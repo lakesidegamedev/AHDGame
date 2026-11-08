@@ -31,12 +31,12 @@ import {
   upsertBudgetDraft,
   tableBudgetWithBill,
 } from "@/lib/db/collections/ukBudgets";
-import { validateBudget } from "@/lib/uk/budget/budgetValidation";
+import { validateBudget } from "@/lib/countries/uk/budget/budgetValidation";
 import {
   buildAnnualBudgetProvisions,
   previewAnnualBudget,
   resolveAnnualBudgetAuthority,
-} from "@/lib/uk/budget/annualBudget";
+} from "@/lib/countries/uk/budget/annualBudget";
 
 const CHANCELLOR_POSITION_ID = "chancellor";
 

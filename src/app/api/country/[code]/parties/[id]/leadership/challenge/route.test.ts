@@ -7,7 +7,9 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
 vi.mock("@/lib/db/partyLookup", () => ({ findPartyBySequentialId: vi.fn() }));
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
-vi.mock("@/lib/uk/leadership/leadershipCommands", () => ({ initiateLeadershipChallenge: vi.fn() }));
+vi.mock("@/lib/countries/uk/leadership/leadershipCommands", () => ({
+  initiateLeadershipChallenge: vi.fn(),
+}));
 
 const NOW = new Date("2026-09-17T00:00:00Z");
 
@@ -24,7 +26,8 @@ async function setup() {
   const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
   const { findPartyBySequentialId } = await import("@/lib/db/partyLookup");
   const { getGameTime } = await import("@/lib/time/gameTime");
-  const { initiateLeadershipChallenge } = await import("@/lib/uk/leadership/leadershipCommands");
+  const { initiateLeadershipChallenge } =
+    await import("@/lib/countries/uk/leadership/leadershipCommands");
   return {
     errors,
     getDb,

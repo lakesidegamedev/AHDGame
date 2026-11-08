@@ -39,14 +39,10 @@ export async function seedLegislationTypes(
   const projectedTypes = politicalLegislation ? getProjectedPoliticalLegislationTypes() : [];
   const seedSet = [...baseTypes, ...projectedTypes];
 
-  // Upsert-by-_id instead of drop+insertMany (ticket #0860): a destructive
-  // reseed only ever ran from the admin reset flow, so new reference entries
-  // (e.g. UK agriculture/technology legislation) never reached worlds that
-  // weren't reseeded after the entries were added — the changelog announced
-  // them, but live worlds silently kept the old category list. Upserting
-  // keeps this idempotent and safe to run against a live world at any time,
-  // and still prunes any doc no longer present in the reference file so the
-  // collection stays in sync with it either way.
+  // Upsert-by-_id instead of drop+insertMany so this is idempotent and
+  // safe to run against a live world at any time: new reference entries
+  // reach existing worlds without a destructive reseed, and pruning keeps
+  // the collection in sync with the reference file.
   if (seedSet.length > 0) {
     await collection.bulkWrite(
       seedSet.map((t) => ({

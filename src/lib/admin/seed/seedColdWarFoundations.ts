@@ -237,7 +237,6 @@ export async function seedColdWarFoundations(
     { _id: "current" },
     {
       $set: {
-        conflictsEnabled: true,
         coldWarEnabled: true,
         livingConflictsEnabled: true,
         livingConflictsEnabledBy: "system:release-1.3",

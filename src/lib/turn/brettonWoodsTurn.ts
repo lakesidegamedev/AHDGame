@@ -28,7 +28,6 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getInflationTarget } from "@/lib/budget/inflation";
@@ -39,6 +38,7 @@ import {
   shouldSuspendConvertibility,
   stepGoldCover,
 } from "@/lib/monetary/brettonWoods";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export interface BrettonWoodsTurnResult {
   /** Always true: the phase runs every turn. Kept for the phase telemetry shape. */
@@ -132,12 +132,12 @@ export async function processBrettonWoodsTurn(
 
   // This turn's US inflation gap — inflationRecalc ran earlier in the sequence,
   // so the budget row already carries the settled rate.
-  const usBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne(
-      { _id: getNationalBudgetId("US") },
-      { projection: { "economicFactors.inflationRate": 1 } }
-    );
+  const usBudget = await (
+    await getFederalBudgetCollection(db)
+  ).findOne(
+    { _id: getNationalBudgetId("US") },
+    { projection: { "economicFactors.inflationRate": 1 } }
+  );
   const usInflation = finiteOr(usBudget?.economicFactors?.inflationRate, NaN);
   const inflationGap =
     Number.isFinite(usInflation) && currentYear != null

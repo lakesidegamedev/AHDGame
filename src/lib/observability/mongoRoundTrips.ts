@@ -22,6 +22,7 @@
  */
 
 import { getAuditRequestContext } from "@/lib/observability/context";
+import { workerConfig } from "@/lib/config/worker";
 
 /**
  * Per phase: how many commands were issued, and how many documents came back.
@@ -92,7 +93,7 @@ function state(): ProfilerState {
  */
 export function roundTripProfilingEnabled(): boolean {
   const s = state();
-  if (s.enabled === null) s.enabled = process.env.AHD_TURN_ROUNDTRIP_PROFILE === "1";
+  if (s.enabled === null) s.enabled = workerConfig.roundTripProfile();
   return s.enabled;
 }
 
@@ -431,7 +432,7 @@ function formatMb(bytes: number): string {
  * bucket hides.
  */
 function reportPhaseLimit(fallback: number): number {
-  const raw = Number(process.env.AHD_TURN_ROUNDTRIP_TOP);
+  const raw = Number(workerConfig.roundTripTop());
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 

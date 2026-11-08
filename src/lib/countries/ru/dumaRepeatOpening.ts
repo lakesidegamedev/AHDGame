@@ -30,6 +30,8 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 
 export const RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION = "russianDumaRepeatOpenings";
 export interface RussianDumaRepeatOpeningRecord {
@@ -70,10 +72,7 @@ export async function materializeRussianDumaRepeatOpening(input: {
     throw new Error("Duma repeats need a transaction, turn and time");
   const game = await db
     .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default") return null;
   const country = await db.collection<CountryGameState>("countryGameStates").findOne(
     { _id: "RU" },
@@ -190,10 +189,7 @@ export async function materializeRussianDumaRepeatOpening(input: {
     throw new Error("Duma repeats need distinct new ballot identities");
   const regions = await db
     .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db
     .collection<StateRegistrationPool>("stateRegistrationPool")

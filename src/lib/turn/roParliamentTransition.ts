@@ -1,5 +1,5 @@
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, ElectedOfficial, Election, GameState, State } from "@/lib/db/types";
+import type { CountryGameState, GameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -10,6 +10,13 @@ import {
   RO_1992_DEPUTY_SEATS,
   RO_1992_SENATORS_BY_REGION,
 } from "@/lib/countries/ro/rules/parliament1992";
+import {
+  getGameStateCollection,
+  GAME_STATE_PRE_ITERATION_FIELDS,
+} from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 /**
  * Seat the parliament returned by the September 1992 election once both
@@ -65,12 +72,9 @@ async function materializeRoParliamentTransition(
     !Number.isFinite(now.getTime())
   )
     throw new Error("Romanian handover needs a transaction and valid clock");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (
     game?.preset !== "1991-default" ||
     calendarTurn(currentTurn, {
@@ -91,8 +95,9 @@ async function materializeRoParliamentTransition(
   )
     return false;
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await (
+    await getStatesCollection(db)
+  )
     .find({ countryId: "RO" }, { session, projection: { _id: 1 } })
     .toArray();
   const regionIds = regions.map((region) => String(region._id));
@@ -102,8 +107,9 @@ async function materializeRoParliamentTransition(
   )
     return false;
 
-  const slates = await db
-    .collection<Election>("elections")
+  const slates = await (
+    await getElectionsCollection(db)
+  )
     .find(
       {
         countryId: "RO",
@@ -131,8 +137,9 @@ async function materializeRoParliamentTransition(
   );
   if (!complete) return false;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find(
       { countryId: "RO", officeType: { $in: ["deputy", "senator"] } },
       {
@@ -187,7 +194,9 @@ async function materializeRoParliamentTransition(
       }));
     })
   );
-  await db.collection<State>("states").bulkWrite(
+  await (
+    await getStatesCollection(db)
+  ).bulkWrite(
     regionIds.map((id) => ({
       updateOne: {
         filter: { _id: id, countryId: "RO" },
@@ -203,10 +212,11 @@ async function materializeRoParliamentTransition(
   );
 
   if (officialOps.length > 0)
-    await db.collection<ElectedOfficial>("electedOfficials").bulkWrite(officialOps, { session });
+    await (await getElectedOfficialsCollection(db)).bulkWrite(officialOps, { session });
 
-  const revised = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const revised = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find(
       { countryId: "RO", officeType: { $in: ["deputy", "senator"] } },
       { session, projection: { characterId: 1, nppId: 1, officeType: 1, state: 1, seatsHeld: 1 } }

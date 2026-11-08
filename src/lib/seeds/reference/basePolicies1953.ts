@@ -491,20 +491,13 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       se_local_grants: { economic: -1, social: 0 }, // 1953: standard transfer to kommuner/landsting
     },
     optionIndexes: {
-      // se_income_tax/se_social_charges corrected from idx4/idx2 to the
-      // ladder's own CENTER "standard" bracket (idx3 "the standard steep
-      // progressive schedule" 60%; idx1 "the standard high employer fees" 33%)
-      // — fiscal-scale audit, 2026-07-28. The prior picks (idx4 "Solidarity
-      // Surtax Act" 75%, idx2 "Expanded Welfare Act" 45%) are each ONE STEP
-      // LEFT of "standard," i.e. already at the 1979-mature-welfare-state
-      // bracket the option's own name describes — inconsistent with this
-      // country's "folkhem under active construction" (not yet built) 1953
-      // framing. Combined with SE's high taxBaseRatios (0.42 income / 0.45
-      // wages), the two aggressive picks alone produced ~45% of GDP in
-      // income+payroll receipts, driving a $200B+/23%-of-GDP day-1 surplus
-      // (verified via getInitialNationalBudgetsForPreset("1953-default")).
-      // The standard brackets land revenue ≈48% of GDP against the unchanged
-      // 36.8%-of-GDP spend — an ≈11% of GDP surplus, not >20%.
+      // se_income_tax/se_social_charges use the ladder's CENTER "standard" bracket
+      // (idx3 60%, idx1 33%): the option's own name describes the target-bracket
+      // maturity, inconsistent with this country's 1953 "folkhem under active
+      // construction" framing. Combined with SE's high taxBaseRatios (0.42 income /
+      // 0.45 wages), aggressive picks produced ~45% of GDP in income+payroll
+      // receipts, a >20%-of-GDP day-1 surplus. Standard brackets land revenue ≈48%
+      // of GDP against 36.8%-of-GDP spend, an ≈11% surplus.
       se_income_tax: 3, // 1953: "the standard steep progressive schedule" (60%)
       se_corporate_tax: 3, // 1953: moderate; center
       se_vat: 0, // 1953: no Moms (VAT); sales tax system
@@ -626,7 +619,7 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       fi_sales_tax: 2,
       fi_social_charges: 1,
       // fi_customs_tariff corrected from idx2 to idx1 (fiscal-scale audit
-      // follow-up, 2026-07-28). idx2 is "National Industry Protection Act"
+      // follow-up). idx2 is "National Industry Protection Act"
       // (25% rate) — the ladder's MOST protectionist/autarkic option — which
       // is inconsistent with the defaults comment above ("licensing + import
       // controls; left", a moderate stance, not maximalist). idx1 is the
@@ -1125,9 +1118,9 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
   // ═══════════════════════════════════════════════════════════════════════════
   //  WARSAW-PACT SATELLITES — 1953
   //
-  //  These six previously had NO 1953 policy config, so `makeEasternBlocBudget`
-  //  fell through to `COUNTRY_POLICY_CONFIGS` — the modern shared map — and a
-  //  1953 world seeded them with Brezhnev-era tax and spending defaults.
+  //  These six need a 1953 policy config: without one `makeEasternBlocBudget`
+  //  falls through to `COUNTRY_POLICY_CONFIGS` (the modern shared map) and a
+  //  1953 world is seeded with Brezhnev-era tax and spending defaults.
   //
   //  `easternBlocPolicyConfig1953` supplies the high-Stalinist baseline: total
   //  surplus remittance, maximal turnover tax, total centralisation, vanguard

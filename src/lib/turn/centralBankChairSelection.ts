@@ -32,10 +32,12 @@ import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { logger } from "../observability/logger";
 import { CHAIR_CHANGE_SCRUTINY_RETAINED } from "@/lib/centralBank/credibility";
+import { workerConfig } from "@/lib/config/worker";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
-const CB_CHAIR_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+const CB_CHAIR_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -218,7 +220,7 @@ async function notifyPendingNominee(
 ): Promise<void> {
   const config = COUNTRY_CONFIGS[countryId];
 
-  const character = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const character = await (await getCharactersCollection(db)).findOne({ _id: characterId });
   // Country webhooks must not depend on in-app notification success or player-linked userId.
   notifyCbChairPendingDiscord(countryId, characterName, pool, character?.avatarUrl).catch((err) =>
     logger.error("CentralBankChairSelection", "Discord pending failed", err)
@@ -480,7 +482,9 @@ export async function acceptCentralBankChairSelection(
   if (!pending.characterId.equals(acceptingCharacterId))
     return { ok: false, error: "You are not the pending nominee" };
 
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await (
+    await getCharactersCollection(db)
+  ).findOne({
     _id: acceptingCharacterId,
   });
   if (!character?.userId) return { ok: false, error: "Character cannot accept this appointment" };
@@ -617,7 +621,9 @@ export async function acceptCentralBankChairSelection(
   const execOffice = config.officeTypes.find((o) => o.isExecutive);
   const executiveTitle = execOffice?.label ?? "executive";
   const executive = pending.appointedByExecutiveId
-    ? await db.collection<Character>("characters").findOne({
+    ? await (
+        await getCharactersCollection(db)
+      ).findOne({
         _id: pending.appointedByExecutiveId,
       })
     : null;
@@ -715,9 +721,9 @@ async function reselectAfterRefusal(
 
   const cfg = COUNTRY_CONFIGS[countryId];
   // Resolve the refused nominee's user for an in-app notice (best effort).
-  const refusedNominee = await db
-    .collection<Character>("characters")
-    .findOne({ _id: pending.characterId }, { projection: { userId: 1, name: 1, avatarUrl: 1 } });
+  const refusedNominee = await (
+    await getCharactersCollection(db)
+  ).findOne({ _id: pending.characterId }, { projection: { userId: 1, name: 1, avatarUrl: 1 } });
   if (refusedNominee?.userId) {
     const title =
       reason === "timeout"
@@ -821,7 +827,9 @@ export async function declineCentralBankChairSelection(
   if (!pending.characterId.equals(decliningCharacterId))
     return { ok: false, error: "You are not the pending nominee" };
 
-  const decliner = await db.collection<Character>("characters").findOne({
+  const decliner = await (
+    await getCharactersCollection(db)
+  ).findOne({
     _id: decliningCharacterId,
     userId: { $exists: true },
   });

@@ -1,6 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { LeadershipRemovalRuleset } from "@/lib/uk/leadership/leadershipRemoval";
+import type { LeadershipRemovalRuleset } from "@/lib/countries/uk/leadership/leadershipRemoval";
 
 /** Party family for leadership-removal defaults + committee naming. */
 export type LeadershipPartyFamily = "con" | "lab" | "other";

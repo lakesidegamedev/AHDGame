@@ -4,9 +4,9 @@ import type { GovernmentType } from "@/lib/constants/countries";
 export type BillPassRule = "majority" | "twoThirds";
 
 /**
- * A bill that nationalizes or privatizes state assets — these face a
- * government-type-dependent passage bar (spec 2026-06-05). Policy provisions
- * carry a `legislationTypeId` and no `type`, so they read as `undefined` here.
+ * A bill that nationalizes or privatizes state assets. These face a
+ * government-type-dependent passage bar. Policy provisions carry a
+ * `legislationTypeId` and no `type`, so they read as `undefined` here.
  */
 export function billHasNatPrivProvision(provisions: { type?: string }[] | undefined): boolean {
   return !!provisions?.some((p) => p.type === "nationalize" || p.type === "privatize");

@@ -41,13 +41,13 @@ import {
 } from "@/lib/military/warEntryPolicy";
 import type { OrganizationLegislation } from "@/lib/db/types/internationalOrganization";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import type { NPP } from "@/lib/db/types";
 import {
   planOrganizationWarDeclarationFromDb,
   type OrganizationWarPlanningContext,
 } from "@/lib/internationalOrganizations/warDeclarationPlanning";
 import { enactAutomaticOrganizationWar } from "@/lib/internationalOrganizations/enactAutomaticWarDeclaration";
 import { loadPolicyHeadSponsors } from "@/lib/internationalOrganizations/policyHeadSponsors";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 async function getPolicyHeadSponsor(
   db: Db,
@@ -61,9 +61,9 @@ async function getPolicyHeadSponsor(
     .findOne({ _id: countryId, status: "formed" });
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: headNppId }, { projection: { _id: 1, name: 1, party: 1 } });
+  const npp = await (
+    await getNppsCollection(db)
+  ).findOne({ _id: headNppId }, { projection: { _id: 1, name: 1, party: 1 } });
   return npp ? { _id: npp._id, name: npp.name, party: npp.party, isNpp: true } : null;
 }
 
@@ -180,16 +180,6 @@ export async function applyResolutionEffect(
         currentTurn,
         context: warPlanningContext,
       });
-      if (!plan.conflictsEnabled) {
-        await recordOrgHistoryEvent(
-          db,
-          resolution.proposingCountryId,
-          currentTurn,
-          `${resolution.organizationId}'s declaration lapsed because conflicts are disabled.`,
-          { organizationId: resolution.organizationId, legislationId: resolution._id.toString() }
-        );
-        return false;
-      }
       if (!plan.targetEnabled) {
         await recordOrgHistoryEvent(
           db,

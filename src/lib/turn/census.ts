@@ -5,6 +5,8 @@ import { apportionHouseSeats } from "@/lib/elections/apportionment";
 import { createSystemNewsPost } from "@/lib/news";
 import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate";
 import { getAutoNeutralizeStateIds } from "@/lib/redistricting/autoNeutralizeStates";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /** Total US House seats redistributed each census (constitutional cap). */
 export const US_HOUSE_TOTAL_SEATS = 435;
@@ -73,9 +75,9 @@ export async function runCensus(
   _turn: number,
   currentYearOverride?: number
 ): Promise<CensusResult> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" } as Partial<GameState>);
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" } as Partial<GameState>);
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
   const currentYear = currentYearOverride ?? gameState?.currentYear;
@@ -104,20 +106,12 @@ export async function runCensus(
   const ops: AnyBulkWriteOperation<State>[] = Object.entries(newSeats).map(([state, seats]) => ({
     updateOne: { filter: { _id: state }, update: { $set: { houseDistricts: seats } } },
   }));
-  if (ops.length > 0) await db.collection<State>("states").bulkWrite(ops);
+  if (ops.length > 0) await (await getStatesCollection(db)).bulkWrite(ops);
 
-  // Regenerate districts for states whose seat count changed, plus, only when
-  // redistricting is on, states that auto-neutralize each census.
-  //
-  // Reapportioned states are redrawn REGARDLESS of the flag: district docs are
-  // the delegation size of record for `districtedHouseResolution` and are
-  // seeded unconditionally, so a stale count disagrees with `houseDistricts`.
-  // The flag gates whether districts DRIVE resolution, not whether they are
-  // accurate.
+  // Regenerate districts for states whose seat count changed, plus states that
+  // auto-neutralize each census.
   const changed = deltas.map((d) => d.state);
-  const autoNeutral = gameState?.redistrictingEnabled
-    ? await getAutoNeutralizeStateIds(db, "US")
-    : [];
+  const autoNeutral = await getAutoNeutralizeStateIds(db, "US");
   const toRegen = [...new Set([...changed, ...autoNeutral])];
   if (toRegen.length > 0) {
     await regenerateCongressionalDistricts(db, {
@@ -127,7 +121,9 @@ export async function runCensus(
     });
   }
 
-  await db.collection<GameState>("gameState").updateOne({ _id: "current" } as Partial<GameState>, {
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" } as Partial<GameState>, {
     // Stamp the year (re-fire guard) AND a compact seat-change summary the region
     // population route reads to show a per-region reapportionment notice (P1d-3).
     $set: {

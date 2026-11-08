@@ -4,7 +4,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { spendPoliticalStrength } from "@/lib/parties/commands/spendPoliticalStrength";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { canSpendOnStateParty } from "@/lib/parties/access";
@@ -42,9 +41,6 @@ export async function POST(
     const character = auth.user.character;
 
     const db = await getDb();
-    if (!isRedistrictingEnabled(await getGameState(db))) {
-      return errorResponse(404, "Redistricting is not enabled");
-    }
 
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) return errorResponse(400, "Invalid body");

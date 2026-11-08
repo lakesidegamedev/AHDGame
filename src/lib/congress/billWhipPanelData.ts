@@ -52,10 +52,8 @@ interface BillWhipViewerContext {
 const ACTIONABLE_BILL_STATUSES = new Set([
   "active",
   "active_other",
-  // Both chambers are voting, so both are whippable. ⚠️ The whip WRITERS
-  // (applyPlayerWhip / applyWhipVotes) must already route per member before this is
-  // opened — otherwise a whipped upper-chamber member's vote and weight land in the
-  // lower tally and the bill can pass on the other house's votes.
+  // Both chambers are whippable. Whip writers must route per member first, or
+  // votes land in the wrong chamber's tally and the bill can pass wrongly.
   "active_both",
   "veto_override",
   "override_shugiin",
@@ -118,10 +116,9 @@ export async function buildBillWhipPanelData(
   const partyIdStr = getPartyIdString(party);
 
   // Access gate. Party Chair/Vice-Chair and admins can always whip. Chamber
-  // leaders (Speaker / Floor Leader / Whip) can whip in the chamber(s) they
-  // lead: the backend whip route already authorizes them, but this panel
-  // historically only rendered for party officers, so whip officers could
-  // never reach the UI (bug: scaffolded, never wired into the client).
+  // leaders (Speaker / Floor Leader / Whip) can whip in the chamber(s) they lead.
+  // The backend whip route authorizes them, but this panel only rendered for
+  // party officers, so whip officers could never reach the UI.
   const isChair = party.chairId?.equals(viewer.characterId);
   const isViceChair = party.viceChairId?.equals(viewer.characterId);
   if (!viewer.isAdmin && !isChair && !isViceChair) {
@@ -144,7 +141,7 @@ export async function buildBillWhipPanelData(
     .collection<ElectedOfficial>("electedOfficials")
     .find({
       // Country-scoped: party sequentialIds collide across countries and some
-      // office types (e.g. "senate") are shared between countries (bug #0699).
+      // office types (e.g. "senate") are shared between countries.
       countryId,
       party: partyIdStr,
       officeType: { $in: [...officeTypeByChamberKey.values()] },

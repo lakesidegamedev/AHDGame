@@ -148,19 +148,17 @@ async function clearOldRegionStateLeadership(
 }
 
 /**
- * Apply the full relocation pipeline to an NPP — the `npps`-collection sibling of
+ * Apply the full relocation pipeline to an NPP: the `npps`-collection sibling of
  * `performRelocation` for player characters.
  *
- * Before this existed, the only NPP move path (`relocate_state` party influence)
- * wrote `homeState` and vacated the office inline, and left every other
- * region-derived fact behind: the old and new regions' `statePartyOrg` presence
- * flags were never recomputed, so moving a party's last NPP out of a region left
- * that region flagged as "party present" (and a region gaining its first NPP
- * stayed flagged empty, blocking Build Org there). State-party leadership in the
- * abandoned region was also retained.
+ * Recomputes region-derived facts the inline `relocate_state` path left stale:
+ * `statePartyOrg` presence flags on both old and new regions, and state-party
+ * leadership in the abandoned region. Otherwise a region losing its last NPP
+ * stays flagged "party present", and a region gaining its first stays flagged
+ * empty (blocking Build Org there).
  *
- * Assumes the caller has already validated the target region exists, belongs to
- * the NPP's country, differs from the current region, and has capacity.
+ * Assumes the caller has validated the target region exists, belongs to the
+ * NPP's country, differs from the current region, and has capacity.
  */
 export async function performNppRelocation(
   db: Db,

@@ -4,12 +4,13 @@ import { getDb } from "@/lib/mongodb";
 import { runSeed } from "@/lib/admin/seed";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
+import { servicesConfig } from "@/lib/config/services";
 
 // POST /api/seed — Seeds the database from static seed data; protected by SEED_SECRET bearer token and idempotent unless ?reset=true.
 // Auth: requireAdminOrApiKey
 // Errors: 401
 export async function POST(request: Request) {
-  const secret = process.env.SEED_SECRET;
+  const secret = servicesConfig.seedSecret();
   if (!secret) {
     return errorResponse(500, "SEED_SECRET environment variable is not set.");
   }

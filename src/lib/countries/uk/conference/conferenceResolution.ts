@@ -9,19 +9,25 @@ import {
   getOrSeedPartyLeadership,
   historyEntry,
   pushHistoryEntry,
-} from "@/lib/uk/leadership/leadershipStore";
+} from "@/lib/countries/uk/leadership/leadershipStore";
 import { getUKPartyLeadershipCollection } from "@/lib/db/collections/ukPartyLeadership";
 import {
   LEADERSHIP_AMENDMENT_COOLDOWN_TURNS,
   validateRulesetAmendment,
-} from "@/lib/uk/leadership/rules";
-import { resolveConferenceMotion, resolvePlatformRatification } from "@/lib/uk/conference/rules";
-import { conferenceHistoryEntry, pushConferenceHistory } from "@/lib/uk/conference/conferenceStore";
+} from "@/lib/countries/uk/leadership/rules";
+import {
+  resolveConferenceMotion,
+  resolvePlatformRatification,
+} from "@/lib/countries/uk/conference/rules";
+import {
+  conferenceHistoryEntry,
+  pushConferenceHistory,
+} from "@/lib/countries/uk/conference/conferenceStore";
 import type {
   ConferenceHistoryEntry,
   ConferenceRulesMotion,
   UKPartyConference,
-} from "@/lib/uk/conference/types";
+} from "@/lib/countries/uk/conference/types";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {

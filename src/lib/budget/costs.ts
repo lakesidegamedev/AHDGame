@@ -123,11 +123,9 @@ export const COST_SCALE_ANCHORS: Partial<Record<CountryId, CostScaleAnchor>> = {
   DE: DE_ECONOMY.costScaleAnchors,
   IE: IE_ECONOMY.costScaleAnchors,
   CN: CN_ECONOMY.costScaleAnchors,
-  // BR had no legacy PRE_2000/MODERN scale entries, which used to be encoded as
-  // scaleLow 1.0 — full modern-authored absolute costs charged against the 1991
-  // PPP-normalized R$900B economy. scaleLow = gpcLow/gpcHigh ≈ 6,040/50,698 ≈ 0.12
-  // shrinks absolute costs to the same proportion of the economy they were
-  // authored at; scaleHigh 1.0 matches the other modern-calibrated sides (IE/CN/NG).
+  // BR has no legacy scale entries; scaleLow ~0.12 rebases absolute costs to
+  // their authored share of the 1991 economy. scaleHigh 1.0 matches other
+  // modern-calibrated sides (IE/CN/NG).
   BR: BR_ECONOMY.costScaleAnchors,
   // NG spending-law per-capita costs are calibrated in 2019 naira (scaleHigh=1).
   // The corrected 1991 GDP anchor keeps costs at their modeled share of GDP:

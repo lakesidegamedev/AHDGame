@@ -19,8 +19,6 @@
  *
  * `stateSenateSeats` happens to equal its landtag seat document exactly, which
  * is what makes the confusion easy to fall into and hard to notice.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
  */
 import type { Db, ObjectId } from "mongodb";
 import type { State } from "@/lib/db/types";

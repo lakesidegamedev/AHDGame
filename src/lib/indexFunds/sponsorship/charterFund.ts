@@ -321,7 +321,7 @@ async function commitCharter(
     ? await creditTreasuryProceeds(db, sponsor.countryId as CountryId, feeLocal, now)
     : 0;
 
-  // #992 tranche 3: the corp debit below covers seed + fee while the fund
+  // The corp debit below covers seed + fee while the fund
   // receives the seed alone, so the debit row can never mirror the fund side.
   // Book the fund's seed receipt as its own fund-subject row: single-sided by
   // construction (the sponsor evidences the debit), netting against the debit

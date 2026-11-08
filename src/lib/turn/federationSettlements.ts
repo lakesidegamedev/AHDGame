@@ -2,7 +2,6 @@
  * obligations together. Residents and private firms await their owners' choices. */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { State } from "@/lib/db/types/state";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -19,6 +18,7 @@ import {
   type FederationRatificationRecord,
 } from "@/lib/world/succession/ratificationStore";
 import { buildSourceRegionHierarchy } from "@/lib/world/succession/sourceRegionHierarchy";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /** Called under the turn lock after ratification. Staging, preparation and all
  * effective writes share one transaction, so a failed phase can retry on a
@@ -119,8 +119,9 @@ export async function processRatifiedFederationSettlements(
           now,
           session,
         });
-        const states = await db
-          .collection<State>("states")
+        const states = await (
+          await getStatesCollection(db)
+        )
           .find(
             { countryId: { $in: [...new Set([...playableCountries, proposal.sourceEntityId])] } },
             {

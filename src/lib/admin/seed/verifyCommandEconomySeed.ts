@@ -32,7 +32,7 @@ export interface CommandEconomySeedReport {
 }
 
 /**
- * Post-seed assertion for command economies (ticket #1014 follow-up).
+ * Post-seed assertion for command economies.
  *
  * The seeders that split a command country into one SOE per commanding-height sector
  * (`seedRuBudgets`, `seedCnBudgets`, `seedDdBudgets`, the Warsaw-Pact block) all read

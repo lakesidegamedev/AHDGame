@@ -14,6 +14,7 @@ import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { freezeRussianCouncilElectorate } from "./rules/councilElectorate";
 import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 
 export const RUSSIAN_COUNCIL_OPENINGS_COLLECTION = "russianCouncilElectionOpenings";
 export interface RussianCouncilOpeningRecord {
@@ -158,10 +159,7 @@ export async function materializeRussianCouncilElectionOpening(input: {
   if (conflict) throw new Error("An unresolved Russian Council ballot already exists");
   const regions = await db
     .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db
     .collection<StateRegistrationPool>("stateRegistrationPool")

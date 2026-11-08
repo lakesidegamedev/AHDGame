@@ -6,7 +6,7 @@
  * approval falls below the confidence pivot. Impact weighting lives in the gauge.
  */
 
-import { CONFIDENCE_APPROVAL_PIVOT } from "@/lib/uk/confidence/confidenceGauge";
+import { CONFIDENCE_APPROVAL_PIVOT } from "@/lib/countries/uk/confidence/confidenceGauge";
 
 export interface NppResignationInput {
   /** 0-100 government approval. */

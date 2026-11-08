@@ -52,7 +52,7 @@ export async function seedDDRegions(
   // model — even if `reset` is false. A half-migrated world that kept
   // DD_BER/NOR/SOU on `states` while metrics keyed on BEO/MV/BB/ST/SN/TH left
   // the metric engine unable to compound state.gdp, so DD's economy stayed
-  // byte-identical across independent sims (#3370 P3).
+  // byte-identical across independent sims.
   if (isDividedGermanyEra(preset)) {
     const legacyDelete = await db
       .collection("states")
@@ -83,10 +83,9 @@ export async function seedDDParties(
   const { isPartyValidForPreset, prunePresetMismatchedDefaultParties } =
     await import("@/lib/seeds/ensureDefaultParties");
 
-  // ⚠️ This seeder previously did NEITHER of these. It destructured
-  // `validForPresets` away and wrote every East German party unconditionally,
-  // so a 1991 or 2019 world was handed the SED and its bloc parties whatever
-  // the era said, and a Cold-War world downgraded to 1991 kept them.
+  // ⚠️ Both are required: honor `validForPresets` instead of writing every
+  // East German party unconditionally, or a 1991 or 2019 world gets the SED and
+  // its bloc parties, and a Cold-War world downgraded to 1991 keeps them.
   await prunePresetMismatchedDefaultParties(db, ddParties as PartySeed[], preset);
   const eligible = (ddParties as PartySeed[]).filter((party) =>
     isPartyValidForPreset(party, preset)
@@ -171,7 +170,7 @@ export async function seedDDDemographics(
 
   // Turnout modifier rows — one per Land, all modifiers 0. The reset branch
   // above already clears them; without this insert they were deleted and
-  // never re-seeded (ticket #1121), so Combined-tab turnout and GOTV had no
+  // never re-seeded, so Combined-tab turnout and GOTV had no
   // `dd_voterGroups` document to read.
   const { ddDemographicTurnout } = await import("@/lib/seeds/dd/ddDemographicTurnout");
   for (const turnout of ddDemographicTurnout) {

@@ -1198,7 +1198,6 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         const playerRandomEventsResult = await runtime.runPhase("playerRandomEvents", () =>
           processPlayerRandomEventsTurn(db, newTurn, {
             playerRandomEventsEnabled: gameState.playerRandomEventsEnabled,
-            rpgStatsEnabled: gameState.rpgStatsEnabled,
             treasuryCashLedgerEnabled: context.config?.treasuryCashLedgerEnabled === true,
             currentYear: eventsCurrentYear,
           })

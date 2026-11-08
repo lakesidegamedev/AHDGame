@@ -14,6 +14,7 @@ import {
   startPatreonGracePeriod,
   type SupporterStatusSnapshot,
 } from "@/lib/patreon/service";
+import { servicesConfig } from "@/lib/config/services";
 
 interface GrantEntry {
   username: string;
@@ -105,7 +106,7 @@ function fingerprint(value: string): string {
   // dictionary scan of the retry collection. The creator token is required
   // for a successful member-list pass; the fallback only keeps unit tests
   // deterministic when they mock that external call.
-  const key = process.env.PATREON_CREATOR_TOKEN;
+  const key = servicesConfig.patreonCreatorToken();
   if (!key && process.env.NODE_ENV !== "test") {
     throw new Error("PATREON_CREATOR_TOKEN is required for reconciliation fingerprints");
   }

@@ -55,29 +55,15 @@ export const DEMOGRAPHIC_TURNOUT_RATES = {
  * Per-era national baseline turnout rates, the year-anchor counterpart of
  * {@link DEMOGRAPHIC_TURNOUT_RATES}.
  *
- * `DEMOGRAPHIC_TURNOUT_RATES` is a single modern table. Without these per-era
- * anchors every world would model participation with 2019 propensities no
- * matter what year it was in - a 1953 world would have 2020's steep youth
- * deficit and 2020's senior surge, neither of which existed then. These
- * anchors let turnout slide along the same clock as everything else.
+ * Without these, every world would model participation with 2019 propensities
+ * regardless of year. The 2019 entry IS `DEMOGRAPHIC_TURNOUT_RATES`, by reference.
  *
- * **The 2019 entry IS `DEMOGRAPHIC_TURNOUT_RATES`**, by reference, so a 2019
- * world is unchanged and every existing calibration test stays green.
+ * NOT the state-level franchise: VRA enfranchisement is owned by
+ * `VOTING_RIGHTS_ACT_ENFRANCHISEMENT_CHECKPOINT` and subtracted back out per state,
+ * so `race.black` here describes participation absent that suppression.
  *
- * WHAT THESE ARE NOT: they are not the state-level franchise. The Voting
- * Rights Act's enfranchisement of Black voters in the covered South is owned by
- * `VOTING_RIGHTS_ACT_ENFRANCHISEMENT_CHECKPOINT` (+40pp in MS/AL, +20pp in
- * LA/GA/SC/VA) and is subtracted back out of these baselines per state by
- * `checkpointBakedShifts.ts`, exactly as the position tables are. So the
- * `race.black` numbers below describe national participation ABSENT that
- * state-specific suppression-and-recovery, not the raw national average of a
- * year in which most Southern Black adults could not register at all.
- *
- * Sources: US Census CPS Voting and Registration Supplement (biennial, 1964–),
- * ANES for the pre-1964 era, CIRCLE for youth series, Pew validated-voter
- * studies for the recent cycles. National VAP/VEP turnout for the anchor
- * elections: 1952 ~61.6%, 1980 ~54.2%, 1992 ~58.1%, 2000 ~54.2%, 2008 ~61.6%,
- * 2020 ~66.8%, 2024 ~63.9%.
+ * Sources: Census CPS Voting and Registration Supplement (1964-), ANES pre-1964,
+ * CIRCLE for youth, Pew validated-voter studies.
  */
 export const ERA_TURNOUT_RATES: Record<EraId, DemographicTurnoutRates> = {
   // 1952. Turnout was HIGH by modern standards and the age curve ran the other
@@ -1675,25 +1661,18 @@ export interface ConditionedPositionOffset {
 /**
  * 1953 Deep South, given race:black: class-bucket social corrections.
  *
- * WHY THIS EXISTS. A granular cell's lean is the mean of its buckets'
- * positions, so every bucket in a Black cell except race:black itself pulls
- * from tables authored overwhelmingly from white behavior. In the 1953 Deep
- * South that misdescribes Black voters three-to-one: no_college (+2.9),
- * wealth:low (+3.1) and their neighbours encode the white caste order's
- * social traditionalism, and averaging them over a race:black (-2) base puts
- * every Black cell at +0.5..+1.5 social — a uniformly right electorate with
- * no liberal-social cells anywhere, which no per-bucket re-authoring can fix
- * (white and Black cells share those buckets, so any shared move drags both;
- * the race-bucket gap alone caps their spread at 2.5 on a 10-point axis).
+ * A granular cell's lean is the mean of its buckets' positions, so every bucket
+ * in a Black cell except race:black pulls from tables authored overwhelmingly
+ * from white behavior. In the 1953 Deep South that places every Black cell at
+ * +0.5..+1.5 social (uniformly right with no liberal-social cells). Per-bucket
+ * re-authoring cannot fix this because white and Black cells share those
+ * buckets.
  *
  * The correction neutralises that transfer for Black cells only (each -3.5
- * moves a +2.6..+3.1 bucket to roughly neutral), leaving white cells on the
- * base table byte-identical. It is data, not a code exception: the mechanism
- * (`conditionedOffsets` in `granularCells.ts`) is general across dims, eras
- * and states, and every other (era, state) resolves to no offsets. Later
- * anchors author none — the 1979+ national tables already place Black cells
- * left, so there is nothing to correct — and the year-blend fades these to
- * zero by 1979 rather than carrying them forward.
+ * moves a +2.6..+3.1 bucket to roughly neutral), leaving white cells identical.
+ * It is data, not a code exception: `conditionedOffsets` in `granularCells.ts`
+ * is general across dims, eras and states, and every other (era, state)
+ * resolves to no offsets. The year-blend fades these to zero by 1979.
  */
 const BLACK_SOUTH_1953_CLASS_CORRECTION: Array<
   [keyof DemographicTurnoutRates, string, number, number]

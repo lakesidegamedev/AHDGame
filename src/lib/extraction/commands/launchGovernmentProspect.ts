@@ -376,11 +376,9 @@ export async function launchGovernmentProspect(
 
   if (level === "national") {
     // NO pre-check. `treasuryBalance` is the SIGNED national cash position,
-    // separate from the bond-ledger `debt.principal` (refs #1975), so
-    // a `balance < cost` guard refused every survey for a country already
-    // carrying a cash hole. `spendFromTreasury` is built to
-    // borrow — it splits the spend into fromSurplus and addedToDebt — and the
-    // rest of the app spends into debt the same way.
+    // separate from the bond-ledger `debt.principal`, so a `balance < cost`
+    // guard refused every survey for a country already in a cash hole.
+    // `spendFromTreasury` borrows by splitting into fromSurplus and addedToDebt.
     await spendFromTreasury(db, countryId, costLocal);
   } else {
     // Spend 1 gubernatorial action point atomically.

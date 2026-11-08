@@ -184,17 +184,14 @@ export async function seedPoliticalLegislationBaseline(
       lawCount++;
     }
 
-    // Regional statePolicies baselines — no enactedLaws, no budget sync. Two
-    // sets, seeded through one loop because they differ only in level:
-    //
-    //   - Regional sidecars (DD Land laws today) at their authored
-    //     `baselineLevelFor` — a region really does start with these enacted.
+    // Regional statePolicies baselines, no enactedLaws or budget sync. Two
+    // sets share this loop, differing only in level:
+    //   - Regional sidecars at their authored `baselineLevelFor` (a region
+    //     really does start with these enacted).
     //   - `both` laws at level 0 (`regionalDefaultLaws`): the region has no
-    //     program of its own on top of the national law YET, but it may propose
-    //     one, so it needs a current-law row to propose against. Without it the
-    //     whole "Current law -> Proposed" block — fiscal comparison and metric
-    //     chips included — renders nothing. See regionalDefaults.ts for why the
-    //     level must be 0 and not the national baseline.
+    //     program of its own yet but may propose one, so it needs a current-law
+    //     row to propose against or the whole Current law -> Proposed block
+    //     renders nothing. See regionalDefaults.ts for why level 0.
     //
     // Live regions intersect the authored Land id list so a drifted world
     // cannot invent phantom Bezirke.

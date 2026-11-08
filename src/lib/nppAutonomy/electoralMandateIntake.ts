@@ -1,8 +1,7 @@
 /**
- * Electoral mandate intake (#2321): reads the governing party's platform,
- * its most recent locked manifesto and its chamber share, then hands them to
- * the pure `deriveElectoralMandate` rule. The governing agenda and the
- * caretaker-minister agenda both consume the result.
+ * Reads the governing party's platform, locked manifesto and chamber share,
+ * then passes them to the pure `deriveElectoralMandate` rule. Both the
+ * governing agenda and the caretaker-minister agenda consume the result.
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";

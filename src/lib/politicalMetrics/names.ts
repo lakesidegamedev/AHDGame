@@ -8,8 +8,7 @@ import {
 /**
  * Per-country display names for every metric family — the country "flavoring"
  * over the shared backend catalog. Transcribed verbatim from the approved
- * design catalog (docs/superpowers/specs/assets/2026-07-16-metrics-mock-data.js
- * FAMILIES names: {us, uk, su}). `satisfies Record<PoliticalMetricId, string>`
+ * design catalog (FAMILIES names: {us, uk, su}). `satisfies Record<PoliticalMetricId, string>`
  * makes a missing or extra entry a compile error.
  */
 

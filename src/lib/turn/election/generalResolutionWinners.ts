@@ -12,7 +12,6 @@ import { getElectionMethod } from "@/lib/elections/electionMethod";
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import {
   buildPrimaryShareMap,
   multiSeatOfficialFilter,
@@ -78,11 +77,7 @@ export async function selectGeneralElectionWinners({
   let houseSeats: Record<string, number> | undefined;
   let commonsSeats: Record<string, number> | undefined;
   let allocationMethod = election.allocationMethod;
-  let gsForHouse: {
-    preset?: string;
-    redistrictingEnabled?: boolean;
-    currentYear?: number;
-  } | null = null;
+  let gsForHouse: { preset?: string; currentYear?: number } | null = null;
   if (election.electionType === "house") {
     gsForHouse = await (await getGameStateCollection(db)).findOne({ _id: "current" });
     // Live (census-updated) House apportionment; equals the preset seed until a
@@ -114,14 +109,10 @@ export async function selectGeneralElectionWinners({
     commonsSeats = getUkCommonsSeats(gsForCommons?.preset);
   }
 
-  // Districted per-district resolution (US House, flag on). Returns null when the
+  // Districted per-district resolution (US House). Returns null when the
   // state has no congressionalDistricts docs → fall back to legacy allocateSeats.
   let districted: Awaited<ReturnType<typeof districtedHouseResolution>> = null;
-  if (
-    election.electionType === "house" &&
-    (election.countryId ?? "US") === "US" &&
-    isRedistrictingEnabled(gsForHouse)
-  ) {
+  if (election.electionType === "house" && (election.countryId ?? "US") === "US") {
     const candidateParty: Record<string, string> = {};
     const candidateCharacterId: Record<string, string | null> = {};
     const candidateNppId: Record<string, string | null> = {};

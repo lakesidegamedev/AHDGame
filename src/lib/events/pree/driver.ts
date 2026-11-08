@@ -33,7 +33,6 @@ import { notifyPlayerEventOffered, notifyPlayerEventResolved } from "./notificat
 import { processDebateChallenges } from "@/lib/debate/processDebateChallenges";
 import { sweepExpiredDebates } from "@/lib/debate/debateSessionLifecycle";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 
 /** Eligibility maps are loaded per chunk to bound query sizes; all player characters are processed. */
 const CHARACTER_CHUNK_SIZE = 200;
@@ -190,7 +189,6 @@ export async function processPlayerRandomEventsTurn(
   currentTurn: number,
   preloaded?: {
     playerRandomEventsEnabled?: boolean;
-    rpgStatsEnabled?: boolean;
     treasuryCashLedgerEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
@@ -210,11 +208,9 @@ export async function processPlayerRandomEventsTurn(
 
   // Election debates: roll challenges and resolve overdue debates before offering
   // normal events. Participants are excluded from the offer loop so a debate can
-  // never collide with a standard random event (the "supersede" rule). Gated
-  // behind the RPG-stats flag.
-  const debateParticipants = (await isRpgStatsEnabled(preloaded))
-    ? (await processDebateChallenges(db, currentTurn, new Date())).participantCharacterIds
-    : new Set<string>();
+  // never collide with a standard random event (the "supersede" rule).
+  const debateParticipants = (await processDebateChallenges(db, currentTurn, new Date()))
+    .participantCharacterIds;
 
   const definitions = await loadApprovedDefinitions(db);
   if (definitions.length === 0) {

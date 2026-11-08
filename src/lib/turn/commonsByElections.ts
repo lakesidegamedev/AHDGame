@@ -21,7 +21,7 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
-import type { Character, ElectedOfficial, Election } from "@/lib/db/types";
+import type { ElectedOfficial, Election } from "@/lib/db/types";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
@@ -32,22 +32,25 @@ import {
   COMMONS_BY_ELECTION_FILING_TURNS,
   COMMONS_BY_ELECTION_GENERAL_TURNS,
   COMMONS_BY_ELECTION_RETRY_COOLDOWN_TURNS,
-} from "@/lib/uk/elections/commonsRecallRules";
-import { computeByElectionCarveFraction } from "@/lib/uk/elections/byElectionCarve";
+} from "@/lib/countries/uk/elections/commonsRecallRules";
+import { computeByElectionCarveFraction } from "@/lib/countries/uk/elections/byElectionCarve";
 import { regularRaceFillsSeatFirst } from "@/lib/turn/byElections";
 import {
   claimVacanciesForElection,
   createCommonsVacancy,
   findLiveVacancyForOfficial,
   markVacanciesFilled,
-} from "@/lib/uk/elections/commonsVacancyShell";
+} from "@/lib/countries/uk/elections/commonsVacancyShell";
 import {
   advanceRecallPetition,
   ensureRecallWatch,
   evaluatePetitionTriggers,
   getActivePetitionForOfficial,
-} from "@/lib/uk/elections/recallPetitionShell";
+} from "@/lib/countries/uk/elections/recallPetitionShell";
 import type { UkCommonsVacancy } from "@/lib/db/types/ukByElection";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 export const SPECIAL_COMMONS_ELECTION_TYPE = "special_commons";
 
@@ -161,7 +164,7 @@ export async function spawnSpecialCommons(
     createdAt: input.now,
     updatedAt: input.now,
   };
-  await db.collection<Election>("elections").insertOne(withCampaignRules(doc));
+  await (await getElectionsCollection(db)).insertOne(withCampaignRules(doc));
   await claimVacanciesForElection(db, input.vacancyIds, doc._id, input.currentTurn, input.now);
   return doc._id;
 }
@@ -195,8 +198,8 @@ export async function processCommonsByElectionWatcher(
     reconciled: 0,
   };
   const scope = officialsCountryScope("UK");
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
-  const elections = db.collection<Election>("elections");
+  const officials = await getElectedOfficialsCollection(db);
+  const elections = await getElectionsCollection(db);
   const vacancies = getUkCommonsVacanciesCollection(db);
 
   const gameState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
@@ -261,8 +264,9 @@ export async function processCommonsByElectionWatcher(
   const characterIds = seated.map((o) => o.characterId).filter((id): id is ObjectId => id != null);
   const characters =
     characterIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await (
+          await getCharactersCollection(db)
+        )
           .find(
             { _id: { $in: characterIds } },
             { projection: { _id: 1, name: 1, party: 1, favorability: 1, infamy: 1 } }

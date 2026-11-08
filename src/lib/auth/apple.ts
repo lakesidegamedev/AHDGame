@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "crypto";
 import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } from "jose";
+import { authConfig } from "@/lib/config/auth";
 
 /**
  * Sign in with Apple (web flow) for the site and the AHDClient phone app.
@@ -36,11 +37,11 @@ export const APPLE_DEFAULT_REDIRECT_URI = "https://ahousedividedgame.com/api/aut
  * must also be registered on the Services ID.
  */
 export function getAppleSignInConfig(): AppleSignInConfig | null {
-  const clientId = process.env.APPLE_CLIENT_ID;
-  const teamId = process.env.APPLE_TEAM_ID;
-  const keyId = process.env.APPLE_KEY_ID;
-  const rawKey = process.env.APPLE_PRIVATE_KEY;
-  const redirectUri = process.env.APPLE_REDIRECT_URI || APPLE_DEFAULT_REDIRECT_URI;
+  const clientId = authConfig.appleClientId();
+  const teamId = authConfig.appleTeamId();
+  const keyId = authConfig.appleKeyId();
+  const rawKey = authConfig.applePrivateKey();
+  const redirectUri = authConfig.appleRedirectUri() || APPLE_DEFAULT_REDIRECT_URI;
   if (!clientId || !teamId || !keyId || !rawKey) return null;
   const trimmed = rawKey.trim();
   const privateKey = trimmed.startsWith("-----BEGIN")
@@ -210,7 +211,7 @@ const REFRESH_KEY_DOMAIN = "ahd-apple-refresh-token-key-v1";
 const REFRESH_ENVELOPE_VERSION = "v1";
 
 function refreshTokenKey(): Buffer {
-  const secret = process.env.AUTH_SECRET;
+  const secret = authConfig.authSecret();
   if (!secret) throw new Error("apple: AUTH_SECRET is not configured");
   return createHmac("sha256", secret).update(REFRESH_KEY_DOMAIN).digest();
 }

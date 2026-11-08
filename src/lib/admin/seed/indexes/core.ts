@@ -116,7 +116,7 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
 
   // One row per (country, state, party). The compound `_id` (`${stateId}_${partyId}`)
   // is derived from these fields, and a drifted `_id` is how one party's org
-  // ended up readable as another's (ticket #1256). Unique at the field level so
+  // ended up readable as another's. Unique at the field level so
   // a future writer can never double-claim a (state, party) chapter row.
   await ensureIndex(
     db,
@@ -126,11 +126,9 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
-  // characterStateOrg: presidential-primary regional bases. Unique compound
-  // key guarantees the atomic findOneAndUpdate in
-  // /api/political-operations/state-org/build cannot create duplicate rows
-  // under concurrent requests. See
-  // docs/plans/archive/2026-05/2026-05-27-presidential-primary-regional-bases-design.md
+  // characterStateOrg: presidential-primary regional bases. Unique compound key
+  // guarantees the atomic findOneAndUpdate in the state-org build API cannot
+  // create duplicates under concurrent requests.
   await ensureIndex(
     db,
     "characterStateOrg",
@@ -181,10 +179,8 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
-  // Pre-index invariant (issue #2028): enumerate every seeded corporation and
-  // fail with ALL colliding ids + holder names before attempting index
-  // creation, so one seed fix can close every duplicate at once instead of
-  // tripping over a bare E11000 one key at a time.
+  // Fail with ALL colliding ids + holder names before creating the index, so
+  // one seed fix closes every duplicate instead of tripping E11000 one at a time.
   await assertUniqueCorporationSequentialIds(db);
   // Created directly (not via the tolerant ensureIndex helper), so a genuine
   // failure stays fatal and visible instead of degrading to a log line that

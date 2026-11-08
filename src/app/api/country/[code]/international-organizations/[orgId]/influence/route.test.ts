@@ -132,13 +132,4 @@ describe("POST .../[orgId]/influence", () => {
     const body = (await res.json()) as { error?: string; message?: string };
     expect(JSON.stringify(body)).toMatch(/locked to its bloc/i);
   });
-
-  it("does not blame the player when the feature gate is off", async () => {
-    setup();
-    vi.mocked(commitInfluencePlay).mockResolvedValue({ ok: false, reason: "gate-off" } as never);
-    const res = await post({ targetEntityId: "YU", amountLocal: 1e8 });
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as unknown;
-    expect(JSON.stringify(body)).toMatch(/not enabled in this world/i);
-  });
 });

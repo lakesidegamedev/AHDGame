@@ -1,6 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { RulesetAmendmentPatch } from "@/lib/uk/leadership/rules";
+import type { RulesetAmendmentPatch } from "@/lib/countries/uk/leadership/rules";
 
 /** Lifecycle of one annual party conference. */
 export type ConferenceStatus = "scheduled" | "open" | "completed" | "expired";

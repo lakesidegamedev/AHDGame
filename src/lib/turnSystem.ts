@@ -92,6 +92,7 @@ import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
+import { serverEnv } from "@/lib/config/read";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -190,9 +191,9 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
     // pay every additive income phase twice: fund generation, corp dividends, savings
     // interest, bond coupons, treasury. The guard exists to prevent precisely that,
     // and a clean shutdown was defeating it.
-    const live = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { processingPhase: 1 } });
+    const live = await (
+      await getGameStateCollection(db)
+    ).findOne({ _id: "current" }, { projection: { processingPhase: 1 } });
     const committed = turnHasCommittedWrites(live?.processingPhase);
 
     if (committed) {
@@ -200,12 +201,12 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
       // lock read as stale IMMEDIATELY, so the next cron consumes this turn rather than
       // serving the full 20-minute wait first. A deploy then costs the remainder of one
       // turn instead of that turn plus the next slot.
-      await db
-        .collection<GameState>("gameState")
-        .updateOne(
-          { _id: "current", isProcessing: true },
-          { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } }
-        );
+      await (
+        await getGameStateCollection(db)
+      ).updateOne(
+        { _id: "current", isProcessing: true },
+        { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } }
+      );
       localTurnLockHeld = false;
       invalidateGameStateCache();
       console.warn(
@@ -218,7 +219,9 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
 
     // Nothing committed yet, so the turn is losslessly re-runnable: release outright and
     // let the next container simply run it.
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current", isProcessing: true },
       {
         $set: {
@@ -256,7 +259,7 @@ export function processTurn(
 ): ReturnType<typeof processTurnImpl> {
   // When the worker owns turns, the web server never runs one: a turn holds the
   // event loop and takes the site down for its whole duration (turn 372).
-  const refusal = inProcessTurnRefusal(process.env);
+  const refusal = inProcessTurnRefusal(serverEnv());
   if (refusal) {
     console.error(`[Turn System] Refused in-process turn: ${refusal}`);
     return Promise.resolve({
@@ -326,7 +329,7 @@ async function processTurnImpl(
     // firing. Use realTime, not lastTurnProcessed (game/LARP clock), so a
     // steady game-clock offset after an outage does not false-positive.
     {
-      const preLockState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+      const preLockState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
       // SIM-ONLY: the drift guard models a LIVE deployment where an hourly cron
       // fires, so a long gap means it stopped. A headless sandbox has no cron (turns
       // run as fast as CPU allows), and a singleplayer world advances only on player
@@ -396,7 +399,9 @@ async function processTurnImpl(
           !hasHealthyInFlightTurn &&
           isAutoPauseDrift(cronDriftMs)
         ) {
-          await db.collection<GameState>("gameState").updateOne(
+          await (
+            await getGameStateCollection(db)
+          ).updateOne(
             { _id: "current" },
             {
               $set: {
@@ -446,7 +451,9 @@ async function processTurnImpl(
       );
     }
 
-    const lockResult = await db.collection<GameState>("gameState").findOneAndUpdate(
+    const lockResult = await (
+      await getGameStateCollection(db)
+    ).findOneAndUpdate(
       {
         _id: "current",
         processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
@@ -521,9 +528,9 @@ async function processTurnImpl(
       // writes anything. Absent on a turn after a clean release: no round trip.
       const reset = staleRecoveryEvidenceReset(gameState);
       if (reset) {
-        await db
-          .collection<GameState>("gameState")
-          .updateOne({ _id: "current", isProcessing: true }, { $set: reset });
+        await (
+          await getGameStateCollection(db)
+        ).updateOne({ _id: "current", isProcessing: true }, { $set: reset });
       }
     }
 
@@ -569,7 +576,9 @@ async function processTurnImpl(
           `${nextTurnNumber} after clock reconciliation; refusing to resume`
       );
     }
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current", isProcessing: true },
       {
         $set: {
@@ -692,7 +701,9 @@ async function processTurnImpl(
       })
       .sort((a, b) => b.durationMs - a.durationMs)
       .slice(0, 5);
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current" },
       {
         $set: {
@@ -933,7 +944,9 @@ async function processTurnImpl(
         ...(failedTarget != null ? { processingTargetTurn: failedTarget } : {}),
         ...(finalizedPhaseStatuses ? { processingPhaseStatuses: finalizedPhaseStatuses } : {}),
       };
-      await db.collection<GameState>("gameState").updateOne(
+      await (
+        await getGameStateCollection(db)
+      ).updateOne(
         { _id: "current" },
         {
           $set: holdForRepair
@@ -1068,7 +1081,9 @@ export async function startTurnSystem(): Promise<{ success: boolean; message: st
 
     // Deadlines are turn-based, so resuming after a pause needs no Date-shift:
     // frozen turns kept every countdown frozen. (Phase 5 removed shiftDeadlinesOnResume.)
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current" },
       {
         $set: {
@@ -1103,7 +1118,9 @@ export async function stopTurnSystem(): Promise<{ success: boolean; message: str
   try {
     const db = await getDb();
     const now = new Date();
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current" },
       {
         $set: {
@@ -1146,12 +1163,12 @@ export async function toggleFastMode(): Promise<{
 
     const newFastModeState = !gameState.fastMode;
 
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { fastMode: newFastModeState, updatedAt: new Date() } }
-      );
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current" },
+      { $set: { fastMode: newFastModeState, updatedAt: new Date() } }
+    );
 
     invalidateGameStateCache();
 

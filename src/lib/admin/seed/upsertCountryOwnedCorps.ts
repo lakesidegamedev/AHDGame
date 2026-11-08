@@ -17,37 +17,19 @@ export interface CountryOwnedCorpUpsertResult {
 
 /**
  * Upsert a country's country-owned corporations and their producing
- * `corporateSectors`, tolerating SOE ids from an EARLIER id layout.
+ * `corporateSectors`, tolerating SOE ids from an earlier id layout.
  *
- * Why this exists. Command-economy SOE ids are derived from a per-country hex
- * base plus the sector's `CORPORATION_TYPES` ordinal (`SOE_ID_BASE_BY_COUNTRY`
- * in `seeds/reference/budgets.ts`). That base has moved twice: legacy 3-digit
- * suffixes, then the 0x1000+ 4-digit bands introduced with ticket #1014. A
- * fresh world only ever sees the current layout, so the seed output is right.
- * A world that was seeded under an older layout and then re-seeded is not: its
- * sectors still hang off the OLD corporation ids, or off the bare sovereign
- * issuer from before the SOE split existed. East Germany on the live world is
- * all three at once: 3 sector types on the current 0x1500 base, 5 on an
- * orphaned 0x600 base, energy at 0xc10, and 8 more still on the primary
- * national corporation with no enterprise of their own.
+ * SOE ids derive from a per-country hex base plus the sector's `CORPORATION_TYPES`
+ * ordinal, and that base has changed. A re-seed of a world seeded under an older
+ * layout leaves sectors on stale owners, so a naive
+ * `{ corporationId, stateId, sectorType }` upsert can never match one and INSERTS a
+ * duplicate producing row, double-counting supply, capacity and workers.
  *
- * Every call site used to upsert sectors on
- * `{ corporationId, stateId, sectorType }`. That filter can never match a
- * sector living under a stale owner, so a re-seed INSERTED a second producing
- * document for the same region and sector type. Two rows for one real sector
- * double-count supply, capacity, and workers for the whole country.
- *
- * So: re-point first, then upsert. A sector is only ever moved when its current
- * owner is another COUNTRY-OWNED corporation of the SAME country, which is why
- * the stale-owner set is read back from the database rather than guessed. A
- * player-founded or nationalised corporation is never a candidate, so this can
- * not take a sector away from anyone who holds one.
- *
- * Re-pointing is skipped when the canonical owner already has that
- * (region, sector type) row, because moving the stale row on top of it would
- * recreate the duplicate this exists to prevent. Such a stale leftover is
- * reported by `verifyCommandEconomySeed` rather than deleted here: the seeder
- * does not destroy producing history.
+ * So: re-point first, then upsert. A sector is moved only when its current owner is
+ * another COUNTRY-OWNED corporation of the SAME country (read back from the DB, not
+ * guessed), so no player or nationalised corp loses a sector. Re-pointing is skipped
+ * when the canonical owner already has that (region, sector type) row, to avoid
+ * recreating the duplicate; such leftovers are reported, not deleted.
  */
 export async function upsertCountryOwnedCorpEntries(
   db: Db,
@@ -68,11 +50,9 @@ export async function upsertCountryOwnedCorpEntries(
   await db.collection<Corporation>("corporations").bulkWrite(corpOps, { ordered: true });
   result.corporations = corpOps.length;
 
-  // Only a corporation this seed run gives producing sectors to is a legitimate
-  // sector owner. The bare sovereign issuer is emitted with `sectors: []`, so it
-  // counts as a stale owner here even though its id is current: sectors sitting
-  // on it are the pre-SOE-split shape, exactly what `verifyCommandEconomySeed`
-  // reports as `sectorsOnPrimaryCorp`.
+  // Only corporations that get producing sectors this run are legitimate
+  // sector owners. The bare sovereign issuer has `sectors: []`, so sectors
+  // on it are the pre-SOE-split shape (`sectorsOnPrimaryCorp`).
   const canonicalSectorOwnerIds = new Set(
     entries
       .filter((entry) => entry.sectors.length > 0)

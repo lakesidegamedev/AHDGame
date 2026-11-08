@@ -1,14 +1,9 @@
 /**
- * Sovereign default — crisis auto-action timer.
+ * Sovereign default crisis auto-action timer.
  *
- * When a player-controlled executive has not proposed a resolution within the
- * 12-hour window (EXECUTIVE_DECISION_HOURS), `crisisAutoActionAt` is set on
- * the federalBudget document at crisis-fire time. This module is called each
- * bond turn to detect expired timers and auto-trigger Repudiate as the safety
- * net — keeping countries from getting permanently stuck in `crisisPending`.
- *
- * Design reference: docs/plans/archive/2026-05/2026-05-04-sovereign-default-design.md
- * Section 6.1 (auto-repudiate fallback).
+ * If a player executive has not acted within EXECUTIVE_DECISION_HOURS of
+ * crisis fire, auto-trigger Repudiate so countries cannot stay stuck in
+ * `crisisPending`.
  */
 
 import type { Db } from "mongodb";

@@ -1,14 +1,15 @@
 /**
- * Unmanned-default capture shield (2026-06-18 D3).
+ * Unmanned-default capture shield.
  *
  * Reduces the effect of actions that ATTACK a target party's metrics (the
- * Build Org rival-poach, Suppression) when the target is a *default* party with
- * no active human chair — i.e. an abandoned DEM/REP-style stronghold. Without
- * this, a PS-rich rival can grind an unmanned default party's Org/turnout to
- * nothing, eroding the baseline two-party landscape new players rely on.
+ * Build Org rival-poach, Suppression) when the target is a *default* party
+ * with no active human chair, i.e. an abandoned DEM/REP-style stronghold.
+ * Without this, a PS-rich rival can grind an unmanned default party's
+ * Org/turnout to nothing, eroding the baseline two-party landscape new players
+ * rely on.
  *
  * Keyed on the national party chair (`isUnmannedDefault`). Applies only to the
- * reduction inflicted on the target (the poach slice) — never to the share a
+ * reduction inflicted on the target (the poach slice), never to the share a
  * party draws from the Unaffiliated pool.
  */
 import type { Db, ObjectId } from "mongodb";

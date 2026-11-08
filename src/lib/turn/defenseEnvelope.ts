@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { DEFENSE_ENVELOPE_FALLBACK_GDP_FRACTION } from "@/lib/constants/military";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 /** The budget fields the defence-line cascade reads. */
 export type DefenseLineSource = Pick<
@@ -33,6 +34,6 @@ export function resolveDefenseLineFrom(budget: DefenseLineSource | null): number
 
 /** DB-reading form of {@link resolveDefenseLineFrom}. */
 export async function resolveDefenseLine(db: Db, countryId: string): Promise<number> {
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ countryId });
+  const budget = await (await getFederalBudgetCollection(db)).findOne({ countryId });
   return resolveDefenseLineFrom(budget);
 }

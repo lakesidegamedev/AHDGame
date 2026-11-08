@@ -42,7 +42,7 @@ describe("resolveMatureWarPoles", () => {
   });
 
   it("finalizes a stamped pole once the war reaches 24 turns", async () => {
-    const result = await resolveMatureWarPoles(seed([war()]) as unknown as Db, TURN, true);
+    const result = await resolveMatureWarPoles(seed([war()]) as unknown as Db, TURN);
 
     expect(result).toEqual({ finalized: 1 });
     expect(finalizePoleVictory).toHaveBeenCalledWith(
@@ -55,7 +55,7 @@ describe("resolveMatureWarPoles", () => {
 
   it("does not finalize an early pole", async () => {
     const young = war({ startTurn: TURN - MIN_NON_PROXY_WAR_TURNS + 1 });
-    const result = await resolveMatureWarPoles(seed([young]) as unknown as Db, TURN, true);
+    const result = await resolveMatureWarPoles(seed([young]) as unknown as Db, TURN);
 
     expect(result).toEqual({ finalized: 0 });
     expect(finalizePoleVictory).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("resolveMatureWarPoles", () => {
 
   it("does not convert an unstamped starting pole into a victory", async () => {
     const untouched = war({ poleSide: undefined, poleSinceTurn: undefined });
-    const result = await resolveMatureWarPoles(seed([untouched]) as unknown as Db, TURN, true);
+    const result = await resolveMatureWarPoles(seed([untouched]) as unknown as Db, TURN);
 
     expect(result).toEqual({ finalized: 0 });
     expect(finalizePoleVictory).not.toHaveBeenCalled();
@@ -71,23 +71,15 @@ describe("resolveMatureWarPoles", () => {
 
   it("re-checks the current control against the stored stamp", async () => {
     const pushedOff = war({ control: 99 });
-    await resolveMatureWarPoles(seed([pushedOff]) as unknown as Db, TURN, true);
+    await resolveMatureWarPoles(seed([pushedOff]) as unknown as Db, TURN);
 
     expect(finalizePoleVictory).not.toHaveBeenCalled();
   });
 
   it("counts only a transition whose atomic claim succeeded", async () => {
     finalizePoleVictory.mockResolvedValue(null);
-    const result = await resolveMatureWarPoles(seed([war()]) as unknown as Db, TURN, true);
+    const result = await resolveMatureWarPoles(seed([war()]) as unknown as Db, TURN);
 
     expect(result).toEqual({ finalized: 0 });
-  });
-
-  it("does nothing while conflicts are disabled", async () => {
-    const result = await resolveMatureWarPoles(seed([war()]) as unknown as Db, TURN, false);
-
-    expect(result).toEqual({ finalized: 0 });
-    expect(finalizePoleVictory).not.toHaveBeenCalled();
-    expect(db.collectionMocks.conflicts.find).not.toHaveBeenCalled();
   });
 });

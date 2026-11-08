@@ -1,5 +1,5 @@
 /**
- * Advertising agreement persistence shell (issue #2235).
+ * Advertising agreement persistence shell.
  *
  * Standalone-Mongo design: every mutation is a single-document write, no
  * sessions, no transactions. Propose is one insertOne; accept/counter/cancel

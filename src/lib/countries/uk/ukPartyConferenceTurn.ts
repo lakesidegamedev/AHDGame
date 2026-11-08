@@ -9,17 +9,17 @@ import {
   ensureNppPlatformProposal,
   postConferenceNews,
   resolveConference,
-} from "@/lib/uk/conference/conferenceCommands";
+} from "@/lib/countries/uk/conference/conferenceCommands";
 import {
   conferenceHistoryEntry,
   getOrSeedConference,
   pushConferenceHistory,
-} from "@/lib/uk/conference/conferenceStore";
+} from "@/lib/countries/uk/conference/conferenceStore";
 import {
   conferenceOpensAtTurn,
   conferenceVotingClosesTurn,
   conferenceYearForTurn,
-} from "@/lib/uk/conference/rules";
+} from "@/lib/countries/uk/conference/rules";
 
 export interface UkPartyConferenceTurnResult {
   scheduled: number;

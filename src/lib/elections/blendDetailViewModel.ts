@@ -284,13 +284,10 @@ function quotaSplit(rows: Row[], quota: number | null) {
   if (!quota || quota <= 0) return null;
   const out = new Map<string, { whole: number; remainderSeats: number; remainder: number }>();
   for (const r of rows) {
-    // A candidate can clear more quotas than they hold seats because the
-    // eligibility gate excluded some candidates, so the printed
-    // count is capped at the seats actually won. The remainder MUST then be
-    // measured against that same capped count, or the sentence contradicts
-    // itself: ticket #1276 reported "192,814 votes buys 1 whole quota at
-    // 24,520 each, leaving a remainder of 21,174", where 21,174 is what is
-    // left after seven quotas, not one. Invariant: votes = whole*quota + remainder.
+    // The printed whole count is capped at seats actually won, because the
+    // eligibility gate can leave a candidate with more quotas than seats.
+    // The remainder MUST be measured against that same capped count or the
+    // sentence contradicts itself. Invariant: votes = whole*quota + remainder.
     const whole = Math.min(Math.floor(r.votes / quota), r.seats);
     out.set(r.c.id, {
       whole,

@@ -37,7 +37,7 @@ import { releaseCharacterHeldIndexFundPositionsToFloat } from "@/lib/indexFunds/
 import { listCharacterPositions } from "@/lib/indexFunds/fundQueries";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { createCommonsVacancy } from "@/lib/uk/elections/commonsVacancyShell";
+import { createCommonsVacancy } from "@/lib/countries/uk/elections/commonsVacancyShell";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { deriveHighestOffice } from "@/lib/character/deriveHighestOffice";

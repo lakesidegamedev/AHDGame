@@ -81,7 +81,6 @@ async function main() {
           currentYear: 1993,
           currentTurn: 96,
           eraSystemEnabled: true,
-          redistrictingEnabled: family.name === "districted_house",
         });
         await db
           .collection("gameConfig")

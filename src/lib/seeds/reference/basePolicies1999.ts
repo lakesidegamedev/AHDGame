@@ -6,27 +6,11 @@
  */
 
 /**
- * US national + regional base policy positions for the 1999-default preset
- * (late-1999 / 106th Congress). Calibrated to real-world 1999 policy:
- *
- *   US — Clinton 2nd term, 106th Congress (Republican House under Hastert +
- *     Republican Senate; New Democrat triangulation). Defining 1999 anchors:
- *       - Budget SURPLUS (Balanced Budget Act 1997); "save Social Security
- *         first" — bipartisan fiscal restraint, debt paydown
- *       - Welfare reform (PRWORA 1996): work requirements, food-stamp cuts — a
- *         rightward safety-net move under a Democratic president
- *       - NAFTA (1994) / WTO (1995) / PNTR debate — New Democrat free trade
- *       - Gramm-Leach-Bliley (Nov 1999) repealed Glass-Steagall — financial
- *         DEREGULATION; Telecom Act 1996 deregulation
- *       - Federal Assault Weapons Ban (1994–2004) IN EFFECT + Brady Bill — the
- *         high-water mark of federal gun control (LEFT of every later era)
- *       - Roe INTACT; Clinton vetoed partial-birth bans (pro-choice federal posture)
- *       - DOMA (1996) + Don't Ask Don't Tell — same-sex marriage federally barred
- *       - Post-Cold-War defense drawdown — the "peace dividend" (defense share low)
- *       - H-1B cap raised (ACWIA 1998) for the tech boom; NVRA "Motor Voter" (1993)
- *       - 1993 OBRA top marginal rate 39.6% (higher than the later Bush-cut era)
- *
- * Tax `optionIndexes` reflect the post-OBRA-1993 / pre-Bush-cut rate regime.
+ * US base policy for the 1999 preset. Calibrated to 1999 real-world: balanced
+ * budget surplus, post-PRWORA welfare restraint, NAFTA/WTO free trade,
+ * Glass-Steagall repeal, assault weapons ban in force, Roe intact, DOMA/DADT,
+ * post-Cold-War defense drawdown. Tax optionIndexes reflect post-1993-OBRA /
+ * pre-Bush-cut rates.
  */
 
 import type { CountryPolicyConfig } from "./basePolicies";

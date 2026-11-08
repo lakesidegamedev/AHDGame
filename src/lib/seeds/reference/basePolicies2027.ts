@@ -6,27 +6,8 @@
  */
 
 /**
- * US national + regional base policy positions for the 2027-default preset.
- * This projection holds the latest enacted modern policy configuration.
- *
- *   US — Biden administration, 118th Congress (Republican House, Democrat Senate).
- *     Key 2023 deltas vs 2019 (Trump):
- *       - IRA (Inflation Reduction Act, Aug 2022): major clean-energy investment
- *         → us_clean_energy economic shifts left (more spending / less fossil-only)
- *       - Dobbs v. Jackson (Jun 2022): Roe overturned → no federal abortion protection;
- *         conservative framing at national level (state-level divergence via stateDefault)
- *       - TCJA rates still in effect: income, corporate, payroll option indexes unchanged
- *       - ARP (American Rescue Plan, Mar 2021): expanded Child Tax Credit (expired),
- *         boosted food assistance temporarily
- *       - CHIPS Act (Aug 2022): major semiconductor/broadband/infra investment
- *       - Infrastructure Investment and Jobs Act (Nov 2021): bipartisan infra boost
- *       - Student-loan-relief executive actions (blocked by courts Jan 2023)
- *       - Border security: Title 42 ongoing through Jan 2023, elevated enforcement
- *       - No federal minimum wage increase (still $7.25, stalled in Senate)
- *       - Gun: Bipartisan Safer Communities Act signed Jun 2022 (first gun law in 30y)
- *       - Defense: $858B National Defense Authorization Act FY2023 (record)
- *
- * Tax `optionIndexes` unchanged from 2019 (TCJA rates in force throughout 2023).
+ * US base policy for the 2027 preset: holds the latest enacted modern policy
+ * (Jan 2023 Biden config). Tax optionIndexes unchanged from 2019 (TCJA rates).
  */
 
 import type { CountryPolicyConfig } from "./basePolicies";

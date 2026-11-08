@@ -10,7 +10,7 @@ vi.mock("@/lib/db/collections/gameState", () => ({
 vi.mock("@/lib/turn/parliamentaryGovernment", () => ({
   getParliamentaryCountryIds: vi.fn().mockReturnValue(["UK", "JP", "DE"]),
 }));
-vi.mock("@/lib/uk/confidence/confidenceGaugeStore", () => ({
+vi.mock("@/lib/countries/uk/confidence/confidenceGaugeStore", () => ({
   tickParliamentaryGovernmentConfidence: vi.fn(async (db: Db) => {
     await db
       .collection<Document & { _id: string }>("governmentFormations")

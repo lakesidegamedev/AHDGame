@@ -27,9 +27,8 @@ const influenceSchema = z.object({
   amountLocal: z.number().positive().max(1e15),
 });
 
-/** Player-facing copy for each refusal. Never blame the player for a closed gate. */
+/** Player-facing copy for each refusal. */
 const FAILURE_MESSAGE: Record<CommitPlayFailure, string> = {
-  "gate-off": "Bloc influence is not enabled in this world.",
   "no-channel": "This organization carries no influence in the current era.",
   "unknown-target": "That nation has no alignment on record.",
   "target-locked": "That nation is locked to its bloc — influence cannot move it.",

@@ -2,36 +2,17 @@
  * Ukraine (Ukrainian SSR) Layer-1 census (1953), one entry per macro-region.
  * ethnicity: ukrainian (titular) / russian / other. Each dim sums 100.
  *
- * SEED INDEPENDENCE - DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1953 directly, keyed to the region `_id` values in
- * uaRegions1953.ts (the same codes the 1979 bundle uses).
+ * SEED INDEPENDENCE - DO NOT DERIVE FROM ANOTHER ERA. Keyed to region `_id`
+ * in uaRegions1953.ts.
  *
- * Key 1953 anchors (vs 1979):
- * - Urbanisation is roughly a third republic-wide against ~61% in 1979, and it
- *   is concentrated almost entirely in the Donbas and the Dnieper belt. The
- *   west and Podolia are village societies with market towns.
- * - Education is thin and rural. Compulsory seven-year schooling was only
- *   restored across the republic after the war and higher education sits at
- *   1-3% of adults; the technical and trade (FZO/remeslennye) streams that
- *   staff the mines and mills are being built out under the Fifth Five-Year
- *   Plan, so vocational shares are highest exactly where the plan is spending.
- * - Age carries two scars, not one: the war removed a large slice of the mid
- *   and mature cohorts and skewed them female, and the 1946-47 famine cut into
- *   the youngest. The young share is still high because the postwar recovery
- *   in births is under way, but it is not the clean baby boom Poland has.
- * - Income is administratively compressed and the 1947 currency reform wiped
- *   what private savings the war had left, so `high` is a rounding error
- *   everywhere.
- * - Ethnicity: the 1959 census (the nearest hard count) gives 76.8% Ukrainian,
- *   16.9% Russian. The Russian share is a function of industry - Donbas is
- *   close to evenly split and the Dnieper belt is a quarter Russian, because
- *   cadre and labour recruitment ran along the coal and steel. The west is
- *   overwhelmingly Ukrainian and would be more so were it not for the
- *   Transcarpathian Hungarians and Bukovinian Romanians in `other`; its Poles
- *   were transferred out in 1944-46 and its Jewish population was destroyed.
- *   In the south `other` carries the Bessarabian Bulgarians, Moldovans and
- *   the Odesa Greeks - the Crimean Tatars had been deported in 1944, and in
- *   any case Crimea is still an RSFSR oblast until February 1954.
+ * 1953 anchors: urbanisation ~1/3, concentrated in Donbas and Dnieper belt;
+ * education thin and rural with vocational build-out under the Fifth
+ * Five-Year Plan; age scarred by war and the 1946-47 famine; income
+ * administratively compressed. Ethnicity near the 1959 count (76.8%
+ * Ukrainian, 16.9% Russian); Russian share tracks industry; west
+ * overwhelmingly Ukrainian with Hungarian and Romanian minorities; south
+ * carries Bessarabian Bulgarians, Moldovans, Odesa Greeks. Crimea is RSFSR
+ * until 1954.
  */
 export const uaRegionCensusData1953 = {
   UKR_KYI: {

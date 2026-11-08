@@ -6,7 +6,7 @@ import {
   sharedPoolFromRows,
   UK_CENTRAL_POSITION_IDS,
   type UkMinisterialRoleSlot,
-} from "@/lib/uk/dualMinistry/rules";
+} from "@/lib/countries/uk/dualMinistry/rules";
 import type { Migration, MigrationResult } from "../types";
 
 export const UK_DUAL_MINISTRY_ROLE_SLOT_INDEX = "cabinetMembers_countryId_characterId_roleSlot";

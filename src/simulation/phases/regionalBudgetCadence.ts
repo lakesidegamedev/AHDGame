@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * Regional budgets run every other turn.
  *
@@ -26,7 +28,7 @@ export const REGIONAL_BUDGET_PHASE_SLOTS: Readonly<Record<string, number>> = {
 };
 
 export function resolveRegionalBudgetCadence(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = serverEnv()
 ): number {
   const raw = env.AHD_REGIONAL_BUDGET_EVERY_TURNS;
   const parsed = raw === undefined || raw === "" ? REGIONAL_BUDGET_EVERY_TURNS : Number(raw);

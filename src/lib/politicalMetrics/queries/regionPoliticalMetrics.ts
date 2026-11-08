@@ -267,10 +267,8 @@ export async function loadRegionPoliticalMetrics(
     const cabinet = cabinetContributionsFor(regionDoc, metricId);
     // Mirrors the turn phase's lazy self-heal: a doc without residuals derives
     // its structural gap from the composed law target, so the panel agrees with
-    // what the engine would compute on its next touch. Shared derivation, so
-    // that stays true — this used to omit the region's own supplement and read
-    // 0.5 x supplement high for the turn after a region changed country, which
-    // is exactly when a board has no residuals to show.
+    // what the engine would compute on its next touch. Shared derivation keeps
+    // this true; omitting the region's own supplement reads high.
     const residual =
       regionDoc.residuals?.[metricId] ??
       structuralResidual(

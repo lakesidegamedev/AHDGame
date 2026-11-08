@@ -1,20 +1,9 @@
 /**
- * Canonical definition of an eligible tradable stock-exchange listing (#2033).
- *
- * A snapshot row is a *listing* (a visible operating firm) but only a subset
- * of rows are *tradable securities*. State enterprises with no issued shares
- * and no public float cannot trade, cannot carry a two-sided book, and must
- * not dilute securities breadth metrics. They stay visible as firms; they
- * leave every tradable denominator and numerator.
- *
- * Snapshot rows are already scoped to public, exchange-visible corporations
- * (the builder filters `isPrivate` / `hiddenFromExchange`, and dissolved
- * corporations are deleted, so they never appear as current rows). The only
- * remaining issuance signal on the row itself is shares vs float, which is
- * what this predicate checks. Every consumer (snapshot builder, vital-signs
- * metrics, UI) imports this module: do not re-derive the rule locally.
- *
- * Pure data-in/data-out so the rule ports to any future host unchanged.
+ * Canonical eligibility for a tradable stock-exchange listing. Snapshot rows
+ * are public, exchange-visible corporations, but state enterprises with no
+ * issued shares or float are not tradable and must exit every securities
+ * metric while staying visible as firms. The only row-level issuance signal
+ * is shares vs float. All consumers import this; do not re-derive the rule.
  */
 export interface TradabilitySlice {
   totalShares?: number | null;

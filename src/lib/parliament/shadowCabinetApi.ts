@@ -26,7 +26,7 @@ import type { Character, PoliticalParty } from "@/lib/db/types";
 import type { ShadowCabinetAppointment } from "@/lib/db/types/party";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { resolveOppositionLeaderForCountry } from "@/lib/parliament/oppositionLeader";
-import { getEligibleCabinetCharacters } from "@/lib/uk/cabinetEligibility";
+import { getEligibleCabinetCharacters } from "@/lib/countries/uk/cabinetEligibility";
 
 const appointSchema = z.object({
   positionId: z.string(),

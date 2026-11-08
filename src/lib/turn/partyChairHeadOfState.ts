@@ -20,6 +20,8 @@ import {
   ALL_COUNTRY_IDS,
   type CountryId,
 } from "@/lib/constants/countries";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 export type ChairSyncAction =
   "noop" | "seated" | "replaced" | "vacated" | "skipped_no_ruling_party" | "skipped_no_office";
@@ -48,7 +50,7 @@ async function findRulingParty(
   countryId: CountryId,
   preset?: string
 ): Promise<PoliticalParty | null> {
-  const coll = db.collection<PoliticalParty>("politicalParties");
+  const coll = await getPoliticalPartiesCollection(db);
   const ruling = await coll.findOne({ countryId, regimeStatus: "ruling" });
   if (ruling) return ruling;
   const seeded = getCountryConfig(countryId, preset).rulingPartyId;
@@ -82,7 +84,7 @@ export async function syncPartyChairHeadOfState(
   const rulingParty = await findRulingParty(db, countryId, preset);
   if (!rulingParty) return { countryId, action: "skipped_no_ruling_party" };
 
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = await getElectedOfficialsCollection(db);
   const currentRow = await officials.findOne({ countryId, officeType });
   const chairId = rulingParty.chairId ?? null;
 

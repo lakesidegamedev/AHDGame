@@ -35,14 +35,6 @@ export function InfluenceTab({
   // so they read in the viewer's currency.
   const fundAmount = useFundFormatter(view);
 
-  if (!view.enabled) {
-    return (
-      <Panel>
-        <p className="text-body-sm text-muted">Bloc influence is not enabled in this world.</p>
-      </Panel>
-    );
-  }
-
   if (!view.channel) {
     return (
       <Panel>

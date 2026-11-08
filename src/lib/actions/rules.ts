@@ -830,9 +830,6 @@ export { DEBATE_PREP_SUCCESS_CHANCE };
 /** Debate skill points gained on a successful Debate Prep attempt. */
 export const DEBATE_PREP_DEBATE_GAIN = 1;
 
-/** Rejection when the RPG stat system flag is off. Mirrors the execute gate. */
-export const DEBATE_PREP_DISABLED_ERROR = "The stat system is not currently enabled.";
-
 /** Rejection when the character has no allocated stat block. Mirrors the execute gate. */
 export const DEBATE_PREP_UNALLOCATED_ERROR = "Allocate your stats before using Debate Prep.";
 
@@ -845,16 +842,6 @@ export const DEBATE_PREP_UNALLOCATED_ERROR = "Allocate your stats before using D
 export interface DebatePrepQuoteActor {
   debate?: number | null;
   hasStats?: boolean;
-}
-
-/**
- * Host-supplied context the rules cannot read themselves: the async RPG-stats
- * feature flag. Omitted (or true) skips the flag leg for callers that cannot
- * know it (canPerformAction, UI quotes); the execute shell always passes the
- * resolved value. Explicit false rejects, mirroring the execute gate.
- */
-export interface DebatePrepQuoteOptions {
-  rpgStatsEnabled?: boolean;
 }
 
 /**
@@ -874,13 +861,7 @@ export type DebatePrepQuote =
     }
   | { ok: false; error: string };
 
-export function quoteDebatePrepAction(
-  actor: DebatePrepQuoteActor,
-  options?: DebatePrepQuoteOptions
-): DebatePrepQuote {
-  if (options?.rpgStatsEnabled === false) {
-    return { ok: false, error: DEBATE_PREP_DISABLED_ERROR };
-  }
+export function quoteDebatePrepAction(actor: DebatePrepQuoteActor): DebatePrepQuote {
   if (!actor.hasStats) {
     return { ok: false, error: DEBATE_PREP_UNALLOCATED_ERROR };
   }

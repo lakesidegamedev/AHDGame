@@ -17,7 +17,7 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(async () => memory),
   resolveMongoDbName: vi.fn(() => "test"),
 }));
-vi.mock("@/lib/env", () => ({ getValidatedEnv: vi.fn(() => ({})) }));
+vi.mock("@/lib/config/validatedEnv", () => ({ getValidatedEnv: vi.fn(() => ({})) }));
 vi.mock("@/lib/world/careerEvidence", () => ({
   loadCareerLegislation: vi.fn(async () => []),
   archiveRetiredCareerLegislation: vi.fn(async () => undefined),

@@ -5,7 +5,7 @@ import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
  * vote at this stage — Westminster's legislative consent comes later as a
  * Commons bill at the conversion stage (alongside Ireland's Dáil bill).
  *
- * See docs/superpowers/specs/2026-06-16-independence-process-design.md §6.
+ * See the independence-process design.
  */
 import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";

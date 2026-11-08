@@ -21,6 +21,7 @@ import {
   migrateSingleplayerWorld,
   stampSingleplayerBaseline,
 } from "@/lib/migrations/singleplayerMigrations";
+import { serverEnv } from "@/lib/config/read";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -34,7 +35,7 @@ import {
  * The launcher sets `SINGLEPLAYER_HOME`; the default matches what it uses
  * when nothing is configured so both sides agree without coordination.
  */
-export function singleplayerHomeDir(env: Record<string, string | undefined> = process.env): string {
+export function singleplayerHomeDir(env: Record<string, string | undefined> = serverEnv()): string {
   const configured = env.SINGLEPLAYER_HOME?.trim();
   if (configured) return path.resolve(configured);
   return path.join(os.homedir(), ".a-house-divided");
@@ -43,11 +44,11 @@ export function singleplayerHomeDir(env: Record<string, string | undefined> = pr
 /** Written by a save-load request; the next start of the world applies it. */
 export const RESTORE_MARKER_FILE = "restore-pending.json";
 
-export function hasPendingRestore(env: Record<string, string | undefined> = process.env): boolean {
+export function hasPendingRestore(env: Record<string, string | undefined> = serverEnv()): boolean {
   return existsSync(path.join(singleplayerHomeDir(env), RESTORE_MARKER_FILE));
 }
 
-export function singleplayerCdnDir(env: Record<string, string | undefined> = process.env): string {
+export function singleplayerCdnDir(env: Record<string, string | undefined> = serverEnv()): string {
   return path.join(singleplayerHomeDir(env), "cdn");
 }
 

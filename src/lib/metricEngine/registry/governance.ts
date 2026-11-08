@@ -100,13 +100,12 @@ export const devolutionSatisfactionNode: RegistryNode = {
 };
 
 // NOTE: `governance.independenceDesire` is intentionally NOT a metric-engine node.
-// The UK SCO/WAL/NIR First Minister "Independence/Reunification Desire" is owned
-// solely by the dedicated per-turn drift engine
+// It is owned solely by the per-turn drift engine
 // (src/lib/turn/independenceDesireDrift.ts), which carries the policy / approval /
-// inflation / mean-reversion drivers and the Devolution-tab UI. A metric-engine node
-// here previously co-wrote the same field and re-rounded it to 1 decimal every turn,
-// cancelling the drift engine's sub-0.1 increments and freezing the value (a
-// metastable fixed point at X.95). See docs/design/uk-independence-desire-ownership-fix.md.
+// inflation / mean-reversion drivers and the Devolution-tab UI. A metric-engine
+// node here would re-round the field to 1 decimal every turn, cancelling the
+// drift engine's sub-0.1 increments and freezing the value (a metastable fixed
+// point at X.95).
 
 // IE seeds 42 (RoI rows) – 58.
 export const unityReferendumSupportNode: RegistryNode = {

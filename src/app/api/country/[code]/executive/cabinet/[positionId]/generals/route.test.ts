@@ -34,7 +34,6 @@ describe("POST commission a general", () => {
     db.collection("characters");
     db.collection("characterGenerals");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
@@ -129,7 +128,6 @@ describe("POST commission a general", () => {
 
   it("403s a non-holder non-admin", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: false,
       currentTurn: 40,
     });
     vi.mocked(requireAuth).mockResolvedValue({
@@ -141,9 +139,8 @@ describe("POST commission a general", () => {
     expect(res.status).toBe(403);
   });
 
-  it("commissions a general when conflicts is disabled", async () => {
+  it("commissions a general", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: false,
       currentTurn: 40,
     });
     const { POST } = await import(ROUTE);

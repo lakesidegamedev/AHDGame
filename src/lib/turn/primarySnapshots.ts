@@ -69,6 +69,8 @@ import {
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
 import { planTurnSlice, type TurnSlicePart } from "@/lib/electionEngine/rules/turnSlice";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -89,8 +91,9 @@ export async function recordPrimarySnapshots(
   const early = options?.slice === "early";
 
   // Elections still in their primary phase — turn-first with Date fallback.
-  const activeElections = await db
-    .collection<Election>("elections")
+  const activeElections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       ...scopeFilter(scope),
       status: { $in: ["upcoming", "active"] },
@@ -145,8 +148,7 @@ export async function recordPrimarySnapshots(
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
     uniqueSnapshotRegionKeys.size > 0
-      ? db
-          .collection<State>("states")
+      ? (await getStatesCollection(db))
           .find({
             $or: [...uniqueSnapshotRegionKeys].map((key) => {
               const [countryId, regionId] = key.split(":");

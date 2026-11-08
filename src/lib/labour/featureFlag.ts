@@ -2,12 +2,12 @@ import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 
 /**
- * Labour/Unions system rollout mode. Graduated and ordered — each tier is a
- * superset of the previous one. See docs/plans/2026-06-30-labour-system.md.
+ * Labour/Unions system rollout mode. Graduated and ordered: each tier is a
+ * superset of the previous one.
  *
- * The enum, its order and the tier comparisons live in `@/lib/labour/modes`
+ * The enum, its order and tier comparisons live in `@/lib/labour/modes`
  * (pure, no Mongo) and are re-exported here so existing importers are
- * unaffected. Mirrors the market/modes split.
+ * unaffected.
  */
 export {
   LABOUR_MODE_ORDER,

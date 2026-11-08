@@ -256,7 +256,7 @@ export function StatusBar({
   // client-routed session every world-state flag it carries is frozen for the
   // whole visit — a settlement crisis that closed on the tick left "The German
   // Question" in the World menu until a hard reload. Same latent staleness for
-  // `conflictsEnabled` and `unionsEnabled`; those just change far more rarely.
+  // `unionsEnabled`; that just changes far more rarely.
   const prevTurnRef = useRef<number | null>(null);
   useEffect(() => {
     const turn = gameState?.currentTurn;

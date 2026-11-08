@@ -75,7 +75,7 @@ import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import {
   readApprovalForResignation,
   resignNppCaretakerMinister,
-} from "@/lib/uk/cabinet/nppResignation";
+} from "@/lib/countries/uk/cabinet/nppResignation";
 
 /** Map a position metric to its agenda domain, or null if it has no mapping. */
 function domainForMetric(category: string, metricId: string): string | null {

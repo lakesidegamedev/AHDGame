@@ -7,10 +7,9 @@ import { activeProcurementRestriction } from "@/lib/db/collections/procurementRe
 /**
  * Temporary freeze on NEW defence procurement.
  *
- * Reads `gameState.defenceProcurementPaused` off the singleton `_id: "current"` doc - the
- * same projection pattern `battleAuthz` uses for `conflictsEnabled`, deliberately NOT filtered
- * on `isActive` (that field is frequently false on the current doc and is not what gates a
- * flag).
+ * Reads `gameState.defenceProcurementPaused` off the singleton `_id: "current"` doc,
+ * deliberately NOT filtered on `isActive` (that field is frequently false on the current doc
+ * and is not what gates a flag).
  *
  * When true, the two routes that create a NEW delivery obligation refuse: awarding a contract
  * and a CEO accepting a pending offer. Everything already active is untouched - the delivery

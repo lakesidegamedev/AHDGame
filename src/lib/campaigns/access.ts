@@ -31,11 +31,9 @@ export async function isCampaignNomineeUser(
  *
  * The running mate is stored as `runningMateId` on the ticket's active
  * ElectionCandidate row (the nominee's row); the mate has no candidate row of
- * their own. This resolves that row, reads the running mate character, and
- * compares ownership. NPP tickets never have a player running mate, so they
- * return false. Presence of an `activeCharacterId` matching the running mate is
- * a fast path (the authenticated character is the mate); the DB ownership match
- * is the authoritative fallback.
+ * their own. NPP tickets never have a player running mate, so return false.
+ * An `activeCharacterId` matching the running mate is a fast path; the DB
+ * ownership match is authoritative.
  */
 export async function isCampaignRunningMateUser(
   db: Db,

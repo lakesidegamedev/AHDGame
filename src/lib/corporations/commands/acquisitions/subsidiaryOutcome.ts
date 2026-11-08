@@ -9,7 +9,7 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, GameState } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import {
   isEligibleAsSubsidiary,
@@ -30,18 +30,6 @@ import {
 
 const SYSTEM_USER_ID = "000000000000000000000000";
 
-async function subsidiaryFeatureEnabled(db: Db): Promise<boolean> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-  return state?.subsidiaryCorporationsEnabled === true;
-}
-
-/** Whether the world allows subsidiary-mode acquisitions at all (UI discovery). */
-export function isSubsidiaryAcquisitionAvailable(db: Db): Promise<boolean> {
-  return subsidiaryFeatureEnabled(db);
-}
-
 /**
  * Resolve every fact the subsidiary outcome is judged on. One cap-table read of
  * the corporation graph (the same projection the formalize and purchase-time
@@ -52,16 +40,10 @@ async function gatherFacts(
   acquirer: Corporation,
   target: Corporation
 ): Promise<SubsidiaryAcquisitionFacts> {
-  const [featureEnabled, allCorps] = await Promise.all([
-    subsidiaryFeatureEnabled(db),
-    db
-      .collection<Corporation>("corporations")
-      .find(
-        {},
-        { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } }
-      )
-      .toArray(),
-  ]);
+  const allCorps = await db
+    .collection<Corporation>("corporations")
+    .find({}, { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
+    .toArray();
 
   const targetParent = getControllingCorporateParent(target);
   const targetControlsOthers = allCorps.some((corp) => {
@@ -88,7 +70,6 @@ async function gatherFacts(
   }
 
   return {
-    featureEnabled,
     acquirerStateOwned: acquirer.countryOwnerId != null || acquirer.ownershipState === "stateOwned",
     acquirerIsFormalizedSubsidiary: acquirer.subsidiaryFormalizedAtTurn != null,
     targetStateOwned: !isEligibleAsSubsidiary(target),

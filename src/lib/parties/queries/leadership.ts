@@ -63,19 +63,15 @@ export async function getNationalPartyElectionState(
   // enter/vote routes enforce the same waiver server-side.
   const hasFoundingElection = activeElections.some((election) => election.founding === true);
 
-  // `canRun` retains the membership gate but intentionally NOT the 24h
-  // new-character cooldown — that's surfaced via `runCooldownUntil` instead, so
-  // the panel can render a disabled Run button with a countdown rather than
-  // hide it silently. `canVote` keeps the cooldown gate to preserve the
-  // existing "no votes during cooldown" UX (the vote routes enforce the
-  // cooldown server-side too).
+  // `canRun` keeps the membership gate but not the 24h new-character
+  // cooldown, which is surfaced via `runCooldownUntil` so the panel can show
+  // a disabled Run button with a countdown. `canVote` keeps the cooldown gate
+  // to preserve "no votes during cooldown" UX (routes enforce it server-side).
   //
-  // The election method decides who VOTES, never who runs (ticket #1291). Each
-  // method is described to players purely as an electorate rule — "Only
-  // committee members and national leadership vote, one vote each" — and the
-  // enter route enforces no method restriction at all, so gating `canRun` on it
-  // here disagreed with both the copy and the server. Under the committee
-  // method any member may stand; only the committee casts ballots.
+  // The election method decides who VOTES, never who runs. Each method is
+  // described to players purely as an electorate rule, and the enter route
+  // enforces no method restriction, so gating `canRun` on it disagreed with
+  // both the copy and the server.
   let canRun = !!isMember;
   let canVote = !!isMember;
   let runCooldownUntil: string | null = null;

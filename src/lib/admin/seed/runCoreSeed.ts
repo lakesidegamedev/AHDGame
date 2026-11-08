@@ -440,14 +440,12 @@ export async function runSeed(
     },
     "runCoreSeed:stateCensusData1953"
   );
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const layer1Positions = await isLayer1PositionsEnabled();
   const { loadEraFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-  const override = layer1Positions ? ((await loadEraFullOverride(era)) ?? undefined) : undefined;
+  const override = (await loadEraFullOverride(era)) ?? undefined;
   let seededDemographicsCount = 0;
   for (const [censusStateId, censusConfig] of Object.entries(censusBundle)) {
     const sd = registerAndGenerate(censusStateId, censusConfig, era, {
-      layer1Positions,
+      layer1Positions: true,
       positions: override?.positions,
       turnout: override?.turnout,
     });
@@ -604,8 +602,7 @@ export async function runSeed(
 
   // Congressional districts (US House redistricting model). Seeded after states
   // + parties + state-party-org so apportionment (state.houseDistricts) and
-  // registration pools are available. Idempotent; cosmetic until the
-  // redistrictingEnabled flag is turned on.
+  // registration pools are available. Idempotent.
   const districtResult = await seedCongressionalDistricts(db, { now, log });
   log(`Seeded ${districtResult.seeded} congressional districts`);
 
@@ -735,10 +732,7 @@ export async function runSeed(
   await seedTradeLanes(db, log, preset);
 
   // Opening alignments between the era's blocs, for the countries this preset
-  // contains. Deliberately NOT gated on `intOrgAlignmentEnabled`: this is the
-  // one alignment write that runs with the feature off, so enabling the gate on
-  // a live world reveals a populated map rather than blank rows. Idempotent —
-  // an existing row is never clobbered.
+  // contains. Idempotent: an existing row is never clobbered.
   const alignmentCountries = getPresetById(preset)?.countries ?? COUNTRY_ORDER;
   const alignmentsSeeded = await seedCountryAlignments(db, preset, alignmentCountries);
   log(`Country alignments seeded: ${alignmentsSeeded}`);

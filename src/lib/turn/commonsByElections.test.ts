@@ -9,9 +9,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import { createFakeCommonsDb } from "@/lib/uk/elections/commonsTestDb";
+import { createFakeCommonsDb } from "@/lib/countries/uk/elections/commonsTestDb";
 import { getUkCommonsSeats } from "@/lib/constants/states";
-import { COMMONS_BY_ELECTION_RETRY_COOLDOWN_TURNS } from "@/lib/uk/elections/commonsRecallRules";
+import { COMMONS_BY_ELECTION_RETRY_COOLDOWN_TURNS } from "@/lib/countries/uk/elections/commonsRecallRules";
 
 const NOW = new Date("2026-09-01T12:00:00Z");
 const TURN = 500;

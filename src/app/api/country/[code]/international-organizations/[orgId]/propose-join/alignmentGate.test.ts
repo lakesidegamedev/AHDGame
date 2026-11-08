@@ -75,12 +75,8 @@ const { loadOrganizationDef, isMember, hasOpenMembershipProposal, getMembers } =
 const { spendDiplomaticAction } =
   await import("@/lib/internationalOrganizations/diplomaticActions");
 
-/** db whose gameState carries the flag and whose countryAlignments carries one row. */
-function makeDb(opts: {
-  alignmentEnabled: boolean;
-  shares?: Record<string, number>;
-  nonAligned?: number;
-}) {
+/** db whose countryAlignments carries one row. */
+function makeDb(opts: { shares?: Record<string, number>; nonAligned?: number }) {
   const proposalInsert = vi.fn().mockResolvedValue({ insertedId: new ObjectId() });
   const db = {
     collection: (name: string) => ({
@@ -92,7 +88,6 @@ function makeDb(opts: {
               _id: "current",
               currentYear: 1979,
               startingYear: 1979,
-              intOrgAlignmentEnabled: opts.alignmentEnabled,
             }
           : name === "countryAlignments" && opts.shares
             ? { entityId: "DE", shares: opts.shares, nonAligned: opts.nonAligned ?? 0 }
@@ -140,7 +135,6 @@ describe("propose-join — alignment gate", () => {
   it("lets a nation past the gate apply to its own bloc", async () => {
     vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "NATO", name: "NATO" } as never);
     const { proposalInsert } = makeDb({
-      alignmentEnabled: true,
       shares: { WEST: 60, EAST: 5 },
       nonAligned: 35,
     });
@@ -152,7 +146,7 @@ describe("propose-join — alignment gate", () => {
 
   it("refuses a nation with too little of the bloc, naming the shortfall", async () => {
     vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "NATO", name: "NATO" } as never);
-    makeDb({ alignmentEnabled: true, shares: { WEST: 5, EAST: 70 }, nonAligned: 25 });
+    makeDb({ shares: { WEST: 5, EAST: 70 }, nonAligned: 25 });
 
     const res = await post("NATO");
     expect(res.status).toBe(400);
@@ -161,7 +155,7 @@ describe("propose-join — alignment gate", () => {
 
   it("refuses a nation inside the deadband, quoting the join share", async () => {
     vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "NATO", name: "NATO" } as never);
-    makeDb({ alignmentEnabled: true, shares: { WEST: 30, EAST: 18 }, nonAligned: 52 });
+    makeDb({ shares: { WEST: 30, EAST: 18 }, nonAligned: 52 });
 
     const res = await post("NATO");
     expect(res.status).toBe(400);
@@ -170,7 +164,7 @@ describe("propose-join — alignment gate", () => {
 
   it("does not spend a diplomatic action on a refused application", async () => {
     vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "NATO", name: "NATO" } as never);
-    makeDb({ alignmentEnabled: true, shares: { WEST: 5, EAST: 70 }, nonAligned: 25 });
+    makeDb({ shares: { WEST: 5, EAST: 70 }, nonAligned: 25 });
 
     await post("NATO");
     expect(vi.mocked(spendDiplomaticAction)).not.toHaveBeenCalled();
@@ -181,7 +175,6 @@ describe("propose-join — alignment gate", () => {
     // still apply. Reading `null` as ineligible would make the UN unjoinable.
     vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "UN", name: "United Nations" } as never);
     const { proposalInsert } = makeDb({
-      alignmentEnabled: true,
       shares: { WEST: 5, EAST: 70 },
       nonAligned: 25,
     });
@@ -191,22 +184,9 @@ describe("propose-join — alignment gate", () => {
     expect(proposalInsert).toHaveBeenCalled();
   });
 
-  it("imposes no condition at all when the feature gate is off", async () => {
-    vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "NATO", name: "NATO" } as never);
-    const { proposalInsert } = makeDb({
-      alignmentEnabled: false,
-      shares: { WEST: 5, EAST: 70 },
-      nonAligned: 25,
-    });
-
-    const res = await post("NATO");
-    expect(res.status).toBe(200);
-    expect(proposalInsert).toHaveBeenCalled();
-  });
-
   it("imposes no condition on a nation with no alignment row yet", async () => {
     vi.mocked(loadOrganizationDef).mockResolvedValue({ id: "NATO", name: "NATO" } as never);
-    const { proposalInsert } = makeDb({ alignmentEnabled: true });
+    const { proposalInsert } = makeDb({});
 
     const res = await post("NATO");
     expect(res.status).toBe(200);
@@ -221,7 +201,6 @@ describe("propose-join — alignment gate", () => {
       name: "Commonwealth of Nations",
     } as never);
     const { proposalInsert } = makeDb({
-      alignmentEnabled: true,
       shares: { WEST: 5, EAST: 70 },
       nonAligned: 25,
     });
@@ -239,7 +218,6 @@ describe("propose-join — alignment gate", () => {
       alignment: { poleId, accentToken: "warning" },
     } as never);
     makeDb({
-      alignmentEnabled: true,
       shares: { WEST: 20, EAST: 10, [poleId]: 55 },
       nonAligned: 15,
     });

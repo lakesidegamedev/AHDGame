@@ -1,13 +1,11 @@
 /**
- * Funded-market trade read back into a background country's macro economy (#5702).
+ * Funded-market trade read back into a background country's macro economy.
  *
- * On a funded turn a background country sells its traded supply and buys its
- * traded demand in the producer market. What it actually sold and bought is
- * recorded here as lagged fill rates, and each kernel tick moves its capacity
- * toward the exports that really found buyers: output nobody bought shrinks
- * capacity, and output that sells out grows it slowly. Only the traded share
- * responds, so a closed economy barely moves and an open one follows its
- * export markets.
+ * On a funded turn a background country sells traded supply and buys traded
+ * demand in the producer market. Actual fills are recorded as lagged rates, and
+ * each tick moves capacity toward exports that found buyers: unsold output
+ * shrinks capacity, sold-out output grows it slowly. Only the traded share
+ * responds, so closed economies barely move.
  *
  * Pure: plain data in, plain data out.
  */

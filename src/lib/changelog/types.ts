@@ -1,14 +1,8 @@
 /**
- * The changelog vocabulary, defined once.
- *
- * Badge and area values used to be spelled out in four places: these types, the
- * loader's filter sets, the CI guard, and the feed's style maps. The loader
- * dropped anything it did not recognise without a word, so an author who wrote
- * `badges: [minor]` saw a normal-looking entry locally and a red build on
- * development twenty minutes later, blocking everyone else's pull requests.
- *
- * Everything downstream now derives from these two arrays, so adding a value is
- * one edit and the compiler names every surface that still has to handle it.
+ * The changelog vocabulary, defined once. Badge and area values must live here
+ * so the loader's filter sets, CI guard, and feed style maps derive from a
+ * single source; adding a value is one edit and the compiler names every
+ * surface that must handle it.
  *
  * Badges say how big the release is. Descriptive words for what the change was
  * about ("balance", "economy", "elections") belong in `tags`, which is free

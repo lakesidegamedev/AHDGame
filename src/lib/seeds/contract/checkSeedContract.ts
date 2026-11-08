@@ -1,7 +1,8 @@
 /**
  * Runs the seed contract for a preset: coverage (every required dataset is
- * authored), the duplicate guard (no dataset is a copy of another preset's)
- * and the scale guard (money sits in bands for the preset's own economy).
+ * authored), the duplicate guard (no dataset is a copy of another preset's),
+ * the scale guard (money sits in bands for the preset's own economy) and the
+ * schemas of the generated data files.
  * Pure: reads authored data only, never the database.
  */
 
@@ -23,9 +24,10 @@ import { eraPriceLevelFor } from "@/lib/campaigns/rules/priceLevel";
 import { shouldReconcileStateGdpForPreset } from "@/lib/admin/seed/reconcileStateGdp";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
-import { PRESET_DATASETS, type PresetDataset } from "./registry";
+import { PRESET_DATASETS, simulatesRegions, type PresetDataset } from "./registry";
 import { REGION_TABLES } from "./regionTables";
 import { SeedContractError, type SeedContractGap } from "./seedContractError";
+import { checkSeedDataFiles } from "./dataFiles";
 import { DUPLICATE_SIMILARITY_THRESHOLD, numericSimilarity } from "./rules/similarity";
 import {
   checkBudgetScale,
@@ -54,10 +56,12 @@ function coverageGaps(preset: SeedPresetId): SeedContractGap[] {
 }
 
 function duplicateGap(dataset: PresetDataset, preset: SeedPresetId): SeedContractGap | null {
+  if (dataset.regionalCountry && !simulatesRegions(preset, dataset.regionalCountry)) return null;
   const own = dataset.provide(preset);
   if (isEmpty(own)) return null;
   const year = getStartingYearForPreset(preset);
-  const reduce = dataset.fingerprint ?? ((value: unknown) => value);
+  const reduce = (value: unknown) =>
+    dataset.fingerprint ? dataset.fingerprint(value, preset) : value;
   const mine = reduce(own);
   for (const other of SEED_PRESET_IDS) {
     if (getStartingYearForPreset(other) >= year) continue;
@@ -124,6 +128,7 @@ function scaleGaps(preset: SeedPresetId): SeedContractGap[] {
       });
     }
 
+    if (!simulatesRegions(preset, countryId)) continue;
     const regions = REGION_TABLES[countryId];
     const rows = regions?.seededIn.includes(preset) ? regions.table[preset] : undefined;
     if (!rows || rows.length === 0) continue;
@@ -162,7 +167,7 @@ export function checkSeedContract(preset: string): SeedContractGap[] {
   const duplicates = PRESET_DATASETS.map((dataset) => duplicateGap(dataset, id)).filter(
     (gap): gap is SeedContractGap => gap !== null
   );
-  return [...coverageGaps(id), ...duplicates, ...scaleGaps(id)];
+  return [...coverageGaps(id), ...duplicates, ...scaleGaps(id), ...checkSeedDataFiles()];
 }
 
 /** Throws `SeedContractError` listing every gap when `preset` may not seed. */

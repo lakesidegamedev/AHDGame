@@ -5,8 +5,8 @@ import { getGameState } from "@/lib/gameState";
 import { divergentDeathChance, type DivergentDeathChance } from "@/lib/scotus/tenure";
 
 /**
- * Read layer for #3598 scope item 9 (visibility). Exact UI is out of scope
- * (#3581) — these are the data functions a future page/route would call for:
+ * Read layer for visibility. Exact UI is out of scope
+ *, these are the data functions a future page/route would call for:
  *  - current Court composition (per-justice ideology, vacant seats)
  *  - full justice roster + ideology leans
  *  - history of past Docket cases and outcomes

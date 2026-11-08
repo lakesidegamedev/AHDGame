@@ -18,11 +18,6 @@ type FundState = Pick<
  * Remove references to corporations that no longer exist and reconcile each
  * fund's unitSupply to its position ledger.
  *
- * The reset manifest used to preserve `indexFunds` as reference data while it
- * wiped corporations and every indexFund* runtime collection. That retained
- * old-world holdings and unit supply but deleted both their corporations and
- * holder positions. The current world then accumulated new positions on top.
- *
  * Holdings are removed with `$pull` and supply is repaired with `$inc`, so a
  * subscription or redemption racing the migration keeps its own atomic delta.
  */

@@ -46,7 +46,6 @@ function seat(as: "hog" | "defence" | "none") {
  */
 function allyRoll(orgId: string, countries: string[]) {
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
     preset: "1953-default",
   });
@@ -87,7 +86,6 @@ beforeEach(async () => {
     db.collection(c);
   }
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
   });
   db.collectionMocks.conflicts.findOne.mockResolvedValue(null);
@@ -222,14 +220,6 @@ describe("POST declare-war", () => {
     const { POST } = await import("./route");
     const res = await POST(req(good), params);
     expect(res.status).toBe(409);
-  });
-
-  it("404s when the conflicts subsystem is off", async () => {
-    seat("hog");
-    await authAs(HOG);
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { POST } = await import("./route");
-    expect((await POST(req(good), params)).status).toBe(404);
   });
 
   it("rejects an unknown country code in the path", async () => {

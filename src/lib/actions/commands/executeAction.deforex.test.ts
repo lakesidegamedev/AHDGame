@@ -12,9 +12,6 @@ vi.mock("@/lib/gameState", () => ({
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(true),
 }));
-vi.mock("@/lib/stats/featureFlag", () => ({
-  isRpgStatsEnabled: vi.fn().mockResolvedValue(false),
-}));
 vi.mock("@/lib/achievements/triggers", () => ({
   checkActionAchievements: vi.fn().mockResolvedValue(undefined),
   checkFundsAchievements: vi.fn().mockResolvedValue(undefined),

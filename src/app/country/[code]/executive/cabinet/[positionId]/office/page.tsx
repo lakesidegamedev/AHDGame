@@ -26,7 +26,6 @@ import { MinisterialOrderPanel } from "./components/MinisterialOrderPanel";
 import { EmergencyMechanicPanel } from "./components/EmergencyMechanicPanel";
 import { ChancellorFundingPanel } from "./components/ChancellorFundingPanel";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 import {
   resolveCabinetTabs,
   isFinanceMinister,
@@ -158,8 +157,6 @@ export default function CabinetOfficePage() {
   const positionConfig = getCabinetPositions(countryId).find((p) => p.id === positionId);
   const identity = getCabinetIdentity(countryId);
 
-  const conflictsEnabled = useConflictsEnabled();
-
   // Declared above the early returns, like the hash effect below: hooks must run
   // in the same order every render. `enabled` only skips a pointless request;
   // the endpoint re-resolves the seat and is the only authority that matters.
@@ -198,7 +195,6 @@ export default function CabinetOfficePage() {
       countryId,
       positionId,
       mechanics,
-      conflictsEnabled,
       competitionQueueApplies: true,
       cabinetVersion: data.cabinetVersion,
       flagshipAvailable,
@@ -211,15 +207,7 @@ export default function CabinetOfficePage() {
           : "overview";
       return available.some((entry) => entry.id === tab) ? tab : "overview";
     });
-  }, [
-    data,
-    countryId,
-    positionId,
-    mechanics,
-    conflictsEnabled,
-    flagshipAvailable,
-    allocationsAvailable,
-  ]);
+  }, [data, countryId, positionId, mechanics, flagshipAvailable, allocationsAvailable]);
 
   // A #competition hash can select the tab before the queue has answered. If the
   // answer is that the duty does not apply here, fall back rather than leave a
@@ -304,7 +292,6 @@ export default function CabinetOfficePage() {
     countryId,
     positionId,
     mechanics,
-    conflictsEnabled,
     competitionQueueApplies: mergerQueue?.applies === true,
     cabinetVersion: data.cabinetVersion,
     flagshipAvailable,
@@ -613,7 +600,7 @@ export default function CabinetOfficePage() {
                 </>
               )}
 
-              {activeTab === "overview" && holdsForeignPortfolio && conflictsEnabled && (
+              {activeTab === "overview" && holdsForeignPortfolio && (
                 <div className="mb-4">
                   <PeacePanel
                     countryCode={countryCode}
@@ -707,7 +694,7 @@ export default function CabinetOfficePage() {
                 </>
               )}
 
-              {activeTab === "intelligence" && isIntelligence && conflictsEnabled && (
+              {activeTab === "intelligence" && isIntelligence && (
                 <IntelligenceTab
                   countryId={countryId as CountryId}
                   positionId={positionId}
@@ -716,7 +703,7 @@ export default function CabinetOfficePage() {
                 />
               )}
 
-              {activeTab === "commands" && isDefense && conflictsEnabled && (
+              {activeTab === "commands" && isDefense && (
                 <div className="mb-4">
                   <DeclareWarPanel
                     countryCode={countryCode}
@@ -729,7 +716,6 @@ export default function CabinetOfficePage() {
               {activeTab === "commands" && isDefense && (
                 <CommandsTab
                   canAct={canAct}
-                  conflictsEnabled={conflictsEnabled}
                   commands={data.commands ?? []}
                   units={(data.units ?? []) as unknown as MilitaryUnit[]}
                   commanders={data.commanders ?? []}
@@ -743,7 +729,7 @@ export default function CabinetOfficePage() {
                 />
               )}
 
-              {activeTab === "doctrine" && isDefense && conflictsEnabled && (
+              {activeTab === "doctrine" && isDefense && (
                 <DoctrineTab
                   currentEra={data.doctrineEra}
                   doctrine={data.doctrine ?? { adopted: {}, points: 0 }}

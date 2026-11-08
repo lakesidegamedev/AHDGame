@@ -52,7 +52,7 @@ export interface ApplyCharacterPartyJoinArgs {
  *
  * Shared by the immediate "open" join path (`join/route.ts`) and the
  * leader-approved "approval" accept path (`join-requests/route.ts`, suggestion
- * #72) so both stay in exact lockstep. Callers must have already run the
+ * ) so both stay in exact lockstep. Callers must have already run the
  * country / already-member / switch-cooldown / purge-block guards — this
  * function only performs the mutations.
  */
@@ -188,7 +188,7 @@ export async function applyCharacterPartyJoin(
         // Caucuses are scoped to a single (countryId, partyId). Switching parties
         // without going independent must drop old-party caucus membership the same
         // way leave does — otherwise factionId/membership linger and block founding
-        // or joining a caucus in the new party (ticket #1030 / leave fix #0552).
+        // or joining a caucus in the new party.
         const caucusCleanup = await cleanupCaucusParticipationForCharacters(db, [character._id], {
           removeMembership: true,
           membershipStatus: "left",

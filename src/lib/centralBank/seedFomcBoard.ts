@@ -46,10 +46,9 @@ export async function seedFomcBoards(
     const countryId = bank.countryId as CountryId;
 
     // The committee is the US Federal Reserve's institution. Other central banks
-    // run the single-governor / government model, so they must never be seeded a
-    // board — doing so gave every "independent" bank a US-shaped technocrat
-    // committee that then blocked its own government/legislative rate-setting
-    // path (#1195). Gate on the bank's home country, not the viewing country.
+    // use the single-governor / government model and must never be seeded a board,
+    // or it blocks their own government/legislative rate-setting. Gate on the
+    // bank's home country, not the viewing country.
     if (!FOMC_COMMITTEE_COUNTRY_IDS.has(bank.countryId)) continue;
 
     // No committee for a bank the government controls: the MPC was CREATED by

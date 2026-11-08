@@ -8,7 +8,7 @@ import type {
   CommonsVacancyDto,
   CommonsVacancyStatus,
   RecallPetitionDto,
-} from "@/lib/uk/elections/commonsVacancyStatus";
+} from "@/lib/countries/uk/elections/commonsVacancyStatus";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
 

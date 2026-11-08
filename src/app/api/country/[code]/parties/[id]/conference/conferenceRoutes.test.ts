@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createFakeLeadershipDb } from "@/lib/uk/leadership/leadershipTestDb";
+import { createFakeLeadershipDb } from "@/lib/countries/uk/leadership/leadershipTestDb";
 import { getUKPartyConferencesCollection } from "@/lib/db/collections/ukPartyConferences";
-import { conferenceDocId } from "@/lib/uk/conference/conferenceStore";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { conferenceDocId } from "@/lib/countries/uk/conference/conferenceStore";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import type { PoliticalParty } from "@/lib/db/types";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));

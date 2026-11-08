@@ -1,12 +1,11 @@
 /**
  * Primary bond market: the pool underwrites new issues with real cash.
  *
- * Before this, a new bond was fully funded the instant it was issued, with
- * every unit parked in a float nobody had paid for. Now the currency's bond
- * market pool buys what it can afford and wants; the issuer is credited for
- * exactly those units. The rest sits on the bond as `unsoldUnits` and places
- * turn by turn as the pool's cash allows (`placeUnsoldBondUnits`), at the
- * pool's ask. Unsold units are not debt: no coupon, not in `totalIssued`.
+ * The currency's bond market pool buys what it can afford and wants; the
+ * issuer is credited for exactly those units. The rest sits on the bond as
+ * `unsoldUnits` and places turn by turn as pool cash allows
+ * (`placeUnsoldBondUnits`), at the pool's ask. Unsold units are not debt: no
+ * coupon, not in `totalIssued`.
  *
  * Sovereign shortfalls feed the sovereign-default auction classifier through
  * `FederalBudget.lastPrimaryFillRatio`. An autonomous central bank monetizes a
@@ -524,7 +523,7 @@ export async function monetizeUnsoldSovereignUnits(
   const currency = bondPoolCurrency(bond);
   const face = args.units * BOND_UNIT_FACE_VALUE;
   const accounting = await loadPrimaryAccounting(db);
-  // Funded Treasury cash forbids minting (#3401); the units stay unsold.
+  // Funded Treasury cash forbids minting; the units stay unsold.
   if (accounting.treasuryCashLedgerEnabled) return false;
   const budget = await db
     .collection<FederalBudget>("federalBudget")

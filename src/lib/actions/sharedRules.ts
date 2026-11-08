@@ -78,8 +78,6 @@ export interface SharedActionContext {
   priceLevel?: number;
   /** ConvertCash only: amount of personal cash in LOCAL home currency. */
   convertAmount?: number | null;
-  /** DebatePrep only: whether the stat system is enabled in this world. */
-  rpgStatsEnabled?: boolean;
 }
 
 export interface SharedActionQuoteInput {
@@ -221,13 +219,10 @@ export function quoteAction(input: SharedActionQuoteInput): SharedActionQuote {
       return accept(actionType, q.apCost, q.fundCostAnchor, { fundsChangeAnchor: 0 });
     }
     case "debatePrep": {
-      const q = quoteDebatePrepAction(
-        {
-          hasStats: stats != null && typeof stats.debate === "number",
-          debate: stats?.debate ?? undefined,
-        },
-        { rpgStatsEnabled: input.context?.rpgStatsEnabled }
-      );
+      const q = quoteDebatePrepAction({
+        hasStats: stats != null && typeof stats.debate === "number",
+        debate: stats?.debate ?? undefined,
+      });
       if (!q.ok) return reject(actionType, q.error);
       return accept(actionType, q.apCost, 0, {
         fundsChangeAnchor: 0,

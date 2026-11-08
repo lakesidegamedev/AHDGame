@@ -260,22 +260,18 @@ export async function loadBorrowerSnapshot(
 }
 
 /**
- * Originate a named loan. Objective auto-approval unless the bank has opted
- * into CEO approval, in which case the loan is parked as `pending` with no
- * money moved.
+ * Originate a named loan. Auto-approved unless the bank opted into CEO approval,
+ * in which case the loan is parked as `pending` with no money moved.
  *
- * The rules boundary decides (capability, term, self-lending, blacklist,
- * currency, the binding cap) and returns one transition: the loan record,
- * the bank's vault debit, the borrower's proceeds and the cached loan total.
- * The journal lands it exactly once. There is no compensating delete any
- * more: a crash leaves a visible half-applied record, never a booked loan
+ * The rules boundary decides (capability, term, self-lending, blacklist, currency,
+ * the binding cap) and returns one transition: the loan record, the vault debit,
+ * the borrower's proceeds and the cached loan total. The journal lands it exactly
+ * once; a crash leaves a visible half-applied record rather than a booked loan
  * with no cash behind it.
  *
- * The vault IS debited. Origination used to credit the borrower and touch
- * nothing on the bank but a counter, so lending created money and repayment
- * later credited the bank with cash it had never paid out. The caps
- * (cash reserves, lendable headroom) always assumed the bank funds the loan;
- * now it does.
+ * The vault IS debited: caps (cash reserves, lendable headroom) assume the bank
+ * funds the loan, so origination credits neither the borrower nor the bank
+ * without a matching debit.
  */
 export async function originateLoan(
   db: Db,

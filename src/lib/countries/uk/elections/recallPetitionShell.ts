@@ -25,8 +25,8 @@ import {
   nextPetitionStep,
   resolveSupportCheck,
   supportWindowEnd,
-} from "@/lib/uk/elections/commonsRecallRules";
-import { createCommonsVacancy } from "@/lib/uk/elections/commonsVacancyShell";
+} from "@/lib/countries/uk/elections/commonsRecallRules";
+import { createCommonsVacancy } from "@/lib/countries/uk/elections/commonsVacancyShell";
 
 /** Non-terminal petition states: at most one may exist per official row. */
 const LIVE_PETITION_STATUSES: RecallPetitionStatus[] = ["watch", "open", "check"];

@@ -1,11 +1,6 @@
 /**
  * Named-loan underwriting math. Client-safe: the hub form quotes the same
  * caps originateLoan enforces.
- *
- * Two borrower-cash fractions used to live here (25% of personal, 50% of
- * corp LC). Those capped the people who need the loan on the cash they
- * already hold, and they used the holding company's treasury for a bank
- * that now keeps its own vault in `bankCharter.cashReserves`.
  */
 
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";

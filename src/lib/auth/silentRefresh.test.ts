@@ -9,7 +9,7 @@ vi.mock("@/lib/db/collections", () => ({
   getUsersCollection: async () => ({ findOne: mocks.findUser }),
   getCharactersCollection: vi.fn(),
 }));
-vi.mock("@/lib/env", () => ({ getValidatedEnv: vi.fn() }));
+vi.mock("@/lib/config/validatedEnv", () => ({ getValidatedEnv: vi.fn() }));
 const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "test-secret-placeholder");
 const CLAIMS: SilentRefreshClaims = {
   userId: "507f1f77bcf86cd799439011",

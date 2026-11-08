@@ -1,5 +1,6 @@
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { workerConfig } from "@/lib/config/worker";
 
 export interface CorporationTurnResult {
   corporationsProcessed: number;
@@ -21,7 +22,7 @@ export interface CorporationTurnResult {
  * SIM_CORP_TIMING=1 also logs timings for profiling.
  */
 export function createCorporationTurnTimer() {
-  const enabled = process.env.SIM_CORP_TIMING === "1";
+  const enabled = workerConfig.simCorpTiming();
   const timings: Array<[string, number]> = [];
   let previous = enabled ? Date.now() : 0;
   const steps = substepMarker();

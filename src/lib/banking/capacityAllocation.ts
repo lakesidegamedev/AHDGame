@@ -158,11 +158,9 @@ export function commodityProductionCapacityScale(
 ): number {
   if (!privateBankingEnabled || charter?.status !== "active") return 1;
   // Only a DEPOSIT-TAKING charter runs a branch network, so only it pays for
-  // one. This used to apply to every active charter with no type check, which
-  // meant an investment bank surrendered up to half its financial sector's
-  // commodity output to branches that are legally barred from taking a deposit.
-  // It was a pure loss with no corresponding business, and the single cheapest
-  // thing making the charter unviable.
+  // one. Applying it to a non-deposit charter (e.g. an investment bank) would
+  // surrender up to half its financial sector's commodity output to branches it
+  // is legally barred from running.
   if (!charterMay(charter, "branchNetwork")) return 1;
   return Math.max(0, 1 - getBranchCapacityShare(charter));
 }

@@ -2,9 +2,9 @@ import { getDb } from "@/lib/mongodb";
 
 /**
  * Next display ticket number for the Discord support tickets (`tickets` collection).
- * Counter key `tickets` — independent from `suggestions` and legacy `feedback` numbering.
- * Mirrors {@link getNextSuggestionNumber}: seeds the counter from the current max so it
- * stays correct even if the counter doc is missing or behind.
+ * Counter key `tickets`, independent from `suggestions` and legacy `feedback`.
+ * Seeds from the current max so it stays correct even if the counter doc is
+ * missing or behind.
  */
 export async function getNextTicketNumber(discordFloor = 0): Promise<number> {
   const db = await getDb();

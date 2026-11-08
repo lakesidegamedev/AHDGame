@@ -1,14 +1,6 @@
 /**
- * Phase 11b — executive political impact at sovereign-default resolution.
- *
- * Calibration anchored to real-world post-default incumbent outcomes:
- *   - Repudiate: largest hit (-20 fav / +15 infamy). Defaulting outright is
- *     historically a career-ender (Argentina 2001 → Duhalde / De la Rua etc.).
- *   - Monetize: -15 / +10. Inflation always wrecks incumbents (Erdogan-style
- *     tail risk; Peronist Argentina 2019).
- *   - Bailout: -10 / +5. Less severe but austerity backlash is real
- *     (Sarkozy/Greek bailouts, Macri/IMF deal).
- *   - Restructure: -8 / +5. Compromise tax — least bad option.
+ * Executive political (favorability, infamy) impact per sovereign-default
+ * resolution choice, anchored to real post-default incumbent outcomes.
  */
 
 import type { Db, ObjectId } from "mongodb";

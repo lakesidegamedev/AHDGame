@@ -8,9 +8,9 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
 type SpinOffTechRow = Pick<Corporation, "_id" | "type" | "unlockedTechNodeIds">;
 
 /**
- * Spin-off subsidiaries were created with no tech at all (suggestion #363).
- * Grant each the passed-decade baseline a newly founded corp of its type gets.
- * Additive only: nothing researched since the spin-off is touched.
+ * Spin-off subsidiaries were created with no tech. Grant each the passed-decade
+ * baseline a newly founded corp of its type gets. Additive only: nothing
+ * researched since the spin-off is touched.
  */
 async function backfillSpinOffTechBaselines(
   db: Db,

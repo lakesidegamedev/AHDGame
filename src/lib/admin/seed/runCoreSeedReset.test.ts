@@ -3,8 +3,8 @@
  * to destroy.
  *
  * These pin a constant rather than driving `runSeed` against a mock database:
- * the function reaches `getDb()` through `isLayer1PositionsEnabled` and
- * `loadEraFullOverride`, so it cannot run without a live connection. The
+ * the function reaches `getDb()` through `loadEraFullOverride`, so it cannot
+ * run without a live connection. The
  * constant is the whole contract, and it is the thing that regresses.
  */
 import fs from "fs";

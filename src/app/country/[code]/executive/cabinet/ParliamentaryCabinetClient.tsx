@@ -119,7 +119,7 @@ function reducer(state: State, action: Action): State {
 }
 
 // Cabinet cooldowns are real-clock — the API records expiry as a wall-clock
-// timestamp (see src/lib/uk/cabinetApi.ts and parallel DE/JP/CN paths). Display
+// timestamp (see src/lib/countries/uk/cabinetApi.ts and parallel DE/JP/CN paths). Display
 // routes through formatRealTimeCountdown rather than the game clock.
 function formatCooldownRemaining(targetDate: string): string {
   const result = formatRealTimeCountdown(targetDate);

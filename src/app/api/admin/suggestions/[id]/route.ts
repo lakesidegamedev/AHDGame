@@ -21,6 +21,7 @@ import {
   discordSubmitHandleForChip,
   discordSubmitPrimaryLabel,
 } from "@/lib/suggestions/discordSubmitAttribution";
+import { servicesConfig } from "@/lib/config/services";
 
 async function findSuggestionByAdminId(db: Db, id: string): Promise<Suggestion | null> {
   const coll = getSuggestionsCollection(db);
@@ -178,7 +179,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return match ? parseInt(match[1], 10) : null;
       })();
 
-    if (githubIssueNum && process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
+    if (githubIssueNum && servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       const adminUser = await db
         .collection<User>("users")
         .findOne({ _id: new ObjectId(admin.userId) }, { projection: { username: 1 } });

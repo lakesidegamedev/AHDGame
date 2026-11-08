@@ -14,7 +14,11 @@ import {
   type TechCorpView,
 } from "@/lib/constants/techTree";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { loadLaneBreakthroughResearch } from "@/lib/corporations/techTree/frontierResearch";
+import {
+  loadLaneBreakthroughResearch,
+  loadPrerequisiteLaneResearch,
+} from "@/lib/corporations/techTree/frontierResearch";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { loadStrategyDiffusionWorld } from "@/lib/corporations/techTree/diffusion";
 
 export interface SectorTechContext {
@@ -49,8 +53,9 @@ export async function loadSectorTechContext(
   const techCurrentYear =
     gameState?.currentYear ??
     STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
-  const [sectorResearch, diffusion] = await Promise.all([
+  const [sectorResearch, laneResearch, diffusion] = await Promise.all([
     loadLaneBreakthroughResearch(db, input.lane, techTreesEnabled),
+    loadPrerequisiteLaneResearch(db, SECTOR_STRATEGIES[input.lane] ?? [], techTreesEnabled),
     // A player company may license early; an NPP corporation follows its country.
     loadStrategyDiffusionWorld(db, {
       preset: input.preset,
@@ -70,7 +75,7 @@ export async function loadSectorTechContext(
       techDecadeLane: corporation.techDecadeLane,
       frontierProgrammes: corporation.frontierProgrammes,
     },
-    strategyWorld: { sectorResearch, diffusion },
+    strategyWorld: { sectorResearch, laneResearch, diffusion },
   };
 }
 

@@ -4,19 +4,17 @@ import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { REDISTRICT_AUTHORITY_LAW } from "./caps";
 
 /**
- * "Legislature-drawn" authority ladder index. This is the historically correct
- * baseline for the eras the game ships (1953/1960): before Baker v. Carr (1962)
- * and Wesberry v. Sanders (1964), congressional maps were drawn by state
- * legislatures, and independent/bipartisan commissions for congressional
- * districting did not yet exist. It is also the only authority option that lets
- * a governing trifecta actually redraw (see AUTHORITY_TABLE in ./caps), so
- * seeding it is what makes the redistricting feature reachable at all — the code
- * default is index 1 (bipartisan commission, canDraw:false), and the authority
- * law is not in the v2 political-legislation catalog, so nothing else ever
- * writes this statePolicies key.
+ * "Legislature-drawn" authority ladder index, the historically correct
+ * baseline for the eras the game ships: before Baker v. Carr (1962) and
+ * Wesberry v. Sanders (1964), congressional maps were drawn by state
+ * legislatures, and independent/bipartisan commissions did not yet exist.
+ * It is also the only option that lets a governing trifecta actually
+ * redraw (see AUTHORITY_TABLE in ./caps), so seeding it is what makes the
+ * feature reachable: the code default is bipartisan (canDraw:false) and
+ * nothing else writes this statePolicies key.
  *
- * Mirrors the "Legislative Redistricting Authority Act" option (index 2) of the
- * `us_state_redistricting_authority` catalog entry in
+ * Mirrors the "Legislative Redistricting Authority Act" option (index 2)
+ * of `us_state_redistricting_authority` in
  * src/lib/seeds/reference/legislationTypes.ts.
  */
 export const AUTHORITY_LEGISLATIVE_INDEX = 2;

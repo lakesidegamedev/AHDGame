@@ -8,22 +8,19 @@ import { assertCanOpenCountryToPlayers } from "@/lib/world/countryReadinessContr
 
 /**
  * Per-preset country enablement. `countryGameStates` rows are normally written
- * only by the admin panel; without this, a reset/bootstrap leaves enablement at
- * each country's CONFIG status, so era-specific countries (USSR, the bloc) never
- * turn on. This seeder writes the access tier (enabledForPlayers / economyPreview
- * / status) for the chosen preset so the era is playable straight after reset.
+ * only by the admin panel; without this, a reset leaves enablement at each
+ * country's CONFIG status, so era-specific countries never turn on. This writes
+ * the access tier for the chosen preset so the era is playable after reset.
  *
- * Rows are written for EVERY registered country in every shipping preset. This
- * deliberately reverses the previous behaviour, where a preset without an
- * explicit manifest map (2019) wrote nothing so "admin-managed rows keep winning
- * exactly as before" — an admin toggle surviving a reset is how 2019 drifted
- * into six player countries instead of three. Release-note this.
+ * Rows are written for EVERY registered country in every shipping preset.
+ * Leaving admin-managed rows to win across a reset is how 2019 drifted into six
+ * player countries instead of three.
  *
  * US is omitted: it runs off the global GameState, not a CountryGameState row.
  *
- * Player tiers are gated by the archetype-aware readiness contract (#3722): a
- * manifest `player` legacyAccess that still has hard blockers fails loudly
- * rather than shipping an incomplete player launch.
+ * Player tiers are gated by the archetype-aware readiness contract: a legacy
+ * `player` access with hard blockers fails loudly rather than shipping an
+ * incomplete launch.
  */
 export type Tier = {
   enabledForPlayers: boolean;
@@ -48,7 +45,7 @@ const TIER_ROWS: Record<CountryEraTier, RosterRow | null> = {
   econ: { ...ECON, absentInEra: false, backgroundCountry: false },
   npp: { ...NPP, absentInEra: false, backgroundCountry: false },
   // Registered and not joinable, like an NPP country, but the flag takes it
-  // out of every per-country turn phase (#5702).
+  // out of every per-country turn phase.
   background: { ...NPP, absentInEra: false, backgroundCountry: true },
   // A country absent from this era gets the NPP row plus the flag. It is a
   // separate concept from dissolution — see `absentInEra` in gameState.ts.
@@ -65,9 +62,7 @@ const TIER_ROWS: Record<CountryEraTier, RosterRow | null> = {
  * special presets (`empty`, `2019-no-parties`).
  *
  * Returning null for anything unrecognised would turn a typo into a silent
- * no-op reset — the failure mode this whole sub-project exists to remove. The
- * previous implementation failed loudly via the manifest lookup; that property
- * is preserved here now the manifest is no longer consulted.
+ * no-op reset, so this must fail loudly.
  */
 function assertRecognisedPreset(preset: string): void {
   if (isShippingPreset(preset) || isKnownPreset(preset)) return;

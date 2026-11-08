@@ -10,7 +10,8 @@
 
 import { decayApprovals } from "@/lib/legislature/rules/approvalDecay";
 import { getDb } from "@/lib/mongodb";
-import type { Character, NPP } from "@/lib/db/types";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /**
  * Process archetype approval decay for all characters and NPPs.
@@ -25,8 +26,9 @@ export async function processArchetypeApprovalDecay(): Promise<{
   const db = await getDb();
 
   // Process characters with archetype approvals
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { archetypeApprovals: { $exists: true, $ne: {} } },
       { projection: { archetypeApprovals: 1 } }
@@ -56,12 +58,13 @@ export async function processArchetypeApprovalDecay(): Promise<{
   }
   const charactersProcessed =
     charOps.length > 0
-      ? (await db.collection<Character>("characters").bulkWrite(charOps)).modifiedCount
+      ? (await (await getCharactersCollection(db)).bulkWrite(charOps)).modifiedCount
       : 0;
 
   // Process NPPs with archetype approvals
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await (
+    await getNppsCollection(db)
+  )
     // Read only the approval balances and Mongo's default _id projection.
     .find(
       { archetypeApprovals: { $exists: true, $ne: {} }, retiredAt: null },
@@ -87,7 +90,7 @@ export async function processArchetypeApprovalDecay(): Promise<{
     }
   }
   const nppsProcessed =
-    nppOps.length > 0 ? (await db.collection<NPP>("npps").bulkWrite(nppOps)).modifiedCount : 0;
+    nppOps.length > 0 ? (await (await getNppsCollection(db)).bulkWrite(nppOps)).modifiedCount : 0;
 
   return { charactersProcessed, nppsProcessed };
 }

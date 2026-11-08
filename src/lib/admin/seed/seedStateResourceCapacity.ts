@@ -51,9 +51,8 @@ export async function seedStateResourceCapacity(
   const capacityMap = getStateResourceCapacity(preset);
   const ops: AnyBulkWriteOperation<StateResourceCapacity>[] = [];
 
-  // Indexes before the upserts, not after: the writes below filter on
-  // `stateId`, and building the index afterwards makes each one a collection
-  // scan. Round-trip latency used to hide that; the batched write does not.
+  // Create indexes before the upserts: the writes filter on `stateId`,
+  // and building the index after would make each upsert a collection scan.
   await db
     .collection("stateResourceCapacity")
     .createIndex({ stateId: 1 }, { unique: true })

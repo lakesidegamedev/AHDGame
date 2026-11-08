@@ -1,16 +1,10 @@
 /**
  * Per-turn processor for sovereign-crisis legislative ratification.
  *
- * Per "executiveProposed" decision:
- *   1. Find the active phase via currentChamberIndex.
- *   2. Skip if outcome is no longer pending or window hasn't expired.
- *   3. Tally: votesFor > votesAgainst → passed; otherwise rejected.
- *   4. Rejected → mark decision rejected and auto-Repudiate the country.
- *   5. Passed → stamp phase outcome; if upper chamber exists and we just
- *      cleared the lower, append the upper phase + advance index.
- *      Otherwise: ratified — dispatch to the chosen Phase 5/6 orchestrator.
- *
- * Idempotent: re-running is a no-op for decisions in terminal states.
+ * Per "executiveProposed" decision: tally the active phase; reject and
+ * auto-Repudiate on failure; on success stamp the phase, appending an upper
+ * chamber if the lower just cleared, otherwise dispatch to the chosen Phase
+ * 5/6 orchestrator. Idempotent for decisions in terminal states.
  */
 
 import { type Db, type ObjectId } from "mongodb";

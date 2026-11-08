@@ -28,7 +28,7 @@ describe("queueAidAlignmentPull", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1953 });
   });
 
   it("queues a pull toward the paying bloc, marked as aid", async () => {
@@ -42,14 +42,6 @@ describe("queueAidAlignmentPull", () => {
       resolvedTurn: null,
       source: "aid",
     });
-  });
-
-  it("queues nothing when the alignment gate is off", async () => {
-    // The phase does not run at all with the gate off, so a queued row would
-    // sit pending forever rather than being ignored.
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: false });
-    expect(await call()).toBe(false);
-    expect(db.collection("alignmentPlays").insertOne).not.toHaveBeenCalled();
   });
 
   it("queues nothing for an org that carries no influence this era", async () => {

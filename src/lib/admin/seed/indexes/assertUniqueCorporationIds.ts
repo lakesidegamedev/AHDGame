@@ -14,13 +14,11 @@ export interface SequentialIdCollision {
 
 /**
  * Group seeded corporations by sequentialId and return every id claimed by
- * more than one corporation. Pure (no DB access), so tests can pin the exact
- * issue #2028 duplicate groups without a database.
+ * more than one. Pure (no DB), so tests can pin duplicate groups without a
+ * database.
  *
- * Corporations without a sequentialId are ignored: the
- * `corporations_sequentialId` index is sparse, so those never collide.
- * Output is sorted by sequentialId (then holder name) so the diagnostic is
- * deterministic across runs.
+ * Corporations without a sequentialId are ignored: the index is sparse, so
+ * those never collide. Output is sorted for deterministic diagnostics.
  */
 export function findDuplicateCorporationSequentialIds(
   corporations: SeededCorporationIdentity[]

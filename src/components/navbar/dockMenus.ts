@@ -76,7 +76,6 @@ export interface DesktopMenusInput {
   myCorporationId?: number | null;
   myCorporationHasGroup?: boolean;
   myUnionId?: string | null;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   settlementCrisisLive?: boolean;
   nationalDetailSections: NationDetailSection[];
@@ -108,7 +107,6 @@ export function buildDesktopMenus({
   myCorporationId,
   myCorporationHasGroup,
   myUnionId,
-  conflictsEnabled,
   unionsEnabled,
   settlementCrisisLive,
   nationalDetailSections,
@@ -200,7 +198,6 @@ export function buildDesktopMenus({
       myCorporationId,
       myCorporationHasGroup,
       myUnionId,
-      conflictsEnabled,
       unionsEnabled,
       settlementCrisisLive,
     });

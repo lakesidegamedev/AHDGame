@@ -31,6 +31,8 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { getGameState } from "@/lib/gameState";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -70,8 +72,9 @@ async function loadCeoComposites(
 ): Promise<Map<string, CorpComposite | null>> {
   const out = new Map<string, CorpComposite | null>();
   if (chars.length === 0) return out;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { ceoId: { $in: chars.map((char) => char._id) } },
       { projection: { ceoId: 1, countryId: 1, creditCompositeSnapshot: 1 } }
@@ -141,8 +144,9 @@ export async function processLineOfCreditTurn(
     return resolvePrimeForCurrency(primeByCountryId, currency);
   };
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ lineOfCredit: { $exists: true } })
     .toArray();
 

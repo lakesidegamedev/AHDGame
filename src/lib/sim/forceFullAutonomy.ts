@@ -53,13 +53,7 @@ export { stampInitialGameClock } from "@/lib/admin/bootstrapGameWorld";
  *   respond once crises exist: crisisIntake.ts already feeds active crises
  *   into the governing agenda, which cascades into ministerial orders and
  *   emergency bill sponsorship, both NPP-autonomous.
- * - `conflictsEnabled: true`, `coldWarEnabled: true`: user-requested for the
- *   500-turn audit. NOTE: confirmed via grep that both are PURE UI-visibility
- *   gates (src/app/world/conflicts/_coldwar/gate.ts's page redirect,
- *   client-nav's navbar link) — neither has any src/lib/turn or
- *   src/simulation phase reading them. Harmless to enable, but adds no
- *   testable mechanic to a headless sim; flagging so this isn't mistaken for
- *   real new coverage.
+ * - `coldWarEnabled: true`: user-requested for the 500-turn audit.
  * - `sectorTechTreesEnabled: true`: user-requested; gates the tech-tree
  *   unlock/abandon routes, which are CEO-decision-driven and currently
  *   player-only (src/app/api/corporation/[id]/tech/{unlock,abandon}/route.ts)
@@ -108,9 +102,6 @@ export async function forceFullAutonomy(
         // makes crises a materially active force without spamming (per-crisis
         // cooldowns still apply). Production is unaffected (flag absent → ×1).
         crisisSpawnChanceMultiplier: 5,
-        conflictsEnabled: true,
-        conflictsEnabledBy: "sim-harness",
-        conflictsEnabledAt: new Date().toISOString(),
         coldWarEnabled: true,
         coldWarEnabledBy: "sim-harness",
         coldWarEnabledAt: new Date().toISOString(),

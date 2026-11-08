@@ -8,31 +8,14 @@
 
 /**
  * US national + regional base policy positions for the 2007-default preset
- * (mid-2007 / 110th Congress). Calibrated to real-world 2007 policy:
+ * (mid-2007, 110th Congress, Bush administration, divided government).
  *
- *   US — George W. Bush administration, 110th Congress (Democratic House AND
- *     Senate after the 2006 midterms — divided government, Bush vetoes).
- *     Defining 2007 anchors vs the 2019/2023 baselines:
- *       - Iraq "surge" (Jan 2007) + Afghanistan → record war-era defense outlays
- *       - Bush tax cuts (EGTRRA 2001 / JGTRRA 2003) in force; 35% statutory
- *         corporate rate (pre-TCJA) → corporate optionIndex higher than 2019/23
- *       - Medicare Part D (2006) with the *non-interference clause* — Medicare
- *         is statutorily BARRED from negotiating drug prices (right)
- *       - Pre-ACA: market-based healthcare, no Medicaid expansion, DRA-2005 cuts
- *       - Energy Policy Act 2005 (fossil/nuclear favoring); Kyoto rejected; EISA
- *         2007 (Dec) raised CAFE but clean-energy posture is right of 2019/23
- *       - Fair Minimum Wage Act 2007: first federal min-wage rise since 1997
- *         (phasing $5.85→$7.25) — a leftward move, but level still low
- *       - Roe v. Wade INTACT (Gonzales v. Carhart, Apr 2007, upheld the
- *         partial-birth ban but left Roe standing) — federal abortion protection
- *         still exists, unlike the post-Dobbs 2023 seed
- *       - Pre-Heller (2008): assault-weapons ban expired 2004, permissive guns
- *       - Honest Leadership & Open Government Act 2007 (post-Abramoff ethics
- *         reform by the new Democratic majority)
- *       - Housing bubble cresting/cracking; no federal stimulus yet (the
- *         Economic Stimulus Act is Feb 2008, after this snapshot)
+ * Key 2007 anchors vs 2019/2023: Iraq surge-era defense outlays; pre-TCJA 35%
+ * corporate rate; Medicare Part D non-interference clause (no drug negotiation);
+ * pre-ACA healthcare; fossil/nuclear-favoring energy posture; first federal
+ * minimum-wage rise since 1997 but still low; Roe intact; permissive guns.
  *
- * Tax `optionIndexes` reflect the pre-TCJA rate regime (corporate 35%).
+ * Tax `optionIndexes` reflect the pre-TCJA rate regime.
  */
 
 import type { CountryPolicyConfig } from "./basePolicies";

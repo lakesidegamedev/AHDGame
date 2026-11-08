@@ -1,7 +1,7 @@
 import { type Db } from "mongodb";
 import { getEligibleVoterSet } from "@/lib/parties/proposals";
 import { getUKPartyConferencesCollection } from "@/lib/db/collections/ukPartyConferences";
-import type { UKPartyConference } from "@/lib/uk/conference/types";
+import type { UKPartyConference } from "@/lib/countries/uk/conference/types";
 import type { Character, PoliticalParty } from "@/lib/db/types";
 
 export function partySeqIdOf(party: PoliticalParty): string {

@@ -53,7 +53,7 @@ import {
   type RussianDumaRepeatOpeningRecord,
 } from "@/lib/countries/ru/dumaRepeatOpening";
 import { certifyRussianDumaElection } from "@/lib/countries/ru/dumaElectionResult";
-import type { Election, ElectionVoteTally, GameState, State } from "@/lib/db/types";
+import type { Election, ElectionVoteTally, State } from "@/lib/db/types";
 import { generateElectionNews } from "@/lib/news";
 import { HOUSE_SEATS, UK_COMMONS_SEATS } from "@/lib/constants";
 import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
@@ -79,6 +79,9 @@ import { readHuMixedElectionPlan } from "@/lib/countries/hu/readMixedElectionPla
 import type { HuMixedPlan } from "@/lib/countries/hu/rules/mixedElectionPlan";
 import { captureElectionResolved } from "@/lib/analytics/electionAnalytics";
 import { isNativeRussianAssemblyElection } from "@/lib/countries/ru/rules/assemblyElection";
+import { workerConfig } from "@/lib/config/worker";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -102,8 +105,9 @@ export async function resolveGeneralElections(
   const db = await getDb();
 
   const completedElections = (
-    await db
-      .collection<Election>("elections")
+    await (
+      await getElectionsCollection(db)
+    )
       .find({
         ...(onlyElectionIds ? { _id: { $in: onlyElectionIds } } : {}),
         status: "completed",
@@ -139,7 +143,7 @@ export async function resolveGeneralElections(
           .toArray()
           .catch(() => [])
       : Promise.resolve([]),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    (await getGameStateCollection(db)).findOne({ _id: "current" }),
     loadFirstMinisterBonusContexts(db, ukDevolutionRegions),
   ]);
   const currentTurn = gameStateDoc?.currentTurn ?? 0;
@@ -157,8 +161,9 @@ export async function resolveGeneralElections(
   const bgFoundingCycles = new Set(bgFoundingRaces.map((row) => row.cycle));
   if (onlyElectionIds && bgFoundingCycles.size) {
     const selected = new Set(onlyElectionIds.map((id) => id.toHexString()));
-    const peers = await db
-      .collection<Election>("elections")
+    const peers = await (
+      await getElectionsCollection(db)
+    )
       .find(
         {
           countryId: "BG",
@@ -219,8 +224,9 @@ export async function resolveGeneralElections(
   const hu1991Cycles = new Set(hu1991Races.map((row) => row.cycle));
   if (onlyElectionIds && hu1991Cycles.size) {
     const selected = new Set(onlyElectionIds.map((id) => id.toHexString()));
-    const cohort = await db
-      .collection<Election>("elections")
+    const cohort = await (
+      await getElectionsCollection(db)
+    )
       .find(
         {
           countryId: "HU",
@@ -246,8 +252,9 @@ export async function resolveGeneralElections(
   const hu2011Cycles = new Set(hu2011Races.map((row) => row.cycle));
   if (onlyElectionIds && hu2011Cycles.size) {
     const selected = new Set(onlyElectionIds.map((id) => id.toHexString()));
-    const peers = await db
-      .collection<Election>("elections")
+    const peers = await (
+      await getElectionsCollection(db)
+    )
       .find(
         { countryId: "HU", electionType: "nationalAssembly", cycle: { $in: [...hu2011Cycles] } },
         { projection: { cycle: 1 } }
@@ -638,7 +645,7 @@ export async function resolveGeneralElections(
   // ordering (generalElectionResolutionOrder) is preserved: presidents still see
   // the freshly-seated Congress. Bounded so we don't overwhelm the Mongo pool;
   // set ELECTION_RESOLUTION_CONCURRENCY=1 to fall back to fully sequential.
-  const concurrency = Math.max(1, Number(process.env.ELECTION_RESOLUTION_CONCURRENCY) || 4);
+  const concurrency = Math.max(1, Number(workerConfig.electionResolutionConcurrency()) || 4);
 
   // completedElections is pre-sorted by resolution order, so contiguous runs of
   // the same order form each group.
@@ -783,8 +790,9 @@ export async function resolveGeneralElections(
   const committedOutcomeIds = new Set(
     completedElections.length > 0
       ? (
-          await db
-            .collection<Election>("elections")
+          await (
+            await getElectionsCollection(db)
+          )
             .find(
               {
                 _id: { $in: completedElections.map((election) => election._id) },

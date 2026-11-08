@@ -1,11 +1,13 @@
 import type { Db } from "mongodb";
-import type { CountryGameState, ElectedOfficial, Election, GameState } from "@/lib/db/types";
+import type { CountryGameState, GameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import {
   yuDissolutionDue,
   yuPoliticalRetirementAuthorized,
 } from "@/lib/countries/yu/rules/succession";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 /**
  * Retire SFRY federal institutions after the historical decision window opens
@@ -51,13 +53,13 @@ export async function processYuDissolution(
   )
     return false;
 
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { countryId: "YU", status: { $in: ["upcoming", "active", "completed"] } },
-      { $set: { status: "cancelled", updatedAt: now } }
-    );
-  await db.collection<ElectedOfficial>("electedOfficials").deleteMany({ countryId: "YU" });
+  await (
+    await getElectionsCollection(db)
+  ).updateMany(
+    { countryId: "YU", status: { $in: ["upcoming", "active", "completed"] } },
+    { $set: { status: "cancelled", updatedAt: now } }
+  );
+  await (await getElectedOfficialsCollection(db)).deleteMany({ countryId: "YU" });
   await db.collection<GovernmentFormation>("governmentFormations").updateOne(
     { _id: "YU" },
     {

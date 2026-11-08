@@ -18,10 +18,11 @@ import {
 import { REGIONAL_MODIFIERS_1953 } from "@/lib/politicalMetrics/seeds/regionalModifiers1953";
 import { REGIONAL_TEXTURE_1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
 import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
-import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 
 /**
- * The 1953 preset carrying both authored modifiers and generated texture (issue #704).
+ * The 1953 preset carrying both authored modifiers and generated texture.
  * Applying either 1953 regional input to another era's baselines would dress
  * it in the wrong year's regional character.
  */
@@ -34,9 +35,7 @@ const PLAYABLE = new Set<string>(POLITICAL_METRIC_COUNTRY_IDS);
  * given a neutral board; a 63-family doc of 50s would look authored while
  * meaning nothing, which is the failure mode this whole project exists to end.
  */
-const BOARD_COUNTRIES = new Set<string>(
-  Object.values(NON_PLAYABLE_BOARDS).flatMap((byCountry) => Object.keys(byCountry))
-);
+const BOARD_COUNTRIES = new Set<string>(NON_PLAYABLE_BOARD_COUNTRY_IDS);
 // PoliticalMetricsCountryId is a subset of CountryId, so the Mongo filter needs
 // the wider element type to satisfy the State schema.
 const SEEDED_FILTER: State["countryId"][] = [
@@ -48,14 +47,13 @@ const clampScore = (v: number) => Math.max(0, Math.min(100, v));
 /**
  * Seeds one politicalMetrics doc per US/UK/RU/DD region present in `states`:
  * value = clamp(baseline at `year` + regional character, 0, 100), where the
- * character is the sparse hand-authored modifier where one exists and the
- * generated texture deviation otherwise (issues #704 and #3266).
+ * character is the sparse hand-authored modifier where one exists, else the
+ * generated texture deviation.
  *
  * Baselines resolve by in-game YEAR through the anchor table, never by seed
- * preset. Authored era anchors give later presets their own national values.
- *
- * Texture resolves by seed PRESET, never by year. The 1953 preset prefers
- * explicit modifiers; the 1991 preset uses its population-centered texture.
+ * preset, so authored era anchors give later presets their own national
+ * values. Texture resolves by seed PRESET, never by year: 1953 prefers
+ * explicit modifiers, 1991 uses its population-centered texture.
  */
 export async function seedPoliticalMetrics(
   db: Db,
@@ -69,7 +67,7 @@ export async function seedPoliticalMetrics(
   // has no emitted board seeds NO non-playable boards rather than falling back
   // to another era's; a 2019 world wearing 1953 numbers is exactly the silent
   // wrongness this project exists to end.
-  const boardsForPreset = NON_PLAYABLE_BOARDS[preset];
+  const boardsForPreset = getNonPlayableBoards()[preset];
   if (!boardsForPreset) {
     log(`No non-playable political boards emitted for preset ${preset}; playables only`);
   }

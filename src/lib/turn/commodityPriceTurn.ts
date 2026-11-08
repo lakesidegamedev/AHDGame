@@ -12,13 +12,11 @@ import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand"
  */
 import { getDb } from "@/lib/mongodb";
 import type {
-  CorporateSector,
   CommodityPrice,
   StateMetrics,
   Corporation,
   CentralBank,
   Bond,
-  FederalBudget,
   ExchangeRate,
   StateBudget,
   GameConfig,
@@ -79,10 +77,8 @@ import {
   getExtractionContractsCollection,
   activeExtractionContractFilter,
 } from "@/lib/db/collections/extractionContracts";
-import type { State } from "@/lib/db/types/state";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameState } from "@/lib/db/types/gameState";
 import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
 import {
   fundedLedgers,
@@ -164,6 +160,11 @@ import { ownRouteIdentity, resolveSupplyPolicies } from "@/lib/market/internalSu
 import { persistTurnOutputs } from "./commodity/persistence";
 import { loadBlockadeClosure } from "./commodity/blockadeClosure";
 import { bookExtractionDepletion } from "./commodity/extractionDepletion";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -263,8 +264,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     existingPrices,
     allStateBudgets,
   ] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    (await getCorporateSectorsCollection(db))
       .find(
         {},
         {
@@ -326,8 +326,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find(
         {},
         {
@@ -355,8 +354,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       .find({})
       .project<Pick<CentralBank, "_id" | "countryId" | "primeRate">>({ countryId: 1, primeRate: 1 })
       .toArray(),
-    db
-      .collection<State>("states")
+    (await getStatesCollection(db))
       .find({}, { projection: { _id: 1, countryId: 1, gdp: 1, population: 1 } })
       .toArray(),
     db
@@ -371,8 +369,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         },
       })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    (await getFederalBudgetCollection(db))
       // Project the WHOLE category map, not named paths. A pinned projection
       // silently strips legs added later (and alternate spellings like
       // `health`), so a new GOVT_SPEND_DEMAND leg would read zero.
@@ -460,7 +457,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // contribute. The authored era rate is the correct answer, so resolve it from
   // the preset's table before conceding to 1.0. INITIAL_RATES (2019) stays as
   // the last resort for an unknown preset, matching prior behaviour.
-  const presetState = await db.collection<GameState>("gameState").findOne(
+  const presetState = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       // `currentYear` rides along for the planned-economy output remap below —
@@ -1105,9 +1104,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // NATIONAL leg only — never the shared global leg.
   const commandEconomyEnabled = marketFlagsConfig?.commandEconomyEnabled === true;
   const priceGameState = commandEconomyEnabled
-    ? await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentYear: 1 } })
+    ? await (
+        await getGameStateCollection(db)
+      ).findOne({ _id: "current" }, { projection: { currentYear: 1 } })
     : null;
   const priceCurrentYear = priceGameState?.currentYear ?? null;
   // Legacy-stockpile cover cap: accelerated spoilage on shadow stock above

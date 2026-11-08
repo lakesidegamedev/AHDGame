@@ -1,7 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { FederalBudget, StateBudget, EconomicGrowthFactors } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
-import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalDocId, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
@@ -29,6 +28,8 @@ import {
   type LabourWagePlant,
   type WageShareReceipt,
 } from "@/lib/market/producerMarket/wageShareRules";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
  * each turn, so bases and accrued revenue track the live economy instead of
@@ -123,10 +124,10 @@ export async function processFiscalBaseGrowth(
 ): Promise<{ countriesProcessed: number; statesProcessed: number }> {
   const db = await getDb();
   const [allFederalBudgets, stateBudgets, allStateMetrics, states, gameConfig] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").find({}).toArray(),
+    (await getFederalBudgetCollection(db)).find({}).toArray(),
     db.collection<StateBudget>("stateBudgets").find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
-    db.collection<State>("states").find({}).toArray(),
+    (await getStatesCollection(db)).find({}).toArray(),
     db
       .collection<LabourWageGameConfig & { _id: string }>("gameConfig")
       .findOne({ _id: "default" }, { projection: LABOUR_WAGE_CONFIG_PROJECTION }),

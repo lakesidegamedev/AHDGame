@@ -108,6 +108,7 @@ import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
+import { workerConfig } from "@/lib/config/worker";
 export {
   INDEX_FUND_NAV_CONCURRENCY,
   shouldRebalanceIndexFundConstituents,
@@ -209,7 +210,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   // Env-gated pass-level timing (SIM_CORP_TIMING=1), same mechanism as the
   // corporation/NPP turn phases - zero-cost when off.
-  const timingOn = process.env.SIM_CORP_TIMING === "1";
+  const timingOn = workerConfig.simCorpTiming();
   const passTimings: Array<[string, number]> = [];
   let _tPrev = timingOn ? Date.now() : 0;
   // Always feeds the persisted phase sub-steps.

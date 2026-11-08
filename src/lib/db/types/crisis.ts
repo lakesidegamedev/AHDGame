@@ -21,6 +21,7 @@ import type {
   CampaignStage,
   CampaignWindowSnapshot,
 } from "./livingConflictCampaign";
+import type { CrisisInstance } from "@/lib/crises/v2/types";
 
 export interface CrisisEffect {
   effectType: "flat" | "tick" | "decay";
@@ -491,6 +492,8 @@ export interface Crisis {
   globalResponse?: GlobalResponseDefinition;
   /** Deterministic living-conflict event id used to suppress replay duplicates. */
   livingConflictEventId?: string;
+  /** Crisis v2 stage, severity and accountability state. Absent on crises that predate v2. */
+  v2?: CrisisInstance;
 }
 
 /** One row per (auto-crisis template, scope key) tracking the last turn it

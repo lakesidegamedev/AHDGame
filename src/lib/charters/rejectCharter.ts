@@ -3,21 +3,14 @@ import type { Character, PartyCharter } from "@/lib/db/types";
 import { computeCharterDeadline, computeCharterDeadlineTurn } from "./charterDeadlines";
 
 /**
- * Phase 6 — record a founder's rejection on a charter. Transitions the
- * charter to `founder-replacement` so a new founder can be invited
- * within the deadline (Phase 6 D3 + D4).
+ * Records a founder's rejection on a charter and transitions it to
+ * `founder-replacement` so a new founder can be invited within the deadline.
  *
- * Founder identity is `characterId`; auth runs against the session's
- * `userId` so the caller passes both.
+ * Founder identity is `characterId`; auth runs against the session's `userId`,
+ * so the caller passes both.
  *
- * Edge cases:
- *  - Charter not in `pending-signatures` → returns `not-rejectable`.
- *  - Character isn't a founder → returns `not-a-founder`.
- *  - Caller doesn't own the character → returns `not-character-owner`.
- *  - Character already signed → returns `already-signed` (must withdraw
- *    via a separate endpoint; not in Phase 6 MVP scope).
- *
- * See plan §"Phase 6 — Tasks" 6.2 + D3.
+ * Failure reasons: `not-rejectable`, `not-a-founder`, `not-character-owner`,
+ * `already-signed` (withdrawal is a separate endpoint and out of scope).
  */
 export type RejectCharterResult =
   | { ok: true; status: "founder-replacement" }

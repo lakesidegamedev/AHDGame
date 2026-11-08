@@ -1,13 +1,12 @@
 /**
- * Shell for background countries' national budgets (#5702).
+ * Shell for background countries' national budgets.
  *
  * A background country's budget is derived from its macro economy instead of
  * regional tax bases and enacted laws (see
- * `world/macro/rules/backgroundBudget.ts`). The per-turn revenue refresh and
- * the fiscal-year close both read the macro documents once per pass and write
- * the derived revenue, spending and GDP onto the ordinary budget document, so
- * the treasury, sovereign bond issuance, ratings and the default path run on
- * it unchanged and players can buy its bonds like any other country's.
+ * `world/macro/rules/backgroundBudget.ts`). Per-turn refresh and fiscal-year
+ * close write the derived revenue, spending and GDP onto the ordinary budget
+ * document, so treasury, bond issuance, ratings and the default path run on it
+ * unchanged.
  */
 import type { Db } from "mongodb";
 import type { FederalBudget, FederalRevenue, FederalSpending } from "@/lib/db/types/budget";

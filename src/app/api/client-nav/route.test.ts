@@ -89,13 +89,12 @@ describe("GET /api/client-nav", () => {
   });
 
   it.each([
-    { singleplayer: false, enabled: true, hasGroup: true },
-    { singleplayer: true, enabled: true, hasGroup: true },
-    { singleplayer: false, enabled: true, hasGroup: false },
-    { singleplayer: false, enabled: false, hasGroup: false },
+    { singleplayer: false, hasGroup: true },
+    { singleplayer: true, hasGroup: true },
+    { singleplayer: false, hasGroup: false },
   ])(
-    "includes country links and Group visibility ($singleplayer, $enabled, $hasGroup)",
-    async ({ singleplayer, enabled, hasGroup }) => {
+    "includes country links and Group visibility ($singleplayer, $hasGroup)",
+    async ({ singleplayer, hasGroup }) => {
       vi.mocked(resolveMySubsidiaryGroupNav).mockResolvedValue(hasGroup);
       vi.stubEnv("SINGLEPLAYER", singleplayer ? "1" : "0");
       vi.stubEnv("MONGODB_URI", "mongodb://127.0.0.1:27099/test");
@@ -230,12 +229,7 @@ describe("GET /api/client-nav", () => {
 
       const { getGameStateCollection } = await import("@/lib/db/collections");
       vi.mocked(getGameStateCollection).mockResolvedValue({
-        // rpgStatsEnabled gates needsStatAllocation — on here so the flag surfaces.
-        findOne: vi.fn().mockResolvedValue({
-          wikiDisabled: false,
-          rpgStatsEnabled: true,
-          subsidiaryCorporationsEnabled: enabled,
-        }),
+        findOne: vi.fn().mockResolvedValue({ wikiDisabled: false }),
       } as never);
 
       const { GET } = await import("./route");
@@ -257,8 +251,7 @@ describe("GET /api/client-nav", () => {
       expect(json.myCorporationId).toBe(42);
       expect(resolveMySubsidiaryGroupNav).toHaveBeenCalledWith(
         db,
-        new ObjectId("100000000000000000000001"),
-        enabled
+        new ObjectId("100000000000000000000001")
       );
       expect(json.myCorporationType).toBeNull();
       expect(json.myCorporationCountryId).toBeNull();
@@ -400,8 +393,7 @@ describe("GET /api/client-nav", () => {
 
     const { getGameStateCollection } = await import("@/lib/db/collections");
     vi.mocked(getGameStateCollection).mockResolvedValue({
-      // rpgStatsEnabled gates needsStatAllocation — on here so the flag surfaces.
-      findOne: vi.fn().mockResolvedValue({ wikiDisabled: false, rpgStatsEnabled: true }),
+      findOne: vi.fn().mockResolvedValue({ wikiDisabled: false }),
     } as never);
 
     const { GET } = await import("./route");
@@ -597,6 +589,6 @@ async function stubClientNavDb(userId: ObjectId) {
   vi.mocked(getDb).mockResolvedValue(db as never);
   const { getGameStateCollection } = await import("@/lib/db/collections");
   vi.mocked(getGameStateCollection).mockResolvedValue({
-    findOne: vi.fn().mockResolvedValue({ wikiDisabled: false, rpgStatsEnabled: true }),
+    findOne: vi.fn().mockResolvedValue({ wikiDisabled: false }),
   } as never);
 }

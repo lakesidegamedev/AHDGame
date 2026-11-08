@@ -13,7 +13,6 @@ const render = (ui: React.ReactNode) =>
   );
 
 const BASE: OrgInfluenceView = {
-  enabled: true,
   year: 1953,
   channel: {
     poleId: "WEST",
@@ -100,19 +99,6 @@ beforeEach(() => {
 });
 
 describe("InfluenceTab", () => {
-  it("explains itself when the feature is off rather than showing a dead form", () => {
-    render(
-      <InfluenceTab
-        view={{ ...BASE, enabled: false, channel: null, targets: [] }}
-        orgId="NATO"
-        viewerCountryId="US"
-        onChange={() => {}}
-      />
-    );
-    expect(screen.getByText(/not enabled in this world/i)).toBeTruthy();
-    expect(screen.queryByText(/Commit play/i)).toBeNull();
-  });
-
   it("says why an org carries no influence this era", () => {
     render(
       <InfluenceTab

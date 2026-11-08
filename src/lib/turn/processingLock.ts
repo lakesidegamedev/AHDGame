@@ -1,4 +1,5 @@
 import type { GameState } from "@/lib/db/types";
+import { workerConfig } from "@/lib/config/worker";
 
 export const TURN_LOCK_STALE_MS = 20 * 60 * 1000;
 export const TURN_LOCK_HEARTBEAT_MS = 30_000;
@@ -29,7 +30,7 @@ const DEFAULT_PHASE_TIMEOUT_MS = 4 * 60 * 1000;
  * not make the lock look stale.
  */
 export function resolvePhaseTimeoutMs(
-  raw: string | undefined = process.env.TURN_PHASE_TIMEOUT_MS
+  raw: string | undefined = workerConfig.turnPhaseTimeoutMs()
 ): number {
   const parsed = Number(raw);
   if (!raw || !Number.isFinite(parsed) || parsed <= 0) return DEFAULT_PHASE_TIMEOUT_MS;

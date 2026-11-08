@@ -167,7 +167,7 @@ export async function proposeOrganizationLegislation(params: {
     // An organisation sanctions an OUTSIDER. Aid below is gated the other way —
     // its recipient must be a member — and sanctions was the one resolution with
     // no relationship test at all, so a bloc could embargo one of its own
-    // (ticket #1285). The fan-out makes that concrete: every member except the
+    //. The fan-out makes that concrete: every member except the
     // target blocks it in both directions, which is an alliance ordering itself
     // to blockade a member it is simultaneously sworn to defend.
     if (members.has(target)) {
@@ -391,13 +391,6 @@ export async function proposeOrganizationLegislation(params: {
   }
 
   if (input.type === "declare_war") {
-    const gs = await db
-      .collection<{ _id: string; conflictsEnabled?: boolean }>("gameState")
-      .findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return { ok: false as const, status: 404, error: "Conflicts subsystem disabled" };
-    }
-
     const target = input.targetCountryId;
     if (members.has(target)) {
       return {
@@ -464,16 +457,6 @@ export async function proposeOrganizationLegislation(params: {
   }
 
   if (input.type === "join_conflict") {
-    // The subsystem's own switch, enforced here as the admin create route enforces
-    // it. Conflict documents outlive the flag being turned off, so without this a
-    // crafted request could table a war-entry vote in a world where the Conflicts
-    // subsystem is off and the pages that would show it redirect away.
-    const gs = await db
-      .collection<{ _id: string; conflictsEnabled?: boolean }>("gameState")
-      .findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return { ok: false as const, status: 404, error: "Conflicts subsystem disabled" };
-    }
     if (input.side !== "A" && input.side !== "B") {
       return { ok: false as const, status: 400, error: "Pick side A or side B." };
     }

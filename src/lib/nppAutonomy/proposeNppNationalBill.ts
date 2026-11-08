@@ -130,7 +130,7 @@ export async function proposeNppNationalBill(
     social: option.social,
   };
 
-  // Tax-slider laws (ruling #16): the selection carries only a DIRECTION —
+  // Tax-slider laws: the selection carries only a DIRECTION -
   // resolve the concrete rate (one notch) against the live budget and run the
   // same server-side validation players go through. Bounds-blocked or
   // sub-step moves simply skip this sponsorship attempt.

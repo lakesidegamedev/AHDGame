@@ -51,17 +51,16 @@ function mapSpendError(step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Er
 
 /**
  * Charge a primary state attack (character actions + campaign funds) and
- * record the attack row so the result is exactly-once on every topology
- * (issue #1672).
+ * record the attack row so the result is exactly-once on every topology.
  *
  * Under real transactions the legs, the row insert, and the idempotency
- * receipt join the transaction and commit atomically, preserving the old
- * behavior. On a standalone deployment the fallback runs the same writes as
- * keyed idempotent steps: a crash between the debits and the insert leaves
- * an `in_progress` receipt, and retrying with the same key reconciles to
- * exactly one charged attack instead of charging for an attack that never
- * landed (or landing it twice). A retry after a terminal failure throws
- * `MoneyFlowTerminalError` (fail closed); a new attempt needs a new key.
+ * receipt join the transaction and commit atomically. On a standalone
+ * deployment the fallback runs the same writes as keyed idempotent steps: a
+ * crash between the debits and the insert leaves an `in_progress` receipt, and
+ * retrying with the same key reconciles to exactly one charged attack instead
+ * of charging for an attack that never landed (or landing it twice). A retry
+ * after a terminal failure throws `MoneyFlowTerminalError` (fail closed); a new
+ * attempt needs a new key.
  */
 export async function applyStateAttackSpend(
   db: Db,

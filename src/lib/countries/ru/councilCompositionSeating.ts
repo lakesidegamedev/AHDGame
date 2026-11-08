@@ -29,6 +29,7 @@ import {
 } from "./rules/councilCompositionDelta";
 import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import type { RussianAssemblySeatingRecord, RussianAssemblyOfficeArchive } from "./assemblySeating";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 
 const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
@@ -66,10 +67,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     throw new Error("Council composition seating needs a transaction, turn and time");
   const game = await db
     .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default") return false;
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(

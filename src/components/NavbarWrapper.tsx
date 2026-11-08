@@ -97,7 +97,6 @@ interface NavbarWrapperState {
   imperialCharacter: ImperialCharacterNav | null;
   isImperialMode: boolean;
   wikiDisabled: boolean;
-  conflictsEnabled: boolean;
   unionsEnabled: boolean;
   settlementCrisisLive: boolean;
 }
@@ -123,7 +122,6 @@ type NavbarWrapperAction =
   | { type: "SET_GOVERNOR_OFFICE"; governorOffice: NavbarWrapperState["governorOffice"] }
   | { type: "SET_ACTIVE_PRESIDENT_ELECTION_ID"; id: string | null; seatId: string | null }
   | { type: "SET_WIKI_DISABLED"; wikiDisabled: boolean }
-  | { type: "SET_CONFLICTS_ENABLED"; conflictsEnabled: boolean }
   | { type: "SET_SETTLEMENT_CRISIS_LIVE"; settlementCrisisLive: boolean }
   | { type: "SET_UNIONS_ENABLED"; unionsEnabled: boolean }
   | { type: "CLEAR_ALL" }
@@ -157,7 +155,6 @@ const initialState: NavbarWrapperState = {
   imperialCharacter: null,
   isImperialMode: false,
   wikiDisabled: false,
-  conflictsEnabled: false,
   unionsEnabled: false,
   settlementCrisisLive: false,
 };
@@ -198,8 +195,6 @@ function navbarWrapperReducer(
       };
     case "SET_WIKI_DISABLED":
       return { ...state, wikiDisabled: action.wikiDisabled };
-    case "SET_CONFLICTS_ENABLED":
-      return { ...state, conflictsEnabled: action.conflictsEnabled };
     case "SET_SETTLEMENT_CRISIS_LIVE":
       return { ...state, settlementCrisisLive: action.settlementCrisisLive };
     case "SET_UNIONS_ENABLED":
@@ -415,10 +410,6 @@ export function NavbarWrapper({
       seatId: navData.activePresidentElectionSeatId ?? null,
     });
     dispatch({ type: "SET_WIKI_DISABLED", wikiDisabled: navData.wikiDisabled ?? false });
-    dispatch({
-      type: "SET_CONFLICTS_ENABLED",
-      conflictsEnabled: navData.conflictsEnabled ?? false,
-    });
     dispatch({
       type: "SET_SETTLEMENT_CRISIS_LIVE",
       settlementCrisisLive: navData.settlementCrisisLive ?? false,
@@ -691,7 +682,6 @@ export function NavbarWrapper({
               myUnionId={state.myUnionId ?? undefined}
               adminCharacters={state.adminCharacters ?? undefined}
               imperialCharacter={state.imperialCharacter ?? undefined}
-              conflictsEnabled={state.conflictsEnabled}
               settlementCrisisLive={state.settlementCrisisLive}
               unionsEnabled={state.unionsEnabled}
               activePresidentElectionId={state.activePresidentElectionId ?? undefined}
@@ -732,7 +722,6 @@ export function NavbarWrapper({
               }
               isImperialMode={useLightweightNav ? false : state.isImperialMode}
               wikiDisabled={useLightweightNav ? false : state.wikiDisabled}
-              conflictsEnabled={useLightweightNav ? false : state.conflictsEnabled}
               unionsEnabled={useLightweightNav ? false : state.unionsEnabled}
               settlementCrisisLive={useLightweightNav ? false : state.settlementCrisisLive}
               initialPageCountry={initialPageCountry}

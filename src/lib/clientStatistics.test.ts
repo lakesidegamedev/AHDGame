@@ -23,7 +23,7 @@ function validReport() {
       autonomy: "v1",
       featureFlags: {
         forexEnabled: true,
-        rpgStatsEnabled: false,
+        sectorTechTreesEnabled: false,
         playerRandomEventsEnabled: true,
       },
     },
@@ -326,8 +326,8 @@ describe("turnBucket", () => {
 
 describe("hashFeatureFlags", () => {
   it("is stable for the same allowlisted flags regardless of insertion order", () => {
-    const a = hashFeatureFlags({ rpgStatsEnabled: false, forexEnabled: true });
-    const b = hashFeatureFlags({ forexEnabled: true, rpgStatsEnabled: false });
+    const a = hashFeatureFlags({ sectorTechTreesEnabled: false, forexEnabled: true });
+    const b = hashFeatureFlags({ forexEnabled: true, sectorTechTreesEnabled: false });
     expect(a).toBe(b);
     expect(a).toMatch(/^[0-9a-f]{16}$/);
   });

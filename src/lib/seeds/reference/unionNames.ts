@@ -113,23 +113,9 @@ export type UnionNameMap = Partial<Record<CountryId, Partial<Record<OperatingSec
  * Shared modern-era names (2019/2023 family). Era-specific bundles override
  * these via spreads, so every era bundle is a complete map on its own.
  *
- * Historical-accuracy notes (audited 2026-07, refs union-name accuracy pass):
- * - IT: FENEAL-UIL is the construction/wood federation, and "Fegica" is a
- *   petrol-station operators' association, so extraction and entertainment
- *   now use FILCTEM-CGIL (energy/chemical/mining) and SLC-CGIL
- *   (communication/entertainment workers) instead.
- * - SE: Lantarbetareforbundet (farm workers) merged into Kommunal in 1997,
- *   so modern agriculture maps to Kommunal.
- * - TR: replaced invented "-Is" names with the real Turk-Is affiliates
- *   (Tez-Koop-Is commerce, Yol-Is construction, Tes-Is energy, TUMTIS
- *   transport). No era-correct dedicated tech union is attestable, so
- *   technology falls back to the generic name.
- * - RU: "Medprofzdrav" is not the union's name; the health workers' union is
- *   the Trade Union of Health Workers of Russia. Rail transport is dominated
- *   by Rosprofzhel (Russian Trade Union of Railwaymen and Transport Builders).
- * - ES media: FAPE is a journalists' professional association rather than a
- *   trade union, but it is a real, era-correct journalists' body; kept in
- *   preference to inventing a federation name.
+ * Accuracy constraints: SE farm workers merged into Kommunal (1997); TR uses
+ * real Turk-Is affiliates; RU health is the Trade Union of Health Workers of
+ * Russia; ES media uses FAPE, a journalists' body rather than a union.
  */
 const NAMES_MODERN: UnionNameMap = {
   US: US_UNION_NAMES_MODERN,

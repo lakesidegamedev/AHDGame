@@ -198,14 +198,10 @@ export async function seedExchangeRates(db: Db, preset: string): Promise<void> {
 // ── Central bank updates ────────────────────────────────────────────────────────
 
 /**
- * Ensure every preset-scoped central bank exists and has the required
- * forexRevenue / tradeGrowth fields. A tradable currency alone does not imply
- * a modelled central bank: countries without authored fiscal coverage remain
- * in exchangeRates but are removed here. Safe to run multiple times; upsert is
- * idempotent and $setOnInsert preserves accumulated state on existing banks.
- *
- * Previously this hardcoded ["US","UK","JP"] and omitted DE, which caused EUR
- * spread fees to be silently dropped (updateOne no-ops when the document is absent).
+ * Ensure every preset-scoped central bank exists with forexRevenue /
+ * tradeGrowth. Tradable currency does not imply a modelled central bank:
+ * countries without authored fiscal coverage are removed here. Idempotent;
+ * $setOnInsert preserves accumulated state on existing banks.
  */
 export async function updateCentralBanks(db: Db, preset: string): Promise<void> {
   const now = new Date();

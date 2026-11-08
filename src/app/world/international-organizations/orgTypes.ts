@@ -129,8 +129,6 @@ export interface OrgWorldResponse {
   organizations: OrgSummary[];
   currentTurn: number;
   proposalVotingWindowTurns: number;
-  /** Whether bloc alignment is switched on; gates the per-org Influence tab. */
-  intOrgAlignmentEnabled?: boolean;
 }
 
 /**

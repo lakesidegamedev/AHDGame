@@ -130,7 +130,6 @@ export function processSectors(
   // realization + Tier 3/D1 throughput coupling. Inert (multipliers 1) when
   // disabled — the default.
   market: MarketContext = MARKET_DISABLED,
-  subsidiaryCorporationsEnabled: boolean = false,
   /** gameConfig.commandEconomyEnabled — gates the soft-budget exemptions. */
   commandEconomyEnabled: boolean = false,
   /** gameConfig.privateBankingEnabled — branch/commodity capacity split. */
@@ -911,10 +910,9 @@ export function processSectors(
     const effectiveDividendRate = shouldClearDividends ? 0 : dividendRate;
     // For pass-through structures: enforce minimum payout without overwriting the stored dividendRate.
     const minDividendPct = (corpLegalStructure.minimumDividendRate ?? 0) * 100;
-    // Subsidiary corporations (feature-gated): honor a parent-set dividend floor
-    // only while the setter still controls >50% voting power of this corp.
+    // Honor a parent-set dividend floor only while the setter still controls
+    // >50% voting power of this corp.
     const parentDividendFloorPct = activeParentDividendFloorPct({
-      enabled: subsidiaryCorporationsEnabled,
       parentDividendFloorPct: corp.parentDividendFloorPct,
       parentDividendFloorSetByCorpId: corp.parentDividendFloorSetByCorpId,
       controllingParent: getControllingCorporateParent(corp),

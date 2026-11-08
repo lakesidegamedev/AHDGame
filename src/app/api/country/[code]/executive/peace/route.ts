@@ -92,10 +92,7 @@ async function open(code: string) {
   const db = await getDb();
   const gs = await (
     await getGameStateCollection(db)
-  ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-  if (!gs?.conflictsEnabled) {
-    return { bad: errorResponse(404, "Conflicts subsystem disabled") };
-  }
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
 
   const { character } = auth.user;
   // Head of government OR the foreign seat holder, either one, no precedence —
@@ -105,7 +102,7 @@ async function open(code: string) {
   const gate = await requirePeaceNegotiator(db, countryId, character._id, auth.user.isAdmin);
   if (!gate.ok) return { bad: gate.response };
 
-  return { db, countryId, character, currentTurn: gs.currentTurn ?? 0 };
+  return { db, countryId, character, currentTurn: gs?.currentTurn ?? 0 };
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {

@@ -10,8 +10,7 @@ export interface CrisisListResult {
   startingYear: number;
   /**
    * `GameState.preIterationTurns` (0 on normal worlds). Crisis turns are stored
-   * RAW, so a display needs this to date them on the world's calendar instead of
-   * a game year ahead of it (#1208).
+   * RAW, so a display needs this to date them on the world's calendar.
    */
   preIterationTurns: number;
   /** `GameState.preIteration.active` — calendar pinned to the era start while true. */

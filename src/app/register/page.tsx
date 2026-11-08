@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isMissingRequiredEnvError } from "@/lib/env";
+import { isMissingRequiredEnvError } from "@/lib/config/validatedEnv";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus";

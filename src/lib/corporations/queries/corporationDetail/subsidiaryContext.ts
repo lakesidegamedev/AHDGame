@@ -106,7 +106,6 @@ export interface SubsidiaryPayload {
 export interface SubsidiaryContextResult {
   parentCorporationPayload: ParentCorporationPayload | null;
   subsidiariesPayload: SubsidiaryPayload[];
-  subsidiaryCorporationsEnabled: boolean;
   isFormalizedSub: boolean;
   activeFloorPct: number;
   canManageAsParent: boolean;
@@ -265,13 +264,8 @@ export async function loadSubsidiaryContext(
     }
   }
 
-  // Subsidiary corporations (feature-gated): derive management/formalization
-  // eligibility for the viewer + honor the parent dividend floor. Read the flag
-  // via the in-scope db (this query already holds a connection).
-  const subsidiaryGs = await db
-    .collection<{ _id: string; subsidiaryCorporationsEnabled?: boolean }>("gameState")
-    .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-  const subsidiaryCorporationsEnabled = subsidiaryGs?.subsidiaryCorporationsEnabled === true;
+  // Subsidiary corporations: derive management/formalization eligibility for
+  // the viewer + honor the parent dividend floor.
   const isFormalizedSub = isFormalizedSubsidiaryHelper(corporation, controllingParent);
   // The budget line shows growth bought less the 5% decay, not the
   // strength the leader transfers to subsidiaries. Flag the incomplete figure
@@ -289,7 +283,6 @@ export async function loadSubsidiaryContext(
       ? { subsidiaryCount: formalizedSubsidiaryCount }
       : null;
   const activeFloorPct = activeParentDividendFloorPct({
-    enabled: subsidiaryCorporationsEnabled,
     parentDividendFloorPct: corporation.parentDividendFloorPct,
     parentDividendFloorSetByCorpId: corporation.parentDividendFloorSetByCorpId,
     controllingParent,
@@ -300,7 +293,6 @@ export async function loadSubsidiaryContext(
   // Viewer (as CEO of this corp) may spin off a subsidiary when the corp is
   // eligible to act as a parent. The command re-checks cooldown + sector count.
   const canSpinOff =
-    subsidiaryCorporationsEnabled &&
     !!viewerUserId &&
     corporation.ceoVacant !== true &&
     corporation.userId?.toString() === viewerUserId &&
@@ -311,7 +303,7 @@ export async function loadSubsidiaryContext(
     corporation.lastSpinOffTurn,
     currentTurn
   );
-  if (subsidiaryCorporationsEnabled && viewerUserId) {
+  if (viewerUserId) {
     canManageAsParent = await canActOnCorporationAsParent(
       db,
       new ObjectId(viewerUserId),
@@ -349,7 +341,6 @@ export async function loadSubsidiaryContext(
   return {
     parentCorporationPayload,
     subsidiariesPayload,
-    subsidiaryCorporationsEnabled,
     isFormalizedSub,
     activeFloorPct,
     canManageAsParent,

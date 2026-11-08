@@ -11,12 +11,12 @@ import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GovernmentApproval } from "@/lib/db/types";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import { GREAT_OFFICE_POSITION_IDS } from "@/lib/uk/confidence/confidenceGauge";
-import { applyConfidenceEventToGov } from "@/lib/uk/confidence/confidenceGaugeStore";
+import { GREAT_OFFICE_POSITION_IDS } from "@/lib/countries/uk/confidence/confidenceGauge";
+import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import {
   shouldNppMinisterResign,
   type NppResignationInput,
-} from "@/lib/uk/cabinet/rules/nppResignation";
+} from "@/lib/countries/uk/cabinet/rules/nppResignation";
 
 export interface NppCaretakerResignationArgs {
   countryId: CountryId;

@@ -114,8 +114,6 @@ export interface GameStateData {
   lastTurnProcessed: Date | null;
   currentTurn: number;
   effectiveNow: string;
-  /** When true, US House primaries advance top-3 (districted nominee split). */
-  redistrictingEnabled?: boolean;
 }
 
 export interface ElectionResponse {

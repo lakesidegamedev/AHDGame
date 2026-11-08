@@ -137,9 +137,8 @@ export async function seedTRStateMetrics(
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
     await import("@/lib/seeds/metricPresets");
   const { apply1991IncomeVintage } = await import("@/lib/seeds/reference/income1991");
-  // The base is historical; authored 1953 and modern overlays select the era.
-  // 1991 has no income overlay, so the 1979-lira base income is replaced with
-  // its 1991 old-lira vintage (#3371).
+  // 1991 has no income overlay, so the 1979-lira base income is replaced
+  // with its 1991 old-lira vintage.
   const base =
     preset === "1991-default"
       ? trStateMetrics.map((m) => apply1991IncomeVintage("TR", m))

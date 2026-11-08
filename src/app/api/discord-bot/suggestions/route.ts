@@ -14,6 +14,7 @@ import { resolveSuggestionReporterIdentity } from "@/lib/suggestions/reporterIde
 import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import type { Suggestion, User } from "@/lib/db/types";
 import type { SuggestionCategory, SuggestionGameSystem } from "@/lib/db/types/suggestion";
+import { servicesConfig } from "@/lib/config/services";
 
 const schema = z.object({
   title: z.string().min(1).max(200),
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
 
     // GitHub issue (non-fatal)
     let githubIssueUrl: string | undefined;
-    if (process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
+    if (servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       try {
         const gh = await createPlayerSuggestionGitHubIssue({
           issueNumber,

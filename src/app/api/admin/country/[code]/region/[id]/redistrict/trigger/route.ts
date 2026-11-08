@@ -2,8 +2,6 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
-import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
@@ -27,14 +25,6 @@ export const POST = withAdminRoute(
     }
     if (countryId !== "US") {
       return errorResponse(400, "Redistricting is only available for US states");
-    }
-
-    const gs = await getGameState();
-    if (!isRedistrictingEnabled(gs)) {
-      return errorResponse(
-        400,
-        "Redistricting is not enabled — turn it on in the admin dashboard first"
-      );
     }
 
     const db = await getDb();

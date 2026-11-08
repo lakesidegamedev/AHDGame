@@ -136,9 +136,8 @@ export async function seedSEStateMetrics(
   const { seStateMetrics } = await import("@/lib/seeds/se/seStateMetrics");
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
     await import("@/lib/seeds/metricPresets");
-  // Base bundle is ~1979; 1953 overlay is the only registered SE preset (2019 no-op).
-  // 1991 has no income overlay, so the ~1979 base income is replaced with its
-  // 1991 vintage in the same legacy currency as the 1991 GDP (#3393).
+  // 1991 has no income overlay, so the ~1979 base income is replaced
+  // with its 1991 vintage in the same legacy currency as the 1991 GDP.
   const vintage1991 =
     preset === "1991-default"
       ? (await import("@/lib/seeds/reference/income1991")).apply1991IncomeVintage

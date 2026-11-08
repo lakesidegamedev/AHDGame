@@ -5,6 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createGitHubIssue, syncFeedbackToGitHub } from "@/lib/github";
 import type { Feedback, User } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { servicesConfig } from "@/lib/config/services";
 
 /**
  * POST /api/admin/feedback/backfill-github
@@ -23,8 +24,8 @@ export async function POST() {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    const token = process.env.GIT_TOKEN;
-    const repo = process.env.GITHUB_REPO;
+    const token = servicesConfig.gitToken();
+    const repo = servicesConfig.githubRepo();
     if (!token || !repo) {
       return errorResponse(
         400,

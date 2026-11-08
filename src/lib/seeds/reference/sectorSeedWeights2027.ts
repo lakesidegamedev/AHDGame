@@ -8,24 +8,15 @@
 
 /**
  * Projected 2027 national sector weights: the US, plus the background countries below.
+ * Relative percentage-of-GDP allocations across the 17 game sectors, calibrated
+ * to 2023 BEA value-added shares. All weights are normalised at read time, so
+ * only relative magnitudes matter.
  *
- * Numbers are relative percentage-of-GDP allocations across the 17 game sectors,
- * calibrated to 2023 BEA value-added shares. Relative to the 2019-default bundle:
- *   - technology +2 (platform software, cloud, AI services now ~9–10% of GDP)
- *   - healthcare +1 (persistent post-COVID demand, now ~10% of private GDP)
- *   - manufacturing -2 (continued structural decline; offshoring accelerated)
- * All weights are normalised at read time, so only relative magnitudes matter.
+ * The 16 background countries carry a coarse national mix of their own. They seed
+ * no sectors; the weights size their aggregate macro economy. Each row is a
+ * game-scale projection, not a sourced statistical series.
  *
- * The 16 background countries of the 2027 world (#5702) carry a coarse
- * national mix of their own. They seed no sectors; the weights size their
- * aggregate macro economy (`world/macro/background2027.ts`). Each row is a
- * game-scale projection of the country's broad output structure (services
- * heavy in western Europe, extraction in Russia and Nigeria, manufacturing in
- * central Europe and Turkey), not a sourced statistical series.
- *
- * Other countries remain on an even split until country-specific data is
- * authored. `getCountrySectorWeights2027` returns an even distribution for any
- * country not in the map.
+ * Countries not in the map get an even split via `getCountrySectorWeights2027`.
  */
 
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";

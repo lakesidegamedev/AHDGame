@@ -73,7 +73,6 @@ import {
 import { getTranslations } from "next-intl/server";
 import { CeoCorporationCard } from "@/app/profile/components/CeoCorporationCard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import { CharacterStatsPanel } from "@/app/profile/components/CharacterStatsPanel";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { LocWalletStrip } from "@/components/forex/LocWalletStrip";
@@ -127,10 +126,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CharacterPage({ params }: PageProps) {
   const { id } = await params;
-  const [userData, forexEnabled, rpgStatsEnabled, data] = await Promise.all([
+  const [userData, forexEnabled, data] = await Promise.all([
     getAuthUserWithCharacter(),
     isForexEnabled(),
-    isRpgStatsEnabled(),
     getCharacterById(id),
   ]);
 
@@ -175,7 +173,6 @@ export default async function CharacterPage({ params }: PageProps) {
     ceoCorporation,
     statePartyOrg,
     nationalNpiOrdinalRank,
-    conflictsEnabled,
     doctrineAdopted,
     general,
     militaryService,
@@ -574,7 +571,6 @@ export default async function CharacterPage({ params }: PageProps) {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-16">
       <ProfileTabs
-        conflictsEnabled={conflictsEnabled}
         adopted={doctrineAdopted}
         general={general}
         militaryService={militaryService}
@@ -707,7 +703,7 @@ export default async function CharacterPage({ params }: PageProps) {
               />
             </section>
 
-            {rpgStatsEnabled && character.stats && <CharacterStatsPanel stats={character.stats} />}
+            {character.stats && <CharacterStatsPanel stats={character.stats} />}
             {isOwnProfile && forexEnabled ? <LocWalletStrip countryId={countryIdResolved} /> : null}
 
             <ProfileAchievements

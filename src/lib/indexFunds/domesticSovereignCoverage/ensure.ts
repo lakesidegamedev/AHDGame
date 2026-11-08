@@ -1,5 +1,5 @@
 /**
- * Gated domestic sovereign-bond coverage shell (#1001).
+ * Gated domestic sovereign-bond coverage shell.
  *
  * When gameConfig.domesticSovereignBondCoverageEnabled is exactly true,
  * ensures one home-sovereign bond fund per uncovered sovereign issuer (see

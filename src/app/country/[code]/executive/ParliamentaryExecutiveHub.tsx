@@ -43,15 +43,15 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
-import { getEligibleCabinetCharacters } from "@/lib/uk/cabinetEligibility";
+import { getEligibleCabinetCharacters } from "@/lib/countries/uk/cabinetEligibility";
 import { ShadowCabinetSection } from "./components/ShadowCabinetSection";
 import { ObjectId } from "mongodb";
 import {
   getConfidenceGauge,
   getConfidenceGaugeHistory,
-} from "@/lib/uk/confidence/confidenceGaugeStore";
+} from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { ConfidenceGaugeReadout } from "@/components/uk/government/ConfidenceGaugeReadout";
-import { getNhsState } from "@/lib/uk/nhs/nhsStore";
+import { getNhsState } from "@/lib/countries/uk/nhs/nhsStore";
 import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
 
 type PartyRowMeta = {

@@ -25,6 +25,7 @@ import {
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { settleBgOrdinaryListHolders } from "./rules/ordinaryElectionPlan";
 import { bgOrdinarySeatingClockReady } from "./rules/assemblyClock1991";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 
 interface BgAssemblyOfficeArchive {
   _id: string;
@@ -61,10 +62,7 @@ async function materializeBgOrdinaryAssembly(input: {
   if (!receipt || receipt.seatedAtTurn != null) return false;
   const game = await db
     .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default")
     throw new Error("No Bulgarian ordinary mandate in this world");
   const calendar = calendarTurn(turn, {

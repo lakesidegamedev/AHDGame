@@ -1,14 +1,13 @@
 /**
- * National index funds for background countries (#5702).
+ * National index funds for background countries.
  *
  * Each background country gets one ordinary index fund, created the first
- * time its kernel ticks, so players buy and sell it through the existing fund
- * subscribe and redeem routes and hold it as an ordinary fund position. Its
- * only asset is cash kept equal to NAV times units; each kernel tick marks it
- * to the country's index level, creating or withdrawing the difference
- * against the background economy with a ledger leg. The fund cron leaves the
- * fund's assets alone (see `isNationalIndexFund`) and only serves its
- * redemption queue and snapshots.
+ * time its kernel ticks, so players buy and sell it through the existing
+ * fund subscribe and redeem routes. Its only asset is cash kept equal to NAV
+ * times units; each tick marks it to the country's index level, creating or
+ * withdrawing the difference against the background economy with a ledger
+ * leg. The fund cron leaves its assets alone (see `isNationalIndexFund`) and
+ * only serves its redemption queue and snapshots.
  *
  * Batched: one fund read, at most one insert, one queued-unit read, one bulk
  * fund write, one transaction insert and one ledger emission per tick.

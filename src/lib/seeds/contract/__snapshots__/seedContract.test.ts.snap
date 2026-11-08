@@ -252,45 +252,4 @@ exports[`seed contract per preset > 2023-default matches the recorded gap list 1
 ]
 `;
 
-exports[`seed contract per preset > 2027-default matches the recorded gap list 1`] = `
-[
-  "budget:AT duplicate",
-  "budget:BR duplicate",
-  "budget:CN duplicate",
-  "budget:DE duplicate",
-  "budget:ES duplicate",
-  "budget:FI duplicate",
-  "budget:FR duplicate",
-  "budget:GR duplicate",
-  "budget:IE duplicate",
-  "budget:IT duplicate",
-  "budget:JP duplicate",
-  "budget:NG budgetSpending",
-  "budget:NG duplicate",
-  "budget:SE duplicate",
-  "budget:TR duplicate",
-  "budget:UK duplicate",
-  "census:BR missing",
-  "census:IE missing",
-  "census:NG missing",
-  "census:SE missing",
-  "census:TR duplicate",
-  "metricPresets:BR missing",
-  "metricPresets:CN missing",
-  "metricPresets:DE missing",
-  "metricPresets:IE missing",
-  "metricPresets:JP missing",
-  "metricPresets:NG missing",
-  "metricPresets:TR duplicate",
-  "metricPresets:UK missing",
-  "metricPresets:US missing",
-  "regions:AT regionalGdp",
-  "regions:ES regionalGdp",
-  "regions:GR regionalGdp",
-  "regions:IT regionalGdp",
-  "regions:NG regionalGdp",
-  "regions:SE regionalGdp",
-  "regions:TR duplicate",
-  "regions:TR regionalGdp",
-]
-`;
+exports[`seed contract per preset > 2027-default matches the recorded gap list 1`] = `[]`;

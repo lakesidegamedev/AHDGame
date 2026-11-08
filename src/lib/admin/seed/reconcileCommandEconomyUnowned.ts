@@ -1,22 +1,16 @@
 /**
- * Command-economy SOE / plants reconcile (ticket #1014).
+ * Command-economy SOE / plants reconcile.
  *
  * Under plants, Eastern-bloc command countries need state capacity in EVERY
- * sector. The old "commanding heights" SOE lists left most sectors as
- * unreachable unowned headroom (private founding is banned), and even the
- * seeded SOE buckets carried a full unowned twin that diluted capacity share
- * to ~50%.
+ * sector, but private founding is banned and seeded SOE buckets carried a
+ * full unowned twin that diluted capacity share to ~50%.
  *
- * This pass:
- *   1. Upserts one SOE corporation + per-state plants for every sector in
- *      {@link commandEconomySoeSectors} (matched by assignedSectorTypes so
- *      live ObjectIds from prior id layouts are reused).
- *   2. Deletes unowned docs and foreign-held corporate sectors only for the
- *      (country, type, state) triples this run actually covers — so a
- *      dual-track country like CN keeps unowned headroom outside its shorter
- *      SOE set, and a merge survivor keeps the absorbed regions' sectors the
- *      seed built no row for (ticket #1271). Never delete what you did not
- *      replace.
+ * This pass upserts one SOE corporation plus per-state plants for every
+ * sector in {@link commandEconomySoeSectors}, then deletes unowned and
+ * foreign-held corporate sectors ONLY for the (country, type, state) triples
+ * it covers. Never delete what you did not replace: dual-track countries
+ * like CN keep unowned headroom outside their shorter SOE set, and merge
+ * survivors keep sectors the seed built no row for.
  *
  * Idempotent. Called at the end of `seedUnownedSectors` and from the deploy
  * migration for live worlds.
@@ -138,10 +132,9 @@ export async function reconcileCommandEconomyUnowned(
   let sectorsUpserted = 0;
 
   // States this run actually covers, per (country, sector type). The deletes
-  // below must never reach past them: after a merge (German reunification) the
-  // survivor owns regions the seed never built SOE rows for, and wiping those
-  // regions' sectors while creating nothing in their place destroys live
-  // production instead of reconciling it (ticket #1271).
+  // below must never reach past them: after a merge the survivor owns regions
+  // the seed never built SOE rows for, and wiping those regions' sectors while
+  // creating nothing in their place destroys live production.
   const coveredStatesByCountryType = new Map<
     string,
     { countryId: CountryId; sectorType: OperatingSectorType; stateIds: Set<string> }
@@ -170,7 +163,7 @@ export async function reconcileCommandEconomyUnowned(
     if (!existing) {
       if (!dryRun) {
         // Never overwrite an ObjectId that already belongs to another corp
-        // (legacy 3-digit SOE ids collided with the first #1014 band map).
+        // (legacy 3-digit SOE ids collided with the first band map).
         const idTaken = await db
           .collection<Corporation>("corporations")
           .findOne({ _id: corpId }, { projection: { _id: 1, countryOwnerId: 1 } });
@@ -227,7 +220,7 @@ export async function reconcileCommandEconomyUnowned(
     }
 
     // Drop sectors for this country/type that still hang off a foreign corp
-    // (ObjectId overwrite fallout from the first #1014 heal) — but ONLY in
+    // (ObjectId overwrite fallout from the first heal), but ONLY in
     // states this run covers with a fresh SOE row. Anything outside that set
     // (an absorbed region the seed has no row for) keeps its sectors; the
     // nationalization mechanic, with compensation, is what moves those.
@@ -265,10 +258,10 @@ export async function reconcileCommandEconomyUnowned(
   }
 
   // Drain unowned only where an SOE row now covers the (country, type, state).
-  // CN (and any future short-list command country) must keep unowned outside
-  // its SOE set — and after a merge the survivor must keep unowned in regions
-  // the seed built no row for, so a later nationalization still has a pool to
-  // carve into the National Corporation (ticket #1271).
+  // CN and other short-list command countries must keep unowned outside their
+  // SOE set, and after a merge the survivor must keep unowned in regions the
+  // seed built no row for, so a later nationalization still has a pool to
+  // carve into the National Corporation.
   const covered = [...coveredStatesByCountryType.values()].map(
     ({ countryId, sectorType, stateIds }) => ({
       countryId,

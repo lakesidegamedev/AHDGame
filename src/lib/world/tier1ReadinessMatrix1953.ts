@@ -1,8 +1,8 @@
 /**
- * 1953 Tier-1 readiness matrix (#3723).
+ * 1953 Tier-1 readiness matrix.
  *
  * Evaluates every proposed Tier-1 country against the archetype-aware readiness
- * contract (#3722), attaches capability + follow-up issue references to every
+ * contract, attaches capability + follow-up issue references to every
  * blocker, and exposes a deterministic admin/diagnostics read model.
  */
 

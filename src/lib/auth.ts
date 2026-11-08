@@ -10,10 +10,12 @@ import { getCharactersCollection, getUsersCollection } from "@/lib/db/collection
 import { getCachedUser, invalidateCachedUser, setCachedUser } from "@/lib/auth/userDocCache";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { Character, User } from "@/lib/db/types";
-import { getValidatedEnv } from "@/lib/env";
+import { getValidatedEnv } from "@/lib/config/validatedEnv";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { CHARACTER_GATE_COOKIE } from "@/lib/auth/characterGate";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
+import { authConfig } from "@/lib/config/auth";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 const CANONICAL_COOKIE_DOMAIN = ".ahousedividedgame.com";
 
@@ -72,7 +74,7 @@ async function getCookieDomain(): Promise<string | undefined> {
 
   return (
     resolveCookieDomainFromBaseUrl(process.env.NEXT_PUBLIC_BASE_URL?.trim()) ??
-    (process.env.RAILWAY_ENVIRONMENT_NAME || process.env.VERCEL_ENV === "production"
+    (runtimeConfig.railwayEnvironmentName() || runtimeConfig.vercelEnv() === "production"
       ? CANONICAL_COOKIE_DOMAIN
       : undefined)
   );
@@ -81,7 +83,7 @@ async function getCookieDomain(): Promise<string | undefined> {
 export function getJwtSecret(): Uint8Array {
   const secret =
     process.env.NODE_ENV === "test"
-      ? (process.env.AUTH_SECRET ?? "test-secret-placeholder")
+      ? (authConfig.authSecret() ?? "test-secret-placeholder")
       : getValidatedEnv().AUTH_SECRET;
 
   return new TextEncoder().encode(secret);

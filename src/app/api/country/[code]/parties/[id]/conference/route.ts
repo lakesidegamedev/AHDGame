@@ -7,8 +7,8 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { getGameTime } from "@/lib/time/gameTime";
-import { getConferenceState } from "@/lib/uk/conference/conferenceCommands";
-import { conferenceYearForTurn } from "@/lib/uk/conference/rules";
+import { getConferenceState } from "@/lib/countries/uk/conference/conferenceCommands";
+import { conferenceYearForTurn } from "@/lib/countries/uk/conference/rules";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;

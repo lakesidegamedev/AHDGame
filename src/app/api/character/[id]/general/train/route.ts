@@ -1,6 +1,6 @@
 // POST /api/character/[id]/general/train
-// Train a trait node on a character's general. Auth: self or admin. Gated by
-// conflictsEnabled. The server re-validates points/availability/era via trainNode.
+// Train a trait node on a character's general. Auth: self or admin. The
+// server re-validates points/availability/era via trainNode.
 // Errors: 400, 401, 403, 404.
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -9,7 +9,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import {
   getCharacterCommission,
   getCharacterGeneralsCollection,
@@ -38,13 +37,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!body.success) return errorResponse(body.status, body.error);
 
     const db = await getDb();
-    const gs = await (
-      await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
-
     const character = await db
       .collection<Character>("characters")
       .findOne(

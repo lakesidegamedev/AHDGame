@@ -15,7 +15,7 @@ import {
   getUkCommonsVacanciesCollection,
   getUkRecallPetitionsCollection,
 } from "@/lib/db/collections/ukByElection";
-import { RECALL_SIGNATURES_REQUIRED } from "@/lib/uk/elections/commonsRecallRules";
+import { RECALL_SIGNATURES_REQUIRED } from "@/lib/countries/uk/elections/commonsRecallRules";
 import {
   SPECIAL_COMMONS_ELECTION_TYPE,
   commonsByElectionGate,

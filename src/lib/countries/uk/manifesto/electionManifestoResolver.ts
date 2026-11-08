@@ -7,6 +7,7 @@ import {
   buildManifestoMultipliers,
   type GroupLeanWithId,
 } from "@/lib/countries/uk/manifesto/manifestoPopularity";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 /**
  * Election-time bridge from locked manifestos to the vote engine's
@@ -18,7 +19,7 @@ import {
  * the hot vote-tally path.
  */
 export function isManifestoVoteEffectEnabled(): boolean {
-  return process.env.UK_MANIFESTO_VOTE_EFFECT === "1";
+  return runtimeConfig.ukManifestoVoteEffect();
 }
 
 /** Minimal shapes so this stays decoupled from the engine's concrete types. */

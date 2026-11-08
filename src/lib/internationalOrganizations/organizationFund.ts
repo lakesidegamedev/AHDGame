@@ -31,7 +31,7 @@ export function memberDueUsd(gdpUsd: number, duesRateAnnual: number): number {
 
 /**
  * Convert a country's local-currency amount to USD (USD = local × rate).
- * `preset` selects the era's rate (refs #3778) — see `getGdpAnchorRate`.
+ * `preset` selects the era's rate; see `getGdpAnchorRate`.
  */
 export function localToUsd(country: CountryId, amountLocal: number, preset?: string): number {
   if (!(amountLocal > 0)) return 0;
@@ -144,16 +144,10 @@ export async function chargeOrganizationDues(
       const dueLocal = Math.round(dueUsd / rate); // member's own currency (debit)
       if (dueLocal <= 0) continue;
       // CREDIT ONLY WHAT WAS ACTUALLY DEBITED. A member with no `federalBudget`
-      // row matches nothing here, and crediting the fund anyway would mint money
-      // the reconciler cannot attribute to anyone. That was unreachable while
-      // dues were restricted to player-enabled countries, which all have a row —
-      // it became reachable when non-voting members started paying dues in
-      // organisations that levy no tribute (#1156).
-      //
-      // Tribute takes the other branch for the same case and counts it as an
-      // explicit `minted` figure. Dues have no such accounting, so an unmodelled
-      // member simply does not contribute rather than contributing from nowhere.
-      // Credit the fund in its (founding) currency.
+      // row matches nothing here; crediting the fund anyway would mint money
+      // the reconciler cannot attribute. Non-voting members in organisations
+      // that levy no tribute can reach this case, so an unmodelled member
+      // simply does not contribute. Credit the fund in its (founding) currency.
       if (fundedCash && batch) {
         const treasuryRate = organizationTreasuryLocalPerAnchor(batch, m.countryId);
         const fundRate = organizationLocalPerAnchor(batch, currencyCountryId);

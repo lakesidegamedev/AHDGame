@@ -123,13 +123,10 @@ export function getCabinetEligibleOfficeTypes(countryId: CountryId, preset?: str
 }
 
 /**
- * Office-type keys the region Politics → Officials tab buckets into Senate /
- * House / State Senate sections.
- *
- * Chamber *keys* (e.g. DD `volkskammer`, CN `npc`) are not always the stored
- * `electedOfficials.officeType` (DD `volkskammerDeputy`, CN `npcDelegate`).
- * Matching only the chamber key left those countries' lower-chamber seats
- * looking vacant even when deputies were seated (ticket #1121).
+ * Office-type keys the region Politics -> Officials tab buckets into Senate /
+ * House / State Senate sections. Chamber keys (e.g. DD `volkskammer`, CN
+ * `npc`) are not the stored `electedOfficials.officeType` (DD
+ * `volkskammerDeputy`, CN `npcDelegate`), so match on office types.
  */
 export function getRegionOfficialBuckets(
   countryId: CountryId,

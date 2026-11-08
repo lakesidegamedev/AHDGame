@@ -116,7 +116,7 @@ export interface NatViewSector {
   /** Growth rate actually applied this turn (trends toward the target). */
   currentGrowthRate: number;
   /**
-   * Active production method (suggestion #91). The national CEO panel never
+   * Active production method. The national CEO panel never
    * exposed this, so a state-owned sector was stuck on whatever it was seeded
    * with — even though `setSectorStrategy` has always accepted the national
    * CEO (it only checks `requireCeo`, with no state-owned exclusion).
@@ -457,15 +457,10 @@ export async function buildNationalCorporationView(
       efficiency,
       vsPrivateMarginDelta: efficiency.total,
       // Operating profit is the engine's own answer, on the REALIZED basis and
-      // signed (ticket #1072). It used to be
-      // `revenue x max(0, effectiveProfitMargin) / 100`, which billed a cold
-      // plant's untouched nameplate at the margin it WOULD have earned if it
-      // had run, and floored every running loss at zero. Five mothballed East
-      // German plants therefore reported +4.78M per day against an
-      // engine-booked loss, and mothballing became the profit-maximizing move.
-      // `effectiveProfitMargin` already bakes in the SOE efficiency penalty, so
-      // `efficiency.total` is added only to the seeded-base fallback a sector
-      // that has never processed a turn falls back to.
+      // signed, so a cold or losing plant is not billed at a nameplate margin it
+      // never earned. effectiveProfitMargin already includes the SOE efficiency
+      // penalty; efficiency.total is added only for the seeded-base fallback used
+      // when a sector has never processed a turn.
       operatingProfit: Math.round(
         soeSectorOperatingProfit(s, plantsMode, s.profitMargin + efficiency.total)
       ),
@@ -584,7 +579,7 @@ export async function buildNationalCorporationView(
   const grossRevenuePerTurn = Math.round(totalRevenue);
   const mandateSubsidyPerTurn = Math.round(
     viewSectors.reduce(
-      // Realized, not nameplate (ticket #1072): a cold plant sells nothing, so
+      // Realized, not nameplate: a cold plant sells nothing, so
       // price control forgoes nothing on it and the treasury is not paying for it.
       (acc, s) => acc + (s.priceControlled ? (s.realizedRevenue * -s.efficiency.mandate) / 100 : 0),
       0

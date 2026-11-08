@@ -135,8 +135,7 @@ export async function listServiceableFunds(db: Db): Promise<IndexFund[]> {
 
 /**
  * Funds a corporation sponsors, newest first, excluding delisted. Powers the
- * owner-facing "funds this corp sponsors" surface - there was previously no way
- * to list a corp's own funds after the session that chartered them (ticket 1088).
+ * owner-facing "funds this corp sponsors" surface.
  */
 export async function listFundsBySponsor(
   db: Db,
@@ -823,7 +822,7 @@ export async function listSnapshotsForFunds(
     .collection<IndexFundSnapshot>(FUND_SNAPSHOT_COLLECTION)
     .aggregate<{ _id: ObjectId; snapshots: IndexFundSnapshot[] }>([
       { $match: { fundId: { $in: fundIds } } },
-      // Group key first so the {fundId, turn} index supplies the order (#2693).
+      // Group key first so the {fundId, turn} index supplies the order.
       { $sort: { fundId: 1, turn: -1 } },
       {
         $group: {

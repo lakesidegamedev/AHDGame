@@ -117,13 +117,10 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
       // member stamps EUR, not the era-blind map code. No extra read: the
       // ensure above already returned the document.
       liquidCurrencyCode: primary.liquidCurrencyCode,
-      // `buildNationalCorporationDoc` defaults `type` to "financial", which is
-      // right for the PRIMARY NatCorp (a sovereign issuer) and wrong for a
-      // producing split-off. `corporation.type` is the sector a corp builds into
-      // when none is named (`expandSector`, `buildCapacity`) and one of the keys
-      // `applyPriceMultipliers` reads, so leaving it at the default pointed every
-      // split-off enterprise at the financial sector regardless of what it
-      // actually operates (ticket #1271).
+      // buildNationalCorporationDoc defaults `type` to "financial", right for the
+      // PRIMARY NatCorp (a sovereign issuer) but wrong for a producing split-off:
+      // `corporation.type` drives expandSector/buildCapacity defaults and is read
+      // by applyPriceMultipliers, so the default mislabels every split-off.
       type: corporationTypeOfLane(params.sectorType),
       ...(operatingSectorIdentity(params.sectorType).industryModel
         ? { industryModel: operatingSectorIdentity(params.sectorType).industryModel }

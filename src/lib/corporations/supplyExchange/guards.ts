@@ -121,13 +121,8 @@ export async function checkSupplyContractParties(
   args: { supplier: GuardedCorp; buyer: GuardedCorp; commodity: CommodityType }
 ): Promise<string | null> {
   const { supplier, buyer, commodity } = args;
-  if (resolveRelatedParty(supplier, buyer)) {
-    const world = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-    if (world?.subsidiaryCorporationsEnabled !== true || !shareFormalizedGroup(supplier, buyer)) {
-      return RELATED_PARTY_MESSAGE;
-    }
+  if (resolveRelatedParty(supplier, buyer) && !shareFormalizedGroup(supplier, buyer)) {
+    return RELATED_PARTY_MESSAGE;
   }
   if (
     await isSupplyLaneClosed(db, {

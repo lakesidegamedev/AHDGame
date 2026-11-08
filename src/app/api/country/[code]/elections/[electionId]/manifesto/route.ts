@@ -17,7 +17,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { Election } from "@/lib/db/types/election";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import {
   upsertManifestoDraft,
   lockManifesto,

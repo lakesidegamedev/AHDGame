@@ -32,7 +32,7 @@ export interface DistrictedArgs {
    * runs on every House race page view: with persistence unconditional, opening
    * a live race rewrote that state's sitting members from an in-progress tally.
    * The projection path also has no NPP id map, so it wrote `npps` ids into
-   * `holderCharacterId` and every NPP-held seat rendered unheld (#2906 again).
+   * `holderCharacterId` and every NPP-held seat rendered unheld.
    */
   persist?: boolean;
   preloadedDistricts?: CongressionalDistrict[];
@@ -101,7 +101,7 @@ export function projectDistrictedSeats(
   // each party's quota into the districts where it is strongest (lean + boost).
   // Quotas are proportional so a statewide plurality — or a lean-invariant
   // centrist party — can no longer sweep every district; gerrymandering shifts
-  // WHICH districts each party holds, not HOW MANY. (ticket 926)
+  // WHICH districts each party holds, not HOW MANY.
   const quotas = computePartySeatQuotas(
     baselines,
     docs.length,

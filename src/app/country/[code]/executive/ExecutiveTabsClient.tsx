@@ -13,7 +13,6 @@ import { AdminAppointPmButton } from "./components/AdminAppointPmModal";
 import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { ExecutiveActivitySection } from "./components/ExecutiveActivitySection";
 import { ForeignAffairsTab } from "./components/ForeignAffairsTab";
-import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 
 type TabKey =
   | "devolution"
@@ -106,7 +105,6 @@ export function ExecutiveTabsClient({
       (requested === "admin" ? viewerIsAdmin : canSeePrivateTabs);
     return openable ? requested : "overview";
   });
-  const conflictsEnabled = useConflictsEnabled();
   const ordersLabel = chrome.ordersLabel;
 
   return (
@@ -142,7 +140,7 @@ export function ExecutiveTabsClient({
             {t("tab")}
           </TabButton>
         )}
-        {canSeePrivateTabs && conflictsEnabled && (
+        {canSeePrivateTabs && (
           <TabButton active={active === "foreign"} onClick={() => setActive("foreign")}>
             Foreign affairs
           </TabButton>
@@ -181,10 +179,7 @@ export function ExecutiveTabsClient({
       {active === "address" && <WhiteHouseAddressTab countryId={countryId} />}
       {active === "orders" && <WhiteHouseOrdersTab countryId={countryId} />}
       {active === "endorsements" && <WhiteHouseEndorsementsTab countryId={countryId} />}
-      {/* Guards repeated on the BODY, not just the button: `active` is component
-          state, so a flag flipping off while this tab is open would otherwise leave
-          it rendered. */}
-      {active === "foreign" && canSeePrivateTabs && conflictsEnabled && (
+      {active === "foreign" && canSeePrivateTabs && (
         <ForeignAffairsTab countryId={countryId} canAct={canSeePrivateTabs} />
       )}
       {active === "regime" && isOnePartyState && <RegimeHealthTab countryCode={countryId} />}

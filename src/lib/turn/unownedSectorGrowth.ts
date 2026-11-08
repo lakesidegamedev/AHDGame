@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { CorporateSector, StateMetrics, UnownedSector } from "@/lib/db/types";
+import type { StateMetrics, UnownedSector } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
 import {
@@ -11,6 +11,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
 import { unownedHeadroomUnitsPerAnchor } from "@/lib/market/unownedHeadroom";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 
 const FALLBACK_GROWTH_RATE = 1; // % per game year (same unit as corporate growthRate)
 
@@ -36,8 +37,7 @@ export async function processUnownedSectorGrowth(db: Db): Promise<number> {
   const [unownedSectors, corpSectors, nationalCorpIds, plantsEnabled, eraUnitScale] =
     await Promise.all([
       db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      (await getCorporateSectorsCollection(db))
         .find(
           {},
           {

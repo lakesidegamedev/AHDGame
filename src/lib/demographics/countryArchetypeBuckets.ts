@@ -1,5 +1,5 @@
 import type { ArchetypeBucketWeight } from "./archetypeBucketMap";
-import { COMPOSITION_WEIGHTS } from "./compositionWeights.generated";
+import { COMPOSITION_WEIGHTS } from "./compositionWeights";
 
 /**
  * Per-country archetype to Layer-1 bucket weights, read from the country's own
@@ -11,7 +11,7 @@ import { COMPOSITION_WEIGHTS } from "./compositionWeights.generated";
  * Composition is era-stable (only political positions move between eras), so
  * one table serves every era.
  *
- * Weights come from `compositionWeights.generated.ts`, not the seed directly,
+ * Weights come from the generated composition-weights data, not the seed directly,
  * because the seed carries every region's census marginals and cannot be
  * bundled for the browser. A test keeps the generated file in sync with the
  * seed.

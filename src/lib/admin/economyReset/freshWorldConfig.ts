@@ -39,7 +39,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   // opening that moves the rebuilt economy onto the funded path.
   producerMarketLiveFromTurn: "",
   producerDemandPlanStage: "",
-  // Demand curve stage (#5451), switched on deliberately.
+  // Demand curve stage, switched on deliberately.
   producerDemandCurveStage: "",
   producerSpilloverStage: "",
   producerOwnSitesFirstStage: "",
@@ -48,9 +48,9 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerSpilloverShare: "",
   producerPublicCarryStage: "",
   producerPublicCarryShare: "",
-  // Soft price ceiling stage (issue #5452), switched on deliberately.
+  // Soft price ceiling stage, switched on deliberately.
   producerSoftPriceCeilingStage: "",
-  // Carry release stage (issue #5454), switched on deliberately.
+  // Carry release stage, switched on deliberately.
   producerPublicCarryReleaseStage: "",
   producerRunPaceDrop: "",
   producerConversionPaceShare: "",
@@ -160,16 +160,10 @@ const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
 } as const satisfies Partial<GameConfig>);
 
 /**
- * Funded-market settings a rebuilt economy starts with (owner 2026-10-25,
- * chosen on the fresh-economy test arms: arm D grew every turn to 8.4M anchor
- * revenue by funded turn 23 with an 18% losing share and median prices 2.4x
- * base, where 6%/10x crashed mid-run and 3%/5x crashed by turn 8). A seeded
- * world starts far short of real demand: short plants build in a quarter of
- * the time, and prices move at most 2% a turn up to 3x.
- *
- * The legacy-to-plants governor ramp is finished on a rebuilt plants world
- * (owner 2026-10-30): a ramp of 1 turn. Unsetting it fell back to the 240-turn
- * default and brought the old running dominance tolls back.
+ * Funded-market settings a rebuilt economy starts with. A seeded world
+ * starts far short of real demand: short plants build in a quarter of the
+ * time, prices move at most 2% a turn up to 3x, and the governor ramp
+ * finishes in one turn. Unsetting the ramp falls back to a 240-turn default.
  */
 const FRESH_PLANTS_SETTINGS = Object.freeze({
   producerShortageBuildFactor: 0.25,

@@ -10,6 +10,7 @@ import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 /** Per-process dedup so the unexpected-miss warning fires once, not every turn. */
 const warnedUnexpectedMisses = new Set<string>();
@@ -20,7 +21,7 @@ export async function ensureFederalBudget(
   preset: string
 ): Promise<FederalBudget | null> {
   const budgetId = getNationalBudgetId(countryId);
-  const existing = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const existing = await (await getFederalBudgetCollection(db)).findOne({ _id: budgetId });
   if (existing) return existing;
 
   const { getInitialNationalBudgetsForPreset } = await import("@/lib/seeds/reference/budgets");
@@ -42,19 +43,19 @@ export async function ensureFederalBudget(
   }
 
   const { _id, ...budgetData } = defaultBudget;
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id },
-      { $setOnInsert: { ...budgetData, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await (
+    await getFederalBudgetCollection(db)
+  ).updateOne(
+    { _id },
+    { $setOnInsert: { ...budgetData, updatedAt: new Date() } },
+    { upsert: true }
+  );
   console.warn(
     `[ensureFederalBudget] ${countryId} had a centralBanks doc but no federalBudget ` +
       `(_id="${budgetId}") — seeded default from preset "${preset}". This world was ` +
       `likely bootstrapped via a partial seed path; check scripts/seed-sandbox.ts.`
   );
-  return db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  return (await getFederalBudgetCollection(db)).findOne({ _id: budgetId });
 }
 
 /**
@@ -69,8 +70,9 @@ export async function findCountriesMissingFederalBudget(db: Db): Promise<string[
     .toArray();
   if (banks.length === 0) return [];
   const budgetIds = banks.map((bank) => getNationalBudgetId(bank.countryId as CountryId));
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({ _id: { $in: budgetIds } }, { projection: { _id: 1 } })
     .toArray();
   const present = new Set(budgets.map((budget) => String(budget._id)));
@@ -94,8 +96,9 @@ export async function findCountriesMissingFederalBudget(db: Db): Promise<string[
 export async function findFederalBudgetCountryMismatches(
   db: Db
 ): Promise<{ budgetId: string; expectedCountryId: string; actualCountryId: string | undefined }[]> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   const mismatches: {

@@ -702,10 +702,9 @@ const HISTORY_BASELINE_KINDS: ReadonlySet<ContestKind> = new Set([
 ]);
 
 /**
- * A corporation round opened on a turn with no history snapshots (an
- * economy-only reset wipes them) has an empty field and stayed empty all week
- * (#5374). Take the baselines on the first turn that has snapshots instead;
- * growth then counts from that turn.
+ * A corporation round opened with no history snapshots (e.g. an economy-only
+ * reset wipes them) has an empty field forever. Take baselines on the first
+ * turn that has snapshots; growth counts from that turn.
  */
 async function fillLateBaselines(
   db: Db,

@@ -9,7 +9,6 @@ function context(
   latestDeclarationTurn = new Map<CountryId, number>()
 ): OrganizationWarPlanningContext {
   return {
-    conflictsEnabled: true,
     access: access as OrganizationWarPlanningContext["access"],
     allianceRoll: { blocs: {}, preset: "1953-default" },
     activeTrucePairIds: new Set(),

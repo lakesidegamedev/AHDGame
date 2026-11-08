@@ -9,8 +9,6 @@
  * No silent gaps: legislationCatalog.validation.test.ts asserts the key set
  * equals the live seed catalog exactly, so adding a type without classifying
  * it fails CI.
- *
- * Spec: docs/superpowers/specs/2026-07-06-era-legislation-design.md (Appendix A).
  */
 
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";

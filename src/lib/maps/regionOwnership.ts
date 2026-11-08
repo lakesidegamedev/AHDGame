@@ -57,10 +57,9 @@ export interface RegionDetail {
 }
 
 /**
- * regionCode → live display detail (owner + name + population + lower-chamber
- * seats + province), read straight from `states`. Lets the maps render the
- * preset-correct figures the game actually runs on, instead of a static seed
- * baked for one era.
+ * regionCode → live display detail (owner, name, population, lower-chamber
+ * seats, province) read from `states`, so maps render the live figures the
+ * game runs on rather than a static seed.
  */
 export async function getRegionDetails(
   db: Db,

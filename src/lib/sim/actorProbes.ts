@@ -1,20 +1,19 @@
 /**
- * Deterministic actor-coverage probes (issue #1993).
+ * Deterministic actor-coverage probes.
  *
- * Thin deterministic drivers over the REAL rules functions — not reworded
- * copies of their logic and not static string tokens. Each probe takes a run
- * mode plus explicit inputs, calls the production code path with synthetic
- * actors (or records the exact uncovered result when no actor exists), and
- * resolves its mechanic id through `assertKnownActorMechanic` so an
- * unregistered probe fails loudly.
+ * Thin deterministic drivers over the REAL rules functions, not reworded
+ * copies of their logic or static string tokens. Each probe takes a run mode
+ * plus explicit inputs, calls the production path with synthetic actors (or
+ * records the exact uncovered result when no actor exists), and resolves its
+ * mechanic id through `assertKnownActorMechanic` so an unregistered probe
+ * fails loudly.
  *
- * The probes perform no I/O themselves: no database, no wall clock (the
- * convention probe passes an explicit 1953 timestamp instead of the default
- * `new Date()`), no randomness, no env. Prices and book values after founding
- * are explicit probe inputs — in a live sim run they are the observed market
- * quotes; here they are deterministic defaults. Materializing the plan into a
+ * The probes perform no I/O: no database, no wall clock (the convention probe
+ * passes an explicit 1953 timestamp), no randomness, no env. Prices and book
+ * values after founding are explicit probe inputs; in a live sim run they are
+ * observed market quotes, here deterministic defaults. Materializing a
  * sandbox world and running real turns is the worldsim evidence gate, not
- * something these probes pretend to do.
+ * something these probes do.
  */
 
 import { resolveNominationForParty } from "@/lib/turn/election/conventionResolution";

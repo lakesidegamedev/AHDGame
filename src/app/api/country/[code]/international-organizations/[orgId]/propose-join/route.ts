@@ -11,7 +11,6 @@ import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { ALIGNMENT_POLES } from "@/lib/constants/alignmentEras";
 import { JOIN_SHARE, standingFor } from "@/lib/alignment/membershipEligibility";
-import { isIntOrgAlignmentEnabled } from "@/lib/alignment/featureFlag";
 import { getCountryAlignmentsCollection } from "@/lib/db/collections";
 import type { GameState } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
@@ -91,39 +90,34 @@ export async function POST(
     // the diplomatic action below, so a refused application costs nothing.
     const gs = await db
       .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, intOrgAlignmentEnabled: 1 } }
+      .findOne({ _id: "current" }, { projection: { currentYear: 1, startingYear: 1 } });
+    const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
+    const topology = orgDef.alignment ? await loadAlignmentTopology(db, year) : null;
+    const alignments = await getCountryAlignmentsCollection(db);
+    const row = await alignments.findOne({ entityId: countryId });
+    const standing = row
+      ? standingFor({
+          shares: { shares: row.shares, nonAligned: row.nonAligned },
+          year,
+          organizationId: orgDef.id,
+          channels: topology?.channels,
+        })
+      : null;
+    if (standing?.governsMembership && !standing.eligible) {
+      // A null pole is the Non-Aligned Movement: its standing is the share no
+      // bloc has persuaded, not a share of any bloc.
+      const label = standing.poleId
+        ? (topology?.poleDefinitions.get(standing.poleId)?.label ??
+          (standing.poleId in ALIGNMENT_POLES
+            ? ALIGNMENT_POLES[standing.poleId as keyof typeof ALIGNMENT_POLES].label
+            : standing.poleId))
+        : "non-alignment";
+      return NextResponse.json(
+        badRequest(
+          `${countryId} holds only ${standing.share} of ${label}, short of the ${JOIN_SHARE} needed to join ${orgDef.name ?? orgId}.`
+        ).toJson(),
+        { status: 400 }
       );
-    if (await isIntOrgAlignmentEnabled(gs ?? {})) {
-      const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
-      const topology = orgDef.alignment ? await loadAlignmentTopology(db, year) : null;
-      const alignments = await getCountryAlignmentsCollection(db);
-      const row = await alignments.findOne({ entityId: countryId });
-      const standing = row
-        ? standingFor({
-            shares: { shares: row.shares, nonAligned: row.nonAligned },
-            year,
-            organizationId: orgDef.id,
-            channels: topology?.channels,
-          })
-        : null;
-      if (standing?.governsMembership && !standing.eligible) {
-        // A null pole is the Non-Aligned Movement: its standing is the share no
-        // bloc has persuaded, not a share of any bloc.
-        const label = standing.poleId
-          ? (topology?.poleDefinitions.get(standing.poleId)?.label ??
-            (standing.poleId in ALIGNMENT_POLES
-              ? ALIGNMENT_POLES[standing.poleId as keyof typeof ALIGNMENT_POLES].label
-              : standing.poleId))
-          : "non-alignment";
-        return NextResponse.json(
-          badRequest(
-            `${countryId} holds only ${standing.share} of ${label}, short of the ${JOIN_SHARE} needed to join ${orgDef.name ?? orgId}.`
-          ).toJson(),
-          { status: 400 }
-        );
-      }
     }
 
     const currentTurn = await getCurrentTurn(db);

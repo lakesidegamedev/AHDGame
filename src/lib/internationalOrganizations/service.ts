@@ -93,16 +93,15 @@ export interface OrganizationSummary {
      */
     hasVote: boolean;
     /**
-     * Whether this member casts a ballot ON EVERY OTHER INSTRUMENT — a leadership
-     * election, sanctions, aid, dues, a directive, and a free-trade agreement,
-     * which is unanimous but voted only by its own named parties.
+     * Whether this member casts a ballot ON EVERY OTHER INSTRUMENT (leadership
+     * election, sanctions, aid, dues, a directive, an FTA voted by its own named
+     * parties).
      *
      * Wider than `hasVote`: in active mode it also covers modelled members run by
-     * an NPP government. They are trusted here, where a silence merely costs a
-     * yes or is a party declining its own deal, and kept off an admission,
-     * declaration, or entry resolution, where a silence is a veto. Pick the field
-     * that matches the ballot you are rendering — showing a threshold the
-     * resolver will not apply is the whole of ticket #1257.
+     * an NPP government. They are trusted here, where silence merely costs a yes
+     * or declines a party's own deal, and kept off admission, declaration, or
+     * entry resolutions where silence is a veto. Pick the field matching the
+     * ballot you render, or you show a threshold the resolver will not apply.
      */
     hasPolicyVote: boolean;
     /**
@@ -292,7 +291,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     loadCustomOrganizations(db),
     loadCountryTiers(db),
   ]);
-  // Background members (#5702) vote by script on every ballot the policy roll
+  // Background members vote by script on every ballot the policy roll
   // covers, so they hold a policy vote exactly as the resolver seats them.
   const backgroundMembers = new Set<string>(tiers.backgroundIds);
 

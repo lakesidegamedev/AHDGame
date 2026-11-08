@@ -152,10 +152,8 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
-  // The authoritative savings accounts: one per owner and currency, which is
-  // the invariant the whole account model rests on, so it is a unique index
-  // rather than a rule the code has to remember. Holder lookups serve the
-  // bank liability projection ("every account this bank holds") every turn.
+  // One savings account per owner and currency is the core invariant, so it is
+  // enforced as a unique index rather than trusted to callers.
   await ensureIndex(
     db,
     "savingsAccounts",

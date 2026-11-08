@@ -1,10 +1,9 @@
 /**
  * NPP engine 6.4: primary consolidation (v6).
  *
- * Owner decision 2026-10-13: withdraw only. A clearly trailing NPP leaves a
- * same-party primary before it closes. It endorses nobody (NPP endorsements
- * stay manual-only), incumbents never withdraw, and a primary with any player
- * candidate is never touched.
+ * Withdraw only. A clearly trailing NPP leaves a same-party primary before it
+ * closes. It endorses nobody (NPP endorsements stay manual-only), incumbents
+ * never withdraw, and a primary with any player candidate is never touched.
  */
 import { nppCandidateStrength } from "./candidatePlacement";
 

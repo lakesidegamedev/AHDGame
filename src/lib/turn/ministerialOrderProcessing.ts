@@ -1,8 +1,7 @@
-import type { FederalBudget } from "@/lib/db/types";
 // src/lib/turn/ministerialOrderProcessing.ts
 import { getDb } from "@/lib/mongodb";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
-import type { Character, StateMetrics, UnifiedCabinetMember, CabinetSetting } from "@/lib/db/types";
+import type { StateMetrics, UnifiedCabinetMember, CabinetSetting } from "@/lib/db/types";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
@@ -64,6 +63,8 @@ import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { CountryId } from "@/lib/constants/countries";
 import { expireMinisterialOrders } from "@/lib/cabinet/ministerialOrderLifecycle";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 /**
  * Maximum |modifier| any single metric can receive per turn from the combined
@@ -154,8 +155,9 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   ].map((s) => new ObjectId(s));
   const statecraftMultByChar = new Map<string, number>();
   if (orderCharIds.length > 0) {
-    const issuers = await db
-      .collection<Character>("characters")
+    const issuers = await (
+      await getCharactersCollection(db)
+    )
       .find({ _id: { $in: orderCharIds } }, { projection: { _id: 1, stats: 1 } })
       .toArray();
     for (const c of issuers) {
@@ -381,8 +383,9 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   const defenseCountryIds = Object.keys(DEFENSE_POSITION_BY_COUNTRY);
   const defenseBudgetByCountry = new Map(
     (
-      await db
-        .collection<FederalBudget>("federalBudget")
+      await (
+        await getFederalBudgetCollection(db)
+      )
         .find(
           { countryId: { $in: defenseCountryIds } },
           {
@@ -488,7 +491,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
 
   // 4b-ii. Resolve declared theater offensives (Conflicts). Declarations made on an
   // earlier turn resolve now against the target's real units, persisting outcomes to
-  // both nations' live units + reports. Gated upstream by conflictsEnabled at declare time.
+  // both nations' live units + reports.
   await resolveBattleDeclarations(db, currentTurn);
 
   // 4b-ii-a. Resolve proxy wars pinned at a pole for three turns. Runs AFTER battles
@@ -496,13 +499,13 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   //
   // Must be a turn step, not a check inside `applyOccupation`: once pinned at 100
   // the front cannot move, so nothing would re-enter it and the timer would never
-  // fire. Reads `conflictsEnabled` itself: no upstream declaration gates it.
+  // fire.
   await resolveColdWarHolds(db, currentTurn);
 
   // 4b-ii-a-i. Finish non-proxy wars that reached a pole before their 24-turn
   // minimum and still hold it now. This runs after battles for the same reason as
   // the proxy hold sweep: a counterattack this turn must clear the pole first.
-  await resolveMatureWarPoles(db, currentTurn, defenceGameState?.conflictsEnabled === true);
+  await resolveMatureWarPoles(db, currentTurn);
 
   // 4b-ii-a-ii. White-peace any won war whose dictate window has lapsed. A real
   // sweep rather than lazy expiry: nothing forces a victor to open the conflict
@@ -549,10 +552,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   // a seat's condition-drift write touches only its own estates, so reading them
   // all up front sees exactly what each per-seat read would have seen.
   const [estateBudgets, allEstates] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .find({ countryId: { $in: estateCountryIds } })
-      .toArray(),
+    (await getFederalBudgetCollection(db)).find({ countryId: { $in: estateCountryIds } }).toArray(),
     getCabinetEstatesCollection(db)
       .find({ countryId: { $in: estateCountryIds as CountryId[] } })
       .toArray(),

@@ -7,9 +7,9 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getUkRecallPetitionsCollection } from "@/lib/db/collections/ukByElection";
-import { addRecallSignature } from "@/lib/uk/elections/recallPetitionShell";
+import { addRecallSignature } from "@/lib/countries/uk/elections/recallPetitionShell";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { RECALL_SIGNATURES_REQUIRED } from "@/lib/uk/elections/commonsRecallRules";
+import { RECALL_SIGNATURES_REQUIRED } from "@/lib/countries/uk/elections/commonsRecallRules";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" };
 

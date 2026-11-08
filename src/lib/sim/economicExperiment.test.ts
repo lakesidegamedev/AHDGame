@@ -169,11 +169,11 @@ describe("frontier-entry experiment sim wiring (#991)", () => {
   it("keeps the experimental gate out of the all-feature-flags sweep", () => {
     const set = allFeatureFlagsGameStateSet({
       forexEnabled: true,
-      rpgStatsEnabled: false,
+      sectorTechTreesEnabled: false,
       nppAutonomyLevel: "v4",
       frontierEntryExperimentEnabled: false,
     });
-    expect(set).toEqual({ forexEnabled: true, rpgStatsEnabled: true });
+    expect(set).toEqual({ forexEnabled: true, sectorTechTreesEnabled: true });
     expect(set).not.toHaveProperty("frontierEntryExperimentEnabled");
     expect(set).not.toHaveProperty("nppAutonomyLevel");
   });

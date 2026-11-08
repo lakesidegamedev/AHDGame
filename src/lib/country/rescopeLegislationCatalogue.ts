@@ -15,8 +15,6 @@
  * reunified one-party Germany that inherited only the first set could legislate
  * nothing but West German tax law, while the laws already on its books came from
  * a catalogue it could no longer touch. It takes the union of both.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";

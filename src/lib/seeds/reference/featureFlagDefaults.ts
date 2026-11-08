@@ -4,31 +4,15 @@ import type { GameState } from "@/lib/db/types/gameState";
 /**
  * Fresh-world feature flag policy.
  *
- * Standing rule: every fresh world (first bootstrap or a reset) starts with
- * EVERY gameplay feature flag ON, at the top of every rollout ladder, with one
- * exclusion: NPP autonomy stays at v4 rather than v5 (see
- * FRESH_WORLD_FLAG_EXCLUSIONS). The two presets below are that policy, one per
- * document the flags live on.
+ * Every fresh world (bootstrap or reset) starts with every gameplay flag ON at
+ * the top of its rollout ladder, except entries in FRESH_WORLD_FLAG_EXCLUSIONS
+ * (NPP autonomy stays at v4). FeatureFlagDefaults.test.ts reads GameState and
+ * GameConfig and fails when a flag is in neither preset nor the non-gameplay
+ * lists, so new flags cannot ship silently.
  *
- * Fields that look like flags but are not gameplay features (ops kill switches,
- * maintenance and access gates, security tooling, sim-only harness switches,
- * runtime state, era-derived values, deprecated aliases, superseded
- * alternatives) are listed in NON_GAMEPLAY_GAME_STATE_FIELDS and
- * NON_GAMEPLAY_GAME_CONFIG_FIELDS with the reason each keeps its own default.
- * featureFlagDefaults.test.ts reads the GameState and GameConfig types and fails
- * when a flag field is in none of these lists, so a new flag cannot ship
- * without either being on for fresh worlds or carrying a recorded exclusion.
- *
- * Applied by:
- *   - `initializeGameState` (first gameState doc) and `resetGameWorld` (every
- *     reset) for the gameState preset;
- *   - the reference gameConfig (`seeds/reference/gameConfig.ts`), written by
- *     the core seed, plus `resetGameWorld` for the gameConfig preset.
- *
- * Existing running worlds are never flipped by this policy. Non-reset seed
- * top-ups write these keys with `$setOnInsert` only, and the startup
- * migration that adopts reference gates leaves them alone past a world's first
- * game day.
+ * Applied by initializeGameState, resetGameWorld, and the reference gameConfig
+ * seed. Running worlds are never flipped: seed top-ups use $setOnInsert only and
+ * the reference-gate startup migration leaves post-first-day worlds alone.
  */
 
 /** Gameplay flags held below their maximum on fresh worlds, and why. */
@@ -44,7 +28,6 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   forexEnabled: true,
   playerRandomEventsEnabled: true,
   autoDisastersEnabled: true,
-  rpgStatsEnabled: true,
   sectorTechTreesEnabled: true,
   nppAutonomyLevel: FRESH_WORLD_FLAG_EXCLUSIONS.nppAutonomyLevel.value,
   // Kept in sync with nppAutonomyLevel for legacy readers.
@@ -61,15 +44,10 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   legislationSystemVersion: "v1",
   cabinetSystemVersion: "v1",
   eraSystemEnabled: true,
-  conflictsEnabled: true,
   livingConflictsEnabled: true,
-  demographicsLayer1PositionsEnabled: true,
   coldWarEnabled: true,
-  redistrictingEnabled: true,
-  subsidiaryCorporationsEnabled: true,
   nppEntryViabilityMode: "enforce",
   frontierEntryExperimentEnabled: true,
-  intOrgAlignmentEnabled: true,
   nppCorpStrategyEnabled: true,
   // Macro demand reads state GDP in anchor terms. Fresh worlds only: existing
   // worlds lack the field and keep the raw stored reading.

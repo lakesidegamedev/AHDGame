@@ -18,24 +18,17 @@ export function isFormalizedSubsidiary(
 /**
  * The parent-set dividend floor (percent) that is currently ACTIVE for a corp:
  * the stored `parentDividendFloorPct` clamped to `maxRate`, but only while the
- * feature is on AND the corp that set it still controls >50% voting power.
+ * corp that set it still controls >50% voting power.
  * Otherwise 0 (ignored). Shared by the turn dividend site and the detail mirror.
  */
 export function activeParentDividendFloorPct(params: {
-  enabled: boolean;
   parentDividendFloorPct?: number;
   parentDividendFloorSetByCorpId?: ObjectId;
   controllingParent: { corporationId: ObjectId } | null;
   maxRate: number;
 }): number {
-  const {
-    enabled,
-    parentDividendFloorPct,
-    parentDividendFloorSetByCorpId,
-    controllingParent,
-    maxRate,
-  } = params;
-  if (!enabled) return 0;
+  const { parentDividendFloorPct, parentDividendFloorSetByCorpId, controllingParent, maxRate } =
+    params;
   if (parentDividendFloorPct == null || parentDividendFloorSetByCorpId == null) return 0;
   if (!controllingParent) return 0;
   if (!controllingParent.corporationId.equals(parentDividendFloorSetByCorpId)) return 0;

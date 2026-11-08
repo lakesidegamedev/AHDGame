@@ -66,10 +66,11 @@ import {
   trailingCandidatesToWithdraw,
 } from "@/lib/nppAutonomy/v6/rules/primaryConsolidation";
 import { logger } from "../../observability/logger";
+import { workerConfig } from "@/lib/config/worker";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
-const ELECTION_ENTRY_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+const ELECTION_ENTRY_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
 // v3 ambitious-challenger pass (Phase 2.5): base per-primary-per-cycle chance a
 // second same-party NPP also enters an already-filled primary, scaled by the
 // challenger's officeSeekingMult. Kept low — this rolls once per already-filled

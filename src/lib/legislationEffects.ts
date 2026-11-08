@@ -70,11 +70,8 @@ async function applyOneProvision(
   const { metricCategoryId, metricId } = legislationType.effectTarget;
   const path = `${metricCategoryId}.${metricId}.value`;
   // Macro paths write the enacting country's macroMetrics docs (regions plus
-  // the national rollup, which all carry `countryId`). This used to be an
-  // empty-filter updateMany: a US bill nudged every region on earth, including
-  // countries that never saw the bill. A bill with no countryId cannot be
-  // attributed, so its macro effect is dropped, exactly as the political
-  // branch below already does.
+  // the national rollup, all carrying `countryId`). A bill with no countryId
+  // cannot be attributed, so its macro effect is dropped.
   if (isMacroMetricPath(path)) {
     if (!countryId) return;
     await db.collection<StateMetrics>("macroMetrics").updateMany(
@@ -115,10 +112,7 @@ async function applyOneProvision(
   }
 }
 
-/**
- * Derive a CountryId from a bill. Post-migration all bills should have
- * countryId set directly — the old stateId-prefix parsing is no longer valid.
- */
+/** Derive a CountryId directly from a bill's countryId. */
 function getBillCountryId(bill: Pick<Bill, "countryId">): CountryId | null {
   return (bill.countryId as CountryId) ?? null;
 }

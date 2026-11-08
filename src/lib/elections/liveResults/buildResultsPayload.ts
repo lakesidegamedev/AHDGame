@@ -293,14 +293,10 @@ export async function buildResultsPayload(
   const rosterIds = new Set([...rosterDocIds, ...tallyOnlyIds]);
 
   // ── Seat projections (multi-seat races) ───────────────────────────────
-  // #1277: same rule as `enrichElection` — a finalized tally's allocation is
-  // authoritative, anything earlier is a projection. This used to read
-  // `tally.seatsEstimate ?? compute(...)`, but `accumulateVoteTurn` rewrites
-  // that field every turn, so the fallback was near-dead and a LIVE race was
-  // served last turn's estimate instead of one built from the current roster.
-  // `resolvedSeatsEstimate(tally, null)` first so a finalized race
-  // short-circuits before the org-ranking round-trip, exactly as the old
-  // `??` did.
+  // Same rule as `enrichElection`: a finalized tally's allocation is
+  // authoritative, anything earlier is a projection. `resolvedSeatsEstimate`
+  // first so a finalized race short-circuits before the org-ranking
+  // round-trip; otherwise compute from the current roster.
   const seatsEstimate =
     !isPresident && tally
       ? (resolvedSeatsEstimate(tally, null) ??

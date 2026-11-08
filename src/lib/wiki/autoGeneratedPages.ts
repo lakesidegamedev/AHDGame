@@ -142,10 +142,7 @@ export interface GeneratedOfficePageData {
   hasEditableContent: boolean;
 }
 
-// ── Dynamic country list ──────────────────────────────────────────────────
-//
-// Previously a hardcoded list `["US", "UK", "DE", "JP", "IE"]`. Now resolved
-// dynamically from `getEnabledCountryIds()` (DB-driven admin panel toggles).
+// Country list is resolved dynamically from `getEnabledCountryIds()`.
 // The US is always included even when not explicitly enabled (it has no
 // `countryGameStates` document by default but should always have wiki pages).
 async function getOfficeCountries(db?: Db): Promise<CountryId[]> {
@@ -613,8 +610,7 @@ function finalizeEntry(
   endTurn: number | null,
   /**
    * Founding-phase clock. Office turns are stored RAW, so without it every
-   * career date and sort key on the wiki reads a game year AHEAD of the status
-   * bar (#1208).
+   * career date and sort key reads a game year ahead of the status bar.
    */
   clock?: CalendarClock
 ): void {
@@ -997,7 +993,7 @@ export function iterationContextFor(gameState: OfficeClockState): IterationConte
       lastTurnProcessed: gameState?.lastTurnProcessed ?? new Date(),
       startingYear,
       // The founding-phase clock. Office turns are stored raw, so without it
-      // every tenure date reads a game year ahead of the status bar (#1208).
+      // every tenure date reads a game year ahead of the status bar.
       preIterationActive: gameState?.preIteration?.active === true,
       preIterationTurns: gameState?.preIterationTurns ?? 0,
     },

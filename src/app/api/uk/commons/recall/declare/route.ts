@@ -7,7 +7,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getUkRecallPetitionsCollection } from "@/lib/db/collections/ukByElection";
-import { addRecallDeclaration } from "@/lib/uk/elections/recallPetitionShell";
+import { addRecallDeclaration } from "@/lib/countries/uk/elections/recallPetitionShell";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" };

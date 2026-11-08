@@ -59,6 +59,9 @@ import {
 import { wageFundConstrainedGrowth } from "@/lib/economy/twoCircuitMoney";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveGosbankPosture } from "@/lib/economy/commandEconomyPosture";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 
 /**
  * Command-economy macro turn phase. Advances shortage-economy state on
@@ -192,7 +195,7 @@ export async function processCommandEconomyTurn(
   /** corpId → directed credit awarded this turn (corp-local), plants path only. */
   const plantsCreditByCorp = new Map<string, number>();
 
-  const budgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+  const budgets = await (await getFederalBudgetCollection(db)).find({}).toArray();
 
   // ── Hydrate the stored marketization registry for this turn ───────────────
   //
@@ -561,8 +564,9 @@ async function loadSoeStates(
   const finalStateByCorp = new Map<string, SoeState>();
   const replacementLocalByCorp = new Map<string, number>();
 
-  const soeCorps = await db
-    .collection<Corporation>("corporations")
+  const soeCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { soe: { $exists: true } },
       { projection: { _id: 1, countryId: 1, soe: 1, liquidCurrencyCode: 1 } }
@@ -571,8 +575,9 @@ async function loadSoeStates(
   if (soeCorps.length === 0) return { byCountry, finalStateByCorp, replacementLocalByCorp };
 
   const soeIds = soeCorps.map((c) => c._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await (
+    await getCorporateSectorsCollection(db)
+  )
     .find(
       { corporationId: { $in: soeIds } },
       {
@@ -707,12 +712,10 @@ async function buildCapacityFromDirectedCredit(
   const { ObjectId } = await import("mongodb");
   const corpIds = [...creditByCorp.keys()].map((id) => new ObjectId(id));
   const [corps, sectors, fxByCurrency, wholePlants] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find({ _id: { $in: corpIds } }, { projection: { _id: 1, liquidCurrencyCode: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    (await getCorporateSectorsCollection(db))
       .find(
         { corporationId: { $in: corpIds } },
         {
@@ -808,7 +811,7 @@ async function buildCapacityFromDirectedCredit(
     }
     if (valueAddedLocal > 0) valueAddedByCorp.set(corpId, valueAddedLocal);
   }
-  if (ops.length > 0) await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+  if (ops.length > 0) await (await getCorporateSectorsCollection(db)).bulkWrite(ops);
   return valueAddedByCorp;
 }
 
@@ -822,7 +825,7 @@ async function persistSoeStates(db: Db, finalStateByCorp: Map<string, SoeState>)
       updateOne: { filter: { _id: new ObjectId(corpId) }, update: { $set: { soe: state } } },
     });
   }
-  await db.collection<Corporation>("corporations").bulkWrite(ops);
+  await (await getCorporationsCollection(db)).bulkWrite(ops);
 }
 
 const clampNum = (v: number, lo: number, hi: number): number =>

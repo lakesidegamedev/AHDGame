@@ -53,11 +53,9 @@ export interface SovereignMaturityWaveReceipt {
 }
 
 /**
- * One projected budget read answers both questions the settlement used to ask
- * once per bond: does this Treasury already hold bank claims, and how much
- * spendable cash did it have when the phase reached this point. One read on the
- * status/kind index finds the maturities a crash left half-applied; partial
- * receipts are rare.
+ * One projected budget read answers both questions the settlement needs per
+ * bond: whether the Treasury holds bank claims, and its spendable cash at this
+ * phase. Partial receipts from a crash are rare.
  */
 export async function loadSovereignMaturityWave(
   db: Db,

@@ -7,7 +7,7 @@ import {
   getUKPartyConferencesCollection,
   getUKPartyPlatformsCollection,
 } from "@/lib/db/collections/ukPartyConferences";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { resolvePartyPsCap, resolvePartyTier } from "@/lib/parties/partyTier";
 import { NATIONAL_PS_CAP } from "@/lib/politicalStrength/strengthConstants";
 import {
@@ -19,16 +19,17 @@ import {
   conferenceYearStartTurn,
   isConferencePayoffEnabled,
   payoffGroupsForPledges,
-} from "@/lib/uk/conference/rules";
+} from "@/lib/countries/uk/conference/rules";
 import {
   conferenceDocId,
   conferenceHistoryEntry,
   pushConferenceHistory,
-} from "@/lib/uk/conference/conferenceStore";
-import type { UKPartyConference } from "@/lib/uk/conference/types";
+} from "@/lib/countries/uk/conference/conferenceStore";
+import type { UKPartyConference } from "@/lib/countries/uk/conference/types";
 import type { Character, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { partySeqIdOf } from "./conferenceShared";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 export interface ConferencePayoff {
   applied: boolean;
@@ -61,7 +62,7 @@ async function computePayoffIntent(
   const partyNow =
     (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ?? party;
   let groups: string[] = [];
-  if (proposal && isConferencePayoffEnabled(process.env.UK_CONFERENCE_PAYOFF)) {
+  if (proposal && isConferencePayoffEnabled(runtimeConfig.ukConferencePayoff())) {
     const catalog = pledgeCatalogFor(countryId);
     const salience = new Map(catalog.map((e) => [e.id, Object.keys(e.salienceByGroup ?? {})]));
     groups = payoffGroupsForPledges(proposal.pledgeIds, salience).slice(

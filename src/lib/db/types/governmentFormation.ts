@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ReshuffleRecord } from "@/lib/uk/cabinet/reshuffleLimit";
+import type { ReshuffleRecord } from "@/lib/countries/uk/cabinet/reshuffleLimit";
 import type { WhippedFromVoteMap } from "./legislation";
 import type { GoverningAgenda } from "@/lib/nppAutonomy/governingAgenda";
 import type { PersistedCommandStance, PersistedFiscalStance } from "@/lib/nppAutonomy/fiscalStance";

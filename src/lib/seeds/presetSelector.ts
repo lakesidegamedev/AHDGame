@@ -131,7 +131,7 @@ export function presetForEra(era: EraId): ResetPresetId {
  * as such — i.e. the 1953 and 1979 eras. By the 1991 era the bloc governments had
  * collapsed (Warsaw Pact dissolved July 1991) and later eras use the successor
  * democracies + the modern Russian Federation, so those structures must NOT seed
- * there (refs #3269). This mirrors the RU-regions era gate in bootstrapGameWorld.
+ * there. This mirrors the RU-regions era gate in bootstrapGameWorld.
  */
 export function isEasternBlocEra(preset: string): boolean {
   const era = eraForPreset(preset);
@@ -139,29 +139,18 @@ export function isEasternBlocEra(preset: string): boolean {
 }
 
 /**
- * Presets whose fresh world is MEANT to start in the live pre-iteration
- * "founding" phase (`GameState.preIteration.active`), so a normal admin reset
- * produces a working founding cycle without anyone remembering to tick a flag.
+ * Presets whose fresh world starts in the pre-iteration "founding" phase
+ * (`GameState.preIteration.active`), so an admin reset yields a working
+ * founding cycle without anyone ticking a flag.
  *
- * Why this is preset-scoped rather than global: the founding phase only makes
- * sense where the authored roster deliberately leaves the playable legislatures
- * EMPTY, to be filled by the cycle-0 founding election. Measured against
- * `getPresetSeats(preset)` on this branch:
+ * Preset-scoped because founding only makes sense where the authored roster
+ * leaves the playable legislatures EMPTY, to be filled by the cycle-0
+ * founding election. 1953 and 1979 leave US/UK chambers vacant by design;
+ * 1991+ presets ship full historical rosters that seat at bootstrap, so
+ * defaulting the founding phase on would blank them.
  *
- *   1953-default   360 authored seats — US house 75 / senate 96 / governor 48
- *                  are the *priors* pool, and `bootstrapGameWorld` explicitly
- *                  skips the executive backfill under `preIteration`. Chambers
- *                  start vacant BY DESIGN and the founding election seats them.
- *   1979-default   138 authored seats — RU/DD structures only; the US/UK
- *                  chambers have no authored roster at all. Same vacant-roster
- *                  shape as 1953, so founding is required for a valid world.
- *   1991/1999/     ~1004-1015 authored seats each — every chamber ships a full
- *   2007/2019/     historical roster that seats at bootstrap. Defaulting the
- *   2023           founding phase on here would blank those rosters and replace
- *                  a correct historical world with a synthetic one. Left OFF.
- *
- * Callers treat an explicit `preIteration` option as authoritative; this only
- * supplies the default when the caller says nothing.
+ * Callers treat an explicit `preIteration` option as authoritative; this
+ * only supplies the default when the caller says nothing.
  */
 export function presetDefaultsToFoundingPhase(
   preset: string,
