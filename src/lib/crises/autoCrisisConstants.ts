@@ -3,10 +3,6 @@
  *  too soon (separate from the per-country disaster cadence). */
 export const DEFAULT_DISASTER_COOLDOWN_TURNS = 144;
 
-/** Hard cap on auto-crises (excluding regional disasters) created in one turn,
- *  so a bad metric snapshot can't spawn a pile-up across every template. */
-export const MAX_AUTO_CRISES_PER_TURN = 1;
-
 /** Deterministic [0,1) roll from (turn, templateKey, scopeKey). Used instead of
  *  Math.random() so turn processing stays reproducible and a re-run of the same
  *  turn cannot double-spawn. FNV-1a over the joined key. */

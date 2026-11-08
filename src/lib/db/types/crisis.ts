@@ -539,11 +539,7 @@ export interface CrisisAutoCooldown {
    * on legacy rows, which are read as armed.
    */
   armed?: boolean;
-  /**
-   * Turn a random-tier spawn was won but held back by the severe-crisis
-   * stacking guard. A deferred spawn lands, without re-rolling, as soon as the
-   * country has a free slot. Cleared when the crisis spawns.
-   */
+  /** Retired deferral marker; the next spawn clears it from rows that still carry one. */
   deferredTurn?: number;
   updatedAt: Date;
 }

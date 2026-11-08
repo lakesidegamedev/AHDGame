@@ -1,4 +1,4 @@
-import type { Crisis, CrisisTemplate } from "@/lib/db/types/crisis";
+import type { CrisisTemplate } from "@/lib/db/types/crisis";
 import { ALL_CRISIS_TEMPLATES, getTemplateDuration } from "@/lib/crises/templates";
 import { floorCrisisDuration } from "@/lib/crises/crisisDuration";
 import { legacyStoredEffectsModule } from "@/lib/crises/v2/effectModule";
@@ -15,6 +15,7 @@ import {
 } from "./registry";
 
 let registered = false;
+let keysByTemplate: Map<object, string> | null = null;
 
 const AD_HOC_TEMPLATE = {
   name: "Crisis",
@@ -63,7 +64,24 @@ export function legacyDefinitionFor(templateKey: string | undefined): CrisisDefi
   return getCrisisDefinition(legacyDefinitionId(key)) as CrisisDefinition;
 }
 
-export type LegacyDefinitionCrisis = Pick<Crisis, "templateKey">;
+/**
+ * Definition for a crisis made from `template`. Spawners often pass the
+ * template without its key, so the key is found by identity in the registry.
+ */
+export function legacyDefinitionForTemplate(
+  template: object,
+  templateKey: string | undefined
+): CrisisDefinition {
+  if (templateKey) return legacyDefinitionFor(templateKey);
+  let keyByTemplate = keysByTemplate;
+  if (!keyByTemplate) {
+    keyByTemplate = new Map(
+      Object.entries(ALL_CRISIS_TEMPLATES).map(([key, value]) => [value as object, key])
+    );
+    keysByTemplate = keyByTemplate;
+  }
+  return legacyDefinitionFor(keyByTemplate.get(template));
+}
 
 /** Test seam: forces the next ensure call to register again. */
 export function resetLegacyCrisisContentForTests(): void {
