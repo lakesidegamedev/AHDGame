@@ -89,6 +89,16 @@ export function loadLiveCrisis(db: Db, crisisId: ObjectId): Promise<LiveCrisis |
     ) as Promise<LiveCrisis | null>;
 }
 
+export function loadLiveCrises(db: Db, crisisIds: ObjectId[]): Promise<LiveCrisis[]> {
+  return db
+    .collection<Crisis>("crises")
+    .find(
+      { _id: { $in: crisisIds }, status: "active", "v2.definitionId": { $exists: true } },
+      { projection: { scope: 1, countryIds: 1, regionIds: 1, v2: 1 } }
+    )
+    .toArray() as unknown as Promise<LiveCrisis[]>;
+}
+
 /** Latest turn the holder pulled this lever, counted by the turn phase or not. */
 export async function lastPulledTurn(
   db: Db,

@@ -1,4 +1,4 @@
-import type { Db, ObjectId } from "mongodb";
+import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import { isResolvedBillStatus } from "@/lib/crises/aidFinalize";
 import { LEDGER_LIMIT } from "@/lib/crises/v2/accountability";
 import type { AccountabilityEntry } from "@/lib/crises/v2/types";
@@ -11,6 +11,7 @@ import {
   checkLeverEligibility,
   commitLeverUse,
   loadLiveCrisis,
+  loadLiveCrises,
   fail,
   type LeverResult,
 } from "./leverCommand";
@@ -71,12 +72,12 @@ export async function proposeEmergencyBill(
   return { ok: true, billId };
 }
 
-async function recordFailedBill(db: Db, bill: Bill, turn: number): Promise<void> {
+type LiveCrisis = NonNullable<Awaited<ReturnType<typeof loadLiveCrisis>>>;
+
+function inactionRow(crisis: LiveCrisis, bill: Bill, turn: number): AccountabilityEntry | null {
   const marker = bill.crisisEmergency;
-  if (!marker) return;
-  const crisis = await loadLiveCrisis(db, marker.crisisId);
-  if (!crisis || crisis.v2.stage === "resolved") return;
-  const row: AccountabilityEntry = {
+  if (!marker || crisis.v2.stage === "resolved") return null;
+  return {
     turn,
     stage: crisis.v2.stage,
     role: "legislature",
@@ -86,22 +87,14 @@ async function recordFailedBill(db: Db, bill: Bill, turn: number): Promise<void>
     mitigation: 0,
     severity: crisis.v2.severity,
   };
-  await db
-    .collection<Crisis>("crises")
-    .updateOne(
-      { _id: crisis._id },
-      { $push: { "v2.ledger": { $each: [row], $slice: -LEDGER_LIMIT } } }
-    );
 }
 
-async function recordPassedBill(db: Db, bill: Bill, turn: number): Promise<void> {
+async function recordPassedBill(db: Db, bill: Bill, crisis: LiveCrisis, turn: number) {
   const marker = bill.crisisEmergency;
-  if (!marker) return;
-  const crisis = await loadLiveCrisis(db, marker.crisisId);
-  const lever = crisis
-    ? getCrisisDefinition(crisis.v2.definitionId)?.levers.find((l) => l.id === marker.leverId)
-    : undefined;
-  if (!crisis || !lever || crisis.v2.stage === "resolved") return;
+  const lever = getCrisisDefinition(crisis.v2.definitionId)?.levers.find(
+    (candidate) => candidate.id === marker?.leverId
+  );
+  if (!marker || !lever || crisis.v2.stage === "resolved") return;
   const result = await commitLeverUse(db, {
     crisis,
     lever,
@@ -135,29 +128,59 @@ export async function processCrisisEmergencyBills(
       "crisisEmergency.recordedTurn": { $exists: false },
     })
     .toArray();
-  const counts = { passed: 0, failed: 0 };
-  for (const bill of bills) {
+  const resolved = bills.flatMap((bill) => {
     const outcome = isResolvedBillStatus(bill.status);
-    if (!outcome) continue;
+    return outcome ? [{ bill, outcome }] : [];
+  });
+  const counts = { passed: 0, failed: 0 };
+  if (resolved.length === 0) return counts;
+
+  // Claim every outcome in one write first, so a retry never records one twice.
+  await db.collection<Bill>("bills").updateMany(
+    {
+      _id: { $in: resolved.map(({ bill }) => bill._id) },
+      "crisisEmergency.recordedTurn": { $exists: false },
+    },
+    { $set: { "crisisEmergency.recordedTurn": turn } }
+  );
+
+  const crisisIds = [
+    ...new Set(resolved.flatMap(({ bill }) => bill.crisisEmergency?.crisisId ?? [])),
+  ];
+  const crises = new Map(
+    (await loadLiveCrises(db, crisisIds)).map((crisis) => [crisis._id.toString(), crisis])
+  );
+
+  const inaction: AnyBulkWriteOperation<Crisis>[] = [];
+  for (const { bill, outcome } of resolved) {
+    const crisis = crises.get(bill.crisisEmergency?.crisisId.toString() ?? "");
+    if (!crisis) continue;
     try {
-      const claim = await db
-        .collection<Bill>("bills")
-        .updateOne(
-          { _id: bill._id, "crisisEmergency.recordedTurn": { $exists: false } },
-          { $set: { "crisisEmergency.recordedTurn": turn } }
-        );
-      if (claim.modifiedCount === 0) continue;
       if (outcome === "passed") {
-        await recordPassedBill(db, bill, turn);
+        await recordPassedBill(db, bill, crisis, turn);
         counts.passed += 1;
       } else {
-        await recordFailedBill(db, bill, turn);
+        const row = inactionRow(crisis, bill, turn);
+        if (!row) continue;
+        inaction.push({
+          updateOne: {
+            filter: { _id: crisis._id },
+            update: { $push: { "v2.ledger": { $each: [row], $slice: -LEDGER_LIMIT } } },
+          },
+        });
         counts.failed += 1;
       }
     } catch (error) {
       logger.error(COMPONENT, "recording emergency bill outcome failed", error, {
         billId: bill._id.toString(),
       });
+    }
+  }
+  if (inaction.length > 0) {
+    try {
+      await db.collection<Crisis>("crises").bulkWrite(inaction, { ordered: false });
+    } catch (error) {
+      logger.error(COMPONENT, "recording failed emergency bills failed", error);
     }
   }
   return counts;
