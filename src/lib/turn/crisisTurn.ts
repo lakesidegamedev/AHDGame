@@ -12,7 +12,6 @@ import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import type { MetricCategoryId } from "@/lib/db/types";
-import type { State } from "@/lib/db/types/state";
 import {
   createCrisisInteraction,
   getExpiredInteractions,
@@ -37,6 +36,7 @@ import {
   livingVietnamAsLegacyState,
   retireLegacyVietnamCrises,
 } from "@/lib/livingConflict/vietnamCompat";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /**
  * Process active crises for the current turn.
@@ -101,7 +101,7 @@ export async function processCrisisTurn(
 
   if (crises.length === 0) return 0;
 
-  const allStates = await db.collection<State>("states").find({}).toArray();
+  const allStates = await (await getStatesCollection(db)).find({}).toArray();
 
   // country → stateId[] for scope resolution
   const statesByCountry = new Map<string, string[]>();
@@ -343,8 +343,9 @@ function resolveScope(
  */
 async function resolveCrisisTargetStateIds(db: Db, crisis: Crisis): Promise<string[]> {
   if (crisis.scope === "region") return crisis.regionIds;
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   if (crisis.scope === "global") return states.map((s) => s._id);

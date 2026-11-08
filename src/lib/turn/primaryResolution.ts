@@ -99,6 +99,8 @@ import {
 
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
 import { hasBankedGeneralTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 export type { ElectionSweepScope } from "./electionSweepScope";
 export { recordPrimarySnapshots } from "./primarySnapshots";
@@ -118,8 +120,9 @@ export async function resolvePrimariesIfNeeded(
 
   // Past-primary but not-yet-ended — turn-first (drift-immune, freezes on
   // pause) with a Date fallback for un-backfilled docs.
-  const pastPrimary = await db
-    .collection<Election>("elections")
+  const pastPrimary = await (
+    await getElectionsCollection(db)
+  )
     .find({
       ...scopeFilter(scope),
       status: { $in: ["active", "upcoming"] },
@@ -160,8 +163,7 @@ export async function resolvePrimariesIfNeeded(
         .find({ electionId: { $in: electionIds } }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY })
         .toArray(),
       uniqueRegionKeys.size > 0
-        ? db
-            .collection<State>("states")
+        ? (await getStatesCollection(db))
             .find({
               $or: [...uniqueRegionKeys].map((key) => {
                 const [countryId, regionId] = key.split(":");
@@ -773,8 +775,9 @@ export async function accumulateGeneralElectionVotes(
   // "active" when vote accumulation runs (resolution is a later phase). Excluding
   // them via endTime > now causes the final turn's votes to be dropped whenever
   // turn processing runs a few milliseconds after the scheduled endTime.
-  const generalElections = await db
-    .collection<Election>("elections")
+  const generalElections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       ...scopeFilter(scope),
       status: "active",
@@ -823,7 +826,7 @@ export async function accumulateGeneralElectionVotes(
           governingPartyEntries,
         ] = await Promise.all([
           loadDemographicCategories(db),
-          db.collection<State>("states").find(regionalScope).toArray(),
+          (await getStatesCollection(db)).find(regionalScope).toArray(),
           db.collection<StateDemographics>("stateDemographics").find(regionalScope).toArray(),
           db
             .collection<StatePartyOrg>("statePartyOrg")

@@ -32,6 +32,7 @@ import {
   RUSSIAN_COUNCIL_RESULTS_COLLECTION,
   type RussianCouncilResultRecord,
 } from "./councilElectionResult";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -43,10 +44,7 @@ export async function loadRussianAssemblySeatingInputs(
 ) {
   const game = await db
     .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (
     game?.preset !== "1991-default" ||
     ru1993LegislatureStage(

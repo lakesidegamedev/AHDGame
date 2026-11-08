@@ -19,6 +19,7 @@ import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import { recoverStaleFillClaims } from "@/lib/forex/fillRecovery";
 import { sendSystemMail } from "@/lib/mail/systemMail";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 // ── Limit order processing ──────────────────────────────────────────────────
 
@@ -333,7 +334,7 @@ export async function expireStaleOrders(db: Db, currentTurn: number, now: Date):
       },
     });
   }
-  if (refundOps.length) await db.collection<Character>("characters").bulkWrite(refundOps);
+  if (refundOps.length) await (await getCharactersCollection(db)).bulkWrite(refundOps);
   if (pending.length)
     await orders.updateMany(
       {
@@ -353,7 +354,7 @@ export async function expireStaleOrders(db: Db, currentTurn: number, now: Date):
     },
   }));
   if (cleanupOps.length) {
-    await db.collection<Character>("characters").bulkWrite(cleanupOps);
+    await (await getCharactersCollection(db)).bulkWrite(cleanupOps);
     await orders.updateMany(
       {
         _id: { $in: pending.map((order) => order._id) },
@@ -383,8 +384,9 @@ export async function sendFillNotifications(
     )
     .map((n) => n.characterId);
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: uniqueOids } },
       { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } }

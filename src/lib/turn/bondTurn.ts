@@ -14,7 +14,7 @@ import {
 import { loadSovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { Bond, Corporation, CentralBank, Character, GameConfig } from "@/lib/db/types";
+import type { Bond, Corporation, CentralBank, GameConfig } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { BOND_DEFAULT_CREDIT_PENALTY_TURNS } from "@/lib/constants/bonds";
 import {
@@ -69,6 +69,8 @@ import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { accrueBondCoupons } from "./bondTurnCoupons";
 import { resolveBondMaturitiesAndDefaults, payMaturedBonds } from "./bondTurnMaturities";
 import { createSovereignMaturityPlanner } from "./bondTurnSovereignPlan";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
@@ -220,8 +222,9 @@ export async function processBondTurn(
   const corporations =
     allCorpIds.size === 0
       ? []
-      : await db
-          .collection<Corporation>("corporations")
+      : await (
+          await getCorporationsCollection(db)
+        )
           .find({ _id: { $in: [...allCorpIds].map((id) => new ObjectId(id)) } })
           .project<Corporation>(SETTLEMENT_HISTORY_EXCLUDED)
           .toArray();
@@ -575,8 +578,9 @@ export async function processBondTurn(
     );
   }
   if (!corporationActionsPaused && corpIds.length > 0) {
-    const updatedCorps = await db
-      .collection<Corporation>("corporations")
+    const updatedCorps = await (
+      await getCorporationsCollection(db)
+    )
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
       .project<{ _id: ObjectId; liquidCapital: number; shareEscrowBalance?: number }>({
         _id: 1,
@@ -652,7 +656,7 @@ export async function processBondTurn(
     }
   }
   if (creditPenaltyOps.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(creditPenaltyOps);
+    await (await getCorporationsCollection(db)).bulkWrite(creditPenaltyOps);
   }
 
   // ── Phase 4: Update market prices and handle maturity/default ─────────────
@@ -902,8 +906,9 @@ export async function processBondTurn(
     // volume pressure. Gated on forexEnabled.
     if (forexEnabled) {
       const couponCharIds = [...charPayments.keys()].map((id) => new ObjectId(id));
-      const couponChars = await db
-        .collection<Character>("characters")
+      const couponChars = await (
+        await getCharactersCollection(db)
+      )
         .find({ _id: { $in: couponCharIds } })
         .toArray();
       const charById = new Map(couponChars.map((c) => [c._id.toString(), c]));

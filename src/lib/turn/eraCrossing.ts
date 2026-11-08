@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import { eraFromYear } from "@/lib/era/era";
 import { getNewlyActivatedMetrics } from "@/lib/era/metricCatalog";
 import { createSystemNewsPost } from "@/lib/news";
 import { sendNewsEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface EraCrossingResult {
   ran: boolean;
@@ -43,7 +43,9 @@ export async function runEraCrossing(
   db: Db,
   currentYearOverride?: number
 ): Promise<EraCrossingResult> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: { currentYear: 1, lastEraCrossedYear: 1, currentEraId: 1, eraSystemEnabled: 1 },
@@ -59,12 +61,12 @@ export async function runEraCrossing(
   const era = eraFromYear(currentYear);
 
   if (shouldCrossEra(currentYear, gameState.lastEraCrossedYear)) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { currentEraId: era.id, lastEraCrossedYear: currentYear, updatedAt: new Date() } }
-      );
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current" },
+      { $set: { currentEraId: era.id, lastEraCrossedYear: currentYear, updatedAt: new Date() } }
+    );
 
     await createSystemNewsPost(buildEraCrossingContent(era.label), "general", {
       title: `The ${era.label} Begin`,
@@ -76,9 +78,9 @@ export async function runEraCrossing(
   // Mid-decade enable: stamp the marker quietly (no news, no crossing-guard
   // update) so the flags route / admin panel show the right era immediately.
   if (gameState.currentEraId !== era.id) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { currentEraId: era.id, updatedAt: new Date() } });
+    await (
+      await getGameStateCollection(db)
+    ).updateOne({ _id: "current" }, { $set: { currentEraId: era.id, updatedAt: new Date() } });
     return { ran: true, eraId: era.id, year: currentYear, healed: true };
   }
 
@@ -107,7 +109,9 @@ export async function runMetricActivation(
   db: Db,
   currentYearOverride?: number
 ): Promise<MetricActivationResult> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: {
@@ -127,12 +131,12 @@ export async function runMetricActivation(
   const lastYear = gameState.lastMetricActivationYear;
   if (lastYear === undefined || !Number.isFinite(lastYear)) {
     // Quiet self-heal: stamp without posting (no mid-game news burst).
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
-      );
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current" },
+      { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
+    );
     return { posted: [], healed: true };
   }
 
@@ -150,11 +154,11 @@ export async function runMetricActivation(
     posted.push(event.news.title);
   }
 
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
-    );
+  await (
+    await getGameStateCollection(db)
+  ).updateOne(
+    { _id: "current" },
+    { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
+  );
   return { posted };
 }

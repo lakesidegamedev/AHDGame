@@ -32,6 +32,7 @@ import type { GameConfig } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import { soeCapacityReplacementCostAnchor } from "@/lib/economy/soe";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -336,7 +337,7 @@ export async function calculateCountryOwnedBudgetRevenue(
       .collection<CorporateSector>("corporateSectors")
       .find(
         { corporationId: { $in: corporationIds } },
-        { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
+        { projection: CORPORATE_SECTOR_LEAN_FIELDS }
       )
       .toArray(),
     hoistedFxByCurrency ? Promise.resolve(hoistedFxByCurrency) : loadFxRatesByCurrency(db),
@@ -462,7 +463,7 @@ export async function estimateCountryOwnedBudgetNetLocal(
       .collection<CorporateSector>("corporateSectors")
       .find(
         { corporationId: { $in: corporationIds } },
-        { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
+        { projection: CORPORATE_SECTOR_LEAN_FIELDS }
       )
       .toArray(),
     loadFxRatesByCurrency(db),

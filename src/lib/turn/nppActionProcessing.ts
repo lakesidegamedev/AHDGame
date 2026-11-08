@@ -11,7 +11,7 @@
 import { withBondPoolLedgerSnapshot } from "@/lib/bonds/marketPoolLedger";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import type { Db, ObjectId } from "mongodb";
-import type { NPP, GameConfig, PoliticalParty, Bond, ElectionCandidate } from "@/lib/db/types";
+import type { NPP, GameConfig, Bond, ElectionCandidate } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   decideNppAction,
@@ -80,6 +80,8 @@ import {
   sellNppStockSurplus,
   foundNppCorporationsSurplus,
 } from "./nppSurplusActions";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 export {
   NPP_FOUNDING_FEE_ANCHOR,
   sellNppStockSurplus,
@@ -244,8 +246,9 @@ async function runNppActions(db: Db, currentTurn: number): Promise<NppActionProc
     }
   >();
   {
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await (
+      await getPoliticalPartiesCollection(db)
+    )
       .find({}, { projection: { _id: 1, sequentialId: 1, countryId: 1, treasury: 1, name: 1 } })
       .toArray();
     for (const party of parties) {
@@ -510,7 +513,7 @@ async function runNppActions(db: Db, currentTurn: number): Promise<NppActionProc
 
   // Flush NPP updates
   if (nppOps.length > 0) {
-    await db.collection<NPP>("npps").bulkWrite(nppOps);
+    await (await getNppsCollection(db)).bulkWrite(nppOps);
   }
   if (rallyOps.length > 0) {
     await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(rallyOps, {
@@ -537,7 +540,7 @@ async function runNppActions(db: Db, currentTurn: number): Promise<NppActionProc
       .filter((op): op is NonNullable<typeof op> => op !== null);
 
     if (partyOps.length > 0) {
-      await db.collection<PoliticalParty>("politicalParties").bulkWrite(partyOps);
+      await (await getPoliticalPartiesCollection(db)).bulkWrite(partyOps);
 
       const txEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
       for (const [compositeKey, entry] of partyTreasuryUpdates) {
@@ -630,7 +633,7 @@ export async function investNppBondSurplus(
   }
   // Investment capital is the personal forex account (₳), NOT campaign funds
   // and NOT savings — the full campaign/economy wall.
-  const cursor = db.collection<NPP>("npps").find(
+  const cursor = (await getNppsCollection(db)).find(
     {
       retiredAt: null,
       nppInvestmentCashAnchor: { $gt: NPP_BOND_INVEST_RESERVE_FLOOR },
@@ -742,7 +745,7 @@ export async function investNppStockSurplus(
   }
   void currentTurn; // kept for signature symmetry with the bond sweep; not needed by nppBuyShares.
 
-  const cursor = db.collection<NPP>("npps").find(
+  const cursor = (await getNppsCollection(db)).find(
     {
       retiredAt: null,
       nppInvestmentCashAnchor: { $gt: NPP_STOCK_INVEST_RESERVE_FLOOR },

@@ -65,6 +65,7 @@ import {
   buildRegistrationPresence,
   registrationPresenceKey,
 } from "@/lib/parties/rules/registrationPresence";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -1259,9 +1260,9 @@ async function getPartyPosition(
 ): Promise<PartyPosition> {
   const db = await getDb();
   // Parties are uniquely identified by (countryId, sequentialId).
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ sequentialId: Number(partyId), countryId });
+  const party = await (
+    await getPoliticalPartiesCollection(db)
+  ).findOne({ sequentialId: Number(partyId), countryId });
   if (!party) return { economic: 0, social: 0 };
   return { economic: party.economicPosition, social: party.socialPosition };
 }

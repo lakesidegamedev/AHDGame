@@ -15,6 +15,7 @@ import {
   russianDuma1995DecisionAvailability,
   passesRussianDumaLawChamber,
 } from "./rules/dumaElectoralLaw";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 
 const RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION = "russianDumaLawProposals";
 const ID = "1991-default:ru-duma:law1995";
@@ -58,10 +59,7 @@ function availability(
 async function canonicalGame(db: Db, session?: ClientSession) {
   return db
     .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
 }
 function validClock(turn: number, now: Date) {
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))

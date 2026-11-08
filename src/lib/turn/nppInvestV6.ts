@@ -17,7 +17,6 @@ import {
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { nppBuyBond } from "@/lib/nppAutonomy/v3/finance/nppBonds";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { loadEquityPoolsByCurrency, equityPoolCurrency } from "@/lib/equities/marketPool";
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
 import { nppBuyShares } from "@/lib/nppAutonomy/v3/finance/nppShares";
@@ -37,6 +36,8 @@ import {
   pickStockCandidate,
   stockBuyShares,
 } from "./nppInvestCandidates";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 /** An NPP weighing a market buy this sweep, with its v6 chance. */
 export type InvestDecider = {
@@ -61,8 +62,9 @@ export async function loadInvestDeciders(
   preset: string | undefined,
   actsThisTurn: ((id: ObjectId) => boolean) | undefined
 ): Promise<InvestDecider[]> {
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await (
+    await getNppsCollection(db)
+  )
     .find(
       {
         retiredAt: null,
@@ -248,8 +250,9 @@ export async function investNppStockSurplusV6(
   if (deciders.length === 0) return;
 
   const countries = [...new Set(deciders.map((d) => d.countryId))];
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       {
         countryId: { $in: countries },

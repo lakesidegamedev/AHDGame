@@ -4,8 +4,9 @@
 // Wrapped in runPhase — errors log to Sentry but do not halt turn processing.
 
 import { ObjectId, type Db } from "mongodb";
-import type { ActionLog, Character, GameConfig } from "@/lib/db/types";
+import type { ActionLog, GameConfig } from "@/lib/db/types";
 import type { ActivityAction, ActivityLogTurnSummary } from "@/lib/db/types/activityLog";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 export interface ActivityLoggingResult {
   summariesInserted: number;
@@ -44,8 +45,9 @@ export async function processActivityLogging(
 
   // Batch-fetch characters for name, userId, countryId, and current actions (post-refresh)
   const characterIds = [...byCharacter.keys()].map((id) => new ObjectId(id));
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: characterIds } },
       { projection: { _id: 1, name: 1, userId: 1, countryId: 1, actions: 1 } }

@@ -15,15 +15,12 @@ import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type {
-  Character,
   CharacterStateOrg,
   DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
-  NPP,
   PoliticalParty,
-  State,
   StateDemographics,
   StatePartyOrg,
   StateDemographicTurnout,
@@ -77,6 +74,11 @@ import { allocateDelegates, type AllocationMethod } from "@/lib/primaryDelegateA
 import { projectPrimaryByState } from "@/lib/primaryProjection";
 import { logger } from "../observability/logger";
 import { emitPrimaryTierWire } from "@/lib/elections/raceWireEmit";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -299,8 +301,9 @@ export async function runPrimaryStaggerWaveIfDue(
   const uniquePartyIds = [...new Set(candidates.map((c) => c.party))];
   // Candidates store `party` as the sequentialId stringified (per codebase convention).
   const partyNumericIds = uniquePartyIds.map((s) => Number(s)).filter((n) => !isNaN(n));
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find({
       countryId: election.countryId,
       sequentialId: { $in: partyNumericIds },
@@ -314,10 +317,7 @@ export async function runPrimaryStaggerWaveIfDue(
   const waveStates = wave.states;
   const [categories, states, demographics, partyOrgs, turnoutDocs] = await Promise.all([
     loadDemographicCategories(db),
-    db
-      .collection<State>("states")
-      .find({ _id: { $in: waveStates } })
-      .toArray(),
+    (await getStatesCollection(db)).find({ _id: { $in: waveStates } }).toArray(),
     db
       .collection<StateDemographics>("stateDemographics")
       .find({ _id: { $in: waveStates } })
@@ -373,15 +373,13 @@ export async function runPrimaryStaggerWaveIfDue(
   // Pre-wave per-state candidate meta (home state, campaigning state, ticks) —
   // resolved from the raw candidate + character/npp docs for the projection call.
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    (await getCharactersCollection(db))
       .find({
         _id: { $in: candidates.filter((candidate) => !candidate.isNPP).map((c) => c.characterId) },
       })
       .project({ _id: 1, homeState: 1 })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    (await getNppsCollection(db))
       .find({
         _id: {
           $in: candidates
@@ -1095,8 +1093,9 @@ export async function processPrimaryStaggerWaves(
   // pre-filter on primaryEndTime would drift against the game clock across
   // pauses and could wrongly exclude an in-window primary — the in-memory
   // check in runPrimaryStaggerWaveIfDue is the source of truth.
-  const presElections = await db
-    .collection<Election>("elections")
+  const presElections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       ...(onlyElectionIds ? { _id: { $in: onlyElectionIds } } : {}),
       status: "active",

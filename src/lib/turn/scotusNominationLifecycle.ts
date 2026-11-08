@@ -17,7 +17,7 @@ import { didPass } from "@/lib/billLifecycleHelpers";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { nppCabinetVote } from "@/lib/cabinetNominationLifecycle";
 import { getGameState } from "@/lib/gameState";
-import type { ElectedOfficial, NPP, Character, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, Character } from "@/lib/db/types";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { loadNomineePersonalPositions } from "@/lib/scotus/nominateJustice";
 import { computeJusticeIdeology } from "@/lib/scotus/ideology";
@@ -28,6 +28,7 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { awardAchievement } from "@/lib/achievements";
 import { SCOTUS_CONFIRMED_SLUG } from "@/lib/scotus/achievementDefinitions";
 import { buildScotusConfirmationCareerEvent } from "@/lib/scotus/careerEvents";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 
 export interface ScotusNominationLifecycleResult {
   nominationsProcessed: number;
@@ -102,9 +103,9 @@ async function seatConfirmedJustice(
   if (personal && nomination.nomineeParty) {
     const seqId = parseInt(nomination.nomineeParty, 10);
     const party = Number.isFinite(seqId)
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ sequentialId: seqId, countryId: nomination.countryId })
+      ? await (
+          await getPoliticalPartiesCollection(db)
+        ).findOne({ sequentialId: seqId, countryId: nomination.countryId })
       : null;
     if (party) {
       const ideology = computeJusticeIdeology(personal, {

@@ -22,6 +22,7 @@ import {
 } from "@/lib/budget/spending";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export { SUBSIDY_COST_MULTIPLIER } from "@/lib/subsidies/subsidyBudgetCosts";
 
@@ -33,7 +34,7 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
   const [{ nationalCostByBudgetId, stateCostByStateId }, allFederalBudgets, stateBudgets] =
     await Promise.all([
       loadAnnualSubsidyCostMaps(db),
-      db.collection<FederalBudget>("federalBudget").find({}).toArray(),
+      (await getFederalBudgetCollection(db)).find({}).toArray(),
       db.collection<StateBudget>("stateBudgets").find({}).toArray(),
     ]);
 

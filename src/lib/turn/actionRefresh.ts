@@ -1,9 +1,8 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character, GameConfig, NPP } from "@/lib/db/types";
+import type { Character, GameConfig } from "@/lib/db/types";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CongressLeader, LeadershipRole } from "@/lib/db/types/leadership";
-import type { PoliticalParty } from "@/lib/db/types/party";
 import {
   applyNationalInfluenceTurn,
   applyPoliticalInfluenceDecay,
@@ -50,6 +49,8 @@ import {
   loadStatePartyChairIds,
   resolveCeoNiTier,
 } from "./actionRefreshRoles";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -156,8 +157,9 @@ export async function processActionRefresh(
 
   const partyChairIds = new Set<string>();
   const partySubChairIds = new Set<string>();
-  const partyRows = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyRows = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find(
       {
         $or: [
@@ -465,7 +467,7 @@ export async function processActionRefresh(
   await awardOfficeHolderAchievements(db, characters);
 
   // NPP stat decay mirrors player decay and keeps both stats in the 0-100 range.
-  const nppCursor = db.collection<NPP>("npps").find(
+  const nppCursor = (await getNppsCollection(db)).find(
     { retiredAt: null },
     {
       projection: {

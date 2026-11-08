@@ -19,6 +19,7 @@ import {
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { resolveGameYear } from "@/lib/era/era";
 import type { GameState } from "@/lib/db/types";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 const CAP = 0.08; // matches MAX_PER_METRIC_MODIFIER_PER_TURN; the pipeline re-clamps too.
 const clampCap = (v: number) => Math.max(-CAP, Math.min(CAP, v));
@@ -115,12 +116,12 @@ export async function applyEnergyEffects(
   // Era-aware only while the era system is on, matching the dynamics phase: a
   // realistic 1953 grid never clears the modern band, so scoring it there reads
   // every early-Cold-War region as bottom-of-scale.
-  const eraGameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" as GameState["_id"] },
-      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1, eraSystemEnabled: 1 } }
-    );
+  const eraGameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" as GameState["_id"] },
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1, eraSystemEnabled: 1 } }
+  );
   const era = {
     countryId,
     year: eraGameState?.eraSystemEnabled ? (resolveGameYear(eraGameState) ?? null) : null,

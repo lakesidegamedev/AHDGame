@@ -8,13 +8,15 @@ import type { FederalBudget } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { computeConfidenceRecovery } from "@/lib/nationalization/consequences/compute";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export async function processInvestorConfidenceDecay(
   turn: number
 ): Promise<{ countriesHealed: number }> {
   const db = await getDb();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find(
       { investorConfidence: { $lt: INVESTOR_CONFIDENCE_BASELINE } },
       { projection: { countryId: 1, investorConfidence: 1 } }
@@ -36,7 +38,7 @@ export async function processInvestorConfidenceDecay(
     });
   }
   if (ops.length > 0) {
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(ops);
+    await (await getFederalBudgetCollection(db)).bulkWrite(ops);
   }
   return { countriesHealed: ops.length };
 }

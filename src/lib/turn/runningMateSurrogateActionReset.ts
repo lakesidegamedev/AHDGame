@@ -4,6 +4,7 @@ import type { Db } from "@/lib/mongodb";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { getCalendarDayInTimezone, shouldApplyDailyReset } from "@/lib/time/dailyReset";
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 /**
  * Refill each active presidential ticket's shared running-mate surrogate action
@@ -20,8 +21,9 @@ export async function resetRunningMateSurrogateActions(
 ): Promise<{ surrogatePoolsReset: number }> {
   const todayEastern = getCalendarDayInTimezone(new Date());
 
-  const presidentialElections = await db
-    .collection<Election>("elections")
+  const presidentialElections = await (
+    await getElectionsCollection(db)
+  )
     .find({ electionType: "president", status: "active" })
     .project<Pick<Election, "_id" | "rulesetVersion">>({ _id: 1, rulesetVersion: 1 })
     .toArray();
