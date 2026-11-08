@@ -43,7 +43,7 @@ import {
 } from "./planningRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
-import { captiveMarketValue, laneClearingPrices } from "./captiveMarketValueRules";
+import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
 import { shortageAsk } from "./shortageAskRules";
 import { householdSpendBase } from "./householdSpendRules";
 import {
@@ -217,6 +217,9 @@ export interface ProducerOperatingResult {
   /** Matching management-account entries between own sites; no treasury cash moves. */
   internalSupplyIncome?: number;
   internalSupplyCharge?: number;
+  /** Own-site deliveries at the lane price, valuation only; they net to zero per company. */
+  valuationCredit?: number;
+  valuationCharge?: number;
   capacityUnits: number;
   activeUnits: number;
   /** Physical proposal before funded order matching constrains actual production. */
@@ -1150,7 +1153,9 @@ export function advanceProducerEconomy(
       ...(input.marketFirstAccounts?.length
         ? { marketFirstAccounts: input.marketFirstAccounts }
         : {}),
-      ...(input.captiveMarketValue ? { trackInternalDeliveries: true } : {}),
+      ...(input.captiveMarketValue || input.ownSiteValuationCredit
+        ? { trackInternalDeliveries: true }
+        : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it
@@ -1402,6 +1407,17 @@ export function advanceProducerEconomy(
         ),
       })
     : null;
+  // Same prices, valuation only, for accounts that book no entries of their own.
+  const valuationValue = input.ownSiteValuationCredit
+    ? ownSiteCredit({
+        deliveries: market.internalDeliveries ?? [],
+        offers: postedOffers,
+        prices: market.prices,
+        plans,
+        pricedAccounts: internalAccountingAccounts,
+        marketValueBooked: input.captiveMarketValue === true,
+      })
+    : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
   const unsoldByBook = new Map<string, { unitPrice: number; units: number }[]>();
   for (const offer of market.tradeReceipt.offers) {
@@ -1503,6 +1519,7 @@ export function advanceProducerEconomy(
     }
     let purchases = 0;
     let internalSupplyCharge = 0;
+    let valuationCharge = 0;
     for (const recipe of p.inputs) {
       const bought = orderIdsForInput(p.id, recipe.commodity).reduce(
         (total, id) => {
@@ -1527,6 +1544,8 @@ export function advanceProducerEconomy(
       stock.value += bought.cost;
       purchases += bought.cost;
       internalSupplyCharge += bought.internalCost;
+      for (const id of orderIdsForInput(p.id, recipe.commodity))
+        valuationCharge += valuationValue?.chargeByOrder.get(id) ?? 0;
       stocks.set(recipe.commodity, stock);
     }
     // Make do: the plant produces its settled plan and uses up to what it has
@@ -1580,6 +1599,7 @@ export function advanceProducerEconomy(
       stock.value *= 1 - loss;
     }
     let internalSupplyIncome = 0;
+    let valuationCredit = 0;
     let revenue = 0,
       offeredUnits = 0,
       soldUnits = 0,
@@ -1592,6 +1612,7 @@ export function advanceProducerEconomy(
       const marketValue = captiveValue?.incomeByOffer.get(sold.id) ?? 0;
       revenue += sold.revenue;
       internalSupplyIncome += (sold.internalValue ?? 0) + marketValue;
+      valuationCredit += valuationValue?.incomeByOffer.get(sold.id) ?? 0;
       offeredUnits += sold.offeredUnits;
       soldUnits += sold.soldUnits;
       deliveredUnits += sold.deliveredUnits;
@@ -1740,6 +1761,8 @@ export function advanceProducerEconomy(
       id: p.id,
       ...(internalSupplyIncome > 0 ? { internalSupplyIncome } : {}),
       ...(internalSupplyCharge > 0 ? { internalSupplyCharge } : {}),
+      ...(valuationCredit > 0 ? { valuationCredit } : {}),
+      ...(valuationCharge > 0 ? { valuationCharge } : {}),
       capacityUnits: p.capacityUnits,
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,

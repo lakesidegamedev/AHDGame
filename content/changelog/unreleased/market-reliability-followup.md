@@ -11,6 +11,6 @@ areas: [engine, frontend]
 ---
 
 - Fair allocation and embargo restrictions are preserved while repeated supplier accounting is pooled.
-- Corporation processing has a five-minute timeout, with a four-minute pre-settlement market budget.
+- Corporation processing has a five-minute timeout, with three quarters reserved for pre-settlement market work.
 - After a retryable market failure, independent electoral and party work can complete. Financial dependants wait for settlement, and retries retain completed phases.
 - Health cards show the relevant turn and separate failed phases from blocked phases, including historical snapshots.

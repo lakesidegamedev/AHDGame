@@ -49,6 +49,9 @@ export interface FundedReceipt {
   turn?: number;
   internalSupplyIncome?: number;
   internalSupplyCharge?: number;
+  /** Anchor per turn, valuation only: own-site deliveries credited / charged at lane prices. */
+  valuationCredit?: number;
+  valuationCharge?: number;
   /** Anchor per turn. */
   revenue: number;
   /** Anchor per turn: revenue minus inputs consumed, wages and site bills. */

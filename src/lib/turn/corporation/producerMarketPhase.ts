@@ -10,6 +10,7 @@ import {
   settleProducerTurn,
 } from "@/lib/market/producerMarket/settlement";
 import type { prepareProducerSector } from "./producerSectorPlan";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
 import {
   roundStageTimings,
@@ -21,8 +22,16 @@ import {
 export const LIVE_PLANNING_PASSES = 64;
 /** Cooperative budget includes market preparation; final clearing still completes. */
 export const LIVE_PLANNING_BUDGET_MS = 30_000;
-/** Reserve the last minute of the five-minute corporation phase for settlement and other work. */
-export const LIVE_MARKET_EXECUTION_BUDGET_MS = 240_000;
+/**
+ * Size the pre-settlement deadline from the corporation-specific timeout,
+ * leaving a quarter of the phase for durable settlement and other work.
+ */
+export function liveMarketExecutionBudgetMs(timeoutMs: number): number {
+  return Math.floor(timeoutMs * 0.75);
+}
+export const LIVE_MARKET_EXECUTION_BUDGET_MS = liveMarketExecutionBudgetMs(
+  phaseTimeoutMs("corporationTurn")
+);
 
 export { producerWalletId, type ProducerWalletScope };
 

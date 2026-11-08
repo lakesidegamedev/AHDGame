@@ -19,7 +19,8 @@ No build or full-project TypeScript run was used to increase local resource pres
   Flush each constrained cohort before the next price/group can observe its stock.
 - Keep opening budgets, shared-budget caps, priorities, own-site transfers, route
   membership, supplier IDs and receipt allocation semantics unchanged.
-- Corporation timeout: 300 seconds. Pre-settlement market ceiling: 240 seconds.
+- Corporation timeout: 300 seconds. Pre-settlement market ceiling: 225 seconds,
+  calculated as three quarters of the corporation-specific phase timeout.
   Deadlines still fail before claiming a receipt; claimed journals retain replay.
   Failure messages include completed stage timings.
 - Independent electoral/party phases can run after a retryable corporation stop,

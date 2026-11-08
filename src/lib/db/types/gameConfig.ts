@@ -599,6 +599,15 @@ export interface GameConfig {
    */
   fundedValuationStage?: number;
   /**
+   * With fundedValuationStage on: 1 values a supplier site whose output goes to
+   * its own company's other sites at this turn's lane price for those units
+   * (the receiving site carries the matching charge), so it is not valued at
+   * its book floor while its sister sites get the goods free. Valuation only:
+   * no site account, cash or profit line changes. Companies that book their own
+   * own-site entries are left as they are. 0 or absent = off.
+   */
+  fundedValuationOwnSiteCreditStage?: number;
+  /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.
    */

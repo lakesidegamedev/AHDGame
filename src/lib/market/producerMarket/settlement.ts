@@ -574,7 +574,7 @@ export async function settleProducerTurn(
     const checkBudget = () => {
       if (input.executionBudgetMs != null && performance.now() - started >= input.executionBudgetMs)
         throw new Error(
-          `Producer market execution deadline exceeded before settlement; completed stages: ${JSON.stringify(roundStageTimings(timings))}`
+          `Producer market execution deadline exceeded before settlement (stage timings ms: ${JSON.stringify(roundStageTimings(timings))})`
         );
     };
     await verifyOpeningProducerPayables(db, {
