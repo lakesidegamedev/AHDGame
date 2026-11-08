@@ -37,6 +37,7 @@ import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedempti
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import type { IndexFund } from "@/lib/db/types/indexFund";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { logIndexFundRedeemActivity } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -44,6 +45,8 @@ import { getQueuedRedemptionLiabilityAnchor } from "@/lib/indexFunds/fundValuati
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { claimFundRedemptionLock } from "@/lib/indexFunds/redemptionLock";
+
+class FundQuoteMovedError extends Error {}
 
 const redeemSchema = z.object({
   corporationId: z
@@ -116,6 +119,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       if (fund.status === "delisted") {
         return errorResponse(400, "Fund is delisted");
       }
+
+      // A national fund is re-marked each tick, so its writes are conditional on
+      // the NAV the units were quoted at.
+      const quotedNavGuard = fund.nationalIndex ? { quotedNav: fund.quotedNav } : {};
+      const navMoved = async (s?: { session?: import("mongodb").ClientSession }) => {
+        if (!fund.nationalIndex) return false;
+        const current = await db
+          .collection<IndexFund>("indexFunds")
+          .findOne({ _id: fund._id }, { projection: { quotedNav: 1 }, ...s });
+        return !!current && current.quotedNav !== fund.quotedNav;
+      };
 
       const position = await getPosition(db, fund._id, "character", { characterId });
       if (
@@ -249,7 +263,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           // Burn all accepted units up front. Any unpaid remainder becomes a
           // queued cash payable, not phantom fund units in the NAV denominator.
           const supplyBurn = await db.collection("indexFunds").updateOne(
-            { _id: fund._id, unitSupply: { $gte: units } },
+            {
+              _id: fund._id,
+              unitSupply: { $gte: units },
+              ...quotedNavGuard,
+            },
             {
               $inc: { unitSupply: -units },
               $set: { updatedAt: new Date() },
@@ -257,6 +275,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             s
           );
           if (supplyBurn.matchedCount === 0) {
+            // A national fund is re-marked each tick; the quote was read at the
+            // old NAV, so a moved NAV must not take this redemption.
+            if (await navMoved(s)) throw new FundQuoteMovedError();
             throw new Error("Fund unit supply changed during redemption; please retry.");
           }
           if (compensate) {
@@ -272,6 +293,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
           let fundState = await resolveFundBySlugOrId(db, slug, s);
           if (!fundState) throw new Error("Fund not found");
+          if (fund.nationalIndex && fundState.quotedNav !== fund.quotedNav) {
+            throw new FundQuoteMovedError();
+          }
           let existingQueuedLiabilityAnchor = await getQueuedRedemptionLiabilityAnchor(
             db,
             fundState._id
@@ -302,7 +326,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             // both debit, driving fund cash negative. The queued-redemption path
             // already guards this way; the immediate path did not.
             const cashDebit = await db.collection("indexFunds").updateOne(
-              { _id: fundState!._id, cashAnchor: { $gte: quote.paidAmountAnchor } },
+              {
+                _id: fundState!._id,
+                cashAnchor: { $gte: quote.paidAmountAnchor },
+                ...quotedNavGuard,
+              },
               {
                 $inc: {
                   cashAnchor: -quote.paidAmountAnchor,
@@ -312,6 +340,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
               s
             );
             if (cashDebit.matchedCount === 0) {
+              if (await navMoved(s)) throw new FundQuoteMovedError();
               throw new Error("FUND_CASH_RACE");
             }
             // Undo for this leg's cash debit, unwound by the outer stack if a
@@ -586,6 +615,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             );
           }
         } catch (err) {
+          if (err instanceof FundQuoteMovedError) {
+            return errorResponse(409, "The fund price just moved. Please try again.");
+          }
           if (err instanceof Error && err.message === "FUND_CASH_RACE") {
             // Another redemption took the cash between the quote and the debit.
             // Nothing was written, so the caller can simply retry.

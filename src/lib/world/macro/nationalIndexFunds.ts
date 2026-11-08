@@ -125,7 +125,12 @@ export async function markNationalIndexFunds(
       .toArray();
     for (const f of fresh) byCountry.set(f.nationalIndex!.entityId, f);
     const writes: AnyBulkWriteOperation<IndexFund>[] = [];
-    const attempted: { mark: NationalIndexMark; fund: FundRead; cashDelta: number }[] = [];
+    const attempted: {
+      mark: NationalIndexMark;
+      fund: FundRead;
+      cashDelta: number;
+      token: string;
+    }[] = [];
     for (const mark of pending) {
       const fund = byCountry.get(mark.countryId)!;
       const { cashDelta } = markNationalIndexFund({
@@ -135,32 +140,36 @@ export async function markNationalIndexFunds(
         queuedUnits: queued.get(String(fund._id)) ?? 0,
         cashAnchor: fund.cashAnchor,
       });
-      attempted.push({ mark, fund, cashDelta });
+      const token = new ObjectId().toHexString();
+      attempted.push({ mark, fund, cashDelta, token });
       writes.push({
         updateOne: {
           filter: { _id: fund._id, unitSupply: fund.unitSupply, quotedNav: fund.quotedNav },
           update: {
-            $set: { quotedNav: mark.nav, backingRatio: 1, updatedAt: now },
+            $set: {
+              quotedNav: mark.nav,
+              backingRatio: 1,
+              updatedAt: now,
+              "nationalIndex.markToken": token,
+            },
             ...(cashDelta !== 0 ? { $inc: { cashAnchor: cashDelta } } : {}),
           },
         },
       });
     }
     await funds.bulkWrite(writes, { ordered: false });
-    // The write stamps `updatedAt: now`, so a fund carrying the new NAV and
-    // that stamp took this attempt's write.
+    // Each write carries a token unique to this attempt, so a fund holding it
+    // took this write and not another writer's.
     const after = await funds
       .find(
         { _id: { $in: attempted.map((a) => a.fund._id) } },
-        { projection: { quotedNav: 1, updatedAt: 1 } }
+        { projection: { "nationalIndex.markToken": 1 } }
       )
       .toArray();
-    const landed = new Set(
-      after.filter((f) => f.updatedAt?.getTime() === now.getTime()).map((f) => String(f._id))
-    );
+    const landedTokens = new Set(after.map((f) => f.nationalIndex?.markToken));
     const retry: NationalIndexMark[] = [];
     for (const a of attempted) {
-      if (!landed.has(String(a.fund._id))) {
+      if (!landedTokens.has(a.token)) {
         retry.push(a.mark);
         continue;
       }
