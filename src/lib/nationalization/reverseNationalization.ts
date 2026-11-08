@@ -6,7 +6,12 @@ import { isStateOwned } from "./nationalCorporation";
 import { privatizeAsset } from "./privatizeAsset";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
-import { clawBackNationalizationCompensation } from "./clawbackCompensation";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import {
+  completeCompensationRecovery,
+  discardCompensationRecovery,
+  recordCompensationRecovery,
+} from "./clawbackCompensation";
 
 export interface ReverseNationalizationParams {
   countryId: string;
@@ -44,109 +49,145 @@ export async function reverseNationalizationTaking(
   params: ReverseNationalizationParams
 ): Promise<ReverseNationalizationResult> {
   const now = new Date();
+  const result: ReverseNationalizationResult = {
+    restoredToPriorOwner: 0,
+    spunOut: 0,
+    skipped: 0,
+    compensationRecoveredAnchor: 0,
+    compensationOwedAnchor: 0,
+  };
+  for (const sectorId of params.sectorIds) {
+    try {
+      await reverseSector(db, params, sectorId, now, result);
+    } catch (err) {
+      console.error(
+        `[reverseNationalization] failed to return sector ${sectorId.toString()}:`,
+        err
+      );
+      result.skipped++;
+    }
+  }
+  return result;
+}
+
+/**
+ * Undo every taking recorded on one sector row, newest first, so a row that
+ * folded several takings hands each one back in turn.
+ */
+async function reverseSector(
+  db: Db,
+  params: ReverseNationalizationParams,
+  sectorId: ObjectId,
+  now: Date,
+  result: ReverseNationalizationResult
+): Promise<void> {
   const sectorsCol = db.collection<CorporateSector>("corporateSectors");
   const corps = db.collection<Corporation>("corporations");
+  let reversedAny = false;
+  const done = (): void => {
+    if (!reversedAny) result.skipped++;
+  };
 
-  let restoredToPriorOwner = 0;
-  let spunOut = 0;
-  let skipped = 0;
-  let compensationRecoveredAnchor = 0;
-  let compensationOwedAnchor = 0;
+  for (;;) {
+    const sector = await sectorsCol.findOne({ _id: sectorId });
+    if (!sector) return done();
 
-  for (const sectorId of params.sectorIds) {
-    let releaseClaim: () => Promise<void> = async () => {};
+    // Only reverse a sector that is STILL held by a state-owned NatCorp of this
+    // country. A row already handed back (idempotent re-run) is left alone.
+    const holder = await corps.findOne({ _id: sector.corporationId });
+    if (!holder || !isStateOwned(holder) || holder.countryOwnerId !== params.countryId) {
+      return done();
+    }
+
+    const prov = sector.nationalizationProvenance;
+    const priorOwner = prov?.formerCorporationId
+      ? await corps.findOne({ _id: prov.formerCorporationId })
+      : null;
+    const compensation = prov?.compensationAnchor ?? 0;
+    const compensationCountryId = prov?.compensationCountryId ?? params.countryId;
+
+    // The recovery is recorded before the asset moves and finished after, so a
+    // crash between the two is resumed rather than lost.
+    let markerKey: string | null = null;
+    let owingCorpId: ObjectId | null = null;
+    let moved = false;
+    const recordRecovery = async (corporationId: ObjectId) => {
+      if (!prov || !(compensation > 0)) return;
+      owingCorpId = corporationId;
+      markerKey = await recordCompensationRecovery(db, {
+        countryId: compensationCountryId,
+        corporationId,
+        sectorId: sector._id,
+        takenAtTurn: prov.takenAtTurn,
+        compensationAnchor: compensation,
+      });
+    };
+    const finishRecovery = async () => {
+      if (!markerKey || !owingCorpId) return;
+      const recovered = await completeCompensationRecovery(db, owingCorpId, markerKey, now);
+      result.compensationRecoveredAnchor += recovered.recoveredAnchor;
+      result.compensationOwedAnchor += recovered.owedAnchor;
+    };
+    const abandonRecovery = async () => {
+      if (!moved && markerKey && owingCorpId)
+        await discardCompensationRecovery(db, owingCorpId, markerKey).catch(() => undefined);
+    };
+
     try {
-      const sector = await sectorsCol.findOne({ _id: sectorId });
-      if (!sector) {
-        skipped++;
+      // A row that folded this taking into holdings the state already had is
+      // never handed back whole: only what the taking added returns.
+      if (prov?.mergedIntoExisting) {
+        if (!priorOwner || priorOwner._id.equals(holder._id)) return done();
+        await recordRecovery(priorOwner._id);
+        if (!(await returnMergedPortion(db, sector, priorOwner._id, now))) {
+          await abandonRecovery();
+          return done();
+        }
+        moved = true;
+        result.restoredToPriorOwner++;
+        reversedAny = true;
+        await finishRecovery();
         continue;
       }
 
-      // Only reverse a sector that is STILL held by a state-owned NatCorp of this
-      // country. A row already handed back (idempotent re-run) is left alone.
-      const holder = await corps.findOne({ _id: sector.corporationId });
-      if (!holder || !isStateOwned(holder) || holder.countryOwnerId !== params.countryId) {
-        skipped++;
-        continue;
-      }
-
-      const prov = sector.nationalizationProvenance;
-      const priorOwner = prov?.formerCorporationId
-        ? await corps.findOne({ _id: prov.formerCorporationId })
-        : null;
-
-      // Claim the compensation before the asset moves so a retry cannot recover
-      // it twice; the claim is handed back below if the return does not happen.
-      let claimedAnchor = 0;
-      if (prov && priorOwner) claimedAnchor = await claimCompensation(db, sector._id, prov);
-      releaseClaim = () => restoreCompensationClaim(db, sector._id, claimedAnchor);
-      const recoverCompensation = async () => {
-        if (claimedAnchor <= 0 || !priorOwner) return;
-        const recovered = await clawBackNationalizationCompensation(db, {
-          countryId: prov?.compensationCountryId ?? params.countryId,
-          corporationId: priorOwner._id,
-          compensationAnchor: claimedAnchor,
-          now,
-        });
-        compensationRecoveredAnchor += recovered.recoveredAnchor;
-        compensationOwedAnchor += recovered.owedAnchor;
-      };
-
-      {
-        // A row that folded this taking into holdings the state already had is
-        // never handed back whole: only what the taking added returns.
-        if (prov?.mergedIntoExisting) {
-          if (!priorOwner || priorOwner._id.equals(holder._id)) {
-            skipped++;
-            continue;
+      if (prov && priorOwner && !priorOwner._id.equals(holder._id)) {
+        // Re-parent to the recorded prior owner and restore pre-haircut economics.
+        //
+        // PLANTS-GATED: the `revenue` write below is the LEGACY nameplate, not
+        // the quantity. `formerCapitalStock` is restored in the same `$set`, and
+        // under plants `sectorTurn` restates revenue from owned capacity on the
+        // next tick, so the nameplate converges on the restored capacity rather
+        // than being double-counted against it. Restoring capacity without
+        // revenue would leave a stale pre-haircut nameplate visible for one
+        // turn; restoring revenue without capacity would be erased. Both, in one
+        // write, is the correct pairing.
+        await recordRecovery(priorOwner._id);
+        await sectorsCol.updateOne(
+          { _id: sector._id },
+          {
+            $set: {
+              corporationId: priorOwner._id,
+              ...(typeof prov.formerRevenue === "number" ? { revenue: prov.formerRevenue } : {}),
+              ...(typeof prov.formerCapitalStock === "number"
+                ? {
+                    capitalStock: prov.formerCapitalStock,
+                    ...seedPlantLedger(sector, prov.formerCapitalStock),
+                  }
+                : {}),
+              updatedAt: now,
+            },
+            $unset: {
+              absorbedAtTurn: "",
+              nationalizedAtTurn: "",
+              nationalizationTransitionMultiplier: "",
+              nationalizationProvenance: "",
+            },
           }
-          if (await returnMergedPortion(db, sector, priorOwner._id, now)) {
-            restoredToPriorOwner++;
-            await recoverCompensation();
-          } else {
-            await releaseClaim();
-            skipped++;
-          }
-          continue;
-        }
-
-        if (prov && priorOwner && !priorOwner._id.equals(holder._id)) {
-          // Re-parent to the recorded prior owner and restore pre-haircut economics.
-          //
-          // PLANTS-GATED: the `revenue` write below is the LEGACY nameplate, not
-          // the quantity. `formerCapitalStock` is restored in the same `$set`, and
-          // under plants `sectorTurn` restates revenue from owned capacity on the
-          // next tick, so the nameplate converges on the restored capacity rather
-          // than being double-counted against it. Restoring capacity without
-          // revenue would leave a stale pre-haircut nameplate visible for one
-          // turn; restoring revenue without capacity would be erased. Both, in one
-          // write, is the correct pairing.
-          await sectorsCol.updateOne(
-            { _id: sector._id },
-            {
-              $set: {
-                corporationId: priorOwner._id,
-                ...(typeof prov.formerRevenue === "number" ? { revenue: prov.formerRevenue } : {}),
-                ...(typeof prov.formerCapitalStock === "number"
-                  ? {
-                      capitalStock: prov.formerCapitalStock,
-                      ...seedPlantLedger(sector, prov.formerCapitalStock),
-                    }
-                  : {}),
-                updatedAt: now,
-              },
-              $unset: {
-                absorbedAtTurn: "",
-                nationalizedAtTurn: "",
-                nationalizationTransitionMultiplier: "",
-                nationalizationProvenance: "",
-              },
-            }
-          );
-          restoredToPriorOwner++;
-          await recoverCompensation();
-          continue;
-        }
+        );
+        moved = true;
+        result.restoredToPriorOwner++;
+        await finishRecovery();
+        return;
       }
 
       // Fallback: no surviving prior owner. Spin the sector out to a fresh private
@@ -156,8 +197,9 @@ export async function reverseNationalizationTaking(
         { _id: sector._id },
         { $unset: { absorbedAtTurn: "", nationalizationProvenance: "" }, $set: { updatedAt: now } }
       );
+      moved = true;
       const carveName = `${params.label} Returned ${sector._id.toString().slice(-6)}`.slice(0, 60);
-      await privatizeAsset(db, {
+      const spun = await privatizeAsset(db, {
         countryId: params.countryId as CountryId,
         sourceNationalCorporationId: holder._id,
         selections: [{ sectorId: sector._id, carveFraction: 1 }],
@@ -166,24 +208,71 @@ export async function reverseNationalizationTaking(
         method: "ipo",
         turn: params.turn,
       });
-      spunOut++;
+      result.spunOut++;
+      // The corporation that now holds the asset owes the compensation back.
+      if (spun?.newCorporationId) {
+        await recordRecovery(spun.newCorporationId);
+        await finishRecovery();
+      }
+      return;
     } catch (err) {
-      console.error(
-        `[reverseNationalization] failed to return sector ${sectorId.toString()}:`,
-        err
-      );
-      await releaseClaim().catch(() => undefined);
-      skipped++;
+      await abandonRecovery();
+      throw err;
     }
   }
+}
 
-  return {
-    restoredToPriorOwner,
-    spunOut,
-    skipped,
-    compensationRecoveredAnchor,
-    compensationOwedAnchor,
-  };
+/**
+ * Finish compensation recoveries a crash interrupted. A marker whose taking is
+ * still on its sector never started (the asset did not move) and is dropped;
+ * every other marker is completed.
+ */
+export async function resumePendingCompensationRecoveries(
+  db: Db,
+  now = new Date()
+): Promise<number> {
+  const corps = await getCorporationsCollection(db);
+  const owing = await corps
+    .find(
+      { pendingCompensationRecoveries: { $exists: true, $ne: {} } },
+      { projection: { _id: 1, pendingCompensationRecoveries: 1 } }
+    )
+    .limit(200)
+    .toArray();
+  let resumed = 0;
+  for (const corp of owing) {
+    for (const [key, marker] of Object.entries(corp.pendingCompensationRecoveries ?? {})) {
+      try {
+        if (
+          marker.stage === "pending" &&
+          (await takingStillInPlace(db, marker.sectorId, marker.takenAtTurn, corp._id))
+        ) {
+          await discardCompensationRecovery(db, corp._id, key);
+          continue;
+        }
+        await completeCompensationRecovery(db, corp._id, key, now);
+        resumed++;
+      } catch (err) {
+        console.error(`[reverseNationalization] could not resume recovery ${key}:`, err);
+      }
+    }
+  }
+  return resumed;
+}
+
+async function takingStillInPlace(
+  db: Db,
+  sectorId: ObjectId,
+  takenAtTurn: number,
+  owingCorpId: ObjectId
+): Promise<boolean> {
+  const sector = await (await getCorporateSectorsCollection(db)).findOne({ _id: sectorId });
+  const prov = sector?.nationalizationProvenance;
+  if (!sector || !prov || sector.corporationId.equals(owingCorpId)) return false;
+  return (
+    prov.takenAtTurn === takenAtTurn ||
+    (prov.earlierTakings ?? []).some((t) => t.takenAtTurn === takenAtTurn)
+  );
 }
 
 /**
@@ -199,8 +288,15 @@ async function returnMergedPortion(
   priorOwnerId: ObjectId,
   now: Date
 ): Promise<boolean> {
-  const prov = survivor.nationalizationProvenance;
-  if (!prov) return false;
+  if (!survivor.nationalizationProvenance) return false;
+  const { earlierTakings = [], ...prov } = survivor.nationalizationProvenance;
+  const previousTaking = earlierTakings[earlierTakings.length - 1];
+  const remainingProvenance = previousTaking
+    ? {
+        ...previousTaking,
+        ...(earlierTakings.length > 1 ? { earlierTakings: earlierTakings.slice(0, -1) } : {}),
+      }
+    : null;
   const sectorsCol = await getCorporateSectorsCollection(db);
   const plants = typeof prov.foldedCapitalStock === "number";
   const foldedStock = plants
@@ -236,9 +332,10 @@ async function returnMergedPortion(
                 : {}),
             }
           : {}),
+        ...(remainingProvenance ? { nationalizationProvenance: remainingProvenance } : {}),
         updatedAt: now,
       },
-      $unset: { nationalizationProvenance: "" },
+      ...(remainingProvenance ? {} : { $unset: { nationalizationProvenance: "" } }),
     }
   );
   if (taken.modifiedCount !== 1) return false;
@@ -314,32 +411,4 @@ async function returnMergedPortion(
     updatedAt: now,
   } as CorporateSector);
   return true;
-}
-
-/** Take the recorded compensation off the sector so it can be recovered exactly once. */
-async function claimCompensation(
-  db: Db,
-  sectorId: ObjectId,
-  prov: NonNullable<CorporateSector["nationalizationProvenance"]>
-): Promise<number> {
-  const amount = prov.compensationAnchor ?? 0;
-  if (!(amount > 0)) return 0;
-  const claim = await (
-    await getCorporateSectorsCollection(db)
-  ).updateOne(
-    { _id: sectorId, "nationalizationProvenance.compensationAnchor": amount },
-    { $unset: { "nationalizationProvenance.compensationAnchor": "" } }
-  );
-  return claim.modifiedCount === 1 ? amount : 0;
-}
-
-/** Hand a claimed compensation back to the sector when the asset did not return. */
-async function restoreCompensationClaim(db: Db, sectorId: ObjectId, amount: number): Promise<void> {
-  if (!(amount > 0)) return;
-  await (
-    await getCorporateSectorsCollection(db)
-  ).updateOne(
-    { _id: sectorId, nationalizationProvenance: { $exists: true } },
-    { $set: { "nationalizationProvenance.compensationAnchor": amount } }
-  );
 }

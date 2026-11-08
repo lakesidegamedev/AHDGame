@@ -15,7 +15,11 @@ vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
   getCorpFxRate: vi.fn().mockResolvedValue(1),
 }));
 
-import { reverseNationalizationTaking } from "./reverseNationalization";
+import { privatizeAsset } from "./privatizeAsset";
+import {
+  resumePendingCompensationRecoveries,
+  reverseNationalizationTaking,
+} from "./reverseNationalization";
 
 function world(opts: { priorCash: number; merged?: boolean }) {
   const memory = createInMemoryDb();
@@ -121,5 +125,211 @@ describe("reverseNationalizationTaking compensation clawback", () => {
     expect(returned).toHaveLength(1);
     expect(returned[0]?.revenue).toBe(1_000);
     expect(returned[0]?.workers).toBe(10);
+  });
+
+  it("hands back every taking folded into one row and recovers each compensation", async () => {
+    creditTreasury.mockClear();
+    const memory = createInMemoryDb();
+    const natCorp = new ObjectId();
+    const ownerA = new ObjectId();
+    const ownerB = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      { _id: natCorp, name: "State Oil", countryOwnerId: "US", liquidCapital: 0, countryId: "US" },
+      { _id: ownerA, name: "A", liquidCapital: 1_000, countryId: "US" },
+      { _id: ownerB, name: "B", liquidCapital: 1_000, countryId: "US" },
+    ]);
+    memory.seed("corporateSectors", [
+      {
+        _id: sectorId,
+        corporationId: natCorp,
+        stateId: "TX",
+        sectorType: "extraction",
+        revenue: 1_020,
+        workers: 60,
+        currentGrowthCost: 6,
+        nationalizationProvenance: {
+          formerCorporationId: ownerB,
+          formerRevenue: 200,
+          takenAtTurn: 12,
+          compensationAnchor: 100,
+          compensationCountryId: "US",
+          mergedIntoExisting: true,
+          foldedRevenue: 170,
+          foldedWorkers: 20,
+          foldedGrowthCost: 2,
+          earlierTakings: [
+            {
+              formerCorporationId: ownerA,
+              formerRevenue: 1_000,
+              takenAtTurn: 10,
+              compensationAnchor: 300,
+              compensationCountryId: "US",
+            },
+          ],
+        },
+      },
+    ]);
+    const db = memory as unknown as Db;
+
+    const result = await reverseNationalizationTaking(db, params(sectorId));
+
+    expect(result.restoredToPriorOwner).toBe(2);
+    expect(result.compensationRecoveredAnchor).toBe(400);
+    expect(creditTreasury).toHaveBeenCalledTimes(2);
+    const rows = await memory.collection("corporateSectors").find({}).toArray();
+    expect(rows.find((r) => String(r.corporationId) === String(ownerA))?.revenue).toBe(1_000);
+    expect(rows.find((r) => String(r.corporationId) === String(ownerB))?.revenue).toBe(200);
+    expect(rows.some((r) => r.nationalizationProvenance)).toBe(false);
+    const a = await memory.collection("corporations").findOne({ _id: ownerA });
+    const b = await memory.collection("corporations").findOne({ _id: ownerB });
+    expect(a?.liquidCapital).toBe(700);
+    expect(b?.liquidCapital).toBe(900);
+    expect(Object.keys(a?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    expect(Object.keys(b?.pendingCompensationRecoveries ?? {})).toEqual([]);
+  });
+
+  it("recovers from the corporation that now holds the asset when no prior owner survives", async () => {
+    creditTreasury.mockClear();
+    const memory = createInMemoryDb();
+    const natCorp = new ObjectId();
+    const gone = new ObjectId();
+    const spunOut = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      { _id: natCorp, name: "State Oil", countryOwnerId: "US", liquidCapital: 0, countryId: "US" },
+      { _id: spunOut, name: "Returned", liquidCapital: 150, countryId: "US" },
+    ]);
+    memory.seed("corporateSectors", [
+      {
+        _id: sectorId,
+        corporationId: natCorp,
+        stateId: "TX",
+        sectorType: "extraction",
+        revenue: 850,
+        nationalizationProvenance: {
+          formerCorporationId: gone,
+          takenAtTurn: 10,
+          compensationAnchor: 500,
+          compensationCountryId: "US",
+        },
+      },
+    ]);
+    vi.mocked(privatizeAsset).mockResolvedValueOnce({ newCorporationId: spunOut } as never);
+
+    const result = await reverseNationalizationTaking(memory as unknown as Db, params(sectorId));
+
+    expect(result.spunOut).toBe(1);
+    expect(result.compensationRecoveredAnchor).toBe(150);
+    expect(result.compensationOwedAnchor).toBe(350);
+    const holder = await memory.collection("corporations").findOne({ _id: spunOut });
+    expect(holder?.federalTaxArrearsAnchorByCountry).toEqual({ US: 350 });
+  });
+});
+
+describe("resumePendingCompensationRecoveries", () => {
+  const marker = (sectorId: ObjectId, over: Record<string, unknown> = {}) => ({
+    sectorId,
+    takenAtTurn: 10,
+    countryId: "US",
+    anchor: 600,
+    stage: "pending",
+    ...over,
+  });
+
+  it("completes a recovery whose asset already moved before the crash", async () => {
+    creditTreasury.mockClear();
+    const memory = createInMemoryDb();
+    const owner = new ObjectId();
+    const natCorp = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      {
+        _id: owner,
+        liquidCapital: 1_000,
+        countryId: "US",
+        pendingCompensationRecoveries: { [`${sectorId.toHexString()}_10`]: marker(sectorId) },
+      },
+    ]);
+    memory.seed("corporateSectors", [
+      { _id: sectorId, corporationId: owner, stateId: "TX", sectorType: "extraction" },
+    ]);
+    void natCorp;
+
+    await resumePendingCompensationRecoveries(memory as unknown as Db);
+
+    const corp = await memory.collection("corporations").findOne({ _id: owner });
+    expect(corp?.liquidCapital).toBe(400);
+    expect(Object.keys(corp?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    expect(creditTreasury).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a marker whose taking never left the state, moving no money", async () => {
+    creditTreasury.mockClear();
+    const memory = createInMemoryDb();
+    const owner = new ObjectId();
+    const natCorp = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      {
+        _id: owner,
+        liquidCapital: 1_000,
+        countryId: "US",
+        pendingCompensationRecoveries: { [`${sectorId.toHexString()}_10`]: marker(sectorId) },
+      },
+    ]);
+    memory.seed("corporateSectors", [
+      {
+        _id: sectorId,
+        corporationId: natCorp,
+        nationalizationProvenance: { formerCorporationId: owner, takenAtTurn: 10 },
+      },
+    ]);
+
+    await resumePendingCompensationRecoveries(memory as unknown as Db);
+
+    const corp = await memory.collection("corporations").findOne({ _id: owner });
+    expect(corp?.liquidCapital).toBe(1_000);
+    expect(Object.keys(corp?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    expect(creditTreasury).not.toHaveBeenCalled();
+  });
+
+  it("credits the treasury once for cash already taken, then books the unpaid rest as debt", async () => {
+    creditTreasury.mockClear();
+    const memory = createInMemoryDb();
+    const owner = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      {
+        _id: owner,
+        liquidCapital: 0,
+        countryId: "US",
+        pendingCompensationRecoveries: {
+          [`${sectorId.toHexString()}_10`]: marker(sectorId, { stage: "debited", paidAnchor: 250 }),
+        },
+      },
+    ]);
+    memory.seed("corporateSectors", [
+      { _id: sectorId, corporationId: owner, stateId: "TX", sectorType: "extraction" },
+    ]);
+    const db = memory as unknown as Db;
+
+    creditTreasury.mockRejectedValueOnce(new Error("crash"));
+    await resumePendingCompensationRecoveries(db);
+    let corp = await memory.collection("corporations").findOne({ _id: owner });
+    expect(corp?.pendingCompensationRecoveries).toBeDefined();
+
+    await resumePendingCompensationRecoveries(db);
+    corp = await memory.collection("corporations").findOne({ _id: owner });
+    expect(corp?.liquidCapital).toBe(0);
+    expect(corp?.federalTaxArrearsAnchorByCountry).toEqual({ US: 350 });
+    expect(Object.keys(corp?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    expect(creditTreasury).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "US",
+      250,
+      expect.any(Date),
+      expect.anything()
+    );
   });
 });

@@ -31,7 +31,10 @@ import { calendarTurn } from "@/lib/utils/gameDate";
 import { generateScotusRulingNews } from "@/lib/scotus/scotusNews";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { reverseNationalizationTaking } from "@/lib/nationalization/reverseNationalization";
+import {
+  resumePendingCompensationRecoveries,
+  reverseNationalizationTaking,
+} from "@/lib/nationalization/reverseNationalization";
 import { logWireEvent } from "@/lib/wireEvent";
 
 export interface ScotusDocketTurnResult {
@@ -48,6 +51,11 @@ export async function processScotusDocketTurn(
   const gameState = await getGameState();
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
+
+  // Finish any court-ordered compensation recovery a crash left half done.
+  await resumePendingCompensationRecoveries(database).catch((err) =>
+    console.error("[scotusDocketTurn] compensation recovery resume failed:", err)
+  );
 
   const pendingCases = await database
     .collection<DocketCase>("docketCases")

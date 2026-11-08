@@ -61,6 +61,7 @@ import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import {
   addInstitutionalBondPayout,
   emptyInstitutionalBondPayouts,
+  assertNoBankTreasuryHolders,
   payInstitutionalBondHolders,
   selfHeldBondUnits,
 } from "@/lib/bonds/payInstitutionalBondHolders";
@@ -295,6 +296,7 @@ export async function executeCorporationBondDefaultDissolution(
   for (const bond of bonds) {
     const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+    assertNoBankTreasuryHolders([bond]);
     for (const h of bond.holders) {
       const faceLocal = h.units * BOND_UNIT_FACE_VALUE;
       const faceAnchor = corpCapitalToAnchor(faceLocal, bondCcy, bondRate);
