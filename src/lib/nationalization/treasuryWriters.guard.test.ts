@@ -61,6 +61,10 @@ const REGISTRY: Record<string, Registered> = {
       },
     ],
   },
+  "src/lib/nationalization/clawbackCompensation.ts": {
+    writers: ["creditTreasuryProceedsFromAnchor"],
+    witness: [{ kind: "flow", flows: ["nationalization_compensation"] }],
+  },
   "src/lib/corporations/groups/applyGroupRelief.ts": {
     writers: ["debitTreasuryCompensation"],
     witness: [{ kind: "flow", flows: ["group_loss_relief"] }],
