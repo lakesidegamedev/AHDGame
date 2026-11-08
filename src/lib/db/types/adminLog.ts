@@ -142,5 +142,7 @@ export interface AdminLog {
     durationMs?: number;
     /** Last 200 log lines — the tail is what describes the failure. */
     logTail?: string[];
+    /** Count of post-reset residue violations; each one is also in `failures`. */
+    residueViolations?: number;
   };
 }

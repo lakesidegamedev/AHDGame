@@ -1441,10 +1441,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/api/corporations/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/app/api/country/[code]/budget/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -3306,7 +3302,7 @@
       "narrativeLines": 2
     },
     "src/lib/admin/resetGameWorld.ts": {
-      "longBlocks": 4,
+      "longBlocks": 3,
       "narrativeLines": 2
     },
     "src/lib/admin/resetRunRecord.ts": {
@@ -5959,7 +5955,7 @@
     },
     "src/lib/corporations/marketShare.ts": {
       "longBlocks": 3,
-      "narrativeLines": 9
+      "narrativeLines": 8
     },
     "src/lib/corporations/mergerReview/authority.ts": {
       "longBlocks": 1,
@@ -9606,10 +9602,6 @@
       "narrativeLines": 1
     },
     "src/lib/indexFunds/domesticSovereignCoverage/ensure.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/indexFunds/domesticSovereignCoverage/rules.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
@@ -15667,7 +15659,7 @@
     },
     "src/lib/world/macro/europe1953.ts": {
       "longBlocks": 1,
-      "narrativeLines": 9
+      "narrativeLines": 6
     },
     "src/lib/world/macro/macroCountry.test.ts": {
       "longBlocks": 0,
