@@ -23,7 +23,7 @@ import {
   COMMODITY_BASE_PRICES,
   COMMODITY_LABELS,
 } from "@/lib/constants/commodities";
-import type { ExtractableResource, CommodityType } from "@/lib/constants/commodities";
+import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
 import { CONTRACT_DEFAULT_MISSED_PAYMENTS } from "@/lib/constants/prospecting";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
@@ -282,7 +282,7 @@ export async function settleExtractionContracts(
     capCol.find({ stateId: { $in: stateIds } }).toArray(),
     db
       .collection<CommodityPrice>("commodityPrices")
-      .find({ commodity: { $in: EXTRACTABLE_RESOURCES as unknown as CommodityType[] } })
+      .find({ commodity: { $in: [...EXTRACTABLE_RESOURCES] } })
       .toArray(),
     loadFxRatesByCurrency(db),
     loadTxThresholds(db),

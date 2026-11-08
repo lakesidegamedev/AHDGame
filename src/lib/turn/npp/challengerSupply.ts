@@ -178,7 +178,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
           }
         : {
             status: "active",
-            electionType: { $in: CONTESTABLE as unknown as string[] },
+            electionType: { $in: [...CONTESTABLE] },
             $or: primaryOpen,
           },
       { projection: { _id: 1, electionType: 1, state: 1, countryId: 1 } }

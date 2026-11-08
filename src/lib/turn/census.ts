@@ -85,10 +85,13 @@ export async function runCensus(
     return { ran: false };
   }
 
-  const usStates = (await db
+  const usStates = await db
     .collection("states")
-    .find({ countryId: "US" }, { projection: { _id: 1, population: 1, houseDistricts: 1 } })
-    .toArray()) as unknown as Array<{ _id: string; population?: number; houseDistricts?: number }>;
+    .find<{ _id: string; population?: number; houseDistricts?: number }>(
+      { countryId: "US" },
+      { projection: { _id: 1, population: 1, houseDistricts: 1 } }
+    )
+    .toArray();
 
   // Apportion only over states that currently hold House seats (excludes DC etc.).
   const populations: Record<string, number> = {};

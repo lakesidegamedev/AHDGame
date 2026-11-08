@@ -110,9 +110,9 @@ export async function migrateEntertainmentRemoval(
   if (config?.[ENTERTAINMENT_REMOVAL_MARKER] != null) return { skipped: true };
 
   // 1. Rescale media sectors not yet stamped. Only media rows can carry the mix.
-  const rows = (await db
+  const rows = await db
     .collection("corporateSectors")
-    .find(
+    .find<RescaleRow>(
       { sectorType: "media", [ENTERTAINMENT_RESCALE_STAMP]: { $ne: true } },
       {
         projection: {
@@ -126,7 +126,7 @@ export async function migrateEntertainmentRemoval(
         },
       }
     )
-    .toArray()) as unknown as RescaleRow[];
+    .toArray();
   const unset = Object.fromEntries(
     SECTOR_COMMODITY_MAPS.map((field) => [`${field}.${REMOVED_COMMODITY}`, ""])
   );

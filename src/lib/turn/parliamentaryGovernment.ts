@@ -876,19 +876,14 @@ export async function autoAyeNPPsForParliamentaryAppointment(
 
   const whips = await db
     .collection("billWhips")
-    .find({
+    .find<{ partyId: string; direction: "for" | "against" }>({
       targetType: "pmAppointmentVote",
       targetId: voteId,
       // NPP confidence voting only considers NPP whips; character whips already wrote player votes directly.
       $or: [{ audience: "npp" }, { audience: { $exists: false } }],
     })
     .toArray();
-  const whipByParty = new Map(
-    (whips as unknown as Array<{ partyId: string; direction: "for" | "against" }>).map((w) => [
-      w.partyId,
-      w.direction,
-    ])
-  );
+  const whipByParty = new Map(whips.map((w) => [w.partyId, w.direction]));
 
   const officials = await (
     await getElectedOfficialsCollection(db)
@@ -977,19 +972,14 @@ export async function autoVoteNPPsForNoConfidence(
 
   const whips = await db
     .collection("billWhips")
-    .find({
+    .find<{ partyId: string; direction: "for" | "against" }>({
       targetType: "noConfidenceVote",
       targetId: voteId,
       // NPP confidence voting only considers NPP whips; character whips already wrote player votes directly.
       $or: [{ audience: "npp" }, { audience: { $exists: false } }],
     })
     .toArray();
-  const whipByParty = new Map(
-    (whips as unknown as Array<{ partyId: string; direction: "for" | "against" }>).map((w) => [
-      w.partyId,
-      w.direction,
-    ])
-  );
+  const whipByParty = new Map(whips.map((w) => [w.partyId, w.direction]));
 
   const officials = await (
     await getElectedOfficialsCollection(db)
