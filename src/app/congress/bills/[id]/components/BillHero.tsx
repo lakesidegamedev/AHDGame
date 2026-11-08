@@ -18,6 +18,8 @@ interface BillHeroProps {
   eligible: number;
   /** Deadline for the vote currently on the floor, if one is live. */
   liveDeadline?: string | null;
+  /** Closing turn for that vote; the engine closes on this, not on the date. */
+  liveDeadlineTurn?: number | null;
   filibustered: boolean;
   supermajority: boolean;
   /** The viewer's vote in the chamber currently on the floor. */
@@ -73,6 +75,7 @@ export function BillHero({
   votes,
   eligible,
   liveDeadline,
+  liveDeadlineTurn,
   filibustered,
   supermajority,
   myVote,
@@ -212,7 +215,7 @@ export function BillHero({
               value={
                 liveDeadline ? (
                   <span className="text-base">
-                    <DeadlineCountdown deadline={liveDeadline} />
+                    <DeadlineCountdown deadline={liveDeadline} deadlineTurn={liveDeadlineTurn} />
                   </span>
                 ) : (
                   <span className="text-base">{cast > 0 ? "Vote closed" : "Not voting"}</span>

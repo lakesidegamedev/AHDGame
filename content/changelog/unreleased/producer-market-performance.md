@@ -12,7 +12,7 @@ areas: [engine]
 
 - Shared route and supplier lists are compacted in immutable market receipts. Existing receipts remain readable.
 - Fair allocations reuse route eligibility and supplier cohorts without changing priority, budgets or blocked trade routes.
-- A separate pre-settlement execution deadline is checked inside clearing and receipt preparation, so a slow market stops before committing its settlement rather than running past the corporation phase timeout.
+- A separate execution deadline bounds market clearing. Once a market is fully computed, its receipt can finish encoding and durable settlement instead of discarding that completed work.
 
 - Market preparation shares one supplier-route index across producers and final buyers, retaining domestic access and embargo restrictions.
 - Receipt encoding batches plain supplier IDs and deadline checks. Staging verifies freshly encoded chunks against their exact stored bytes; existing encodings still receive full checksum verification.

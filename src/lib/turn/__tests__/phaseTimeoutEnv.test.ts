@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { resolvePhaseTimeoutMs, phaseTimeoutMs, PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 
 describe("resolvePhaseTimeoutMs", () => {
-  it("gives only corporations a five-minute timeout", () => {
-    expect(phaseTimeoutMs("corporationTurn")).toBe(300_000);
+  it("gives only corporations a fixed six-minute timeout", () => {
+    expect(phaseTimeoutMs("corporationTurn")).toBe(360_000);
     expect(phaseTimeoutMs("treasuryTurn")).toBe(PHASE_TIMEOUT_MS);
   });
   it("defaults to four minutes when unset or invalid", () => {

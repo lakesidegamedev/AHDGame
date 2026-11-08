@@ -96,3 +96,17 @@ Recovery decoding continues to verify all chunk hashes.
   same 19 launcher tests pass with loopback access enabled. The full-suite gate is not claimed
   from that interrupted attempt. A production build remains deferred to CI.
 - No deployment or production mutation occurs during qualification.
+
+## Subsequent integration audit (2026-11-08)
+
+Development at `48665b24be` is integrated after these measurements. Its completed-market
+receipt-deadline fix is retained. Its ten-minute corporation timeout is deliberately resolved
+to the requested six minutes, with the derived 270-second clearing budget. Its run-plan stock
+cover update is also retained. The timing and economic-equivalence figures above describe the
+pre-integration matched pair; they are not a new benchmark of the integrated source revision.
+Post-integration qualification passes 810 tests across 74 market/preparation/timeout files,
+all 185 lifecycle/reset/index contracts, focused TypeScript checking and changed-file ESLint.
+The isolated 36-test reset contract also passes. The first sandboxed contract retry exited
+unexpectedly; the complete retry with local-test permissions and a bounded 3 GiB heap passes.
+Full repository type/build gates remain for CI under the local resource constraint. No new
+full-turn timing or aged-world gate verdict is claimed for this integrated revision.
