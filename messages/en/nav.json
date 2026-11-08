@@ -65,8 +65,7 @@
       },
       "staff": {
         "localWorld": "Local World",
-        "adminPanel": "Admin Panel",
-        "modPanel": "Mod Panel",
+        "controlPanel": "Control Panel",
         "opsDashboard": "Ops Dashboard",
         "docs": "Docs",
         "tickets": "Tickets",

@@ -9,6 +9,7 @@ import {
 } from "@/components/admin/tabs/AdminTabsConfig";
 import { SubTabBar } from "./SubTabBar";
 import { useAdminPins } from "@/components/admin/nav/useAdminPins";
+import { useControlPanel } from "@/components/control/ControlContext";
 
 interface SubNavLayoutProps<T extends string> {
   tab: MainTabId;
@@ -30,8 +31,10 @@ export function SubNavLayout<T extends string>({
   const subTabs = SUB_TABS_BY_TAB[tab];
   const { isPinned, togglePin } = useAdminPins();
   const tabLabel = MAIN_TABS.find((t) => t.id === tab)?.label ?? tab;
+  // The control panel supplies the section nav; render only the tool.
+  const inControlPanel = useControlPanel() !== null;
 
-  if (!groups || subTabs.length === 0) {
+  if (inControlPanel || !groups || subTabs.length === 0) {
     return <>{children}</>;
   }
 

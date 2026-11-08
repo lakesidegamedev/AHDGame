@@ -504,10 +504,11 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   });
 
   const staffSubItems =
-    user?.isAdmin || user?.isModerator
+    user?.isAdmin || user?.isModerator || user?.isJuniorDev
       ? visibleStaffNavItems({
           isAdmin: !!user?.isAdmin,
           isModerator: !!user?.isModerator,
+          isJuniorDev: !!user?.isJuniorDev,
           isSingleplayerOwner: viewerIsSingleplayerOwner(user),
         })
       : [];
@@ -1203,7 +1204,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 </div>
 
                 {/* Staff — admin/mod only */}
-                {(user?.isAdmin || user?.isModerator) && staffSubItems.length > 0 && (
+                {(user?.isAdmin || user?.isModerator || user?.isJuniorDev) && staffSubItems.length > 0 && (
                   <div
                     className="relative shrink-0"
                     ref={open === "staff" ? dropdownAnchorRef : undefined}

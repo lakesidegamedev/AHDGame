@@ -1,4 +1,5 @@
 import { isTokenRevokedByCutoff } from "@/lib/auth/revocationCutoff";
+import type { StaffRole } from "@/lib/staff/rules";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { jwtVerify, SignJWT, errors as joseErrors } from "jose";
@@ -493,6 +494,26 @@ export async function getAuthJuniorDev(): Promise<AuthUserWithCharacter | null> 
   if (!user || !user.isJuniorDev) return null;
 
   return user;
+}
+
+/**
+ * Get an authenticated staff member of any role (admin, moderator, junior
+ * dev) with the role resolved. Returns null for everyone else. Page loaders
+ * use this; API routes use requireAdmin / requireModerator.
+ */
+export async function getAuthStaff(): Promise<
+  (AuthUserWithCharacter & { staffRole: StaffRole }) | null
+> {
+  const user = await getAuthUserWithCharacter();
+  if (!user) return null;
+  const staffRole: StaffRole | null = user.isAdmin
+    ? "admin"
+    : user.isModerator
+      ? "moderator"
+      : user.isJuniorDev
+        ? "junior_dev"
+        : null;
+  return staffRole ? { ...user, staffRole } : null;
 }
 
 /**

@@ -33,10 +33,10 @@ const SuspiciousActivityTab = dynamic(
     })),
   { ssr: false }
 );
-const ModeratorsManagementTab = dynamic(
+const StaffRolesTab = dynamic(
   () =>
-    import("@/components/moderator/ModeratorsManagementTab").then((m) => ({
-      default: m.ModeratorsManagementTab,
+    import("@/components/admin/players/StaffRolesTab").then((m) => ({
+      default: m.StaffRolesTab,
     })),
   { ssr: false }
 );
@@ -125,7 +125,7 @@ export function AdminPlayersTab({ activeSub, onSubChange }: AdminPlayersTabProps
           />
         )}
         {activeSub === "watchlist" && <WatchlistPanel />}
-        {activeSub === "moderators" && <ModeratorsManagementTab />}
+        {activeSub === "moderators" && <StaffRolesTab />}
         {activeSub === "mod-audit-log" && <ModAuditLogTab />}
         {activeSub === "ip-bans" && <IpBansTab />}
         {activeSub === "api-keys" && <UserApiKeysTab />}

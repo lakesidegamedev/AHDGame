@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import type { Task, TaskType, TaskStatus, TaskPriority } from "@/lib/db/types";
 import type { TaskLesson, LessonCategory } from "@/lib/db/types/taskLesson";
-import { TaskFormToast } from "@/components/admin/tasks/TaskFormToast";
-import { TaskDetailModal } from "@/components/admin/tasks/TaskDetailModal";
-import { HealingTools } from "@/components/admin/tasks/HealingTools";
+import { TaskFormToast } from "@/components/control/overview/tasks/TaskFormToast";
+import { TaskDetailModal } from "@/components/control/overview/tasks/TaskDetailModal";
+import { HealingTools } from "@/components/control/overview/tasks/HealingTools";
 import { LocalTime } from "@/components/time/LocalTime";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -63,11 +63,11 @@ export function TasksPageClient() {
   const selectedTask = tasks.find((t) => t._id.toString() === selectedTaskId) ?? null;
 
   function openTask(id: string) {
-    router.push(`/admin/tasks?task=${id}`, { scroll: false });
+    router.push(`/control/overview/tasks?task=${id}`, { scroll: false });
   }
 
   function closeTask() {
-    router.push("/admin/tasks", { scroll: false });
+    router.push("/control/overview/tasks", { scroll: false });
   }
 
   // Filters
@@ -78,7 +78,7 @@ export function TasksPageClient() {
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "all">("all");
 
   useEffect(() => {
-    fetch("/api/admin/tasks")
+    fetch("/api/control/overview/tasks")
       .then((r) => (r.ok ? r.json() : Promise.reject("Failed")))
       .then((json: { tasks: Task[] }) => setTasks(json.tasks))
       .catch(() => setTasks([]))
@@ -86,7 +86,7 @@ export function TasksPageClient() {
   }, []);
 
   async function updateStatus(task: Task, newStatus: TaskStatus) {
-    const res = await fetch(`/api/admin/tasks/${task._id.toString()}`, {
+    const res = await fetch(`/api/control/overview/tasks/${task._id.toString()}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
@@ -101,7 +101,7 @@ export function TasksPageClient() {
 
   async function deleteTask(id: string) {
     if (!confirm("Are you sure you want to delete this task?")) return;
-    const res = await fetch(`/api/admin/tasks/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/control/overview/tasks/${id}`, { method: "DELETE" });
     if (res.ok) {
       setTasks((prev) => prev.filter((t) => t._id.toString() !== id));
     }
@@ -311,7 +311,7 @@ function LessonCard({
   async function saveTags() {
     const tags = parseTags(tagsInput);
     setSaving(true);
-    const res = await fetch(`/api/admin/tasks/lessons/${lesson._id}`, {
+    const res = await fetch(`/api/control/overview/tasks/lessons/${lesson._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tags }),
@@ -325,7 +325,7 @@ function LessonCard({
   }
 
   async function saveCategory(category: LessonCategory) {
-    const res = await fetch(`/api/admin/tasks/lessons/${lesson._id}`, {
+    const res = await fetch(`/api/control/overview/tasks/lessons/${lesson._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ category }),
@@ -430,7 +430,7 @@ function LessonsTab() {
   const [categoryFilter, setCategoryFilter] = useState<LessonCategory | "all">("all");
 
   useEffect(() => {
-    fetch("/api/admin/tasks/lessons")
+    fetch("/api/control/overview/tasks/lessons")
       .then((r) => (r.ok ? r.json() : Promise.reject("Failed")))
       .then((json: { lessons: LessonWithTask[] }) => setLessons(json.lessons))
       .catch(() => setLessons([]))

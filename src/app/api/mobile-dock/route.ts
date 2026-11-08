@@ -37,6 +37,7 @@ interface DockNav {
     singleplayer?: boolean;
     isAdmin?: boolean;
     isModerator?: boolean;
+    isJuniorDev?: boolean;
     username?: string;
     experimentalFeatures?: boolean;
     desktopNavigationLayout?: unknown;
@@ -117,7 +118,7 @@ export async function GET(request: Request) {
         .catch(() => 0),
     ]);
 
-    const isStaff = !!(nav.user.isAdmin || nav.user.isModerator);
+    const isStaff = !!(nav.user.isAdmin || nav.user.isModerator || nav.user.isJuniorDev);
     const nationalDetailSections = buildNationalDetailsSections(pageCountry, {
       activePresidentElection: presidentElection
         ? { id: presidentElection._id.toString(), seatId: presidentElection.seatId ?? undefined }
@@ -157,6 +158,7 @@ export async function GET(request: Request) {
         ? visibleStaffNavItems({
             isAdmin: !!nav.user.isAdmin,
             isModerator: !!nav.user.isModerator,
+            isJuniorDev: !!nav.user.isJuniorDev,
             isSingleplayerOwner: viewerIsSingleplayerOwner(nav.user),
           })
         : [],

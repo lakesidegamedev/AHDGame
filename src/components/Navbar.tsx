@@ -502,6 +502,7 @@ export const Navbar = React.memo(function Navbar({
             <StaffDropdown
               isAdmin={!!user?.isAdmin}
               isModerator={!!user?.isModerator}
+              isJuniorDev={!!user?.isJuniorDev}
               isSingleplayerOwner={viewerIsSingleplayerOwner(user)}
             />
 
