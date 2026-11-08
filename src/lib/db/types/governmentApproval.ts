@@ -45,6 +45,8 @@ export interface GovernmentApproval {
   headOfGovernmentSinceTurn?: number | null;
   /** Durable idempotency witnesses for funded country-event effect replay. */
   appliedEventEffects?: string[];
+  /** Crisis approval writes already applied here, so a repeated write is a no-op. */
+  appliedCrisisEffects?: string[];
   /** Turn-by-turn history (most recent last, capped at 20 entries) */
   history: Array<{
     turn: number;
