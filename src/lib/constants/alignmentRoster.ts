@@ -1,24 +1,20 @@
 /**
- * Every nation alignment may be authored for — a superset of CountryId, taken
- * verbatim from the ops 1953 seed-readiness report
- * (internal 1953 seed-readiness report). Implemented
- * countries reuse their CountryId spelling, so the key narrows to CountryId by
- * a plain membership check with no translation table; the rest use the
- * project's own historical entity ids (NVN, SVN, YE, MM, TANG, ...).
+ * Every nation alignment may be authored for: a superset of CountryId.
+ * Implemented countries reuse their CountryId spelling so the key narrows to
+ * CountryId by a plain membership check, no translation table. The rest use
+ * the project's historical entity ids (NVN, SVN, YE, MM, TANG, ...).
  *
- * Authoring deliberately covers nations the game does not implement yet, so
- * adding a country later is a COUNTRY_CONFIGS change with no alignment content
- * pass. Unimplemented entries are inert data — they never get a document.
+ * Covers nations the game does not implement yet, so adding a country later is
+ * a COUNTRY_CONFIGS change with no alignment pass. Unimplemented entries are
+ * inert data.
  *
- * GENERATED from the ops report, then RECONCILED against the canonical world
- * entity manifest, which owns tier, status and the administering power. The
- * literal is kept rather than derived because `AlignmentCountryKey` has to be a
- * literal union — a type cannot be computed from runtime data — and deriving
- * the entries would force an unchecked cast on every key. `alignmentRoster.test`
- * holds the two in agreement instead, so manifest drift fails the build.
+ * GENERATED then RECONCILED against the world entity manifest (tier, status,
+ * administering power). Kept as a literal because `AlignmentCountryKey` must
+ * be a literal union; `alignmentRoster.test` holds the two in agreement so
+ * manifest drift fails the build.
  *
- * Map geometry stays roster-owned: the manifest leaves `mapFeatureIds` empty for
- * playable countries, so neither side is complete on its own.
+ * Map geometry stays roster-owned: the manifest leaves `mapFeatureIds` empty
+ * for playable countries.
  *
  * Client-safe: no db imports.
  */
@@ -1118,10 +1114,8 @@ export const ALIGNMENT_ROSTER: readonly AlignmentRosterEntry[] = [
   {
     key: "ES",
     name: "Spain",
-    // Demoted on development by #3840 (working 1953 budgets). The manifest is the
-    // source of truth for tier; this table follows it, and
-    // `alignmentRoster.test.ts` fails the moment the two disagree — which is how
-    // this drift surfaced on the merge rather than in a player's game.
+    // The manifest is the source of truth for tier; this table must follow it.
+    // alignmentRoster.test.ts fails if the two disagree.
     tier: "sphere-macro",
     status1953: "sovereign",
     iso: ["724"],

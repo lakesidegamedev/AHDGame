@@ -1,20 +1,15 @@
 /**
  * Whole plants: a plant is the unit players build and own, and a sector's
- * capacity is always a whole number of plants.
- *
- * Behind `gameConfig.wholePlantsStage` (0 or absent = off). With the stage on:
+ * capacity is always a whole number of plants. Behind
+ * `gameConfig.wholePlantsStage` (0 or absent = off). With the stage on:
  *
  *   capitalStock === plantCount * size
  *   0 <= plantUnitRemainder < size   construction credit, does not produce
  *   0 <= plantWearUnits     < size   wear toward the next plant coming off
  *
- * where `size = plantSizeForSector(sector)`. Losses (depreciation, recession,
- * idle retirement, shed) fill the wear counter and a whole plant comes off when
- * it reaches one plant. Free or partial gains (R&D, grants, rescale leftovers)
- * fill the credit and a whole plant is added when it reaches one plant. The
- * last plant of a sector never wears out.
- *
- * Plain data in, plain data out. No database, clock or randomness.
+ * Losses fill the wear counter; free/partial gains fill the credit; a whole
+ * plant is added or removed when either reaches one plant. The last plant of a
+ * sector never wears out. Plain data in, plain data out.
  */
 
 /** `gameConfig.wholePlantsStage` value from which whole plants are on. */

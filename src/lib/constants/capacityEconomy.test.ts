@@ -140,7 +140,7 @@ describe("laborIntensity strategy awareness (build preview staffing)", () => {
   });
 
   it("no longer understates a heavy-machinery sector's crew at the ordinary factory rate", () => {
-    // Ticket 1678: the build preview showed a heavy-machinery sector's new
+    // The build preview showed a heavy-machinery sector's new
     // plants at the standard factory crew. Staffing per unit follows the RPU
     // the running method actually earns, so the ratio is the RPU ratio.
     const heavy = laborIntensity(

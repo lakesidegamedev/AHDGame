@@ -168,20 +168,19 @@ export const CREDIT_REVOCATION_TURNS = 8;
 export const CREDIT_WEIGHT_DECAY = 0.5;
 
 /**
- * Turn qualifying bills into a penalty-side forgiveness.
+ * Turn qualifying bills into penalty-side forgiveness.
  *
- * Credit is scored PER COMPONENT, so a government that passed five jobs bills
- * cannot buy off an inflation penalty it never touched. Within a component the
- * first bill earns weight 1, the next 0.5, the next 0.25 and so on, and the
- * summed weight is capped at 1: a burst of token bills is worth barely more
- * than one real one.
+ * Credit is scored per component, so jobs bills cannot offset an
+ * untouched inflation penalty. Within a component bills earn weights
+ * 1, 0.5, 0.25, ... summed and capped at 1, so a burst of token bills
+ * is worth barely more than one real one.
  *
- * Forgiveness on a component is `|penalty| x CREDIT_FORGIVENESS_MAX x credit`,
- * so the relief lands hardest where the pain is, and the total can never
- * exceed {@link CREDIT_FORGIVENESS_MAX} of the raw penalty.
+ * Forgiveness is `|penalty| * CREDIT_FORGIVENESS_MAX * credit` per
+ * component, so relief lands where the pain is and totals never exceed
+ * {@link CREDIT_FORGIVENESS_MAX} of the raw penalty.
  *
- * Pure: no DB, no clock. The cost gate and the revocation gate run in the
- * loader and are expressed here as candidates simply being absent.
+ * Pure: no DB, no clock. Cost and revocation gates run in the loader;
+ * gated candidates are simply absent here.
  */
 export function applyResponseCredit(
   components: readonly ReferendumComponent[],

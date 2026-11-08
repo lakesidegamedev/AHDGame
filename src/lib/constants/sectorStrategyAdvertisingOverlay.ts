@@ -1,14 +1,13 @@
 /**
- * Advertising as a paid production input (owner decision 2026-10-19, about 7%
- * of output value), applied ONLY on funded producer turns.
+ * Advertising as a paid production input (about 7% of output value),
+ * applied only on funded producer turns.
  *
- * Generated from commit c97c1cf8fa (PR #4548) against its parent: every
- * strategy demand record that change touched, in full, including the other
- * inputs it trimmed to keep base margins in band. It was reverted in live play
- * because the legacy engine booked the input as demand nobody paid for; on the
- * funded market companies pay for it from their own cash.
+ * Generated from a fixed source commit: every strategy demand record that
+ * change touched, in full, including the other inputs it trimmed to keep
+ * base margins in band. The legacy engine booked the input as demand nobody
+ * paid for; on the funded market companies pay for it from their own cash.
  *
- * Do not edit by hand; regenerate from that commit if the recipe changes.
+ * Do not edit by hand; regenerate if the recipe changes.
  */
 import type { CommodityType } from "./commodities";
 

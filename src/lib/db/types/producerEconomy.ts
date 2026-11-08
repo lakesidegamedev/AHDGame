@@ -15,7 +15,7 @@ export interface ProducerEconomyAccount {
     | "publicBuyer"
     | "investmentBuyer"
     | "operatingPayee"
-    /** A background country's macro economy trading in the funded market (#5702). */
+    /** A background country's macro economy trading in the funded market. */
     | "backgroundEconomy"
     /** Import tariffs collected for one country this turn, swept to its treasury (producerTariffStage). */
     | "tariffCollector";

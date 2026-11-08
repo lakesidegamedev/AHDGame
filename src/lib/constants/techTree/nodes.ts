@@ -1,22 +1,19 @@
 /**
- * Sector tech-tree node content (v2 — branching lanes).
+ * Sector tech-tree node content (v2, branching lanes).
  *
  * Each decade tier forks into two lanes:
- *  - **generic** (Corporate): shared across all 17 sectors, authored once below;
+ *  - **generic** (Corporate): shared across all sectors, authored once below;
  *  - **sector** (Specialist): unique to each sector type.
  *
- * Each lane has 9 unique nodes per decade (slots 1-9), plus v3 slots 10-15. The CEO commits to ONE lane per
- * decade (first unlock commits); switching requires abandoning that decade. Some
- * nodes carry an `unlockStrategy` effect that makes a production method
- * (SECTOR_STRATEGIES entry) available — modern methods stay locked until then.
+ * Each lane has 9 unique nodes per decade, plus v3 slots 10-15. The CEO commits
+ * to ONE lane per decade (first unlock commits); switching abandons that decade.
+ * Some nodes carry an `unlockStrategy` effect that makes a production method
+ * available; modern methods stay locked until then.
  *
- * Cost model: rdScore cost on the first six decades is ~1/6 of v1
- * (40/55/70/85/100/120); later decades continue the table. Unlocking also
- * debits cash as a fraction of the corp's daily gross revenue
+ * Unlocking costs rdScore and a fraction of daily gross revenue
  * (TECH_NODE_CASH_REVENUE_FRACTION, optionally overridden per node).
  *
- * Tier ART is shared per (lane, sector, decade) — resolved in ./images.ts, not
- * stored on the node.
+ * Tier ART is shared per (lane, sector, decade), resolved in ./images.ts.
  */
 
 import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "../corporations";

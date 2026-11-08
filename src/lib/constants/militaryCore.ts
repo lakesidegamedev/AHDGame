@@ -76,14 +76,10 @@ export function techPowerMult(tier: number): number {
 /**
  * What a tech tier does to a unit's running cost, index = techTier 0..3.
  *
- * Modernisation used to be pure upside: a tier bought +8% power and a political
- * `defenseIndustry` bump, cost nothing to buy, and cost nothing to keep, so the only
- * question was how fast a nation could click through it.
- *
- * Deliberately steeper than `techPowerMult`: Legacy → Cutting-Edge is ×1.30 power for
- * ×1.71 upkeep. A modern division is better than an old one and worse value than two of
- * them, which is the choice this is meant to create. Cheap legacy kit is a real option
- * for a nation that needs mass.
+ * Deliberately steeper than `techPowerMult`: Legacy to Cutting-Edge is ×1.30
+ * power for ×1.71 upkeep. A modern division is better than an old one and
+ * worse value than two of them, which is the choice this is meant to create.
+ * Cheap legacy kit is a real option for a nation that needs mass.
  */
 export const TECH_UPKEEP_MULT = [0.85, 1.0, 1.2, 1.45];
 

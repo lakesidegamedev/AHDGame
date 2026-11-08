@@ -1,29 +1,15 @@
 /**
  * Era-aware readiness expectations.
  *
- * `COUNTRY_READINESS_EXPECTATIONS` is authored per country and read per world,
- * which makes it the sixth authority to answer "what should this country look
- * like?" without knowing which era it is being asked about. Russia's entry says
- * `partyRoster: "CPSU"`; applied to a 2019 world it let a Russian Federation
- * pass `partiesAuthored` by asserting a party whose seeds are gated to 1953 and
- * 1979.
- *
- * Six fields have a genuine per-era source and are derived from it. The rest
- * stay authored, because they are not counts: `seatMin` is a deliberate floor
- * ("RU has no static seedSeats section, so a fresh world legitimately starts at
- * 0"), and deriving it would replace documented judgment with arithmetic.
- * `HistoricalSeat` has no `countryId` either, so there is nothing to filter by.
- *
+ * `COUNTRY_READINESS_EXPECTATIONS` is authored per country with no era
+ * awareness, so fields that have a genuine per-era source are derived here.
+ * The rest stay authored because they are not counts (`seatMin` is a
+ * deliberate floor, and `HistoricalSeat` has no `countryId` to filter by).
  * Every derived field falls back to the authored value when no era source
- * exists, so a country outside `FULL_ERA_REGION_BUNDLES` keeps exactly the
- * numbers it has today.
+ * exists.
  *
- * Lives beside `countryReadinessExpectations.ts` rather than inside it, and
- * reads `expectedRegionCount` from `seedDiagnostic/regionBundles` rather than
- * from `seedDiagnostic/expectations`. Both avoid the same cycle: the readiness
- * contract imports this module, and `seedDiagnostic/expectations` reaches
- * `seedCountryGameStates`, which imports the readiness contract straight back.
- * `regionBundles` depends on neither side.
+ * Lives here, reading from `regionBundles` rather than
+ * `seedDiagnostic/expectations`, to avoid an import cycle.
  */
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -38,21 +24,12 @@ import { checkGovernmentFormation } from "@/lib/constants/readinessChecks";
  * Era overrides for `seatMin`, where a country's chambers are a different size
  * than the authored entry assumes.
  *
- * ⚠️ AN OVERRIDE TABLE RATHER THAN A DERIVATION, deliberately. The header above
- * explains why `seatMin` stays authored: it is a judgment about what a healthy
- * fresh world looks like, not a chamber-size sum, and RU's floor of 0 is the
- * case that makes arithmetic wrong. Overriding the two eras where the authored
- * number is measured against the wrong chamber keeps that judgment intact.
+ * Override rather than derive: `seatMin` is a judgment about what a healthy
+ * fresh world looks like, not a chamber-size sum.
  *
- * ⚠️ THIS EXISTS BECAUSE THE DIAGNOSTIC COULD NOT SEE A 46-SEAT HOLE. Japan's
- * authored floor is 713 with the note "465 Shugiin + 248 Sangiin" — the modern
- * Diet. The 1991 Diet is 512 + 252 = 764, and a 1991 world seating 512 + 206
- * reported 718, cleared 713, and passed while a fifth of its upper house was
- * missing.
- *
- * Only Japan needs an entry. The US floor of 535 is right in both eras (435 +
- * 100 did not change), and the UK's 650 is right in both now that 1991 seats
- * the 1987 Commons rather than the 651-seat 1992 one.
+ * Japan's 1991 Diet is 512 + 252 = 764 seats; the authored 713 (modern Diet)
+ * would pass a world missing a fifth of its upper house. The US floor of 535
+ * and the UK's 650 hold in both eras.
  */
 const SEAT_MIN_BY_PRESET: Partial<
   Record<string, Partial<Record<CountryId, { seatMin: number; seatNote: string }>>>

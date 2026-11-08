@@ -4,25 +4,11 @@
 
 import type { PrimaryStateAction } from "@/lib/db/types";
 
-// ─── FPTP vote-splitting constants ───────────────────────────────────────────
+// FPTP vote-splitting constants.
 //
-// In First Past the Post states, the vote-splitting (spoiler) effect is modelled
-// explicitly: a third-party candidate draws votes directly from the ideologically
-// nearest major-party candidate, potentially handing the race to the opposite
-// major party.  This is Duverger's Law from the major party's perspective —
-// they face an existential threat whenever a third party occupies nearby
-// ideological space, since that third party can bleed their coalition and flip
-// the seat to the opposition.
+// In FPTP states a third party draws votes from the ideologically nearest major party (Manhattan distance on the economic/social grid), in proportion to its own group-level allocation, potentially flipping the seat. Marginal third parties spoil marginally; large ones spoil significantly.
 //
-// The spoiled votes are drawn from the nearest major-party candidate (Manhattan
-// distance on the economic/social grid) in proportion to the third party's own
-// group-level allocation.  Scaling by the third party's own vote count means
-// marginal third parties cause marginal spoiling; a large, well-organised third
-// party causes significant spoiling.
-//
-// In RCV states (state.votingSystem === "rcv") this step is skipped entirely,
-// since ranked-choice voting lets voters safely express a third-party first
-// preference without harming their second choice — eliminating the spoiler dynamic.
+// Skipped entirely in RCV states (state.votingSystem === "rcv"), where voters can safely rank a third party first.
 
 /**
  * @deprecated Use getPartyStrengthWeight(countryId, officeKey) from CountryConfig instead.
@@ -65,31 +51,17 @@ export const FPTP_SPOILER_RATE = 0.04;
 export const PRESIDENTIAL_SPOILER_RATE = 0.02;
 
 /**
- * Primary-only multiplier strength for the party-fit penalty (L1).
+ * Primary-only multiplier strength for the party-fit penalty.
  * Candidate weight is scaled by
- *   `partyFit = 1 − WEIGHT × (1 − rawFit)`
- * where
- *   `rawFit = max(0, 1 − manhattan(candidate, party) / 6)`.
+ *   `partyFit = 1 - WEIGHT * (1 - rawFit)`
+ * where `rawFit = max(0, 1 - manhattan(candidate, party) / 6)`.
  *
- * The `/6` normalizer reflects typical within-party Manhattan spreads on
- * the (-4,+4) grid: a "Park-style centrist" sits ~3 from a party at the
- * extreme corner (the design's canonical reference example), saturating
- * the penalty at distance 6 (across-the-party-line positions).
+ * The `/6` normalizer reflects typical within-party Manhattan spreads on the
+ * (-4,+4) grid. At WEIGHT = 0.3: rawFit 1.0 -> 1.00, rawFit 0.5 -> 0.85,
+ * rawFit 0.0 -> 0.70.
  *
- * Reference points at the calibrated WEIGHT = 0.3:
- *   rawFit = 1.0 (perfect party alignment)         → partyFit = 1.00
- *   rawFit = 0.5 (centrist Park-style, dist ~3)    → partyFit = 0.85
- *   rawFit = 0.0 (across-the-line, dist ≥ 6)       → partyFit = 0.70
- *
- * Calibration: 0.3 was selected over the design spec's initial 0.5 via
- * the `scripts/sim/presidential-eight-way-scenarios.ts` thresholds. At
- * 0.5 the eight-way primary (P2) over-concentrated; at 0.3 the four sim
- * scenarios pass simultaneously — clear winner emerges where stats
- * justify it (Allen 24% national vote share in P2) without flattening
- * the competitive vote-share spread (5 candidates between 10–25%).
- *
- * Increase to make party-fit a stronger filter; decrease to admit more
- * centrist/cross-pressure competitiveness.
+ * Calibrated against the eight-way primary sim: higher over-concentrates.
+ * Increase for a stronger party-fit filter; decrease to admit more centrists.
  */
 export const PRIMARY_PARTY_FIT_WEIGHT = 0.3;
 
@@ -184,19 +156,10 @@ export const PRIMARY_LOCAL_ATTACK_COST_ACTIONS = 4;
  * Vote suppression: points of the target's vote removed in one state while the
  * attack is live.
  *
- * The only one of the attacks that touches the count directly, so it is the
- * dearest. It shipped at 2.5 points on the theory that small was safe — enough
- * to decide a state already inside the margin, never enough to take one
- * outright. Simulated across 2- to 5-candidate fields, 2.5 turned out to be
- * under the noise floor rather than merely modest: buying it in one state cost
- * the target 0.03pp of the delegate count, and buying it in the five largest
- * states cost 0.10pp. A player spending 70,000 and 5 actions could not see what
- * they had bought.
- *
- * At 10 the same purchases cost 0.18pp / one state and 0.41pp / three states —
- * a lever that decides close states without deciding the race, which is what
- * the 2.5 was reaching for. PRIMARY_VOTE_SUPPRESSION_FLOOR still caps the whole
- * field's convergence at 15% of a state's vote.
+ * The only attack that touches the count directly, so it is the dearest. Set at
+ * 10 so it decides close states without deciding the race; lower values fell
+ * under the noise floor and were invisible to the player. PRIMARY_VOTE_SUPPRESSION_FLOOR
+ * still caps the whole field's convergence at 15% of a state's vote.
  */
 export const PRIMARY_VOTE_SUPPRESSION_PCT = 10;
 export const PRIMARY_VOTE_SUPPRESSION_COST_FUNDS = 70_000;
@@ -229,10 +192,8 @@ export const PRIMARY_VOTE_SUPPRESSION_FLOOR = 0.85;
  * Vote multiplier the live vote-suppression rows impose on one candidate in one
  * state.
  *
- * Shared by the stagger phase, which decides the real result, and the
- * projection that displays it, exactly as `homeStateSurgeMultiplier` is. They
- * apply the same rule from the same function so the board cannot promise what
- * the wave will not deliver.
+ * Shared by the stagger phase, which decides the real result, and the projection
+ * that displays it, so the board cannot promise what the wave will not deliver.
  *
  * Returns exactly 1 for a candidate with no live rows against them in this
  * state, so the vote path is byte-identical for everyone not under attack.
@@ -364,16 +325,11 @@ export const PRIMARY_MOMENTUM_WIN_BONUS = 2;
  */
 export const PRIMARY_MOMENTUM_UPSET_BONUS = 2;
 
-// ─── Per-character per-state Campaign Presence (regional bases) ────────────
-//
-// Adds a recurring per-state per-candidate weight multiplier in presidential
-// primary waves AND in the general election (at reduced caps), modelling the
-// Sanders/NH or Biden/SC pattern where a candidate's multi-cycle ground game
-// outperforms in specific states. Paired with HOME_STATE_BONUS_PRIMARY /
-// _GENERAL. The engine picks which cap to apply via `options.isGeneralElection`.
-// See
-// docs/plans/archive/2026-05/2026-05-27-presidential-primary-regional-bases-design.md
-// docs/plans/archive/2026-05/2026-05-27-presidential-general-regional-bases-design.md
+// Per-character per-state Campaign Presence (regional bases):
+// a recurring per-state per-candidate weight multiplier in primary waves and
+// the general election (at reduced caps), modelling candidates whose ground
+// game outperforms in specific states. Paired with HOME_STATE_BONUS_PRIMARY /
+// _GENERAL; the engine selects the cap via `options.isGeneralElection`.
 
 /**
  * Maximum per-state multiplier in the PRIMARY path from a fully-built state
@@ -430,19 +386,13 @@ export const MAX_PARTY_INFLUENCE_BONUS_PRIMARY = 0.4;
  *   level=5  → +7.5% in-state
  *   level=10 → +15% in-state (cap)
  *
- * Calibration discovery: the engine's per-group share normalization with
+ * 0.15 is 60% of the primary's 0.25 cap: per-group share normalization with
  * polarized Dem/Rep group appeals dampens weight multipliers much more in the
- * general path than in primaries. At 0.10 the P8 share lift (level-10 + home
- * Dem vs unfunded baseline in PA) was only 1.9pp; the spec's original
- * ≥3pp threshold would have required a 0.20 cap, defeating the design intent
- * of "general is meaningfully smaller than primary." 0.15 (60% of the
- * primary's 0.25 cap) lands at a 2.5pp lift — clearly distinguishable as
- * weaker than primary while still registering visibly for invested players.
+ * general path than in primaries, so this lands at roughly a 2.5pp in-state
+ * share lift at level 10, clearly weaker than primary but visible.
  *
- * Combined with HOME_STATE_BONUS_GENERAL at home: 1.15 × 1.05 = 1.2075×.
- * Compared to primary's 1.25 × 1.10 = 1.375×, the general weight lift is
- * about half the primary's — meaningful in invested swing states without
- * overwhelming the partisanship math.
+ * Combined with HOME_STATE_BONUS_GENERAL at home: 1.15 × 1.05 = 1.2075×,
+ * about half the primary's 1.25 × 1.10 = 1.375×.
  */
 export const MAX_STATE_ORG_BONUS_GENERAL = 0.15;
 
@@ -469,11 +419,8 @@ export const STATE_ORG_COST_ACTIONS = 3;
  * internally; the forex helper converts to the character's home currency at the
  * API boundary so the player-facing UI never displays anchor units).
  *
- * Raised from a flat 50,000 (2026-08-19). At 50k, maxing a state cost $500K
- * against live presidential treasuries of $196M–$284M — roughly 0.2% of budget
- * for the whole map, which is why campaign funds visibly "didn't matter".
- * Presence is now the main thing a campaign treasury is FOR, so it is priced
- * like it.
+ * Presence is the main thing a campaign treasury is FOR, so it is priced like
+ * it: campaigns raise real money, and presence should meaningfully draw on it.
  *
  * @see stateOrgLevelCost for the per-level escalation.
  */
@@ -532,22 +479,20 @@ export const STATE_ORG_REFERENCE_FRACTION = 0.75;
  * Campaign Presence bonus as a fraction of the applicable maximum
  * (`MAX_STATE_ORG_BONUS_PRIMARY` / `..._GENERAL`), for an unbounded level.
  *
- * Replaces the old linear `level / STATE_ORG_MAX_LEVEL` ratio, which was only
- * coherent because the level was capped at 10. Uncapping that ratio would have
- * made vote weight grow without limit — level 40 would have been +100% primary
- * weight — turning presence into a pure "richest campaign wins" lever. Given
- * live treasuries span $271.8M (DEM) to $80K (MCPUS), that would have made the
- * minor-party lockout dramatically worse.
+ * Exponential approach to 1.0, never reaching it, so vote weight cannot grow
+ * without limit as level rises (a linear ratio would). Given live treasuries
+ * span $271.8M (DEM) to $80K (MCPUS), unbounded growth would make the minor
+ * party lockout dramatically worse.
  *
- * Curve: `1 − (1 − f)^(level / L)` with `f = STATE_ORG_REFERENCE_FRACTION` and
- * `L = STATE_ORG_MAX_LEVEL`. Exponential approach to 1.0, never reaching it:
+ * Curve: `1 − (1 − f)^(level / L)` with `f = STATE_ORG_REFERENCE_FRACTION`
+ * and `L = STATE_ORG_MAX_LEVEL`.
  *
  *   L0 → 0%      L5 → 50%     L10 → 75%    L15 → 87.5%
  *   L20 → 93.8%  L30 → 98.4%  L40 → 99.6%
  *
  * Every level still helps, so investment is never wasted and there is no wall
  * to hit. But the 20th level buys ~1/12th of what the 2nd did, while
- * {@link STATE_ORG_COST_GROWTH} makes it ~15x more expensive — so the ladder
+ * {@link STATE_ORG_COST_GROWTH} makes it ~15x more expensive, so the ladder
  * self-limits on value rather than on a rule.
  */
 export function stateOrgBonusFraction(level: number): number {
@@ -559,10 +504,9 @@ export function stateOrgBonusFraction(level: number): number {
 // ─── Governor coattail (§7.3.2 govModifier term) ────────────────────────────
 
 /**
- * Maximum nominal-share bonus/drag a sitting regional executive's party gets in
- * its own state's down-ballot generals, at full approval swing (±25 points from
- * the neutral baseline). Preserves the prior tenure band-3 ceiling (±9%).
- * Approval-based per the 2026-06-02 coattails design. Tune-later.
+ * Maximum nominal-share bonus/drag a sitting regional executive's party gets
+ * in its own state's down-ballot generals, at full approval swing (±25 points
+ * from neutral). Tune-later.
  */
 export const COATTAIL_MAX_BONUS = 0.09;
 

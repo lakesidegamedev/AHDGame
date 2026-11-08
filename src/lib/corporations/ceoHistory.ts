@@ -13,12 +13,7 @@ export async function openCeoTenure(
   corpId: ObjectId,
   args: { holderId: ObjectId; ceoType: "character" | "imperial" | "npp"; turn: number }
 ): Promise<void> {
-  // Gate the close-step on the array already existing. A positional array
-  // update (`ceoHistory.$[t]`) throws MongoServerError "The path 'ceoHistory'
-  // must exist in the document in order to apply array updates" when the field
-  // is absent — true for brand-new corps (founding doesn't seed it) and legacy
-  // corps founded before this feature. The filter no-ops on those; the $push
-  // below then creates the array with the new open tenure.
+  // Gate the $set on ceoHistory existing: positional updates on an absent array throw. The filter no-ops for new and legacy corps; the $push below creates it.
   await db
     .collection<Corporation>("corporations")
     .updateOne(

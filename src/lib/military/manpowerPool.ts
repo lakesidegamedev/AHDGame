@@ -85,19 +85,17 @@ export async function drawManpower(db: Db, countryId: string, men: number): Prom
 }
 
 /**
- * Return men to the pool, never above the ceiling. Atomic in both branches — this
- * runs on the recruit rollback path, where a lost update destroys manpower.
+ * Return men to the pool, never above the ceiling. Atomic in both branches;
+ * runs on the recruit rollback path where a lost update destroys manpower.
  *
- * Branch 1 (common): guarded `$inc` when the full amount fits under the ceiling.
- * Branch 2: the increment would breach the ceiling, so clamp — but ONLY when the
- * pool is actually below it. A pool sitting ABOVE its ceiling is legitimate (a
- * conscription-stance downgrade or population fall lowers the ceiling, and
- * `applyReinforcement` only re-clamps on its own pass), and an unconditional
- * `$set: ceiling` would silently destroy that excess. `$lt: ceiling` makes the
- * clamp a no-op there, which is the safe outcome: the men stay in the pool.
+ * Branch 1: guarded `$inc` when the full amount fits under the ceiling.
+ * Branch 2 clamps only when the pool is below the ceiling: a pool above its
+ * ceiling is legitimate (conscription downgrade or population fall), and an
+ * unconditional `$set` would destroy that excess. `$lt: ceiling` makes the
+ * clamp a no-op there, leaving the men in the pool.
  *
- * No `upsert` — `ensureManpowerPool` above guarantees the document exists, and an
- * upsert here would insert one without the required `mode`.
+ * No `upsert`; `ensureManpowerPool` guarantees the document exists, and an
+ * upsert would insert one without the required `mode`.
  */
 export async function returnManpower(db: Db, countryId: string, men: number): Promise<void> {
   if (men <= 0) return;

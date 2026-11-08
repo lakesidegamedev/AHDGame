@@ -3,17 +3,16 @@
  *
  * `controlledGroupIds` (merger review) answers this for ONE root and scans the
  * corporation set to do it. The turn phase needs every group at once, so this
- * does the same walk once and returns the whole mapping rather than being
- * called in a loop.
+ * does the walk once and returns the whole mapping rather than being called in
+ * a loop.
  *
  * A group edge requires BOTH halves of the relationship:
  *  - the parent controls >50% of voting power (de facto control), and
  *  - the child is a FORMALIZED subsidiary.
  *
- * De facto control alone is not a group for tax. Formalization is an explicit
- * act the parent already has to take, and making relief depend on it means the
- * same declaration that buys the tax benefit is the one that makes the group
- * legible to merger review and to everyone reading the corporation page.
+ * De facto control alone is not a group for tax: making relief depend on the
+ * explicit act of formalization ties the tax benefit to the declaration that
+ * makes the group legible to merger review and the corporation page.
  */
 
 import type { Db } from "mongodb";

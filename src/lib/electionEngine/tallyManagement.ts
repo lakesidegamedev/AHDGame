@@ -167,7 +167,7 @@ export async function accumulateVoteTurn(
   options?: {
     /**
      * When present, the tally update is appended here instead of written, so
-     * the caller can flush every race's update in one bulk write (#2695).
+     * the caller can flush every race's update in one bulk write.
      */
     tallyWrites?: AnyBulkWriteOperation<ElectionVoteTally>[];
     approvalMap?: Map<string, number>;
@@ -202,15 +202,9 @@ export async function accumulateVoteTurn(
   ]);
 
   if (!tally || candidates.length === 0) return;
-  // Per-turn idempotency: a turn whose later phase stalled (a stuck
-  // corporationTurn lock, cleared and re-run) runs this phase again under the
-  // SAME turn number. Live turn 460 ran three times on 2026-08-28 and every
-  // open general banked three slices of that turn. A tally that already holds
-  // this turn's snapshot has already been counted.
-  //
-  // A turn may be split in two: the half-hour results tick banks an "early"
-  // half ahead of the turn, and the turn then banks the "rest". Each half is
-  // counted once; a whole or "rest" snapshot means the turn is fully counted.
+  // Per-turn idempotency: a stalled turn can re-run this phase under the
+  // same turn number, and each half ("early" ahead of the turn, then "rest")
+  // is counted once. A tally already holding this turn's snapshot is counted.
   const slicePlan = planTurnSlice(
     sameTurnSliceParts(tally.turnSnapshots, turnNumber),
     options?.slice
@@ -341,14 +335,10 @@ export async function accumulateVoteTurn(
   const regBaselineByParty = buildCurrentRegistrationBaseline(statePartyOrgs, election.countryId);
 
   // Turn-first surge window (drift-immune) with a Date fallback for legacy docs.
-  // Keying the closing surge off turn numbers makes the final-turn band coincide
-  // with the race's actual last turns instead of a stale `endTime` projection
-  // that the drifting game clock no longer matches.
-  //
   // Anchor the window at the GENERAL-election start (`primaryEndTurn`), NOT the
   // overall `startTurn`: general votes only accrue after the primary, so spanning
   // the primary period smears the early-vote share across turns that cast no
-  // general votes and inflates the final turns to ~66% of the vote (ticket #955).
+  // general votes and inflates the final turns.
   // `?? startTurn` preserves prior behavior for races with no primary window.
   const { totalTurns, turnIndex } = resolveTurnWindow({
     startTurn: election.primaryEndTurn ?? election.startTurn,
@@ -507,35 +497,25 @@ export async function accumulateVoteTurn(
   }
   // ── Physical electorate ceiling ────────────────────────────────────────────
   // The resolved turnout pool can exceed the people who exist: the granular
-  // substrate aggregates turnout over overlapping demographic dimensions, and
-  // on era worlds the 1956 general certified 333% of the voting-eligible
-  // population (the audited engine defect behind 378.8M ballots from 204.9M
-  // residents). A state cannot cast more ballots than it has eligible voters,
-  // so the per-turn slice is rescaled to the electorate's share. Vote SHARES
-  // are invariant to the pool basis (the F-4 guarantee above), so this changes
-  // reported magnitudes only.
+  // substrate aggregates turnout over overlapping demographic dimensions. A state
+  // cannot cast more ballots than it has eligible voters, so the per-turn slice
+  // is rescaled to the electorate's share. Vote shares are invariant to the pool
+  // basis, so this changes reported magnitudes only.
   //
-  // The cap scales ONLY the released turn slice, deliberately leaving
-  // `effTotalPool` as the truthful normalisation base. The earlier form also
-  // reassigned `effTotalPool = electorate`, and that made the cap a no-op on
-  // actual ballots: the distributors normalise each group's contribution by
-  // `totalPool` before multiplying by the slice, so shrinking both cancels to
-  // the ballot — the same algebra that made the registered-voter gate below a
-  // live-verified no-op on its first placement.
-  // Half-hour split: each half carries half of the turn's slice, before the
-  // electorate caps, so the caps still bound the whole turn.
+  // Scale ONLY the released turn slice, never `effTotalPool`: distributors
+  // normalize each group by `totalPool` before multiplying by the slice, so
+  // shrinking both cancels to the ballot. The half-hour split gives each half
+  // half the turn's slice before these caps, so the caps still bound the whole turn.
   effEffectiveTurnPool *= sliceFraction;
   effEffectiveTurnPool = capTurnSliceToElectorate(effEffectiveTurnPool, effTotalPool, electorate);
   // ── Registered-voter gate ──────────────────────────────────────────────────
   // The unregistered slice of the registration pool cannot cast a ballot, so
-  // this turn's released pool shrinks to the registered share. Same F-4 note
-  // as the ceiling above: shares, seats and winners are invariant — only
-  // reported magnitudes and turnout percentages change.
+  // this turn's released pool shrinks to the registered share. Shares, seats
+  // and winners are invariant; only reported magnitudes and turnout change.
   //
-  // Scale ONLY the turn pool, never `effTotalPool`: the distributors normalise
-  // each group as `contribution / totalPool` and then multiply by the turn
-  // pool, so scaling both cancels to the ballot and the gate would be a no-op
-  // (verified live before this comment existed).
+  // Scale ONLY the turn pool, never `effTotalPool`: distributors normalize each
+  // group as `contribution / totalPool` then multiply by the turn pool, so
+  // scaling both cancels out and the gate becomes a no-op.
   if (!participationSummary) {
     effEffectiveTurnPool = scalePoolToRegistered(
       effEffectiveTurnPool,
@@ -802,7 +782,7 @@ export async function accumulateVoteTurn(
     }
   }
 
-  // UK manifesto policy-popularity map (epic #856). Off by default: the
+  // UK manifesto policy-popularity map. Off by default: the
   // resolver short-circuits to undefined unless UK_MANIFESTO_VOTE_EFFECT=1 and
   // this is a UK general election with locked manifestos — so no DB read and no
   // behaviour change in prod until the coefficient is worldsim-calibrated.

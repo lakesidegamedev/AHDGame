@@ -240,7 +240,7 @@ describe("fineOverdueDivestitures", () => {
     );
     // The treasury is credited the ANCHOR amount, so the receiving country
     // converts into its own currency rather than banking the payer's local
-    // figure verbatim (#808).
+    // figure verbatim.
     expect(vi.mocked(creditTreasuryProceedsFromAnchor)).toHaveBeenCalledWith(
       db,
       "US",

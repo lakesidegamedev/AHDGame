@@ -1,22 +1,16 @@
 /**
  * Who the viewer is at a conflict, what they may do there, and who does the rest.
  *
- * Authority over a war is split across three seats and nothing said so. A player asked,
- * in order: "where can I see if I am part of a battle as a general, not SoD?", "where
- * do I assign more troops to the battlefield as SoD?", and "is it user error when I
- * made my division a logistics command?" — three symptoms of one gap.
+ * Authority over a war is split across three seats:
  *
- * The chain, and the step each question was missing:
- *
- *   1. The DEFENSE HOLDER builds force structure: creates Commands, assigns units to
- *      them, and appoints each Command's Commanding General.
- *   2. The COMMANDING GENERAL of a Command employs it: posts the generals under them
- *      to Conflicts, and designates one as Theater Commander.
- *   3. UNITS FOLLOW THEIR GENERAL. A unit is at whatever front its assigned general is
- *      posted to — `theaterOfUnit`. Nobody moves units to a front directly, which is
- *      why "how do I send more troops" has no button and needs a sentence instead.
- *   4. The THEATER COMMANDER (or the defense holder where none is designated) declares
- *      offensives at the front.
+ *   1. The DEFENSE HOLDER builds force structure: creates Commands, assigns units,
+ *      appoints each Command's Commanding General.
+ *   2. The COMMANDING GENERAL employs the Command: posts generals under them to
+ *      Conflicts and designates one Theater Commander.
+ *   3. UNITS FOLLOW THEIR GENERAL. A unit is at whatever front its assigned general
+ *      is posted to (`theaterOfUnit`). Nobody moves units to a front directly.
+ *   4. The THEATER COMMANDER (or the defense holder when none is designated)
+ *      declares offensives at the front.
  *
  * Pure. The page resolves the flags; this decides what to say about them.
  */

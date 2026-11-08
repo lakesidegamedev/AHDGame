@@ -40,12 +40,7 @@ export interface PortfolioHistory {
   /** Outstanding personal income tax at snapshot time, in anchor units. */
   incomeTaxDebtValue?: number;
   /**
-   * FX rates (local per 1 ₳) at snapshot time, keyed by currency code. Used by
-   * portfolio charts to convert each historical point's anchor-denominated
-   * values back to local currency at the rate that was actually in effect
-   * then — without it, current rates get re-applied to old anchor values and
-   * paint phantom volatility (Antonelli/Aurora "missing $6bn" incident).
-   * Absent on pre-fix snapshots; consumers must fall back to current rates.
+   * FX rates (local per 1 ₳) at snapshot time, keyed by currency code. Used by portfolio charts to convert each historical point's anchor values back to local currency at the then-effective rate; without it current rates get re-applied to old values and paint phantom volatility. Absent on older snapshots; consumers fall back to current rates.
    */
   exchangeRatesSnapshot?: Partial<Record<CurrencyCode, number>>;
   createdAt: Date;

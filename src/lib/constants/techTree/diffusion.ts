@@ -1,5 +1,5 @@
 /**
- * Technology diffusion by country (issue #5689).
+ * Technology diffusion by country.
  *
  * A production method's tier opens on the calendar, but a country only gets
  * the method once its technology readiness lets it: 3 years after the tier

@@ -41,12 +41,10 @@ export const CORPORATE_BOND_TERM_PREMIUMS: Record<BondMaturityTurns, number> = {
 export const MIN_BOND_ISSUANCE = 100_000;
 
 /**
- * Absolute floor on a corporation's issuance headroom (₳) below which bonds are
- * unavailable at all. The `MIN_BOND_ISSUANCE` minimum is otherwise clamped down
- * to a corp's own ceiling, so a small corp can issue below ₳100,000 rather than
- * being locked out when its 2x-equity headroom sits under the flat minimum
- * (ticket #1083). This floor keeps dust-sized issuances (with their coupon
- * overhead) off the table.
+ * Absolute floor on a corporation's issuance headroom (₳) below which bonds
+ * are unavailable. The `MIN_BOND_ISSUANCE` minimum is otherwise clamped down
+ * to a corp's own ceiling, so a small corp can issue below ₳100,000 rather
+ * than being locked out. This floor keeps dust-sized issuances off the table.
  */
 export const BOND_ISSUANCE_MIN_HEADROOM = 10_000;
 
@@ -54,31 +52,24 @@ export const BOND_ISSUANCE_MIN_HEADROOM = 10_000;
 export const MAX_BOND_ISSUANCE_FRACTION = 2.0;
 
 /**
- * Hard cap on total debt as a multiple of EXIT equity — what a corp's balance
- * sheet would actually realize if the debt had to be settled today (see
+ * Hard cap on total debt as a multiple of EXIT equity, what a corp's balance sheet
+ * would realize if debt were settled today (see
  * {@link import("@/lib/bonds/corpExitEquity").corpExitEquityAnchor}).
  *
- * `MAX_BOND_ISSUANCE_FRACTION` above measures the going-concern equity a corp
- * is worth as a living business; this one measures what its creditors could
- * recover. Under `marketSystemMode: "plants"` the two diverge sharply, and
- * before ticket #1198 only the first was enforced at issuance while only the
- * second was enforced by `filterInsolventCorps` — so a corp could be sold a
- * debt ceiling ~75x larger than the one that could liquidate it. Corporation
- * #624 drew under 1% of its quoted ceiling and was declared insolvent two turns
- * later.
- *
- * At 1.0 the invariant is exact: `debt <= exit equity`, so a corp that stays
- * inside its quoted ceiling can never be judged insolvent. Raising this above
- * 1.0 reopens that gap by precisely the amount it is raised.
+ * `MAX_BOND_ISSUANCE_FRACTION` above measures going-concern equity; this one
+ * measures creditor recovery. Under `marketSystemMode: "plants"` the two diverge
+ * sharply. At 1.0 the invariant is exact: `debt <= exit equity`, so a corp inside
+ * its quoted ceiling can never be judged insolvent by `filterInsolventCorps`.
+ * Raising above 1.0 reopens that gap by exactly the amount it is raised.
  */
 export const MAX_BOND_ISSUANCE_EXIT_EQUITY_FRACTION = 1.0;
 
 /**
  * The issuance window a corporation may actually use, all in ₳. `maxAllowed` is
  * the smallest of the per-issuance cap, the remaining 2x going-concern leverage
- * headroom, and the remaining 1x exit-equity headroom (#1198).
+ * headroom, and the remaining 1x exit-equity headroom.
  * `effectiveMin` clamps the flat `MIN_BOND_ISSUANCE` down to that
- * ceiling so a small corp is never locked out by min > max (ticket #1083).
+ * ceiling so a small corp is never locked out by min > max.
  * `available` is false below the dust floor, where bonds are offered at all.
  * `limitedBy` names the binding constraint so callers can explain a refusal in
  * the terms that actually caused it.
@@ -209,15 +200,14 @@ export function calculateCreditScore(
     previousCompositeScore?: number;
     /**
      * The composite the turn already wrote. Used verbatim, no smoothing.
-     * Read-only surfaces pass this so they report the score the turn persisted
-     * rather than blending it a second time (ticket #1138).
+     * Read-only surfaces pass this so they report the persisted score.
      */
     persistedCompositeScore?: number;
     /** One-notch downgrade for insider concentration >65% on public corps. */
     insiderConcentrationPenalty?: boolean;
     /**
      * One-notch UPGRADE for a corp whose shares are meaningfully held by index
-     * funds (suggestion #62). The mirror of the concentration penalty: a broad,
+     * funds. The mirror of the concentration penalty: a broad,
      * sticky passive holder base is cheaper capital. Nets against it — a corp
      * that is both insider-concentrated and index-held ends where it started.
      */

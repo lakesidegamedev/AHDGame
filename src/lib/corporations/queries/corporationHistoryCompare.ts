@@ -4,7 +4,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /**
  * Read query + pure helpers backing the corporation "Snapshot" tab — a
- * turn-over-turn compare table (suggestion #97). Distinct from the Charts tab:
+ * turn-over-turn compare table. Distinct from the Charts tab:
  * Charts LINE-PLOTS a single metric across every turn; this loads the same
  * persisted `corporationHistory` rows but reduces them to five headline metrics
  * and computes the absolute + %Δ between TWO chosen turns (turn A vs turn B).

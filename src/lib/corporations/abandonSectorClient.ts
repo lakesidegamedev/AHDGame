@@ -2,7 +2,7 @@
  * Client side of POST /api/corporations/[id]/sectors/[sectorId]/abandon.
  * When the sector feeds the company's bank, the server answers 409
  * BANK_CAPACITY_IMPACT with the deposit ceiling before and after; the player
- * sees that and must confirm before the abandon goes through (ticket 1553).
+ * sees that and must confirm before the abandon goes through.
  */
 interface BankImpact {
   ceilingBefore: number;

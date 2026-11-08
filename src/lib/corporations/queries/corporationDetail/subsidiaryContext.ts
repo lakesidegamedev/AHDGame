@@ -118,7 +118,7 @@ export interface SubsidiaryContextResult {
   spinOffCooldownTurnsRemaining: number;
   hostileTakeoverEligibility: Awaited<ReturnType<typeof buildHostileTakeoverEligibility>>;
   /**
-   * #1669: present only for the CEO of a group leader whose group runs under
+   * Present only for the CEO of a group leader whose group runs under
    * strength upkeep. The leader pays each formalized subsidiary part of the
    * strength it gains, so the CEO tab's own projection (which counts only the
    * budget's growth and the decay) is incomplete without saying so.
@@ -127,7 +127,7 @@ export interface SubsidiaryContextResult {
 }
 
 /**
- * Parent / subsidiary / takeover / spin-off context for the detail view (#587).
+ * Parent / subsidiary / takeover / spin-off context for the detail view.
  *
  * The parent-corp lookup, the subsidiary-candidates query, and the hostile-
  * takeover eligibility build are independent, so they fan out in one round
@@ -273,11 +273,10 @@ export async function loadSubsidiaryContext(
     .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
   const subsidiaryCorporationsEnabled = subsidiaryGs?.subsidiaryCorporationsEnabled === true;
   const isFormalizedSub = isFormalizedSubsidiaryHelper(corporation, controllingParent);
-  // #1669: the budget line on the CEO tab shows the growth a budget buys less
-  // the 5% decay, and never the strength the group leader hands to its
-  // subsidiaries. Show the CEO that the figure is incomplete rather than
-  // letting a rising forecast sit next to a falling total. Only the group
-  // leader pays, so only its CEO needs the note.
+  // The budget line shows growth bought less the 5% decay, not the
+  // strength the leader transfers to subsidiaries. Flag the incomplete figure
+  // so a rising forecast is not read against a falling total. Only the group
+  // leader pays, so only its CEO needs this note.
   const viewerIsCeoOfThisCorp =
     !!viewerUserId &&
     corporation.ceoVacant !== true &&

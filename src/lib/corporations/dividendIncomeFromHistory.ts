@@ -39,8 +39,7 @@ export async function fetchLatestCorpHistoryDividendRows(
     }>([
       { $match: { corporationId: { $in: corporationIds } } },
       // Sort on the group key first so the {corporationId, turn} index serves
-      // match, sort and $first as a DISTINCT_SCAN (one entry per corporation)
-      // instead of walking the whole history by turn (#2693).
+      // match, sort and $first as a DISTINCT_SCAN instead of walking all history by turn.
       { $sort: { corporationId: 1, turn: -1 } },
       {
         $group: {

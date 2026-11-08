@@ -1,20 +1,16 @@
 /**
  * Who is at this war, on which side, and what put them there.
  *
- * Pure, and deliberately: the attacker/defender rule is a judgment about a war,
- * and every clause of it should be pinnable without a database.
+ * Pure: the attacker/defender rule should be pinnable without a database.
  *
- * WHY THE HOST DECIDES WHO ATTACKED. A conflict document does not record an
- * aggressor. `declareWar` happens to build side A from the declarer and side B
- * from the defender plus its allies, but seeded and admin-created conflicts do
- * not follow that, and a roster can change afterwards — so reading side A as
- * "the attackers" would be an assumption dressed as a fact. Host membership is
- * the same test `initialControl` already uses to decide whose soil the war opens
- * on, and it survives both: the side standing on the other's ground attacked it.
+ * The host decides who attacked. A conflict document records no aggressor:
+ * seeded and admin-created conflicts do not put the declarer on side A, and
+ * rosters change. Host membership is the same test `initialControl` uses to
+ * decide whose soil the war opens on: the side standing on the other's
+ * ground attacked it.
  *
- * A host that fights on NEITHER side is every proxy war, and there the question
- * has no answer in the data. Naming an aggressor there would be inventing one,
- * so both sides simply keep their own labels.
+ * A host fighting on NEITHER side is every proxy war; the question has no
+ * answer in the data, so both sides keep their own labels.
  */
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { entityName } from "@/lib/constants/entityDisplay";
@@ -72,10 +68,7 @@ function entryFor(
 ): BelligerentEntry {
   const base = { code: countryId, name: entityName(countryId) };
 
-  // Names the ally it came in for, not just the charter that dragged it. The
-  // record used to carry that second half as a prose line in the masthead
-  // ("Russia entered under the Warsaw Pact to defend East Germany") sitting above
-  // a roll that already said "Russia · RU | Warsaw Pact". One column says both.
+  // Names the ally it came in for, not just the charter. One column says both.
   const treaty = (c.treatyEntries ?? []).find((e) => e.countryId === countryId);
   if (treaty) {
     return {

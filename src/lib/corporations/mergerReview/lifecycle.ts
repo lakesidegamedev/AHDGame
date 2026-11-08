@@ -262,7 +262,7 @@ export async function fineOverdueDivestitures(
     // country's treasury keeps its books in its OWN currency. Credit the ₳
     // amount converted for the receiving country, not the payer's local figure
     // — otherwise a cross-border acquirer over- or under-pays the government by
-    // the exchange-rate difference (#808).
+    // the exchange-rate difference.
     await creditTreasuryProceedsFromAnchor(
       db,
       obligation.countryId as CountryId,

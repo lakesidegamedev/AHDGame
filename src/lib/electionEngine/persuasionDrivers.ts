@@ -29,29 +29,8 @@ import { executiveIncumbencyBudget } from "@/lib/government/rules/accountability
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
 
 /**
- * Largest contribution any single driver component can make to the
- * aggregate. Per-driver budgets sum to ≤ 1.0 so all-five-firing in one
- * direction lands near the aggregate clamp without artificial cap
- * pressure.
- *
- * T1 tuning re-pass (`2026-05-22-driver-tuning-repass.md`) replaced
- * the previously-shared 0.4 component budget with these per-driver
- * budgets, calibrated against political-science benchmarks:
- *
- *   - Support delta (0.30): integrates rallies + scandals +
- *     endorsements; should be the most expressive single driver.
- *   - Policy distance (0.15): previously dominated saturation at 0.40 —
- *     cut significantly; the per-state median voter (M-phase) makes
- *     the remaining magnitude more honest.
- *   - Money (0.20): diminishing returns; capped per log-ratio shape.
- *   - Incumbency: successful executive shield up to 0.10; failed executive
- *     drag up to 0.20, continuing to worsen below 36 approval.
- *
- * Maximum magnitude: 0.85, leaving the aggregate `[-1, +1]` clamp as a safety rail
- * that activates only on driver pile-on, not by structural design.
- * (Presidential coattails are no longer a persuasion driver — they apply
- * as a nominal-share multiplier; see `presidentialCoattail.ts`.)
- * Invariant guarded by a unit test in voteDistributionSwingFlow.test.ts.
+ * Per-driver budgets for persuasion contributions. Sum to 0.85, keeping the
+ * aggregate [-1, +1] clamp as a pile-on safety rail rather than structural.
  */
 export const SUPPORT_DELTA_BUDGET = 0.3 as const;
 export const POLICY_DISTANCE_BUDGET = 0.15 as const;
@@ -59,11 +38,10 @@ export const MONEY_BUDGET = 0.2 as const;
 export const INCUMBENCY_BUDGET = 0.1 as const;
 
 /**
- * Approval pivot for the executive incumbency curve — set to `BASE_APPROVAL`
- * so a race with no resolved approval lands exactly on the neutral
- * seat-share fallback. The shield above it and the drag below it are
- * computed by `executiveIncumbencyBudget`.
- * See 2026-06-22-incumbency-approval-bonus-design.md.
+ * Approval pivot for the executive incumbency curve, set to `BASE_APPROVAL`
+ * so a race with no resolved approval lands on the neutral seat-share
+ * fallback. `executiveIncumbencyBudget` derives the shield above it and
+ * drag below it.
  */
 // Pivot: approval an incumbent must clear to earn a shield (below it, a drag).
 // Held below the live national mean so most incumbents still get a smaller
@@ -74,9 +52,8 @@ export const INCUMBENCY_SHIELD_MAX = 0.1 as const;
 /**
  * Single-seat legislative (US Senate) incumbency: a flat, officeholder-based
  * shield that decays with the sitting senator's consecutive terms to a
- * permanent floor. Deliberately excludes favorability/approval (already priced
- * into the election math elsewhere) and never becomes a drag. See
- * 2026-07-15-senate-incumbency-driver-design.md.
+ * permanent floor. Excludes favorability/approval (priced into the election
+ * math elsewhere) and never becomes a drag.
  */
 const LEGISLATIVE_INCUMBENCY_SHIELD = 0.06 as const; // flat +6 pts
 const LEGISLATIVE_TENURE_FATIGUE_PER_TERM = 0.01 as const; // −1 pt / term beyond first
@@ -149,20 +126,13 @@ function supportDeltaDriver(pj: string, pi: string, enriched: EnrichedCandidate[
 }
 
 /**
- * Policy-distance driver. P_j's representative candidate's position vs
- * P_i's representative candidate's position, relative to the state's
- * median voter. When P_j sits closer to the median than P_i, that's a
- * positive driver — easier to peel marginal voters.
+ * Policy-distance driver: P_j's representative position vs P_i's, relative to
+ * the state's median voter. When P_j sits closer to the median than P_i, the
+ * driver is positive.
  *
- * When no `medianVoter` is supplied (older callers, primary phase, etc.)
- * the driver falls back to distance-from-`(0, 0)`, preserving the
- * original behavior. With a median supplied, distance is measured
- * relative to the state-specific voter mood — see
- * `2026-05-22-per-state-median-voter.md`.
- *
- * Normalization denominator adapts to the median's distance from origin
- * so off-center states preserve the [-1, +1] bound (the max possible
- * distance on the ±4 grid stretches when the median shifts).
+ * With no `medianVoter` supplied, distance falls back to origin (0,0). The
+ * normalization denominator adapts to the median's distance from origin so
+ * off-center states preserve the [-1, +1] bound.
  */
 function policyDistanceDriver(
   pj: string,
@@ -218,18 +188,15 @@ function moneyDriver(pj: string, pi: string, options: DistributeVotesOptions | u
  * Incumbency driver. For single-winner executive own-races (approval
  * supplied) it is a full-magnitude directional shield/drag scaled by the
  * sitting executive's approval; otherwise defenders with larger prior
- * seat-share defend more. Per the share-weighted (option δ) model in
- * `2026-05-22-swing-flow-driver-activation.md` §A1 and the approval overlay
- * in `2026-06-22-incumbency-approval-bonus-design.md`.
+ * seat-share defend more.
  *
  * US Senate single-seat races use the dedicated `legislativeIncumbentPartyId`
- * flat-shield branch above and never reach the seat-share fallback. For
- * proportional / multi-seat races (US House, UK Regional Council, JP
- * Shugiin/Sangiin, DE Bundestag, etc) the map carries each party's last-cycle
- * seat-share so the lift / drag scales with how much each party is defending.
+ * flat-shield branch and never reach the seat-share fallback. For
+ * proportional / multi-seat races the map carries each party's last-cycle
+ * seat-share so lift / drag scales with how much each party is defending.
  *
- * Returns 0 when no map is supplied (first-ever race, open seat with no
- * prior cycle, or missing data — driver degrades gracefully).
+ * Returns 0 when no map is supplied (first-ever race, open seat, missing
+ * data).
  */
 function incumbencyDriver(
   pj: string,
@@ -284,17 +251,16 @@ function incumbencyDriver(
  * Aggregated `persuasion_drivers(P_j vs P_i)`. Returns a signed
  * contribution in `[-1, +1]`.
  *
- * Components contributing to the bounded sum:
+ * Components:
  *   - candidate Support delta
  *   - policy-distance proxy
  *   - money: log-ratio of campaign funds
  *   - incumbency: seat-share shield for legislatures; approval-scaled
  *     shield/drag for single-winner executive own-races
  *
- * Each component contributes within its own per-driver budget so no
- * single signal dominates. Per-driver budgets sum to 0.75 so the
- * aggregate `[-1, +1]` clamp activates only on pile-on. The final
- * clamped sum drives the peeling magnitude in the swing-flow model.
+ * Per-driver budgets sum to 0.75 so the final clamp only activates on
+ * pile-on. The clamped sum drives peeling magnitude in the swing-flow
+ * model.
  */
 export function persuasionDrivers(
   pj: string,

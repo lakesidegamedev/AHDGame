@@ -7,12 +7,9 @@ import type { CountryId } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 
 /**
- * Pure growth-cost calculation for a sector. `growthRatePct` is the growth rate
- * **per game year** (48 turns); the return value is the *daily* (24-turn) cost of
- * holding that rate, which is what callers divide by `TURNS_PER_DAY` to charge
- * per turn. Mirrors the inline math previously in setSectorGrowth.ts.
- * `acumen` is the CEO's Business Acumen stat (defaults to neutral): a skilled CEO
- * grows more cheaply and absorbs less of a high prime rate.
+ * Growth rate is per game year (48 turns); return value is the daily (24-turn)
+ * cost that callers divide by TURNS_PER_DAY to charge per turn. `acumen` is
+ * the CEO's Business Acumen (defaults neutral).
  */
 export function growthCostFor(
   revenue: number,

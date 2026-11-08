@@ -1,26 +1,22 @@
 /**
- * Market recovery stage 5 (kanban 254504): AI companies hand off-type plants to
- * a same-type AI company.
+ * AI companies hand off-type plants to a same-type AI company.
  *
- * Any sector whose type differs from its corporation's type carries the -15
- * type-mismatch margin penalty (specialization/rules.ts). At turn 273, 4,306 of
- * 7,978 producing plants carried it and 3,796 belonged to AI companies, which
- * built across industries. The owner kept the penalty; instead each standalone
- * AI company sells at most one off-type plant per turn, at book value plus
- * inventory, to an existing AI company of the plant's type in the same country
- * that can pay. Nothing is deleted: the plant row is re-parented whole
- * (capacity, crew, inventory, build queue, production history).
+ * A sector whose type differs from its corporation's type carries the -15
+ * type-mismatch margin penalty. Each standalone AI company sells at most one
+ * off-type plant per turn, at book value plus inventory, to an existing AI
+ * company of the plant's type in the same country that can pay. The plant row
+ * is re-parented whole (capacity, crew, inventory, build queue, production
+ * history); nothing is deleted.
  *
  * Deferred, not forced: plants with secured construction, defence contracts or
- * an active supply agreement on one of their outputs, extraction plants, and
+ * an active supply agreement on an output, extraction plants, and
  * cross-currency pairs wait. Player, caretaker, state and subsidiary companies
  * are never sellers or buyers.
  *
  * Crash safety: one keyed receipt per (turn, sector) in `offTypeHandovers`,
  * advanced pending -> debited -> moved -> done, one bulk write per leg. Buyer
- * debits and seller credits carry a per-turn marker on the corporation, so a
- * retried turn resumes from the recorded leg without repeating a money move.
- * Buyers share the seller's currency, so re-parenting needs no re-denomination.
+ * debits and seller credits carry a per-turn marker, so a retried turn resumes
+ * without repeating a money move.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";

@@ -3,8 +3,6 @@
  * (US Senate). Finds the sitting senator, guards against open seats (the
  * incumbent must actually be running), and counts their consecutive terms in
  * the seat. Feeds the flat-shield branch of `incumbencyDriver`.
- *
- * See docs/superpowers/specs/2026-07-15-senate-incumbency-driver-design.md.
  */
 
 import type { Db } from "mongodb";
@@ -194,50 +192,27 @@ export async function resolveSingleSeatLegislativeIncumbent(
 
 // ─── US House (multi-seat) incumbency ───────────────────────────────────────
 //
-// The pattern above does NOT extend to the US House, and forcing it to is the
-// wrong shape rather than a missing detail:
+// The single-seat pattern does not extend to the House. A state's delegation is
+// one Election with `totalSeats` > 1, so several parties' nominees are "the
+// incumbent" for their own slice, and there is no persisted tenure counter:
+// `ElectedOfficial` house rows are rewritten every cycle and
+// `CongressionalDistrict.holderCharacterId` exists only when redistricting is on.
 //
-//  1. A House race isn't single-seat. A state's whole House delegation is one
-//     Election with `totalSeats` > 1, resolved by proportional/majoritarian
-//     seat allocation (`allocateSeats`) or, with redistricting on, per-district
-//     quota assignment (`districtedHouseResolution`). Several parties' nominees
-//     can simultaneously be "the incumbent" for their own slice of the
-//     delegation — there is no single officeholder to look up the way
-//     `{ officeType: "senate", state, senateClass }` finds exactly one row.
-//  2. There is no persisted per-district (or per-candidate) tenure counter to
-//     read: `ElectedOfficial` house rows are deleted and rewritten fresh every
-//     cycle (`multiSeatOfficialFilter`) with no running "consecutiveTerms"
-//     field, and `CongressionalDistrict.holderCharacterId` is a
-//     REDISTRICTING-only display projection (absent whenever redistricting is
-//     off, which is most worlds) — not a resolver's source of truth.
+// Tenure is therefore tracked per candidate identity (characterId/nppId), not per
+// party or district. A returning nominee carries their own consecutive-term
+// count; a brand-new nominee for the same party starts at first term, matching
+// the single-seat guard above.
 //
-// So this tracks tenure PER CANDIDATE IDENTITY (characterId/nppId), not per
-// party and not per district: each party's returning nominee carries their
-// OWN consecutive-term count, so a state that stays 5-3 Democratic-Republican
-// for a decade fatigues each incumbent's PERSONAL stat edge individually,
-// while a party that retains control by fielding a brand-new nominee applies
-// NO fatigue to that fresh nominee's own (already-modest) influence/
-// favorability — matching the single-seat guard above (an open seat / a
-// different person running resets to "first term").
+// History is read from `electionVoteTallies`. Multi-seat "winning" depends on the
+// seat-allocation formula, not raw vote rank, so this reuses the vote-share gate
+// the allocator applies (`getMultiSeatMinShare`): clearing it counts as holding a
+// seat that cycle. That is a proxy, which is enough because counting consecutive
+// terms needs only a boolean per cycle.
 //
-// Reading history back out of `electionVoteTallies` (the only persisted
-// record, since `ElectedOfficial` rows don't survive past the current cycle)
-// can't reuse `getElectionWinnerIdentity`'s argmax-vote test — multi-seat
-// "winning" depends on the seat-allocation formula, not raw vote rank. Instead
-// this reuses the vote-share GATE the real allocator applies before a
-// candidate is eligible for a seat at all (`getMultiSeatMinShare("house",
-// prior.totalSeats, countryId)`): clearing that cycle's delegation-aware gate is treated
-// as "held at least one seat" that cycle. That's a proxy, not an exact seat
-// re-derivation, and consecutive-term COUNTING only needs a boolean per cycle,
-// not the seat total.
-//
-// One deliberate simplification: the allocator pools a PARTY's nominees before
-// applying that gate, while this measures each candidate's own share. A party
-// fielding two nominees who each poll under 20% but over 20% combined would
-// seat them and still be recorded here as having no tenure. No US House race
-// has ever fielded more than one nominee per party (verified across all 292 US
-// House elections on 2026-08-31), so the two readings have never diverged in
-// practice; pooling here would be a balance change needing its own sim.
+// Known simplification: the allocator pools a party's nominees before the gate
+// and this measures each candidate alone, so two nominees each under the gate but
+// over it combined would be recorded as having no tenure. No US House race has
+// fielded more than one nominee per party; pooling would be a balance change.
 
 /** Bounds the historical walk-back: personalStatTenureRetention saturates at
  *  PERSONAL_STAT_TENURE_EROSION_MAX/PERSONAL_STAT_TENURE_EROSION_PER_TERM = 5

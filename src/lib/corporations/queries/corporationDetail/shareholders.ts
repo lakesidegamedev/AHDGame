@@ -9,7 +9,7 @@ import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { computeAccountedShares } from "@/lib/corporations/shareInvariant";
 
 /**
- * Shareholder display context: CEO + every named holder class (#587).
+ * Shareholder display context: CEO + every named holder class.
  *
  * Characters, imperial characters, holding corporations, NPPs, and index
  * funds each resolve through their own lookup so the shareholder tab can
@@ -268,7 +268,7 @@ export interface ShareholderListInputs {
 }
 
 /**
- * Shareholder response rows, with the CEO absorbing unaccounted shares (#587).
+ * Shareholder response rows, with the CEO absorbing unaccounted shares.
  *
  * The share invariant reconciles listed/ordered shares against the ledger;
  * any remainder is attributed to the CEO rather than vanishing from the tab.

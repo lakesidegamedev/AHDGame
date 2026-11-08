@@ -250,7 +250,7 @@ export function distributeVotesByGroupLevelAllocation(
           const normalized = normalizePartyInfluencePresidentialPrimary(effective);
           partyInfluenceMult = 1 + normalized * MAX_PARTY_INFLUENCE_BONUS_PRIMARY;
         }
-        // UK manifesto policy-popularity factor (epic #856). Off by default:
+        // UK manifesto policy-popularity factor. Off by default:
         // when no map is supplied the lookup falls back to 1.0 (no effect).
         const manifestoMult = options?.manifestoMultipliers?.[ec.party]?.[group.id] ?? 1;
         const w = Math.max(
@@ -277,10 +277,7 @@ export function distributeVotesByGroupLevelAllocation(
         weights[ec.candidateId] = w;
       }
 
-      // Slate-nested split (#1048), kept identical to the swing-flow engine so
-      // the two lanes cannot drift. No-op for primaries (one party, so the
-      // single slate takes the whole pool and the within-slate split reproduces
-      // the old per-candidate split) and for one-candidate-per-party generals.
+      // Must stay identical to the swing-flow engine so the lanes cannot drift. No-op for primaries and one-candidate-per-party generals.
       const groupSplit = splitGroupPoolBySlate(
         groupPool,
         enriched.map((ec) => ({

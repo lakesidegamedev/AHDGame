@@ -23,11 +23,10 @@ export type PlantAccountInput = {
    */
   fundedComplianceAnchor?: number | null;
   /**
-   * Ticket 1122: the lines the turn ACTUALLY booked, in ₳. When present every
-   * money figure below is read straight off them and nothing is
-   * reconstructed. Absent on a sector that has not run a plants turn since
-   * the field shipped, which falls back to the margin inversion exactly as
-   * before. See `plantsPnlBasis.ts` for why the inversion is not enough.
+   * The lines the turn ACTUALLY booked, in ₳. When present, all money figures
+   * below are read off them; nothing is reconstructed. Absent on a sector that
+   * has not run a plants turn since the field shipped, which falls back to the
+   * margin inversion. See `plantsPnlBasis.ts` for why the inversion is not enough.
    */
   enginePnl?: {
     revenue: number;
@@ -62,10 +61,9 @@ export function plantAccountTotals(money: PlantAccountInput, ownSiteValue: numbe
     : 0;
   const freightCostAnchor = money.freightCostAnchor ?? 0;
   const freightIncomeAnchor = money.freightIncomeAnchor ?? 0;
-  // One basis for revenue, cost and profit (issue 5385, ticket 1763): the
-  // profit counts income and charges between the company's own sites, so the
-  // revenue and the bill do too. Settled statements take precedence; older
-  // payloads keep their existing cost-line adapter.
+  // One basis for revenue, cost and profit: profit counts inter-site income
+  // and charges, so revenue and bill do too. Settled statements take precedence;
+  // older payloads use the cost-line adapter.
 
   const operatingCostAnchor = money.statement
     ? money.statement.totalCost - nonNeg(money.growthCostAnchor)

@@ -406,7 +406,7 @@ describe("buildSectorPlantsSection", () => {
     expect(s.pnl.otherOperatingAnchor).toBeGreaterThanOrEqual(0);
   });
 
-  // Ticket 1122, reproduced from prod sector 6a83e59f97baa9dbe6bb7980 (a
+  // Reproduced from prod sector 6a83e59f97baa9dbe6bb7980 (a
   // California newsroom): realized revenue 321,760.57, engine margin 88.63%,
   // wage bill 70,561.75, no growth spend. The engine's operating bill is
   // therefore 36,584.10, which is LESS than the wage bill alone, because the

@@ -126,10 +126,8 @@ export async function previewRelocationBond(
     liquidCapitalAnchor +
     sectorNPV +
     sumCorporateSectorConstructionInProgress(sectors, corporation._id, currentTurn);
-  // Ticket #1198: a relocation bond is new borrowing, so it answers to the same
-  // exit-equity ceiling as an ordinary issuance. Without it this route stayed
-  // the open door to the going-concern-vs-realizable gap the ordinary route
-  // just closed.
+  // A relocation bond is new borrowing, so it is subject to the same
+  // exit-equity ceiling as an ordinary issuance.
   const { exitEquityAnchor } = await loadCorpExitEquityAnchor(db, {
     liquidCapitalAnchor,
     sectors,

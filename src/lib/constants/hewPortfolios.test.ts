@@ -3,7 +3,7 @@ import { getCabinetMechanics } from "./cabinetMechanics";
 
 /**
  * HEW carries education + welfare policy levers on top of its healthcare tier
- * (ticket #1070). These guard against typos in the extra-tier config: every
+ * These guard against typos in the extra-tier config: every
  * tier needs a stable `key`, a valid defaultTier, and effect keys shaped like
  * `category.metricId`.
  */

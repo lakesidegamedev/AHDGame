@@ -113,7 +113,7 @@ export async function buildSectorCommoditySections(args: {
   currentTurn?: number;
   /**
    * Last turn's average price buyers paid per book lane (producerMarketOutcomes),
-   * for saying why an output went unsold (issue #5448). Absent: no reason shown.
+   * for saying why an output went unsold. Absent: no reason shown.
    */
   laneClearingPrices?: Readonly<Record<string, number | undefined>>;
 }) {
@@ -231,9 +231,7 @@ export async function buildSectorCommoditySections(args: {
     sector.soldByCommodity && typeof sector.soldByCommodity === "object"
       ? sector.soldByCommodity
       : {};
-  // Each output's share of last turn's realized revenue (ticket 1507). Lets the
-  // page show a sale price per product on a multi-output sector instead of one
-  // blended average. Absent until the sector clears a turn with the field.
+  // Each output's share of last turn's realized revenue, so multi-output sectors can show a per-product sale price instead of a blended average. Absent until the sector clears a turn with the field.
   const revenueShareByCommodity: Partial<Record<string, number>> =
     sector.revenueShareByCommodity && typeof sector.revenueShareByCommodity === "object"
       ? sector.revenueShareByCommodity

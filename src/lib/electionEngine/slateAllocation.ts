@@ -1,19 +1,15 @@
 /**
- * Slate-level (party-nested) split of a demographic group's vote pool.
+ * Slate-level split of a demographic group's vote pool.
  *
- * A straight per-candidate split lets a party fielding two comparable
- * candidates take two shares of every group's pool, so seat count scales with
- * ballot slots rather than support. Split by SLATE instead: a slate's weight
- * is the MEAN of its candidates' appeal weights, then divide the slate's take
- * among its own candidates by within-slate weight share. Slate size cancels;
- * slate quality still matters (a weak co-partisan drags the mean).
+ * Per-candidate splitting scales seat count with ballot slots rather than
+ * support. A slate's weight is the MEAN of its candidates' appeals, then
+ * divided among them by within-slate share, so slate size cancels while weak
+ * co-partisans still drag the mean.
  *
- * Independents are never pooled. Each stands as its own slate, mirroring
- * `eligibilityGroupKey` in `turn/election/seatAllocation.ts` so the eligibility
- * gate and the vote split agree on what a "party" is.
+ * Independents are never pooled; each is its own slate, mirroring
+ * `eligibilityGroupKey` so eligibility and vote split agree on "party".
  *
- * Byte-identical for one-candidate-per-party races (every FPTP family and
- * every primary). Only multi-candidate-per-party races move.
+ * Byte-identical for one-candidate-per-party races.
  */
 
 /** Slate key: same-party candidates pool; independents stand alone. */

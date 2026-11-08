@@ -55,28 +55,22 @@ interface RestorableSectorDelta {
 }
 
 /**
- * Return deleted corporate-sector revenue to the persistent unowned pool, then
- * remove the original sector rows.
+ * Return deleted corporate-sector revenue to the persistent unowned pool,
+ * then remove the original sector rows.
  *
- * WHY: Production can reject Mongo multi-document transactions, so this path
- * must still be safe under retries and duplicate submits. We first apply an
- * idempotent per-sector restore token to the destination `unownedSectors` doc;
- * retrying the same deleted sector then becomes a no-op on revenue. We prune
- * those tokens to a short rolling window so long-lived market docs do not grow
- * without bound. Only after the pool is safely credited do we delete the
- * sector rows, which avoids the old "delete first, lose the market on crash"
- * corruption mode.
+ * Production can reject Mongo multi-document transactions, so this must be
+ * safe under retries and duplicate submits: an idempotent per-sector restore
+ * token on the destination `unownedSectors` doc makes retry a no-op. Tokens
+ * are pruned to a short rolling window so market docs do not grow without
+ * bound. Only after the pool is credited do we delete the sector rows, so a
+ * crash cannot lose the market.
  *
- * ─── PLANTS RETURNS CAPACITY, NOT FILL-DEPENDENT REVENUE ────────────────────
- * At `marketSystemMode >= "plants"` a sector's `revenue` is a DERIVED figure —
- * `capitalStock × mixPrice`, further scaled down by whatever the market
- * actually cleared and by the ramp. Returning that number to the pool leaks
- * market on every abandon/dissolution: a plant running at 40% utilization gives
- * the pool 40% of the market it was occupying, and the remaining 60% simply
- * ceases to exist. Under plants we therefore return the CAPACITY the sector
- * held (`capitalStock` at abandon time), priced through its own mix into the
- * pool's default-mix units, and let the pool's `revenue` be re-derived from the
- * unit total. Below the plants tier the legacy ₳ revenue credit is unchanged.
+ * PLANTS RETURNS CAPACITY, NOT FILL-DEPENDENT REVENUE: at marketSystemMode
+ * >= "plants", `revenue` is derived (`capitalStock × mixPrice` scaled by
+ * cleared fraction and ramp). Returning it would leak market on every
+ * abandon (a 40%-utilized plant returns 40% of its market). Under plants we
+ * return `capitalStock` priced through the sector's mix into the pool's
+ * default-mix units; below plants, legacy ₳ revenue credit.
  */
 export async function restoreSectorsToUnowned(
   db: Db,
@@ -95,13 +89,10 @@ export async function restoreSectorsToUnowned(
   const corporationIds = [...new Set(sectors.map((sector) => sector.corporationId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  // The pool row this restores capacity into CARRIES a countryId, and every
-  // reader filters on it, so it has to be the country the state is in rather
-  // than whatever the sector last stored. A row whose stored value went stale
-  // when its region changed hands would otherwise return its capacity to a
-  // market the country it sits in cannot see (ticket #1271, the shape
-  // `buildCapacity` and `expandSector` carried on the founding side). Batched
-  // alongside the corporation read, so this costs one query for the whole set.
+  // The pool row carries a countryId that every reader filters on, so it must
+  // be the country the state is in, not the sector's last stored value:
+  // a stale value would return capacity to a market the country cannot see.
+  // Batched alongside the corporation read.
   const [corporations, fxByCurrency, sectorStates] = await Promise.all([
     db
       .collection<Corporation>("corporations")

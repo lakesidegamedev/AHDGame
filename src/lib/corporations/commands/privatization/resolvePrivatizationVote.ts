@@ -190,15 +190,14 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   const nonCeoHolders = corp.shareholders.filter((s) => s.characterId?.toString() !== ceoIdStr);
   const publicFloat = Math.max(0, (corp.publicFloat ?? 0) - unplacedIpoShares(corp));
 
-  // #3450: index-fund holders must be paid too. Previously a fund holder had its
-  // payout counted into the CEO's outflow but was NEVER credited, and its shares
-  // were absorbed into the CEO by the cap-table rebuild below — destroying money
-  // and wiping the fund's stake for free. Funds hold cash in ₳, so convert the
-  // buyout payout from the buyout currency. There is no `fund` subjectType for
-  // financialTxLog yet (Phase-3 ledger gap), so the cash credit is the real,
-  // conserving move and the fund leg stays unbooked — matching every other fund
-  // cash flow today. Fund payouts are tracked separately so the CEO's booked
-  // outflow leg reflects only the char/corp/float portions it can attribute.
+  // Index-fund holders must be paid too. Otherwise their payout is counted into
+  // the CEO's outflow but never credited, and the cap-table rebuild below absorbs
+  // their shares into the CEO, destroying money and wiping the fund's stake.
+  // Funds hold cash in ₳, so convert the buyout payout from the buyout currency.
+  // There is no `fund` subjectType for financialTxLog yet, so the cash credit is
+  // the conserving move and the fund leg stays unbooked. Fund payouts are tracked
+  // separately so the CEO's booked outflow leg reflects only the portions it can
+  // attribute.
   const hasFundHolder = nonCeoHolders.some((h) => h.fundId && !h.characterId && !h.corporationId);
   const fxByCurrency =
     input.fxByCurrency ??
@@ -338,12 +337,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
         lastPrivatizationTurn: currentTurn,
         updatedAt: now,
       },
-      // #908: a private corp is single-class — drop dual-class supershare state
-      // so hasSuperShares() stops reporting 10× voting on a now-private corp
-      // (the rebuilt CEO shareholder entry above already omits `superShares`).
-      // Approved-but-unissued public float is void once the corp leaves the
-      // public market; the paced placement loop skips private corps, so a
-      // surviving flag would block future share proposals forever.
+      // A private corp is single-class: drop dual-class supershare state so hasSuperShares() stops reporting 10x voting. Also void pendingShareIssuance, since the placement loop skips private corps and a stale flag would block future proposals forever.
       $unset: {
         privatizationCooldownUntilTurn: "",
         superShareMultiplier: "",

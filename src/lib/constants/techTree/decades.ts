@@ -1,17 +1,10 @@
 /**
  * Decade brackets for the sector tech trees.
  *
- * Each corporation sector tree is organised into six decade tiers. A tier
- * becomes researchable once the game world's `currentYear` reaches its
- * `startYear`; earlier decades than the world's starting decade are treated as
- * ungated baseline and never appear (per design: "only the current decade
- * onward is researchable"). Future decades stay locked until the clock arrives.
- *
- * `currentYear` is derived from the active reset preset's `startingYear`
- * (1979, 1991, 1999, 2007, 2019, …) plus elapsed game years — see
- * `src/lib/time/gameTime.ts`. The brackets below are intentionally aligned to
- * the canonical reset eras so a 1979-start world walks the whole tree while a
- * 2019-start world only ever sees the final two tiers.
+ * Each sector tree has six decade tiers. A tier becomes researchable once
+ * `currentYear` reaches its `startYear`; earlier decades are ungated baseline
+ * and never appear. `currentYear` is the reset preset's `startingYear` plus
+ * elapsed game years (see `src/lib/time/gameTime.ts`).
  */
 
 export interface TechDecade {

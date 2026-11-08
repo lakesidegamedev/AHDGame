@@ -102,9 +102,8 @@ export interface Bond {
   originalIssuerName?: string;
   /**
    * Turn at which the most recent default occurred. Preserved after a cure
-   * (cash payoff / refinance / parent-payoff) so the bond doc still records
-   * its default history; pair with {@link Bond.defaultCure} to distinguish
-   * "currently defaulted" from "previously defaulted, since cured".
+   * so the bond doc records its default history; pair with {@link Bond.defaultCure}
+   * to distinguish currently defaulted from previously defaulted, since cured.
    */
   defaultedAtTurn: number | null;
   /**
@@ -121,12 +120,9 @@ export interface Bond {
   /** Whether the bond has fully matured and been settled */
   matured: boolean;
   /**
-   * Turn on which a matured bond's face value was auto-redeemed to holders and
-   * the holdings cleared. Set alongside `matured: true` by the bond turn
-   * processor. Distinguishes a cleanly settled bond from legacy rows that were
-   * flagged `matured` before auto-redemption existed (those still carry
-   * populated `holders` and were never paid — see issue #2974). Absent on
-   * unmatured bonds.
+   * Turn the bond was auto-redeemed and holdings cleared. Set with `matured: true`
+   * by the turn processor. Distinguishes a settled bond from legacy `matured`
+   * rows that still carry `holders` and were never paid. Absent on unmatured bonds.
    */
   redeemedAtTurn?: number;
   /** Frozen, funded payout quote retained until a sovereign maturity fully pays. */
@@ -323,20 +319,14 @@ export interface CorporateCreditRating {
 // ── Bond Unit Size ───────────────────────────────────────────────────────────
 
 /**
- * Each bond unit has a face value of 1,000 in the bond's denomination
- * currency (v0.2.6+ — `Bond.currencyCode`). Pre-migration, bonds were
- * implicitly anchor-denominated; post-migration the same numeric unit means
- * "1,000 of whatever the bond's currencyCode is" (1,000 USD for a US
- * treasury, 1,000 GBP for a UK gilt, 1,000 JPY for a JGB, etc.).
+ * Face value of one bond unit: 1,000 in the bond's `currencyCode`.
  *
- * **Unit contract (post-v0.2.6):** this constant is in the bond's LOCAL
- * currency. Any expression of the form `BOND_UNIT_FACE_VALUE × units` or
- * `perTurnCouponPayment(rate, BOND_UNIT_FACE_VALUE) × units` produces a
- * value in the bond's `currencyCode`, **not** ₳. To get ₳, feed the result
- * through `corpCapitalToAnchor(value, bond.currencyCode, fxRate)` where
- * `fxRate = fxByCurrency.get(bond.currencyCode) ?? 1`. Do this at the
- * source of the expression, not at the consumer — every caller that
- * forwards a LOCAL value to an ₳-expecting API is a bug waiting to
- * surface (A13/A14 class).
+ * This constant is in the bond's LOCAL currency, not anchor. Any expression
+ * `BOND_UNIT_FACE_VALUE * units` or
+ * `perTurnCouponPayment(rate, BOND_UNIT_FACE_VALUE) * units` yields a LOCAL
+ * value. Convert to anchor at the source via
+ * `corpCapitalToAnchor(value, bond.currencyCode, fxRate)` where
+ * `fxRate = fxByCurrency.get(bond.currencyCode) ?? 1`. Forwarding a LOCAL
+ * value to an anchor-expecting API is a bug.
  */
 export const BOND_UNIT_FACE_VALUE = 1_000;

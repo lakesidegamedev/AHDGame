@@ -136,7 +136,7 @@ export function getMediaOperatingModelStrategies(sectorType: string): SectorStra
  * An unknown ID falls back to the sector's named `standard` recipe, never to
  * `strategies[0]`: several catalogs prepend future recipes, so index 0 can be a
  * locked 2019 recipe and an obsolete persisted ID would silently become one
- * (#4244). Unknown persisted sector types use an inert strategy until repaired.
+ * Unknown persisted sector types use an inert strategy until repaired.
  */
 function strategyForPreset(
   sectorType: string,
@@ -377,45 +377,22 @@ function blendRates(
 /**
  * Share of a planned economy's media output that reaches the market.
  *
- * The 1953 seed sized every bloc state's media sector like a Western commercial
- * broadcaster, 82,000 to 806,000 capitalStock each, one per state, so the bloc
- * physically produces about 4x what a state media budget plausibly funds.
- * Capacity is the only real lever under plants, and derating the market
- * contribution is the reversible, code-side form of it: no mutation of live
- * state-owned sectors. Bloc media sells advertising, bought domestically by
- * the planned-only state media line (STATE_MEDIA_DEMAND_RATE).
- *
- * Proper fix is to right-size the seed; see ops-knowledge
- * `plants-output-mix-invariants`.
+ * The seeded bloc states produce about 4x what a state media budget plausibly
+ * funds. Derating the market contribution is the reversible, code-side fix:
+ * no mutation of live state-owned sectors. Bloc media sells advertising,
+ * bought domestically by the planned-only state media line.
  */
 export const PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR = 0.25;
 
 /**
- * Share of a MARKET economy's media output that reaches the advertising market.
+ * Share of a market economy's media output that reaches the advertising
+ * market. Media nameplate is roughly 20x what the market absorbs, pinning
+ * price to the deflation clamp; capacity is the only lever, since ownership
+ * and output mix offer none. Derating is reversible.
  *
- * Same seeding problem as the bloc, minus the command-economy angle: media
- * nameplate is roughly 20x what any advertising market absorbs. Prod turn 120,
- * after the bloc re-point removed 57% of world supply, still read 2,705,394
- * supply against 136,553 demand — 19.8x, price 0.68 against an era base of 2.15,
- * i.e. still pinned to the 0.32x deflation clamp.
- *
- * Ownership offers no lever here: Western media corps ("Metro News", "Prime
- * Media") are ordinary seeded corps with real ObjectIds and no `countryOwnerId`,
- * indistinguishable from a player's. And the output mix cannot help either —
- * `commodityMixWeight` is 1 for a single-commodity mix whatever the rate, so
- * capacity is the only term. Derating the market contribution is the reversible
- * form of right-sizing it.
- *
- * This RAISES media revenue rather than cutting it, which is counterintuitive
- * enough to be worth stating: those sectors currently clear about 2% of output
- * at a third of base price, so realized value is ~0.006 of nameplate. At 0.10
- * of nameplate clearing near fully at a recovered price it is ~0.10 — an order
- * of magnitude better. The glut is what is impoverishing them.
- *
- * 0.10 is deliberately a step, not a landing: it takes world advertising to
- * roughly 2x rather than straight to balance, so the price move can be soaked
- * before tuning further. Proper fix is to right-size the seed; see ops-knowledge
- * `plants-output-mix-invariants`.
+ * This RAISES media revenue: the glut is what impoverishes these sectors,
+ * so clearing less at a recovered price beats clearing more at a third of
+ * base. 0.10 is a step, not a landing. Proper fix is to right-size the seed.
  */
 export const MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR = 0.1;
 

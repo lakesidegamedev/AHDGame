@@ -133,7 +133,7 @@ describe("runTransactionWithSessionRetry", () => {
     expect(endSession).toHaveBeenCalledOnce();
   });
   it("runs the body with NO session when the deployment has no transaction support", async () => {
-    // Ticket #1239: production Mongo is standalone, so starting a transaction
+    // Production Mongo is standalone, so starting a transaction
     // fails outright. The body must still run rather than 500 the player.
     assertTransactionSupportMock.mockResolvedValue(false);
     const startSession = vi.fn();

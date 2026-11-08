@@ -1,6 +1,6 @@
 /**
  * Fault-injection, replay, and recovery coverage for the durable agreed-
- * acquisition settlement (issue #2017).
+ * acquisition settlement.
  *
  * Strategy: run the real executor against the in-memory collections, crash
  * after every durable write in the observed write order, then retry clean on
@@ -150,7 +150,7 @@ describe("settlement crash recovery", () => {
   it("resumes to exactly-once success after a crash past any durable write (banked target)", async () => {
     const log = await referenceLog({ charter: true });
     // Crashes inside the charter transfer's own claim/release/re-key window
-    // belong to its recovery protocol (PR #2016, issue #2014): the money below
+    // belong to its recovery protocol: the money below
     // still converges exactly once, but satellite convergence for those
     // indices is #2016's to prove, so this sweep asserts money only there.
     // The claim index itself cannot converge pre-#2016 (named test below);

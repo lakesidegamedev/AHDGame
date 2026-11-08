@@ -13,24 +13,17 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 /**
  * Salvage value (in ₳) a dissolving corp recovers from its operating sectors.
  *
- * On dissolution the sectors pass to NPP successors (or the unowned market)
- * with no going-concern sale, so only {@link DISSOLUTION_SECTOR_SALVAGE_FRACTION}
- * of their value is realized as cash for the payout pool. Paying the full value
- * would mint the corp's enterprise value (the money-laundering exploit the
- * salvage haircut exists to prevent).
+ * Sectors pass to NPP successors with no going-concern sale, so only
+ * {@link DISSOLUTION_SECTOR_SALVAGE_FRACTION} is realized for the payout
+ * pool; paying full value would mint the enterprise value.
  *
- * The valued quantity depends on the market tier (D11):
- *   - below "plants": capitalized going-concern NPV, as it always was;
- *   - at/above "plants": replacement-cost BOOK of the sector's built capacity
- *     plus any construction still in progress. Under plants a sector IS its
- *     plant, and settling exits at book is what makes build-then-dissolve a
- *     guaranteed loss rather than a mint.
+ * Valued as going-concern NPV below the "plants" market tier, and as
+ * replacement-cost book of built capacity plus in-progress construction at or
+ * above it, so build-then-dissolve is a loss rather than a mint.
  *
- * This mirrors the bond-default dissolution settlement
- * ({@link previewDissolveSettlement}); the voluntary CEO dissolve route and its
- * preview share this helper so the quoted and executed payouts match exactly.
- *
- * Returns 0 for a corp with no positive-NPV (or no built) sectors.
+ * Shared with the bond-default settlement ({@link previewDissolveSettlement})
+ * so quoted and executed payouts match. Returns 0 for a corp with no
+ * positive-NPV or no built sectors.
  */
 export async function computeDissolutionSectorSalvageAnchor(
   db: Db,

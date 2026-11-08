@@ -55,12 +55,10 @@ export async function findActiveResidentCeoCorporation(
     return corporation;
   }
 
-  // CEO no longer resides at HQ — not eligible for combined relocation.
-  // We do NOT vacate here: this function is called from both GET (preview) and
-  // POST (action) contexts, and mutating on a read causes the relocation dialog
-  // to silently strip CEO status just from page load (bug #0813). Vacating is
-  // the responsibility of the route that is actually performing the move:
-  // performRelocation (character relocate), relocateHeadquarters (corp relocate),
-  // and the admin HQ route all handle this explicitly.
+  // CEO no longer resides at HQ, so not eligible for combined relocation. We do
+  // NOT vacate here: this runs in GET (preview) and POST (action) contexts, and
+  // mutating on a read would strip CEO status on page load. Vacating is handled
+  // by the routes performing the actual move (performRelocation,
+  // relocateHeadquarters, admin HQ route).
   return null;
 }

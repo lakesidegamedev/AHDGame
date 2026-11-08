@@ -38,17 +38,13 @@ export type CountryPeaceNotice =
 /**
  * Load the peace strip's state for one reader.
  *
- * SEAT GATED, unlike the wartime strip beside it, and the asymmetry is deliberate.
- * A war is a fact about the country, so every reader of its pages is told. An offer
- * is a decision in front of one person: showing every citizen a call to action they
- * cannot take turns a prompt into noise. So this returns null for anyone who does
- * not hold the seat.
+ * Seat gated, unlike the wartime strip: a war is a fact about the country,
+ * an offer is a decision for one person. Returns null unless the reader holds
+ * the seat.
  *
- * The seat test is `requirePeaceNegotiator`, the same function the peace routes use,
- * so the strip and the buttons it links to can never disagree about who may act.
- *
- * Returns null and never throws for a logged-out reader: `characterId` is null and
- * there is no seat to check.
+ * Uses `requirePeaceNegotiator`, the same check the peace routes use, so the
+ * strip and its buttons agree on who may act. Returns null for logged-out
+ * readers.
  */
 export async function loadCountryPeaceNotice(
   db: Db,

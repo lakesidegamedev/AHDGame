@@ -173,12 +173,9 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
 
     ops.push({
       updateOne: {
-        // CAS on fundamentalSharePrice: if a writer (e.g. the consolidate
-        // route's reverse/forward split) updated the fundamental between this
-        // pass's read and write, skip the update so we don't clobber the
-        // fresh price with a multiplier derived from the stale fundamental.
-        // See bug #0449 — deterministic clobber was fixed at the consolidate
-        // route; this CAS closes the residual sub-second race window.
+        // CAS on fundamentalSharePrice: if a writer updated the fundamental
+        // between our read and write, skip so we don't clobber the fresh price
+        // with a multiplier derived from the stale fundamental.
         filter: { _id: corp._id, fundamentalSharePrice: fundamentalPrice },
         update: {
           $set: {

@@ -241,14 +241,12 @@ export interface ForceAggregate {
 }
 
 /**
- * Roll a country's units into the force totals the Defense seat and the appropriation
- * sweep both read.
+ * Roll a country's units into the force totals the Defense seat and the
+ * appropriation sweep both read.
  *
- * `tier` is the department-wide readiness setting and reaches ONLY upkeep here. It used to
- * also scale `avgReadiness` in this aggregate, which was the whole of what the setting did
- * (ticket #1140): the multiplier never touched a stored unit, so the player saw an unchanged
- * roster and a 25% larger bill. The tier now moves the readiness baseline units drift toward
- * (`readinessBaselineOf`), so re-scaling it here would count it a second time.
+ * `tier` is the department-wide readiness setting and reaches ONLY upkeep here.
+ * It already moves the readiness baseline units drift toward
+ * (`readinessBaselineOf`), so re-scaling `avgReadiness` here would count it twice.
  */
 export function aggregateForce(
   units: MilitaryUnit[],
@@ -299,21 +297,11 @@ export function aggregateForce(
 export const FORCE_EFFECT = {
   /** publicSafetyConfidence per "normalized power" point (power/POWER_NORM). */
   powerWeight: 0.02,
-  // W1 (2026-07-14): after veterancy+equipment entered effPower, seeded-force totalPower rose
-  // only ~5% (US) / ~9% (CN), shifting publicSafetyConfidence by ~+0.0006 (both ~0.037, mid-band).
-  // POWER_NORM kept at 1500 by decision — vet/equipment now legitimately count as a small buff.
-  //
-  // RE-NORMALISED 1500 -> 2900 when the great powers got authored orders of battle. 1500 was
-  // calibrated against a roster distribution that was largely an artifact: US/UK/DE/JP/IE/CN had
-  // no authored composition and drew 3-5 random units per branch, so the US seeded 767 power
-  // against RU's 3,025. Authoring them roughly quadrupled the US force and doubled China's, and
-  // at 1500 that pinned four countries at MAX_PER_METRIC_MODIFIER_PER_TURN (0.08), where the
-  // metric has no gradient at all and growing or cutting the army does nothing.
-  //
-  // 2900 is the largest-force fit: swept over every country x era, the strongest seeded force
-  // (2023 US, 4,744 power) now lands at 0.0582 and nothing exceeds 0.06. The weak end is
-  // unchanged, because a 4-unit force's contribution is carried by the readiness term either way
-  // (1953 Finland: 0.0163 at 1500, 0.0142 at 2900). Locked by militaryForceEffects.test.ts.
+  // POWER_NORM is fit to the strongest seeded force: across every country x era,
+  // the strongest (2023 US, 4,744 power) lands at 0.0582 and nothing exceeds
+  // 0.06, well under MAX_PER_METRIC_MODIFIER_PER_TURN (0.08), so the metric keeps
+  // gradient. The weak end is carried by the readiness term either way.
+  // Locked by militaryForceEffects.test.ts.
   POWER_NORM: 2900,
   /** publicSafetyConfidence per readiness point above baseline. */
   readinessWeight: 0.0015,

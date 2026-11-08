@@ -1221,9 +1221,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Mixed online and physical retail operations.",
       supply: { retail: 0.5 },
       demand: {
-        // Broad-basket rates sum to 0.735 rather than 1.05. Retail still creates
-        // the widest final-demand sink, but no longer buys more than its entire
-        // nameplate before payroll, occupancy and other operating costs.
+        // Broad-basket rates sum to 0.735, not 1.05: retail still creates the widest final-demand sink but no longer buys more than its entire nameplate before operating costs.
         food: 0.1,
         electronics: 0.06,
         energy: 0.05,
@@ -1400,7 +1398,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       id: "natural_gas_drilling",
       name: "Natural Gas Focus",
       description: "Gas-led drilling. Main output natural gas, with crude oil as a byproduct.",
-      // Suggestion S#422: Oil & Gas always made more oil than gas, so a producer
+      // Oil & Gas always made more oil than gas, so a producer
       // facing a gas shortage and an oil glut had no recipe to lean on. Mirror of
       // oil_gas with the two outputs swapped. Inputs are a share of nameplate
       // revenue, so the base margin matches oil_gas whatever the output mix.

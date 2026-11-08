@@ -1,7 +1,6 @@
-// Domain types for the Military Commands suite. Model mirrors the design mockup
-// (3 command types, 12 postures, 19 strategic regions), typed and data-driven.
-// Backend-spec richness (travel time, operations engine) is intentionally omitted;
-// see docs/superpowers/specs/2026-07-12-military-commands-foundation-design.md.
+// Domain types for the Military Commands suite: 3 command types, 12 postures,
+// 19 strategic regions. Backend-spec richness (travel time, operations engine)
+// is intentionally omitted.
 
 export type CommandType = "HOMELAND_DEFENSE" | "REGIONAL" | "LOGISTICS";
 
@@ -96,9 +95,8 @@ export interface MilitaryCommand {
   type: CommandType;
   commanderIds: string[];
   /**
-   * The general in charge of this Command (characterId). Must be a member of
-   * `commanderIds`; null when the Command has no lead. Formalises what the roster
-   * previously only implied by rendering `commanderIds[0]` as the primary.
+   * CharacterId of the general in charge, or null when the Command has no lead.
+   * Must be a member of `commanderIds`.
    */
   commandingGeneralId: string | null;
   regionIds: string[];

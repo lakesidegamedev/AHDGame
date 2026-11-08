@@ -180,12 +180,9 @@ export function allocateProportionalShareTotals(
       entry.avgCostPerShare = p.avgCostPerShare * basisFactor;
     }
     // Scale supershares proportionally to the share allocation so dual-class
-    // voting power survives splits/reverse splits. The split ratio is n / p.weight
-    // (new shares ÷ old shares for this holder). Floored and capped at n so the
-    // effective invariant `min(superShares, shares)` is never violated. This was
-    // previously missing entirely — the entire shareholders array was $set without
-    // superShares, silently demoting every dual-class founder to one-share-one-vote
-    // after any split (Bug #0832).
+    // voting power survives splits/reverse splits. Ratio is n / p.weight;
+    // floored and capped at n so `min(superShares, shares)` holds. Without
+    // this, $set silently demotes dual-class founders to one-share-one-vote.
     if (p.superShares != null && p.superShares > 0 && p.weight > 0) {
       const scaledSuper = Math.floor((p.superShares * n) / p.weight);
       if (scaledSuper > 0) {
@@ -286,11 +283,10 @@ export function findDroppedShareholders(
 }
 
 /**
- * Defense in depth: verify that a CEO-driven split / reverse split preserved
- * every owner in the input shareholders list. The proportional allocator is
- * designed to emit one output row per positive input holder, so a missing
- * entry means a bug shape was reintroduced (e.g., only considering one holder
- * kind).
+ * Verify that a CEO-driven split or reverse split preserved every owner in the
+ * input shareholders list. The proportional allocator emits one output row per
+ * positive input holder, so a missing entry means a bug (e.g. only one holder
+ * kind considered).
  */
 export function assertShareStructureChangePreservesHolders(
   before: Pick<

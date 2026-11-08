@@ -266,15 +266,11 @@ export function canUnlock(
     return { ok: false, reason: "already-owned", node };
   }
   const isCompletedDecade = getPassedDecadeIds(currentYear).includes(node.decadeId);
-  // A completed decade hands out only its baseline (slots 1–9) on both lanes, so
-  // its specialization tier is closed on both tracks (ticket 1606). Baseline
-  // nodes there are already auto-granted, which is checked above.
+  // Completed decades have only baseline nodes (slots 1-9) on both lanes, so their specialization tier is closed; baseline nodes are auto-granted (checked above).
   if (!isNodeOpenForResearch(node, isCompletedDecade)) {
     return { ok: false, reason: "decade-complete", node };
   }
-  // Completed decades are auto-granted in BOTH lanes at founding (see
-  // autoGrantedNodeIds) and never lane-lock (#0869), so the per-decade commitment
-  // applies only to decades the corp can still research.
+  // Completed decades are auto-granted in both lanes at founding (see autoGrantedNodeIds) and never lane-lock, so the commitment applies only to researchable decades.
   const committed = isCompletedDecade ? undefined : getCommittedLane(corp, node.decadeId);
   if (committed && committed !== node.lane) {
     return { ok: false, reason: "lane-locked", node };
@@ -339,7 +335,7 @@ export function getPassedDecadeIds(currentYear: number): string[] {
  * Whether a node's tier is still open for research. A lane's baseline (slots
  * 1–9) is always open. The specialization tier above it (slots 10–15) belongs to
  * the decade it sits in, so once a decade is completed (`decadeCompleted`, i.e.
- * auto-granted) that tier is closed on BOTH tracks (ticket 1606). The baseline
+ * auto-granted) that tier is closed on BOTH tracks. The baseline
  * grant never covers specializations, so nothing above the baseline is
  * researchable in a completed decade.
  */

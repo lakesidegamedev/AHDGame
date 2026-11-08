@@ -258,7 +258,7 @@ export const TOTAL_UK_COMMONS_SEATS = 650;
  * the `1953-default` preset). Mirrors `ukRegions1953.houseDistricts` exactly
  * (England 506 / Scotland 71 / Wales 36 / Northern Ireland 12 = 625). Without
  * this map, spawn/allocate still used the modern 650-seat `UK_COMMONS_SEATS`
- * and seated 650 MPs against a 625-seat / majority-313 chamber (ticket #1058).
+ * and seated 650 MPs against a 625-seat / majority-313 chamber.
  */
 export const UK_COMMONS_SEATS_1953: Record<string, number> = {
   LON: 91,
@@ -405,11 +405,11 @@ export const TOTAL_CN_NPC_SEATS = 2980;
  *
  * Mirrors `cnRegions1953[i].houseDistricts` EXACTLY (88/129/379/215/118/219/78),
  * which is also what `COUNTRY_CONFIGS.CN.legislature.lowerChamber` declares for
- * this preset and what `CN_NPC_1953` in `historicalSeats.ts` seats (#3781).
+ * this preset and what `CN_NPC_1953` in `historicalSeats.ts` seats.
  * Before this map existed, `ensureCNElections` sized the 1953 race off the
  * modern 2,980 while every other era-aware source said 1,226, so the first CN
  * election in a 1953 world would have resolved ~1,750 phantom deputies into the
- * chamber (#3779 — the same over-seating class as bug #0853).
+ * chamber.
  */
 export const CN_NPC_SEATS_1953: Record<string, number> = {
   DB: 88,
@@ -479,25 +479,22 @@ export function getCnPeoplesCongressSeats(preset: string | undefined): Record<st
 }
 
 /**
- * Total seats in a region's sub-national legislature — the elected chamber whose
+ * Total seats in a region's sub-national legislature: the elected chamber whose
  * composition the region legislature page renders, whose vacancies the seat
  * appointer validates against, and whose size sets state-bill majorities.
  *
  * For China this is the Provincial People's Congress
  * (`getCnPeoplesCongressSeats(preset)`), NOT the State's `stateSenateSeats`
- * field — for CN in the modern eras that field holds the separate, appointed
- * CPPCC allocation (~half the size). Every other country's sub-national chamber
- * (US State Senate, DE Landtag, …) is sized by `stateSenateSeats`.
+ * field, which for CN holds the separate, appointed CPPCC allocation (~half
+ * the size). Every other country's sub-national chamber is sized by
+ * `stateSenateSeats`.
  *
- * This is the single source of truth shared by the seat appointer, the public
- * legislature API, and state-bill vote math, so they can never disagree with the
- * election system — which sizes CN People's Congress races from the same
- * selector. Sizing the People's Congress off `stateSenateSeats` was bug #0853: a
- * region's parties summed to more seats (e.g. 317) than the displayed cap (175).
+ * Single source of truth shared by the seat appointer, public legislature API,
+ * and state-bill vote math, so they cannot disagree with the election system,
+ * which sizes CN People's Congress races from the same selector.
  *
- * `preset` is optional only so non-CN callers (every country but China) need not
- * plumb it; ALWAYS pass it when the country can be CN, or a 1953 world reads the
- * modern chamber size.
+ * `preset` is optional only so non-CN callers need not plumb it; ALWAYS pass
+ * it when the country can be CN, or a 1953 world reads the modern chamber size.
  */
 export function subNationalChamberSeats(
   countryId: string,
@@ -627,17 +624,15 @@ export const ELECTORAL_MAJORITY = 270;
  * One electoral-vote unit: a whole state, or one leg of a ME/NE split.
  *
  * `electorateShare` is the fraction of the parent state's electorate this unit
- * draws. It exists because every unit used to resolve its pool from
- * `unit.stateId` and therefore draw the WHOLE state (#1464) — so ME contributed
- * about 3x and NE about 4x to the national popular vote once the district split
- * activated.
+ * draws. Without it every unit resolves its pool from the whole state, so ME
+ * and NE districts double count against the state.
  *
- * The real rule is two at-large electors decided by the statewide total and one
- * per district. Scaling the districts alone would still double count against
- * the at-large unit, so the at-large leg carries `derivesFromDistricts` instead:
- * it is not simulated, and its tally is summed from its districts at
- * resolution. Districts partition the state exactly, so each ballot is counted
- * once and the statewide winner is the one who carried the state.
+ * The real rule is two at-large electors decided by the statewide total and
+ * one per district. Scaling districts alone would still double count against
+ * the at-large unit, so the at-large leg carries `derivesFromDistricts`: it is
+ * not simulated, and its tally is summed from its districts at resolution.
+ * Districts partition the state exactly, so each ballot is counted once and the
+ * statewide winner is the one who carried the state.
  */
 export interface ElectoralVoteUnit {
   unitId: string;

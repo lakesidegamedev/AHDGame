@@ -34,11 +34,10 @@ const FLOAT_MARKER = "__float__";
 
 /**
  * Distribute a cross-held equity block IN-KIND, pro-rata to the dissolving
- * corp's cap table, instead of cashing it out at market price (the money-mint
- * the dissolution route used to do). Uses the largest-remainder (Hamilton)
- * method so allocations are integers that sum EXACTLY to `blockShares` — no
- * shares are minted or burned. The dissolving corp's own public-float fraction
- * returns to the issuer's public float.
+ * corp's cap table, instead of cashing it out at market price (which mints
+ * money). Largest-remainder (Hamilton) method so allocations are integers
+ * summing EXACTLY to `blockShares`; no shares minted or burned. The dissolving
+ * corp's public-float fraction returns to the issuer's public float.
  */
 export function computeInKindEquityDistribution(
   input: InKindDistributionInput
