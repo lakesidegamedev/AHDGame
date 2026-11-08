@@ -12,13 +12,6 @@ vi.mock("@/lib/api/rateLimit", () => ({
 vi.mock("@/lib/partyWhips/playerWhip", () => ({
   getEligibleCharactersForWhip: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("@/lib/congress/applyPlayerWhip", () => ({
-  applyPlayerWhipToBill: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToLeadership: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToGovernmentVote: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToCabinet: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToVacateMotion: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-}));
 vi.mock("@/lib/congress/applyWhipVotes", () => ({
   applyWhipVotesToBill: vi.fn().mockResolvedValue({ fellInLine: 0, ignored: 0 }),
   applyWhipVotesToLeadership: vi.fn().mockResolvedValue({ fellInLine: 0, ignored: 0 }),
@@ -52,7 +45,7 @@ function makeRequest(body: Record<string, unknown>) {
   return new Request("http://localhost/api/country/us/parties/1/whip", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ mode: body.audience === "character" ? "soft" : "hard", ...body }),
   });
 }
 
@@ -142,14 +135,6 @@ describe("POST /api/country/[code]/parties/[id]/whip", () => {
         audience: "character",
       })
     );
-
-    const { applyPlayerWhipToLeadership } = await import("@/lib/congress/applyPlayerWhip");
-    expect(applyPlayerWhipToLeadership).toHaveBeenCalledWith(
-      db,
-      expect.any(ObjectId),
-      "speakerNominations",
-      []
-    );
   });
 
   it("validates U.S. Senate leadership whips against the senate leadership collection", async () => {
@@ -182,14 +167,6 @@ describe("POST /api/country/[code]/parties/[id]/whip", () => {
         chamber: "senate",
         audience: "character",
       })
-    );
-
-    const { applyPlayerWhipToLeadership } = await import("@/lib/congress/applyPlayerWhip");
-    expect(applyPlayerWhipToLeadership).toHaveBeenCalledWith(
-      db,
-      expect.any(ObjectId),
-      "senateLeadershipNominations",
-      []
     );
   });
 
@@ -242,11 +219,10 @@ describe("POST /api/country/[code]/parties/[id]/whip", () => {
       })
     );
 
-    const { applyPlayerWhipToBill } = await import("@/lib/congress/applyPlayerWhip");
     const { sendSystemMails } = await import("@/lib/mail/systemMail");
     const { createNotifications } = await import("@/lib/notifications");
 
-    expect(applyPlayerWhipToBill).not.toHaveBeenCalled();
+    expect(db.collectionMocks["bills"]!.updateOne).not.toHaveBeenCalled();
     expect(sendSystemMails).not.toHaveBeenCalled();
     expect(createNotifications).toHaveBeenCalledWith([
       expect.objectContaining({
@@ -256,7 +232,7 @@ describe("POST /api/country/[code]/parties/[id]/whip", () => {
     ]);
   });
 
-  it("allows a hard player whip after a soft player whip already exists on the target", async () => {
+  it("rejects a hard player bill whip even after an advisory whip", async () => {
     const billId = new ObjectId();
 
     db.collection("bills");
@@ -299,14 +275,9 @@ describe("POST /api/country/[code]/parties/[id]/whip", () => {
       }
     );
 
-    expect(response.status).toBe(200);
-    expect(db.collectionMocks["billWhips"]!.insertOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        audience: "character",
-        mode: "hard",
-        targetType: "bill",
-      })
-    );
+    expect(response.status).toBe(400);
+    expect(db.collectionMocks["billWhips"]!.insertOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["bills"]!.updateOne).not.toHaveBeenCalled();
   });
 
   it("rejects duplicate player whips of the same mode on the same target", async () => {

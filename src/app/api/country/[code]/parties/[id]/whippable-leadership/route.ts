@@ -344,7 +344,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       };
       const playerSummary: PlayerWhipSummary = {
         existingWhips: summarizePlayerWhips(char, party),
-        canWhip: char.length < 1,
+        canWhip: !char.some((whip) => whip.mode === "soft"),
       };
       return { nppSummary, playerSummary };
     };

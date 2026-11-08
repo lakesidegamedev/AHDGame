@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -48,6 +49,7 @@ export function BillWhipPanel({
   onWhipIssued,
 }: BillWhipPanelProps) {
   const { showToast } = useToast();
+  const t = useTranslations("parties.whips");
   const [audience, setAudience] = useState<WhipAudience>("character");
   const [whippingId, setWhippingId] = useState<string | null>(null);
 
@@ -67,6 +69,7 @@ export function BillWhipPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           audience: targetAudience,
+          mode: targetAudience === "character" ? "soft" : "hard",
           targetType: "bill",
           targetId: billId,
           chamber: chamberKey,
@@ -100,9 +103,7 @@ export function BillWhipPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">Whip panel</h3>
-          <p className="text-xs text-muted">
-            Issue party whips for this bill here or from the party page. Both stay in sync.
-          </p>
+          <p className="text-xs text-muted">{t("billPlayerWhipExplanation")}</p>
         </div>
         <Link
           href={partyUrl(countryId, whipPanel.party.id)}

@@ -12,14 +12,6 @@ vi.mock("@/lib/api/rateLimit", () => ({
 vi.mock("@/lib/partyWhips/playerWhip", () => ({
   getEligibleCharactersForWhip: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("@/lib/congress/applyPlayerWhip", () => ({
-  applyPlayerWhipToBill: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToLeadership: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToGovernmentVote: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToCabinet: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToVacateMotion: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToImpeachment: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-}));
 vi.mock("@/lib/congress/applyWhipVotes", () => ({
   applyWhipVotesToBill: vi.fn().mockResolvedValue({ fellInLine: 0, ignored: 0 }),
   applyWhipVotesToLeadership: vi.fn().mockResolvedValue({ fellInLine: 0, ignored: 0 }),

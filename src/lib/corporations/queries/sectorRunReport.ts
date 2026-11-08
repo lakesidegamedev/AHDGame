@@ -112,6 +112,7 @@ export function buildRunReport(
         ...((stages?.producerRunPlanStage ?? 0) >= 2
           ? { stockCoverTurns: Math.max(1, stages?.producerStockCover ?? 1) }
           : {}),
+        ...((stages?.producerRunPlanStage ?? 0) >= 3 ? { lossCutBelowSales: true } : {}),
       })
     : demandPlan
       ? demandPlanRunShare(read, floor)
