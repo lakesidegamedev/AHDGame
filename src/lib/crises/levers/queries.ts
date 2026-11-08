@@ -1,10 +1,10 @@
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Db, ObjectId } from "mongodb";
 import type { ActiveCrisisStage, CrisisRole, LeverCost } from "@/lib/crises/v2/types";
 import { AID_DEFAULT_PCT_GDP, AID_MAX_PCT_GDP } from "@/lib/constants/crises";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { Crisis, CrisisInteraction, CrisisLeverUse } from "@/lib/db/types/crisis";
 import { getGameState } from "@/lib/gameState";
 import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
@@ -106,7 +106,7 @@ async function loadAidRanges(
         }
       )
       .toArray(),
-    db.collection<FederalBudget>("federalBudget").findOne({ countryId }),
+    getFederalBudgetCollection(db).then((budgets) => budgets.findOne({ countryId })),
   ]);
   const senderGdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
