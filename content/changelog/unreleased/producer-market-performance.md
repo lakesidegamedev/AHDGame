@@ -13,3 +13,8 @@ areas: [engine]
 - Shared route and supplier lists are compacted in immutable market receipts. Existing receipts remain readable.
 - Fair allocations reuse route eligibility and supplier cohorts without changing priority, budgets or blocked trade routes.
 - A separate pre-settlement execution deadline is checked inside clearing and receipt preparation, so a slow market stops before committing its settlement rather than running past the corporation phase timeout.
+
+- Market preparation shares one supplier-route index across producers and final buyers, retaining domestic access and embargo restrictions.
+- Receipt encoding batches plain supplier IDs and deadline checks. Staging verifies freshly encoded chunks against their exact stored bytes; existing encodings still receive full checksum verification.
+- Receipt chunk reads use larger bounded batches without changing compression, chunk identities or recovery compatibility.
+- The corporation phase has a fixed six-minute timeout. The market pre-settlement deadline leaves 90 seconds for settlement and other corporation work.

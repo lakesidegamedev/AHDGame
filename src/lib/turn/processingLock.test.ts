@@ -5,6 +5,8 @@ import {
   getProcessingLockState,
   turnHasCommittedWrites,
   TURN_BOOTSTRAP_PHASE,
+  phaseTimeoutMs,
+  PHASE_TIMEOUT_MS,
 } from "./processingLock";
 
 const NOW = new Date("2026-07-07T12:00:00.000Z");
@@ -24,6 +26,14 @@ function snap(overrides: Partial<CrashRecoverySnapshot>): CrashRecoverySnapshot 
     ...overrides,
   };
 }
+
+describe("phase timeout limits", () => {
+  it("gives corporation processing six minutes and preserves other phase limits", () => {
+    expect(phaseTimeoutMs("corporationTurn")).toBe(360_000);
+    expect(phaseTimeoutMs("fundGeneration")).toBe(PHASE_TIMEOUT_MS);
+    expect(phaseTimeoutMs("lineOfCreditTurn")).toBe(PHASE_TIMEOUT_MS);
+  });
+});
 
 describe("shouldRecoverCrashedTurn (#2815)", () => {
   it("recovers a stale turn that crashed mid-phase (past bootstrap)", () => {

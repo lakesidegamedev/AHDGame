@@ -3,7 +3,7 @@ import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rul
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
-import type { CommodityType } from "@/lib/constants/commodities";
+import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import {
   prepareProducerPhysicalSector,
@@ -58,6 +58,21 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("reuses era prices without changing regional prices or country-specific plans", () => {
+    for (const countryId of ["US", "UK", "JP"] as const) {
+      const { input, env } = fixture();
+      input.corporation.countryId = countryId;
+      input.sector.countryId = countryId;
+      env.lookups.eraUnitScale = 3;
+      env.lookups.priceRatioByCommodity.set("electricity", 1.8);
+      const baseline = prepareProducerPhysicalSector(input).prepared.plan;
+      const basePrices = Object.freeze(eraScaledBasePrices(env.lookups.eraUnitScale));
+      expect(prepareProducerPhysicalSector({ ...input, basePrices }).prepared.plan).toEqual(
+        baseline
+      );
+    }
+  });
+
   it("applies clearing headroom only to buying limits, across countries", () => {
     for (const countryId of ["US", "UK", "JP"] as const) {
       const { input, env } = fixture();
