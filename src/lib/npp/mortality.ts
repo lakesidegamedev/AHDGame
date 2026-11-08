@@ -22,6 +22,7 @@ import { closeCeoTenure, openCeoTenure } from "@/lib/corporations/ceoHistory";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { generateNPP } from "@/lib/npp/generator";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
+import { getElectedOfficialsCollection } from "@/lib/db/collections";
 import { createSystemNewsPost } from "@/lib/news";
 import {
   backfillBirthYear,
@@ -84,8 +85,9 @@ async function loadLeaderTerms(db: Db, now: Date): Promise<Map<string, number | 
   const result = new Map<string, number | null>();
   if (leaderIds.size === 0) return result;
   for (const key of leaderIds.keys()) result.set(key, null);
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find(
       { nppId: { $in: [...leaderIds.values()] }, termEnds: { $exists: true } },
       { projection: { nppId: 1, termEnds: 1 } }
