@@ -22,10 +22,6 @@ export interface GroupResult {
   categoryWeight: number;
   /** When in an active general election: estimated share of this group (0–100%) */
   estimatedSharePct?: number;
-  /** Per-archetype approval modifier (stored when computed) */
-  archetypeApproval?: number;
-  /** Effective favorability after archetype adjustment */
-  effectiveFavorability?: number;
 }
 
 export interface CategoryResult {
