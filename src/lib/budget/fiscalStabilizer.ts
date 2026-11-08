@@ -102,7 +102,7 @@ export async function loadRulingEconomicPositions(
 }
 
 function taxLinesFor(budget: FederalBudget, revenue: FederalRevenue): StabilizerTaxLine[] {
-  const rates = (budget.taxRates ?? {}) as unknown as Record<string, number | undefined>;
+  const rates = { ...budget.taxRates };
   const pending = (budget.taxRatePhaseIn ?? {}) as Record<string, number | undefined>;
   return TAX_LINE_KEYS.map(({ revenue: revenueKey, rates: keys }) => ({
     revenue: Number(revenue[revenueKey]) || 0,

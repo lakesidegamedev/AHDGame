@@ -204,7 +204,7 @@ export function mergeCorporationCashOps<Op extends object>(operations: readonly 
   const guardedById = new Map<string, Update[]>();
   const unbatchable = new Set<string>();
   for (let index = 0; index < operations.length; index++) {
-    const op = operations[index] as unknown as AnyOp;
+    const op = operations[index] as AnyOp;
     const id = updatedId(op);
     if (id === null) continue;
     const key = String(id);
@@ -232,15 +232,14 @@ export function mergeCorporationCashOps<Op extends object>(operations: readonly 
   for (const [key, indexes] of candidates) {
     if (indexes.length < 2 || unbatchable.has(key)) continue;
     const state = emptyState();
-    for (const index of indexes)
-      applyToState(state, mergeableUpdate(operations[index] as unknown as AnyOp)!);
+    for (const index of indexes) applyToState(state, mergeableUpdate(operations[index] as AnyOp)!);
     const merged = stateToUpdate(state);
     if (Object.keys(merged).length === 0) continue;
     if (hasInternalConflict(merged)) continue;
     if (conflictsWithGuarded(merged, guardedById.get(key) ?? [])) continue;
 
     const first = operations[indexes[0]];
-    const firstUpdate = (first as unknown as { updateOne: Record<string, unknown> }).updateOne;
+    const firstUpdate = (first as { updateOne: Record<string, unknown> }).updateOne;
     replaced.set(indexes[0], { updateOne: { ...firstUpdate, update: merged } } as unknown as AnyOp);
     for (const index of indexes.slice(1)) dropped.add(index);
   }

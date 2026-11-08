@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation, Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db, UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { GameState, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import {
@@ -79,12 +79,7 @@ export async function processPartyTierTurn(
     m.set(r.stateId, r.organization ?? 0);
   }
 
-  const ops: Array<{
-    updateOne: {
-      filter: { _id: PoliticalParty["_id"] };
-      update: { $set?: Record<string, unknown>; $unset?: Record<string, unknown> };
-    };
-  }> = [];
+  const ops: AnyBulkWriteOperation<PoliticalParty>[] = [];
 
   for (const party of parties) {
     result.partiesScanned++;
@@ -160,7 +155,9 @@ export async function processPartyTierTurn(
       $set: set,
     };
     if (Object.keys(unset).length > 0) update.$unset = unset;
-    ops.push({ updateOne: { filter: { _id: party._id }, update } });
+    ops.push({
+      updateOne: { filter: { _id: party._id }, update: update as UpdateFilter<PoliticalParty> },
+    });
     result.partiesUpdated++;
     if (transition.reason === "graduated") result.promoted++;
     if (transition.reason === "demoted") result.demoted++;
@@ -169,9 +166,7 @@ export async function processPartyTierTurn(
   }
 
   if (ops.length > 0) {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .bulkWrite(ops as unknown as AnyBulkWriteOperation<PoliticalParty>[]);
+    await db.collection<PoliticalParty>("politicalParties").bulkWrite(ops);
   }
   return result;
 }

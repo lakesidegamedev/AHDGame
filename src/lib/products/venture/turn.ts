@@ -133,9 +133,9 @@ export async function processProductVentures(
 
   const developing = live.filter((venture) => venture.stage === "development");
   const fresh = developing.length
-    ? ((await args.db
+    ? await args.db
         .collection<Corporation>("corporations")
-        .find(
+        .find<FreshCorp>(
           {
             _id: {
               $in: [...new Set(developing.map((v) => v.corporationId))].map(
@@ -152,7 +152,7 @@ export async function processProductVentures(
             },
           }
         )
-        .toArray()) as unknown as FreshCorp[])
+        .toArray()
     : [];
   const freshById = new Map(fresh.map((row) => [row._id.toString(), row]));
 

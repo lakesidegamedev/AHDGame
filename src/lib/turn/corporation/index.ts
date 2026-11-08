@@ -467,9 +467,12 @@ export async function processCorporationTurn(
     const laggedQ = new Map<CommodityType, number>();
     const qDocs = await db
       .collection("commodityQuality")
-      .find({}, { projection: { commodity: 1, quality: 1 } })
+      .find<{ commodity: CommodityType; quality: number }>(
+        {},
+        { projection: { commodity: 1, quality: 1 } }
+      )
       .toArray();
-    for (const d of qDocs as unknown as { commodity: CommodityType; quality: number }[]) {
+    for (const d of qDocs) {
       if (typeof d.quality === "number") laggedQ.set(d.commodity, d.quality);
     }
     const qCorps: import("./brandQualityTurn").QualityCorpInput[] = [];
