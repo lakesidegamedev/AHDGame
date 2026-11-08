@@ -176,6 +176,26 @@ async function loadHolders(
   return loaded;
 }
 
+/**
+ * Claims a crisis's step for this turn before any effect is routed, so a retry
+ * after a failed state write cannot apply the same effects twice. Losing the
+ * claim means another run already stepped it.
+ */
+async function claimTurn(db: Db, crisisId: ObjectId, turn: number): Promise<boolean> {
+  const claimed = await db.collection<Crisis>("crises").updateOne(
+    {
+      _id: crisisId,
+      status: "active",
+      $or: [
+        { "v2.lastEvaluatedTurn": { $exists: false } },
+        { "v2.lastEvaluatedTurn": { $lt: turn } },
+      ],
+    },
+    { $set: { "v2.lastEvaluatedTurn": turn } }
+  );
+  return claimed.matchedCount > 0;
+}
+
 function toCrisisScope(scope: CrisisScope): Crisis["scope"] {
   if (scope === "global") return "global";
   if (scope === "national") return "country";
@@ -282,7 +302,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   const missingDefinitions = new Set<string>();
   for (const crisis of crises) {
     const def = getCrisisDefinition(crisis.v2.definitionId);
-    const lastSample = crisis.v2.severityHistory.at(-1)?.turn ?? -Infinity;
+    const lastSample = Math.max(
+      crisis.v2.severityHistory.at(-1)?.turn ?? -Infinity,
+      crisis.v2.lastEvaluatedTurn ?? -Infinity
+    );
     if (!def) {
       missingDefinitions.add(crisis.v2.definitionId);
     } else if (lastSample < turn) {
@@ -333,6 +356,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
     for (const { crisis, def } of runnable) {
       try {
+        if (!(await claimTurn(db, crisis._id, turn))) continue;
         const crisisCountries = crisisCountryIds(crisis, world);
         const driverInputs: Record<string, number> = {};
         for (const driver of def.severity.drivers) {
@@ -358,6 +382,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         next = recordInaction(next, def, mergeHolders(holderMaps, crisisCountries), turn);
         next = applySeverityStep(next, step, turn);
         next = applyTransition(next, nextStage(next, def, step.after, turn), turn);
+        next = { ...next, lastEvaluatedTurn: turn };
 
         const evaluation = evaluateEffectModules(def.effectModules, effectRegistry, {
           instance: next,
