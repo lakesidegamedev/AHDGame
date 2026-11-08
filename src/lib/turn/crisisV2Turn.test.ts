@@ -233,10 +233,11 @@ describe("turn claim", () => {
     const data = baseData();
     data.crises = [liveCrisis()];
     const { db, calls } = makeDb(data);
-    calls.claim.mockImplementation(async () => {
-      order.push("claim");
+    calls.claim.mockImplementation((async (_filter: unknown, update: { $set?: object }) => {
+      // delivery progress also writes through updateOne; only the claim counts here
+      if (update.$set && "v2.lastEvaluatedTurn" in update.$set) order.push("claim");
       return { matchedCount: 1 };
-    });
+    }) as never);
     await processCrisisV2Turn(db, 10);
     expect(order).toEqual(["claim", "effects"]);
     expect(calls.claim).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }), {

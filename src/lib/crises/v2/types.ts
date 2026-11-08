@@ -255,6 +255,16 @@ export interface SpilloverRef {
   linkId: string;
 }
 
+/** World effects decided on the instance but not yet confirmed written. */
+export interface PendingDelivery {
+  /** Aftermath approval and vote consequences still owed. */
+  consequences?: boolean;
+  /** Forced-event threshold ids whose world effect is still owed. */
+  forced?: string[];
+  /** Keys of individual writes already made, so a retry skips them. */
+  applied?: string[];
+}
+
 /**
  * The live state of a v2 crisis. Stored on the crisis document under `v2`, so
  * documents written before v2 stay valid with the field absent.
@@ -290,6 +300,8 @@ export interface CrisisInstance {
   scarClaim?: string;
   /** Set once the accountability ledger has been turned into approval and votes. */
   consequencesSettled?: boolean;
+  /** Present until the world writes behind this instance have all landed. */
+  pendingDelivery?: PendingDelivery;
 }
 
 /** Optional v2 state carried on a stored crisis. */

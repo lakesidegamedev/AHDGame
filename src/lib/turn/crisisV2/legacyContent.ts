@@ -14,7 +14,6 @@ import {
   registerCrisisEffectModule,
 } from "./registry";
 
-let registered = false;
 let keysByTemplate: Map<object, string> | null = null;
 
 const AD_HOC_TEMPLATE = {
@@ -34,7 +33,7 @@ function defaultDuration(template: CrisisTemplate): number | null {
  * (campaign events). Idempotent.
  */
 export function ensureLegacyCrisisContent(): void {
-  if (registered) return;
+  if (getCrisisDefinition(legacyDefinitionId(AD_HOC_TEMPLATE_KEY))) return;
   registerCrisisEffectModule(legacyStoredEffectsModule);
   for (const [key, template] of Object.entries(ALL_CRISIS_TEMPLATES) as [
     string,
@@ -51,7 +50,6 @@ export function ensureLegacyCrisisContent(): void {
       durationTurns: null,
     })
   );
-  registered = true;
 }
 
 /** The definition a crisis created from this template key runs on. */
@@ -83,7 +81,5 @@ export function legacyDefinitionForTemplate(
   return legacyDefinitionFor(keyByTemplate.get(template));
 }
 
-/** Test seam: forces the next ensure call to register again. */
-export function resetLegacyCrisisContentForTests(): void {
-  registered = false;
-}
+/** Test seam; kept for callers, since ensure now follows the registry itself. */
+export function resetLegacyCrisisContentForTests(): void {}

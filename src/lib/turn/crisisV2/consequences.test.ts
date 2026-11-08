@@ -163,4 +163,34 @@ describe("settleCrisisConsequences", () => {
     expect(ops).toHaveLength(1);
     expect(ops[0].updateOne.update.$setOnInsert.pct).toBe(-MAX_PARTY_ELECTION_PCT);
   });
+
+  it("skips an approval write whose receipt is already recorded", async () => {
+    const president = new ObjectId();
+    const { db, approvalUpdates } = makeDb([{ _id: president, countryId: "US", party: "red" }]);
+    const marked: string[] = [];
+    const result = await settleCrisisConsequences(
+      db,
+      { ledger: idle(president.toString(), "headOfState") },
+      targets(),
+      40,
+      { done: new Set(["national:US"]), mark: (key) => void marked.push(key) }
+    );
+    expect(approvalUpdates).toHaveLength(0);
+    expect(marked).toEqual([]);
+    expect(result.approvalWrites).toBe(0);
+  });
+
+  it("records a receipt for each approval it writes", async () => {
+    const president = new ObjectId();
+    const { db } = makeDb([{ _id: president, countryId: "US", party: "red" }]);
+    const marked: string[] = [];
+    await settleCrisisConsequences(
+      db,
+      { ledger: idle(president.toString(), "headOfState") },
+      targets(),
+      40,
+      { done: new Set(), mark: (key) => void marked.push(key) }
+    );
+    expect(marked).toEqual(["national:US"]);
+  });
 });

@@ -94,11 +94,15 @@ const HEADLINES: Partial<Record<ForcedEventKind, (label: string) => string>> = {
 export async function runForcedEvents(
   db: Db,
   fired: readonly ForcedEventThreshold[],
-  scope: ForcedEventScope
+  scope: ForcedEventScope,
+  onDone?: (threshold: ForcedEventThreshold) => void
 ): Promise<number> {
   let done = 0;
   for (const threshold of fired) {
-    if (!WORLD_EVENTS.has(threshold.event)) continue;
+    if (!WORLD_EVENTS.has(threshold.event)) {
+      onDone?.(threshold);
+      continue;
+    }
     try {
       switch (threshold.event) {
         case "strike":
@@ -118,6 +122,7 @@ export async function runForcedEvents(
         await logWireEvent("crisis_outcome", headline, { href: `/world/crises/${scope.crisisId}` });
       }
       done += 1;
+      onDone?.(threshold);
     } catch (error) {
       logger.error(COMPONENT, "forced event failed", error, {
         crisisId: scope.crisisId,

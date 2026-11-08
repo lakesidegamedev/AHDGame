@@ -15,7 +15,7 @@ import {
   fail,
   type LeverResult,
 } from "./leverCommand";
-import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
+import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 
 const COMPONENT = "crisisEmergencyBill";
 
@@ -91,7 +91,7 @@ function inactionRow(crisis: LiveCrisis, bill: Bill, turn: number): Accountabili
 
 async function recordPassedBill(db: Db, bill: Bill, crisis: LiveCrisis, turn: number) {
   const marker = bill.crisisEmergency;
-  const lever = getCrisisDefinition(crisis.v2.definitionId)?.levers.find(
+  const lever = resolveCrisisDefinition(crisis.v2.definitionId)?.levers.find(
     (candidate) => candidate.id === marker?.leverId
   );
   if (!marker || !lever || crisis.v2.stage === "resolved") return;

@@ -57,8 +57,7 @@ import { EMERGENCY_APPROVAL_DRIFT, stepForcedEvents } from "@/lib/crises/v2/forc
 import { layScars, scarHorizon, scarTargets } from "@/lib/crises/v2/scars";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { ensureBuiltinCrisisV2Content } from "./crisisV2/builtins";
-import { settleCrisisConsequences } from "./crisisV2/consequences";
-import { runForcedEvents } from "./crisisV2/forcedEventsShell";
+import { deliverPending, owedDelivery, type DeliveryTarget } from "./crisisV2/pendingDelivery";
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { processCrisisScars } from "./crisisV2/scarsShell";
 import { routeEffectIntents } from "./crisisV2/intents";
@@ -410,6 +409,53 @@ async function finalizeScripted(
   }
 }
 
+function deliveryTarget(
+  crisis: LiveCrisis,
+  def: CrisisDefinition,
+  stateIds: readonly string[],
+  countryIds: readonly string[]
+): DeliveryTarget {
+  return {
+    crisisId: crisis._id,
+    regionIds: crisis.regionIds,
+    scope: crisis.v2.scope,
+    stateIds,
+    countryIds,
+    label: def.label,
+    def,
+  };
+}
+
+/**
+ * Finishes the world writes of crises that closed before all of them landed.
+ * Active crises retry inside their own step; a closed one is no longer stepped.
+ */
+async function retryClosedDeliveries(db: Db, turn: number): Promise<void> {
+  try {
+    const closed = (await db
+      .collection<Crisis>("crises")
+      .find(
+        { status: "resolved", "v2.pendingDelivery": { $exists: true } },
+        { projection: LIVE_PROJECTION }
+      )
+      .toArray()) as LiveCrisis[];
+    if (closed.length === 0) return;
+    const world = await loadWorld(db);
+    for (const crisis of closed) {
+      const def = getCrisisDefinition(crisis.v2.definitionId);
+      if (!def) continue;
+      await deliverPending(
+        db,
+        crisis.v2,
+        deliveryTarget(crisis, def, crisisStateIds(crisis, world), crisisCountryIds(crisis, world)),
+        turn
+      );
+    }
+  } catch (error) {
+    logger.error(COMPONENT, "retrying closed crisis deliveries failed; retried next turn", error);
+  }
+}
+
 /**
  * Runs every active Crisis v2 instance one turn: fills driver inputs from the
  * sim, applies the lever uses recorded for it, steps severity and stage, routes
@@ -421,6 +467,9 @@ async function finalizeScripted(
  */
 export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV2TurnResult> {
   ensureBuiltinCrisisV2Content();
+  ensureLegacyCrisisContent();
+  ensureCampaignCrisisContent();
+  await retryClosedDeliveries(db, turn);
   const loadLive = async () =>
     (await db
       .collection<Crisis>("crises")
@@ -438,8 +487,6 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
-  ensureLegacyCrisisContent();
-  ensureCampaignCrisisContent();
   ensureBuiltinCrisisHolderProviders();
   if (crises.length > 0) await runNppCrisisResponse(db, turn);
   const world: World =
@@ -577,7 +624,17 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         }
         const settling =
           !next.consequencesSettled && (next.stage === "aftermath" || next.stage === "resolved");
-        if (settling) next = { ...next, consequencesSettled: true };
+        if (settling || forced.fired.length > 0) {
+          const owed = owedDelivery(next.pendingDelivery, {
+            consequences: settling,
+            forced: forced.fired,
+          });
+          next = {
+            ...next,
+            ...(settling ? { consequencesSettled: true } : {}),
+            ...(owed ? { pendingDelivery: owed } : {}),
+          };
+        }
 
         const refs = scripted
           ? def.effectModules.filter((ref) => ref.moduleId !== LEGACY_STORED_EFFECTS_MODULE_ID)
@@ -650,27 +707,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
           },
         });
         for (const row of rows) consumedUseIds.push(row._id);
-        if (settling) {
-          afterWrite.push(async () => {
-            await settleCrisisConsequences(
-              db,
-              next,
-              { crisisId: crisis._id, scope: next.scope, regionIds: crisis.regionIds },
-              turn
-            );
-          });
-        }
-        if (forced.fired.length > 0) {
-          afterWrite.push(async () => {
-            await runForcedEvents(db, forced.fired, {
-              crisisId: crisis._id.toString(),
-              label: def.label,
-              stateIds,
-              countryIds: crisisCountries,
-              turn,
-              def,
-            });
-          });
+        if (next.pendingDelivery) {
+          const target = deliveryTarget(crisis, def, stateIds, crisisCountries);
+          const instance = next;
+          afterWrite.push(() => deliverPending(db, instance, target, turn));
         }
         if (resolving) {
           if (scripted) scriptedResolved.push(crisis._id);

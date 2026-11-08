@@ -19,9 +19,9 @@ import {
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { getGameState } from "@/lib/gameState";
 import { logger } from "@/lib/observability/logger";
-import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
+import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { leverBlock } from "./availability";
-import { crisisCountryIds, governsAffectedState } from "./jurisdiction";
+import { crisisCountryIds, governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles, type LeverActor } from "./roles";
 
 const COMPONENT = "crisisLeverCommand";
@@ -359,7 +359,7 @@ export async function checkLeverEligibility(
   input: Pick<PullLeverInput, "crisisId" | "leverId" | "characterId">
 ): Promise<LeverResult<{ context: LeverContext }>> {
   const crisis = await loadLiveCrisis(db, input.crisisId);
-  const def = crisis ? getCrisisDefinition(crisis.v2.definitionId) : undefined;
+  const def = crisis ? resolveCrisisDefinition(crisis.v2.definitionId) : undefined;
   const lever = def?.levers.find((candidate) => candidate.id === input.leverId);
   if (!crisis || !def || !lever) return fail("not_found", "No such response on this crisis");
 
@@ -388,13 +388,7 @@ export async function checkLeverEligibility(
   const roles = await resolveLeverRoles(db, actor, countryIds);
   if (!roles.has(lever.role))
     return fail("wrong_role", "You do not hold the office for this response");
-  const pooled = lever.legacy !== undefined && lever.legacy.kind !== "option";
-  if (
-    countryIds &&
-    !pooled &&
-    lever.role !== "corpCeo" &&
-    (!actor.countryId || !countryIds.includes(actor.countryId))
-  ) {
+  if (!leverInActorJurisdiction(lever, countryIds, actor.countryId)) {
     return fail("out_of_jurisdiction", "This crisis is outside your jurisdiction");
   }
   if (lever.role === "stateGovernor" && !governsAffectedState(actor, crisis)) {
