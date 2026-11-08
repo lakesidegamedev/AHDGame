@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -232,7 +233,7 @@ describe("GET /api/admin/health/warnings", () => {
     );
   });
 
-  // Phase-budget pressure. runPhase reports failure at PHASE_TIMEOUT_MS (240s)
+  // Phase-budget pressure. runPhase reports failure at the phase-specific timeout
   // and drains the callback before the turn continues, so a phase creeping
   // toward that threshold remains an outage risk with lead time.
   describe("phaseBudget warnings", () => {
@@ -266,7 +267,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("flags a phase past 75% of the timeout as an error", async () => {
-      seedTurnLog({ corporationTurn: ranFor(500_000) }); // 83% of 600s
+      seedTurnLog({ corporationTurn: ranFor(phaseTimeoutMs("corporationTurn") * 0.83) });
 
       const { GET } = await import("./route");
       const res = await GET(
@@ -285,7 +286,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("flags a phase between 50% and 75% as a warning", async () => {
-      seedTurnLog({ corporationTurn: ranFor(330_000) }); // 55% of 600s
+      seedTurnLog({ corporationTurn: ranFor(phaseTimeoutMs("corporationTurn") * 0.55) });
 
       const { GET } = await import("./route");
       const res = await GET(
@@ -312,9 +313,9 @@ describe("GET /api/admin/health/warnings", () => {
 
     it("reports only the worst phase per turn, not every slow one", async () => {
       seedTurnLog({
-        corporationTurn: ranFor(400_000),
-        indexFunds: ranFor(130_000),
-        bondTurn: ranFor(125_000),
+        corporationTurn: ranFor(phaseTimeoutMs("corporationTurn") * (2 / 3)),
+        indexFunds: ranFor(phaseTimeoutMs("indexFunds") * 0.55),
+        bondTurn: ranFor(phaseTimeoutMs("bondTurn") * 0.52),
       });
 
       const { GET } = await import("./route");
@@ -353,7 +354,7 @@ describe("GET /api/admin/health/warnings", () => {
     // descending is index-backed and equivalent here, because ObjectIds are
     // monotonic and turn logs are written once per turn in order.
     it("orders by _id, not turn, so the query stays index-backed", async () => {
-      seedTurnLog({ corporationTurn: ranFor(400_000) });
+      seedTurnLog({ corporationTurn: ranFor(phaseTimeoutMs("corporationTurn") * 0.83) });
 
       const { GET } = await import("./route");
       await GET(new Request("http://localhost/api/admin/health/warnings?source=phaseBudget"));
@@ -362,7 +363,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("projects away the bulky phases field", async () => {
-      seedTurnLog({ corporationTurn: ranFor(400_000) });
+      seedTurnLog({ corporationTurn: ranFor(phaseTimeoutMs("corporationTurn") * 0.83) });
 
       const { GET } = await import("./route");
       await GET(new Request("http://localhost/api/admin/health/warnings?source=phaseBudget"));

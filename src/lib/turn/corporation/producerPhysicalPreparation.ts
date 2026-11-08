@@ -278,6 +278,8 @@ export function prepareProducerPhysicalSector(input: {
   sector: CorporateSector;
   /** One buyer policy, shared across sectors; supplied by the world host. */
   inputPriceHeadroom: number;
+  /** Shared era prices for this preparation call; site price ratios remain local. */
+  basePrices?: Readonly<Record<CommodityType, number>>;
 }) {
   const { env, corporation: corp, sector } = input;
   const { lookups, currentTurn, currentYear } = env;
@@ -363,7 +365,7 @@ export function prepareProducerPhysicalSector(input: {
   // less output, so scaling inputs to the filtered yield would charge it the
   // full bill for the share it cannot extract.
   const inputYieldSupply = scaledCommodityRates(recipe.supply, tech.outputRateMult);
-  const prices = eraScaledBasePrices(lookups.eraUnitScale);
+  const prices = input.basePrices ?? eraScaledBasePrices(lookups.eraUnitScale);
   const commodities = producerRecipeCommodities(recipe, sector);
   const markets = new Map(
     [...commodities].map((key) => {

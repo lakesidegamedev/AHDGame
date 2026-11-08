@@ -7,13 +7,18 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { sendPlayerMail } from "@/lib/mail/commands/playerMail";
+import { markReceivedMailReadMany, sendPlayerMail } from "@/lib/mail/commands/playerMail";
+import { BULK_READ_MAX_IDS } from "@/lib/inbox/bulkRead";
 import { getInboxMailPage } from "@/lib/mail/queries/playerMail";
 
 const sendMailSchema = z.object({
   toCharacterId: schemas.objectId,
   subject: z.string().min(1).max(80),
   body: z.string().min(1).max(1000),
+});
+
+const markReadManySchema = z.object({
+  ids: z.array(schemas.objectId).min(1).max(BULK_READ_MAX_IDS),
 });
 
 // GET /api/mail — Returns the authenticated character's paginated inbox with unread count
@@ -69,6 +74,29 @@ export async function POST(request: Request) {
       parsed.data.subject,
       parsed.data.body
     );
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return handleRouteError(err);
+  }
+}
+
+// PATCH /api/mail — Marks a list of received mails as read for the authenticated recipient
+// Auth: requireAuthWithCharacter
+// Errors: 400, 401, 429
+export async function PATCH(request: Request) {
+  try {
+    const auth = await requireAuthWithCharacter();
+    if (!auth.ok) return auth.response;
+
+    const rateLimit = checkRateLimit(`api/mail/read:${auth.user.userId}`, 30, 60_000);
+    if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
+
+    const parsed = await parseJsonBody(request, markReadManySchema);
+    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+
+    const db = await getDb();
+    await markReceivedMailReadMany(db, auth.user.userId, parsed.data.ids);
 
     return NextResponse.json({ success: true });
   } catch (err) {

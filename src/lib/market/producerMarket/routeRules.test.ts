@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { routeEligibility, tariffTransfers } from "./routeRules";
+import { createRouteEligibility, routeEligibility, tariffTransfers } from "./routeRules";
 
 describe("route eligibility", () => {
   it("caches fully open routes as well as embargoed routes", () => {
@@ -23,6 +23,31 @@ describe("route eligibility", () => {
     expect(result).toEqual({});
     expect(checks).toBe(2);
   });
+  it("shares indexed lists across producer and final buyers without changing route order", () => {
+    const offers = [
+      { id: "ru1", commodity: "iron", sellerCountry: "RU" },
+      { id: "us1", commodity: "iron", sellerCountry: "US" },
+      { id: "ru2", commodity: "iron", sellerCountry: "RU" },
+      { id: "jp1", commodity: "coal", sellerCountry: "JP" },
+    ];
+    let calls = 0;
+    const listFor = createRouteEligibility(offers, (_commodity, seller, buyer) => {
+      calls++;
+      return seller === "US" && buyer === "JP";
+    });
+    expect(listFor("iron", "JP")).toEqual(["us1"]);
+    const producerList = listFor("iron", "JP");
+    const before = calls;
+    expect(listFor("iron", "JP")).toBe(producerList);
+    expect(calls).toBe(before);
+    expect(listFor("iron", "RU")).toEqual(["ru1", "ru2"]);
+    expect(listFor("iron", "GB")).toEqual([]);
+    expect(listFor("coal", "JP")).toBeUndefined();
+    expect(listFor("missing", "JP")).toBeUndefined();
+    // Caches belong to a single preparation: a later turn can close a route.
+    expect(createRouteEligibility(offers, () => false)("iron", "JP")).toEqual([]);
+  });
+
   const offers = [
     { id: "us-iron", commodity: "iron", sellerCountry: "US" },
     { id: "ru-iron", commodity: "iron", sellerCountry: "RU" },

@@ -12,6 +12,14 @@ export interface EncodedReceipt {
   digest: string;
   chunks: ReceiptChunk[];
 }
+// Only chunks hashed and encoded by this call path can use byte-for-byte
+// read-back verification. Reconstructed or mutated chunks still need decoding.
+const encodedChunks = new WeakMap<ReceiptChunk, { id: string; payload: string }>();
+const newChunk = (id: string, json: string): ReceiptChunk => {
+  const chunk = { _id: id, payload: encode(json) };
+  encodedChunks.set(chunk, { id, payload: chunk.payload });
+  return chunk;
+};
 const ARRAY_CHUNK_BYTES = 1024 * 1024;
 const DOCUMENT_LIMIT = 12 * 1024 * 1024;
 const ROOT_DECODE_LIMIT = 16 * 1024 * 1024;
@@ -24,18 +32,50 @@ const decode = (payload: string, limit: number) =>
 export function encodeReceipt(value: unknown, checkBudget?: () => void): EncodedReceipt {
   const chunks = new Map<string, ReceiptChunk>();
   const arrays = new WeakMap<unknown[], unknown>();
+  let visited = 0;
   const visit = (item: unknown): unknown => {
-    checkBudget?.();
+    // Route graphs contain millions of scalar ids. Check in bounded traversal
+    // batches rather than reading the host clock for every scalar.
+    if ((visited++ & 1023) === 0) checkBudget?.();
     if (Array.isArray(item) && arrays.has(item)) return arrays.get(item);
     if (Array.isArray(item) && item.length > 128) {
+      // Supplier/route lists are plain ids and normally fit one chunk. Native
+      // array serialization avoids stringify + allocation for every individual id.
+      // Keep the original row accounting (including its trailing comma allowance)
+      // so existing content hashes and chunk boundaries remain unchanged.
+      let stringCharacters = 2;
+      let stringRows = 0;
+      if (
+        item.every((row, index) => {
+          if ((index & 1023) === 0) checkBudget?.();
+          if (typeof row !== "string") return false;
+          stringRows++;
+          stringCharacters += row.length + 3;
+          return stringCharacters <= ARRAY_CHUNK_BYTES;
+        }) &&
+        stringRows === item.length
+      ) {
+        checkBudget?.();
+        const json = JSON.stringify(item);
+        if (Buffer.byteLength(json) + 1 <= ARRAY_CHUNK_BYTES) {
+          const id = hash(json);
+          if (!chunks.has(id)) chunks.set(id, newChunk(id, json));
+          checkBudget?.();
+          const marker = { $producerReceiptArray: [id], count: item.length };
+          arrays.set(item, marker);
+          return marker;
+        }
+      }
       const ids: string[] = [];
       let rows: string[] = [],
         bytes = 2;
       const flush = () => {
         if (!rows.length) return;
+        checkBudget?.();
         const json = `[${rows.join(",")}]`;
         const id = hash(json);
-        if (!chunks.has(id)) chunks.set(id, { _id: id, payload: encode(json) });
+        if (!chunks.has(id)) chunks.set(id, newChunk(id, json));
+        checkBudget?.();
         ids.push(id);
         rows = [];
         bytes = 2;
@@ -78,7 +118,9 @@ export function encodeReceipt(value: unknown, checkBudget?: () => void): Encoded
   });
   if (Buffer.byteLength(json) > ROOT_DECODE_LIMIT)
     throw new Error("Producer receipt manifest exceeds limit");
+  checkBudget?.();
   const payload = encode(json);
+  checkBudget?.();
   if (Buffer.byteLength(payload) > DOCUMENT_LIMIT)
     throw new Error("Producer receipt document exceeds limit");
   return { payload, digest: hash(json), chunks: [...chunks.values()] };
@@ -98,14 +140,19 @@ export async function stageReceiptChunks(
       updateOne: { filter: { _id: chunk._id }, update: { $setOnInsert: chunk }, upsert: true },
     }))
   );
+  const expected = new Map(chunks.map((chunk) => [chunk._id, encodedChunks.get(chunk)]));
   const stored = db
     .collection<ReceiptChunk>("producerEconomyTurnChunks")
     .find({ _id: { $in: chunks.map((chunk) => chunk._id) } })
-    .batchSize(16);
+    .batchSize(64);
   let count = 0;
   for await (const chunk of stored) {
     checkBudget?.();
     count++;
+    const encoded = expected.get(chunk._id);
+    // Matching the exact bytes we just encoded proves the persisted payload is
+    // intact without inflating and hashing the entire receipt a second time.
+    if (encoded?.id === chunk._id && encoded.payload === chunk.payload) continue;
     if (hash(decode(chunk.payload, CHUNK_DECODE_LIMIT)) !== chunk._id)
       throw new Error("Staged producer receipt chunk checksum mismatch");
   }
@@ -154,7 +201,7 @@ export async function decodeReceipt(
     const stored = db
       .collection<ReceiptChunk>("producerEconomyTurnChunks")
       .find({ _id: { $in: [...required] } })
-      .batchSize(16);
+      .batchSize(64);
     for await (const chunk of stored) {
       const decoded = decode(chunk.payload, CHUNK_DECODE_LIMIT);
       if (hash(decoded) !== chunk._id) throw new Error("Producer receipt chunk checksum mismatch");

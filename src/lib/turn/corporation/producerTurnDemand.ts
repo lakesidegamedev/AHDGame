@@ -57,7 +57,7 @@ import {
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import type { CorporationLookups } from "./types";
 import {
-  routeEligibility,
+  createRouteEligibility,
   type RouteOffer,
   type RouteOrder,
 } from "@/lib/market/producerMarket/routeRules";
@@ -173,6 +173,7 @@ export async function buildProducerTurnDemand(
           internalSupplyPolicy: pricingPolicies?.get(corp._id.toString())?.policy,
           sector: shadowOpeningSector(sector, worldEpoch, input.turn, carry?.plants[sectorId]),
           inputPriceHeadroom: PRICE_HEADROOM,
+          basePrices: base,
         });
         const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
         const plan = shadowCountryBooks(prepared.plan, sectorCountry);
@@ -595,19 +596,14 @@ export async function buildProducerTurnDemand(
           }))
       ),
     ];
-    eligibleOffersByOrder = routeEligibility(orders, offers, open);
-    // One list per (commodity, buyer country): households, public and
-    // marketing orders repeat the same pairs, and each call regroups every offer.
-    const listCache = new Map<string, readonly string[] | undefined>();
-    const listFor = (commodity: string, country: string) => {
-      const key = `${commodity}|${country}`;
-      if (!listCache.has(key))
-        listCache.set(
-          key,
-          routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x
-        );
-      return listCache.get(key);
-    };
+    // Producers and final buyers share the same indexed offers and cached lists.
+    // Rebuilding the offer index for every final-buyer pair repeated world-wide work.
+    const listFor = createRouteEligibility(offers, open);
+    eligibleOffersByOrder = {};
+    for (const order of orders) {
+      const list = listFor(order.commodity, order.buyerCountry);
+      if (list) eligibleOffersByOrder[order.id] = list;
+    }
     const restrict = (row: { eligibleOfferIds?: readonly string[] }, list?: readonly string[]) => {
       if (list) row.eligibleOfferIds = list;
     };
