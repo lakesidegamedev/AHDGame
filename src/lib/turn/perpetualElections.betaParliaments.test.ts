@@ -164,7 +164,7 @@ const TR_SENATE_REGIONS: MockRegion[] = [
   { id: "TR_ANK", houseDistricts: 60, stateSenateSeats: 6 },
 ];
 
-describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
+describe("beta lower-chamber specs (FR/IT/ES/SE/TR, #3239)", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -516,7 +516,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
 
   // ─── #3791 defect 2: upper chambers only ever lose members ────────────────
   //
-  // No spawner existed for any Senate — `ensureBetaParliamentElections` only
+  // No spawner existed for any Senate — the lower-chamber specs only
   // ever ran for the LOWER chamber, so once a seeded senator's term lapsed
   // nothing refilled the seat. Fixed by `ensureBetaSenateElections` (new
   // sibling spawner, seats sourced from `stateSenateSeats`).
