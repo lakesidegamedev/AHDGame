@@ -3,6 +3,7 @@ import { evaluateEffectModules, createEffectRegistry, type EffectContext } from 
 import { EMERGENT_CRISIS_DEFINITIONS } from "./definitions/emergent";
 import { validateCrisisDefinition } from "./definition";
 import { ROTDM_EFFECT_MODULES, crisisPressure } from "./rotdmModules";
+import type { EffectModuleRef } from "./types";
 
 function context(overrides: Partial<EffectContext> = {}): EffectContext {
   return {
@@ -26,7 +27,7 @@ describe("rotdm effect modules", () => {
   });
 
   it("emits an intent for each system a definition aims at", () => {
-    const refs = [
+    const refs: EffectModuleRef[] = [
       { moduleId: "rotdm.production", params: { maxCut: 0.1, sectorType: "energy" } },
       {
         moduleId: "rotdm.commodity",
