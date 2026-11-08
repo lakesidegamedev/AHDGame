@@ -50,7 +50,10 @@ import {
   computeSectorNpvSum,
 } from "@/lib/bonds/corporateBondDefault";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
-import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import {
+  payFundShareholderRows,
+  payNppShareholderRows,
+} from "@/lib/corporations/payFundShareholders";
 import { applyBrandFacilityLoss } from "@/lib/corporations/brandFacilityLoss";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
@@ -1720,6 +1723,7 @@ export async function payShareholders(
     );
     if (ledger) ledgerEntries.push(...fundTxEntries);
   }
+  await payNppShareholderRows(db, allocation.nppRows, now);
 
   // Flush every holder leg in one insert.
   if (ledger && ledgerEntries.length > 0) {

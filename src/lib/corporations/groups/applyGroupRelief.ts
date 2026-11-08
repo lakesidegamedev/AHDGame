@@ -14,11 +14,12 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   anchorToCorpLiquidCapital,
   getCorpFxRate,
+  loadFxRatesByCurrency,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { debitTreasury } from "@/lib/nationalization/treasury";
+import { debitTreasuryCompensation } from "@/lib/nationalization/treasury";
 import { resolveFormalizedGroups } from "./groupMembership";
 import {
   computeGroupRelief,
@@ -87,6 +88,8 @@ export async function applyGroupLossRelief(
     });
   }
 
+  const fxByCurrency = await loadFxRatesByCurrency(db);
+
   for (const [, pool] of poolByGroupAndCountry(positions)) {
     const outcome = computeGroupRelief(pool);
     if (outcome.allocations.length === 0) continue;
@@ -102,11 +105,20 @@ export async function applyGroupLossRelief(
         );
         if (localAmount <= 0) continue;
 
+        // Debit first, in the treasury's own currency: a refused funded debit
+        // throws before the corporation is credited, so nothing is minted.
+        await debitTreasuryCompensation(
+          db,
+          allocation.countryId as CountryId,
+          allocation.reliefAnchor,
+          fxByCurrency,
+          now,
+          {
+            flow: "group_loss_relief",
+            key: `group-relief:${currentTurn}:${corp._id.toString()}`,
+          }
+        );
         await creditCorpLiquidCapital(db, corp._id, localAmount);
-        await debitTreasury(db, allocation.countryId as CountryId, localAmount, now, {
-          flow: "group_loss_relief",
-          key: `group-relief:${currentTurn}:${corp._id.toString()}`,
-        });
         await emitTx(db, {
           type: "corp_group_relief",
           turn: currentTurn,

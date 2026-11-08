@@ -15,6 +15,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
+import { NPP_ANCHOR_BALANCE_PATH } from "@/lib/corporations/payFundShareholders";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
@@ -58,15 +59,17 @@ export async function settleFundedWholeCorpShareholderPool(
   const personalRows = allocation.characterRows.filter((row) => row.payout > 0);
   const corpRows = allocation.corporationRows.filter((row) => row.payout > 0);
   const fundRows = allocation.fundRows.filter((row) => row.payout > 0);
+  const nppRows = (allocation.nppRows ?? []).filter((row) => row.payout > 0);
   const floatPayout = allocation.publicFloatRow?.payout ?? 0;
   const totalAnchor =
     personalRows.reduce((sum, row) => sum + row.payout, 0) +
     corpRows.reduce((sum, row) => sum + row.payout, 0) +
     fundRows.reduce((sum, row) => sum + row.payout, 0) +
+    nppRows.reduce((sum, row) => sum + row.payout, 0) +
     floatPayout;
   if (!(totalAnchor > 0)) return;
 
-  const [personalDocs, imperialDocs, corpDocs, funds] = await Promise.all([
+  const [personalDocs, imperialDocs, corpDocs, funds, npps] = await Promise.all([
     db
       .collection<Character>("characters")
       .find({
@@ -95,6 +98,13 @@ export async function settleFundedWholeCorpShareholderPool(
       .collection<IndexFund>("indexFunds")
       .find({ _id: { $in: fundRows.map((row) => new ObjectId(row.fundId)) } })
       .toArray(),
+    db
+      .collection("npps")
+      .find(
+        { _id: { $in: nppRows.map((row) => new ObjectId(row.nppId)) } },
+        { projection: { _id: 1 } }
+      )
+      .toArray(),
   ]);
   const personalById = new Map(
     [...personalDocs, ...imperialDocs].map((doc) => [doc._id.toString(), doc])
@@ -107,6 +117,9 @@ export async function settleFundedWholeCorpShareholderPool(
     throw new Error("Funded buyout corporate shareholder is missing");
   if (fundRows.some((row) => !fundById.has(row.fundId)))
     throw new Error("Funded buyout index-fund shareholder is missing");
+  const nppIds = new Set(npps.map((doc) => doc._id.toString()));
+  if (nppRows.some((row) => !nppIds.has(row.nppId)))
+    throw new Error("Funded buyout NPP shareholder is missing");
 
   const treasuryCurrency =
     context.treasuryCurrencies.get(input.countryId) ??
@@ -222,6 +235,17 @@ export async function settleFundedWholeCorpShareholderPool(
       },
       path: "cashAnchor",
       note: `Pay frozen index-fund shareholder ${row.fundId}`,
+    });
+  }
+  for (const row of nppRows) {
+    legs.push({
+      kind: "credit",
+      amount: row.payout,
+      valuation: { currencyCode: "USD", localPerAnchor: 1 },
+      collection: "npps",
+      filter: { _id: new ObjectId(row.nppId) },
+      path: NPP_ANCHOR_BALANCE_PATH,
+      note: `Pay frozen NPP shareholder ${row.nppId}`,
     });
   }
   const projections = [
