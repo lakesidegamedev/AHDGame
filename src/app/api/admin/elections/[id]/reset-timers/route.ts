@@ -1,18 +1,17 @@
 /**
  * POST /api/admin/elections/[id]/reset-timers
- * Admin: Reset presidential election timers from NOW.
  *
- * Resets startTime, primaryEndTime, and endTime relative to the current
- * wall-clock time so the election runs fresh from this moment forward.
+ * Resets startTime, primaryEndTime, and endTime relative to wall-clock now,
+ * so the election runs fresh from this moment forward.
  *
  * Body (all optional):
- *   primaryHours  – primary phase length in hours  (default: 72)
- *   campaignHours – general campaign length in hours (default: 48)
+ *   primaryHours  - primary phase length in hours  (default: 72)
+ *   campaignHours - general campaign length in hours (default: 48)
  *
  * Total duration = primaryHours + campaignHours (default: 120h)
  *
- * Works even if the election is already completed — use this to restart a
- * stuck or mis-timed presidential election without respawning the whole cycle.
+ * Works even on a completed election, to restart a stuck or mis-timed
+ * presidential election without respawning the whole cycle.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";

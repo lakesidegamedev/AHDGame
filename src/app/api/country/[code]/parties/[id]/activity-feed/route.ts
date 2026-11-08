@@ -38,11 +38,9 @@ export async function GET(
     if (before && Number.isNaN(before.getTime())) {
       return errorResponse(400, "Invalid 'before' timestamp");
     }
-    // `Math.max(1, Math.min(100, NaN))` is NaN, not 1, so an unparseable
-    // `?limit` used to reach Mongo's `.limit()` as NaN. Validate before
-    // clamping and fall back to the default rather than 400ing a feed read.
-    // `Number("")` is 0, not NaN, so an empty `?limit=` must be treated as
-    // absent here or it would clamp to 1 instead of falling back to 30.
+    // An unparseable `?limit` becomes NaN and reaches Mongo's `.limit()` as NaN
+    // (`Math.max`/`Math.min` do not sanitize NaN), and `Number("")` is 0, not
+    // NaN, so empty `?limit=` must fall back to the default rather than clamp to 1.
     const limitParsed = limitRaw === null || limitRaw.trim() === "" ? NaN : Number(limitRaw);
     const limit = Number.isFinite(limitParsed)
       ? Math.max(1, Math.min(100, Math.floor(limitParsed)))

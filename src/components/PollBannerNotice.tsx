@@ -1,22 +1,11 @@
 "use client";
 
 /**
- * Site-wide poll/survey strip, shown under the navbar while an admin has it
- * switched on (Admin > Support > Poll Banner). Every page except the handful
- * that render no site chrome at all (see `isChromeHiddenPath`).
- *
- * Modeled on `MaintenancePartialBanner`: self-fetches the public
- * `/api/poll-banner` snapshot on mount, re-polls on a slow interval, and
- * renders nothing at all until the server says otherwise. Not gated on auth,
- * because a survey aimed at the playerbase should reach signed-out visitors
- * too, and not dismissible, because it stays up only as long as an admin
- * leaves it up.
- *
- * The strip itself is split out as `PollBannerStrip` so the admin editor can
- * preview the real thing instead of an approximation of it.
- *
- * Copy rules: the message is admin-authored, so no em or en dashes belong in
- * the surrounding chrome either.
+ * Site-wide poll strip, shown under the navbar while an admin enables it.
+ * Skips chrome-hidden paths. Self-fetches and polls `/api/poll-banner`, renders
+ * nothing until the server says otherwise. Not auth-gated so signed-out
+ * visitors see surveys; not dismissible because only admins can switch it off.
+ * The strip is `PollBannerStrip` so the admin editor can preview the real thing.
  */
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";

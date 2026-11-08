@@ -48,10 +48,9 @@ interface RouteParams {
  * POST /api/corporations/[id]/shares/consolidate
  * CEO-only stock split or reverse split: change total outstanding shares and scale prices
  * so market cap is unchanged. Applies proportionally to all shareholders and the public float.
- * 48-turn cooldown. Open share orders, private listings, and pending offers on the
- * corporation are cancelled and refunded before the restructure runs (escrow to buyers,
- * reserved shares to sellers) so leftover pre-split share counts cannot fill on the next
- * turn and wipe holders (ticket #1154).
+ * 48-turn cooldown. Open share orders, private listings, and pending offers are cancelled
+ * and refunded first (escrow to buyers, reserved shares to sellers) so leftover pre-split
+ * share counts cannot fill on the next turn and wipe holders.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
@@ -281,12 +280,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const sharePrice = corporation.sharePrice ?? 0;
     const scaled = scaleSharePricesForStructureChange(oldTotal, targetTotalShares, sharePrice);
-    // Scale fundamentalSharePrice by the same factor. The 5-minute
-    // applyPriceMultipliers cron computes
-    //   sharePrice = fundamentalSharePrice × sentiment × orderFlow
-    // off the persisted fundamental, so leaving fundamentalSharePrice at the
-    // pre-split value clobbers the just-scaled sharePrice on the next tick
-    // and erases the split's market-cap-preserving scaling (bug #0449).
+    // Scale fundamentalSharePrice by the same factor. The 5-minute applyPriceMultipliers cron computes sharePrice = fundamentalSharePrice × sentiment × orderFlow off the persisted fundamental, so leaving fundamentalSharePrice at the pre-split value clobbers the scaled sharePrice on the next tick and erases the split's market-cap-preserving scaling.
     const fundamentalSharePrice = corporation.fundamentalSharePrice ?? sharePrice;
     const scaledFundamental = scaleSharePricesForStructureChange(
       oldTotal,
@@ -335,8 +329,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // history price as its smoothing prior. That row was written by the turn
     // before the split, so leaving it at the pre-split price pulls the live
     // price back toward the old per-share level and moves market cap on a
-    // split that should be value-neutral (ticket #1500). Market cap on the row
-    // is unchanged by construction.
+    // split that should be value-neutral. Market cap on the row is unchanged
+    // by construction.
     const currentHist = await db
       .collection<CorporationHistory>("corporationHistory")
       .findOne(

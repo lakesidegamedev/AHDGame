@@ -232,10 +232,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
       singleRegionFocus: mechanics.singleRegionFocus ?? null,
     });
 
-    // `includeActions` is false on a withheld office: the seat and its holder are
-    // public, but how much of their turn a minister has left to spend is not.
-    // UK player holders share one pool across both offices (issue #2049), so
-    // both office pages report the same remaining balance.
+    // `includeActions` is false on a withheld office: the seat and its holder
+    // are public, but a minister's remaining turn actions are not. UK player
+    // holders share one pool across both offices, so both pages report the
+    // same remaining balance.
     const sharedRemaining =
       countryId === COUNTRY_CONFIGS.UK.id && member?.characterId
         ? (holderChar?.sharedMinisterialActions ?? null)

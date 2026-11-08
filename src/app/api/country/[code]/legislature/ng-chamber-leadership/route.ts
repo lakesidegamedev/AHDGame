@@ -1,18 +1,16 @@
 /**
  * GET  /api/country/ng/legislature/ng-chamber-leadership
- *   Returns, for both NG presiding-officer roles (Speaker of the House of
- *   Representatives, President of the Senate): the current holder, the active
- *   election (24h window), open nominations, viewer eligibility, and viewer
- *   identity. Auto-resolves an expired-but-not-yet-resolved election before
- *   responding (parity with the DE Bundestagspräsident GET).
+ *   Returns, for both NG presiding-officer roles, the current holder, the
+ *   active election (24h window), open nominations, viewer eligibility, and
+ *   viewer identity. Auto-resolves an expired-but-unresolved election before
+ *   responding.
  *
  * POST /api/country/ng/legislature/ng-chamber-leadership
  *   Body: { role, action, nominationId? }. Actions: declare | withdraw | vote
  *   | start_election (admin) | force_end (admin).
  *
- * Mirror of `/api/country/de/legislature/bundestagspraesident` for the NG
- * National Assembly. Same 24h window, same plurality-winner rule, same
- * any-seated eligibility. Two roles served by one route; NPPs do not vote.
+ * Same 24h window and plurality-winner rule as the DE Bundestagspräsident
+ * route. Two roles served by one route; NPPs do not vote.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";

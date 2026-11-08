@@ -164,9 +164,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const isChair = party.chairId?.toString() === myCharStr;
     const isViceChair = party.viceChairId?.toString() === myCharStr;
     const isCommitteeMember = party.committeeIds.some((id) => id.toString() === myCharStr);
-    // Proposer eligibility (per 2026-05-22 redesign clarification): chair,
-    // vice-chair, or any National Committee member. Treasurer excluded
-    // from proposing but included in the voter set.
+    // Proposer eligibility: chair, vice-chair, or any National Committee member.
+    // Treasurer is excluded from proposing but included in the voter set.
     const canProposeAny = isChair || isViceChair || isCommitteeMember;
 
     const [rawOpen, rawPast, rawIncoming] = await Promise.all([
@@ -238,16 +237,16 @@ export async function GET(_request: Request, { params }: RouteParams) {
       openProposals,
       incomingMergeProposals,
       pastProposals,
-      // 2026-05-22 redesign: chair / vice-chair / committee can propose
-      // any type. Treasurer is included in the voter set but cannot
-      // propose. `canProposeMerge` retained for backward-compat with
-      // existing UI; condition is now identical to `canPropose`.
+      // Chair, vice-chair, and committee can propose any type.
+      // Treasurer can vote but not propose. `canProposeMerge` is kept
+      // for backward compat; identical to `canPropose`.
+      // Treasury-two-person-approval: surface mode so the modal can grey
+      // out the active option (server rejects no-op proposals anyway).
       canPropose: canProposeAny && !party.isDefunct,
       canProposeMerge: canProposeAny && !party.isDefunct,
       canVote: isEligibleVoter && !party.isDefunct,
-      // 2026-05-22 treasury-two-person-approval: surface the current
-      // mode so the modal can grey out the active option (no-op
-      // proposals are server-side rejected anyway).
+      // Surface the current mode so the modal can grey out the active option.
+      // No-op proposals are server-side rejected anyway.
       currentTransactionApprovalMode: party.transactionApprovalMode ?? "double",
     };
 
@@ -292,10 +291,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const characterId = user.character._id;
-    // 2026-05-22 redesign (user clarification): proposer eligibility is
-    // chair OR vice-chair OR any National Committee member. Treasurer
-    // can vote but not propose. The voting body at resolution still
-    // includes treasurer via `getEligibleVoterSet`.
+    // Proposer eligibility: chair, vice-chair, or any committee member.
+    // Treasurer can vote but not propose; the resolution voter set
+    // still includes treasurer via `getEligibleVoterSet`.
     const characterIdStr = characterId.toString();
     const isChair = party.chairId?.toString() === characterIdStr;
     const isViceChair = party.viceChairId?.toString() === characterIdStr;

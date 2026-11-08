@@ -1,13 +1,11 @@
 // GET /api/corporations/buyer-search?q=...&exclude=<corpId>
 // Name search for supply-agreement counterparties and acquisition targets:
-// player-run corporations across ALL countries (not just the supplier's own),
-// so a CEO can contract with / offer to buy a foreign player-owned corp (#106),
-// plus AI-run (NPP) private corps, whose acquisition offers auto-resolve at the
-// asking price instead of waiting for a human Accept (#217).
+// player-run corporations across ALL countries, plus AI-run (NPP) private corps,
+// whose acquisition offers auto-resolve at the asking price.
 // Player-run seats need a human who can accept (missing `ceoType` counts as
-// character: founding historically omitted it). NPP seats need no acceptor but
-// must be genuinely AI-run: caretaker-run player corps stay excluded, and so are
-// AI-run subsidiaries of another corporation.
+// character). NPP seats need no acceptor but must be genuinely AI-run:
+// caretaker-run player corps stay excluded, as are AI-run subsidiaries of
+// another corporation.
 // Excludes state-owned corps, imperial seats, and the caller itself.
 // Auth: public read. Errors: none
 import { NextResponse } from "next/server";
@@ -31,8 +29,7 @@ export async function GET(request: Request) {
       .collection<Corporation>("corporations")
       .find({
         // Not state-owned; player-run (a human CEO must be able to accept) or
-        // genuinely AI-run (offers auto-resolve, #217). Any country is
-        // eligible; that is the point of #106.
+        // genuinely AI-run (offers auto-resolve). Any country is eligible.
         countryOwnerId: { $exists: false },
         $or: [
           ...PLAYER_RUN_CEO_FILTER.$or,

@@ -1,13 +1,12 @@
 /**
- * GET /api/whitehouse/scotus — Court composition, pending nominations, viewer status.
+ * GET /api/whitehouse/scotus - Court composition, pending nominations, viewer status.
  *
- * Presentation-layer read for the SCOTUS UI (#3605) — mirrors the shape of
+ * Presentation-layer read for the SCOTUS UI that mirrors the shape of
  * GET /api/whitehouse/cabinet (positions + nominations + isPresident/isSenator)
  * so the nomination/confirmation UI can reuse the same page conventions.
- * Reuses `getScotusComposition` (#3598, src/lib/scotus/queries.ts) for the
- * per-seat summary; adds a lightweight raw-seat lookup only to resolve
- * `isJustice`/`mySeatNumber` for the viewer, since that summary intentionally
- * omits `justiceCharacterId`.
+ * Reuses `getScotusComposition` for the per-seat summary; adds a lightweight
+ * raw-seat lookup only to resolve `isJustice`/`mySeatNumber` for the viewer,
+ * since that summary intentionally omits `justiceCharacterId`.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -19,7 +18,7 @@ import { getScotusComposition } from "@/lib/scotus/queries";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import type { ElectedOfficial, Character } from "@/lib/db/types";
 
-// GET /api/whitehouse/scotus — Returns the Court's 9-seat composition, active nominations, and the caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only per #3581, so any other country returns an empty shell.
+// GET /api/whitehouse/scotus: 9-seat composition, active nominations, and caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only, other countries return an empty shell.
 // Auth: public
 // Errors: 400
 export async function GET(request: Request) {

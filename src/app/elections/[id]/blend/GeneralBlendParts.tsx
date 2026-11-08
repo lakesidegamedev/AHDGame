@@ -229,12 +229,10 @@ export function YourTicketBlock({
  * The referendum standing the whole board is being judged against, with what
  * fed it.
  *
- * The components sit here rather than in a card further down the page. The
- * figure used to appear in both places under the same heading, and the bars
- * beneath each were different quantities — the block below this one is "Why it
- * moved", the persuasion drivers behind a candidate's vote, which is not what
- * moves this number. Keeping the economic components against the economic
- * figure is what tells the two apart.
+ * The components sit here rather than in a card further down the page, because
+ * the block below is "Why it moved": the persuasion drivers behind a
+ * candidate's vote, which are not what moves this figure. Keeping the economic
+ * components against the economic figure is what tells the two apart.
  */
 export function NationalMoodBlock({ vm }: { vm: GeneralBlendVM }) {
   if (!vm.mood) return null;

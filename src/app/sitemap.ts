@@ -12,18 +12,12 @@ import { loadPublicPosts } from "@/lib/changelog/posts";
 /**
  * Rendered per request, never prerendered at build.
  *
- * This route reads live game state and wiki rows, and it deliberately THROWS when
- * those queries fail (see the two catch blocks below — a 500 makes crawlers retry and keep
- * the previous sitemap, whereas a 200 missing most of its URLs de-lists those pages).
- *
- * Next prerenders metadata routes during `next build`, so that same deliberate throw took
- * the production build down: Railway's `mongodb.railway.internal` only resolves inside the
- * runtime private network, not in the build container, so the query fails with ENOTFOUND
- * and `Export encountered an error on /sitemap.xml/route` exits the build.
- *
- * Marking it dynamic is the honest fix rather than a build-time special case: a sitemap of
- * live database rows was never a build-time artifact, and this keeps the runtime failure
- * semantics exactly as they are.
+ * Reads live game state and wiki rows and deliberately THROWS on query
+ * failure: a 500 makes crawlers retry and keep the previous sitemap, while a
+ * 200 missing most URLs de-lists those pages. Next prerenders metadata
+ * routes at build, where the database host does not resolve, so the throw
+ * broke the production build. Marking it dynamic keeps runtime failure
+ * semantics intact: a sitemap of live rows was never a build artifact.
  */
 export const dynamic = "force-dynamic";
 
@@ -172,9 +166,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 : 0.65,
       }));
     } catch (error) {
-      // The wiki is ~3/4 of the sitemap. Serving a 200 without it (observed
-      // live 2026-08-09: 233 URLs degraded to 59 on a query blip) tells
-      // crawlers those pages are gone; a 500 tells them to come back later.
+      // The wiki is most of the sitemap. A 200 without it tells crawlers those pages are gone; a 500 tells them to come back later.
       console.error("sitemap: wiki page query failed", error);
       throw error;
     }

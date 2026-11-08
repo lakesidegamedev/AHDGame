@@ -145,14 +145,13 @@ export async function POST(_request: Request, { params }: RouteParams) {
     /**
      * Hand the slot back on ANY failure exit below.
      *
-     * The claim above is deliberately written BEFORE the execute, so two
-     * approvers racing cannot both execute. The cost is that a refusal
-     * further down used to leave the signature behind on a still-open
-     * row: the panel then showed a transaction that looked approved,
-     * every further Approve click burned the other slot the same way,
-     * and the row sat there until the expiry sweep took it 48 turns
-     * later. Releasing restores exactly the state the approver clicked
-     * from, so a refusal is a refusal and not a corrupted row.
+     * The claim is written BEFORE the execute so two approvers racing cannot
+     * both execute. Without release, a refusal further down leaves the
+     * signature behind on a still-open row: the panel shows a transaction that
+     * looks approved, every further Approve click burns the other slot the same
+     * way, and the row sits until the expiry sweep takes it. Releasing restores
+     * the state the approver clicked from, so a refusal is a refusal and not a
+     * corrupted row.
      */
     const releaseClaimedSlot = async (): Promise<void> => {
       await db.collection<PendingTreasuryTransaction>("pendingTreasuryTransactions").updateOne(
@@ -189,16 +188,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
       });
     }
 
-    // ─── Reserve-target override ─────────────────────────────────────────
-    // Same rule the direct send/transfer routes apply: piercing the
-    // Treasurer's reserve target is allowed, but it is recorded as an
-    // emergency override unless the Treasurer is the one doing it.
-    //
-    // This used to be hardcoded null on the grounds that the Treasurer
-    // co-signed every completed row by definition. Once any two officers
-    // can complete one, that stopped being true: a Chair and a
-    // Vice-Chair can now empty the reserve with nothing in the admin log
-    // to say so.
+    // Reserve-target override: piercing the Treasurer's reserve target is
+    // allowed but recorded as an emergency override unless the Treasurer
+    // (or acting Treasurer) does it.
     const budgetCollection = await getPartyBudgetCollection();
     const treasuryPlan = await findPartyBudgetForScope(budgetCollection, {
       countryId,

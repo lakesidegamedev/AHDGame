@@ -1,16 +1,13 @@
 /**
  * POST /api/admin/heal/stale-admin-appointments
  *
- * Removes stale admin-appointed officials that should have been replaced
- * by election winners. This handles cases where:
- * 1. Admin appointed someone to a seat
- * 2. An election resolved for that seat with a different winner
- * 3. The admin-appointed record was never cleaned up
+ * Removes admin-appointed officials that should have been replaced by
+ * election winners but were never cleaned up.
  *
- * The endpoint identifies duplicates by seat key (officeType + state + senateClass/district).
- * When choosing which to keep:
- * - Prefer filled records (has characterId or nppId) over vacant ones
- * - Among equally-filled records, keep the most recent (by electedAt then updatedAt)
+ * Duplicates are identified by seat key (officeType + state +
+ * senateClass/district). Among duplicates, prefer filled records
+ * (characterId or nppId) over vacant, then the most recent by electedAt
+ * then updatedAt.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";

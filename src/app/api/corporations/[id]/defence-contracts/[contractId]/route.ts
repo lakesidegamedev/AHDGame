@@ -99,9 +99,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // clear their board while procurement is paused.
     if (accept) {
       // Barred by the world kill switch, or by a peace settlement that named the
-      // BUYING country. The buyer is the contract's country, not the corporation's
-      // owner: a settlement bars a government from ordering, not a firm from
-      // trading.
+      // BUYING country: a settlement bars a government from ordering, not a firm
+      // from trading.
       const gateState = await getGameState();
       const gate = await isProcurementBlocked(db, contract.countryId, gateState?.currentTurn ?? 0);
       if (gate.blocked) {

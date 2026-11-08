@@ -11,21 +11,12 @@ const TURN_STUCK_WARNING_MS = 5 * 60_000;
 
 /**
  * Phase-budget headroom. `runPhase` reports failure at PHASE_TIMEOUT_MS, then
- * drains the still-running callback before any later phase or turn completion.
- * A phase creeping toward that threshold is an outage risk with lead time and
- * is worth surfacing before it crosses the threshold.
+ * drains the still-running callback. A phase creeping toward that threshold is
+ * an outage risk worth surfacing before it crosses.
  *
- * Why this exists (2026-08-28): corporationTurn costs ~6ms per corporateSector
- * and the sector population grows with NPP expansion, so the phase gets more
- * expensive as the world grows rather than because of any code change. Measured
- * that day it was already peaking at 110s of the 240s ceiling. Nothing in the
- * admin surfaced that, because a slow phase that still SUCCEEDS produces no
- * warning, skip or error anywhere — the turn just quietly gets closer to the
- * edge each week.
- *
- * Read from turnLogs rather than gameHealthSnapshots on purpose: the snapshot
- * query above only returns turns that already carry a warning/error/skip, so a
- * slow-but-clean turn would never appear in it.
+ * A slow phase that still SUCCEEDS produces no warning, skip or error anywhere,
+ * so it never appears in gameHealthSnapshots (which only carries turns with a
+ * warning/error/skip). Read from turnLogs so slow-but-clean turns are visible.
  */
 const PHASE_BUDGET_WARN_FRACTION = 0.5;
 const PHASE_BUDGET_ERROR_FRACTION = 0.75;
@@ -223,20 +214,12 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   // Only the worst phase per turn is reported, so a broadly slow turn produces
   // one actionable line rather than thirty.
   if (source === "phaseBudget" || !source) {
-    // Ordered by _id, NOT by turn, and projected down to just the fields used
-    // below (notably dropping the bulky `phases`). `turnLogs` carries only the
-    // default `_id_` index, so sort({turn:-1}) plans as a blocking SORT over a
-    // COLLSCAN: measured 2026-08-28 it examined all 448 documents of a 16.2MB
-    // collection (avgObjSize ~38KB). The collection grows ~24 docs/day and its
-    // intended 24h TTL index does not actually exist, so that sort would have
-    // crossed MongoDB's blocking-sort memory ceiling within weeks and 500'd
-    // this route — the health check failing at the same time as the thing it
-    // exists to warn about.
-    //
-    // sort({_id:-1}) plans as LIMIT <- FETCH <- IXSCAN and examines exactly
-    // PHASE_BUDGET_TURN_SAMPLE documents. ObjectIds are monotonic by
-    // insertion and turn logs are written once per turn in order, so _id
-    // descending is newest-turn-first just as turn descending is.
+    // Ordered by _id, NOT turn: turnLogs only has the default _id_ index,
+    // so sort({turn:-1}) is a blocking SORT over a COLLSCAN that would blow
+    // MongoDB's memory ceiling and 500 this route as the collection grows.
+    // sort({_id:-1}) uses an IXSCAN and is equally newest-turn-first because
+    // ObjectIds are monotonic and turn logs are written once per turn in order.
+    // Projection drops bulky fields not used below.
     const budgetLogs = await db
       .collection<TurnLog>("turnLogs")
       .find(turnFilter, { projection: { turn: 1, realTime: 1, createdAt: 1, phaseStatuses: 1 } })

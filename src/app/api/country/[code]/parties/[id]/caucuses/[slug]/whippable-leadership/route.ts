@@ -134,9 +134,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .find({
         party: partyIdStr,
         officeType: { $in: officeTypes },
-        // Two independent disjunctions: the country scope (bug #0699) and the
-        // caucus membership match. They cannot both be a top-level $or, so
-        // they are joined under $and.
+        // Country scope and caucus membership are independent disjunctions,
+        // so they are joined under $and.
         $and: [
           officialsCountryScope(countryId),
           {

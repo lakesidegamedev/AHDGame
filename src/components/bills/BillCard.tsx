@@ -69,14 +69,11 @@ export function BillCard({
     bill.status === "veto_override" &&
     bill.overrideChamber != null;
 
-  // Bill DB status only transitions on the hourly turn cron; between `votingEndsAt`
-  // passing and the next turn, treat voting as closed so the badge matches the
-  // server-side deadline. active / active_other / cabinet_review / override_shugiin
-  // always expose a usable deadline on BillDisplay; state (region) bills also expose
-  // the override deadline for `veto_override` (mapStateBillToBillDisplay maps
-  // overrideVotingEndsAt/OnTurn onto votingEndsAt/OnTurn), so without this the card
-  // keeps showing a live "Override Voting" pill for up to a turn after the override
-  // deadline passes — the ticket #936 "override vote not resolving" perception.
+  // Bill DB status only transitions on the hourly turn cron; between
+  // `votingEndsAt` passing and the next turn, treat voting as closed so the
+  // badge matches the server-side deadline. Otherwise the card keeps showing
+  // a live "Override Voting" pill for up to a turn after the override
+  // deadline passes.
   const deadlineCheckable =
     bill.status === "active" ||
     bill.status === "active_other" ||

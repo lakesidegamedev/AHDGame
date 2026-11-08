@@ -119,8 +119,8 @@ interface LegislationTypeOption {
 
 /**
  * Inline notice for supplementary form loads (bill types, categories, balance,
- * current policies). These fetches used to fail silently, leaving selectors
- * empty with no explanation; this gives the player a message and a retry.
+ * current policies). Without it, failed fetches leave selectors empty with no
+ * explanation and no retry.
  */
 function SupplementaryLoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -257,11 +257,9 @@ function LegacyProposeBillModal({
       domesticOnly: false,
     },
   ]);
-  // Union-law provision (v3 Phase 7b, industry category). Inclusion is an
-  // explicit checkbox (code-review fix #15) — previously inferred from
-  // `bias !== 0`, which made it impossible to ever legislate a RESET back to
-  // neutral (bias=0 is a valid, meaningful explicit reset once a country has
-  // a nonzero law in effect, not just "don't propose one").
+  // Union-law inclusion is an explicit checkbox rather than inferred from
+  // bias !== 0, so a RESET back to neutral (bias=0) is representable once a
+  // country has a nonzero law in effect.
   const [includeUnionLaw, setIncludeUnionLaw] = useState(false);
   const [unionLawBias, setUnionLawBias] = useState(0);
   // Electoral law — franchise and registration access. Two independent axes, so
@@ -382,10 +380,7 @@ function LegacyProposeBillModal({
     loadCurrentPolicies();
   }, [loadCurrentPolicies]);
 
-  // An electoral-law provision occupies one of the bill's MAX_PROVISIONS slots,
-  // so the policy provisions get what is left. Without this the form built a
-  // four-provision bill out of three rows plus the franchise checkbox and the
-  // body schema refused it with "At most 3 provisions" (#1250).
+  // Standalone provisions (electoral law, treaty) consume a MAX_PROVISIONS slot, so policy provisions get the remainder or the body schema rejects the bill.
   const standaloneProvisionCount =
     (isElectoralCat && (includeVotingAge || includeRegAccess) ? 1 : 0) + (includeTreaty ? 1 : 0);
   const maxPolicyProvisions = Math.max(0, MAX_PROVISIONS - standaloneProvisionCount);
@@ -399,9 +394,7 @@ function LegacyProposeBillModal({
         : isSubsidyCat
           ? subsidyProvisions.length
           : // An electoral-law provision rides the NPI ladder like any other, so
-            // it has to be counted here or the modal quotes a cost lower than
-            // the route then charges, and `canAffordNpi` clears a bill the
-            // server refuses for insufficient influence (#1250).
+            // Must be counted here: otherwise the modal quotes a cost lower than the route charges, and `canAffordNpi` clears a bill the server refuses for insufficient influence.
             (includeTreaty
               ? provisions.filter((p) => p.legislationTypeId.trim()).length
               : provisions.length) + standaloneProvisionCount;

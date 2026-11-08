@@ -140,18 +140,14 @@ export default function ChartsTab({
     );
   }
 
-  // Post-v0.2.6: money fields in each history snapshot are stored in that
-  // snapshot's own `currencyCode` (Task 10). Normalize every plotted value
-  // to ₳ so a shared Y-axis works across legacy (no code) and post-migration
-  // (code stamped) snapshots. Formatting then honors wallet preference via
-  // the representative currency for the selected metric.
+  // Money fields in each history snapshot are stored in that snapshot's own
+  // `currencyCode`. Normalize every plotted value to ₳ so a shared Y-axis works
+  // across legacy (no code) and post-migration (code stamped) snapshots.
   //
   // Use the rate that was ACTUALLY in effect when this row was written
-  // (`fxRateAtWrite`), not the live/current rate. FX floats every turn, so
-  // reconverting an old snapshot with today's rate drifts by however much
-  // that currency has moved since (#2958). Rows written before this field
-  // existed fall back to the live rate (best available, matches prior
-  // behavior for that legacy data).
+  // (`fxRateAtWrite`), not the live rate: FX floats every turn, and reconverting
+  // an old snapshot with today's rate drifts as the currency moves. Rows with no
+  // recorded rate fall back to the live rate.
   const toAnchor = (val: number, code?: string, fxRateAtWrite?: number) => {
     if (!code) return val;
     if (typeof fxRateAtWrite === "number" && fxRateAtWrite > 0) return val / fxRateAtWrite;

@@ -1,15 +1,15 @@
 /**
  * POST /api/admin/demographics/reseed
  *
- * Upserts demographic categories and state demographics from the seed data.
- * Admin-only. Removes legacy categories (race, gender, education, wealth, age, ideology)
- * so only the new voterGroups schema remains. Clears stored polls from all characters
- * so they commission fresh polls with the new 12 voter groups.
+ * Upserts demographic categories and state demographics from seed data.
+ * Admin-only. Removes legacy categories (race, gender, education, wealth, age,
+ * ideology) so only the voterGroups schema remains. Clears stored polls from
+ * all characters so they commission fresh polls with the new voter groups.
  *
  * Optional JSON body:
  *   { era?: EraId, countryId?: string, skipPollClear?: boolean }
  * Defaults: era="2019", countryId="US", skipPollClear=false
- * Backward-compatible: callers that POST with no body get US/2019 behaviour.
+ * Callers that POST with no body get US/2019 behaviour.
  *
  * For countryId !== "US", uses the international Layer-1 model path
  * (getCountryLayer1Model + buildModelRegionDemographics). Returns 400 if
@@ -94,10 +94,8 @@ export async function POST(request: Request) {
       const regionIds = regionDemographics.map((r) => r._id);
       const snapshotId = await takeSnapshot(db, countryId, era, regionIds, auth.admin.username);
 
-      // Categories must come from the DB, not the US static import: a region's
-      // lean is summed only over categories named in its `categoryWeights`, so
-      // scoring an RU/DD/UK region against US voter groups matches nothing and
-      // silently yields a 0/0 lean (#3752).
+      // Categories must come from the DB, not the US static import: region leans
+      // only sum categories in categoryWeights, so US groups yield a silent 0/0.
       const countryCategories = await db
         .collection<DemographicCategory>("demographicCategories")
         .find({})

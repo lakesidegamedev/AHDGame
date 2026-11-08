@@ -1,11 +1,10 @@
 /**
- * POST   /api/corporations/[id]/ceo/caretaker  — install an NPP caretaker CEO
- * DELETE /api/corporations/[id]/ceo/caretaker  — dismiss the caretaker, reclaim
+ * POST   /api/corporations/[id]/ceo/caretaker  - install an NPP caretaker CEO
+ * DELETE /api/corporations/[id]/ceo/caretaker  - dismiss the caretaker, reclaim
  *
- * Player-appointed caretaker CEO (NPP-autonomy V2.1). Only the sitting human CEO
- * (the corp owner, via `requireCeo`) may install or dismiss a caretaker, and the
- * country's NPP-autonomy level must be active for this country
- * (`nppAutonomyAtLeast(v1)` — true for autonomy countries at v1, player
+ * Only the sitting human CEO (via `requireCeo`) may install or dismiss.
+ * Country's NPP-autonomy level must be active for this country
+ * (`nppAutonomyAtLeast(v1)` - true for autonomy countries at v1, player
  * countries at v2). Auth: requireBasicAuth + requireCeo. Errors: 401, 403, 400.
  */
 

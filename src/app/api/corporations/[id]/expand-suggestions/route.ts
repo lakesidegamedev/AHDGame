@@ -73,16 +73,16 @@ type OwnershipFilter = "all" | "owned" | "unowned";
 
 /**
  * GET /api/corporations/[id]/expand-suggestions?sectorType=xxx&mode=unowned|playerCorp&ownership=all|owned|unowned
- * Returns up to 5 states with the best market opportunity for the given sector type.
- * mode=unowned (default): sorted by estimated capture from the unowned pool.
- * mode=playerCorp: sorted by total competitor revenue — markets with active player corps.
- * ownership (default all): owned = only states this corp already operates a sector in;
- *   unowned = only states it has not entered. Applied BEFORE the top-N slice so the
- *   best owned/new markets surface rather than being hidden behind the global top-N.
+ * Returns up to 5 states with the best market opportunity for the sector type.
+ * mode=unowned (default): ranked by estimated capture from the unowned pool.
+ * mode=playerCorp: ranked by total competitor revenue, i.e. markets with active player corps.
+ * ownership (default all): owned = states this corp already operates in; unowned =
+ *   states it has not entered. Applied BEFORE the top-N slice so the best owned/new
+ *   markets surface instead of being hidden behind the global top-N.
  * state (optional): pin this stateId into the returned top-N (Build-here deep link).
  * Includes competitor corporations already operating in each state.
  *
- * Plants worlds also return, per market, the entry verdict from
+ * Plant worlds also return, per market, the entry verdict from
  * `evaluateMarketEntry` (the rules the founding command enforces) and the room
  * to build in capacity units, kept apart from the legacy unowned revenue pool.
  * CEO only.
@@ -162,21 +162,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     }
 
-    // Demand gap for this sector type's output mix, per physical market (mean
-    // over legs so one balanced line does not veto answering a deep shortage
-    // in another — demand audit step 4). Most outputs use the candidate
-    // country's reachable book;
-    // state-local outputs use the candidate state's own balance.
-    // unowned pool's headroom is claimable market SHARE, not buyers; ranking
-    // and labelling it "untapped demand" steered players straight into gluts
-    // (ticket #1027 follow-up).
-    //
-    // Scoped to each candidate market's own REACHABLE book rather than the world
-    // aggregate (ticket #1077). The aggregate summed supply behind embargo walls
-    // and supply from countries outside COUNTRY_ORDER that trade with nobody, so
-    // a market running a real shortage read as a glut and every state on Earth
-    // quoted "room for 0". A market a corporation cannot sell into must not
-    // suppress the quote for one it can.
+    // Demand gap per candidate market's own REACHABLE book, mean over legs so a
+    // balanced line does not veto a shortage in another. State-local outputs use
+    // the candidate state's own balance. The unowned pool's headroom is
+    // claimable market SHARE, not buyers, so it is not ranked as untapped demand.
     const supplyMix =
       getStrategyForOperatingModel(sectorType, "standard", industryModel, mediaDiscriminator)
         .supply ?? {};

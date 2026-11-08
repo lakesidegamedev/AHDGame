@@ -243,10 +243,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({
       active: true,
       currentTurn,
-      // Return anchor-denominated liquidCapital so the client can use formatAmount()
-      // directly — matches the other monetary fields in this payload (sectorNpv,
-      // totalEquity, defaultedPrincipal, cashCost, dissolve.preview.*). Previously
-      // returned the raw native value, which displayed wrong for non-USD corps.
+      // Anchor-denominated so the client can use formatAmount() directly,
+      // matching the other monetary fields in this payload.
       liquidCapital: liquidCapitalAnchor,
       sectorNpv,
       totalEquity,

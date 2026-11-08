@@ -3,13 +3,12 @@ import type { FinancialVisibilityReason } from "../types";
 import { financialVisibilityCopy } from "../lib/financialVisibility";
 
 /**
- * Stands in for the money/plant panel when the figures are withheld. Without it
- * a fogged viewer sees the hero card's bare dash cells and an empty column,
- * which reads as "this sector earns nothing / is broken", the exact confusion
- * that had a player report a healthy sector as a $0 bug.
+ * Stands in for the money/plant panel when the figures are withheld. Without
+ * it a fogged viewer sees bare dash cells and an empty column, which reads as
+ * "this sector earns nothing / is broken".
  *
- * Renders nothing for `visible` (owner / admin), so it is a pure explainer, not
- * a gate.
+ * Renders nothing for `visible` (owner / admin), so it is a pure explainer,
+ * not a gate.
  */
 export default function FinancialVisibilityNotice({
   reason,

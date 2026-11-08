@@ -176,10 +176,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(400, "Insufficient caucus funds");
       }
 
-      // The debit has landed and there is no transaction to roll back, so
-      // every exit from here on must either complete the credit or put the
-      // money back. A THROWN credit was previously not compensated at all:
-      // it escaped with the caucus treasury already short.
+      // The debit has landed and there is no transaction to roll back, so every exit
+      // from here must either complete the credit or refund the debit.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
           const refundResult = await db

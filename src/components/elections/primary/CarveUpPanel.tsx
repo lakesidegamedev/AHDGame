@@ -1,17 +1,13 @@
 /**
  * Per-state demographic carve-up panel.
  *
- * Shows a conic-gradient pie chart of candidate slices in the currently
- * selected state, plus a breakdown row per candidate (avatar pill, name,
- * archetype tag, percent, bar). The slices come from the view-model
- * (Task 4.4) which runs `calcAppeal` against the per-state demographics.
+ * Shows a conic-gradient pie of candidate slices in the selected state, plus a
+ * breakdown row per candidate (avatar pill, name, archetype tag, percent, bar).
+ * Slices come from the view-model, which runs `calcAppeal` against per-state
+ * demographics.
  *
- * Renders an honest empty state when no candidate has run in this state
- * yet — no fake numbers, no "0%" pie.
- *
+ * Renders an honest empty state when no candidate has run in this state yet.
  * Pure presentational; the parent decides which state is selected.
- *
- * See plan §"Phase 4 — Tasks" 4.3.
  */
 
 import { useTranslations } from "next-intl";

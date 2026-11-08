@@ -8,10 +8,6 @@ import { INDEX_FUND_BACKING_WARN_RATIO, autoPauseDisabled } from "@/lib/indexFun
  * The full sweep represents 0% → 150% backing. The tick marks the under-backed
  * warning level so a viewer can read the headroom in one glance. Values above
  * 150% are clamped to the top of the arc.
- *
- * The tick used to be drawn from the auto-pause constant, which is 0, so it sat
- * at the origin and the error tone never fired while the copy claimed a 50%
- * auto-pause line.
  */
 export function BackingRatioGauge({ ratio }: { ratio: number | null }) {
   const W = 210;

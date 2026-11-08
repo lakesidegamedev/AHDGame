@@ -61,9 +61,9 @@ interface CommodityWorldMapViewProps {
   nationalSupply?: Record<string, number>;
   nationalDemand?: Record<string, number>;
   /**
-   * Per-country reachable book for THIS commodity (ticket #1077). Absent on a
-   * world that has not run a turn since 1.1.2, which hides the Reachable mode
-   * rather than painting every country as empty.
+   * Per-country reachable book for THIS commodity. Absent on a world that has
+   * not run a turn since 1.1.2, which hides the Reachable mode rather than
+   * painting every country as empty.
    */
   reachableBooks?: Record<
     string,

@@ -24,21 +24,15 @@ import {
 import type { MergerReviewSummary } from "../route";
 
 /**
- * The OFFICEHOLDER surface: the national referral queue for the seat the
- * viewer holds, plus the referrals that seat has already decided.
+ * National referral queue for the officeholder's seat, plus referrals that
+ * seat has already decided. Separate from the CEO endpoint so running a
+ * corporation never reveals pending referrals against other firms.
  *
- * This is national work, not corporation work, which is why it is its own
- * endpoint rather than a second array bolted onto the CEO payload. Running a
- * corporation must never reveal pending referrals against other firms.
+ * Authorization re-resolves the seat from `cabinetMembers` on every request;
+ * whoever holds the seat now decides.
  *
- * Authorization re-resolves the seat from `cabinetMembers` on every request and
- * trusts nothing from the client: whoever holds the seat NOW decides, and a
- * minister who was reshuffled out this turn loses the queue with the seat.
- *
- * Fails closed. A country whose era has no such seat, or whose economy is a
- * command economy, has no queue and reports `applies: false` so the caller
- * renders NOTHING rather than an empty state implying a feature that does not
- * apply here.
+ * Fails closed: no seat or a command economy yields `applies: false` so the
+ * caller renders nothing rather than a misleading empty state.
  */
 async function handleGET() {
   try {

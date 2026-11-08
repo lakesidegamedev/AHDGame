@@ -107,9 +107,9 @@ export async function GET() {
     }
 
     // The same sweep the turn runs, so a chair emptied here gets its election
-    // exactly as one emptied on the turn does. The page-load path used to
-    // vacate and stop, and because it fires far more often than the turn it
-    // would win the race and leave the seat with nothing to refill it.
+    // exactly as one emptied on the turn does. The page-load path fires far
+    // more often than the turn and would otherwise win the race and leave
+    // the seat with nothing to refill it.
     await vacateLeadershipForLostSeats(db);
 
     // Sits beside the seat-loss sweep because it is the same kind of check —

@@ -21,13 +21,11 @@ export function orgMembersByCountry(orgs: OrgSummary[]): Map<OrgMemberId, OrgSum
  * members.
  *
  * Dependencies are deliberately NOT included. Shading them made the map assert
- * something false — the legend reads "Members of NATO" while 75 colonies and
- * protectorates were painted alongside the 14 signatories, so the map claimed
- * Uganda and Malaya had joined the alliance. The North Atlantic Treaty is
- * explicit on the point: Article 6 draws a treaty area covering the Algerian
- * departments of France and the North Atlantic islands, and pointedly excludes
- * the members' other possessions. Painting them was not a shortcut for a truth
- * the map could not otherwise tell; it contradicted one.
+ * something false: the legend reads "Members of NATO" while 75 colonies and
+ * protectorates were painted alongside the 14 signatories, implying they had
+ * joined. The North Atlantic Treaty is explicit: Article 6 draws a treaty area
+ * covering the Algerian departments of France and the North Atlantic islands,
+ * and excludes the members' other possessions.
  *
  * Constituent territory still shades, because it is not a dependency question:
  * Byelorussia and the Baltics fall inside the Soviet Union's own geometry, so
@@ -44,18 +42,12 @@ export function memberEntityIds(org: OrgSummary | null): Set<string> {
 }
 
 /**
- * Map feature ids to shade for an organisation's members.
+ * Map feature ids to shade for an org's members.
  *
- * Resolved through the alignment roster rather than through `CountryId`,
- * because membership is entity-wide: NATO's 1953 roster includes Canada and the
- * Benelux, which the game carries as background entities with map geometry but
- * no CountryId. Keying on CountryId left them unshaded — the member list said
- * fourteen and the map showed six.
- *
- * Present-day footprints only, and deliberately so. Where an entity's territory
- * differed from today's — the USSR, Czechoslovakia, Yugoslavia, a divided
- * Germany — the map draws a region-overlay blob from live ownership instead, and
- * the base features that blob covers are dropped before this set is consulted.
+ * Keyed on roster entity, not CountryId: membership is entity-wide, and some
+ * members (Canada, Benelux) are background entities without a CountryId.
+ * Present-day footprints only; territory differences are drawn as an overlay
+ * blob and covered base features are dropped before this set is consulted.
  */
 export function memberFeatureIds(org: OrgSummary | null): Set<string> {
   const ids = new Set<string>();

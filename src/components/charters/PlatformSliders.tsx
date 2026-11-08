@@ -4,13 +4,9 @@ import { Slider, Label } from "@/components/ui";
 import { PLATFORM_AXIS_MAX, PLATFORM_AXIS_MIN } from "@/lib/charters/overtonGuardrails";
 
 /**
- * Phase 6 minimal-MVP platform editor (D6). Renders a slider per charter
- * platform axis — economic and social — each clamped to `[-60, +60]`. No
- * fancy Overton-window visualization; just the labels at each pole and the
+ * Platform editor: renders a slider per charter platform axis (economic and
+ * social), each clamped to `[-60, +60]`, with labels at each pole and the
  * current numeric value.
- *
- * Foreign-policy and culture sliders were removed in ticket #1032: they
- * were recorded on the charter but no gameplay mechanic ever read them.
  *
  * Used in `/charters/new` for drafting and (read-only) on `/charters/[id]`
  * to display the proposed platform.

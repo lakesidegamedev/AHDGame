@@ -69,10 +69,7 @@ export interface UserData {
   } | null;
 }
 
-/** `*-past` means the value was shared within the 90-day history window but is
- * no longer either account's current value. A moderator has to be able to tell
- * "these two share a fingerprint right now" from "these two shared one six
- * weeks ago"; collapsing the two would make the cards less trustworthy. */
+/** `*-past` means the value was shared within the 90-day window but is no longer current. Moderators must distinguish current from historical matches for trust. */
 export type MatchReason =
   "ip" | "fingerprint" | "tracking" | "device" | "ip-past" | "fingerprint-past";
 export type GroupMember = UserData & {
@@ -91,11 +88,12 @@ export interface DuplicateGroup {
   sharedIps: string[];
   sharedFingerprints: string[];
   sharedDevices: string[];
-  /** Values shared within the 90-day window that are no longer any member's
-   * current value. Kept separate from the lists above so the header never
-   * presents a rotated-away match as live evidence — but present, because a
-   * group formed ONLY by a rotated fingerprint would otherwise render with an
-   * empty header and read as having no evidence behind it at all. */
+  /**
+   * Values shared within the 90-day window that are no longer any member's
+   * current value. Kept separate so the header never presents a rotated-away
+   * match as live evidence, while still showing a group formed only by a
+   * rotated fingerprint.
+   */
   sharedHistoricalIps: string[];
   sharedHistoricalFingerprints: string[];
   cgnatSuspect: boolean;

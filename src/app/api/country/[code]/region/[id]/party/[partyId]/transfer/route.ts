@@ -161,10 +161,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       }
 
-      // The debit has landed and there is no transaction to roll back, so
-      // every exit from here on must either complete the credit or put the
-      // money back. A THROWN credit was previously not compensated at all:
-      // it escaped with the state treasury already short.
+      // Debit has landed with no transaction to roll back, so every exit from
+      // here must either complete the credit or refund.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
           const refundResult = await db

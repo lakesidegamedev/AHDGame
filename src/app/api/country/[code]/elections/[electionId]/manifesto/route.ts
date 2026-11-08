@@ -1,20 +1,10 @@
 /**
- * UK manifesto authoring (epic #856, ticket #857).
- *
  * POST /api/country/[code]/elections/[electionId]/manifesto
- *   body { pledges: string[], action?: "save" | "lock" }
- *   → saves (or locks) the party leader's draft manifesto.
- *
- * Only the party CHAIR (leader) may author. UK only. The vote-share effect
- * stays gated by UK_MANIFESTO_VOTE_EFFECT regardless of this route.
- *
- * Write-only on purpose. This route used to serve GET too, and the elections
- * page mounted one manifesto bar per contested Commons race, each fetching its
- * own — 7,763 requests over 24 elections in 7 days on live, 19% of all logged
- * API traffic, for a payload whose catalog/party/leader half was identical
- * every time. Reads now come from `…/elections/manifestos`, which answers the
- * whole page at once. Saving and locking stay here: they really are
- * per-election.
+ * body { pledges: string[], action?: "save" | "lock" }
+ * Saves or locks the party leader's manifesto. Chair only, UK only. Vote-share
+ * effect gated by UK_MANIFESTO_VOTE_EFFECT. Write-only: reads come from
+ * …/elections/manifestos, which serves the whole page at once; per-race GETs
+ * were a traffic sink.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";

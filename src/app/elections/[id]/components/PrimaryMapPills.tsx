@@ -38,10 +38,10 @@ const TIER_LABEL: Record<NonNullable<ReturnType<typeof resolveTier>>, string> = 
 
 /**
  * Tier the pills should link to. `tierPrimaryRoute` returns the presidential
- * URL for "president" and the /elections/primary/* tree for the lower tiers.
- * The per-party primary pages are US-only (hardcoded US state list + GeoJSON),
- * so non-US elections must not link to them — a Japanese party's sequentialId
- * would otherwise resolve to the same-numbered US party (ticket #954).
+ * URL for "president" and the /elections/primary/* tree for lower tiers.
+ * Non-US elections must not link to per-party primary pages: they are US-only
+ * (hardcoded state list + GeoJSON), so a foreign sequentialId would resolve to
+ * the same-numbered US party.
  */
 function resolveTier(election: ElectionDetail) {
   if (election.countryId !== "US") return undefined;

@@ -129,12 +129,12 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const currentTurn = gameState?.currentTurn ?? 1;
 
   // Source the income statement from the SAME shared builder the website uses,
-  // so the bot embed matches the corp page by construction (ticket #970). The
-  // builder returns daily-unit, corp-LOCAL figures — the same units the fields
-  // below already use — and folds in the engine's realized income when a
-  // corporationHistory row exists. `viewerUserId: null` = public view (no
-  // request-scoped auth needed). We only take `financials` here; the sectors,
-  // bonds, balance-sheet and credit sections keep their existing computations.
+  // so the bot embed matches the corp page by construction. The builder returns
+  // daily-unit, corp-LOCAL figures (the same units the fields below use) and
+  // folds in the engine's realized income when a corporationHistory row exists.
+  // `viewerUserId: null` = public view. Only `financials` is used here; the
+  // sectors, bonds, balance-sheet and credit sections keep their existing
+  // computations.
   const detail = await loadCorporationDetailView({
     db,
     corporation,
@@ -201,9 +201,8 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
 
   // Sector economic fields are stored in each sector's HOST-market currency,
-  // not the owning corp's — same shape as the web sector-detail currency bug
-  // fixed in #3540. Normalize host -> ₳ (for currency-invariant math, e.g.
-  // workers) and host -> corp currency (for anything displayed as money).
+  // not the owning corp's. Normalize host -> ₳ for currency-invariant math
+  // (e.g. workers) and host -> corp currency for anything shown as money.
   const sectorAmountAnchor = (amount: number, sector: CorporateSector) =>
     readCorpEconomicAnchor(
       amount,

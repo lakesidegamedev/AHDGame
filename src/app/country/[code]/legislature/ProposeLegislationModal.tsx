@@ -263,14 +263,10 @@ function LegacyProposeLegislationModal({
   // are standalone actions that leave the bias untouched at enactment.
   const [unionLawAction, setUnionLawAction] = useState<"bias" | "ban" | "repeal_ban">("bias");
 
-  // Provisions that stand on their own: they carry the whole bill and need no
-  // accompanying policy provision. "Return rate-setting to the government" and
-  // a franchise change are complete statutes by themselves, and requiring an
-  // unrelated policy row alongside them made a bank-independence bill
-  // impossible to propose at all (#1250) — the blank starter row could not be
-  // removed and could not pass the "every provision needs a policy type" gate.
-  // One provision each: an electoral-law bill carries the franchise and the
-  // registration regime on a single provision, however many axes it sets.
+  // Some provisions stand alone and need no accompanying policy row:
+  // e.g. "Return rate-setting to the government" or a franchise change are
+  // complete statutes by themselves. Each such provision occupies one
+  // MAX_PROVISIONS slot, so policy rows get what is left.
   const standaloneProvisionCount =
     (canProposeEuro && includeEuroAdoption ? 1 : 0) +
     (includeTreaty ? 1 : 0) +
@@ -279,9 +275,8 @@ function LegacyProposeLegislationModal({
     (isElectoralCat && (includeVotingAge || includeRegAccess) ? 1 : 0);
   const hasStandaloneProvision = standaloneProvisionCount > 0;
   // A standalone provision occupies one of the bill's MAX_PROVISIONS slots, so
-  // the policy rows get what is left. Without this the form happily built a
-  // four-provision bill out of three rows plus a checkbox and the body schema
-  // refused it with "At most 3 provisions" (#1250).
+  // the policy rows get what is left.
+
   const maxPolicyRows = Math.max(0, MAX_PROVISIONS - standaloneProvisionCount);
 
   const blockedProvisionKeys = new Set(

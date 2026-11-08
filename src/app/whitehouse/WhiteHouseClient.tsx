@@ -145,16 +145,11 @@ export default function WhiteHouseClient({
   const [submitting, setSubmitting] = useState(false);
   const [resignLoading, setResignLoading] = useState(false);
   const [billActionId, setBillActionId] = useState<string | null>(null);
-  // Seeded from `?tab=`, so a link can open a specific tab. Follows the pattern
-  // `CentralBankClient` and `CongressClient` already use. Initial state only: once
-  // the page is open, clicking a tab keeps working exactly as before without
-  // rewriting the URL.
-  //
-  // GATED THE SAME WAY THE NAV IS, for the reason the sibling shell spells out: the
-  // `address` and `orders` bodies carry no guard of their own because `activeTab`
-  // used to be reachable only by clicking a button the viewer could see. The
-  // viewer's own flags are not loaded yet on the first render, so the seed is
-  // re-checked once `data` arrives.
+  // Seeded from `?tab=` so a link can open a specific tab (matches
+  // CentralBankClient/CongressClient). Initial state only: clicking a tab does
+  // not rewrite the URL. The seed is re-gated once `data` arrives, since viewer
+  // flags are not loaded on first render and the `address`/`orders` bodies carry
+  // no guard of their own.
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     const requested = searchParams.get("tab");
     return isTabKey(requested) && (requested === "overview" || requested === "endorsements")

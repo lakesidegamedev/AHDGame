@@ -328,9 +328,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
             .toArray()
         : [];
 
-    // Live capacity × equity cap, not the cached turn stamp. Pointer deposits
-    // used to zero book equity and pin the cached ceiling at $0 until the next
-    // bankingTurn; the console must show the number the next turn will use.
+    // Live capacity x equity cap, not the cached turn stamp. The cached ceiling can be stale until the next bankingTurn, so the console must show the number the next turn will use.
     const sheet =
       hasActiveCharter && charter
         ? bankBalanceSheet({
@@ -342,9 +340,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
         : null;
     const depositCeiling = sheet ? sheet.depositCeiling : null;
 
-    // The console used to ship raw ObjectId hex for every borrower and every
-    // blacklist entry, which the UI then printed (truncated, for the loan
-    // book). Nobody can read that, and a player has no way to produce one.
+    // The UI prints borrower and blacklist names, not raw ObjectId hex.
     // Resolve names once here so both surfaces render people and companies.
     const blacklistVisible = isCeo || isAdmin || isChair;
     const rawBlacklist = charter?.blacklist;
@@ -663,12 +659,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
         status: loan.status,
         arrearsTurns: loan.arrearsTurns ?? 0,
       })),
-      // The household book, by rating, best credit first. This is what the
-      // console used to be unable to show: the book was one lump with one rate,
-      // so "NPC bulk outstanding (implied)" was genuinely all there was to say.
-      // Per-band targets mirror the turn's funding derivation (deposit base
-      // after reserves, less non-household loans) from console-visible inputs,
-      // so each row shows where the stance is steering it, not just where it is.
+      // The household book, best credit first. Per-band targets mirror the turn's funding derivation (deposit base after reserves, less non-household loans), so each row shows where the stance is steering it, not just where it is.
       householdBook,
       // Where the charter is in its life and what that admits. The console
       // shows the stage and disables what the stage refuses, so a player is

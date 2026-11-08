@@ -166,11 +166,9 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
     if (!background) setLoading(true);
     setError("");
     try {
-      // Five fetches, one round trip. `/api/character/me` used to be awaited
-      // after this batch resolved, adding a full serial RTT (on top of its own
-      // ~10-query chain) before the wallet strip could render; the monetary
-      // policy payload is no longer fetched here at all — only the policy tab
-      // reads it, so it loads when that tab opens.
+      // Five fetches, one round trip. `/api/character/me` is in this batch so
+      // the wallet strip does not wait on a serial RTT. Monetary policy is
+      // only read by its tab, so it loads when that tab opens.
       const [exchangeRes, ordersRes, meRes, countriesRes] = await Promise.all([
         fetch("/api/forex/exchange"),
         fetch("/api/forex/orders"),

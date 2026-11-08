@@ -1,20 +1,17 @@
 // GET /api/admin/financial-logs/reconcile?subjectId=...&turns=24
 //
-// Compares the logged net of financialTxLog for a given subject over the last
-// `turns` turns against the actual balance delta read from `portfolioHistory`
-// snapshots. The result is the same "logged net vs actual" calculation we ran
-// by hand to surface the bond-buy exploit:
+// Compares the logged net of financialTxLog for a subject over the last
+// `turns` turns against the actual balance delta from `portfolioHistory`
+// snapshots (anchor units).
 //
-//   - For each turn snapshot in [now - turns, now], read total/cash/stock/bond
-//     value (denominated in anchor units).
-//   - Sum every financialTxLog row's `amount` for the subject in the same
-//     window, converted to anchor where currency rates allow.
-//   - Discrepancy = (actualΔ) − (loggedΔ). Anything ≫ 0 means cash flowed
-//     into the subject without a logged tx; ≪ 0 means logged tx outpaced
-//     actual movement (refund / cancel / reversal not captured).
+//   - For each snapshot in [now - turns, now], read total/cash/stock/bond value.
+//   - Sum every financialTxLog `amount` for the subject in the same window,
+//     converted to anchor where rates allow.
+//   - Discrepancy = actualΔ − loggedΔ. ≫ 0 means cash flowed in without a
+//     logged tx; ≪ 0 means logged tx outpaced actual movement (refund, cancel,
+//     or reversal not captured).
 //
-// Auth: requireAdmin. Errors: 400 (invalid params), 403, 404 (no
-// portfolioHistory rows for the subject).
+// Auth: requireAdmin. Errors: 400 (invalid params), 403, 404 (no history rows).
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";

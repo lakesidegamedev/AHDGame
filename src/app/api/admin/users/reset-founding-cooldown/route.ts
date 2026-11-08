@@ -15,13 +15,10 @@ const schema = z.object({
 // Auth: requireAdmin
 // Errors: 400, 403, 404
 //
-// The founding cooldown (Bug #0728) is deliberately per-USER, not per-character:
-// it blocks the found -> drain -> abandon -> found rotation, and scoping it to
-// the character would let a reroll dodge it. That means a player who founds a
-// corp and then retires keeps the cooldown on their new character — working as
-// designed, but with no way for staff to grant an exception. `reset-movement`
-// had this escape hatch for relocation; founding did not, so the only remedy
-// was a direct Mongo write. This closes that gap.
+// The founding cooldown is deliberately per-USER, not per-character: it blocks
+// the found -> drain -> abandon -> found rotation, and scoping it to the
+// character would let a reroll dodge it. A player who founds a corp and retires
+// keeps the cooldown on their new character, so staff need this escape hatch.
 //
 // Grant sparingly on production: waiving it hands back the exact exploit the
 // cooldown exists to prevent. The common legitimate case is a freshly reset

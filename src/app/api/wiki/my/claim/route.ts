@@ -2,15 +2,13 @@
  * POST /api/wiki/my/claim
  *
  * Create a stub wiki page for the current player or their corporation, using
- * a deterministic slug derived from the target entity's ObjectId. If a page
- * with that slug already exists, returns the existing slug (idempotent).
+ * a deterministic slug derived from the target entity's ObjectId. Idempotent:
+ * if a page with that slug exists, returns the existing slug.
  *
  * Body: { target: "player" | "corporation" | "party", corporationSequentialId?: number }
  * Returns: { slug, created }
  *
- * Auth: requireBasicAuth (+ active character); blocked when wiki is disabled.
- * The "corporation" target additionally requires that the caller is the CEO.
- * Errors: 400, 401, 403, 404, 429
+ * The "corporation" target requires the caller to be the CEO.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";

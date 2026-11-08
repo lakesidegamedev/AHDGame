@@ -67,11 +67,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid legal structure for this corporation's country.");
     }
 
-    // This route is private-only (public corps are blocked above), so a
-    // listed-only form (PLC, AG, SA Aberta, …) cannot be elected here — it is
-    // acquired by taking the corporation public, not by restructuring.
-    // State patronage forms are for state-owned companies only; a private
-    // owner cannot elect a state tax preference.
+    // This route is private-only, so listed-only forms (acquired by going
+    // public) and state patronage forms (state-owned only) cannot be elected
+    // here.
     if (structure.id === "cn_soe" && !corporation.countryOwnerId) {
       return errorResponse(400, `${structure.name} is only available to state-owned companies.`);
     }

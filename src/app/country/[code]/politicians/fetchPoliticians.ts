@@ -138,10 +138,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
       politicalInfluence: character.politicalInfluence || 0,
       nationalInfluence: character.nationalInfluence ?? 0,
       favorability: character.favorability ?? 50,
-      // LOCAL home-currency balance (canonical source of truth) — fixes
-      // in-game bug #0553 where the politicians-list card displayed the
-      // stale anchor mirror (e.g. -$2.4M for a character with $208K real
-      // balance under floating FX).
+      // Local home-currency balance; the canonical source, not the FX-mirrored anchor value.
       funds: character.currencyBalances?.campaign ?? character.funds ?? 0,
       isNPP: false,
       isAdmin: character._userIsAdmin === true || character._userRole === "admin",

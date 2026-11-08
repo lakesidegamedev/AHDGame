@@ -1,6 +1,4 @@
-// DELETE: cancel an open/partial limit order, refund remaining escrowed funds
-// Auth: requireAuthWithCharacter
-// Errors: 400 (invalid ID), 401, 403 (not owner / forex disabled), 404
+// DELETE: cancel an open/partial limit order, refund remaining escrow. Auth: requireAuthWithCharacter. Errors: 400, 401, 403, 404.
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";

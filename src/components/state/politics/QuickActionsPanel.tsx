@@ -9,18 +9,14 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 /**
  * Quick Actions hub for the State Politics tab.
  *
- * Live actions (Org Building, GOTV, Suppression budgets) deep-link to
- * the State Party page where the canonical mutation forms live —
- * Phase 2 doesn't duplicate them. Per Phase 2 D2.
+ * Live actions deep-link to the State Party page where the canonical
+ * mutation forms live, so they are not duplicated here.
  *
- * Preview-only actions (Contest, Field Office, Establish Presence,
- * Rally, Ad Buy, Endorse) render as visible-but-disabled buttons with
- * No fake success toasts.
+ * Preview-only actions render as visible-but-disabled buttons, with no
+ * fake success toasts.
  *
- * Renders nothing if the viewer is unaffiliated (no partyId) — there
- * is no actor context for actions to apply to.
- *
- * See plan §"Phase 2 — Task 2.1" + §16.
+ * Renders nothing if the viewer is unaffiliated (no partyId), there is
+ * no actor context for actions to apply to.
  */
 export function QuickActionsPanel({
   countryCode,

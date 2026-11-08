@@ -10,9 +10,8 @@ interface PrimaryPhaseNoteProps {
 }
 
 /**
- * The one place that explains primary scoring. The headline stays short; the
- * full formula sits behind a disclosure. The page used to print a second,
- * near-identical paragraph at the very bottom — that has been folded in here.
+ * The one place that explains primary scoring: short headline, full formula
+ * behind a disclosure.
  */
 export function PrimaryPhaseNote({
   election,

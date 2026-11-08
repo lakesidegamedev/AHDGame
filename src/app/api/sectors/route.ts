@@ -95,25 +95,20 @@ export async function GET(request: Request) {
       .toArray();
     const stateMap = new Map(states.map((s) => [s._id, s]));
 
-    // A country that renamed itself must be listed and labelled under the name
-    // it goes by. Reunified Germany keeps `DD` as its country id and carries the
-    // new name in `countryState.displayNameOverride`, so reading the compiled
-    // config alone showed its sectors under "East Germany" while the dissolved
-    // shell still offered "Germany" as a filter that could never match a row
-    // (ticket #1271). `COUNTRY_ORDER` is the compiled roster, so it is narrowed
-    // to countries that still hold territory rather than trusted as a list of
-    // live countries.
+    // A renamed country must be listed and labelled under the name it goes by.
+    // Reunified Germany keeps `DD` as its id and carries the new name in
+    // `countryState.displayNameOverride`, so reading the compiled config alone
+    // showed sectors under "East Germany" while a stale "Germany" filter could
+    // never match a row. `COUNTRY_ORDER` is the compiled roster, so narrow it to
+    // countries that still hold territory.
     //
-    // Three corrections, not one. The runtime override is what reunification
-    // writes; the ERA name is what a 1953 world calls RU ("Soviet Union") and DE
-    // ("West Germany"); and the flag override travels with the rename, so
-    // applying only the name left Germany labelled correctly under the flag of
-    // the state it replaced.
+    // Three corrections: the runtime rename override, the era name (e.g. "Soviet
+    // Union" for RU in 1953), and the flag override, which travels with the rename.
     //
-    // `loadCountryPresentationOverrides` rather than `resolveCountryIdentities`
-    // because the latter reads through `getCountryState`, which SELF-HEALS a
-    // missing row. This is a public listing endpoint and must not be able to
-    // insert documents as a side effect of someone sorting a table.
+    // Use `loadCountryPresentationOverrides` rather than
+    // `resolveCountryIdentities`: the latter reads through `getCountryState`,
+    // which self-heals a missing row, and this public listing endpoint must not
+    // insert documents as a side effect.
     const [preset, overrides] = await Promise.all([
       loadWorldPreset(db),
       loadCountryPresentationOverrides(db),
@@ -148,14 +143,9 @@ export async function GET(request: Request) {
      * The country filter, as a query. Used by the rows AND by the badge counts,
      * so the two cannot disagree.
      *
-     * The second leg is for a row whose state no longer exists: `mergeRegion`
-     * re-points sector rows before deleting a region, so this is debris rather
-     * than normal state, and the pool heal deliberately leaves it for a human.
-     * It is still LABELLED from its stored country, and without this leg it
-     * would be labelled under a country whose filter could never return it:
-     * visible in the unfiltered list, gone the moment you filter by the country
-     * it names. Findable under the name it is shown under is the only pairing
-     * that is not a lie.
+     * The second leg catches rows whose state was deleted but whose stored country
+     * still labels them: without it they would be visible unfiltered but vanish
+     * when filtered by the country they name.
      */
     const allStateIds = states.map((st) => st._id);
     const countryScopedFilter: Record<string, unknown> = filteredStateIds

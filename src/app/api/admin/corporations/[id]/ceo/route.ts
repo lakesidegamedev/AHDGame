@@ -43,13 +43,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .findOne({ _id: new ObjectId(characterId) }, { projection: { userId: 1 } });
     if (!character) throw notFound("Character not found");
 
-    // `ceoType` MUST be stamped, not just left alone: the seat may previously
-    // have been held by an NPP (spawned or caretaker) or an imperial character,
-    // and corporationDetail resolves the CEO from the collection named by
-    // `ceoType`. A stale "npp" makes the corp page render "CEO Vacant" while a
-    // live character sits in `ceoId`. Any caretaker record dies with the
-    // handover — leaving it would let a later dismissal restore the old human
-    // over the one just appointed.
+    // `ceoType` MUST be stamped, not left alone: corporationDetail resolves the
+    // CEO from the collection named by `ceoType`. A stale "npp" renders "CEO
+    // Vacant" while a live character sits in `ceoId`. Any caretaker record dies
+    // with the handover; leaving it would let a later dismissal restore the old
+    // caretaker over the one just appointed.
     await db.collection<Corporation>("corporations").updateOne(
       { _id: new ObjectId(id) },
       {

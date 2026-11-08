@@ -97,10 +97,9 @@ export async function GET(req: Request) {
       source,
     });
 
-    // Slow-turn alert: a full turn taking more than 5 minutes means something is
-    // stuck — a phase hanging on a DB index scan, a large election resolution,
-    // or a metric engine regression. The cron maxDuration is 800s, so 300s is
-    // the "investigate now" threshold before it risks timing out entirely.
+    // Slow-turn alert: >5 minutes means something is stuck (hanging phase,
+    // large election, metric regression). maxDuration is 800s, so 300s is the
+    // investigate-now threshold before a timeout risk.
     if (result.success && durationMs > 300_000) {
       Sentry.captureMessage(`Slow turn: #${result.turn} took ${Math.round(durationMs / 1000)}s`, {
         level: "warning",

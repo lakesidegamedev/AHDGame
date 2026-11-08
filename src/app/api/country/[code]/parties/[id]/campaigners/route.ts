@@ -27,9 +27,9 @@ interface RouteParams {
  * adding. Returns an error response when a candidate fails, or null when
  * every candidate is clean.
  *
- * The relocation gate mirrors the state-leadership rule (#949) so the
- * national chair can't re-grant, via a campaigner seat, the powers a
- * fresh relocation is meant to withhold (ticket #974). Admins skip it.
+ * The relocation gate mirrors the state-leadership rule so the national chair
+ * cannot re-grant, via a campaigner seat, the powers a fresh relocation is meant
+ * to withhold. Admins skip it.
  */
 async function validateCandidates(
   db: Db,
@@ -103,31 +103,17 @@ const campaignersSchema = z.object({
 });
 
 /**
- * POST /api/country/[code]/parties/[id]/campaigners — chair submits the
- * desired campaigner roster (up to MAX_NATIONAL_CAMPAIGNERS).
+ * POST submits the chair's desired campaigner roster (up to
+ * MAX_NATIONAL_CAMPAIGNERS).
  *
- * Per suggestion #269, the seat is no longer purely chair-appointed:
+ * Dropped names are removed immediately (chair fires at will). Added names
+ * become `campaignerAppointment` proposals confirmed by the National Committee
+ * before seating, because campaigners carry NPP Management on top of Build Org.
+ * The committee can strip a seated campaigner via `removeOfficeHolder`.
  *
- *  - Names DROPPED from the roster are removed immediately. The chair
- *    fires at will, so a campaigner who goes rogue loses the seat on the
- *    spot.
- *  - Names ADDED become `campaignerAppointment` proposals before the
- *    National Committee. They take the seat only when the committee
- *    confirms. Nothing about the roster changes until then.
- *
- * Campaigners carry NPP Management on top of Build Org, which is why the
- * appointment is confirmed rather than granted. The National Committee
- * can also strip a seated campaigner via a `removeOfficeHolder` proposal
- * with role `campaigner`.
- *
- * Validation on additions:
- *  - Each id must resolve to a Character
- *  - Each character must currently be a member of this party
- *  - No duplicate ids, no double nomination, no over-cap once pending
- *    nominations are counted
- *
- * Vice-chair cannot reassign; only chair (or acting VC) / admin. Admins
- * still seat the roster directly, bypassing the committee.
+ * Additions must resolve to a Character, be a current party member, be unique,
+ * not already nominated, and fit the cap counting pending nominations. Chair or
+ * acting VC only; admins bypass the committee.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
@@ -173,9 +159,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Malformed campaigner id");
     }
 
-    // Split the submitted roster against the seated one. Removals land
-    // immediately (the chair can fire at will — suggestion #269); additions
-    // become National Committee nominations and only seat on a passing vote.
+    // Removals land immediately; additions become National Committee nominations
+    // and only seat on a passing vote.
     const seated = party.campaignerIds ?? [];
     const keptIds = seated.filter((id) => requestedIds.some((r) => r.equals(id)));
     const removedIds = seated.filter((id) => !requestedIds.some((r) => r.equals(id)));

@@ -1,24 +1,23 @@
 /**
  * GET /api/country/[code]/regime/leader
  *
- * Full diagnostics for the sitting head of government: raw scalars,
- * dwell counters, the active decision (if any) with its options,
- * reform-action availability + cooldowns, convention state, and the
- * popular-legitimacy / party-confidence history series.
+ * Full diagnostics for the sitting head of government: raw scalars, dwell
+ * counters, active decision with options, reform-action availability and
+ * cooldowns, convention state, and popular-legitimacy / party-confidence
+ * history series.
  *
- * Auth: the sitting head of government always sees their own
- * diagnostics. Site admins/moderators also get read access (mirroring
- * the requireAdmin() guard on the admin override endpoints) so the
- * Admin and Regime Health tabs stay usable even when there is no
- * sitting head of government yet. Everyone else gets 403 — the Regime
- * Health tab in the UI uses this to decide whether to render the
- * diagnostic surface or fall back to the public panel.
+ * Auth: the sitting head of government always sees their own diagnostics.
+ * Site admins/moderators also get read access (mirroring `requireAdmin()
+ * on the admin override endpoints) so Admin and Regime Health tabs stay
+ * usable even without a sitting leader. Everyone else gets 403; the Regime
+ * Health tab uses this to decide whether to render diagnostics or fall back
+ * to the public panel.
  *
  * Errors:
- *   400 — unknown country
- *   401 — not authenticated and not an admin
- *   403 — caller is neither the sitting leader nor an admin
- *   500 — anything else
+ *   400 unknown country
+ *   401 not authenticated and not admin
+ *   403 neither sitting leader nor admin
+ *   500 anything else
  */
 import { NextResponse } from "next/server";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";

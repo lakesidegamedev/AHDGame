@@ -267,9 +267,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
     }
   }
 
-  // Mid-world player handoff (#3725): open/close go through the handoff
-  // module so readiness is gated, live state is preserved, and exit vacates
-  // claimable player offices without an instant NPP replacement.
+  // Handoff module gates readiness, preserves live state, and vacates claimable player offices without instant NPP replacement.
   if (enabledForPlayers === true) {
     try {
       await enterCountryForPlayers(db, countryId, {

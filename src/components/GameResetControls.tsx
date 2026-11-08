@@ -19,9 +19,8 @@ interface ResetPreset {
 }
 
 /**
- * Start year embedded at the front of every preset name ("2019 Start Date — …").
- * Used to order the selector chronologically. Names without a leading year sort
- * last.
+ * Start year embedded at the front of preset names, used to order the
+ * selector chronologically. Names without a leading year sort last.
  */
 function presetStartYear(preset: ResetPreset): number {
   const match = preset.name.match(/\b(\d{4})\b/);

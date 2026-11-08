@@ -149,9 +149,7 @@ export async function GET() {
         preset,
       },
       {
-        // Global signup/country-picker data (no per-user fields); cache at the
-        // edge like the sibling reference routes instead of recomputing the
-        // full-collection player-count aggregation on every request. (#2818)
+        // Global signup/country-picker data (no per-user fields); cache at edge to avoid recomputing the full-collection player-count aggregation each request.
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=60, no-transform",
         },

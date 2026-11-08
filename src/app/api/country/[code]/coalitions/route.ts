@@ -272,9 +272,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         const party = partyMap.get(member.partyId.toString());
         const seqIdStr = String(party?.sequentialId ?? "");
         const memberCount = (charCountMap.get(seqIdStr) ?? 0) + (nppCountMap.get(seqIdStr) ?? 0);
-        // partyId is the party's sequentialId (number) — matches CoalitionListItem.
-        // Previously returned the ObjectId hex, which broke UI comparisons against
-        // character.party (a stringified sequentialId) — e.g. parties-page isInCoalition.
+        // partyId is the party's sequentialId (number) to match CoalitionListItem
+        // and character.party, which UI comparison code relies on.
         return {
           partyId: party?.sequentialId ?? member.partySequentialId,
           name: party?.name ?? "Unknown Party",

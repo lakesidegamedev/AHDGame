@@ -168,16 +168,9 @@ export async function GET(request: Request) {
       });
     }
 
-    // ─── Convert each sector at its OWN host rate (#1161) ───────────────────
-    //
-    // `corporateSectors.revenue` is stored in the SECTOR's host currency, not
-    // the corp's (see the docblock on `corpDailyGrossRevenueLocal`, ticket
-    // #1118). Converting it at the corp's rate reads a foreign sector's local
-    // figure as if it were already in the corp's money, so one sector in a
-    // weak-currency country inflated a corp's revenue by whatever the two
-    // currencies differ by — and the ranking is built on that number. Reported
-    // as "people with one foreign sector in like bulgaria talking about how
-    // they have the biggest corp".
+    // Convert each sector at its OWN host rate. `corporateSectors.revenue` is
+    // stored in the SECTOR's host currency, not the corp's, so converting at the
+    // corp's rate inflates revenue by the FX gap and corrupts the ranking.
     const revenueAnchorByCorp = new Map<string, number>();
     const ownedRevenueAnchorByState = new Map<string, number>();
     for (const sec of sectorsInScope) {
@@ -214,9 +207,7 @@ export async function GET(request: Request) {
     for (const [corpId, revenueAnchor] of revenueAnchorByCorp) {
       const corp = corpMap.get(corpId);
       totalOwnedRevenue += revenueAnchor;
-      // The displayed figure is the anchor restated in the corp's OWN currency.
-      // It used to be a bare sum of per-sector amounts in whatever currency
-      // each sector happened to be stored in, which is not a quantity.
+      // The displayed figure is the anchor restated in the corp's own currency.
       const corpFx = fxByCorpId.get(corpId);
       companies.push({
         corporationId: corpId,
@@ -233,9 +224,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // Ticket #1145: market share = a corp's revenue over the TOTAL real revenue
-    // in scope. No unowned pool in the denominator, so shares sum to 100% and
-    // there is no "unowned" slice.
+    // Market share is revenue over total owned revenue, so shares sum to 100% with no unowned pool.
     const effectiveMarket = totalOwnedRevenue;
     for (const company of companies) {
       company.marketSharePercent = roundMarketSharePercent(company.revenueAnchor, effectiveMarket);

@@ -1,10 +1,8 @@
 /**
- * GET /api/unions/[id]: union detail + the CorporateSectors currently
- * matching its (countryId, sectorType) scope (v3 Phase 8). Read-only, no
- * auth required, the dashboard UI decides what actions to show based on
- * whether the viewer leads this union. Gated on `labourSystemMode >= "full"`
- * (code-review fix #10/#13, previously ungated, kept serving live union
- * data indefinitely even after the feature was disabled).
+ * GET /api/unions/[id]: union detail plus CorporateSectors matching its
+ * (countryId, sectorType) scope. Read-only, no auth; gated on
+ * `labourSystemMode >= "full"` so live union data is not served when the
+ * feature is disabled.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -434,10 +432,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         unionizedWorkers: members,
         density: representedHeadcount > 0 ? members / representedHeadcount : 0,
       },
-      // No union-wide strike preview: unions no longer call strikes directly,
-      // so the only live cost/eligibility figures are the campaign-scoped ones
-      // in `bargainingCampaigns[].escalationPreview` below, which are built
-      // from the same `strikeCallCost` and `STRIKE_CALL_MIN_UNIONIZATION`.
+      // No union-wide strike preview: strikes are only callable via campaign-scoped escalationPreview entries below, built from the same strikeCallCost and STRIKE_CALL_MIN_UNIONIZATION.
       agreements: liveAgreements.map((agreement) => ({
         agreementId: agreement._id.toString(),
         employerCorporationId: agreement.employerCorporationId.toString(),

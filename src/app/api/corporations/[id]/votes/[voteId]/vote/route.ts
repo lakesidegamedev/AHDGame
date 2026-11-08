@@ -55,12 +55,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const { vote: choice, voterCorporationId } = parsed.data;
 
-    // Resolve the voter's shareholding. If voterCorporationId is explicitly
-    // provided, vote as that corporation (must be CEO of it and it must hold
-    // shares). Otherwise, vote as the active character (respects
-    // activeCharacterId for multi-character support — Bug #0832).
-    // If the character holds no shares, auto-detect a managed corporation
-    // that holds shares (multi-CEO path).
+    // Resolve the voter's shareholding. If voterCorporationId is provided, vote as that corporation (must be CEO and it must hold shares). Otherwise vote as the active character. If the character holds no shares, auto-detect a managed corporation that holds shares.
     let voterId: ObjectId;
     let voterType: "character" | "corporation";
     let voteShares: number;

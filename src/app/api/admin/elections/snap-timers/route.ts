@@ -1,18 +1,15 @@
 /**
  * POST /api/admin/elections/snap-timers
  *
- * Snaps all active-election timers to exact turn-fire boundaries.
+ * Re-anchors each future timer so it lands exactly when its turn fires.
  *
- * Turns process at the top of each hour. When primaryEndTime / endTime are
- * set to an arbitrary wall-clock time (e.g. "now + 72h"), the LARP week
- * shown to players may be one turn off because the deadline falls mid-turn.
+ * Turns process at the top of each hour. A timer set to an arbitrary
+ * wall-clock time (e.g. "now + 72h") can land mid-turn, so the LARP week
+ * shown to players may be one turn off.
  *
- * This route re-anchors each future timer so it lands exactly when its
- * corresponding turn will fire:
- *   snapped = nextScheduledTurn + (turnsLeft - 1) × 1h
+ * snapped = nextScheduledTurn + (turnsLeft - 1) * 1h
  *
- * The LARP week count is preserved (same number of turns remaining); only
- * the minute/second portion is zeroed out to align with the scheduler.
+ * The turn count remaining is preserved; only minute/second is zeroed.
  */
 
 import { NextResponse } from "next/server";

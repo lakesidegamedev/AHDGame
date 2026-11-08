@@ -142,9 +142,7 @@ export async function GET(request: Request) {
               avatarUrl: member.characterId
                 ? charMap.get(member.characterId.toString())?.avatarUrl
                 : undefined,
-              // The real flag. This used to report `isNPP`, which both hid
-              // genuine acting holders and mislabelled NPP-held seats as
-              // acting. `isNPP` is already reported separately above.
+              // Use `acting`, not `isNPP`: `isNPP` hides genuine acting holders and mislabels NPP-held seats. `isNPP` is reported separately above.
               acting: member.acting === true,
               actingExpiresOnTurn: member.actingExpiresOnTurn ?? null,
               confirmedAt: (member.confirmedAt ?? member.createdAt).toISOString(),

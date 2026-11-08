@@ -78,25 +78,15 @@ import { resolveNavbarPageCountry } from "@/lib/navigation/resolveNavbarPageCoun
 import "./globals.css";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
-// Geist Sans sets every heading and all body copy, so it is the only family
-// preloaded: it is what renders above the fold on a cold anonymous load,
-// including the landing page's LCP element.
+// Geist Sans is the only preloaded family: it renders above the fold on a
+// cold anonymous load, including the landing page's LCP element. The mono
+// families load lazily and would otherwise compete for the connection during
+// first paint. `display: "swap"` plus next/font's size-adjust fallback avoids
+// layout shift.
 //
-// Preloading every family used to put 166KB of woff2 across 5 files on the
-// wire at ~200ms, all fighting for the same connection. On a throttled
-// mid-tier mobile profile (4x CPU, 1.6Mbps) they did not finish until
-// 2326-3342ms, and the landing LCP fired at 2940ms because the paragraph was
-// waiting on its own font swap.
-//
-// The mono families below still load normally when a glyph needs them; they
-// just do not compete during first paint. `display: "swap"` keeps their text
-// visible in the fallback face meanwhile, and next/font's automatic
-// size-adjust fallback keeps the swap from shifting layout.
-//
-// The variable classes go on <html>, not <body>: the Tailwind theme declares
-// --font-sans and --default-font-family on :root as var(--font-geist-sans),
-// and a custom property only resolves against variables defined on its own
-// element or an ancestor.
+// Variable classes go on <html>, not <body>: the Tailwind theme declares
+// --font-sans on :root as var(--font-geist-sans), and a custom property only
+// resolves against variables on its own element or an ancestor.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -156,12 +146,9 @@ export const viewport: Viewport = {
 };
 
 /**
- * Async so the description and the SEO keywords name the countries that are
- * ACTUALLY open to players right now. Both used to be hand-written lists, and
- * both went stale independently: the keywords tag was still selling Germany and
- * Japan months after those closed. Source of truth is
- * `lib/marketing/marketedWorldServer`; the read is served from a 5-minute
- * in-process cache, so this does not add a Mongo round-trip per request.
+ * Async so the description and SEO keywords reflect the countries currently
+ * open to players. Source of truth is `lib/marketing/marketedWorldServer`,
+ * served from a 5-minute in-process cache (no Mongo round-trip per request).
  */
 export async function generateMetadata(): Promise<Metadata> {
   const world = await getMarketedWorldSafe();
@@ -330,11 +317,8 @@ export default async function RootLayout({
     pathname,
     search: requestHeaders.get("x-search"),
   });
-  // The root layout does not re-render on a client-side navigation, so it ships
-  // only what its own client tree renders: the navbar and the tutorial coach.
-  // `app/template.tsx` adds the rest for the current route and refreshes it on
-  // every navigation. Measured 2026-10-24: the full catalog was 70,586 bytes
-  // gzipped, almost the whole 78,378-byte /corporation/1 document.
+  // Root layout does not re-render on client navigation, so it ships only
+  // what its own client tree renders; app/template.tsx adds the rest per route.
   const clientMessages = pickClientNamespaces(intlMessages, SHELL_CLIENT_NAMESPACES);
   const adSenseClientId = getAdSenseClientId();
   // Never load the AdSense page tag (auto ads + CMP) inside the native app

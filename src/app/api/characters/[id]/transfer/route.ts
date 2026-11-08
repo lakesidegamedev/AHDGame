@@ -104,11 +104,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
 
-    // Exactly-once on every topology (issue #1672): keyed idempotent legs
-    // reconcile a crash between the debit and the credit instead of
-    // destroying or duplicating money. A replayed key returns duplicate.
-    // Let the keyed debit check funds. A precheck here would reject a replay
-    // after the first attempt debited the sender but before it credited the target.
+    // Keyed idempotent legs make transfer exactly-once: a crash between
+    // debit and credit reconciles on replay instead of duplicating or losing
+    // money. Skip a funds precheck here, since it would reject a replay whose
+    // debit already landed.
     const { duplicate: transferDuplicate } = await transferCharacterCampaignFunds(db, {
       senderId: sender._id,
       targetId: targetObjectId,

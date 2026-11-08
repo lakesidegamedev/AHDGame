@@ -77,11 +77,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Sector types the minister can split off = those the PRIMARY National
     // Corporation actually holds (fully or partially nationalized). A split moves
     // the primary's sectors of that type into a new corp, so types already split
-    // off — or never nationalized — are naturally excluded (the primary holds
-    // none of them). Ordered by OPERATING_SECTOR_TYPES for a stable dropdown.
-    // Sorted on _id so a data bug carrying two flagged primaries (ticket #1254)
-    // still yields one deterministic answer; `mergeNationalCorporations` is the
-    // real collapse.
+    // off or never nationalized are excluded (the primary holds none).
+    // Ordering by OPERATING_SECTOR_TYPES gives a stable dropdown. Sorted on _id
+    // so a data bug carrying two flagged primaries still yields one
+    // deterministic answer; `mergeNationalCorporations` is the real collapse.
     const primaryId = corps
       .filter((c) => c.isPrimaryNationalCorporation)
       .sort((a, b) => a._id.toString().localeCompare(b._id.toString()))[0]?._id;

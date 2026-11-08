@@ -1,21 +1,9 @@
 /**
- * A faster path writer for the landing globe's spin. d3-geo rotates, clips
- * and resamples every vertex through a chain of stream objects on every frame,
- * which on the hero globe costs about 30 ms a frame on a desktop CPU and
- * starves the main thread on a phone. Most countries are either wholly on the
- * near side or wholly on the far side at any moment, and neither needs a clip.
- *
- * So each geometry is prepared once: densified so no edge spans more than
- * `MAX_STEP_DEG` (straight segments then trace great circles to well under a
- * pixel, which is what d3's resampling was for), turned into unit vectors, and
- * bounded by a spherical cap. Per frame, a country whose cap is wholly behind
- * the globe is skipped, one wholly in front is projected with a 3x3 rotation,
- * and only the few that straddle the horizon go through d3. Lines (graticule,
- * border meshes) are cut at the horizon directly.
- *
- * Works on the orthographic projection the landing globe uses, centred on the
- * rotated origin. Takes the d3 rotation function rather than importing d3-geo,
- * which the globe loads lazily.
+ * d3-geo's per-vertex clip/resample chain costs ~30ms/frame, starving phones.
+ * Most countries sit wholly near or far side and need no clip, so each geometry
+ * is prepared once (densified to MAX_STEP_DEG, unit vectors, spherical cap).
+ * Per frame: far-side caps skipped, near-side projected with a 3x3 rotation,
+ * only horizon-straddlers go through d3. Assumes orthographic projection.
  */
 import type { Feature, Geometry, LineString, MultiLineString, Position } from "geojson";
 

@@ -754,10 +754,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       .collection<ElectedOfficial>("electedOfficials")
       .find({
         isNPP: true,
-        // Country-scope the officials: party sequentialIds collide across
-        // countries (US "3" = Reform, BR "3" = a Brazilian party), so without
-        // this filter a whip would also fetch and vote foreign senators of the
-        // same numeric party onto a domestic bill (bug #0699).
+        // Country-scope officials: party sequentialIds collide across
+        // countries, so without this filter a whip also fetches and votes
+        // foreign senators of the same numeric party onto a domestic bill.
         countryId,
         party: partyIdStr,
         // Resolve the chamber key to the office type members are stored under

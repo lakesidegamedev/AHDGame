@@ -20,15 +20,13 @@ const querySchema = z.object({
   turn: z.coerce.number().int().nonnegative().optional(),
 });
 
-// GET /api/admin/economy/npp-corp-health - Return the issue #2122 regression
-// metric: per-sector cash-negative share and median liquid capital for NPP-led
-// corporations, plus the aggregate binding-gate/binding-constraint counts from
-// the persisted operator diagnostics. A historical ?turn= request has no matching
-// cash snapshot, so it returns diagnostics only and marks cash unavailable.
-// The current metric is COMPUTED here from live
-// corporation documents (this is a low-frequency admin read, not a turn hot
-// path); the binding counts are read from the turn snapshot the NPP phase
-// already flushed, so no entry/dividend formula is recomputed.
+// GET /api/admin/economy/npp-corp-health: Return per-sector cash-negative
+// share and median liquid capital for NPP-led corporations, plus aggregate
+// binding-gate/constraint counts from persisted operator diagnostics. A
+// historical ?turn= returns diagnostics only and marks cash unavailable.
+// The current metric is computed here from live corporation documents
+// (low-frequency admin read, not a turn hot path); binding counts are read
+// from the turn snapshot the NPP phase already flushed.
 // Auth: requireAdmin
 // Errors: 400, 403
 export const GET = withAdminRoute(async (_auth, request: Request) => {
