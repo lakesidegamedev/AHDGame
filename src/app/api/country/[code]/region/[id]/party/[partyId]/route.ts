@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
@@ -110,6 +111,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // renumber / region fuse, ticket #1256) still reads back here instead of
     // showing 0 while the state's org breakdown shows the party's real number.
     const statePartyOrg = await findStatePartyOrgRow(db, countryId, stateId, party);
+    await vacateBannedOfficerSeats(db, statePartyOrg);
 
     // Get state lean for display
     const { getStateLean } = await import("@/lib/utils/demographics");

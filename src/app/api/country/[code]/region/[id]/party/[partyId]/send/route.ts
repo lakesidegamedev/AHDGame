@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
 import { getDb, getMongoClient } from "@/lib/mongodb";
@@ -91,6 +92,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!statePartyOrg) {
       return errorResponse(404, "State party not found");
     }
+    await vacateBannedOfficerSeats(db, statePartyOrg);
+    await vacateBannedOfficerSeats(db, party);
 
     // Check authorization: admin, national chair, state chair, vice chair, or state treasurer
     const isAdmin = authUser.isAdmin;
