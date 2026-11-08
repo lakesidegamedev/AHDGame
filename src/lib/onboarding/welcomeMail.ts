@@ -35,9 +35,9 @@ function turnCadence(turnLengthMinutes: number): string {
 }
 
 /**
- * One-time welcome mail sent at character creation (gated on
- * onboardingChecklistEnabled). Numbers come from the character's actual
- * starting kit so referral bonuses and config changes never make it lie.
+ * One-time welcome mail sent at character creation. Numbers come from the
+ * character's actual starting kit so referral bonuses and config changes never
+ * make it lie.
  *
  * Deliberately does not enumerate the checklist steps. The player picks what
  * they want to be shown in the welcome flow after creation, so this mail is

@@ -2,7 +2,6 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Crisis, CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
 import { getTemplateDuration } from "./templates";
-import { isCrisisInteractionEnabled } from "./featureFlag";
 import { createCrisisInteraction } from "./interactionEngine";
 import { floorCrisisDuration } from "./crisisDuration";
 import { resolveCrisisLocationName, interpolateLocation } from "./crisisLocation";
@@ -103,11 +102,7 @@ export async function createCrisisFromTemplate(
 
   const result = await db.collection<Crisis>("crises").insertOne(crisis as Crisis);
 
-  if (
-    crisis.interactionDefinition &&
-    !params.deferInteractionUntilStart &&
-    (await isCrisisInteractionEnabled())
-  ) {
+  if (crisis.interactionDefinition && !params.deferInteractionUntilStart) {
     await createCrisisInteraction(db, { ...(crisis as Crisis), _id: result.insertedId });
   }
 

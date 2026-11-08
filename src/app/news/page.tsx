@@ -5,7 +5,6 @@ import { getDb } from "@/lib/mongodb";
 import { getNewsFeed } from "@/lib/news/queries/newsQueries";
 import { getAuthUser } from "@/lib/auth";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isOnboardingDismissed } from "@/lib/onboarding/checklist";
 import { OnboardingStepTracker } from "@/components/onboarding/OnboardingStepTracker";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
@@ -42,13 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Whether to record the "read-wire" onboarding step for this viewer: flag on,
- * has a character, checklist not dismissed, and the step not yet stored.
+ * Whether to record the "read-wire" onboarding step for this viewer: has a
+ * character, checklist not dismissed, and the step not yet stored.
  */
 async function shouldTrackReadWire(userId: string | undefined): Promise<boolean> {
   if (!userId) return false;
   try {
-    if (!(await isOnboardingChecklistEnabled())) return false;
     const db = await getDb();
     const character = await getCharacterByUserId(db, userId);
     if (!character) return false;

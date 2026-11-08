@@ -100,7 +100,7 @@ describe("bucket drift on the live demographics doc", () => {
     const shifts = calculateDemographicShiftsByTarget([policy(3)], legTypeMap(effects));
     expect(shifts.economicLean["education:no_college"]).toBeCloseTo(LEAN_SHIFT_RATE_PER_TURN, 10);
 
-    const updates = buildDemographicUpdates(demographics(), shifts, new Map(), true);
+    const updates = buildDemographicUpdates(demographics(), shifts, new Map());
     expect(updates["layer1PositionOverrides.education.no_college.economicLean"]).toBeCloseTo(
       LEAN_SHIFT_RATE_PER_TURN,
       10
@@ -117,7 +117,7 @@ describe("bucket drift on the live demographics doc", () => {
         },
       },
     });
-    const updates = buildDemographicUpdates(atCap, shifts, new Map(), true);
+    const updates = buildDemographicUpdates(atCap, shifts, new Map());
     expect(updates["layer1PositionOverrides.education.no_college.economicLean"]).toBeUndefined();
   });
 
@@ -131,8 +131,7 @@ describe("bucket drift on the live demographics doc", () => {
     const updates = buildDemographicUpdates(
       drifted,
       { population: {}, economicLean: {}, socialLean: {}, turnout: {} },
-      new Map(),
-      true
+      new Map()
     );
     expect(updates["layer1PositionOverrides.education.no_college.economicLean"]).toBeCloseTo(
       stored * (1 - LEAN_TURNOUT_DECAY_RATE_PER_TURN),

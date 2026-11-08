@@ -86,10 +86,8 @@ import {
 } from "@/lib/parties/historyQuery";
 import { ConstituencySelector } from "./components/ConstituencySelector";
 import { CeoCorporationCard } from "./components/CeoCorporationCard";
-import { NewPlayerBanner } from "./components/OnboardingCard";
 import { ReplayTutorialButton } from "@/components/tutorial/ReplayTutorialButton";
 import { OnboardingFlaggedCard } from "./components/OnboardingFlaggedCard";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isOnboardingDismissed, loadOnboardingChecklist } from "@/lib/onboarding/checklist";
 import { recordOnboardingProgress } from "@/lib/onboarding/stepStamps";
 import { loadFirstDays, type FirstDaysData } from "@/lib/onboarding/firstDays";
@@ -222,10 +220,7 @@ async function getCharacterData() {
   const firstDays: FirstDaysData | null = await loadFirstDays(db, character).catch(() => null);
 
   // New-player onboarding checklist: derive step completion only while the
-  // card is actually shown (flag on, not dismissed, reward not yet claimed).
-  const onboardingChecklistEnabled = await isOnboardingChecklistEnabled({
-    onboardingChecklistEnabled: gameState?.onboardingChecklistEnabled,
-  });
+  // card is actually shown (not dismissed, reward not yet claimed).
   let onboardingChecklist: {
     steps: Array<{
       id: string;
@@ -240,11 +235,7 @@ async function getCharacterData() {
     rewardAmount: number;
     rewardSymbol: string;
   } | null = null;
-  if (
-    onboardingChecklistEnabled &&
-    !isOnboardingDismissed(character) &&
-    character.onboarding?.rewardGrantedAt === undefined
-  ) {
+  if (!isOnboardingDismissed(character) && character.onboarding?.rewardGrantedAt === undefined) {
     const checklist = await loadOnboardingChecklist(db, character);
     const homeCurrency = getHomeCurrency(character, gameState?.preset);
     const anchorCountry = getCountryIdForCurrency(homeCurrency);
@@ -434,7 +425,6 @@ async function getCharacterData() {
     ceoCorporation,
     forexEnabled,
     rpgStatsEnabled,
-    onboardingChecklistEnabled,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
@@ -499,7 +489,6 @@ export default async function ProfilePage() {
     ceoCorporation,
     forexEnabled,
     rpgStatsEnabled,
-    onboardingChecklistEnabled,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
@@ -828,15 +817,10 @@ export default async function ProfilePage() {
                 partiesHref={partiesUrl(character.countryId)}
               />
             )}
-            {/* New player onboarding: checklist when the flag is on, legacy banner otherwise */}
-            {onboardingChecklistEnabled ? (
-              <OnboardingFlaggedCard
-                checklist={onboardingChecklist}
-                bannerDismissed={!!character.onboardingDismissed}
-              />
-            ) : (
-              !character.onboardingDismissed && <NewPlayerBanner />
-            )}
+            <OnboardingFlaggedCard
+              checklist={onboardingChecklist}
+              bannerDismissed={!!character.onboardingDismissed}
+            />
             {/* Persistent reminder when the one-time stat allocation was set aside */}
             {rpgStatsEnabled && !character.statsAllocated && character.statAllocationDismissed && (
               <StatAllocationBanner />

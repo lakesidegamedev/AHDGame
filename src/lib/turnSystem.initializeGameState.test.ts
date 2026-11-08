@@ -54,12 +54,9 @@ describe("initializeGameState", () => {
     expect(insertedDoc).toMatchObject({
       forexEnabled: true,
       playerRandomEventsEnabled: true,
-      crisisInteractionEnabled: true,
       autoDisastersEnabled: true,
-      crisisAidBillsEnabled: true,
       rpgStatsEnabled: true,
       // Fresh-world policy: every gameplay flag on, NPP autonomy at v4.
-      autoSectorSeedEnabled: true,
       sectorTechTreesEnabled: true,
       nppAutonomyLevel: "v4",
       nppAutonomyEnabled: true,

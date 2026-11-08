@@ -83,7 +83,6 @@ export async function commitSettlementPlay(
   const capitalCharged = payment === "capital" ? capitalPriceFor(play) : play.capitalCost;
 
   const ctx = await loadSettlementActorContext(db, input.characterId);
-  if (!ctx) return fail(404, "The German Question is not running.");
   if (!ctx.crisisId) return fail(404, "No settlement crisis is open.");
 
   const crises = await getSettlementCrisesCollection(db);

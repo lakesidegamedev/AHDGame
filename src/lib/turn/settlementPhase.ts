@@ -32,7 +32,6 @@ import { applyToInstitution, recomputePosition } from "@/lib/settlement/position
 import { driftSeedFor, rollInstitutionDrift, weightedDrift } from "@/lib/settlement/drift";
 import { resolvePlayBatch, type ResolvedBatch } from "@/lib/settlement/resolvePlays";
 import { isArmed, nextHeat, outcomeFor } from "@/lib/settlement/outcome";
-import { isSettlementCrisisEnabled } from "@/lib/settlement/featureFlag";
 import { levyMobilisation } from "@/lib/settlement/mobilisation";
 import { settleFrozenCrisisFromConflict } from "@/lib/settlement/settleFromConflict";
 import {
@@ -43,7 +42,6 @@ import {
 import { actuateSettlementOutcome } from "@/lib/settlement/actuate";
 import { emitSettlementWire } from "@/lib/settlement/emitWire";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
-import type { GameState } from "@/lib/db/types";
 
 export interface SettlementTurnResult {
   playsResolved: number;
@@ -77,11 +75,6 @@ export async function processSettlementTurn(
   db: Db,
   currentTurn: number
 ): Promise<SettlementTurnResult> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { settlementCrisisEnabled: 1 } });
-  if (!(await isSettlementCrisisEnabled(gameState ?? {}))) return idle();
-
   const crises = await getSettlementCrisesCollection(db);
 
   // A resolved crisis that has not been actuated yet gets its consequences and

@@ -20,33 +20,23 @@ export interface SingleplayerFeatureFlagOption {
 const LABELS: Record<SingleplayerFeatureFlagKey, string> = {
   forexEnabled: "Foreign exchange",
   playerRandomEventsEnabled: "Player random events",
-  crisisInteractionEnabled: "Crisis decisions",
   autoDisastersEnabled: "Automatic crises and disasters",
-  crisisAidBillsEnabled: "Crisis aid bills",
   rpgStatsEnabled: "Character stats",
-  autoSectorSeedEnabled: "Automatic sector seeding",
   sectorTechTreesEnabled: "Sector technology trees",
-  onboardingChecklistEnabled: "Onboarding checklist",
-  worldEventsEnabled: "World events",
-  legislationDemographicEffectsV2Enabled: "Legislation demographic effects",
   demographicsLayer1PositionsEnabled: "Detailed demographic positions",
   eraSystemEnabled: "Era progression",
   conflictsEnabled: "International conflicts",
   coldWarEnabled: "Cold War systems",
   redistrictingEnabled: "US House redistricting",
   subsidiaryCorporationsEnabled: "Subsidiary corporations",
-  seasonRecapEnabled: "Season recap",
   intOrgAlignmentEnabled: "International alignment",
   nppCorpStrategyEnabled: "Autonomous corporate strategy",
   livingConflictsEnabled: "Living conflicts",
-  macroGrowthV1: "Macro growth convergence",
-  settlementCrisisEnabled: "Settlement crises",
   nppTurnoverEnabled: "Politician aging and retirement",
   nppPartyRenewalEnabled: "Party renewal",
 };
 
 const descriptions: Partial<Record<SingleplayerFeatureFlagKey, string>> = {
-  autoSectorSeedEnabled: "Periodically seed unowned sectors.",
   nppTurnoverEnabled:
     "Computer-run politicians grow old, retire and die, and are replaced by younger members of their party.",
   nppPartyRenewalEnabled:

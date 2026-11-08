@@ -42,7 +42,6 @@ interface CrisisState {
 }
 
 interface AdminState {
-  enabled: boolean;
   currentTurn: number;
   /** Set when opening now would freeze the question onto a war already running. */
   openWarning: string | null;
@@ -146,13 +145,7 @@ export function GermanQuestionManager() {
           the Warsaw Pact. It is started from here and nowhere else — the turn loop advances a live
           crisis but never creates one.
         </p>
-        <dl className="mt-3 grid grid-cols-3 gap-3 text-sm">
-          <div>
-            <dt className="text-body-sm font-medium text-muted">Feature gate</dt>
-            <dd className={state?.enabled ? "text-success" : "text-error"}>
-              {state?.enabled ? "On" : "Off"}
-            </dd>
-          </div>
+        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div>
             <dt className="text-body-sm font-medium text-muted">Turn</dt>
             <dd className="text-foreground">{state?.currentTurn ?? "—"}</dd>
@@ -162,13 +155,6 @@ export function GermanQuestionManager() {
             <dd className="text-foreground">{crisis ? crisis.status : "none live"}</dd>
           </div>
         </dl>
-        {!state?.enabled && (
-          <p className="mt-3 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-sm text-warning">
-            The <code>settlementCrisisEnabled</code> gate is off, so the turn phase will not tick
-            this crisis even after you open it. Flip it on the Dashboard&apos;s Feature Gates panel
-            first.
-          </p>
-        )}
       </section>
 
       {message && (

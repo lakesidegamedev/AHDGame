@@ -88,10 +88,6 @@ function prime(db: MockDb, name: string): MockCollection {
 
 /** Wire the mock db so the phase sees one crisis and the given plays. */
 function arrange(db: MockDb, doc: SettlementCrisisDoc, plays: SettlementPlayDoc[]) {
-  prime(db, "gameState").findOne.mockResolvedValue({
-    _id: "current",
-    settlementCrisisEnabled: true,
-  });
   // Filter-aware: the phase asks for a FROZEN crisis first (the war sweep) and
   // an OPEN one second. A blanket mock hands the same document to both, so the
   // sweep swallows every open-crisis test.
@@ -138,23 +134,7 @@ describe("processSettlementTurn", () => {
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
 
-  it("does nothing when the feature gate is off", async () => {
-    prime(db, "gameState").findOne.mockResolvedValue({
-      _id: "current",
-      settlementCrisisEnabled: false,
-    });
-    const crises = prime(db, "settlementCrises");
-    const { processSettlementTurn } = await import("./settlementPhase");
-    const result = await processSettlementTurn(db as unknown as Db, 412);
-    expect(result.playsResolved).toBe(0);
-    expect(crises.updateOne).not.toHaveBeenCalled();
-  });
-
   it("does nothing when no crisis is open", async () => {
-    prime(db, "gameState").findOne.mockResolvedValue({
-      _id: "current",
-      settlementCrisisEnabled: true,
-    });
     prime(db, "settlementCrises").findOne.mockResolvedValue(null);
     const { processSettlementTurn } = await import("./settlementPhase");
     const result = await processSettlementTurn(db as unknown as Db, 412);
@@ -165,10 +145,6 @@ describe("processSettlementTurn", () => {
     // "Closed as if it never started" only holds if every sweep skips it. The
     // filters are all positive, so a cancelled document matches none of them —
     // this test is what stops a future widened query from resurrecting one.
-    prime(db, "gameState").findOne.mockResolvedValue({
-      _id: "current",
-      settlementCrisisEnabled: true,
-    });
     prime(db, "settlementCrises").findOne.mockImplementation(
       async (filter: { status?: unknown }) => {
         const doc = crisis({ status: "cancelled", outcome: null });
@@ -187,7 +163,6 @@ describe("processSettlementTurn", () => {
     // would be made for them by the calendar.
     prime(db, "gameState").findOne.mockResolvedValue({
       _id: "current",
-      settlementCrisisEnabled: true,
       currentYear: 1953,
     });
     prime(db, "settlementCrises").findOne.mockResolvedValue(null);
@@ -519,10 +494,7 @@ describe("processSettlementTurn", () => {
   });
 
   it("returns a fresh idle result each time rather than a shared object", async () => {
-    prime(db, "gameState").findOne.mockResolvedValue({
-      _id: "current",
-      settlementCrisisEnabled: false,
-    });
+    prime(db, "settlementCrises").findOne.mockResolvedValue(null);
     const { processSettlementTurn } = await import("./settlementPhase");
     const a = await processSettlementTurn(db as unknown as Db, 412);
     a.heat = 99;
@@ -719,7 +691,6 @@ describe("processSettlementTurn — war attachment", () => {
   function primeBlocs(db: MockDb) {
     prime(db, "gameState").findOne.mockResolvedValue({
       _id: "current",
-      settlementCrisisEnabled: true,
       preset: "1953-default",
     });
     prime(db, "organizationMemberships").find.mockReturnValue({

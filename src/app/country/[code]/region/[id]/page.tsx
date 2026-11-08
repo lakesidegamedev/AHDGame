@@ -15,7 +15,6 @@ import {
 } from "@/lib/constants/countries";
 import { UK_REGIONS, UK_NATIONS } from "@/lib/constants/uk";
 import { getAuthUserWithCharacter } from "@/lib/auth";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isOnboardingDismissed } from "@/lib/onboarding/checklist";
 import { OnboardingStepTracker } from "@/components/onboarding/OnboardingStepTracker";
 import { resolveOfficeAccess } from "@/lib/governorOffice/access";
@@ -667,9 +666,9 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
 // ── Page component ──
 
 /**
- * Whether to record the "scout-state" onboarding step for this viewer: flag
- * on, this is the viewer's own home region, checklist not dismissed, and the
- * step not yet stored.
+ * Whether to record the "scout-state" onboarding step for this viewer: this is
+ * the viewer's own home region, checklist not dismissed, and the step not yet
+ * stored.
  */
 async function shouldTrackScoutState(countryId: CountryId, regionCode: string): Promise<boolean> {
   try {
@@ -678,8 +677,7 @@ async function shouldTrackScoutState(countryId: CountryId, regionCode: string): 
     if (!character) return false;
     if (character.countryId !== countryId || character.homeState !== regionCode) return false;
     if (isOnboardingDismissed(character)) return false;
-    if (character.onboarding?.steps?.["scout-state"] !== undefined) return false;
-    return isOnboardingChecklistEnabled();
+    return character.onboarding?.steps?.["scout-state"] === undefined;
   } catch {
     return false;
   }

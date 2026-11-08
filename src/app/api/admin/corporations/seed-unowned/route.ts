@@ -119,7 +119,6 @@ export async function GET(request: Request) {
       totalCurrentRevenue,
       totalProjectedDelta,
       totalDocs,
-      autoSectorSeedEnabled: gameState?.autoSectorSeedEnabled === true,
     });
   } catch (error) {
     return handleRouteError(error);

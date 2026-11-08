@@ -9,7 +9,6 @@ import type { Crisis, CrisisTemplate } from "@/lib/db/types/crisis";
 import { ObjectId } from "mongodb";
 import { createCrisisFromTemplate } from "./createCrisisFromTemplate";
 import { createCrisisInteraction } from "./interactionEngine";
-import { isCrisisInteractionEnabled } from "./featureFlag";
 
 const RESPONSE_TEMPLATE: CrisisTemplate = {
   name: "Domestic Bank Stress",
@@ -107,8 +106,6 @@ export async function ensureBankFailureResponseWindow(
     currentTurn: number;
   }
 ): Promise<ObjectId | null> {
-  if (!(await isCrisisInteractionEnabled())) return null;
-
   const eventId = bankFailureResponseEventId(input.bankId.toString(), input.charteredTurn);
   const crises = db.collection<Crisis>("crises");
   const existing = await crises.findOne({ livingConflictEventId: eventId });

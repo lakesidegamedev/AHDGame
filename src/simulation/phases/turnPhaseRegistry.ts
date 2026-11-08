@@ -1206,8 +1206,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
 
         // World Events v1 Phase 0 substrate maintenance: expire temporary
         // sectorDemandModifier docs. No scheduler yet (Phase 1), this only
-        // keeps countryModifiers from growing unbounded regardless of the
-        // worldEventsEnabled flag (cheap no-op collection when nothing wrote to it).
+        // keeps countryModifiers from growing unbounded (cheap no-op
+        // collection when nothing wrote to it).
         const worldEventsMaintenanceResult = await runtime.runPhase("worldEventsMaintenance", () =>
           sweepExpiredCountryModifiers(db, newTurn)
         );
@@ -1218,12 +1218,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // World Events v1 Phase 1: deterministic scheduler producer. Runs
         // right after the maintenance sweep so a definition that just
         // expired its cooldown modifier can be offered again the same turn.
-        // No-op (flag off / no scheduled definitions) is the default.
+        // No-op when there are no scheduled definitions.
         const worldEventsSchedulerResult = await runtime.runPhase("worldEventsScheduler", () =>
-          processWorldEventsTurn(db, newTurn, {
-            worldEventsEnabled: gameState.worldEventsEnabled,
-            currentYear: eventsCurrentYear,
-          })
+          processWorldEventsTurn(db, newTurn, { currentYear: eventsCurrentYear })
         );
         if (worldEventsSchedulerResult) {
           phaseResults.worldEventsScheduler = worldEventsSchedulerResult;

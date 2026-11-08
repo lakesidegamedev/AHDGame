@@ -43,7 +43,6 @@ import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
 import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import type { CharacterStats } from "@/lib/stats/statsConstants";
 import { sendSystemMail } from "@/lib/mail/systemMail";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { onboardingRewardAmount } from "@/lib/onboarding/reward";
 import {
   buildWelcomeMailBody,
@@ -545,39 +544,36 @@ export async function POST(request: Request) {
           console.error("Achievement award failed:", e);
         }
 
-        // Welcome mail pointing at the onboarding checklist (best-effort; gated on
-        // the onboarding-checklist flag so flag-off worlds behave exactly as before).
+        // Welcome mail pointing at the onboarding checklist (best-effort).
         try {
-          if (await isOnboardingChecklistEnabled()) {
-            await sendSystemMail(db, {
-              toCharacterId: characterId,
-              toCharacterName: name,
-              toCharacterSequentialId: character.sequentialId ?? 0,
-              toUserId: new ObjectId(userId),
-              senderName: WELCOME_MAIL_SENDER,
-              subject: WELCOME_MAIL_SUBJECT,
-              body: buildWelcomeMailBody({
+          await sendSystemMail(db, {
+            toCharacterId: characterId,
+            toCharacterName: name,
+            toCharacterSequentialId: character.sequentialId ?? 0,
+            toUserId: new ObjectId(userId),
+            senderName: WELCOME_MAIL_SENDER,
+            subject: WELCOME_MAIL_SUBJECT,
+            body: buildWelcomeMailBody({
+              countryId,
+              startingFunds: character.funds ?? startingCampaignFunds,
+              startingActions: character.actions,
+              rewardAmount: onboardingRewardAmount(startingCampaignFunds),
+              turnLengthMinutes: gameConfig.turnLengthMinutes,
+              currencyCode: homeCurrency,
+              localStartingFunds: campaignAnchorToLocal(
+                character.funds ?? gameConfig.startingFunds,
                 countryId,
-                startingFunds: character.funds ?? startingCampaignFunds,
-                startingActions: character.actions,
-                rewardAmount: onboardingRewardAmount(startingCampaignFunds),
-                turnLengthMinutes: gameConfig.turnLengthMinutes,
-                currencyCode: homeCurrency,
-                localStartingFunds: campaignAnchorToLocal(
-                  character.funds ?? gameConfig.startingFunds,
-                  countryId,
-                  campaignRates,
-                  worldPreset
-                ),
-                localRewardAmount: campaignAnchorToLocal(
-                  onboardingRewardAmount(startingCampaignFunds),
-                  countryId,
-                  campaignRates,
-                  worldPreset
-                ),
-              }),
-            });
-          }
+                campaignRates,
+                worldPreset
+              ),
+              localRewardAmount: campaignAnchorToLocal(
+                onboardingRewardAmount(startingCampaignFunds),
+                countryId,
+                campaignRates,
+                worldPreset
+              ),
+            }),
+          });
         } catch (e) {
           console.error("Welcome mail failed:", e);
         }
