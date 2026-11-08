@@ -14,7 +14,7 @@ import type { SectorStrategy } from "../sectorStrategies";
 import { isDecadeReached } from "./decades";
 import { autoGrantedNodeIds, getUnlockedStrategyIds, type TechCorpView } from "./selectors";
 import { getOperatingSectorType } from "../sectorStrategies";
-import { isBreakthroughReached } from "./breakthrough";
+import { arePrerequisiteLanesReached, isBreakthroughReached } from "./breakthrough";
 import { isStrategySunset } from "./sunset";
 import {
   countryDiffusionContext,
@@ -31,7 +31,7 @@ export interface StrategyAvailability {
    * breakthrough threshold, the method has been retired (sunset), or the
    * method has not yet reached the corporation's country (diffusion).
    */
-  reason?: "era" | "tech" | "research" | "sunset" | "diffusion";
+  reason?: "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion";
   /** For a diffusion lock: the first year the method opens in the country. */
   opensYear?: number;
 }
@@ -51,6 +51,11 @@ export interface StrategyAvailabilityWorld {
    */
   sectorResearch?: number;
   /**
+   * Cumulative world frontier research per lane, read by methods that depend on
+   * another sector (`requiresLaneResearch`). Absent keeps those methods closed.
+   */
+  laneResearch?: ReadonlyMap<string, number>;
+  /**
    * Country access for worlds with technology diffusion. Absent keeps the
    * calendar-only gate: the method opens everywhere on its tier year.
    */
@@ -65,7 +70,12 @@ export function getStrategyAvailability(
   corp: TechCorpView,
   strategy: Pick<
     SectorStrategy,
-    "id" | "minDecade" | "requiresTechUnlock" | "researchThreshold" | "sunsetDecade"
+    | "id"
+    | "minDecade"
+    | "requiresTechUnlock"
+    | "researchThreshold"
+    | "requiresLaneResearch"
+    | "sunsetDecade"
   >,
   currentYear: number,
   techTreesEnabled: boolean,
@@ -112,6 +122,9 @@ export function getStrategyAvailability(
   if (!isBreakthroughReached(strategy, world.sectorResearch)) {
     return { locked: true, reason: "research" };
   }
+  if (!arePrerequisiteLanesReached(strategy, world.laneResearch)) {
+    return { locked: true, reason: "prerequisite" };
+  }
   return { locked: false };
 }
 
@@ -125,13 +138,18 @@ export function getStrategyAvailability(
 export function isUngatedStrategy(
   strategy: Pick<
     SectorStrategy,
-    "minDecade" | "requiresTechUnlock" | "researchThreshold" | "sunsetDecade"
+    | "minDecade"
+    | "requiresTechUnlock"
+    | "researchThreshold"
+    | "requiresLaneResearch"
+    | "sunsetDecade"
   >
 ): boolean {
   return (
     !strategy.minDecade &&
     !strategy.requiresTechUnlock &&
     strategy.researchThreshold == null &&
+    !strategy.requiresLaneResearch?.length &&
     !strategy.sunsetDecade
   );
 }

@@ -32,6 +32,20 @@ export function isBreakthroughReached(
   return typeof sectorResearch === "number" && sectorResearch >= threshold;
 }
 
+/**
+ * Whether every cross-sector prerequisite is met. A lane missing from the map
+ * counts as no research, so callers that cannot load the totals keep the
+ * method closed.
+ */
+export function arePrerequisiteLanesReached(
+  strategy: Pick<SectorStrategy, "requiresLaneResearch">,
+  laneResearch: ReadonlyMap<string, number> | undefined
+): boolean {
+  const required = strategy.requiresLaneResearch;
+  if (!required || required.length === 0) return true;
+  return required.every((req) => (laneResearch?.get(req.lane) ?? 0) >= req.threshold);
+}
+
 /** Share of the threshold reached, 0 to 1, for progress display. 1 with no threshold. */
 export function breakthroughProgress(
   strategy: Pick<SectorStrategy, "researchThreshold">,

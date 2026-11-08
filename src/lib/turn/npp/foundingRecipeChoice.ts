@@ -62,6 +62,7 @@ export function foundingRecipeAvailable(
     if (recipe.minDecade && !(year > 0 && isDecadeReached(recipe.minDecade, year))) return false;
     return !getStrategyAvailability(newCompany, recipe, year, world.techTreesEnabled, {
       sectorResearch,
+      laneResearch: world.sectorResearchByLane,
       diffusion,
     }).locked;
   };
