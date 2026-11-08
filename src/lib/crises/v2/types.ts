@@ -52,6 +52,16 @@ export interface CrisisLeverDef {
   stages?: readonly ActiveCrisisStage[];
   /** Offered only once a state of emergency has been declared on the crisis. */
   requiresEmergency?: boolean;
+  /** Set when the lever stands in for an authored decision node's option or pledge. */
+  legacy?: LegacyLeverRef;
+}
+
+/** The authored decision a converted lever answers. */
+export interface LegacyLeverRef {
+  /** `aid` is a pooled pledge; `collective` is a pooled contribution option. */
+  kind: "option" | "aid" | "collective";
+  nodeId: string;
+  optionId?: string;
 }
 
 /** One sim input feeding severity. `input` is a key the shell fills each turn. */

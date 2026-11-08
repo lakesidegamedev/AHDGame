@@ -26,7 +26,8 @@ describe("a converted crisis has one response path per option", () => {
           const hasLever = levers.some(
             (lever) =>
               lever.id === `${node.nodeId}.${option.optionId}` ||
-              lever.id.startsWith(`${node.nodeId}.${option.optionId}@`)
+              lever.id.startsWith(`${node.nodeId}.${option.optionId}@`) ||
+              lever.id === `pool.${node.nodeId}.${option.optionId}`
           );
           expect(answered, `${key}:${node.nodeId}.${option.optionId}`).toBe(hasLever);
           if (answered) covered += 1;
@@ -36,18 +37,37 @@ describe("a converted crisis has one response path per option", () => {
     expect(covered).toBeGreaterThan(0);
   });
 
-  it("keeps aid and collective nodes on their fiscal paths with no pooled lever", () => {
+  it("answers aid pledges and collective contributions through pooled levers only", () => {
+    let pooled = 0;
     for (const [key, template] of templates) {
       const tree = template.interactionDefinition!.decisionTree;
-      expect(
-        leversFromDecisionTree(tree).some((l) => l.id.startsWith("pool.")),
-        key
-      ).toBe(false);
+      const levers = leversFromDecisionTree(tree);
       for (const node of tree.filter((n) => n.type === "aid" || n.type === "collective")) {
         const v2 = { definitionId: `legacy:${key}` } as never;
-        expect(decisionAnsweredByLever({ v2 }, tree, node), `${key}:${node.nodeId}`).toBe(false);
+        const own = levers.filter((l) => l.legacy?.nodeId === node.nodeId);
+        if (node.type === "aid") {
+          expect(
+            own.map((l) => l.legacy?.kind),
+            key
+          ).toEqual(["aid"]);
+          expect(decisionAnsweredByLever({ v2 }, tree, node), `${key}:${node.nodeId}`).toBe(true);
+          const decline = node.options?.[0];
+          if (decline) {
+            expect(decisionAnsweredByLever({ v2 }, tree, node, decline.optionId)).toBe(false);
+          }
+        } else {
+          expect(
+            own.every((l) => l.legacy?.kind === "collective"),
+            key
+          ).toBe(true);
+          expect(decisionAnsweredByLever({ v2 }, tree, node), `${key}:${node.nodeId}`).toBe(
+            own.length > 0
+          );
+        }
+        pooled += own.length;
       }
     }
+    expect(pooled).toBeGreaterThan(0);
   });
 
   it("blocks a covered decision only on converted crises", () => {

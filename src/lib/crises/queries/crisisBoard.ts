@@ -105,6 +105,8 @@ export function viewerCanActOnCrisis(
     (crisis.scope === "country" && !!countryId && crisis.countryIds.includes(countryId)) ||
     (crisis.scope === "region" && !!stateId && crisis.regionIds.includes(stateId));
 
+  if (decisionAnsweredByLever(crisis, interaction.decisionTree, node)) return false;
+
   // Pooled aid is open to the whole world; it is an offer, not a lever, so it
   // only counts for crises that reach the viewer and that they have not given to.
   if (node.type === "collective" || node.type === "aid") {
@@ -114,7 +116,6 @@ export function viewerCanActOnCrisis(
     );
   }
 
-  if (decisionAnsweredByLever(crisis, interaction.decisionTree, node)) return false;
   if (!canCharacterInteract(node, roles, countryId, stateId)) return false;
   if (!canRespondToCrisis(crisis, node, countryId, stateId)) return false;
   if (crisis.globalResponse && !(countryId && globalResponseRoleFor(crisis, countryId))) {

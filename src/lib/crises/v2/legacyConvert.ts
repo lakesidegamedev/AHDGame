@@ -35,6 +35,7 @@ const BASE_LEVER_MITIGATION = 2;
 const MITIGATION_PER_REDUCED_TURN = 2;
 const MAX_LEVER_MITIGATION = 12;
 const MITIGATION_CAP = 25;
+const POOLED_LEVER_MITIGATION = 4;
 
 export function legacyDefinitionId(templateKey: string): string {
   return `${LEGACY_DEFINITION_PREFIX}${templateKey}`;
@@ -73,19 +74,55 @@ function optionLever(
     label: option.label,
     mitigation,
     cost: option.requiredBudget ? { treasuryCash: option.requiredBudget } : {},
+    legacy: { kind: "option", nodeId: node.nodeId, optionId: option.optionId },
   };
+}
+
+function pooledRole(node: CrisisDecisionNode): CrisisRole {
+  if (node.type === "aid") return "headOfState";
+  return node.requiredRoles.flatMap((r) => NODE_ROLE_TO_CRISIS_ROLE[r] ?? [])[0] ?? "headOfState";
+}
+
+/** Aid nodes get one pledge lever; each collective option that does something gets its own. */
+function pooledLevers(node: CrisisDecisionNode): CrisisLeverDef[] {
+  if (node.type === "aid") {
+    return [
+      {
+        id: `pool.${node.nodeId}`,
+        role: "headOfState",
+        label: node.title,
+        mitigation: POOLED_LEVER_MITIGATION,
+        cost: {},
+        legacy: { kind: "aid", nodeId: node.nodeId },
+      },
+    ];
+  }
+  return (node.options ?? [])
+    .filter((option) => (option.collectiveContribution ?? 0) > 0 || !isDoNothing(option))
+    .map((option) => ({
+      id: `pool.${node.nodeId}.${option.optionId}`,
+      role: pooledRole(node),
+      label: option.label,
+      mitigation: POOLED_LEVER_MITIGATION,
+      cost: {},
+      legacy: { kind: "collective", nodeId: node.nodeId, optionId: option.optionId },
+    }));
 }
 
 /**
  * Choice options become levers by the office the node asks for. Aid and
- * collective nodes move real treasury money through the aid and pooled-target
- * paths, so they stay on those paths and get no lever. Choice nodes that ask
- * only for cabinet or "any" responder have no single office to hold the lever
- * and stay on the decision.
+ * collective nodes become pooled levers whose pull runs the real pledge and
+ * contribution code, so the treasury spend, commitment and bill stay on those
+ * paths. Choice nodes that ask only for cabinet or "any" responder have no
+ * single office to hold the lever and stay on the decision.
  */
 export function leversFromDecisionTree(tree: readonly CrisisDecisionNode[]): CrisisLeverDef[] {
   const levers = new Map<string, CrisisLeverDef>();
   for (const node of tree) {
+    if (node.type === "aid" || node.type === "collective") {
+      for (const lever of pooledLevers(node)) levers.set(lever.id, lever);
+      continue;
+    }
     if (node.type !== "choice") continue;
     const roles = node.requiredRoles.flatMap((r) => NODE_ROLE_TO_CRISIS_ROLE[r] ?? []);
     if (roles.length === 0) continue;
@@ -114,8 +151,9 @@ export function optionAnsweredByLever(
   optionId: string
 ): boolean {
   const prefix = `${nodeId}.${optionId}`;
+  const pooled = `pool.${prefix}`;
   return leversFromDecisionTree(tree).some(
-    (lever) => lever.id === prefix || lever.id.startsWith(`${prefix}@`)
+    (lever) => lever.id === prefix || lever.id.startsWith(`${prefix}@`) || lever.id === pooled
   );
 }
 
