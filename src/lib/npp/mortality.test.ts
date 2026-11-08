@@ -431,9 +431,25 @@ describe("processNppMortality", () => {
       expect(nppAutonomyAtLeast).not.toHaveBeenCalled();
     });
 
+    it("never turns over US NPPs", async () => {
+      setTurnover(true);
+      const rng = vi.fn(() => 0);
+      seedWithBackfill([], [npp({ countryId: "US", birthYear: 1900 })]);
+
+      const result = await processNppMortality(db as unknown as Db, {
+        now: new Date("2027-01-01T00:00:00Z"),
+        year: 2027,
+        rng,
+        mintReplacement: mintStub,
+      });
+
+      expect(result).toMatchObject({ deaths: 0, retirements: 0, replacements: 0 });
+      expect(rng).not.toHaveBeenCalled();
+    });
+
     it("retires an old survivor and seats a successor like a death", async () => {
       setTurnover(true);
-      const old = npp({ birthYear: 1947 }); // 80 in 2027
+      const old = npp({ countryId: "UK", birthYear: 1947 }); // 80 in 2027
       seedWithBackfill([], [old]);
       const rolls = [0.99, 0]; // survive the death roll, then retire
       const mint = vi.fn(mintStub);
@@ -513,7 +529,7 @@ describe("processNppMortality", () => {
 
       it("holds a mid-term leader in office until the window before the term ends", async () => {
         setTurnover(true);
-        const leader = npp({ birthYear: 1947 });
+        const leader = npp({ countryId: "UK", birthYear: 1947 });
         seatLeader(leader, CONFIG.leaders.windowTurns + 50);
         seedWithBackfill([], [leader]);
 
@@ -525,7 +541,7 @@ describe("processNppMortality", () => {
 
       it("retires a leader inside the window and posts news", async () => {
         setTurnover(true);
-        const leader = npp({ birthYear: 1947, name: "Ada Quill" });
+        const leader = npp({ countryId: "UK", birthYear: 1947, name: "Ada Quill" });
         seatLeader(leader, 5);
         seedWithBackfill([], [leader]);
 
@@ -538,7 +554,7 @@ describe("processNppMortality", () => {
 
       it("retires a very old leader mid-term", async () => {
         setTurnover(true);
-        const leader = npp({ birthYear: 1930 });
+        const leader = npp({ countryId: "UK", birthYear: 1930 });
         seatLeader(leader, 150);
         seedWithBackfill([], [leader]);
 
@@ -576,7 +592,7 @@ describe("processNppMortality", () => {
     it("does nothing when the flag is off", async () => {
       setTurnover(false);
       vi.mocked(nppAutonomyAtLeast).mockResolvedValue(true);
-      seedNpps([npp({ birthYear: 1900 })]);
+      seedNpps([npp({ countryId: "UK", birthYear: 1900 })]);
 
       const result = await processNppMortality(db as unknown as Db, {
         now: new Date("2027-01-01T00:00:00Z"),
