@@ -4197,11 +4197,6 @@ const SEAT_GROUPS_2019: SeatGroups = mergeGroups(SEAT_GROUPS_2020, {
  * fixed fictional identities through the 2027 roster overlay. A presidential player country with no
  * president is a broken world, and `eraContract.test.ts` S5 fails on exactly
  * that; a generic 2020 holder was the earlier stopgap.
- *
- * The US Congress, governors and state senates come from the November 2026
- * election results (`usCongressResult2027.ts`, `usStateOffices2027.ts`),
- * replacing the frozen pre-election projection and the 2020 sub-national
- * rosters.
  */
 const SEAT_GROUPS_2027: SeatGroups = {
   US: [

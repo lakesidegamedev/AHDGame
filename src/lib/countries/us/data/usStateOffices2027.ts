@@ -1,47 +1,16 @@
 import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 
 /**
- * January 2027 US governors and state senates after the November 3, 2026
- * elections. Party allocations only: every office holder is a generated
- * fictional person.
+ * January 2027 US governors and state senates after the November 2026
+ * elections (called results, not certified, as of November 6, 2026). Party
+ * allocations only: every office holder is a generated fictional person.
  *
- * Status: called results, not yet certified, as of November 6, 2026.
+ * Governors: the 36 states that voted in 2026 use the called winner's party;
+ * uncalled Alaska and Kansas and the other 14 states keep the sitting party.
  *
- * Governors: the 36 states that voted in 2026 use the called winner's party.
- * Alaska and Kansas were uncalled and keep the sitting governor's party
- * (Alaska Republican, Kansas Democratic). The other 14 states keep the party
- * elected in 2023, 2024 or 2025.
- *
- * State senates: one row per party, summing to each state's modeled chamber
- * size. Nebraska's unicameral, nonpartisan legislature is omitted. Each state
- * is tagged with its basis:
- * - "result": the reported post-election composition.
- * - "pre-election": a 2026 election was held but its chamber total was not
- *   yet reported, so the composition sitting before the election is kept.
- * - "no 2026 election": no regular state senate election in 2026, so the
- *   current composition stands (Louisiana uses its 2023 election result).
- * Independents and minor parties count with the party they caucus with, or
- * with the chamber majority when they caucus with neither. Wyoming's 31 seats
- * are scaled to the modeled 30.
- *
- * States kept at their pre-election composition:
- * AK, CA, CT, FL, IA, IL, IN, MD, ME, MN, MO, NC, NH, NY, OH, OR, SD, UT, WA.
- *
- * Sources:
- * - Wikipedia, "2026 United States gubernatorial elections", race summary,
- *   revision of November 6, 2026 (AP calls).
- * - Wikipedia, "2026 United States state legislative elections", state
- *   summaries, revision of November 6, 2026, citing NCSL "State Partisan
- *   Composition".
- * - Wikipedia chamber articles for states without a 2026 senate election:
- *   Kansas Senate, New Mexico Senate, South Carolina Senate, Mississippi State
- *   Senate, New Jersey Senate, Senate of Virginia (November 2026), and "2023
- *   Louisiana State Senate election".
- * - KJZZ, "Arizona Democrats claim a trifecta with leads in House and Senate
- *   races", November 4, 2026.
- *
- * Do not silently refresh these numbers. A later count or the certified
- * result must update the status line, the basis tags and the rows together.
+ * State senates: one row per party summing to the modeled chamber size, tagged
+ * "result", "pre-election" or "no 2026 election". Independents count with their
+ * caucus, else the majority. Wyoming's 31 seats scale to 30; Nebraska omitted.
  */
 export const US_GOVERNORS_2027: HistoricalSeat[] = [
   { state: "AK", officeType: "governor", party: "republican" },
