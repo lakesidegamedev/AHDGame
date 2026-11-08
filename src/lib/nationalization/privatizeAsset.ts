@@ -338,7 +338,7 @@ export async function privatizeAsset(
     if (!transitionKey) throw new Error("A secured sector reservation was lost");
     const keep = 1 - fraction;
     const keptRevenue = Math.round(sector.revenue * keep);
-    // Revenue writes here are the LEGACY nameplate only: under plants,
+    // PLANTS-GATED: revenue writes here are the LEGACY nameplate only: under plants,
     // sectorTurn restates both from capitalStock x mix price next tick. Write
     // revenue in lockstep with the plant state split (same fraction) so views
     // agree for one turn and non-plants readers stay correct. Without splitting

@@ -1,14 +1,24 @@
 /**
- * Absorb one country into another: move every region across, then retire the
- * shell. Country-agnostic on purpose, so it is testable without a seeded world.
+ * Absorb one country into another.
  *
- * Not a partial transfer. `transferRegion` assumes the source survives: its
- * NPPs retreat to another of its regions and it keeps its national layer. A
- * merge inverts both, which is why `relocateToRegionId` grew a null case.
+ * Generic on purpose. The German Question is the first caller, but nothing here
+ * knows about Germany: any merge is "move every region across, then retire the
+ * shell". Keeping it country-agnostic is also what makes it testable without a
+ * seeded world.
  *
- * ORDER: regions first, retirement last, so a half-run merge leaves a
- * simulated country with fewer regions and is recoverable by re-running.
- * Reverse order would strand regions of a retired country.
+ * WHAT THIS IS NOT. It is not a partial transfer. `transferRegion` already does
+ * that (Northern Ireland into Ireland) and its contract assumes the source
+ * survives — its evacuated NPPs retreat to another of the source's regions and
+ * the source keeps its national layer. A merge inverts both: there is no
+ * retreat, and the source's national layer stops existing. That difference is
+ * why this cannot be a loop over `transferRegion` with the old arguments, and
+ * why `relocateToRegionId` grew a null case.
+ *
+ * ORDER. Regions first, retirement last. A half-run merge then leaves a country
+ * with fewer regions but still simulated — recoverable by re-running, because
+ * `transferRegion` is idempotent per region and skips ones already moved. The
+ * reverse order would retire a country that still owned regions, stranding them
+ * in a state nothing enumerates.
  */
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import type { CorporationExitSnapshot } from "@/lib/corporations/exits/rules";
@@ -296,15 +306,25 @@ async function sweepNationalStrays(
   await db
     .collection("subsidies")
     .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
-  // Tariffs are collision-aware IN THE WINNER'S FAVOUR: two live records on
-  // one scope (same sector/origin/corp/economy-wide) would double-apply, so one
-  // must go. Which one follows the winner, not the shell: a tariff is legislated
-  // policy and follows the victor like the tax code and reserve law.
+  // Tariffs are collision-aware IN THE WINNER'S FAVOUR: where BOTH states
+  // legislated a tariff on the same scope (same sector, same origin country,
+  // same corporation, or both economy-wide), one record has to go, because two
+  // live records on one scope would double-apply.
   //
-  // BOTH SIDES OF THE COMPARISON MOVE TOGETHER. Scopes are read from the side
-  // that WINS and the delete lands on the side that loses; taking scopes from a
-  // fixed side and only flipping the delete would match every loser record
-  // against its own scope list and wipe its entire trade policy.
+  // WHICH ONE depends on which side won, not on which side is the shell. A merge
+  // normally runs winner-into-shell, so the absorbed side's record takes the slot
+  // and that is the default. When the SURVIVOR is the victor the rule inverts:
+  // keeping the absorbed record would leave the defeated state's trade policy
+  // standing and delete the winner's. A tariff is legislated policy, so it
+  // follows the winner exactly as the tax code and the reserve law do.
+  //
+  // Later legislation by the unified government supersedes either through the
+  // normal reconcile (enactment order), which is the ordinary lex-posterior rule.
+  // BOTH SIDES OF THE COMPARISON MOVE TOGETHER. The scopes are read from the side
+  // that WINS and the delete lands on the side that loses; taking the scopes from
+  // one fixed side and only flipping the delete would match every one of the
+  // loser's own records against its own scope list and wipe its entire trade
+  // policy, colliding or not.
   const tariffWinner = absorbedTariffsWin ? fromCountryId : toCountryId;
   const tariffLoser = absorbedTariffsWin ? toCountryId : fromCountryId;
   const winningTariffs = (await db
@@ -368,23 +388,33 @@ async function sweepNationalStrays(
  * Carry the absorbed state's corporations onto the survivor, leaving exactly ONE
  * `isPrimaryNationalCorporation`.
  *
- * A National Corporation is national by definition (`headquartersState: ""`),
- * so it is in no region and neither `evacuateRegionPolitics` nor
- * `convertTransferredResidentsCurrency` reaches it. This pass handles ownership,
- * domicile, denomination, then folds the shell into the survivor.
+ * A National Corporation is national by definition: `buildNationalCorporationDoc`
+ * gives it `headquartersState: ""`. Every other corporation crosses a merge by
+ * riding its HQ region — `evacuateRegionPolitics` re-scopes domicile that way and
+ * `convertTransferredResidentsCurrency` re-denominates the same way — so a
+ * corporation in no region was reached by neither pass, and there was no third
+ * one. This is that third pass: ownership, domicile, denomination, then the fold.
  *
- * The fold matters: every resolver reads the primary with a SINGLE document
- * query (ensurePrimaryNationalCorporation, bond issuer lookup, state-ownership
- * page). Two primaries means a read returns whichever the natural order yields,
- * routing bonds, merges and nationalisations into a corpse. No resolver tiebreak
- * can recover it, so it is fixed here.
+ * THE FOLD IS THE POINT. Two corporations for one country both flagged primary
+ * is not cosmetic, because every resolver reads the primary with a SINGLE
+ * document query — `ensurePrimaryNationalCorporation`, the sovereign bond issuer
+ * lookup, the state-ownership page, the State Enterprises panel. A single read
+ * over two matches returns whichever the natural order yields, on live data the
+ * ABSORBED shell, so every merge-back, nationalisation and bond tranche routed
+ * into a corporation whose state no longer existed while the survivor's own
+ * corporation kept the coupon liability and earned nothing against it
+ * (ticket #1254). No tiebreak in the resolver can recover this — nothing on the
+ * document says which of the two the country means — so it is fixed here.
  *
- * Money-neutral, matching `mergeBackSectorType`: sectors, bonds, shareholdings
- * and cash follow the survivor; the empty shell is dissolved.
+ * Money-neutral, matching `mergeBackSectorType`: a National Corporation has no
+ * private shareholders, so its sectors, its bonds, its shareholdings and its cash
+ * follow it onto the survivor and the empty shell is dissolved.
  *
- * Cash moves only at a MATCHING currency. On a missing rate the shell keeps its
- * balance and is demoted rather than dissolved, so the money stays visible on a
- * named corporation instead of a wrong-denomination total.
+ * Cash still moves only at a MATCHING currency. The conversion above normally
+ * makes that true, so the mismatch branch is the missing-rate case rather than an
+ * ordinary one: there the shell keeps its balance and is demoted instead of
+ * dissolved, leaving the money visible on a named corporation rather than
+ * swallowed into a wrong-denomination total.
  */
 async function mergeNationalCorporations(
   db: Db,
@@ -636,35 +666,43 @@ async function repointShareholderEntries(
 }
 
 /**
- * Cancel the absorbed country's in-flight races instead of handing them to
- * the survivor.
+ * Cancel the absorbed country's in-flight races instead of handing them to the
+ * survivor.
  *
- * The region sweep deletes source-country races on transfer, but only those
- * still keyed to the SOURCE. A race that `rescopeRegionToCountry` re-keys to
- * the SURVIVOR but whose `electionType` belongs to the dissolved
- * constitution (e.g. GDR `bundestag`/`landtag`/`ministerPresident` when the
- * GDR is the shell that survives) crosses as an active race the survivor
- * never scheduled. Resolution would seat winners into offices the survivor's
- * constitution does not define, and both parliaments would campaign at once.
+ * WHY THIS EXISTS. The region sweep deletes each transferred region's
+ * source-country races as it goes, but only those still keyed to the SOURCE.
+ * A race that arrives under the SURVIVOR's id with the absorbed side's
+ * electionType is invisible to that filter: `rescopeRegionToCountry` re-keys
+ * `elections` by region, and a race whose `electionType` belongs to the
+ * dissolved constitution (East Germany's `bundestag` / `landtag` /
+ * `ministerPresident` when the GDR is the shell that survives) crosses the
+ * border as an active race the survivor never scheduled. The turn's
+ * resolution machinery seats its winners into offices the survivor's
+ * constitution does not define, and the player sees BOTH parliaments
+ * campaigning at once — the reunified Germany running Bundestag and
+ * Volkskammer races side by side (ticket #1252).
  *
- * So the merge CANCELS them, just as `evacuateRegionPolitics` cancels
- * per-region races: the office ends, the candidates stood for a country that
- * stops existing, and the design is that the carried chamber keeps sitting
- * without re-election. Deleting the race and its candidates leaves the
- * survivor running only its own election families.
+ * So the merge CANCELS them, exactly as `evacuateRegionPolitics` cancels the
+ * per-region races: the race belongs to an office the settlement ends, its
+ * candidates were standing for a country that stops existing, and the design
+ * is that the carried chamber keeps sitting rather than being re-elected —
+ * no election is called post-merge. Deleting the in-flight race (and its
+ * candidates, so nobody stays filed for a phantom contest) is what leaves
+ * the survivor running only its own election families.
  *
- * Two catches cover races that escaped the per-region sweep:
- *  - still keyed to the DISSOLVED country (sweep missed the region, or the
- *    doc never got re-keyed);
- *  - keyed to the SURVIVOR but carrying an electionType from the dissolved
- *    constitution.
+ * TWO CATCHES, both covering races that escaped the per-region sweep:
+ *  - still keyed to the DISSOLVED country (a region the sweep has not
+ *    reached, or a doc the re-key never matched);
+ *  - keyed to the SURVIVOR but carrying an electionType that belonged to the
+ *    dissolved constitution — the re-keyed race whose office name crossed the
+ *    border while the constitution it belonged to did not.
  *
- * The second filter reads `officeRemapFor` so it fires only for pairs with a
- * declared mapping (a genuine merge of constitutions). Generic region
- * transfers where the source SURVIVES are untouched: this runs only inside a
- * merge.
+ * The second filter reads `officeRemapFor` so it only fires for pairs with a
+ * declared mapping (a genuine merge of two constitutions). Any other pair
+ * falls through to the first catch alone, and generic region transfers —
+ * where the source SURVIVES — are untouched: this runs only inside a merge.
  *
- * Idempotent: a re-run finds nothing left to cancel.
+ * Idempotent by construction: a re-run finds nothing left to cancel.
  */
 async function cancelAbsorbedElections(
   db: Db,
