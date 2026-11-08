@@ -10,6 +10,7 @@ import {
   creditSharesToImperial,
   creditSharesToCorp,
   creditSharesToFund,
+  creditSharesToNpp,
 } from "@/lib/corporations/shareholderOps";
 import { upsertFundHoldingShares } from "@/lib/indexFunds/fundQueries";
 import {
@@ -54,6 +55,7 @@ export async function distributeCrossEquityInKind(
       if (s.corporationId)
         return { id: s.corporationId.toString(), kind: "corporation", shares: s.shares };
       if (s.fundId) return { id: s.fundId.toString(), kind: "fund", shares: s.shares };
+      if (s.nppId) return { id: s.nppId.toString(), kind: "npp", shares: s.shares };
       return null;
     })
     .filter((x): x is InKindShareholder => x !== null && x.shares > 0);
@@ -136,6 +138,10 @@ export async function distributeCrossEquityInKind(
         // (anchor currency) so NAV reflects the windfall; non-constituent
         // positions are liquidated by the next rebalance sweep.
         await upsertFundHoldingShares(db, recipientId, issuer._id, alloc.shares, basisAnchor);
+      } else if (alloc.kind === "npp") {
+        await creditSharesToNpp(db, issuer._id, recipientId, alloc.shares, basis, {
+          $set: { updatedAt: now },
+        });
       } else {
         await creditSharesToCorp(db, issuer._id, recipientId, alloc.shares, basis, {
           $set: { updatedAt: now },

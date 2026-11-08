@@ -13,7 +13,7 @@ export function sumAccountedOutstandingShares(corp: Corporation): number {
   return sh + float;
 }
 
-export type HolderKind = "character" | "imperial" | "corporation" | "fund";
+export type HolderKind = "character" | "imperial" | "corporation" | "fund" | "npp";
 
 type AllocPart = {
   key: string;
@@ -30,6 +30,7 @@ function holderKindOf(h: Shareholder): HolderKind | null {
   if (h.imperialCharacterId) return "imperial";
   if (h.corporationId) return "corporation";
   if (h.fundId) return "fund";
+  if (h.nppId) return "npp";
   return null;
 }
 
@@ -37,6 +38,7 @@ function ownerIdOf(h: Shareholder, kind: HolderKind): ObjectId {
   if (kind === "character") return h.characterId!;
   if (kind === "imperial") return h.imperialCharacterId!;
   if (kind === "fund") return h.fundId!;
+  if (kind === "npp") return h.nppId!;
   return h.corporationId!;
 }
 
@@ -175,6 +177,7 @@ export function allocateProportionalShareTotals(
     if (p.kind === "character") entry.characterId = p.ownerId;
     else if (p.kind === "imperial") entry.imperialCharacterId = p.ownerId;
     else if (p.kind === "fund") entry.fundId = p.ownerId;
+    else if (p.kind === "npp") entry.nppId = p.ownerId;
     else entry.corporationId = p.ownerId;
     if (p.avgCostPerShare != null) {
       entry.avgCostPerShare = p.avgCostPerShare * basisFactor;
@@ -193,8 +196,16 @@ export function allocateProportionalShareTotals(
   }
 
   shareholders.sort((a, b) => {
-    const aId = (a.characterId ?? a.imperialCharacterId ?? a.corporationId ?? a.fundId)!.toString();
-    const bId = (b.characterId ?? b.imperialCharacterId ?? b.corporationId ?? b.fundId)!.toString();
+    const aId = (a.characterId ??
+      a.imperialCharacterId ??
+      a.corporationId ??
+      a.fundId ??
+      a.nppId)!.toString();
+    const bId = (b.characterId ??
+      b.imperialCharacterId ??
+      b.corporationId ??
+      b.fundId ??
+      b.nppId)!.toString();
     return aId.localeCompare(bId);
   });
 
@@ -221,7 +232,7 @@ export type FundHoldingSplitSync = {
 export function planFundHoldingSplitSync(
   newShareholders: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[],
   oldTotal: number,
   newTotal: number
@@ -240,7 +251,7 @@ export function planFundHoldingSplitSync(
 export type DroppedShareholder = { kind: HolderKind; ownerId: ObjectId };
 
 /**
- * Returns every holder (character, imperial, corporation, fund) that was present
+ * Returns every holder (character, imperial, corporation, fund, NPP) that was present
  * in `before` with positive shares but is missing or zero-share in `after`.
  * Zero-share input rows are ignored — those are never expected to survive.
  * Structured so callers can surface names instead of raw ObjectIds.
@@ -248,20 +259,24 @@ export type DroppedShareholder = { kind: HolderKind; ownerId: ObjectId };
 export function findDroppedShareholders(
   before: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[],
   after: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[]
 ): DroppedShareholder[] {
   const entryOf = (
-    h: Pick<Shareholder, "characterId" | "imperialCharacterId" | "corporationId" | "fundId">
+    h: Pick<
+      Shareholder,
+      "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId"
+    >
   ): DroppedShareholder | null => {
     if (h.characterId) return { kind: "character", ownerId: h.characterId };
     if (h.imperialCharacterId) return { kind: "imperial", ownerId: h.imperialCharacterId };
     if (h.corporationId) return { kind: "corporation", ownerId: h.corporationId };
     if (h.fundId) return { kind: "fund", ownerId: h.fundId };
+    if (h.nppId) return { kind: "npp", ownerId: h.nppId };
     return null;
   };
   const keyOf = (e: DroppedShareholder) => `${e.kind}:${e.ownerId.toString()}`;
@@ -291,11 +306,11 @@ export function findDroppedShareholders(
 export function assertShareStructureChangePreservesHolders(
   before: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[],
   after: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[]
 ): void {
   const dropped = findDroppedShareholders(before, after);
@@ -303,7 +318,7 @@ export function assertShareStructureChangePreservesHolders(
     const keys = dropped.map((d) => `${d.kind}:${d.ownerId.toString()}`);
     throw new Error(
       `Share structure change dropped holders: ${keys.join(", ")}. ` +
-        `All owner kinds (character, imperial, corporation, fund) must be preserved.`
+        `All owner kinds (character, imperial, corporation, fund, NPP) must be preserved.`
     );
   }
 }
