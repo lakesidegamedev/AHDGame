@@ -360,7 +360,7 @@ export function LeadershipPanel({
                 </li>
               ))}
             </ul>
-            {challenge.status === "gathering" && data.capabilities.isPartyMp && (
+            {challenge.status === "gathering" && data.capabilities.canBack && (
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -414,13 +414,24 @@ export function LeadershipPanel({
                     <button
                       key={vote}
                       type="button"
-                      disabled={busy || !data.capabilities.isPartyMember}
+                      disabled={
+                        busy ||
+                        !(challenge.ballot!.electorate === "mps"
+                          ? data.capabilities.isPartyMp
+                          : data.capabilities.isPartyMember)
+                      }
                       title={
-                        data.capabilities.isPartyMember
-                          ? vote === "aye"
-                            ? "Vote to remove the leader"
-                            : "Vote to retain the leader"
-                          : "Only party members vote in this ballot"
+                        challenge.ballot!.electorate === "mps"
+                          ? data.capabilities.isPartyMp
+                            ? vote === "aye"
+                              ? "Vote to remove the leader"
+                              : "Vote to retain the leader"
+                            : "Only this party's MPs vote in this ballot"
+                          : data.capabilities.isPartyMember
+                            ? vote === "aye"
+                              ? "Vote to remove the leader"
+                              : "Vote to retain the leader"
+                            : "Only party members vote in this ballot"
                       }
                       onClick={() =>
                         void runAction(

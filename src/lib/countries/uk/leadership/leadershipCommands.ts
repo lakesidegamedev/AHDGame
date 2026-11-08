@@ -96,6 +96,7 @@ export interface LeadershipStateView {
     isCommitteeMember: boolean;
     isPartyMp: boolean;
     canInitiate: boolean;
+    canBack: boolean;
   };
   history: UKPartyLeadership["history"];
 }
@@ -337,7 +338,17 @@ export async function getLeadershipState(
       isPartyMember: isMember,
       isCommitteeMember: isCommittee,
       isPartyMp: isMp,
-      canInitiate: isMp && leader != null && activeChallenge == null && !immune,
+      canInitiate:
+        isMp &&
+        leader != null &&
+        activeChallenge == null &&
+        !immune &&
+        !(viewer != null && party.chairId != null && party.chairId.equals(viewer._id)),
+      canBack:
+        isMp &&
+        activeChallenge != null &&
+        activeChallenge.status === "gathering" &&
+        !(viewer != null && activeChallenge.targetCharacterId.equals(viewer._id)),
     },
     history: leadership.history,
   };
