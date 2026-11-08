@@ -8,10 +8,9 @@ import { calculateStateLean } from "@/lib/utils/demographics";
  *
  * Seeding `stateDemographics` alone is not enough: `cachedEconomicLean` /
  * `cachedSocialLean` are what `getStateLean` reads, what the region pickers
- * display, and — via policy distance — what the election engine weighs. A
- * country that seeds demographics but skips this step contributes nothing to
- * that calculation and renders as "lean not yet derived" (#3752, which is
- * exactly what RU and DD did).
+ * display, and, via policy distance, what the election engine weighs. A country
+ * that seeds demographics but skips this step contributes nothing to that
+ * calculation and renders as "lean not yet derived".
  *
  * Returns the number of regions written.
  */

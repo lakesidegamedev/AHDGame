@@ -66,15 +66,10 @@ export interface CountryPolicyConfig {
 /**
  * Per-country policy configuration, legacy union.
  *
- * The sixteen modern blocks now live in `basePolicies2019.ts` and are spread in
- * here; the eleven below belong to eras that ended, and are kept because
- * `budgets.ts` reads them for the 1979 and 1991 budget seeds. Nothing is
- * duplicated: this map has exactly one source for every key.
- *
- * ⚠️ This is NOT the 2019 policy seed any more. `getBasePolicies("2019-default")`
- * builds from `COUNTRY_POLICY_CONFIGS_2019` alone, so a modern world no longer
- * picks up `su`, `dd` or the Warsaw-Pact blocks. Do not point a preset at this
- * map to "get everything" — that is the defect it used to have.
+ * Modern 2019 blocks come from `basePolicies2019.ts`; the remaining entries
+ * serve 1979 and 1991 budget seeds via `budgets.ts`. Do not point a preset at
+ * this map expecting the 2019 seed: `getBasePolicies("2019-default")` builds
+ * from `COUNTRY_POLICY_CONFIGS_2019` alone.
  *
  * economic/social: -3 (left/lib) to +3 (right/trad), 0 = center.
  */
@@ -246,11 +241,8 @@ function stateDefault(
 /**
  * Build the full `BasePolicyRecord[]` set from a country-config map.
  *
- * Originally read `COUNTRY_POLICY_CONFIGS` directly; parameterised in
- * Phase 5 so a preset-specific config (e.g. `COUNTRY_POLICY_CONFIGS_1991`)
- * can be passed in instead. The output shape and semantics are unchanged —
- * national + regional records per country, regional records derived from
- * `getStateLean` × `stateDefault` for non-tax types.
+ * Output is national + regional records per country; regional records are
+ * derived from `getStateLean` x `stateDefault` for non-tax types.
  *
  * Callers: `getBasePolicies(preset)` selects the right config map.
  */
@@ -343,16 +335,11 @@ function buildBasePolicies(
 }
 
 /**
- * The 2019 policy set, un-vacuumed and preset-blind.
+ * Preset-blind 2019 policy set from COUNTRY_POLICY_CONFIGS_2019 (sixteen
+ * countries). Retained for preset-blind importers. Still emits types whose
+ * window opens after 2019 (e.g. cn_common_prosperity, 2021).
  *
- * Retained for compatibility with preset-blind importers. It builds from
- * `COUNTRY_POLICY_CONFIGS_2019`, so it covers sixteen countries rather than the
- * legacy union's twenty-seven: running it no longer writes Warsaw-Pact or Soviet
- * policy rows into a world that has none.
- *
- * ⚠️ Preset-aware callers must use `getBasePolicies(preset)` instead. This export
- * skips the era vacuum, so it still emits types whose window opens after 2019
- * (`cn_common_prosperity`, 2021). That is unchanged and pre-existing.
+ * Preset-aware callers must use `getBasePolicies(preset)`.
  */
 export const basePolicies = buildBasePolicies(COUNTRY_POLICY_CONFIGS_2019);
 export default basePolicies;

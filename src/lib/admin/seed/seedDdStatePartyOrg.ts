@@ -55,7 +55,7 @@ export async function seedDdStatePartyOrg(
 
   // The GDR only exists in the divided-Germany (1953/1979) eras — its Länder
   // belong to DE in unified eras, so seeding here would attach National Front
-  // rosters to West German states (the RU-regions gate, refs #3269).
+  // rosters to West German states (the RU-regions gate).
   const { isEasternBlocEra } = await import("@/lib/seeds/presetSelector");
   if (!isEasternBlocEra(activePreset)) {
     log(

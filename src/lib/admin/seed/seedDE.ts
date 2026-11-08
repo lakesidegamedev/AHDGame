@@ -371,16 +371,10 @@ export async function seedDEGovernmentFormation(
 }
 
 /**
- * Re-seed DE legislation types in isolation.
- *
- * NOTE: `runCoreSeed` already covers every DE legislation type via the main
- * `legislationTypes.ts` spread (`...deLegislationTypes` at the bottom of that
- * file). This function is kept as a targeted re-seed for the admin UI and the
- * sandbox script — bootstrap no longer calls it as a separate step, since the
- * upserts were duplicate. JP/IE/CN never had an equivalent helper for the
- * same reason; DE's existed historically. Safe to invoke independently when
- * an admin wants to refresh only DE legislation without touching other
- * countries' types.
+ * Re-seed DE legislation types in isolation, for the admin UI and sandbox
+ * script. `runCoreSeed` already covers these via the main legislationTypes
+ * spread; bootstrap no longer calls this separately since the upserts would
+ * be duplicates.
  */
 export async function seedDELegislation(db: Db, log: (msg: string) => void) {
   const { deLegislationTypes } = await import("@/lib/seeds/de/deLegislationTypes");

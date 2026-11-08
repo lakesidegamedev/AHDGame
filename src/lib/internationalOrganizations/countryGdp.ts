@@ -14,13 +14,10 @@ import { aggregateNationalGdp } from "@/lib/utils/nationalGdp";
 /**
  * USD-normalized national GDP (millions) for the given countries. `state.gdp`
  * is stored in the unit the era's regional seed authored it in, so cross-country
- * comparison goes through `getGdpAnchorRate` — which is ERA-SCOPED.
- *
- * Reading the base config here (refs #3778) is what made the world-organizations
- * GDP table rank France at ~$3.9T in a 1953 world: frRegions1953 is authored in
- * old francs at 350 FRF/$, and the base config carries FR's 1979 rate of 0.238.
- * `preset` may be supplied by callers that already hold it; otherwise it is read
- * from the `gameState` singleton.
+ * comparison must go through `getGdpAnchorRate`, which is ERA-SCOPED: using a
+ * base-config rate misranks countries seeded under different currency regimes.
+ * `preset` may be supplied by callers that already hold it; otherwise it is
+ * read from the `gameState` singleton.
  */
 export async function loadUsdGdpByCountry(
   db: Db,

@@ -74,7 +74,7 @@ export function buildNationalCorporationDoc(
  * of the two the country means. The invariant is therefore enforced where it can
  * be broken: `mergeNationalCorporations` in `country/mergeCountry.ts` folds the
  * absorbed state's primary into the survivor's when one country absorbs another.
- * Ticket #1254 is what this looks like when it is not held.
+ * Violating it shows up as inconsistent ownership state.
  */
 export async function ensurePrimaryNationalCorporation(
   db: Db,

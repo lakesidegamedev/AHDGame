@@ -1,17 +1,14 @@
 /**
- * Portable rules core for the research panels (#2331, #2332, #2333, #2336).
+ * Portable rules core for the research panels.
  *
  * Pure data in, plain data out: no database, no wall clock, no randomness, no
- * environment. The turn shells (`countryTurn.ts`, `trade.ts`, `securities.ts`)
- * read live state, pass the observation time in explicitly, and write the rows
- * these builders return. The export shell (`export.ts`) reads rows back and
- * hands them to the panel builders below.
+ * environment. Shells pass the observation time in explicitly and write the
+ * returned rows.
  *
- * Every series extends the long-horizon telemetry contract (#2100): rows carry
- * world identity, source class, sim-run provenance (run id, seed, executed
- * revision), the raw turn and in-game year, the founding-turn flag and an
- * explicit `world-raw-full` retention label. Missing values are `null` and are
- * listed in `missing`; nothing absent is ever written as zero.
+ * Every series extends the long-horizon telemetry contract: rows carry world
+ * identity, source class, sim-run provenance, raw turn and in-game year, the
+ * founding-turn flag and an explicit `world-raw-full` retention label. Missing
+ * values are `null` and listed in `missing`; nothing absent is written as zero.
  */
 import {
   LONG_HORIZON_RETENTION_POLICY_ID,
@@ -86,7 +83,7 @@ function round(value: number, places = 4): number {
   return Math.round(value * scale) / scale;
 }
 
-// ── Country-turn macro, monetary and fiscal panel (#2331, #2336) ─────────────
+// ── Country-turn macro, monetary and fiscal panel ─────────────
 
 /**
  * Who set the policy rate. `government`: the head of government or finance
@@ -438,7 +435,7 @@ export function sovereignFlowsForTurn(
   };
 }
 
-// ── Annual fiscal and debt decomposition (#2336) ─────────────────────────────
+// ── Annual fiscal and debt decomposition ─────────────────────────────
 
 export interface AnnualFiscalRow {
   country: string;
@@ -630,7 +627,7 @@ export function buildAnnualFiscalPanel(rows: readonly CountryTurnRow[]): AnnualF
   return out;
 }
 
-// ── Bilateral trade panel (#2333) ────────────────────────────────────────────
+// ── Bilateral trade panel ────────────────────────────────────────────
 
 export interface TradePairObservation {
   exporter: string;
@@ -834,7 +831,7 @@ export function tradeObserverMetrics(
   };
 }
 
-// ── Securities panel (#2332) ─────────────────────────────────────────────────
+// ── Securities panel ─────────────────────────────────────────────────
 
 /** How the recorded price was produced. */
 export type PriceBasis = "executed" | "model" | "administrative";

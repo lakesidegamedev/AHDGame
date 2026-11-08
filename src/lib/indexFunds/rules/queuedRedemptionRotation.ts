@@ -1,5 +1,5 @@
 /**
- * Cross-fund service order for the budgeted queued-redemption pass (#3366).
+ * Cross-fund service order for the budgeted queued-redemption pass.
  *
  * The pass shares one claim budget across every fund with a queue. When more
  * funds wait than there are claims, a fixed order would hand the same leading

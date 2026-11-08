@@ -1,17 +1,10 @@
 /**
- * Phase 11b — populist favorability surge on crisis-fire.
+ * On crisis-fire, NPPs with populist/nationalist ideology get a bulk
+ * favorability bump. Decay is handled by the existing favorability decay;
+ * no separate decay system is needed.
  *
- * When a sovereign-debt crisis fires, anti-establishment sentiment rises in
- * the affected country. NPPs whose ideology maps to "populist" or
- * "nationalist" via Phase 10's `deriveIdeology` get a bulk +10 favorability
- * bump. The bump is then gradually eroded by the existing favorability
- * decay each turn (no separate decay system needed — relies on the natural
- * regression-to-mean of the favorability stat over time).
- *
- * Deterministic + idempotent caveats:
- *   - Same crisis-fire turn re-runs would re-apply the bump. crisisDetection
- *     gates this via the `firedThisEvaluation` flag (only fires once per
- *     state transition into crisisPending), so re-runs are bounded.
+ * Idempotency relies on crisisDetection's `firedThisEvaluation` flag, so
+ * re-runs of the same crisis-fire turn are bounded.
  */
 
 import type { Db } from "mongodb";

@@ -1,14 +1,8 @@
 /**
  * Pure synthetic market-demand computation.
  *
- * Phase 2 contract: deterministic function of `SovereignDemandSnapshot`.
- * Returns the scalar demand ratio plus per-component contributions for UI.
- *
- * Phase 3 will compose this with entity-holdings contribution (capped) to
- * produce the full demand signal.
- *
- * Design reference: docs/plans/archive/2026-05/2026-05-04-sovereign-default-design.md
- * Section 3 — Trigger & crisis detection.
+ * Deterministic function of `SovereignDemandSnapshot`. Returns the scalar
+ * demand ratio plus per-component contributions for UI.
  */
 
 import {

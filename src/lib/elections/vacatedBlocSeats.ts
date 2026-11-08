@@ -31,7 +31,7 @@ export async function heldBlocRowIds(
 /**
  * Drop the seat count from bloc rows whose holder was just cleared. Seat
  * tallies skip a row with no party, so a holder-less row that keeps
- * `seatsHeld` silently removes those seats from the chamber (#5391, AHD-951).
+ * `seatsHeld` silently removes those seats from the chamber.
  *
  * A row a UK Commons vacancy points at is left alone: the by-election is sized
  * from it and seats its winners in new rows. Call this AFTER any vacancy for

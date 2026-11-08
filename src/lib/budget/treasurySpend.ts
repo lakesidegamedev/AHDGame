@@ -23,9 +23,9 @@ export interface FiscalImpact {
  * Canonical treasury mover. `delta` is signed (negative = spend, positive =
  * credit). Moves the SSOT `treasuryBalance` only: `debt.principal` belongs to
  * the bond ledger (see bonds/sovereignPrincipal.ts) and is never re-derived
- * from the balance here (#1975). Returns the surplus/debt split of a SPEND
- * (zero split for a credit) plus the post-move balance and the untouched
- * bond-owned principal. The treasury is allowed to go negative.
+ * from the balance. Returns the surplus/debt split of a SPEND (zero split for
+ * a credit) plus the post-move balance and the untouched bond-owned principal.
+ * The treasury is allowed to go negative.
  */
 /**
  * Opt-in ledger witness for a caller whose own rows do not already evidence the

@@ -40,7 +40,7 @@ export async function sellFundBondHoldingsForCash(
   now: Date = new Date(),
   options?: {
     /**
-     * #992 tranche 6: game turn stamped on each fund-subject ledger row.
+     * Game turn stamped on each fund-subject ledger row.
      * When absent the sales still settle but emit no rows.
      */
     turn?: number;
@@ -122,13 +122,11 @@ export async function sellFundBondHoldingsForCash(
       createdAt: now,
     });
 
-    // #992 tranche 6: fund-subject ledger leg for the cashAnchor credit
-    // above. The bond position is an asset account the shadow ledger does
-    // not carry, so the row is single-sided under the shared
-    // bond_principal_investment reason (the purchase leg shares it, netting
-    // per currency). Fund-subject rows never mirror, so this is the only
-    // ledger row for the credit, and it fires only on the committed path
-    // — a refunded pool debit or a lost holder race emits nothing.
+    // Fund-subject ledger leg for the cashAnchor credit above. The bond position
+    // is an asset account the shadow ledger does not carry, so this row is
+    // single-sided under the shared bond_principal_investment reason. Fund-subject
+    // rows never mirror, so this is the only ledger row for the credit, and it
+    // fires only on the committed path.
     if (options?.turn !== undefined) {
       await emitTx(
         db,

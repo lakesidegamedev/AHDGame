@@ -1,5 +1,5 @@
 /**
- * The background country page (#5702), as plain data.
+ * The background country page, as plain data.
  *
  * A background country runs no regions, legislature, parties or NPP politicians,
  * so the full country page and its sub-pages have nothing to show for it. Its

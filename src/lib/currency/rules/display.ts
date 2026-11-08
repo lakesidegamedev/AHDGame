@@ -1,7 +1,7 @@
 /**
- * Currency displays preserve the denomination of stored balances. Local displays
- * may translate a German accounting unit into marks or Irish pounds into euros;
- * displayQuote returns the same rate used to interpret a player's input.
+ * Currency displays preserve the denomination of stored balances. Local
+ * displays may translate units into marks or pounds into euros; displayQuote
+ * returns the same rate used to interpret player input.
  */
 import {
   CURRENCY_ANCHOR_COUNTRY,

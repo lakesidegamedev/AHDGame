@@ -65,12 +65,6 @@ export async function unwindBank(
     };
   }
 
-  // Everything the unwind used to do by hand is the shared waterfall's job now.
-  // The hand-rolled version credited the central bank's money pool with the
-  // household book, left the matching cash in the bank, and then let
-  // `revokeCharter` hand that same cash to the shareholder as a refund. The
-  // deposit book existed twice and the owner was paid out of it.
-  //
   // `revokeCharter` runs the waterfall itself, so calling it is the whole job.
   const npcDeposits = Math.max(0, charter.npcDeposits ?? 0);
 

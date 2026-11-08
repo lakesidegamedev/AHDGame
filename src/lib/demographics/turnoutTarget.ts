@@ -4,18 +4,12 @@ import { bucketLabel } from "./bucketLabels";
 /**
  * Where a turnout-targeting action writes its modifier.
  *
- * A Governor's Address targets a group of voters and stores a turnout delta on
- * `stateDemographicTurnout.modifiers`. Historically the target was one of the 12
- * US voter archetypes, and the delta landed on `modifiers.voterGroups.<id>` —
- * which only the US reads per-group. On the other 16 countries the archetype had
- * no bucket mapping, so the boost was charged and then silently applied to
- * nobody (see `getUnmappedArchetypeDrops`).
- *
- * Targets are now Layer-1 buckets (`"race:black"`), stored dim-keyed as
- * `modifiers.race.black`, which every country's granular substrate reads
- * natively. Archetype ids still resolve here so addresses delivered before this
- * change expire against the field they were written to — an in-flight boost must
- * come back off the same key it went on, or it becomes permanent.
+ * A Governor's Address stores a turnout delta on
+ * `stateDemographicTurnout.modifiers`, dim-keyed as `modifiers.race.black`,
+ * which every country's granular substrate reads natively. Archetype ids still
+ * resolve here so boosts delivered before this change expire against the same
+ * key they were written to; a boost must come off the key it went on, or it
+ * becomes permanent.
  */
 
 /**

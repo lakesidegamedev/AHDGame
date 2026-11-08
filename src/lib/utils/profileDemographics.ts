@@ -66,13 +66,9 @@ export function getNationalityLabel(countryId?: string | null): string | null {
 
 /**
  * The country a character STARTED in, for the profile's "Starting Nationality".
- *
- * Ticket 1107: this used to read `users.accountCountryId`, which is account-level
- * and written only from a player's FIRST ever character. A player whose second
- * character (or whose post-world-reset character) starts elsewhere saw the old
- * character's nationality, e.g. an East German character labelled "United States".
- * `startingCountryId` is stamped per character at creation; characters that
- * predate the field fall back to their current country.
+ * Must use `startingCountryId` (stamped per character at creation), not the
+ * account-level country, or later characters show an earlier character's
+ * nationality. Characters predating the field fall back to their current country.
  */
 export function resolveStartingCountryId(character: {
   startingCountryId?: string | null;

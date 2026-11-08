@@ -115,10 +115,9 @@ export async function suspendCampaignAndEndorse(params: {
   );
 
   // Register the suspend-endorse as a counted player endorsement so it feeds the
-  // endorsee's endorsement tally + per-turn campaign-action grant (ticket #948) —
-  // in addition to the one-time strength/org transfer below. Mirrors the normal
-  // /endorse route: deactivate any prior active endorsement by this character for
-  // this election, then insert one keyed by the endorsed candidate ROW id.
+  // endorsee's endorsement tally and per-turn campaign-action grant, in addition
+  // to the one-time strength/org transfer. Mirrors /endorse: deactivate any prior
+  // active endorsement by this character, then insert one keyed to the endorsed row.
   await db
     .collection<PlayerEndorsement>("playerEndorsements")
     .updateMany(

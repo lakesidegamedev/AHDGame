@@ -3,14 +3,12 @@
  *
  * `pensionTurn.ts` debits a corporation twice every turn (the bargained
  * contribution, then a deficit top-up) and ledgers both as `pension_contribution`.
- * Every reader of that log is an admin route, so before this the CEO saw the
- * cash leave and had nothing to name it. This recomputes the same two figures
- * from the same rules the turn uses, so the income statement can carry a line
- * for each.
+ * This recomputes the same two figures from the same rules the turn uses, so the
+ * income statement can carry a line for each.
  *
  * Projection, not history: it answers "what is this agreement charging me right
- * now", the way every other row on that statement does. An employer too short to
- * pay is still shown what it owes, because the claim accrues either way.
+ * now", like every other row on that statement. An employer too short to pay is
+ * still shown what it owes, because the claim accrues either way.
  */
 
 import { ObjectId, type Db } from "mongodb";

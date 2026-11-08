@@ -4,12 +4,11 @@ import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { ReachableBookEntry, ReachableBooksDoc } from "@/lib/trade/reachableBook";
 
 /**
- * Load the latest turn's reachable books (ticket #1077).
+ * Load the latest turn's reachable books.
  *
- * Returns `null` when no snapshot carries them: worlds that have not run a turn
- * since 1.1.2 shipped, and any world below the trade-clearing tier. Callers MUST
- * treat null as "fall back to the previous global-aggregate behaviour" rather
- * than as "no room", or a world mid-upgrade would show every market closed.
+ * Returns `null` when no snapshot has them. Callers MUST treat null as
+ * "fall back to the previous global-aggregate behaviour" rather than as "no
+ * room", or a world mid-upgrade would show every market closed.
  */
 export async function loadReachableBooks(
   db: Db,

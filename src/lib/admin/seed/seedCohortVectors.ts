@@ -9,22 +9,17 @@ import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
 
 /**
- * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`) —
- * the SSOT population stock the demographic turn phase evolves — for a freshly seeded/reset
- * world, and stamp the seed-time derived population metrics (`sexRatio`, `dependencyRatio`,
- * `realizedMigrationRate`) onto `stateMetrics.population` so the Live Population panel is
- * populated at turn 0 instead of waiting for the first turn.
+ * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
+ * for a freshly seeded or reset world, and stamp seed-time population metrics onto
+ * `stateMetrics.population` so the Live Population panel is populated at turn 0.
  *
- * Era-aware: synthesizes from each region's preset-appropriate census age-shares
- * (`getRegionCensusData`) + its seeded `population.medianAge` / `birthRate`. Uses the same
- * SSOT synthesis (`synthesizeAgeSexVector`) and derived-view helpers as the turn engine, so
- * the seeded stock is byte-identical to what the unit-tested engine produces.
+ * Synthesizes from each region's preset-appropriate census age-shares plus seeded
+ * `medianAge`/`birthRate`, using the same SSOT helpers as the turn engine so the
+ * seeded stock matches engine output.
  *
- * This is the shared core called both by `bootstrapGameWorld` (every reset) and the
- * standalone `2026-06-10-seed-cohort-vectors` migration (live worlds). `apply: false`
- * computes coverage stats without writing (the migration's dry-run). `replace: true` (the
- * reset path) also deletes every stock this run did not rebuild, so no prior-world stock can
- * survive a reset and overwrite the seeded population on the first demographic turn.
+ * `apply: false` computes coverage stats without writing. `replace: true` (reset path)
+ * also deletes every stock this run did not rebuild, so no prior-world stock survives
+ * a reset and overwrites the seeded population.
  */
 
 const DEFAULT_MEDIAN_AGE = 38;

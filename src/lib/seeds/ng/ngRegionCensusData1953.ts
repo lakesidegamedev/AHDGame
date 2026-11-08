@@ -1,24 +1,21 @@
 /**
- * Nigeria Region Census Profiles — 1953 era (British colonial Nigeria).
+ * Nigeria Region Census Profiles: 1953 era (British colonial Nigeria).
  *
  * 1953-default companion to {@link ngRegionCensusData} (the 2019 profiles).
- * Anchored on the 1952–53 Nigerian Population Census (British colonial
- * administration).
+ * Anchored on the 1952-53 Nigerian Population Census.
  *
- * Era context: Nigeria was a British Crown Colony in 1953, independence
- * coming only in October 1960. The colonial population census of 1952–53
- * recorded ~31.6 million Nigerians. Formal education was almost exclusively
- * mission-run primary schools; secondary and university education were tiny
- * elite preserves (the University College of Ibadan opened 1948 with ~100
- * students). Oil had not yet been discovered (first commercial find 1956,
- * production 1958). The economy was entirely agriculture: cocoa (SW), palm
- * oil (SE), groundnuts (N). Lagos was the only real urban centre. The six
- * modern geopolitical zones are anachronistic for 1953 (the colonial
- * structure was N/E/W regions) but the game uses them for consistency.
- * Income is very low across the board. Product decision 2026-07-25: Nigeria is
- * Tier-1 full-autonomous economy-preview in 1953 (self-governing under the
- * Macpherson/Lyttleton trajectory); this census overlay feeds that seed pack.
- * Player open remains blocked on billLifecycle parity.
+ * Era context: Nigeria was a British Crown Colony, independence coming only
+ * in October 1960. The colonial census of 1952-53 recorded ~31.6 million
+ * Nigerians. Formal education was almost exclusively mission-run primary
+ * schools; secondary and university education were tiny elite preserves (the
+ * University College of Ibadan opened 1948 with ~100 students). Oil had not
+ * yet been discovered (first commercial find 1956, production 1958). The
+ * economy was almost entirely agriculture: cocoa (SW), palm oil (SE),
+ * groundnuts (N). Lagos was the only real urban centre. The six modern
+ * geopolitical zones are anachronistic (the colonial structure was N/E/W
+ * regions) but the game uses them for consistency. Income is very low across
+ * the board. Feeds the Tier-1 full-autonomous economy-preview seed pack;
+ * player open is blocked on billLifecycle parity.
  */
 
 import type { NGRegionLayer1 } from "./ngRegionCensusData";

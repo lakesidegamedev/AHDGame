@@ -17,17 +17,10 @@ export interface FieldOfficeUpkeepResult {
 }
 
 /**
- * Per-turn field-office upkeep. Runs right after the campaign turn so this
- * turn's income is already in the treasury.
- *
- * - Offices whose campaign is gone, archived, or whose race is no longer
- *   active are swept. Campaign deletion happens in half a dozen resolution
- *   paths; sweeping here keeps every one of them correct without touching
- *   them.
- * - A campaign that cannot pay closes its newest offices first (the ones that
- *   have done the least work) until the rest are affordable.
- * - `fieldOfficeCount` is rewritten from the surviving rows, so any drift from
- *   a crashed open/close heals within a turn.
+ * Per-turn field-office upkeep, run after the campaign turn so income is in.
+ * Sweeps offices whose campaign is gone or race inactive; closes newest
+ * offices first when a campaign cannot pay; rewrites fieldOfficeCount from
+ * surviving rows to heal any drift.
  */
 export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkeepResult> {
   const result: FieldOfficeUpkeepResult = {

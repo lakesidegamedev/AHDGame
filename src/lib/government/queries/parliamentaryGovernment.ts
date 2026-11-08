@@ -444,7 +444,7 @@ export async function getPublicVacancies(
   // States that never seated an official have no row and are filled by the
   // regular cycle, so they are NOT vacancies (matches byElectionWatcher).
   //
-  // Fixes #3275: the prior governor logic did the inverse — it treated any
+  // The prior governor logic did the inverse, it treated any
   // governor row (including tombstones) as "filled" and reported never-seated
   // states as vacant. House/stateSenate were also hard-coded empty.
   const collectRowVacancies = (

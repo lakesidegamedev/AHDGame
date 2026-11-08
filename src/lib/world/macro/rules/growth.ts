@@ -1,14 +1,13 @@
 /**
- * Annual growth for aggregate (macro) economies (#5702).
+ * Annual growth for aggregate (macro) economies.
  *
- * A background country grows at its authored trend rate, held back while a
- * shock is in force: a war, sanctions or a living conflict lower
- * `shockModifier`, which already cuts this tick's output, and the same shock
- * drags the growth rate so recovery takes years rather than one tick.
+ * A background country grows at its authored trend rate, held back while a shock
+ * is in force: the same shock that lowers this tick's output also drags the
+ * growth rate, so recovery takes years rather than one tick.
  *
- * The rate is annual. A kernel tick covers several turns, so the growth
- * applied is (1 + rate) ^ (turnsElapsed / turnsPerYear): one game year of
- * ticks compounds to exactly the annual rate, never the annual rate per turn.
+ * The rate is annual. A kernel tick covers several turns, so growth applied is
+ * (1 + rate) ^ (turnsElapsed / turnsPerYear): one game year of ticks compounds to
+ * exactly the annual rate, never the annual rate per turn.
  *
  * Pure: plain data in, plain data out.
  */

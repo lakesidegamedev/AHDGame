@@ -115,17 +115,14 @@ const TICK_RATES_7 = [0.06, 0.04, 0.02, 0.0, -0.02, -0.04, -0.06] as const;
 /**
  * Dedicated, stronger tick rates for the UK birthRate lever (uk_childcare).
  *
- * birthRate is an intensive 0-100 index with NO metric-engine registry node and no
- * competing drift — it only moves by these additive per-turn ticks. National UK
- * policies are divided across the 12 regions (getFederalMultiplier("UK") = 1/12) in
- * computeTickRates; correct for extensive totals, but it dilutes an intensive index.
- * With the shared TICK_RATES_7 (0.06) the strongest option moved each region only
- * 0.06 × 1/12 × 48 ≈ 0.24 index/yr — imperceptible (live player report: "1-2 game
- * years and the birth rate hasn't changed"). Scaled ~12.5× so the strongest option
- * delivers 0.75 × 1/12 × 48 ≈ 3 index/yr per region — a visible demographic response
- * within ~1-2 years while still gradual (≈ replacement after ~2 yrs, not an instant
- * flip). Kept separate from TICK_RATES_7 so the many laws sharing that array are
- * untouched.
+ * birthRate is an intensive 0-100 index with no metric-engine node and no
+ * competing drift; it only moves by these additive per-turn ticks. National
+ * UK policies are divided across the 12 regions (getFederalMultiplier("UK") =
+ * 1/12), which suits extensive totals but dilutes an intensive index. The
+ * shared TICK_RATES_7 (0.06) moved each region only ~0.24 index/yr, which is
+ * imperceptible. Scaled ~12.5x so the strongest option delivers ~3 index/yr
+ * per region: a visible response in ~1-2 years while still gradual. Kept
+ * separate from TICK_RATES_7 so shared laws are untouched.
  */
 const UK_BIRTH_RATE_TICK_RATES_7 = [0.75, 0.5, 0.25, 0.0, -0.25, -0.5, -0.75] as const;
 
@@ -2338,11 +2335,9 @@ const rawLegislationTypes: LegislationType[] = [
       metricId: "educationSpending",
       scope: "state",
     },
-    // §4.7 (P2a) sweep, applied here for ticket #826 item 14: the readout
-    // secondaries (gradRate/testPerf/literacy/college/workforceSkill)
-    // double-counted — this law's education spend now drives them via the
-    // engine's spending channel, same as its federal sibling
-    // (us_federal_education_funding). Primary educationSpending root only.
+    // Readout secondaries (gradRate/testPerf/literacy/college/workforceSkill)
+    // double-counted; education spend now drives them through the engine's spending
+    // channel, as in us_federal_education_funding. Primary educationSpending root only.
     effectTargetsWeighted: weightedTargets({ category: "education", metric: "educationSpending" }, [
       { category: "economic", metric: "economicFreedom", weight: -0.2 },
     ]),
@@ -3679,7 +3674,7 @@ const rawLegislationTypes: LegislationType[] = [
       },
       {
         // High foreign-corp rate ⇒ economically left; stance corrected from a
-        // sovereignty theme so the effectDirection ladder stays monotone (Bug #0962).
+        // sovereignty theme so the effectDirection ladder stays monotone.
         rate: 48,
         name: "America First Foreign Corporate Tax",
         description:
@@ -4577,7 +4572,7 @@ const rawLegislationTypes: LegislationType[] = [
       },
       {
         // High foreign-corp rate ⇒ economically left; stance corrected from a
-        // sovereignty theme so the effectDirection ladder stays monotone (Bug #0962).
+        // sovereignty theme so the effectDirection ladder stays monotone.
         rate: 32,
         name: "State-First Foreign Corp Tax",
         description:
@@ -4739,8 +4734,6 @@ const rawLegislationTypes: LegislationType[] = [
   },
 
   // ── UK Legislation Types ────────────────────────────────────────────────
-  // 55 types: 7 tax (5 national + 2 regional) + 48 policy (34 national + 14 regional)
-  // See docs/plans/archive/2026-04/2026-04-05-uk-legislation-overhaul-design.md
 
   // ── A. UK Tax Types (11 brackets) ─────────────────────────────────────
 
@@ -5323,9 +5316,8 @@ const rawLegislationTypes: LegislationType[] = [
         social: -1,
       },
       {
-        // High foreign-corp rate ⇒ economically left; stance must match the tax
-        // level (was "right" on a sovereignty theme, breaking the monotone ladder
-        // optionIntensity relies on — Bug #0962).
+        // High foreign-corp rate implies economically left stance; must match
+        // the tax level so optionIntensity stays monotone.
         rate: 52,
         name: "Britain First Foreign Corp Tax",
         description:
@@ -6928,9 +6920,9 @@ const rawLegislationTypes: LegislationType[] = [
           "Dramatically expand policing powers, impose mandatory minimum sentences, and increase funding for the National Crime Agency",
           "Massively expand police powers, militarise border and drug enforcement, and impose the harshest sentencing guidelines in British history",
         ][i],
-        // #887: direct crimeRate stance effect so the bill visibly moves crime.
+        // Direct crimeRate stance effect so the bill visibly moves crime.
         // Enforcement (right, index 6) lowers crime; reform (left) raises it
-        // short-term. On crime's native per-100k scale. The police→crime
+        // short-term. On crime's native per-100k scale. The police to crime
         // spending channel (publicSafety.ts) is trimmed to avoid double-count.
       })),
       [38, 64, 89, 115, 153, 216, 306]
@@ -7036,10 +7028,10 @@ const rawLegislationTypes: LegislationType[] = [
           "Dramatically expand local police presence, fund specialised drug and gang units, and invest in surveillance technology",
           "Massively expand local law enforcement with advanced surveillance, zero-tolerance enforcement, and maximum officer deployment",
         ][i],
-        // #887: direct crimeRate stance effect (state scope) so local policing
+        // Direct crimeRate stance effect (state scope) so local policing
         // visibly moves local crime. Enforcement (right) lowers it, reform
         // (left) raises it short-term. Native per-100k scale; paired with the
-        // trimmed police→crime spending channel to avoid double-count.
+        // trimmed police to crime spending channel to avoid double-count.
       })),
       [89, 128, 166, 204, 255, 319, 408]
     ),
@@ -7966,11 +7958,11 @@ const rawLegislationTypes: LegislationType[] = [
       metricId: "governmentTransparency",
       scope: "national",
     },
-    // NOTE (Bug #0962 #5): corruptionIndex is an ENGINE-DERIVED READOUT of
+    // NOTE: corruptionIndex is an ENGINE-DERIVED READOUT of
     // governmentTransparency (§4.7 root→readout edge; see mediaGovernanceSweep.test).
     // Targeting it here would double-count — the engine already lowers corruption when
     // transparency rises. So the anti-corruption law targets the transparency ROOT; the
-    // graded-chip fix (Bug #0962) now surfaces that transparency effect on same-side bills.
+    // graded-chip fix now surfaces that transparency effect on same-side bills.
     effectTargetsWeighted: weightedTargets(
       { category: "governance", metric: "governmentTransparency" },
       [

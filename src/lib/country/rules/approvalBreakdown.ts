@@ -18,13 +18,11 @@ export const NATIONAL_CAP_ADJUSTMENT_ID = "national_positive_cap";
  * adjustments applied after it.
  *
  * The snapshot runs every national modifier through one `applyModifiers` call
- * (positives capped, negatives not) and stores the list it consumed, so the
- * state average is the rating minus that call's net effect. Derived rather than
- * stored: it reconciles with the stored rating by construction, and it works
- * for snapshots written before this existed.
- *
- * When positives overshoot the cap a "cap" line is added so the lines still add
- * up. Adjustments that round to zero are dropped.
+ * (positives capped, negatives not) and stores the consumed list, so the state
+ * average is the rating minus that call's net effect. Derived rather than
+ * stored: it reconciles with the stored rating by construction and works for
+ * older snapshots. A "cap" line keeps lines adding up when positives overshoot
+ * the cap; adjustments rounding to zero are dropped.
  */
 export function buildApprovalBreakdown(
   approval: number,

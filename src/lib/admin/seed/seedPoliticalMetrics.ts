@@ -21,7 +21,7 @@ import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalText
 import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
 
 /**
- * The 1953 preset carrying both authored modifiers and generated texture (issue #704).
+ * The 1953 preset carrying both authored modifiers and generated texture.
  * Applying either 1953 regional input to another era's baselines would dress
  * it in the wrong year's regional character.
  */
@@ -48,14 +48,13 @@ const clampScore = (v: number) => Math.max(0, Math.min(100, v));
 /**
  * Seeds one politicalMetrics doc per US/UK/RU/DD region present in `states`:
  * value = clamp(baseline at `year` + regional character, 0, 100), where the
- * character is the sparse hand-authored modifier where one exists and the
- * generated texture deviation otherwise (issues #704 and #3266).
+ * character is the sparse hand-authored modifier where one exists, else the
+ * generated texture deviation.
  *
  * Baselines resolve by in-game YEAR through the anchor table, never by seed
- * preset. Authored era anchors give later presets their own national values.
- *
- * Texture resolves by seed PRESET, never by year. The 1953 preset prefers
- * explicit modifiers; the 1991 preset uses its population-centered texture.
+ * preset, so authored era anchors give later presets their own national
+ * values. Texture resolves by seed PRESET, never by year: 1953 prefers
+ * explicit modifiers, 1991 uses its population-centered texture.
  */
 export async function seedPoliticalMetrics(
   db: Db,

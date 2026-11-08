@@ -256,7 +256,7 @@ export async function loadCountryCentralBankDetail(params: {
     governmentControlled && viewer?.character
       ? await isNationalIssuer(db, bankHomeCountryId, viewer.character._id)
       : false;
-  // Ticket #1072: the pending-appointment card told the nominee an offer was
+  // The pending-appointment card told the nominee an offer was
   // waiting and gave them nowhere to accept it. The accept and decline routes
   // already existed; only the button was missing. Flag the nominee so the card
   // can show it to them and to nobody else.

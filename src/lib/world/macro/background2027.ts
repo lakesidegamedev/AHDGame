@@ -1,14 +1,13 @@
 /**
- * The 2027 world's background countries as aggregate economies (#5702).
+ * The 2027 world's background countries as aggregate economies.
  *
  * SEED INDEPENDENCE: every input is 2027 data. Population and GDP come from the
- * 2027 national budget seed (the same anchors the 2027 regions are allocated
- * to), the sector mix from `sectorSeedWeights2027`, and resource endowments from
- * the country's authored extraction capacity. Only the behavioural scalars
- * below (fiscal capacity, stability, trade exposure, trend growth) are authored
- * here, with a one-line reason each. They are game values for a central path,
- * not forecasts. Provenance on every document is "authored-2027"; nothing here
- * falls back to the hash-based estimate other background entities use.
+ * 2027 national budget seed, the sector mix from `sectorSeedWeights2027`, and
+ * resource endowments from the country's authored extraction capacity. Only the
+ * behavioural scalars below (fiscal capacity, stability, trade exposure, trend
+ * growth) are authored here. They are game values for a central path, not
+ * forecasts. Provenance is "authored-2027"; nothing falls back to the
+ * hash-based estimate other background entities use.
  */
 import { COMMODITY_BASE_PRICES, type ExtractableResource } from "@/lib/constants/commodities";
 import { SECTOR_MARKET_GDP_FRACTION } from "@/lib/constants/corporations";

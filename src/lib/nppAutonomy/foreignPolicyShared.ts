@@ -137,13 +137,9 @@ export const MAX_ALTERNATIVES = 5;
  * is already fighting: `conduct_war` and `seek_peace`. Only the single
  * top-ranked choice acts, and routine diplomacy scores in the 46-73 band (org
  * votes 46-86, hostile tariffs to 68, embargoes to 73), so war actions based at
- * 25 and 38 could never win a slot against any pending vote or hostile
- * neighbour. That starved the whole war stage: production recorded 205
- * autonomous decisions with zero `conduct_war` and zero `seek_peace` selections
- * while NATO members sat deployed and ready in an active war, so allies joined
- * the roster but never once attacked (ticket #1233). War conduct now starts
- * above the routine band; the readiness/approval gates, the 6-turn conduct
- * cooldown, and `seek_peace`'s pressure terms remain the restraint.
+ * 25 and 38 could never win a slot. War conduct now starts above the routine
+ * band; the readiness/approval gates, the 6-turn conduct cooldown, and
+ * `seek_peace`'s pressure terms remain the restraint.
  */
 export const BELLIGERENT_WAR_ACTION_BASE = 60;
 export const STANDARD_COOLDOWN_TURNS = 24;

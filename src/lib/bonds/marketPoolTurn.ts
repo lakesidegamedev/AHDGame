@@ -3,17 +3,14 @@
  *
  * 1. Re-size each pool's target to a share of its currency's latest broad
  *    money, so the pool scales with the economy it sits in.
- * 2. Sweep cash back out to depositors when the pool has hoarded far past
- *    the target. There is no inflow toward the target: it used to credit 2%
- *    of the shortfall every turn with no payer, and that new money funded
- *    about a quarter of all sovereign underwriting. A pool now holds only what
- *    it took in (purchases, coupons, maturities, QE), the same finite book as
- *    the equity pools. A sovereign issue the pool cannot afford stays unsold
- *    and places later, or an autonomous central bank monetizes part of it on
- *    its own counted balance sheet (`primaryMarket.ts`).
+ * 2. Sweep cash back out to depositors when the pool has hoarded far past the
+ *    target. There is no inflow toward the target: a pool holds only what it
+ *    took in, the same finite book as the equity pools. A sovereign issue the
+ *    pool cannot afford stays unsold and places later, or an autonomous central
+ *    bank monetizes part of it on its own counted balance sheet.
  * 3. Refresh the pool's appetite for each sovereign issuer in its currency
- *    from the sovereign-default demand model, so quotes on a CCC sovereign at
- *    four times GDP are thinner than on an AAA one.
+ *    from the sovereign-default demand model, so quotes on a distressed
+ *    sovereign are thinner than on a strong one.
  *
  * Runs at the top of the bond turn, before any coupon or trade.
  */

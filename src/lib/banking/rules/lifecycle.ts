@@ -1,18 +1,12 @@
 /**
  * A bank charter's life, as explicit stages.
  *
- * The status field on the charter says three things (active, failed, revoked)
- * and every caller used to read the rest off side fields: an amber band here,
- * an undercapitalized stamp there, a resolution stamp somewhere else. This
- * module names the stages, derives one from a charter in one place, and says
- * which lifecycle actions each stage admits. The turn passes, the resolution
- * sweep, the estate worker and the console all ask this table rather than
- * comparing status strings.
- *
- * Stages are selected by capability as much as by status: a bank that takes
- * no deposits has no household book to resolve, so its failure goes straight
- * to `resolved` once the estate is cleared, while a deposit-taker passes
- * through `resolving` while the waterfall runs.
+ * Stages are derived from a charter in one place so the turn, resolution
+ * sweep, estate worker and console ask this table instead of comparing
+ * status strings. Stages select by capability as well as status: a bank
+ * that takes no deposits has no household book to resolve, so its failure
+ * goes straight to `resolved` once the estate is cleared, while a
+ * deposit-taker passes through `resolving` while the waterfall runs.
  */
 
 import type { BankCharter, BankCharterStatus, BankCharterType } from "@/lib/db/types/bank";

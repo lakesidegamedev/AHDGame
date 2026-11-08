@@ -178,8 +178,8 @@ async function deployBondReserve(
   options?: {
     liquidityTargetEnabled?: boolean;
     /**
-     * #992 tranche 6: game turn threaded to each bond purchase's fund-subject
-     * ledger row. When absent the purchases still settle but emit no rows.
+     * Game turn threaded to each bond purchase's fund-subject ledger row.
+     * When absent the purchases still settle but emit no rows.
      */
     turn?: number;
     /**
@@ -235,12 +235,9 @@ async function deployBondReserve(
   }
 
   const countryId = resolveFundBondCountryId(fund);
-  // Coverage funds ensured under the #1001 domestic gate carry no standing
-  // definition entry (definitions only list the broad-fund countries); a
-  // country bond fund with a home country always means its home-sovereign
-  // mandate, so it deploys exactly like a seeded home-only fund. Funds that
-  // exist today all resolve through definitions, so this fallback never fires
-  // for them and gate-off behavior is unchanged.
+  // Bond funds under the domestic gate may lack a standing definition entry;
+  // treat a home-country bond fund as its home-sovereign mandate. Currently unreachable,
+  // since all existing funds resolve through definitions.
   const bondUniverse = fund.kind === "bond" ? resolveFundMandate(fund).bondUniverse : undefined;
   if (fund.kind === "bond" && !bondUniverse) {
     return { deployedAnchor: 0, markedValueAnchor: 0, unitsPurchased: 0, countryId };

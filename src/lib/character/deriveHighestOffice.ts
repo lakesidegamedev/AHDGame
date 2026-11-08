@@ -13,9 +13,7 @@ export type OfficeHolderLike = Pick<Character, "careerHistory" | "currentOffice"
 /**
  * Career-event types that mean the office was actually HELD (vs merely
  * contested). `lost_election` is excluded: it records the office a losing
- * candidate ran for (e.g. a losing presidential candidate gets an event with
- * `office.type: "president"`), not one they held — counting it credited losers
- * with offices they never held (ticket #991).
+ * candidate ran for, not one they held.
  */
 const HELD_OFFICE_EVENT_TYPES: ReadonlySet<string> = new Set([
   "elected",

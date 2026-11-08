@@ -1,6 +1,6 @@
 import { controllerTransferBarrierError } from "@/lib/corporations/commands/acquisitions/controllerTransferBarrier";
 /**
- * Advertising agreement command shell (issue #2235 slice).
+ * Advertising agreement command shell.
  *
  * Thin route handlers: auth guard, CEO check, feature flag, Zod parse (done
  * by the caller via parseJsonBody), then into

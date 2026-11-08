@@ -3,11 +3,8 @@ import type { ObjectId } from "mongodb";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 
 /**
- * Max share of a single sovereign bond issue any one holder may hold
- * (carry-trade fix, #3064). One player absorbing ~an entire country's sovereign
- * series (1.05T CNY of one issue) was a core amplifier of the exploit — the bond
- * position is where the minted savings were laundered and concentrated. Only
- * sovereign issues are capped; corporate bonds are unaffected.
+ * Max share of a single sovereign bond issue any one holder may hold.
+ * Only sovereign issues are capped; corporate bonds are unaffected.
  */
 export const SOVEREIGN_BOND_HOLDER_CAP = 0.25;
 

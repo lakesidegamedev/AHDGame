@@ -80,7 +80,7 @@ export interface ValidatedPolicyProvision {
   /** Omitted when the provision does not take a stance on this axis (0 is not centre). */
   economic?: number;
   social?: number;
-  /** Tax-slider laws (ruling #16): the validated slider-chosen rate. */
+  /** Tax-slider laws: the validated slider-chosen rate. */
   proposedRate?: number;
 }
 
@@ -583,7 +583,7 @@ export async function validateBillProvisions(
         };
       }
       const p = rawP as { type: "union_law"; bias: number; banAction?: unknown };
-      // Union ban (player suggestion #93): a banAction provision carries no
+      // Union ban: a banAction provision carries no
       // meaningful bias (it deliberately leaves unionLawBias untouched at
       // enactment), so it's validated as its own arm.
       if (p.banAction !== undefined) {
@@ -776,7 +776,7 @@ export async function validateBillProvisions(
       };
     validatedLegislationTypes.push(lt);
 
-    // Tax-slider laws (ruling #16): server-side bounds/grid/min-step
+    // Tax-slider laws: server-side bounds/grid/min-step
     // validation against the CURRENT rate, with stamped delta-derived fields.
     if (lt.taxSlider) {
       const resolved = await resolveTaxSliderProvisionFields(
@@ -799,9 +799,9 @@ export async function validateBillProvisions(
       p?.effectDirection != null && typeof p.effectDirection === "number"
         ? Math.max(-1, Math.min(1, Math.round(p.effectDirection)))
         : 0;
-    // 0 means "no stance on this axis", not a centre target. Omitting the
-    // field stops vote-time policy shift from recentring the legislator
-    // (ticket #1116). Explicit non-zero values still stamp.
+    // 0 means no stance on this axis, not a centre target. Omitting the field
+    // stops vote-time policy shift from recentring the legislator. Non-zero
+    // values still stamp.
     const economic =
       p?.economic != null && typeof p.economic === "number"
         ? Math.max(-3, Math.min(3, Math.round(p.economic)))

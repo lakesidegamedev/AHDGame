@@ -14,16 +14,13 @@ const REG_LEDGER_LOOKBACK_TURNS = 24;
 /**
  * Upper bound on `reg` ledger rows one party can receive in a single turn.
  * Used to size the over-fetch so the per-turn collapse still covers the full
- * lookback window.
+ * lookback window; an undersized budget silently returns half the window
+ * rather than failing.
  *
- * Budget: 3 from `regDriftDecay` (renormalize + drift + decay) plus, from
- * `demographicTurnoutTurn`, the party's own registration-drive row AND one
- * NEGATIVE row for every rival whose drive sources its surplus. That last term
- * scales with the number of parties funding drives in the state — all six US
- * parties currently do, which is 8 rows in a turn against the old budget of 4,
- * and an undersized budget silently returns half the requested window rather
- * than failing. 16 leaves headroom for a country with a wider roster; it only
- * costs a larger capped read on an indexed query.
+ * Budget: 3 from `regDriftDecay`, plus the party's own registration-drive row
+ * and one NEGATIVE row per rival whose drive sources its surplus, scaling with
+ * the number of parties funding drives in the state. 16 leaves headroom for a
+ * wider roster; it only costs a larger capped read on an indexed query.
  */
 const MAX_REG_ROWS_PER_TURN = 16;
 

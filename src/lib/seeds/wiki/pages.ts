@@ -12,26 +12,9 @@ import { commoditiesPages } from "./pages/commodities";
 import { iterationsPages } from "./pages/iterations";
 
 /**
- * Aggregated wiki page seed list.
- *
- * Content is organised by category in `./pages/*.ts` files. Each category file
- * exports a `readonly WikiSeedPage[]`; they are concatenated here into the
- * canonical `WIKI_SEED_PAGES` list consumed by `seedWikiPages`.
- *
- * Phase status (page counts from the category files concatenated below):
- *   Getting Started (12 pages)
- *   Elections (17 pages)
- *   Legislatures & Government (16 pages)
- *   Parties, Coalitions, NPPs (13 pages)
- *   Country hubs (10 pages: US, UK, DE, JP, IE, BR, CN, NG, RU, DD)
- *   Economy & Finance (35 pages)
- *   Advanced + Reference + Strategy (25 pages)
- *   Resources & Contracts (4 pages)
- *   Commodities (one page per CommodityType, auto-generated)
- *   Conflicts & Military (14 pages)
- *   Iterations (3 pages)
- *
- * Wiki goes public when an admin flips `wikiDisabled = false` in the admin panel.
+ * Aggregated wiki page seeds. Category files in `./pages/*.ts` each export a
+ * `readonly WikiSeedPage[]`; concatenated here into `WIKI_SEED_PAGES` consumed
+ * by `seedWikiPages`. Wiki is public only when `wikiDisabled` is false.
  */
 export const WIKI_SEED_PAGES: readonly WikiSeedPage[] = [
   ...gettingStartedPages,

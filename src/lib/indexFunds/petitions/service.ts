@@ -285,7 +285,7 @@ export async function fileListingPetition(opts: {
   } else {
     // `contributionAnchor` is in ₳; `creditTreasuryProceeds` expects the
     // country's own units, so crediting it raw banked an unconverted figure
-    // for every non-anchor currency (#808, same unit confusion).
+    // for every non-anchor currency (same unit confusion).
     const countryId = corporation.countryId as CountryId;
     const credited = await creditTreasuryProceedsFromAnchor(
       db,

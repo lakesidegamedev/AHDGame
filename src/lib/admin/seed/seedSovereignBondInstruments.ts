@@ -2,18 +2,12 @@
  * Materialize outstanding federalBudget.debt.principal into tradeable sovereign
  * bond series at world bootstrap.
  *
- * Budgets seed debt as a scalar (principal + interestRate) with zero Bond docs.
- * Surplus countries never trigger quarterly issuance, so that scalar stays
- * orphaned forever (1953-default audit #3370: US/UK WWII-era debt with an empty
- * bond market). Deficit countries eventually grow a float, but only for *new*
- * borrowing — the opening principal remains uninstrumented.
- *
- * This seeder closes the gap: for every national budget whose principal exceeds
- * the sum of active sovereign bond face, it issues staggered reconcile-flagged
- * tranches covering the difference. Budget principal and debtInterest are left
- * alone — they already reflect the national debt; the bonds are the market
- * instruments that will retire that principal as they mature (with quarterly
- * rollover keeping surplus-country float stable).
+ * Budgets seed debt as a scalar with zero Bond docs; surplus countries never
+ * trigger quarterly issuance, so the scalar stays orphaned. Deficit countries
+ * instrument only new borrowing, leaving opening principal uninstrumented.
+ * For any budget whose principal exceeds active bond face, this issues
+ * staggered reconcile-flagged tranches covering the difference. Budget
+ * principal and debtInterest are untouched; the bonds retire it on maturity.
  */
 import { ObjectId, type Db } from "mongodb";
 import { calculateBondMarketPrice } from "@/lib/constants/bonds";

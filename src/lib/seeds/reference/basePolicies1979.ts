@@ -6,41 +6,9 @@
  */
 
 /**
- * US national + regional base policy positions for the 1979-default preset
- * (Carter administration, 96th Congress). Calibrated to real-world 1979 policy:
- *
- *   US — Carter / 96th Congress (Democratic House AND Senate; the New Deal
- *     coalition at its last high-water mark, on the eve of the 1980 Reagan
- *     realignment). Defining 1979 anchors:
- *       - **70% top marginal income-tax rate** (pre-1981 ERTA) and a **46%
- *         statutory corporate rate** — the high-rate redistributive regime
- *         (LEFT of every later era; the income/corporate `optionIndexes` are the
- *         highest in the cross-era set)
- *       - Stagflation + the 1979 energy crisis: National Energy Act (1978),
- *         phased oil-price decontrol, the Synfuels program, Dept. of Energy
- *         (1977) — energy salient but split between conservation and domestic
- *         production
- *       - Labor at peak strength (union density ~24%); CETA public-service jobs;
- *         FLSA minimum wage rising ($2.90→$3.10); Humphrey-Hawkins (1978) — left
- *       - Safety net expanding: Food Stamp Act 1977 (purchase requirement
- *         eliminated); 1977 Social Security financing amendments — left
- *       - Post-Watergate reform: Ethics in Government Act (1978), FEC, Inspectors
- *         General Act (1978); FEMA created (1979)
- *       - Regulated economy: the Fairness Doctrine and the pre-1984 AT&T/Bell
- *         monopoly under FCC rate regulation — left; BUT airline (1978) and
- *         trucking deregulation underway, and the Tokyo Round (1979) cut tariffs
- *       - Roe (1973) intact, but the Hyde Amendment (1976) restricts funding;
- *         the Moral Majority (1979) and the social-conservative backlash are only
- *         just beginning — so SOCIALLY more traditional than 1999 (guns,
- *         culture near center, not left)
- *       - Defense RISING — Carter's post-Afghanistan FY1980 buildup ends the
- *         post-Vietnam drawdown (center, not the 1999 "peace dividend" low)
- *       - Cold War hardening: Camp David (1978) and SALT II (1979), but the Iran
- *         hostage crisis (Nov 1979) and the Soviet invasion of Afghanistan
- *         (Dec 1979) collapse détente
- *
- * Tax `optionIndexes` reflect the pre-Reagan high-rate regime (the highest in
- * the era set), tuned so FY1979 receipts land near the real ≈18% of GDP.
+ * US national + regional base policies for the 1979-default preset.
+ * Tax optionIndexes reflect the pre-Reagan high-rate regime, tuned so
+ * FY1979 receipts land near the real ~18% of GDP.
  */
 
 import type { CountryPolicyConfig } from "./basePolicies";

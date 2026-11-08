@@ -1,20 +1,10 @@
 /**
- * National index for a background country (#5702).
- *
- * A background country has no listed corporations, so players take an equity
- * view through one index per country that tracks its aggregate output and the
- * profits on it. The level moves each kernel tick with:
- * - real output since the last tick (trend growth, shocks, export demand);
- * - an earnings yield, reinvested, scaled by the country's stability;
- * - export conditions: a country whose exports sell out earns a little more,
- *   one whose exports go unsold a little less.
- *
- * The index is held through an ordinary index fund whose only asset is cash
- * kept equal to its net asset value. When the level moves, the fund is marked
- * to it: the difference is created or withdrawn against the background
- * economy, the same counterparty its funded-market trade settles against.
- *
- * Pure: plain data in, plain data out.
+ * National index for a background country: one index per country tracking
+ * aggregate output and profits, so players can take an equity view. The level
+ * moves each tick with real output, an earnings yield reinvested scaled by
+ * stability, and export conditions. Held through an index fund whose only
+ * asset is cash kept at NAV; level moves are marked to it against the
+ * background economy. Pure: plain data in, plain data out.
  */
 import { INDEX_FUND_INITIAL_NAV } from "@/lib/indexFunds/unitAccounting";
 

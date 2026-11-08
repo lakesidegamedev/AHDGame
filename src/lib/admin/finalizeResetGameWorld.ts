@@ -1,29 +1,14 @@
 /**
  * Post-bootstrap finalize pass for a world reset.
  *
- * `resetGameWorld` tears the old world down; `bootstrapGameWorld` builds the new
- * one. Everything here is the third phase: the steps that need a FULLY SEEDED
- * world and therefore cannot live in the teardown.
+ * `resetGameWorld` tears down; `bootstrapGameWorld` builds. These steps need a
+ * FULLY SEEDED world, so they must run after bootstrap, not before: run earlier
+ * they would operate on the outgoing preset's data and be discarded by
+ * bootstrap's own drops.
  *
- * They used to live in `resetGameWorld`, which called `seedAllCountryData`
- * itself so they had something to operate on. That call was the double-seed —
- * `resetAndBootstrapGameWorld` runs `bootstrapGameWorld` immediately afterwards,
- * which seeds the identical world a second time, and the reset-path call passed
- * a no-op logger so the duplicate pass logged nothing. Measured at exactly 2.00x
- * the write count on every collection `seedAllCountryData` touches.
- *
- * ⚠️ Deleting that call meant these steps had to move, not just shift: run
- * BEFORE bootstrap they would operate on the OUTGOING preset's data and then be
- * discarded by bootstrap's own drops. Two of them were in fact already being
- * discarded that way, and their counts in the reset result and the adminLog
- * described work that never survived — `demographicsReset`,
- * `customPartiesDeleted` and `partyOrgRecordsDeleted` are honest for the first
- * time here.
- *
- * ⚠️ `partyCharters` is the one to watch. It is NOT in `runSeed`'s drop list and
- * its cleanup keys on surviving default parties' `sequentialId`s. Run before
- * bootstrap it compared against PRE-drop ids, i.e. the wrong ones; run here it
- * compares against the ids the new world actually has.
+ * `partyCharters` is the one to watch. It is not in `runSeed`'s drop list and
+ * its cleanup keys on surviving default parties' `sequentialId`s, so it must run
+ * after bootstrap or it compares against pre-drop ids.
  */
 
 import {
@@ -405,26 +390,17 @@ export async function finalizeResetGameWorld(
   }
 
   // Orphan region-keyed row purge. `unownedSectors` and `regionDemographics` are
-  // manifest `reference` collections, so the runtime sweep never touches them,
-  // and both seeders are upsert-only fills that iterate the CURRENT `states`
-  // roster — neither can remove a row for a region the new preset does not seed.
-  // A preset switch therefore strands every row from the outgoing region scheme.
-  //
-  // Confirmed live after a 1979 → 1953 reset: 238 orphan `unownedSectors` rows,
-  // including `BY`/`BY_BEL` — `BY` is not a CountryId at all (it is Bavaria, a DE
-  // state id), the exact stale-id shape that crashed the corporation turn in
-  // #3523 — plus DD/PL/YU/HU/BG/CS rows still on the 1979 region scheme
-  // (DD_BER/DD_NOR/DD_SOU, PL_CEN/PL_SOU/PL_NOR, YU_NW/YU_CEN/YU_SOU, …). Three
-  // orphan DD `regionDemographics` rows also double-counted DD's population
-  // (36.8M against a real 18.4M) because population sums over the collection.
+  // manifest `reference` collections the runtime sweep never touches, and their
+  // seeders are upsert-only fills over the CURRENT `states` roster, so a preset
+  // switch strands every row from the outgoing region scheme. Stale ids of this
+  // shape have crashed the corporation turn.
   //
   // Runs after every region seeder above, so `states` is the final roster.
   // `regionDemographics._id` IS the region id (matches `states._id`);
   // `unownedSectors` keys on `stateId`. Guarded on a non-empty roster so a
-  // half-failed seed can never empty either collection.
-  // Region rows for countries the new preset does not seed at all (Ukraine,
-  // Belarus and the Baltic republics in a 1991 world, where they are Soviet
-  // regions) go first, so the orphan sweep below sees the final roster.
+  // half-failed seed can never empty either collection. Region rows for
+  // countries the new preset does not seed at all go first, so the orphan
+  // sweep below sees the final roster.
   const absentPurge = await purgeAbsentCountryRegions(db, preset);
   const absentPurged = Object.values(absentPurge.deleted).reduce((a, b) => a + b, 0);
   if (absentPurged > 0) {
@@ -474,11 +450,9 @@ export async function finalizeResetGameWorld(
     logCollector(`IMF Corp already present (sequentialId=${imfResult.sequentialId ?? "?"}).`);
   }
 
-  // The audit row is OPENED by the orchestrator at the seal and CLOSED with
-  // this string. It used to be inserted right here, which is precisely why a
-  // reset that died in teardown or build left no trace at all — this code never
-  // ran. The message text is unchanged, and it is no longer gated on
-  // `adminUsername`: that gate meant a script-driven reset was never audited.
+  // The audit row is opened by the orchestrator at the seal and closed with
+  // this string, so a reset dying in teardown or build still leaves a trace.
+  // Not gated on adminUsername so script-driven resets are audited too.
   if (noStartingParties) {
     await clearStartingPolitics(db, preset);
     log("Starting parties: none; final political cleanup complete, economic ownership preserved");

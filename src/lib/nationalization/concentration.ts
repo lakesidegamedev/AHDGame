@@ -1,5 +1,5 @@
 /**
- * State Ownership Concentration Index (SOCI, spec rebalance 2026-06-24). A
+ * State Ownership Concentration Index (SOCI). A
  * per-country 0–100 measure = state-owned corporate revenue ÷ total national
  * corporate revenue. Stored on the FederalBudget doc, recomputed each turn. The
  * shared `sociMultiplier` turns it into the escalation factor every

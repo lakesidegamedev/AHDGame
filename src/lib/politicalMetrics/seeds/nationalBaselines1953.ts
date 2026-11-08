@@ -28,7 +28,7 @@ function buildBaselines(rows: CategoryRows): Record<PoliticalMetricId, Political
 }
 
 // Authored campaign-start world state (values adopted from the approved design
-// catalog, docs/superpowers/specs/assets/2026-07-16-metrics-mock-data.js VALUES):
+// catalog VALUES):
 // US = postwar consolidation and armistice dividend; UK = austerity exit, strong
 // institutions, strained finances; RU = succession crisis — weak governance and
 // openness, strong heavy industry and state control. Seven [value, trendPerYear]

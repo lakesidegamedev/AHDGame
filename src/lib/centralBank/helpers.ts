@@ -14,17 +14,11 @@ export function getBankId(countryId: CountryId): string {
 }
 
 /**
- * Empty the committee's chair seat when the single-chair mirror is vacated
- * (resignation, dismissal, executive-independence removal).
- *
- * Clearing only `chairCharacterId` left the departed chair sitting in
- * `fomcBoard`'s seat 0, where their alignment kept tabling motions and the page
- * kept naming them. Backdating `termExpiresAtTurn` lets the next
- * `refreshExpiredSeats` pass vacate the seat (the engine never seats a
- * replacement, #1195) and route the chair vacancy to the selection /
- * presidential-nomination pipeline.
- *
- * No-op for banks without a committee.
+ * Vacate the committee's chair seat (resignation, dismissal, removal).
+ * Clearing only chairCharacterId leaves a stale occupant in fomcBoard that
+ * still tables motions and is still displayed. Backdating termExpiresAtTurn
+ * lets refreshExpiredSeats vacate the seat and route the vacancy to the
+ * selection / nomination pipeline. No-op for banks without a committee.
  */
 export async function vacateFomcChairSeat(db: Db, bankId: string): Promise<void> {
   await db.collection<CentralBank>("centralBanks").updateOne(

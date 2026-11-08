@@ -38,8 +38,8 @@ export function heldStakeValueAnchor(
  * Transfer shares owned by the seized corporation in other corporations to the
  * National Corporation. When a corporation owns shares in other corporations,
  * those shares must be transferred rather than silently destroyed during
- * dissolution (Bug #0803). They move as shares only: the buyout already paid
- * the seized corporation's holders their market value (#3041), so crediting
+ * dissolution. They move as shares only: the buyout already paid
+ * the seized corporation's holders their market value, so crediting
  * that value again as cash would create money.
  */
 export async function transferOwnedSharesToNatCorp(

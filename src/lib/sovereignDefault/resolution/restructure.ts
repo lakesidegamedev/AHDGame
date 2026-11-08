@@ -100,7 +100,7 @@ export async function applyRestructureResolution(
     countryCode,
   });
 
-  // Genuine sovereign-ledger write-down (refs #3813, #1975): the haircut stamped
+  // Genuine sovereign-ledger write-down: the haircut stamped
   // on the bonds above IS the write-down, so the stored stock is re-pointed at
   // the post-haircut outstanding sum read back from the ledger. Treasury cash
   // is a separate position and is deliberately untouched: a haircut writes down

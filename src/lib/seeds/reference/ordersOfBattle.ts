@@ -212,26 +212,17 @@ const IE_MODERN: OrderOfBattleEntry[] = [
 ];
 
 /**
- * Era-specific overrides, keyed by era id (`eraForPreset` output: "1979",
- * "1991", "1999", "2007", "2019", "2023") then country.
+ * Era-specific overrides keyed by era id then country.
  *
- * There is deliberately NO "1953" key — 1953 IS {@link ORDERS_OF_BATTLE}, and
- * duplicating it here would create two sources of truth for one era.
+ * No "1953" key: 1953 IS {@link ORDERS_OF_BATTLE}, and duplicating it would
+ * create two sources of truth. A country absent from an era key falls back to
+ * its 1953 composition.
  *
- * Every era is now authored for every country that changes shape across the
- * Cold War and after it: US, UK, DE, JP, IE, CN and RU. A country absent from
- * an era key falls back to its 1953 composition, which is the right answer for
- * the ones whose force structure genuinely did not move (the Warsaw Pact
- * satellites dissolve before the later eras; FR/IT/ES/SE/TR/GR/AT/FI/BR/NG keep
- * a stable establishment).
- *
- * Two rules the tables must respect, both enforced by `buildCountryRoster`:
- *  - An unnamed branch falls back to RANDOM generation, so any branch a country
- *    has in an era must appear here or accept 3-5 invented units. RU's rocket
- *    force is why: a 1953-pegged table cannot name a 1959 branch.
- *  - A branch named ONLY with archetypes that do not exist yet in that era also
- *    falls back to random. Space archetypes are gated at 2019, so no space entry
- *    may appear in an earlier key even though RU's Space Forces date from 1992.
+ * Enforced by `buildCountryRoster`:
+ *  - An unnamed branch falls back to RANDOM, so every branch a country has in
+ *    an era must appear here, including branches newer than 1953 (e.g. RU space).
+ *  - A branch named only with archetypes gated to a later era also falls back
+ *    to random.
  */
 export const ORDERS_OF_BATTLE_BY_ERA: Partial<
   Record<string, Partial<Record<CountryId, OrderOfBattleEntry[]>>>

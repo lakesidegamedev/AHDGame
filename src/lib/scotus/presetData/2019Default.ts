@@ -1,8 +1,8 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * SCOTUS Original Roster + Docket for the "2019-default" preset (#3602, spec
- * #3581). This is the default/most-played era preset — the real Roberts
+ * SCOTUS Original Roster + Docket for the "2019-default" preset.
+ * This is the default/most-played era preset, the real Roberts
  * Court as seated in 2019, with its full real succession chain through
  * "present" (2026): Ruth Bader Ginsburg's September 2020 death and Amy Coney
  * Barrett's October 2020 confirmation, and Stephen Breyer's 2022 retirement
@@ -31,7 +31,7 @@ import type { ScotusPresetSeed } from "./types";
  * `decideCaseOutcome` actually computes from the leans below for the real
  * roster seated in that case's decision year — this is what makes an
  * unmodified 2019-default game correctly "affirm" (no divergence) for every
- * case here, which is the load-bearing invariant (spec #3581 user story 18).
+ * case here, which is the load-bearing invariant.
  *
  * Known modeling limitation (see ahd-scotus-adr-majority-headcount-
  * divergence — headcount by design, not an averaged score): a handful of

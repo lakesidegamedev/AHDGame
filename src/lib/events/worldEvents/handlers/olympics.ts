@@ -1,21 +1,11 @@
 /**
- * World Events v1 Phase 3 flavor event: the Olympics. Country scope, no
- * decision required (single default option) — like `royalEvent`/`sportsVictory`,
- * this is a wire-only morale event plus a temporary construction/tourism
- * sector-demand bump for whichever country was selected to host.
- *
- * Host selection happens BEFORE this handler runs, in `driver.ts`
- * (`offerGlobalHostCountryEvent`): the host country is picked deterministically
- * from a hash of the current turn (no Math.random, sim-reproducible) and the
- * event is then offered directly to that host's country scope, same as any
- * other country-scope event. This handler only applies the host's effects —
- * there is no bidding, no escrow, no losing countries, no multi-turn state
- * machine.
+ * Olympics flavor event: country scope, no decision required. Host selection
+ * happens BEFORE this handler runs in `driver.ts` (`offerGlobalHostCountryEvent`),
+ * picked deterministically from a hash of the current turn. This handler only
+ * applies the host's effects; no bidding, escrow, or multi-turn state.
  *
  * `sectorType: "media_entertainment"` stands in for tourism (no dedicated
- * `CorporationType` exists — see `royalEvent.ts`'s doc comment for the same
- * finding); `construction` is a real sector and used as-is for the venue
- * build-out.
+ * `CorporationType` exists); `construction` is a real sector used as-is.
  */
 import type { EventHandler } from "@/lib/events/substrate/types";
 import { registerEventHandler } from "@/lib/events/substrate/registry";

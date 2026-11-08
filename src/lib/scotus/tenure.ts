@@ -1,18 +1,17 @@
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 /**
- * Divergent Justice tenure clock (#3598, spec #3581, ahd-scotus-adr-age-agnostic-tenure-clock).
+ * Divergent Justice tenure clock.
  *
- * A Divergent Justice's tenure end is a flat per-turn hazard: no chance of
- * departure within roughly the first 2 years post-confirmation, then a small
- * constant per-turn probability thereafter, uncapped on the high end.
- * Deliberately age-agnostic — the game has no character age/mortality concept
- * anywhere, and this avoids inventing one just for SCOTUS.
+ * A Divergent Justice's tenure end is a flat per-turn hazard: no departure
+ * within roughly the first 2 years post-confirmation, then a small constant
+ * per-turn probability thereafter, uncapped on the high end. Deliberately
+ * age-agnostic because the game has no character age/mortality concept, and
+ * this avoids inventing one just for SCOTUS.
  *
- * The clock applies to player-held seats as well as generated NPPs (ticket
- * #1135). Without it, a confirmed player stays on the Court forever. Callers
- * must notify the occupant and surface the death chance in the UI; silently
- * vacating is the actual bug.
+ * Applies to player-held seats as well as generated NPPs; without it a
+ * confirmed player stays on the Court forever. Callers must notify the
+ * occupant and surface the death chance in the UI; silently vacating is a bug.
  */
 
 /** Turns after confirmation before the hazard starts rolling at all (~2 years). */

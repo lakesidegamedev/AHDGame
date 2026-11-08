@@ -58,18 +58,11 @@ import {
 } from "lucide-react";
 
 /**
- * Achievement icons, resolved from an explicit map.
- *
- * This used to be `import * as icons from "lucide-react"` with a dynamic
- * `icons[name]` lookup, which defeats tree-shaking: every icon in the library
- * shipped to the browser. Measured 2026-10-24, that was an 835 KB chunk
- * (218 KB gzipped) on `/profile` alone, and it loaded on every route that can
- * render an achievement badge (`/profile`, `/character/[id]`, `/settings`).
- *
- * The achievement catalog uses the 55 icons below. Anything outside the map
- * renders the fallback, so a hand-edited achievement in the database cannot
- * break the page, and `achievementIcons.test.ts` fails if a seeded achievement
- * starts using an icon that is not here.
+ * Achievement icons, resolved from an explicit map. A namespace import with
+ * dynamic lookup would defeat tree-shaking and ship the entire icon library.
+ * Anything outside the map renders the fallback, so bad database data cannot
+ * break the page, and the test fails if a seeded achievement uses an icon
+ * that is not here.
  */
 export const ACHIEVEMENT_ICONS: Record<string, LucideIcon> = {
   AudioLines,

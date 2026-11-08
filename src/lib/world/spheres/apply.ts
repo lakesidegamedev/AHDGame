@@ -28,8 +28,7 @@ export interface TaggedMacroContribution {
 export interface SphereMacroApplyResult {
   /**
    * Background-macro contributions applied to the world total, by entity.
-   * The price phase places the background-tier countries' share in their own
-   * national books (#5702).
+   * The price phase records the background-tier share in their own national books.
    */
   background: { entityId: string; contribution: MacroMarketContribution }[];
   entitiesRouted: number;
@@ -66,7 +65,7 @@ export async function loadTaggedMacroContributions(db: Db): Promise<TaggedMacroC
  * resulting (non-duplicated) units to the shared global market, compute bounded
  * aid/tribute/support, and write the auditable ledger + admin explanations.
  *
- * Membership prefers live sponsor-managed state (#3718) over the manifest seed.
+ * Membership prefers live sponsor-managed state over the manifest seed.
  */
 export async function applySphereRoutedMacroContributions(
   db: Db,

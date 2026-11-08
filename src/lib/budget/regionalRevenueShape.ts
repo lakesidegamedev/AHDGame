@@ -1,20 +1,11 @@
 /**
- * Revenue breakdown for a region's budget page.
+ * Revenue breakdown for a region's budget page, country-aware.
  *
- * Each parliamentary country funds its regions differently but persists into one
- * shared `regionalBudgets` collection, so the page needs a per-country view of
- * the same document. This used to live inline in the route as a nested ternary
- * that discriminated on which optional field a doc carried, with the UK shape as
- * the catch-all. RU regions carry only `unionGrant` and matched nothing, so a
- * Soviet republic rendered as a British council — Council Tax, Business Rates
- * and a Westminster grant, all zero — beside a balance computed from the union
- * grant the branch never read. Revenue read three UK fields; the balance read
- * the doc. Same failure shape as the UK regional-revenue bug: one document, two
- * readers, only one of them country-aware.
- *
- * Every branch now reports the document's own `totalBudget` rather than
- * re-summing country-specific fields, so the revenue card cannot disagree with
- * the balance even for a country that has no branch here yet.
+ * Each parliamentary country funds its regions differently but persists into
+ * one shared `regionalBudgets` collection, so the page needs a per-country
+ * view of the same document. Every branch reports the document's own
+ * `totalBudget` rather than re-summing country-specific fields, so the revenue
+ * card cannot disagree with the balance even for a country with no branch yet.
  */
 
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";

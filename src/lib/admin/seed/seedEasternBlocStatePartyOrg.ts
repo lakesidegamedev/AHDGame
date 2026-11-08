@@ -7,22 +7,18 @@ import {
 } from "@/lib/seeds/shared/easternBlocStatePartyOrg";
 
 /**
- * Regional party-organisation seeder for the six Warsaw-Pact satellites and the
- * three Soviet union republics that are modelled as their own countries
+ * Regional party-organisation seeder for the Warsaw-Pact satellites and the
+ * three Soviet union republics modelled as their own countries
  * (PL/HU/RO/BG/CS/YU + UKR/BLR/BAL).
  *
- * The USSR, the GDR and China each have a bespoke seeder because each runs a
- * different party structure — a single all-union party, a five-party National
- * Front, and an advisory-party system respectively. The satellites are the
- * simple case: one ruling communist party per country, so they share this one.
+ * The USSR, GDR and China each have bespoke seeders for their distinct party
+ * structures; the satellites share the simple one-ruling-party case.
  *
- * Without these rows the satellites' ruling parties had NO `statePartyOrg`
- * entries at all, which leaves `registration` unset and drops them to the
- * newcomer baseline in the swing-flow engine's §7.3.2 defense — the PZPR would
- * be ~20%-peelable in its own industrial heartland.
+ * Without these rows the satellites' ruling parties have no `statePartyOrg`
+ * entries, leaving `registration` unset and dropping them to the newcomer
+ * baseline in the swing-flow engine, making them far too peelable.
  *
- * Era-gated: these are Cold-War structures, so the seeder no-ops in 1991/2019
- * exactly like `seedEasternBlocCountry` (refs #3269).
+ * Era-gated: no-ops outside Cold-War presets, mirroring `seedEasternBlocCountry`.
  */
 export async function seedEasternBlocStatePartyOrg(
   db: Db,

@@ -1,16 +1,15 @@
 /**
- * Party renewal turn shell (#5704). Rules live in `./rules/partyRenewal`.
+ * Party renewal turn shell. Rules live in `./rules/partyRenewal`.
  *
- * Every few turns, for each NPP-run multi-party country, look for a national
- * lower-chamber general election cycle that has fully resolved since the last
- * look. For each one: snapshot vote shares, seat shares, the governing party
- * and its approval, and the empty stretches of the ideological map; then, when
- * a previous snapshot exists, ask the rules what renewal the two elections
- * justify and carry it out. Folds reuse the party merger, so seats, offices,
- * candidacies and coalition slots move with the folded party's NPPs.
+ * Every few turns, per NPP-run multi-party country, find a fully resolved
+ * lower-chamber general election cycle since the last look. Snapshot vote shares,
+ * seat shares, governing party and approval, and empty ideological spans; when a
+ * previous snapshot exists, ask the rules what renewal the two elections justify
+ * and carry it out. Folds reuse the party merger, so seats, offices, candidacies
+ * and coalition slots move with the folded party's NPPs.
  *
- * Gated by `gameState.nppPartyRenewalEnabled`. Absent or false: nothing is
- * read past the flag and nothing is written.
+ * Gated by `gameState.nppPartyRenewalEnabled`. Absent or false: nothing is read
+ * past the flag and nothing is written.
  */
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";

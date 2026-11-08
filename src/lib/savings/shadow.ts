@@ -1,17 +1,16 @@
 /**
  * Shadow savings accounts.
  *
- * Before any read or write moves onto the account model, the accounts are
- * built from the legacy character fields every turn and compared, projection
- * by projection, with what the world currently believes: each owner's total,
- * each holder's total, each bank's pointer-deposit aggregate and each central
- * bank's savings stock. A discrepancy is a place where the account model and
- * the legacy model would answer a question differently, which is exactly the
- * list of things that have to be understood before the model becomes true.
+ * Accounts are built from the legacy character fields every turn and compared
+ * projection by projection against what the world currently believes: each
+ * owner's total, each holder's total, each bank's pointer-deposit aggregate,
+ * and each central bank's savings stock. A discrepancy marks where the account
+ * model and the legacy model would answer a question differently, which is
+ * exactly what must be understood before the model becomes true.
  *
- * Shadow mode changes no live behaviour. Discrepancies are counted on the
- * banking telemetry, reported on the banking health page, and published as
- * audit events with aggregates only.
+ * Shadow mode changes no live behaviour. Discrepancies are counted on banking
+ * telemetry, reported on the banking health page, and published as audit
+ * events with aggregates only.
  */
 
 import { ObjectId, type Db } from "mongodb";

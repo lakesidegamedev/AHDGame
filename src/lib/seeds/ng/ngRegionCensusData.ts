@@ -1,20 +1,10 @@
 /**
- * Nigeria Region Census Profiles — Layer 1 demographic breakdown per
- * geo-political zone. Mirrors the BR/UK/JP/DE census files.
+ * Nigeria Region Census Profiles: Layer 1 demographic breakdown per
+ * geo-political zone. Owns the {@link NGRegionLayer1} shape.
  *
- * This module owns the {@link NGRegionLayer1} shape. The `2019-default`
- * profiles below are approximate NPC/NBS estimates (% of adult population)
- * aligned with the 2006 Census and subsequent Nigerian Bureau of Statistics
- * projections. The preset registry selects between them at render time.
- *
- * Fields (% of adult population):
- *   religion     — Religious self-identification (Muslim / Christian / other)
- *   ethnicity    — Broad ethno-linguistic bloc (Hausa-Fulani / Yoruba / Igbo
- *                  / minority nationalities)
- *   age          — Adult (18+) distribution
- *   education    — Highest level of schooling completed
- *   income       — Relative household-income tiers (era-neutral)
- *   urbanization — Urban / peri-urban / rural split
+ * `2019-default` profiles are approximate NPC/NBS estimates (% of adult
+ * population) aligned with the 2006 Census and later projections. The preset
+ * registry selects between them at render time.
  */
 
 export interface NGRegionLayer1 {

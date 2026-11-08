@@ -29,7 +29,7 @@ const reportedSuppressions = new Set<string>();
  * `gameConfig.discord*WebhookUrl`.
  *
  * Those URLs live in the DATABASE, so restoring production into another
- * deployment hands it the players' channels: #1208 saw a non-production world's
+ * deployment hands it the players' channels: one incident saw a non-production world's
  * "First Secretary of State Established" reach World News for a world that had
  * not yet reached the office's year, with no matching post in the live database.
  * `gameConfig.discordWebhookOwnerService` records the deployment that configured

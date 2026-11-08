@@ -5,7 +5,7 @@
  * Used by `getStateOverview()` to populate the optional regional-executive
  * chip on the State Overview tab.
  *
- * Coverage (Phase 1 of UK + JP devolved-executive work, 2026-05-20):
+ * Coverage (UK + JP devolved executives):
  *   - US: elected `governor` per state → `"Governor"`
  *   - DE: elected `ministerPresident` per Land → `"Ministerpräsident"`
  *   - UK: elected `governor` per devolved region, label varies by region
@@ -23,7 +23,7 @@
  *       - all other IE regions → `"Cathaoirleach"`
  *   - any other country: `null`
  *
- * See `docs/design/uk-jp-devolved-executives.md` for the design that
+ * See the devolved-executives design for the design that
  * recycles the cross-country `governor` OfficeType for UK FMs / Mayor of
  * London and JP regional governors — same mechanical shape, different
  * display labels.

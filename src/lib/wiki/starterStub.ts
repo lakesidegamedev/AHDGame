@@ -7,14 +7,11 @@ import { playerWikiStarter, partyWikiStarter, corporationWikiStarter } from "./p
 /**
  * Player, party and corporation wiki pages are created pre-filled with a starter
  * template. Many are never edited, so the published page is an empty scaffold of
- * section headings and instructions to the owner. Google's AdSense review cited
- * low value content while eight of these were indexed, including five reading
- * "Write your biography here".
+ * section headings and instructions to the owner. Such pages are not content.
  *
- * A page still carrying its untouched starter is not content, so it is excluded
- * from the sitemap and served noindex. The same applies to a page with less than
- * a short paragraph of readable text. It flips back automatically when the owner
- * adds meaningful content, with no admin step.
+ * A page still carrying its untouched starter is excluded from the sitemap and
+ * served noindex, as is a page with less than a short paragraph of readable
+ * text. It flips back automatically when the owner adds meaningful content.
  */
 
 /** The italic first line each starter emits. Cheap prefilter for the Mongo query. */

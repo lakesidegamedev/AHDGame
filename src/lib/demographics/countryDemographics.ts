@@ -183,10 +183,9 @@ export function getAllVoterArchetypeIds(): Set<string> {
 }
 
 /**
- * Every valid demographic category (modifier-bucket) key across all countries —
- * US Layer-1 dimensions (race/age/education/wealth/ideology) plus each country's
- * `<cc>_voterGroups`. Used to validate party GOTV/suppression target categories
- * without hardcoding (which previously dropped de/ie/cn/br — bug #0700).
+ * All valid demographic category keys across countries: US Layer-1 dimensions
+ * plus each country's `<cc>_voterGroups`. Used to validate party GOTV target
+ * categories without hardcoding.
  */
 export function getAllDemographicCategoryKeys(): string[] {
   const seen = new Set<string>();

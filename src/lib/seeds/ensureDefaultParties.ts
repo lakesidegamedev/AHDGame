@@ -28,23 +28,15 @@ export function isPartyValidForPreset(seed: PartySeed, preset: string): boolean 
  * zero parties. Explicit rows for the requested preset always win as a group.
  */
 /**
- * Choose the party roster for a preset, inheriting an earlier one when the
- * preset has none of its own.
+ * Choose the party roster for a preset, falling back to an earlier one when
+ * the preset has none of its own.
  *
- * ⚠ THE FALLBACK IS UNGATED ON PURPOSE, AND THAT HAS A KNOWN COST. Every
- * French and Italian party is tagged 1953/1979/1991 and none for a modern
- * preset, so a 2019 world inherits the 1991 roster and seats Democrazia
- * Cristiana, dissolved in 1994. That is wrong history.
- *
- * It is still the better of the two failures. The alternative -- gating the
- * fallback so those countries get nothing -- boots France into 1999 with ZERO
- * parties, which is not a cosmetic problem: a country with no parties cannot
- * hold an election. `partyRosterCoverage.test.ts` forbids exactly that, and an
- * earlier revision of this branch tried the gate and tripped it.
- *
- * The real fix is authoring modern French and Italian rosters, which is a data
- * task, not a code one. Until then the anachronism is recorded here rather than
- * traded for a broken world.
+ * The fallback is ungated on purpose. French and Italian parties are tagged
+ * 1953/1979/1991 only, so a 2019 world inherits the 1991 roster and seats
+ * Democrazia Cristiana, dissolved in 1994. Wrong history, but the alternative
+ * (gating so those countries get nothing) boots France with zero parties, and
+ * a country with no parties cannot hold an election. partyRosterCoverage.test.ts
+ * forbids that. The real fix is authoring modern French and Italian rosters.
  */
 export function selectPartyRosterForPreset(seeds: PartySeed[], preset: string): PartySeed[] {
   const direct = seeds.filter((seed) => isPartyValidForPreset(seed, preset));
@@ -134,15 +126,11 @@ export async function prunePresetMismatchedDefaultParties(
 }
 
 /**
- * Ensures all default parties (US, UK, DE, JP, BR, IE, CN) exist in the
- * database. Creates any that are missing without modifying existing ones.
- * Looks up by name+country since slug is no longer used.
+ * Ensures all default parties exist in the database. Creates missing ones
+ * without modifying existing. Looks up by name+country since slug is unused.
  *
- * `preset` filters preset-gated seeds: e.g. UUP / PDS / JSP / DSP / PMDB /
- * PFL / WP / PD are `"1991-default"`-only and Reform UK / AfD / Linke /
- * CDP / Ishin / DPFP / PL / MDB / UNIÃO / SF (IE) / GP (IE) are
- * `"2019-default"`-only. Pass the current `gameState.preset` value;
- * defaults to `"2019-default"` for back-compat.
+ * `preset` filters preset-gated seeds (some parties are 1991-only, others
+ * 2019-only). Pass `gameState.preset`; defaults to "2019-default".
  *
  * @returns Number of parties created
  */
@@ -208,11 +196,9 @@ export async function ensureDefaultParties(db: Db, preset: string): Promise<numb
       // (overrides any tier on the seed object). The partyTierTurn phase then
       // keeps it current from live Org.
       tier: resolveSeedPartyTier(seed, preset),
-      // 2026-05-22 treasury-two-person-approval: all parties default to
-      // double-approval on creation. Seed rows that don't specify this
-      // field inherit the new default explicitly so the seeded row in
-      // the DB carries it (rather than relying on the route-layer
-      // fallback for legacy data).
+      // All parties default to double-approval on creation. Seed rows that
+      // omit the field explicitly write the default so the DB row carries it
+      // rather than relying on the route-layer fallback for legacy data.
       transactionApprovalMode: seedWithoutMeta.transactionApprovalMode ?? "double",
       createdAt: now,
       updatedAt: now,

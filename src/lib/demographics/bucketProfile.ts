@@ -8,15 +8,9 @@ import type { LegislativePriorities } from "./legislativePriorities/rules";
 /**
  * Per-bucket view of a region's electorate, for the demographics tab.
  *
- * The tab used to list voter ARCHETYPES — composite groups that are an
- * authoring format, not the thing the vote engine counts. The engine counts
- * Layer-1 cells, so a player reading the archetype table was reading a
- * projection of the electorate rather than the electorate. Every number here
- * comes off the same units the vote path uses.
- *
- * A bucket's share/lean/turnout is the share-weighted aggregate of the units
- * that carry it, using the unit's own `bucketWeights` — the same weights the
- * engine folds leans through, so the tab and the engine cannot disagree.
+ * Every number here comes off the same Layer-1 units the vote path counts,
+ * using each unit's own `bucketWeights`, so the tab and the engine cannot
+ * disagree.
  */
 
 export interface BucketRow {

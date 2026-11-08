@@ -186,7 +186,7 @@ async function responderContext(
 /**
  * Per-option eligibility for one country. The Actions-page card and the crisis
  * detail page both gate their buttons on this, so a player is never offered an
- * option the command path is bound to refuse (ticket #1183). Null when the
+ * option the command path is bound to refuse. Null when the
  * country has no role in this response.
  */
 export async function optionAvailabilityForGlobalResponder(

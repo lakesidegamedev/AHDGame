@@ -81,11 +81,11 @@ export async function commitInfluencePlay(params: {
   const amountUsd = localToUsd(fundCountry, amountLocal);
 
   // A spend too small to buy even one grid step (a hundredth of a point) would
-  // resolve to zero applied points and be refunded a turn later — a submission
-  // and a turn spent to move nothing, which reads as "the button does nothing".
-  // Refuse it up front, BEFORE any debit, so the panel can tell the player the
-  // minimum spend instead. Priced on the raw points the spend buys, matching the
-  // per-point cost the dossier quotes (ticket #1213).
+  // resolve to zero applied points and be refunded a turn later, wasting a
+  // submission and a turn for no movement, which reads as "the button does
+  // nothing". Refuse it up front, BEFORE any debit, so the panel can tell the
+  // player the minimum spend instead. Priced on the raw points the spend buys,
+  // matching the per-point cost the dossier quotes.
   if (roundToShareGrid(pointsForSpend(amountUsd, targetGdpUsd)) < MIN_PLAY_POINTS) {
     return { ok: false, reason: "below-min-points" };
   }

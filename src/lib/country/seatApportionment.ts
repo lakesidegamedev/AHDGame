@@ -1,20 +1,17 @@
 /**
  * Rescale one chamber's party shares onto another chamber's size.
  *
- * The Volkskammer seats 500; the five eastern Laender's Bundestag allocation is
- * 48. Carrying `seatsHeld` across unchanged would hand the merged chamber ten
- * times its own size, so the shares are what travel, not the counts.
+ * Shares travel, not seat counts: carrying `seatsHeld` unchanged across chambers
+ * of different size would hand the merged chamber far more seats than it has.
  *
  * LARGEST REMAINDER rather than round-then-fix: rounding each share
  * independently does not sum to the target, and any repair pass has to pick
- * someone to adjust anyway. Largest remainder makes that choice the principled
- * one and is what every other apportionment in this codebase means by "share".
+ * someone to adjust anyway. Largest remainder makes that choice principled and
+ * matches what every other apportionment in this codebase means by "share".
  *
  * Ties break by ascending key so a re-run apportions identically -- the merge is
  * re-runnable after a partial failure, and an apportionment that drifted between
  * runs would hand out different chambers on each attempt.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
  */
 export function apportionSeats(
   sourceSeatsByParty: Record<string, number>,

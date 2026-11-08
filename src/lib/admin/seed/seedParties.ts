@@ -55,9 +55,8 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
 }
 
 export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, preset: string) {
-  // NOTE: Never drop statePartyOrg collection - it would delete third party state organizations
-  // Only upsert the default party orgs (Democrat, Republican per state). Preset
-  // selects the presidential-margin baseline used to compute initial cap + Org.
+  // Never drop statePartyOrg: it holds third party state organizations.
+  // Only upsert the default Democrat and Republican orgs per state.
   const now = new Date();
   const statePartyOrg = generateStatePartyOrg(preset);
   if (statePartyOrg.length === 0) {

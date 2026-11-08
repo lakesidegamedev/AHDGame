@@ -1,5 +1,5 @@
 /**
- * Justice Ideology (#3598, spec #3581, ahd-scotus-context glossary).
+ * Justice Ideology.
  *
  * Two lean scores per justice — economic and social — never collapsed into a
  * single left-right number. Each is a blended composite: 65% the justice's own

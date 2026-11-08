@@ -43,7 +43,7 @@ export const RESET_APPROVAL_BOARD_PROJECTION = {
 /**
  * A board one failed refresh behind is still the latest owned reading. Approval
  * reads it rather than failing every approval consumer (corporations, votes,
- * share prices) until the refresh catches up; on 2026-10-31 a strict match
+ * share prices) until the refresh catches up; a strict match
  * turned one failed refresh into a turn with no economy. Matches the health
  * input lag the demographic phase accepts. Future boards still fail closed.
  */

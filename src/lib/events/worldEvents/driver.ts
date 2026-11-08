@@ -316,9 +316,9 @@ async function offerScheduledEventForCountry(
 }
 
 /**
- * Countries that host world events: the configured active countries, minus
- * any the world holds in the background tier (#5702). The static status filter
- * is kept so presets without background countries behave exactly as before.
+ * Countries that host world events: configured active countries minus any
+ * in the background tier. The static status filter keeps presets without
+ * background countries unchanged.
  */
 async function worldEventCountries(db: Db): Promise<CountryId[]> {
   const tiers = await loadCountryTiers(db);

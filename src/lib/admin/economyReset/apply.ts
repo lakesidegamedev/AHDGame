@@ -412,20 +412,17 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
     .collection("states")
     .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
   await reseedOutputTrends(db);
-  // Pension schemes are on the owner keep-list, but each belongs to a union and
-  // the unions are wiped. The holders phase has already converted every
-  // scheme's fund units to cash, so an empty scheme left pointing at a deleted
-  // union only keeps cutting benefits and piling up unpaid claims every turn.
+  // Pension schemes survive but their unions are wiped; holders phase already
+  // converted fund units to cash, so leaving an empty scheme pointing at a
+  // deleted union keeps cutting benefits and accruing unpaid claims.
   await db.collection("pensionSchemes").deleteMany({ assetsAnchor: { $lte: 0 } });
   // Cumulative extraction by the old economy's mines. Kept, it shortens every
   // reserve's life for plants that never extracted from it.
   await db
     .collection("stateResourceCapacity")
     .updateMany({ extractedUnits: { $exists: true } }, { $unset: { extractedUnits: "" } });
-  // Unions are wiped and reseeded vacant, so no character can still cache
-  // leadership of a union that no longer exists. Leaving it set would also
-  // block them from founding or taking another union (`foundUnion` 409s while
-  // `unionLeaderOf` is non-null) until a later read path repaired it.
+  // Unions are wiped and reseeded vacant, so clear stale cached leadership:
+  // a non-null unionLeaderOf blocks foundUnion with a 409.
   await db
     .collection("characters")
     .updateMany({ unionLeaderOf: { $ne: null } }, { $set: { unionLeaderOf: null } });

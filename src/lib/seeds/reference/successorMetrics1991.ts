@@ -21,17 +21,10 @@ import { yuRegions1991 } from "@/lib/countries/yu/data/yuRegions1991";
  * from Czech/Slovak WDI by census population. YU is a 1990 opening estimate
  * because the SFRY series ends before this scenario's January start. The
  * baseline builder supplies the metric schema and plausible infrastructure/
- * health priors; the transition economy, election and media indicators below
- * replace its 1979 command-system values. `governance.voterTurnout` is the
- * last-election/scenario metric; it is distinct from the demographic model's
- * capped turnout propensity for future simulated elections. Regional income and urbanization
- * differences are transparent GDP-per-resident estimates, not claimed census
- * observations. Sources (replace country and indicator in the URL):
- * https://api.worldbank.org/v2/country/POL/indicator/SP.DYN.LE00.IN?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/SP.URB.TOTL.IN.ZS?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/SL.UEM.TOTL.ZS?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/SP.DYN.CBRT.IN?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/NY.GDP.MKTP.KD.ZG?date=1991&format=json
+ * health priors; the indicators below replace its 1979 command-system values.
+ * `governance.voterTurnout` is the last-election metric, distinct from the
+ * demographic model's capped turnout propensity. Regional income and
+ * urbanization differences are GDP-per-resident estimates, not census data.
  */
 const profiles = {
   RU: {
