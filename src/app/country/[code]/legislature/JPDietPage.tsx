@@ -32,6 +32,7 @@ import { PMSnapElectionButton } from "@/components/parliamentary/PMSnapElectionB
 import type { LegislatureBillStatusFilter } from "@/lib/legislature/billStatusFilters";
 import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { NoConfidenceProposeControl } from "@/components/legislature/NoConfidenceProposeControl";
 
 const DIET_HERO = {
   image: "/api/images/hero/national-diet",
@@ -622,39 +623,14 @@ export function JPDietPage({ countryId }: Props) {
                         : `As an elected ${lowerName} member you may challenge the sitting Prime Minister.`}
                     </p>
                   </div>
-                  {noConfidenceCooldownTurns && noConfidenceCooldownTurns > 0 ? (
-                    <button
-                      disabled
-                      className="shrink-0 rounded-lg border border-warning/20 bg-warning/5 px-4 py-2 text-sm font-semibold text-warning/40 cursor-not-allowed opacity-50"
-                    >
-                      Propose no-confidence
-                    </button>
-                  ) : noConfirmOpen ? (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-warning">Are you sure?</span>
-                      <button
-                        onClick={handleProposeNoConfidence}
-                        disabled={proposingNoConfidence || !viewerMayProposeNoConfidence}
-                        className="rounded-lg bg-warning px-3 py-1.5 text-xs font-semibold text-black hover:bg-warning/90 disabled:opacity-50 transition-colors"
-                      >
-                        {proposingNoConfidence ? "Proposing…" : "Confirm"}
-                      </button>
-                      <button
-                        onClick={() => setNoConfirmOpen(false)}
-                        className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-muted hover:text-foreground transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setNoConfirmOpen(true)}
-                      disabled={!viewerMayProposeNoConfidence}
-                      className="shrink-0 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/20 disabled:opacity-50 transition-colors"
-                    >
-                      Propose no-confidence
-                    </button>
-                  )}
+                  <NoConfidenceProposeControl
+                    cooldownTurns={noConfidenceCooldownTurns}
+                    confirmOpen={noConfirmOpen}
+                    onConfirmOpenChange={setNoConfirmOpen}
+                    proposing={proposingNoConfidence}
+                    canPropose={viewerMayProposeNoConfidence}
+                    onPropose={handleProposeNoConfidence}
+                  />
                 </div>
               )}
 

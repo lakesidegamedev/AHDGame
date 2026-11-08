@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { Achievement } from "@/lib/db/types";
-import { getAllAchievements } from "@/lib/achievements";
+import { listAchievementsWithEarnedCounts } from "@/lib/achievements/earnedCounts";
 import { invalidateDefinitionsCache } from "@/lib/achievements/cache";
 
 const createSchema = z.object({
@@ -27,29 +27,7 @@ const createSchema = z.object({
 // Errors: 403
 export const GET = withAdminAuth(async () => {
   try {
-    const achievements = await getAllAchievements();
-    const db = await getDb();
-
-    const counts = await db
-      .collection("characterAchievements")
-      .aggregate<{ _id: ObjectId; count: number }>([
-        { $group: { _id: "$achievementId", count: { $sum: 1 } } },
-      ])
-      .toArray();
-    const countMap = new Map(counts.map((c) => [c._id.toString(), c.count]));
-
-    const list = achievements.map((a) => ({
-      id: a._id.toString(),
-      slug: a.slug,
-      name: a.name,
-      description: a.description,
-      icon: a.icon,
-      category: a.category,
-      triggerType: a.triggerType,
-      order: a.order,
-      earnedCount: countMap.get(a._id.toString()) ?? 0,
-    }));
-
+    const list = await listAchievementsWithEarnedCounts();
     return NextResponse.json({ achievements: list });
   } catch (error) {
     return handleRouteError(error);

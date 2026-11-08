@@ -33,6 +33,7 @@ import { getEraContext } from "@/lib/era/context";
 import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 import { legislatureUrl } from "@/lib/urls";
 import type { SearchResult } from "@/lib/search/types";
+import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -632,58 +633,7 @@ async function handleGET(request: Request) {
     }
 
     // Search US states (regions)
-    const STATE_MAP: Record<string, string> = {
-      AL: "Alabama",
-      AK: "Alaska",
-      AZ: "Arizona",
-      AR: "Arkansas",
-      CA: "California",
-      CO: "Colorado",
-      CT: "Connecticut",
-      DE: "Delaware",
-      FL: "Florida",
-      GA: "Georgia",
-      HI: "Hawaii",
-      ID: "Idaho",
-      IL: "Illinois",
-      IN: "Indiana",
-      IA: "Iowa",
-      KS: "Kansas",
-      KY: "Kentucky",
-      LA: "Louisiana",
-      ME: "Maine",
-      MD: "Maryland",
-      MA: "Massachusetts",
-      MI: "Michigan",
-      MN: "Minnesota",
-      MS: "Mississippi",
-      MO: "Missouri",
-      MT: "Montana",
-      NE: "Nebraska",
-      NV: "Nevada",
-      NH: "New Hampshire",
-      NJ: "New Jersey",
-      NM: "New Mexico",
-      NY: "New York",
-      NC: "North Carolina",
-      ND: "North Dakota",
-      OH: "Ohio",
-      OK: "Oklahoma",
-      OR: "Oregon",
-      PA: "Pennsylvania",
-      RI: "Rhode Island",
-      SC: "South Carolina",
-      SD: "South Dakota",
-      TN: "Tennessee",
-      TX: "Texas",
-      UT: "Utah",
-      VT: "Vermont",
-      VA: "Virginia",
-      WA: "Washington",
-      WV: "West Virginia",
-      WI: "Wisconsin",
-      WY: "Wyoming",
-    };
+    const STATE_MAP = US_STATE_NAMES;
     for (const [abbr, sname] of Object.entries(STATE_MAP)) {
       if (sname.toLowerCase().includes(lowerQuery) || abbr.toLowerCase().includes(lowerQuery)) {
         results.push({
