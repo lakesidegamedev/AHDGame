@@ -642,10 +642,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       // target, so a large move arrives over several turns instead of shocking
       // the economy in one. Reached targets drop out of the map on their own.
       const ramp = advanceTaxRatePhaseIn(
-        // FederalTaxRates is a fixed-key shape with no string index signature,
-        // so widening needs the explicit two-step. The helper only reads keys it
-        // was handed in `pending`, all of which are real tax types.
-        (b.taxRates ?? {}) as unknown as Record<string, number | null | undefined>,
+        { ...b.taxRates },
         b.taxRatePhaseIn as Record<string, number> | undefined
       );
       const rampSet: Record<string, number> = {};

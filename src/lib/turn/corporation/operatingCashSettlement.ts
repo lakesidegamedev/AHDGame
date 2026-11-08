@@ -818,13 +818,13 @@ export async function settleCorporateOperatingCashLegacy(
   // twice. Everything else keeps its own receipts below.
   const batchPrefix = `corp-operating-net-batch:${turn}:`;
   const claimedBatches = await journals
-    .find({ _id: { $regex: `^${batchPrefix}` } }, { projection: { _id: 1, legs: 1 } })
+    .find<{
+      _id: string;
+      legs?: { collection?: string; filter?: { _id?: unknown } }[];
+    }>({ _id: { $regex: `^${batchPrefix}` } }, { projection: { _id: 1, legs: 1 } })
     .toArray();
   const batchedCorpIds = new Set<string>();
-  for (const row of claimedBatches as unknown as {
-    _id: string;
-    legs?: { collection?: string; filter?: { _id?: unknown } }[];
-  }[]) {
+  for (const row of claimedBatches) {
     for (const leg of row.legs ?? [])
       if (leg.collection === "corporations" && leg.filter?._id !== undefined)
         batchedCorpIds.add(String(leg.filter._id));
@@ -1021,13 +1021,13 @@ export async function settleCorporateOperatingCashLegacy(
   // their members out, exactly as the net batches do above.
   const lossBatchPrefix = `corp-operating-loss-batch:${turn}:`;
   const claimedLossBatches = await journals
-    .find({ _id: { $regex: `^${lossBatchPrefix}` } }, { projection: { _id: 1, event: 1 } })
+    .find<{
+      _id: string;
+      event?: { meta?: { corporationIds?: string | string[] } };
+    }>({ _id: { $regex: `^${lossBatchPrefix}` } }, { projection: { _id: 1, event: 1 } })
     .toArray();
   const lossBatchedCorpIds = new Set<string>();
-  for (const row of claimedLossBatches as unknown as {
-    _id: string;
-    event?: { meta?: { corporationIds?: string | string[] } };
-  }[]) {
+  for (const row of claimedLossBatches) {
     // The members are fenced like the net batch's, so a resumed wave is the
     // only receipt they ever get this turn.
     const members = row.event?.meta?.corporationIds;

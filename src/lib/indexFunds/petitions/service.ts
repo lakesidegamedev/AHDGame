@@ -380,9 +380,9 @@ export async function measurePetitioner(
   worstShortfallRatio: number | null;
   hasUnwaivableFailure: boolean;
 } | null> {
-  const corps = (await db
+  const corps = await db
     .collection<Corporation>("corporations")
-    .find(
+    .find<IndexFundCandidate>(
       { countryId: petition.countryId, isPrivate: { $ne: true } },
       {
         projection: {
@@ -402,7 +402,7 @@ export async function measurePetitioner(
         },
       }
     )
-    .toArray()) as unknown as IndexFundCandidate[];
+    .toArray();
 
   // The pool is that country's broad index: the same peers the size bar would
   // be measured against if a fund rebalanced this turn.

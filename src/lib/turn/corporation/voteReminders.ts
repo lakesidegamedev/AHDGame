@@ -113,7 +113,7 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
         db,
         corporationId: vote.corporationId,
         voteId: vote._id,
-        corpName: (corp as unknown as { name: string }).name,
+        corpName: corp.name,
         summary: "take the corporation private (buyout)",
         notificationType: "corp_vote_reminder",
         userIds,

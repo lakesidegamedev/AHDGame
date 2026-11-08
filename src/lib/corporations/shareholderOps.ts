@@ -1,4 +1,4 @@
-import type { ClientSession, Db, UpdateFilter } from "mongodb";
+import type { ClientSession, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { updatePersonalHolding, type PersonalHoldingChange } from "./personalHoldingOps";
@@ -147,7 +147,7 @@ export async function creditShares(
       },
     },
     {
-      $push: { shareholders: pushed } as unknown as UpdateFilter<Corporation>,
+      $push: { shareholders: pushed },
       ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
       ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
     }
@@ -275,7 +275,7 @@ export async function creditSharesToImperial(
       },
     },
     {
-      $push: { shareholders: pushed } as unknown as UpdateFilter<Corporation>,
+      $push: { shareholders: pushed },
       ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
       ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
     }
@@ -378,7 +378,7 @@ export async function debitShares(
   // Clean up zero/negative entries.
   if (remaining <= 0) {
     const pullUpdate = {
-      $pull: { shareholders: { characterId } } as unknown as UpdateFilter<Corporation>,
+      $pull: { shareholders: { characterId } },
     };
     const options = mongoOptions(opts);
     if (options) {
@@ -448,7 +448,7 @@ export async function debitSharesFromImperial(
 
   if (remaining <= 0) {
     const pullUpdate = {
-      $pull: { shareholders: { imperialCharacterId } } as unknown as UpdateFilter<Corporation>,
+      $pull: { shareholders: { imperialCharacterId } },
     };
     const options = mongoOptions(opts);
     if (options) {
@@ -524,7 +524,7 @@ export async function creditSharesToCorp(
     {
       $push: {
         shareholders: { corporationId: buyerCorpId, shares, avgCostPerShare: pricePerShare },
-      } as unknown as UpdateFilter<Corporation>,
+      },
       ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
       ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
     }
@@ -605,7 +605,7 @@ export async function debitSharesFromCorp(
     const pullUpdate = {
       $pull: {
         shareholders: { corporationId: holderCorpId },
-      } as unknown as UpdateFilter<Corporation>,
+      },
     };
     const options = mongoOptions(opts);
     if (options) {
@@ -684,7 +684,7 @@ export async function creditSharesToFund(
     {
       $push: {
         shareholders: { fundId, shares, avgCostPerShare: pricePerShare },
-      } as unknown as UpdateFilter<Corporation>,
+      },
       ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
       ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
     },
@@ -778,7 +778,7 @@ export async function creditSharesToNpp(
     {
       $push: {
         shareholders: { nppId, shares, avgCostPerShare: pricePerShare },
-      } as unknown as UpdateFilter<Corporation>,
+      },
       ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
       ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
     },
@@ -857,7 +857,7 @@ export async function debitSharesFromNpp(
     const pullUpdate = {
       $pull: {
         shareholders: { nppId },
-      } as unknown as UpdateFilter<Corporation>,
+      },
     };
     const options = mongoOptions(opts);
     if (options) {
@@ -911,7 +911,7 @@ export async function debitSharesFromFund(
     const pullUpdate = {
       $pull: {
         shareholders: { fundId },
-      } as unknown as UpdateFilter<Corporation>,
+      },
     };
     const options = mongoOptions(opts);
     if (options) {

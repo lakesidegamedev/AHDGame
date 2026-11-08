@@ -82,6 +82,16 @@ function marketIdentityConditions(identity: MarketIdentity): Filter<CorporateSec
   ];
 }
 
+function unownedMarketIdentityConditions(identity: MarketIdentity): Filter<UnownedSector>[] {
+  return [
+    {
+      sectorType: identity.sectorType,
+      industryModel: identity.industryModel,
+      mediaDiscriminator: identity.mediaDiscriminator,
+    } as Filter<UnownedSector>,
+  ];
+}
+
 /** Bounded market share percentage (0–100) given anchor-denominated inputs. */
 export function computeMarketSharePercent(
   sectorRevenueAnchor: number,
@@ -811,7 +821,11 @@ export async function fetchMarketSharePercentForSectors(
       marketIdentity(s.sectorType, s.industryModel, s.mediaDiscriminator)
     ).map((condition) => ({ stateId: s.stateId, ...condition }))
   );
-  const unownedBucketFilters = bucketFilters as unknown as Filter<UnownedSector>[];
+  const unownedBucketFilters = targetSectors.flatMap((s) =>
+    unownedMarketIdentityConditions(
+      marketIdentity(s.sectorType, s.industryModel, s.mediaDiscriminator)
+    ).map((condition) => ({ stateId: s.stateId, ...condition }))
+  );
 
   // Sibling sectors across the spanned buckets (a superset; buildMarketShareBySectorId
   // buckets precisely by (state, sectorType), so non-target buckets don't pollute).

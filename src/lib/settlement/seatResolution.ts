@@ -73,11 +73,11 @@ export async function resolveSettlementSeat(
   if (!member) return null;
   const ministerSeat = seatFor(member.countryId ?? null);
   if (!ministerSeat) return null;
-  const foreignPosition = FOREIGN_AFFAIRS_POSITION_BY_COUNTRY[ministerSeat as unknown as CountryId];
+  const foreignPosition = FOREIGN_AFFAIRS_POSITION_BY_COUNTRY[ministerSeat as CountryId];
   if (member.positionId === foreignPosition) {
     return { seatId: ministerSeat, role: "foreignMinister" };
   }
-  const defensePosition = DEFENSE_POSITION_BY_COUNTRY[ministerSeat as unknown as CountryId];
+  const defensePosition = DEFENSE_POSITION_BY_COUNTRY[ministerSeat as CountryId];
   if (member.positionId === defensePosition) {
     return { seatId: ministerSeat, role: "defenseMinister" };
   }

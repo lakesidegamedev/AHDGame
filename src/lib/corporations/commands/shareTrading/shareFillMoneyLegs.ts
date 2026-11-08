@@ -202,6 +202,21 @@ interface HoldingAccount {
   appliedMoneyFlowKeys?: string[];
 }
 
+type CapShareholderRead = {
+  shares: number;
+  avgCostPerShare?: number;
+} & Record<string, unknown>;
+
+type CapShareholdersRead = { shareholders?: CapShareholderRead[] };
+
+type FundHoldingRead = {
+  corporationId: ObjectId;
+  shares: number;
+  avgCostPerShareAnchor?: number;
+};
+
+type FundHoldingsRead = { holdings?: FundHoldingRead[] };
+
 /**
  * Keyed cap-table debit: `$elemMatch` sufficiency + `$ne: key` + `$inc` in
  * one atomic update (the same guard `debitShares` performs with
@@ -320,17 +335,11 @@ export async function applyCapCreditKeyed(
   const corps = db.collection<CapAccount>("corporations");
   const entryId = new ObjectId(leg.idHex);
   const attemptInc = async (): Promise<MoneyFlowLegOutcome> => {
-    const live = await corps.findOne({ _id: corpId } as Filter<CapAccount>, {
+    const live = await corps.findOne<CapShareholdersRead>({ _id: corpId } as Filter<CapAccount>, {
       projection: { shareholders: 1 },
     });
     if (!live) return "missing";
-    const existing = (
-      live as unknown as {
-        shareholders?: Array<
-          { shares: number; avgCostPerShare?: number } & Record<string, unknown>
-        >;
-      }
-    ).shareholders?.find((entry) => {
+    const existing = live.shareholders?.find((entry) => {
       const value = entry[leg.field];
       return value instanceof ObjectId && value.equals(entryId);
     });
@@ -427,15 +436,11 @@ async function revertCapCreditKeyed(
   }
   const corps = db.collection<CapAccount>("corporations");
   const entryId = new ObjectId(leg.idHex);
-  const live = await corps.findOne({ _id: corpId } as Filter<CapAccount>, {
+  const live = await corps.findOne<CapShareholdersRead>({ _id: corpId } as Filter<CapAccount>, {
     projection: { shareholders: 1 },
   });
   if (!live) return "missing";
-  const entry = (
-    live as unknown as {
-      shareholders?: Array<{ shares: number; avgCostPerShare?: number } & Record<string, unknown>>;
-    }
-  ).shareholders?.find((row) => {
+  const entry = live.shareholders?.find((row) => {
     const value = row[leg.field];
     return value instanceof ObjectId && value.equals(entryId);
   });
@@ -538,14 +543,13 @@ function makeHoldingsDebitStep(
         {}
       );
       if (outcome !== "applied" && outcome !== "already-applied") return outcome;
-      const holding = await funds.findOne({ _id: fundId } as Filter<HoldingAccount>, {
-        projection: { holdings: 1 },
-      });
-      const rows = (
-        holding as unknown as {
-          holdings?: Array<{ corporationId: ObjectId; shares: number }>;
-        } | null
-      )?.holdings;
+      const holding = await funds.findOne<FundHoldingsRead>(
+        { _id: fundId } as Filter<HoldingAccount>,
+        {
+          projection: { holdings: 1 },
+        }
+      );
+      const rows = holding?.holdings;
       const remaining = rows?.find((row) => row.corporationId.equals(corpId));
       if (!remaining || remaining.shares <= 0) {
         await funds.updateOne(
@@ -597,19 +601,11 @@ export async function applyHoldingsCreditKeyed(
   const funds = db.collection<HoldingAccount>("indexFunds");
   const safePrice = Number.isFinite(pricePerShareAnchor) ? Math.max(0, pricePerShareAnchor) : 0;
   const attemptInc = async (): Promise<MoneyFlowLegOutcome> => {
-    const live = await funds.findOne({ _id: fundId } as Filter<HoldingAccount>, {
+    const live = await funds.findOne<FundHoldingsRead>({ _id: fundId } as Filter<HoldingAccount>, {
       projection: { holdings: 1 },
     });
     if (!live) return "missing";
-    const existing = (
-      live as unknown as {
-        holdings?: Array<{
-          corporationId: ObjectId;
-          shares: number;
-          avgCostPerShareAnchor?: number;
-        }>;
-      }
-    ).holdings?.find((row) => row.corporationId.equals(corpId));
+    const existing = live.holdings?.find((row) => row.corporationId.equals(corpId));
     if (!existing) return "guard-rejected";
     const newShares = existing.shares + shares;
     const newAvg =
@@ -679,15 +675,11 @@ export async function revertHoldingsCreditKeyed(
   now: Date
 ): Promise<MoneyFlowLegOutcome> {
   const funds = db.collection<HoldingAccount>("indexFunds");
-  const live = await funds.findOne({ _id: fundId } as Filter<HoldingAccount>, {
+  const live = await funds.findOne<FundHoldingsRead>({ _id: fundId } as Filter<HoldingAccount>, {
     projection: { holdings: 1 },
   });
   if (!live) return "missing";
-  const entry = (
-    live as unknown as {
-      holdings?: Array<{ corporationId: ObjectId; shares: number; avgCostPerShareAnchor?: number }>;
-    }
-  ).holdings?.find((row) => row.corporationId.equals(corpId));
+  const entry = live.holdings?.find((row) => row.corporationId.equals(corpId));
   if (!entry) return "already-applied";
   const safePrice = Number.isFinite(pricePerShareAnchor) ? Math.max(0, pricePerShareAnchor) : 0;
   if (entry.shares <= shares) {
