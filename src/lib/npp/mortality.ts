@@ -33,7 +33,7 @@ import {
   nppRetiresThisTurn,
   randomReplacementBirthYear,
 } from "./rules/mortality";
-import { NPP_TURNOVER_CONFIG as CONFIG } from "./turnoverData";
+import { NPP_TURNOVER_CONFIG as CONFIG, NPP_TURNOVER_EXEMPT_COUNTRIES } from "./turnoverData";
 
 export {
   annualDeathProbability,
@@ -245,7 +245,7 @@ export async function processNppMortality(
   // replaces it outright.
   const v5ByCountry = new Map<string, boolean>();
   const isV5 = async (countryId: CountryId): Promise<boolean> => {
-    if (turnover === true) return true;
+    if (turnover === true) return !NPP_TURNOVER_EXEMPT_COUNTRIES.has(countryId);
     const key = countryId;
     let v = v5ByCountry.get(key);
     if (v === undefined) {
