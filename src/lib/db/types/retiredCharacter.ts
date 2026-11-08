@@ -47,7 +47,7 @@ export interface RetiredCharacterSnapshot {
   profileHeaderImageUrl?: string;
   bio?: string;
   careerHistory?: CareerEvent[];
-    /**
+  /**
    * Label only, frozen at retirement. Do not trust for scoring/ranking: may carry stale incorrect labels. Re-derive live from `careerHistory`/`currentOffice` where correctness matters.
    */
   highestOffice?: string;

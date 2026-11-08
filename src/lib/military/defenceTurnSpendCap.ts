@@ -45,7 +45,7 @@ export function defenceCountryTurnSpendCap(defenceLine: number): number {
  *
  * Reuses the award side's share so the two caps say the same thing about who may take how
  * much: a third of the country for private industry, all of it for a National Corporation,
- * which has no player CEO to enrich (ticket #1134).
+ * which has no player CEO to enrich.
  */
 export function defenceSupplierTurnSpendCap(defenceLine: number, stateOwned: boolean): number {
   return defenceCountryTurnSpendCap(defenceLine) * defenceSupplierCapShare(stateOwned);

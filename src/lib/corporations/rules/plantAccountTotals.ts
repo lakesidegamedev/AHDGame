@@ -22,7 +22,7 @@ export type PlantAccountInput = {
    * full engine P&L, so without it the line is re-derived from the share.
    */
   fundedComplianceAnchor?: number | null;
-    /**
+  /**
    * The lines the turn ACTUALLY booked, in ₳. When present, all money figures
    * below are read off them; nothing is reconstructed. Absent on a sector that
    * has not run a plants turn since the field shipped, which falls back to the

@@ -77,7 +77,7 @@ export interface PortfolioHoldings {
 }
 
 /**
- * Bonds, portfolio holdings, and corp-income reads for the detail view (#587).
+ * Bonds, portfolio holdings, and corp-income reads for the detail view.
  *
  * Held-bond values and held-corp stock values are anchor-denominated through
  * the valuation FX map (displayed and ranked values); the corp's own

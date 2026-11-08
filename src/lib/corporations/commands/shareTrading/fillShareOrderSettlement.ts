@@ -138,7 +138,7 @@ export async function settleBuyOrderFill(args: {
   now: Date;
   restoreClaimedOrder: () => Promise<void>;
   /**
-   * Keyed-audit attempt claimed by the caller (issue #1672). The plan carries
+   * Keyed-audit attempt claimed by the caller. The plan carries
    * the pinned buyer name and amounts; money below stays untouched, and the
    * audit rows are written convergently after the commit.
    */

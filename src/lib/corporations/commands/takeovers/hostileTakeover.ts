@@ -303,7 +303,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       targetFxPre
     );
 
-    // Bank-NAV floor (issue #1750): the quoted share price recognizes only a
+    // Bank-NAV floor: the quoted share price recognizes only a
     // haircut of a subsidiary bank's book equity, so a bank-heavy target can
     // otherwise be squeezed out for less than the realizable bank net assets
     // the acquirer inherits (ring-fenced cash plus loans plus the marked

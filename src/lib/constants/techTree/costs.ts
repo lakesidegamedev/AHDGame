@@ -8,7 +8,7 @@
  * strength grants, production methods) cost a small fraction of daily gross
  * revenue instead. A minimum cash price (TECH_NODE_CASH_FLOOR_ANCHOR, scaled
  * to the world era) stops tiny and zero-revenue corps from unlocking nodes for
- * R&D points alone (ticket #1506). A node with running value only needs a
+ * R&D points alone. A node with running value only needs a
  * tenth of that floor (TECH_NODE_VALUED_FLOOR_FRACTION): the full floor sat
  * above value x 48 for most corps and flattened every price to the minimum.
  * Cash is charged in the corp's currency.
@@ -90,7 +90,7 @@ export function techNodeValuePerTurn(node: TechTreeNode, basis: TechPlantBasis):
 
 /**
  * Minimum cash price of a tech node in 2019 anchor money, before era scaling.
- * Ticket #1506: pricing purely off revenue let a corp with no revenue unlock
+ * Pricing purely off revenue let a corp with no revenue unlock
  * nodes for R&D points alone. The floor is multiplied by the world's era unit
  * scale (2019 = 1.0) and converted into the corp's currency, so it is about
  * 5M in 2019, a fraction of that in the 1950s and a little more in the 2020s.

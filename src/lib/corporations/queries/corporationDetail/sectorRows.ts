@@ -129,7 +129,7 @@ export interface SectorModeFlags {
 }
 
 /**
- * Labour/plants mode flags plus the trailing-window realized growth rate (#587).
+ * Labour/plants mode flags plus the trailing-window realized growth rate.
  *
  * Plants tier: sectors are PLANTS, so the row's headline numbers become
  * physical (capacity, output, sales) rather than a growth rate. Below plants
@@ -254,7 +254,7 @@ export interface PhysicalRollups {
 }
 
 /**
- * Per-sector detail rows plus corp-level financial totals (#587).
+ * Per-sector detail rows plus corp-level financial totals.
  *
  * The row's headline numbers are single-currency: every stored host-currency
  * sector field is restated into the corp's home currency before any math.
@@ -558,7 +558,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const engineMargin =
       typeof sector.effectiveProfitMargin === "number" ? sector.effectiveProfitMargin : null;
     const effectiveProfitMargin = engineMargin ?? stackMargin;
-    // Ticket 1122: the turn's own lines when the sector has them, restated into
+    // The turn's own lines when the sector has them, restated into
     // the corp's currency. Inverting `effectiveProfitMargin` cannot be right:
     // it is this P&L's capped OUTPUT, so at the cap it recovers a zero
     // operating cost from a negative one (profit == revenue), and in every case

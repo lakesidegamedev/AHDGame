@@ -96,7 +96,7 @@ export function transitionalOperatingCapacity(args: {
 
 /**
  * Does this transition's owned stock still sit on the source basis, so the
- * turn must convert it before the blend ratio may touch it (issue #2009)?
+ * turn must convert it before the blend ratio may touch it?
  *
  * True exactly when no plants-gated writer could have converted the stock:
  * the rescale flag is absent (legacy row) or explicitly false (committed

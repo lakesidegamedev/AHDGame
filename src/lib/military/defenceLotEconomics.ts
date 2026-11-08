@@ -310,7 +310,7 @@ export function lotPriceBand(input: {
 
 /**
  * How many production lines a defence plant runs, and therefore how finely a CEO can split
- * it across orders (suggestion #281).
+ * it across orders.
  *
  * A fixed four rather than a figure derived from revenue or capital stock: allocation is a
  * STANDING decision a CEO makes once, and a slot count that moved with last turn's revenue
@@ -336,9 +336,9 @@ export function defaultFactoryAllocation(componentCount: number, freeSlots: numb
  * Lines a newly awarded contract should open on.
  *
  * Private suppliers keep the even-split default: the CEO can re-allocate afterwards.
- * A National Corporation has no player CEO (ticket #1087), so that lever is dead and a
+ * A National Corporation has no player CEO, so that lever is dead and a
  * two-domain plant would stay at half throughput forever. State industry therefore
- * takes every free line at award (ticket #1134).
+ * takes every free line at award.
  */
 export function awardFactoryAllocation(input: {
   componentCount: number;

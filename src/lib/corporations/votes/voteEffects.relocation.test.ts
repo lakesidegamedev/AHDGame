@@ -1,7 +1,7 @@
 /**
  * A passed relocation vote must not carry a private corporation into a fully
  * command economy, even when the vote was opened before the proposal gate
- * existed or before the destination's economy closed (ticket 1378).
+ * existed or before the destination's economy closed.
  */
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";

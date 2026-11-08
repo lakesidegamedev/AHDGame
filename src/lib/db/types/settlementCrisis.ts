@@ -152,7 +152,7 @@ export interface SettlementCrisisDoc {
    * settlement outright and the index is not consulted.
    */
   conflictId: string | null;
-    /**
+  /**
    * Which roster wins the settlement for whom. Optional since older crises lack it;
    * `settleFromConflict` falls back to the sides' `backer`.
    */
@@ -179,7 +179,7 @@ export interface SettlementCrisisDoc {
   postedWireEvents?: string[];
   outcome: SettlementOutcome | null;
   cooldownUntilTurn: number | null;
-    /**
+  /**
    * The turn the outcome's consequences FINISHED landing on the world.
    *
    * ⚠️ This, not `cooldownUntilTurn`, is what says a settlement has been

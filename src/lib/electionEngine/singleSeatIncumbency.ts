@@ -3,8 +3,6 @@
  * (US Senate). Finds the sitting senator, guards against open seats (the
  * incumbent must actually be running), and counts their consecutive terms in
  * the seat. Feeds the flat-shield branch of `incumbencyDriver`.
- *
- * See docs/superpowers/specs/2026-07-15-senate-incumbency-driver-design.md.
  */
 
 import type { Db } from "mongodb";

@@ -66,7 +66,7 @@ export interface StatePartyOrg {
   /** State-level NPP recruitment cooldown end turn (currentTurn + 24). Turn-first source. */
   nppRecruitmentCooldownUntilTurn?: number;
 
-    /**
+  /**
    * Party registration percent in this state: slow-moving partisan lean, not a literal vote-share promise.
    *
    * Bounds 0..100 per row. The full state pool is normalized to 100% across all parties' `registration` plus `StateRegistrationPool.{independent, unregistered}`.

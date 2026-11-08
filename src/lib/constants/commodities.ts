@@ -586,7 +586,7 @@ export const COMMODITY_PRICE_DRIFT_RATE = 0.06;
  * Per-turn step of a country's national price toward its supply/demand
  * target. Exporters' supply depends on last turn's national price (sourcing
  * asks), so an undamped national price cobwebs: cheap one turn, ships
- * everything, dear the next, ships nothing (#4605). Half a step settles it.
+ * everything, dear the next, ships nothing. Half a step settles it.
  */
 export const NATIONAL_PRICE_ADJUSTMENT_RATE = 0.5;
 
@@ -1819,7 +1819,7 @@ export function computeRawSupplyDemand(
    * path stays byte-identical.
    */
   plantsEnabled = false,
-    /**
+  /**
    * Era unit-basis scale for plants worlds (~69.8 for 1953, 1 for modern).
    * Plants supply uses physical era-scaled units, but this function's
    * dollars-to-units legs divide era-nominal revenue by modern prices, so
@@ -1881,7 +1881,7 @@ export function computeRawSupplyDemand(
   productionInputDemandByState: Map<string, Map<CommodityType, number>>;
   /**
    * commodity → demand units removed by the PLANTS_LEDGER_DEMAND_SUPPLY_CAP
-   * pass this turn (#1460). Recorded, never applied. A capped commodity reports
+   * pass this turn. Recorded, never applied. A capped commodity reports
    * supply/demand of exactly 2/3 no matter how short it is, so this is the
    * only surviving signal of the real gap.
    */

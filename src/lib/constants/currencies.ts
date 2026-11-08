@@ -254,7 +254,7 @@ export const GDP_GROWTH_SENSITIVITY = 0.01;
 export const TRADE_GROWTH_SENSITIVITY = 0.005;
 /**
  * Macro-target move per unit of a background country's trade-balance pressure
- * (#5702): the pressure is bounded at +/-0.5, so the target moves at most 4%.
+ * The pressure is bounded at +/-0.5, so the target moves at most 4%.
  */
 export const TRADE_BALANCE_SENSITIVITY = 0.08;
 
@@ -594,7 +594,10 @@ export function getInitialRates(preset: string): Partial<Record<CountryId, numbe
   if (preset === "1991-default") return INITIAL_RATES_1991;
   if (preset === "2019-default") return INITIAL_RATES_2019_TRANSITION;
   if (preset === "2027-default") return INITIAL_RATES_2027;
-  // 1999 and 2007 have no authored table; interpolate between authored anchors so early worlds get period-appropriate rates instead of 2019 values.
+  // 1999 and 2007 have no authored table and used to fall through to the 2019
+  // one, so a 1999 world started with 2019 money: Nigeria at 1550 naira/USD
+  // when the real 1999 rate was about 97, a 16x error on day one. Interpolate
+  // between the authored anchors instead. See getInitialRatesForYear.
   const year = getStartingYearForPreset(preset);
   if (year !== STARTING_YEAR) return getInitialRatesForYear(year);
   return INITIAL_RATES;

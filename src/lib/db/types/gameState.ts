@@ -161,7 +161,7 @@ export interface GameState {
   currentYear: number;
   /** Exact operator-selected date of this iteration's reset. */
   resetStartDate?: { year: number; week: number };
-    /**
+  /**
    * Calendar year of turn 1 for the active reset preset (1991, 2019, etc.).
    * When undefined (legacy rows), readers fall back to the global
    * `STARTING_YEAR` constant.
@@ -197,7 +197,7 @@ export interface GameState {
    * election years per era. Defaults to `"2019-default"` when undefined.
    */
   preset?: string;
-  /** Reset choice (#2679). Missing means default; overwritten on every reset. */
+  /** Reset choice. Missing means default; overwritten on every reset. */
   startingPartiesMode?: "default" | "none";
   /**
    * On for fresh worlds (`DEFAULT_GAME_STATE_FLAGS`) since the state GDP unit fix.
@@ -486,7 +486,7 @@ export interface GameState {
   processingPhaseStatuses?: TurnPhaseTelemetryMap | null;
   /**
    * Bounded results of completed phases a later phase consumes, written with the
-   * phase's completed status so a crash resume can restore them (#3429). Keys are
+   * phase's completed status so a crash resume can restore them. Keys are
    * limited to `turnPhaseResumeResults.ts`.
    */
   processingPhaseResults?: Record<string, Record<string, unknown>> | null;
@@ -524,7 +524,7 @@ export interface GameState {
   nppEntryViabilityModeBy?: string;
   nppEntryViabilityModeAt?: string;
   /**
-   * Capped frontier-entry experiment for state-sector coverage (issue #991).
+   * Capped frontier-entry experiment for state-sector coverage.
    * Absent resolves to false: the experiment is disabled by default and no
    * entry mechanics may activate without the controlled 48-turn trial plus
    * largest-supplier-failure stress evidence. The NPP entry funnel and
@@ -1002,7 +1002,7 @@ export interface CountryGameState {
    */
   foundingCycleResolved?: boolean;
   /**
-   * Last Tier-1 NPP strategic decision cycle claimed for this country (#3724).
+   * Last Tier-1 NPP strategic decision cycle claimed for this country.
    * Cycle index is `floor((turn - 1) / 6)`. Claim-before-act prevents a
    * restarted worker from double-firing the same six-hour bucket.
    */

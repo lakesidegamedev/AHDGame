@@ -101,7 +101,7 @@ export async function attemptUnionBusting(
     .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
   const countryId = bustingState?.countryId ?? sector.countryId ?? corporation.countryId;
 
-  // Union ban (player suggestion #93): busting is moot while unions are
+  // Union ban: busting is moot while unions are
   // outlawed — unionization is already decaying to 0 by law and strikes
   // can't trigger, so don't let a CEO pay for nothing.
   if (await isUnionsBanned(db, countryId)) {

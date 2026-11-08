@@ -235,12 +235,12 @@ export interface Character {
   /** Last corporation-turn editorial favorability receipt, for replay safety. */
   mediaEditorialLastAppliedTurn?: number;
   infamy: number;
-    /**
+  /**
    * @deprecated Read from `currencyBalances.campaign` instead.
    * Optional only so unmigrated fixtures compile.
    */
   funds?: number;
-    /**
+  /**
    * @deprecated Read from `currencyBalances.personal[homeCurrency]` instead.
    * Optional only so unmigrated fixtures compile.
    */
@@ -331,7 +331,7 @@ export interface Character {
   party: string;
   currentOffice: OfficeType | null;
   careerHistory?: CareerEvent[];
-    /**
+  /**
    * Shared UK ministerial action pool: one pool per UK player across both
    * offices, so a second title grants no extra actions. Optional for legacy rows.
    */
@@ -358,7 +358,7 @@ export interface Character {
   /** @deprecated Campaign songs no longer autoplay; legacy documents may still carry it. */
   campaignSongAutoplay?: boolean;
   groupFavorability?: Record<string, number>;
-    /**
+  /**
    * Per-group approval modifiers (-100 to +100), keyed on Layer-1 census
    * buckets (`"education:no_college"`). Legacy voter-archetype keys still
    * resolve via `archetypeValuesToBuckets` until the migration runs.
@@ -421,7 +421,7 @@ export interface Character {
   /** When true, automatically enters the character into new elections in their home state */
   autoRunForReelection?: boolean;
   createdAt: Date;
-    /**
+  /**
    * Game turn the character was created on. Anchors the 24-turn new-character
    * transfer barrier; absent on older documents, which fall back to `createdAt`.
    */

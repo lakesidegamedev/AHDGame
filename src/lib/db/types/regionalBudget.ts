@@ -26,7 +26,7 @@ export interface RegionalBudget {
   vatShare?: number;
   /** DE federal equalization grant (Länderfinanzausgleich + BEZ, Finance Minister allocation) */
   federalEqualizationGrant?: number;
-    /**
+  /**
    * DE Gewerbesteuer revenue at the Land level. Computed from the per-Land
    * Hebesatz policy (`de_trade_tax`) × Steuermesszahl (0.035) × Land
    * domestic-corporate-profit base.
@@ -38,13 +38,13 @@ export interface RegionalBudget {
   eitShare?: number;
   /** CN central transfer grant from national government (Finance Minister allocation or equal split) */
   centralTransferGrant?: number;
-    /**
+  /**
    * CN Provincial Resource Tax revenue at the region level. Computed from the
    * per-region `cn_provincial_resource_tax` policy rate × regional GDP ×
    * resource-extraction proxy (3% of GDP).
    */
   resourceTaxRevenue?: number;
-    /**
+  /**
    * CN standing Business Tax (营业税) revenue, always collected (not enactment-gated)
    * and computed from regional GDP x consumption ratio x rate.
    */

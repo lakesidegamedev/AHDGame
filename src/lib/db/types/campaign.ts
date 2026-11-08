@@ -57,7 +57,7 @@ export interface Campaign {
   candidateIsNPP: boolean;
   party: string;
 
-    /**
+  /**
    * Lifecycle state. `"archived"` campaigns are retained but excluded from
    * active surfaces. Missing/undefined treated as `"active"` for legacy rows.
    * Only hard-deleted when the election resolves, so the next cycle starts fresh.
@@ -161,7 +161,7 @@ export interface Campaign {
    */
   spendStock?: number;
 
-    /**
+  /**
    * Hex campaign color ("#3B82F6") used to shade the candidate on primary maps
    * and pages so same-party candidates are distinguishable.
    */

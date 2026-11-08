@@ -116,7 +116,7 @@ export interface CountryState {
    * out-of-band enactments between turns.
    */
   socialAxisDriftTurn?: number;
-    /**
+  /**
    * Display name override, set only when a runtime event (e.g. reunification)
    * changes what the country is called; the compiled name stays the identity
    * every synchronous call site reads. Null/absent = use the compiled name.

@@ -36,8 +36,6 @@ export interface DeclareWarResult {
  * same ground, keeping one map pin per besieged country. Otherwise a new conflict
  * is created, hosted in the defender: `createConflict` derives `region` from
  * `hostCountry`, so the pin lands there with no extra work.
- *
- * Spec: docs/superpowers/specs/2026-08-04-war-declaration-legislation-design.md
  */
 export async function declareWar(db: Db, input: DeclareWarInput): Promise<DeclareWarResult> {
   const { declarer, defender, warGoal, billId, currentTurn } = input;

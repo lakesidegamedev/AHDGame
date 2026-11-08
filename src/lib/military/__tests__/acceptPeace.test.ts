@@ -490,7 +490,7 @@ describe("the settlement stamp", () => {
     expect(JSON.stringify(conflictUpdateSpy.mock.calls)).not.toContain("postedWireEvents");
   });
 
-  // Ticket #1246: the record surfaced the SENDER as the departing country on a
+  // The record surfaced the SENDER as the departing country on a
   // "you get out" deal. The stamp is where the settlement text comes from.
   it("stamps the recipient as target when the RECIPIENT is the leaver", async () => {
     // UK asks CN to leave on a white peace and stays in the war itself. The

@@ -13,7 +13,7 @@ import { resolveMetricPath } from "@/lib/cabinet/resolveMetricPath";
 import { metricCategories } from "@/lib/constants/metricDefinitions";
 
 /**
- * Ticket #1140: the US Secretary of Defense's "Military Readiness" tier shipped with an
+ * The US Secretary of Defense's "Military Readiness" tier shipped with an
  * empty `effects` object on ALL THREE options, so a player could pay a 25% larger defence
  * bill for a setting that wrote to no metric at all. UK, CN and JP defence carried the same
  * hole. This suite is the standing guard: a tier whose every option is empty is a lever the

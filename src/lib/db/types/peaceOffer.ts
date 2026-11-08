@@ -48,7 +48,7 @@ export interface PeaceOfferDoc {
   conflictId: string;
   fromCountry: CountryId;
   toCountry: CountryId;
-    /**
+  /**
    * Which party this deal takes OUT of the war. Always `fromCountry` or
    * `toCountry`.
    *

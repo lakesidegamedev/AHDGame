@@ -1,7 +1,7 @@
 /**
  * Per-party spend aggregator for the swing-flow engine's money driver.
  *
- * Ticket #1261 follow-up: the driver used to read raw "active pacing"
+ * The driver used to read raw "active pacing"
  * (spend-this-turn only), which forgot everything every turn — an idler
  * read exactly like a side that never spent, and any-spend vs ~nothing
  * saturated the log-ratio bar over pocket change. It now reads a decaying

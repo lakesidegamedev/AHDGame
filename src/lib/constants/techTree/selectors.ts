@@ -335,7 +335,7 @@ export function getPassedDecadeIds(currentYear: number): string[] {
  * Whether a node's tier is still open for research. A lane's baseline (slots
  * 1–9) is always open. The specialization tier above it (slots 10–15) belongs to
  * the decade it sits in, so once a decade is completed (`decadeCompleted`, i.e.
- * auto-granted) that tier is closed on BOTH tracks (ticket 1606). The baseline
+ * auto-granted) that tier is closed on BOTH tracks. The baseline
  * grant never covers specializations, so nothing above the baseline is
  * researchable in a completed decade.
  */

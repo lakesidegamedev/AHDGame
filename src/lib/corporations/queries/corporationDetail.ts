@@ -427,7 +427,7 @@ export async function loadCorporationDetailView(args: {
       // uses that live recompute, but the shown rating should be the announced one.
       creditRatingSnapshot: corporation.creditRatingSnapshot ?? undefined,
       creditCompositeSnapshot: corporation.creditCompositeSnapshot ?? undefined,
-      // Suggestion #62: index-fund ownership and whether it has reached the
+      // Index-fund ownership and whether it has reached the
       // level that earns the credit notch and the price premium. Surfaced so
       // inclusion is a visible, chaseable goal rather than an invisible buff.
       indexOwnershipPercent: Math.round(indexFundOwnershipFraction(corporation) * 1000) / 10,

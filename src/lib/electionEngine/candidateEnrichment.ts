@@ -199,7 +199,7 @@ export async function fetchEnrichedCandidates(
     /** Sweep-resolved runtime election config; keeps enrichment read-only. */
     countryConfig?: EnrichmentCountryConfig;
     /**
-     * Caller's Db handle (#2695). Sharing one handle across a phase lets the
+     * Caller's Db handle. Sharing one handle across a phase lets the
      * per-Db country-state cache hit; `getDb()` returns a new handle per call.
      */
     db?: Db;

@@ -1002,12 +1002,12 @@ export type EraCountryConfigOverride = Partial<
  * States, while Turkey read $0.7B and the UK $14.4B.
  *
  * IT/JP/CN/NG deliberately stay at 1.0: their 1953 regional GDP is authored in
- * **USD millions** (refs #3498 — see the header of each `*Regions1953.ts`), so
+ * **USD millions**, so
  * they are already ₳-denominated and a rate of 1.0 IS their era-correct
  * normalization. Do not "fix" them to 1/INITIAL_RATES_1953 — that would read
  * Italy as a $27M economy.
  *
- * HU/PL/RO/YU/BG/CS now have authored 1953 rates too (refs #3778 §1). They stay
+ * HU/PL/RO/YU/BG/CS now have authored 1953 rates too. They stay
  * OUT of `FOREX_ACTIVE_COUNTRIES` — `seedExchangeRates` still writes no
  * `exchangeRates` row for them and they remain budget-only, non-convertible
  * economies. Only the config-side GDP→₳ normalization is authored, sourced from
@@ -1356,7 +1356,7 @@ export function getMajorPartiesForRegion(
   // enrichment pass adds `partyAbbr`. The sets below therefore carry BOTH the
   // seed slug (fixtures, seeders) and the abbreviation (live races); match
   // through `partitionMajorParties`, which also falls back to the two largest
-  // parties in the race when neither encoding matches (#811).
+  // parties in the race when neither encoding matches.
   if (countryId === "UK") {
     if (parentRegionId === "SCO") return new Set(["uk_snp", "uk_labour", "SNP", "LAB"]);
     if (parentRegionId === "WAL") return new Set(["uk_labour", "uk_conservative", "LAB", "CON"]);

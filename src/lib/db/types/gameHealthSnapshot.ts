@@ -80,7 +80,7 @@ export interface EconomyStats {
     Record<
       CountryId,
       {
-                /**
+        /**
          * Annualized real GDP GROWTH (%/yr), not a level; distinct from the `gdp` level field. A healthy convergence from 3.8%/yr toward ~2.3% potential reads as a collapse if mistaken for a level.
          */
         gdpGrowth: number;

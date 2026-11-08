@@ -152,7 +152,7 @@ export const FOMC_VOTE_WINDOW_TURNS = 24;
 /**
  * Turns between repeats of the "board seats are vacant" notice to the
  * executive. Vacant seats can only be filled by presidential nomination, so an
- * unstaffed board silently deadlocks every rate motion (ticket #1238); the
+ * unstaffed board silently deadlocks every rate motion; the
  * reminder keeps the one player who can act aware without nagging every turn.
  */
 export const FOMC_VACANCY_REMINDER_INTERVAL_TURNS = 48;
@@ -414,7 +414,7 @@ export interface CentralBank {
   /** Mirrored from FederalBudget.economicFactors.tradeGrowth each turn (read-cache) */
   tradeGrowth?: number;
   /**
-   * Background countries only (#5702): smoothed funded-trade balance pressure,
+   * Background countries only: smoothed funded-trade balance pressure,
    * -0.5 (deficit) to 0.5 (surplus), written on the macro kernel tick and read
    * into the FX macro target. Absent on every other bank.
    */

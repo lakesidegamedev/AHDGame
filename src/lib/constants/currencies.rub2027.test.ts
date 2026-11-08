@@ -20,7 +20,7 @@ import {
 import { RU_2027_RUB_PER_USD } from "@/lib/currency/rules/rubleTransition";
 
 /**
- * Preset-aware Russian ruble (#2289). RU 2027 country data landed, but RU
+ * Preset-aware Russian ruble. RU 2027 country data landed, but RU
  * still seeded Soviet SUR money. A 2027-default world now seeds RUB while
  * Cold War/1991 worlds keep SUR byte-identically.
  */

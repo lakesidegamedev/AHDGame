@@ -65,7 +65,7 @@ export interface TreatyEntry {
   countryId: CountryId;
   /** The alliance that bound it, e.g. "NATO" / "WARSAW_PACT", or a custom org id. */
   organizationId: string;
-    /**
+  /**
    * Display name of the alliance at write time. Custom organization names live in
    * the database, so an id-only reader would have nothing to show. Absent on
    * older entries; readers fall back to built-in name, then id.

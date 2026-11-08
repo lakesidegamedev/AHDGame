@@ -7,7 +7,7 @@ import type { IterationStampFields } from "./gameState";
  * SCOTUS core mechanics. Justice lives on its own document, mirroring central-bank-chair, so a Justice seat never blocks or is blocked by other offices. Do NOT add a "justice" member to `OfficeType` or set `character.currentOffice` on confirmation/vacancy.
  */
 
-/** One scripted (fictional) justice's tenure on a given seat, authored by the per-preset content tickets (#3599-#3602). */
+/** One scripted (fictional) justice's tenure on a given seat, authored by the per-preset content tickets. */
 export interface HistoricalJusticeOccupant {
   /** Stable key for this historical figure within the preset's roster data (e.g. "halloran-1953"). */
   key: string;

@@ -136,7 +136,7 @@ export function getMediaOperatingModelStrategies(sectorType: string): SectorStra
  * An unknown ID falls back to the sector's named `standard` recipe, never to
  * `strategies[0]`: several catalogs prepend future recipes, so index 0 can be a
  * locked 2019 recipe and an obsolete persisted ID would silently become one
- * (#4244). Unknown persisted sector types use an inert strategy until repaired.
+ * Unknown persisted sector types use an inert strategy until repaired.
  */
 function strategyForPreset(
   sectorType: string,

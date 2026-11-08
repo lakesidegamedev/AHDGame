@@ -176,7 +176,7 @@ export interface Election {
    * `planNextLowerChamberCycle`.
    */
   shiftedScheduleEndTurn?: number;
-    /**
+  /**
    * Fraction of the region's electorate this race contests
    * (vacatedSeats / totalRegionSeats), stored so tally and UI can verify the
    * scaled pool. Present only on `special_commons` races.
@@ -229,7 +229,7 @@ export interface ElectionCandidate {
   isNPP?: boolean;
   nppId?: ObjectId;
   enteredAt: Date;
-    /**
+  /**
    * Short-term candidate mood / momentum, 0..100, written by primary
    * resolution and campaign actions. NATIONAL scalar, not per state: applied
    * identically to every state's vote distribution by
@@ -255,7 +255,7 @@ export interface ElectionCandidate {
   travelState?: string | null;
   /** When the travel was last set */
   traveledAt?: Date;
-    /**
+  /**
    * President-general-only: state the ticket's running mate is campaigning in as a surrogate. Set on the nominee's candidate row (the running mate has no candidate row). Adds the ruleset's vpTravelPresenceWeight to the ticket's per-turn travel-presence favorability. Undefined until the running mate travels; degrades to no bonus on read.
    */
   runningMateTravelState?: string | null;
@@ -288,7 +288,7 @@ export interface ElectionCandidate {
    */
   primarySurgeBoost?: number;
 
-    /**
+  /**
    * Queued Support drips from rally events: each entry pays `amountPerTurn`
    * Support points per turn for `turnsRemaining` turns. The accrual-tick
    * processor decrements each entry and prunes at zero. Undefined or empty
@@ -299,7 +299,7 @@ export interface ElectionCandidate {
     turnsRemaining: number;
   }>;
 
-    /**
+  /**
    * Turn number of the most recently fired one-shot rally action. Throttles the rally button (one one-shot per turn per candidate). Tour ticks do not update this field; they run automatically while the tour is active.
    */
   lastRallyTurn?: number;
@@ -312,7 +312,7 @@ export interface ElectionCandidate {
    */
   rallyTourActive?: boolean;
 
-    /**
+  /**
    * Presidential general-election only: nominee suspended active campaigning
    * and endorsed another ticket. The candidate stays on the ballot; 25% of
    * campaign strength transfers immediately, and 25% of per-state character

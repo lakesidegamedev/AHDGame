@@ -24,7 +24,7 @@ export interface NationalPartyElection {
    * so brand-new players can seat their first chair at iteration start.
    */
   founding?: boolean;
-    /**
+  /**
    * Turn on which quorum acceleration was applied. Set exactly once per
    * election; prevents re-halving. Not applied on a party's first
    * completed-chair cycle. Undefined when never triggered.

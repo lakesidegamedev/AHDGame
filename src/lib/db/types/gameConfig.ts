@@ -93,7 +93,7 @@ export interface GameConfig {
   discordChangelogWebhookUrl?: string;
   /** Discord webhook URL for in-game player suggestions (feedback modal). Optional. */
   discordSuggestionsWebhookUrl?: string;
-    /**
+  /**
    * Deployment slug ({@link deploymentServiceSlug}) that owns the webhook URLs
    * above, stamped whenever an admin saves them. Sends are suppressed when the
    * running deployment does not match, so a restored sandbox, staging, or
@@ -173,7 +173,7 @@ export interface GameConfig {
    */
   producerDemandPlanStage?: number;
   /**
-   * Funded producer market (#5451, #5453): >= 1 gives household orders demand
+   * Funded producer market: >= 1 gives household orders demand
    * curves (a price ladder per good sharing one budget) and income-dependent
    * basket weights, so cheaper supply sells more units and richer households
    * shift spending toward discretionary goods; the spent share responds to the
@@ -205,16 +205,17 @@ export interface GameConfig {
    * Needs freightSettlementMode "active" (own routes only run then).
    */
   ownFreightFirstStage?: number;
-    /**
-   * Funded producer market: >= 1 lets a public line draw at most half its fresh
-   * outlay from carry each turn; the rest waits, so a long-short line does not
-   * unlock several turns of budget at once. 0 or absent = off.
+  /**
+   * Funded producer market: >= 1 keeps a share of each public budget line's
+   * unfilled money in the public wallet for the next turn (instead of burning
+   * it at close), capped at four turns of the line's outlay. Support and grants
+   * are paid from what is left. 0 or absent = off.
    */
   producerPublicCarryStage?: number;
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
   /**
-   * Funded producer market (issue #5454): >= 1 lets a public line draw at most
+   * Funded producer market: >= 1 lets a public line draw at most
    * half its fresh outlay from the carry each turn, holding the rest for later
    * turns, so supply landing on a long-short line does not unlock several
    * turns of budget at once. 0 or absent = off.
@@ -311,7 +312,7 @@ export interface GameConfig {
    * at most doubling a turn, instead of a fixed step. 0 or absent = off.
    */
   producerShortageGrowthStage?: number;
-    /**
+  /**
    * Funded producer market: >= 1 counts a plant's own-company deliveries as
    * sales for the demand plan and zero-sales counter (at asking price for the
    * profit test), so a captive supplier is not mothballed. Settlement unchanged.
@@ -416,7 +417,7 @@ export interface GameConfig {
   /**
    * Capacity builds paid from cash must leave this many turns of the plants'
    * running bills (wages, site bills, inputs from their last receipts) unless
-   * the CEO confirms an override (suggestion 409). Absent = 3, 0 = off.
+   * the CEO confirms an override. Absent = 3, 0 = off.
    */
   capacityBuildReserveTurns?: number;
   /**
@@ -534,7 +535,7 @@ export interface GameConfig {
   /** Funded-turn price ceiling: largest scarcity multiplier. Absent = 10. */
   producerPriceMaxMultiplier?: number;
   /**
-   * Funded producer market (issue #5452): >= 1 replaces the hard ceiling at
+   * Funded producer market: >= 1 replaces the hard ceiling at
    * producerPriceMaxMultiplier with a soft one: the target price is softened
    * above SOFT_CEILING_KNEE of the ceiling before the pace bound applies, so it
    * approaches the ceiling instead of piling up on it and goods in different
@@ -697,7 +698,6 @@ export interface GameConfig {
   /**
    * Structural market rework rollout mode (audit t806, "Nothing Wants to
    * Sell"). Graduated, each tier a superset of the previous (see
-   * docs/plans/2026-07-03-market-structural-plan.md):
    *   off         — today's economy, unchanged (default)
    *   realization — Fix 1: realized revenue scaled by lagged market price
    *   ledger      — Fix 3: commodity flow ledger + inventory (D0/D1)
@@ -900,14 +900,14 @@ export interface GameConfig {
    * (migrateEntertainmentRemoval). Present means later turns skip it.
    */
   entertainmentCommodityRemovedAtTurn?: number;
-    /**
+  /**
    * When true, a sector's input bill adds the landed-price premium for
    * out-of-state sourcing (last turn's sourcingNetworkLoad doc) on top of the
    * global lagged price ratio, so plants sourcing interstate/import actually
    * pay. Off or unset leaves inputsCost unchanged.
    */
   interstateMoneyWiringEnabled?: boolean;
-    /**
+  /**
    * Canonical freight billing v1. When true, the sourcing pass's per-state
    * shipping money (charge = freight price x price TEU weight x units x hops
    * per accepted domestic haul) is persisted on the sourcingNetworkLoad doc
@@ -933,7 +933,7 @@ export interface GameConfig {
   /** Governance record required when shortage-responsive sourcing is enabled. */
   shortageResponsiveSourcingIntervention?: EconomicInterventionPlan;
   /**
-   * Dark gate for sovereign tranche consolidation (#1001): folds below-floor
+   * Dark gate for sovereign tranche consolidation: folds below-floor
    * quarterly issuance rungs into the largest rung so small deficit quarters
    * stop minting sliver issues nobody holds. Default off until worldsim
    * evidence lands; ENABLING IS A BALANCE CHANGE and merges only with a
@@ -949,18 +949,20 @@ export interface GameConfig {
    * Absent or false keeps one replacement bond per claim.
    */
   sovereignRolloverConsolidationEnabled?: boolean;
-    /**
-   * Dark gate for autonomous NPP index-fund redemption. When true, autonomous
-   * NPP investing may redeem fund units (enqueueing a redemption and, on the
-   * cron pass, selling holdings for cash). Default off: enabling it changes
-   * simulated NPP portfolios and fund liquidity, so it merges only with a
-   * worldsim report from scripts/sim/ per CONTRIBUTING.md.
+  /**
+   * Stage gate for grouped sovereign coupon accrual. When true the Treasury
+   * phase freezes each turn's coupons as one claim per budget, currency and
+   * payee group (players apart from the bond pool, index funds and NPPs)
+   * instead of one claim per bond, so an unfunded Treasury's arrears queue
+   * grows by a couple of documents a turn rather than one per bond. Every
+   * payee is owed exactly what its per-bond claims summed to. Absent or false
+   * keeps one claim per bond.
    */
   sovereignCouponGroupedAccrualEnabled?: boolean;
   /** Dark gate for the index-fund 20 percent sovereign-bond allocation target. */
   indexFundBondLiquidityEnabled?: boolean;
   /**
-   * Dark gate for domestic sovereign-bond coverage (#1001): ensures one
+   * Dark gate for domestic sovereign-bond coverage: ensures one
    * home-sovereign bond fund per uncovered sovereign issuer so the existing
    * real-cash deploy pass can reach their paper. Default off until worldsim
    * evidence lands; ENABLING IS A BALANCE CHANGE and merges only with a
@@ -970,7 +972,7 @@ export interface GameConfig {
   /** Governance record required when the sovereign-bond allocation target is enabled. */
   indexFundBondLiquidityIntervention?: EconomicInterventionPlan;
   /**
-   * Dark gate for autonomous NPP index-fund redemption (#2120). When true,
+   * Dark gate for autonomous NPP index-fund redemption. When true,
    * autonomous NPP investing may redeem fund units (enqueueing a redemption
    * and, on the cron pass, selling holdings for cash), so the subscribe ->
    * rebalance -> redeem round trip is exercised by a non-player actor instead

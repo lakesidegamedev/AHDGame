@@ -258,7 +258,7 @@ export const TOTAL_UK_COMMONS_SEATS = 650;
  * the `1953-default` preset). Mirrors `ukRegions1953.houseDistricts` exactly
  * (England 506 / Scotland 71 / Wales 36 / Northern Ireland 12 = 625). Without
  * this map, spawn/allocate still used the modern 650-seat `UK_COMMONS_SEATS`
- * and seated 650 MPs against a 625-seat / majority-313 chamber (ticket #1058).
+ * and seated 650 MPs against a 625-seat / majority-313 chamber.
  */
 export const UK_COMMONS_SEATS_1953: Record<string, number> = {
   LON: 91,
@@ -405,11 +405,11 @@ export const TOTAL_CN_NPC_SEATS = 2980;
  *
  * Mirrors `cnRegions1953[i].houseDistricts` EXACTLY (88/129/379/215/118/219/78),
  * which is also what `COUNTRY_CONFIGS.CN.legislature.lowerChamber` declares for
- * this preset and what `CN_NPC_1953` in `historicalSeats.ts` seats (#3781).
+ * this preset and what `CN_NPC_1953` in `historicalSeats.ts` seats.
  * Before this map existed, `ensureCNElections` sized the 1953 race off the
  * modern 2,980 while every other era-aware source said 1,226, so the first CN
  * election in a 1953 world would have resolved ~1,750 phantom deputies into the
- * chamber (#3779 — the same over-seating class as bug #0853).
+ * chamber.
  */
 export const CN_NPC_SEATS_1953: Record<string, number> = {
   DB: 88,

@@ -12,8 +12,6 @@ import { readNppOffensiveJoinEnabled } from "@/lib/nppAutonomy/offensiveFlags";
  * cabinet battle forecast predicts that roster. The forecast's contract is that it
  * can never disagree with the outcome it predicts, so the question is asked here
  * once and answered identically for both.
- *
- * Spec: docs/superpowers/specs/2026-08-04-allied-coalition-battles-design.md
  */
 export interface OffensiveOptInSources {
   /** Every country's standing orders, as written by the player auto-join route. */

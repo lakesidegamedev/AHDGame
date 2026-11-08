@@ -116,7 +116,7 @@ export interface ShareOrder {
    */
   escrowAnchor?: number;
   status: "open" | "filled" | "cancelled";
-    /**
+  /**
    * Idempotency key of the latest fill attempt, stamped atomically by the
    * order-claim write. Lets the next fill resume a crashed attempt's audit rows.
    */
@@ -268,7 +268,7 @@ export interface CorporationCeoPay {
 }
 
 export interface Corporation {
-  /** Unified producer market (#4322): creditor claims, written only once the new market settles. */
+  /** Unified producer market: creditor claims, written only once the new market settles. */
   producerPayables?: import("./producerEconomy").ProducerPayablesState;
   /** Frozen migration fallback for unrecorded legacy personal cost basis. */
   stockHoldingRolloutAnchorPrice?: number;
@@ -432,7 +432,7 @@ export interface Corporation {
   bankPropForexFee?: import("@/lib/banking/rules/propForexFees").PropForexFeeReceipt & {
     amountLocal: number;
   };
-    /**
+  /**
    * Crash-recovery plan for an in-flight bank-charter transfer. Stamped on the
    * absorbed shell before its charter slot is claimed, cleared once every
    * satellite record is re-keyed. A marker surviving a crash tells the next
@@ -445,7 +445,7 @@ export interface Corporation {
     to: ObjectId;
     /** Charter currency, for the legacy savingsHolder pointer path. */
     currency: CurrencyCode;
-        /**
+    /**
      * Unique token per stamping attempt, claimed atomically and required by all
      * resume, release, cleanup, re-key, and plan-clear decisions so concurrent
      * transfers of one shell cannot mistake each other's writes for their own.
@@ -656,7 +656,7 @@ export interface Corporation {
    * Absent ⇒ not currently in financial distress.
    */
   financialDistressSinceTurn?: number;
-    /**
+  /**
    * Turn an NPP corp's effective cash (liquidCapital + positive share escrow,
    * anchor-converted) first went negative, uncured. Stamped/cleared each turn;
    * if still set after PERSISTENT_INSOLVENCY_GRACE_TURNS the corp is wound down.
@@ -664,7 +664,7 @@ export interface Corporation {
    * financialDistressSinceTurn instead.
    */
   nppInsolventSinceTurn?: number;
-    /**
+  /**
    * Append-only log of CEO tenures. An open tenure (no endTurn) is the sitting
    * CEO. Blocks a former CEO from buying corp bonds for
    * EX_CEO_BOND_PURCHASE_BLOCK_TURNS after leaving.
@@ -678,7 +678,7 @@ export interface Corporation {
   federationPendingHeadquartersId?: string;
   /** Character being offered the CEO position (pending acceptance) */
   pendingCeoCharacterId?: ObjectId;
-    /**
+  /**
    * Set while an NPP caretaker runs this player-owned corp. The autonomy brain
    * operates via `ceoType: "npp"` + `ceoId`, but `userId` stays the appointing
    * owner for private-data access and immediate reclaim. Operational commands
@@ -703,13 +703,13 @@ export interface Corporation {
     /** Owner-selected operating mandate. Legacy caretakers default to active. */
     mandate?: "active" | "passive";
   };
-    /**
+  /**
    * Turn until which a new caretaker may not be installed, stamped when the owner
    * reclaims control. Enforces CARETAKER_REAPPOINT_COOLDOWN_TURNS. Absent or
    * in the past means no cooldown.
    */
   caretakerCooldownUntilTurn?: number;
-    /**
+  /**
    * Owner-enabled autopilot. The player stays CEO: `ceoType:"character"` and manual commands still work. Each turn the cautious NPP brain runs budgets, dividends, capacity and divestment, and records moves it judged worthwhile but will not make as `advisories`. Absent means the player runs the corp.
    */
   autopilot?: CorporationAutopilot;
@@ -955,7 +955,7 @@ export interface Corporation {
   /** Turn after which another privatization vote may be opened (set when a vote fails or expires). */
   privatizationCooldownUntilTurn?: number;
   /**
-   * Dual-class supershare vote multiplier (S#33). Present once the corp adopts
+   * Dual-class supershare vote multiplier. Present once the corp adopts
    * supershares (at IPO or by `adopt_supershares` vote); each of the founder's
    * supershares counts as this many votes in shareholder votes. Absent =
    * single-class, one share one vote. See lib/corporations/superShares.

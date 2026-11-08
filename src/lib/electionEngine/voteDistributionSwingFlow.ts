@@ -225,7 +225,7 @@ function appealWeight(
     }
   }
 
-  // UK manifesto policy-popularity factor (epic #856). Off by default: absent
+  // UK manifesto policy-popularity factor. Off by default: absent
   // map ⇒ 1.0 (no effect). Mirrors the group-level engine so the two lanes
   // cannot drift.
   const targetedAdMult = 1 + (ec.targetedAdBonuses?.[groupId] ?? 0);

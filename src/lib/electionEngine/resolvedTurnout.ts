@@ -34,7 +34,7 @@ type Layer1Dim = (typeof LAYER1_DIMS)[number];
  * lookup alone would silently drop them. deriveGroupTurnout reuses the same
  * composition that built the stored turnouts.
  *
- * Returns null for non-US states so callers use the stored archetype + 
+ * Returns null for non-US states so callers use the stored archetype +
  * archetype-keyed modifier path.
  */
 function computeLayer1DerivedArchetypeTurnouts(

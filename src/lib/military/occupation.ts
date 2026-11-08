@@ -10,8 +10,6 @@ import { OCCUPATION } from "./config";
  * `ConflictDoc.control` is the share of the HOST country's territory held by side B:
  * 0 = side A holds all of it, 100 = side B holds all of it. A conflict starts at the
  * host's own pole when the host is a belligerent, and split when it is not.
- *
- * Spec: docs/superpowers/specs/2026-07-26-occupation-territory-design.md
  */
 
 export type Side = "A" | "B";

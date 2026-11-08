@@ -305,7 +305,7 @@ export function commandEconomySoeSectors(
  *          + w_pol * policyStance                  // reformist → +, orthodox → −
  */
 export const MARKETIZATION_DRIFT_WEIGHTS = {
-    /**
+  /**
    * Weight on black-market pressure (0..1). Max +0.22/turn. Tuned so the
    * shortage→black-market reform spiral moves the dial without overshooting:
    * `accumulateOverhang` counts unmet plan as a goods deficit, and a
@@ -316,7 +316,7 @@ export const MARKETIZATION_DRIFT_WEIGHTS = {
    * policyStance terms, so this trim leaves them nearly untouched.
    */
   blackMarket: 0.22,
-    /** Weight on the SOE plan-fulfillment shortfall (baseline − perf). Kept low
+  /** Weight on the SOE plan-fulfillment shortfall (baseline − perf). Kept low
    *  so chronic plan misses stay the primary reform channel without a
    *  collapsed world rocketing to fully-market in a few years. */
   soePerformance: 0.18,

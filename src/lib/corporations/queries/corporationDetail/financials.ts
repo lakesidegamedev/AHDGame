@@ -59,7 +59,7 @@ export interface FinancialsInputs {
 }
 
 /**
- * Financials statement assembly for the corporation detail view (#587).
+ * Financials statement assembly for the corporation detail view.
  *
  * Maintenance is shown net of labour (the wage slice is broken out as
  * `laborCosts`). Under plants the residual CAN be negative: derived operating
@@ -138,7 +138,7 @@ export function buildFinancials(inputs: FinancialsInputs) {
           // Matches the Financials headline (operating + bond coupons −
           // bond interest + dividends received): history.income is
           // operating-only, so a bond/holding-portfolio corp's masthead went
-          // deeply negative while the income statement was positive (#941).
+          // deeply negative while the income statement was positive.
           realizedIncome: Math.round(
             realizedNetIncomePerTurn({
               ...latestCorpIncomeRow,

@@ -184,7 +184,7 @@ const STATE_METRIC_COMPONENT_KEYS: ReadonlySet<keyof PolicyStackInput> = new Set
  * on an "Other factors" row instead of being folded into the scale factor.
  * Without that row, a named stack whose net pp has the opposite sign of the
  * booked credit makes `credit / sum(pp)` negative and inverts every dollar
- * amount: a type-switch penalty renders as income (ticket 1148).
+ * amount: a type-switch penalty renders as income.
  *
  * A `remainderPp` row carries whatever the itemized set does not name, so the
  * split is complete rather than quietly short. `appliedPolicyPp` supersedes it.
@@ -210,7 +210,7 @@ export function buildPolicyStackRows(args: {
    * unnamed slice (soft cap, SOE efficiency, strike, dominance, ...) becomes an
    * "Other factors" row so `sum(pp)` has the same sign as the credit. Without
    * it, `credit / sum(named pp)` inverts every dollar amount whenever the
-   * itemized net and the booked credit disagree (ticket 1148).
+   * itemized net and the booked credit disagree.
    */
   appliedPolicyPp?: number;
 }): PolicyStackRow[] {

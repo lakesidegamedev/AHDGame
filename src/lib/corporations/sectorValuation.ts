@@ -47,7 +47,7 @@ export function computeSectorListingValuation(
    * pure/sync callers that cannot read game config.
    */
   plantsEnabled = false,
-    /**
+  /**
    * Book-value floor inputs. Supplied only under plants.
    *
    * The quote above is an NPV of PROFIT, and under plants profit derives from

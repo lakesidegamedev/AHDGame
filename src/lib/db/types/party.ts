@@ -5,7 +5,7 @@ export type PartyLeadershipTitleKey = "chair" | "viceChair" | "treasurer";
 export type PartyLeadershipTitles = Partial<Record<PartyLeadershipTitleKey, string | null>>;
 
 /**
- * A single Shadow Cabinet appointment (player suggestion #52) — the character
+ * A single Shadow Cabinet appointment — the character
  * the Leader of the Opposition has named to shadow one cabinet post. A member
  * of the sitting Opposition Leader's shadow cabinet earns +1 action per turn
  * (see `SHADOW_CABINET_ACTION_BONUS`); no other mechanical effect. Stored in
@@ -54,7 +54,7 @@ export interface PoliticalParty {
   createdBy: ObjectId | null;
   treasury: number;
   nationalTaxRate: number;
-    /**
+  /**
    * Political Strength reserve: grows from flat passive gain plus treasury-driven spend; capped solely by `politicalStrengthCap`. Spent on party actions via `spendPoliticalStrength`, which also tracks per-geography pressure escalation.
    */
   politicalStrength: number;
@@ -76,7 +76,7 @@ export interface PoliticalParty {
    * Defaults to `0` (off). See `partyActionGeneration` for the math.
    */
   psInvestmentBudget?: number;
-    /**
+  /**
    * Dedicated NPP Action Points pool (national scope). Banked, regenerates a
    * flat passive per turn (tier-scaled) up to `nppActionPointCap("national",
    * tier)`. Sole currency for NPP Recruitment (5 AP) and NPP Management (1 AP).
@@ -103,7 +103,7 @@ export interface PoliticalParty {
   nppRecruitmentCooldownUntil?: Date;
   /** NPP recruitment cooldown end turn (currentTurn + 24). Turn-first source. */
   nppRecruitmentCooldownUntilTurn?: number;
-    /**
+  /**
    * `ukPartyConferences._id` whose payoff credited this party's PS reserve.
    * Set atomically with the `$inc` so replays and concurrent callers cannot
    * double-credit. Absent = never credited (covers all legacy rows).
@@ -193,7 +193,7 @@ export interface PoliticalParty {
    * the new default lights up retroactively on next read.
    */
   transactionApprovalMode?: "single" | "double";
-    /**
+  /**
    * Regime status when the country's governmentType is "onePartyState".
    * - "ruling": the single party allowed to form government, field executive
    *   candidates, trigger VONC, invite coalitions. At most one per country.
@@ -233,7 +233,7 @@ export interface PoliticalParty {
   majorDemotionWarning?: { startedTurn: number };
 
   /**
-   * Membership gate (player suggestion #72). "open" or absent — a join takes
+   * Membership gate. "open" or absent — a join takes
    * effect immediately. "approval" — a join instead files a pending request in
    * `pendingJoinRequests` for a party leader (chair, or acting vice-chair when
    * the chair seat is vacant) to accept or decline. Mirrors the coalition
@@ -247,7 +247,7 @@ export interface PoliticalParty {
    */
   pendingJoinRequests?: PartyJoinRequest[];
   /**
-   * Shadow Cabinet appointments (player suggestion #52). When this party's
+   * Shadow Cabinet appointments. When this party's
    * chair is the resolved Leader of the Opposition, they may name characters to
    * shadow versions of the country's cabinet posts. Keyed by cabinet position
    * id (from the country's parliamentary cabinet config); each value records

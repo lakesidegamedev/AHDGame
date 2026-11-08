@@ -4,8 +4,6 @@
  * Single source of truth shared by the lifecycle processor, the domain
  * commands, the API routes, and the UI preview — mirrors the structure of
  * `src/lib/constants/devolution.ts`. No DB I/O lives here.
- *
- * See `docs/superpowers/specs/2026-06-16-independence-process-design.md`.
  */
 import { clamp } from "@/lib/numeric/rules";
 

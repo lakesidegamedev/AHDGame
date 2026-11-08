@@ -1,5 +1,5 @@
 /**
- * Operating reserve on capacity builds (suggestion 409). A build paid from
+ * Operating reserve on capacity builds. A build paid from
  * cash may not leave the company with less than a few turns of the bills its
  * plants run on: wages, site bills and inputs, read from each plant's last
  * settled receipt. Spending the running cash on construction cuts every plant

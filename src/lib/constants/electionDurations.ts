@@ -99,14 +99,14 @@ export const DEFAULT_DURATIONS: Record<
   riksdag: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   milletMeclisi: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // GR/AT/FI unicameral lower chambers — same beta-tier treatment as
-  // FR/IT/ES/SE/TR (#3791). Previously missing entirely: `ensureBetaParliamentElections`
+  // FR/IT/ES/SE/TR. Previously missing entirely: `ensureBetaParliamentElections`
   // no-ops when `DEFAULT_DURATIONS[electionType]` is undefined, so even after
   // the countryGameStates status fix these three still would not have spawned.
   vouli: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   nationalrat: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   eduskunta: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // FR Sénat / IT+TR Senato / ES Senado — upper-chamber re-election spawners
-  // (#3791). See canonicalCycle.ts for cycle-length/anchor commentary.
+  // See canonicalCycle.ts for cycle-length/anchor commentary.
   senat: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   senato: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   senado: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },

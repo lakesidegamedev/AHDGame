@@ -64,7 +64,7 @@ export interface ElectedOfficial {
     rootCandidateId: string;
   };
   /**
-   * Vice-president self-serve action pool (player suggestion #67). Present only
+   * Vice-president self-serve action pool. Present only
    * on the `vicePresident` office doc. Gains +1 every `VP_ACTION_ACCRUAL_TURNS`
    * turns up to `VP_ACTION_CAP` (see vicePresidentActionReset.ts) and is
    * spent one-per-action by the VP action endpoint. Absent on non-VP offices
@@ -77,7 +77,7 @@ export interface ElectedOfficial {
   lastVpActionAccrualTurn?: number;
   /** Turn the VP last bought +1 action with main AP (once per turn). */
   lastVpActionTopUpTurn?: number;
-    /**
+  /**
    * Westminster whip withdrawal: true while the MP sits suspended from the
    * parliamentary party as an independent with elevated reselection risk.
    * Set only by the sitting PM; absent means whipped.

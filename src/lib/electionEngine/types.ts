@@ -23,7 +23,7 @@ export interface EnrichedCandidate {
   /**
    * Party abbreviation (SNP, LAB, CON, …) when the enrichment pass loaded
    * politicalParties. Used to hard-block UK regional parties outside their
-   * home nation (ticket #1110). Optional so hand-built fixtures stay valid.
+   * home nation. Optional so hand-built fixtures stay valid.
    */
   partyAbbr?: string;
   isNPP: boolean;
@@ -132,7 +132,7 @@ export interface DistributeVotesOptions {
    * for FPTP spoiler modelling. Defaults to "US" when omitted.
    */
   countryId?: CountryId;
-    /**
+  /**
    * UK manifesto policy-popularity multipliers, keyed party → demographic
    * group id → factor (centred on 1.0). Absent means the feature is off and
    * the weight is multiplied by 1.0. Precomputed by the manifesto layer so
@@ -265,7 +265,7 @@ export interface DistributeVotesOptions {
    * Models vote-share to seat-share allocation for multi-seat races. Races with an officeholder incumbency path do NOT use this map: single-winner executives use incumbentPartyId and US Senate uses legislativeIncumbentPartyId. The map holds raw prior-cycle vote shares, so for a single winner it would yield a meaningless margin-scaled value, and on a vacant seat an incumbency bonus with no incumbent. Enforced by usesSeatShareIncumbency in incumbentSeatShare.ts.
    */
   incumbentSeatShareByParty?: Map<string, number>;
-    /**
+  /**
    * Single-winner executive own-race only: the sitting executive's party id
    * and approval (0..100). When set, the incumbency driver becomes a
    * directional shield/drag scaled by `incumbentApproval`. Unset for
@@ -399,7 +399,7 @@ export interface AppealWeightTrace {
 
 export interface AccumulateVoteTurnPreload {
   /**
-   * The phase's Db handle (#2695). `getDb()` returns a new Db object per call,
+   * The phase's Db handle. `getDb()` returns a new Db object per call,
    * so per-Db caches (country state) only hit when callers share one handle.
    */
   db?: import("mongodb").Db;
@@ -439,7 +439,7 @@ export interface AccumulateVoteTurnPreload {
    * behavior, byte-identical.
    */
   eraSystemEnabled?: boolean;
-    /** When true, the seat-share incumbency shield stops growing past half the seats. */
+  /** When true, the seat-share incumbency shield stops growing past half the seats. */
   partyRenewalEnabled?: boolean;
   /**
    * Seeded per-state snapshots (`demographicDefaults` collection), used by the

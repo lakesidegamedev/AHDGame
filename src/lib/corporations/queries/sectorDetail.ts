@@ -252,7 +252,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       user?.isModerator === true &&
       new URL(request.url).searchParams.get("modView") === "1";
     // The CEO of the controlling parent is an insider of its subsidiary, same
-    // rule GET /api/corporations/[id] applies (ticket 1423).
+    // rule GET /api/corporations/[id] applies.
     let isParentCeo = false;
     let parentDirection: {
       parentName: string;
@@ -1077,7 +1077,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       // market/tradePartition). The world aggregate it used to read counted
       // embargoed and untraded supply the sector can neither buy from nor lose
       // a sale to, so a sector in a real shortage was told it was oversupplied
-      // (ticket #1077). Falls back to the aggregate when no book is persisted.
+      // Falls back to the aggregate when no book is persisted.
       const reachableBooks = await loadReachableBooks(db, currentTurn);
       const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
       const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
@@ -1758,7 +1758,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // formatAmount so wallet preference still governs final rendering.
         liquidCurrencyCode: corporation.liquidCurrencyCode ?? null,
         // State-owned (NatCorp) sectors can't be attacked, the UI hides Market
-        // Actions accordingly (backend already rejects the attack). Bug #0775.
+        // Actions accordingly (backend already rejects the attack)..
         isStateOwned: isStateOwned(corporation),
         // Drives the Prospect modal's success-odds / yield preview (corp-side
         // prospecting math is a pure function of rdScore).

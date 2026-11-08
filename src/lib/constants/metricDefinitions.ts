@@ -90,7 +90,7 @@ export const metricCategories: MetricCategory[] = [
         // low-income 1953 region up on turn 1 (NG NORTH_EAST 100). 0 still
         // bounds nonsense while leaving every historical value the eras author.
         // Ceiling 10M clipped 1991 Turkey, whose household medians are 10M-40M
-        // pre-2005 lira (#3371). The bound is a clamp only: effect scaling reads
+        // pre-2005 lira. The bound is a clamp only: effect scaling reads
         // the current value, not this span.
         minValue: 0,
         maxValue: 1_000_000_000,
@@ -614,7 +614,7 @@ export const metricCategories: MetricCategory[] = [
         formatSuffix: "%",
         decimals: 1,
         // 0 floor: universal-coverage systems (UK NHS etc.) genuinely reach ~0 —
-        // THRESHOLDS best is 0, and bounds must contain the realistic span (S1).
+        // THRESHOLDS best is 0, and bounds must contain the realistic span.
         // Ceiling must span every ERA. 25 was a "Pre-ACA US" assumption —
         // NG NORTH_EAST authors 98 and BR/CN/TR sit at 70–90 in 1953 (essentially
         // no formal health coverage).
@@ -1394,7 +1394,7 @@ export const metricCategories: MetricCategory[] = [
         isHigherBetter: true,
         formatSuffix: "%",
         decimals: 1,
-        // S1: surplus/deficit %. Without an explicit negative minValue the default
+        // Surplus/deficit %. Without an explicit negative minValue the default
         // [0,100] clamp floored every deficit at 0 — silently inert on ~97 spending
         // laws and the half of the P6 "spend = win" brake that runs through here.
         minValue: -100,
@@ -1685,7 +1685,7 @@ export const metricCategories: MetricCategory[] = [
         isHigherBetter: true,
         formatSuffix: "%",
         decimals: 2,
-        // S1: can be negative (population decline). The default [0,100] floor made
+        // Can be negative (population decline). The default [0,100] floor made
         // declines impossible; the design's demographic engine requires this range.
         minValue: -3,
         maxValue: 5,
@@ -1721,7 +1721,7 @@ export const metricCategories: MetricCategory[] = [
         isHigherBetter: true,
         formatSuffix: "%",
         decimals: 2,
-        // S1: net migration can be negative (net emigration). The default [0,100]
+        // Net migration can be negative (net emigration). The default [0,100]
         // floor made restrictive-immigration laws (effectDirection -1) no-ops.
         minValue: -5,
         maxValue: 5,
@@ -1853,7 +1853,7 @@ export const metricCategories: MetricCategory[] = [
         description: "Average sentiment score on social media (-100 to +100)",
         isHigherBetter: true,
         decimals: 0,
-        // S1: bipolar metric. Without an explicit negative minValue the default
+        // Bipolar metric. Without an explicit negative minValue the default
         // [0,100] floor truncated the entire negative half its description promises.
         minValue: -100,
         maxValue: 100,

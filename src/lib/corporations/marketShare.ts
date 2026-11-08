@@ -238,7 +238,7 @@ export function effectiveMarketAnchor(
   // below the revenue already owned in this bucket — a sector cannot hold more
   // than 100% of its market. Without this floor, a nationalization that consumed
   // the unowned pool left a tiny GDP baseline against a large consolidated
-  // revenue, yielding market shares well over 100% (Bug #0775).
+  // revenue, yielding market shares well over 100%.
   return Math.max(gdpFallback, Math.round(Math.max(0, ownedRevenueAnchor)));
 }
 
@@ -371,9 +371,10 @@ interface BuildSectorMarketShareInputs {
 }
 
 /**
- * @deprecated Unused. Sector revenue uses the host-state currency, not the
- * owning corp's, so per-owner FX resolution is unnecessary. Accepted for
- * call-site compatibility; remove once all callers drop it.
+ * One sector's anchor-denominated revenue and its host country. Both share
+ * builders read exactly these two facts; resolving them once per sector in a
+ * shared pass keeps the FX lookup, the country fallback and the id string off
+ * the per-bucket path.
  */
 interface SectorAnchorIndex {
   /** ₳ revenue per sector, in `sectors` order. */
@@ -424,7 +425,7 @@ function localShareFromIndex(
 ): Map<string, number> {
   // Market share is a sector's revenue over the TOTAL real revenue produced in
   // its (state, sectorType) cell — its slice of the actual market, not of an
-  // "unowned pool" of demand nobody earns (ticket #1145). Cell revenue sums
+  // "unowned pool" of demand nobody earns. Cell revenue sums
   // across every producer (player AND NPP), so shares in a cell add to 100%.
   const bucketKeyBySector = localBucketKeys(sectors);
   const ownedRevenueByBucket = new Map<string, number>();
@@ -488,7 +489,7 @@ function nationalShareFromIndex(
   stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>
 ): Map<string, number> {
   // National market = Σ over the country's states of each (state, sectorType)
-  // cell's TOTAL real revenue (ticket #1145). Same definition as the local
+  // cell's TOTAL real revenue. Same definition as the local
   // builder: the denominator is what every producer actually earns, not an
   // unowned pool of unclaimed demand. A national champion's share is its revenue
   // over the sum of real revenue in that sector across the country.
@@ -624,13 +625,14 @@ export async function fetchSectorMarketSharePercent(
   if (!state) return 0;
   const countryId = (sector.countryId as CountryId | undefined) ?? (state.countryId as CountryId);
 
-  // Retained for call-site compatibility. Market share is revenue-basis in every
-  // tier now, so the tier does not select a basis.
+  // Every sibling sector is in the same state (same host country), so they all
+  // share one host-state functional currency — the currency their revenue is
+  // stored in regardless of owner. Resolve the ₳ rate once from the host country.
   const hostCode = resolveSectorHostCurrencyCode({ countryId }, null);
   const hostRate = fxRateForSectorHostFromMap({ countryId }, null, fxByCurrency);
 
   // Market share = this sector's revenue over the TOTAL real revenue in its
-  // (state, sectorType) cell (ticket #1145). No unowned pool, no GDP floor, no
+  // (state, sectorType) cell. No unowned pool, no GDP floor, no
   // capacity-units twin — the denominator is what every producer actually earns.
   // Matches buildMarketShareBySectorId exactly.
   let cellRevenue = 0;
@@ -923,7 +925,7 @@ export async function fetchAttackerDefenderShares(
   const hostCode = resolveSectorHostCurrencyCode({ countryId }, null);
   const hostRate = fxRateForSectorHostFromMap({ countryId }, null, fxByCurrency);
 
-  // Defender/attacker shares of the cell's TOTAL real revenue (ticket #1145),
+  // Defender/attacker shares of the cell's TOTAL real revenue,
   // the same denominator every other share reads.
   let cellRevenue = 0;
   let defenderAnchor = 0;

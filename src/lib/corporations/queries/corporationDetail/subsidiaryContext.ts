@@ -118,7 +118,7 @@ export interface SubsidiaryContextResult {
   spinOffCooldownTurnsRemaining: number;
   hostileTakeoverEligibility: Awaited<ReturnType<typeof buildHostileTakeoverEligibility>>;
   /**
-   * #1669: present only for the CEO of a group leader whose group runs under
+   * Present only for the CEO of a group leader whose group runs under
    * strength upkeep. The leader pays each formalized subsidiary part of the
    * strength it gains, so the CEO tab's own projection (which counts only the
    * budget's growth and the decay) is incomplete without saying so.
@@ -127,7 +127,7 @@ export interface SubsidiaryContextResult {
 }
 
 /**
- * Parent / subsidiary / takeover / spin-off context for the detail view (#587).
+ * Parent / subsidiary / takeover / spin-off context for the detail view.
  *
  * The parent-corp lookup, the subsidiary-candidates query, and the hostile-
  * takeover eligibility build are independent, so they fan out in one round

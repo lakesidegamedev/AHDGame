@@ -38,7 +38,7 @@ import {
 export interface CorpDailyGrossRevenuePricing {
   dailyGrossRevenueLocal: number;
   capacityFloorApplied: boolean;
-  /** Era-scaled minimum tech node cash price in the corp's currency (#1506). */
+  /** Era-scaled minimum tech node cash price in the corp's currency. */
   techCashFloorLocal: number;
   /** Per-turn plant P&L tech nodes are valued against, in the corp's currency. */
   techPlantBasis: TechPlantBasis;

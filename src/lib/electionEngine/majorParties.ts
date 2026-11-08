@@ -1,5 +1,5 @@
 /**
- * Major-party resolution for FPTP spoiler modelling (#811).
+ * Major-party resolution for FPTP spoiler modelling.
  *
  * `getMajorPartiesForRegion` returns seed slugs and abbreviations, but live
  * candidates store `party` as the party's sequentialId string, so for the UK

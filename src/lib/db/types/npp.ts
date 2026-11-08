@@ -42,7 +42,7 @@ export interface NPP {
   _id: ObjectId;
   countryId?: CountryId;
   name: string;
-    /**
+  /**
    * Calendar birth year. Absent on legacy rows, which are exempt from
    * age-based mortality until healed. Age in game years =
    * gameState.currentYear - birthYear.
@@ -92,7 +92,7 @@ export interface NPP {
     totalTimesInfluenced: number;
   };
   electionCooldowns?: Record<string, string>;
-    /**
+  /**
    * Per-group approval modifiers (-100 to +100), keyed on Layer-1 census
    * buckets (`"education:no_college"`). Legacy voter-archetype keys still
    * resolve via `archetypeValuesToBuckets` until the migration runs.

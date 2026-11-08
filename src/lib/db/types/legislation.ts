@@ -288,7 +288,7 @@ export interface UnionLawProvision {
   /** -50 (strong right-to-work) .. +50 (strong collective-bargaining protection). */
   bias: number;
   /**
-   * Union ban (player suggestion #93). When present, this provision is a BAN
+   * Union ban. When present, this provision is a BAN
    * action rather than a bias law: `"ban"` outlaws unions nationally
    * (`FederalBudget.unionsBanned = true`, player unions suspended, NPC
    * unionization decays to 0), `"repeal_ban"` lifts it. A ban provision
@@ -502,7 +502,7 @@ export interface Bill {
   /** Optional pseudo-state for country-scoped national bills (e.g. "uk_national"). */
   stateId?: string;
   /**
-   * Set on the UK annual Budget's vote-vehicle bill (epic #856): links this bill
+   * Set on the UK annual Budget's vote-vehicle bill: links this bill
    * to the UKBudget for that fiscal year. When such a bill resolves, the UK
    * notifier applies the outcome to the budget (defeat → budgetDefeat confidence
    * hit). The budget's tax/spend content lives in the UKBudget doc, not here.
@@ -565,12 +565,12 @@ export interface Bill {
   overrideVotingEndsOnTurn?: number;
   overrideEnactedAt?: Date;
   overrideFailedAt?: Date;
-  /** Frozen origin-chamber result, set when the bill leaves `active` (#0982). */
+  /** Frozen origin-chamber result, set when the bill leaves `active`. */
   voteSnapshot?: BillVoteSnapshot;
-  /** Frozen second-chamber result, set when the bill leaves `active_other` (#0982). */
+  /** Frozen second-chamber result, set when the bill leaves `active_other`. */
   otherChamberVoteSnapshot?: BillVoteSnapshot;
   /**
-   * Frozen per-chamber veto-override display, set when the override resolves (#0982).
+   * Frozen per-chamber veto-override display, set when the override resolves.
    * Structurally an `OverrideChamberDisplay` (inlined to avoid a db/types ↔ congress
    * import cycle).
    */

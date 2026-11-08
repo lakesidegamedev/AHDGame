@@ -41,7 +41,7 @@ export interface BuildQueueSummary {
   lastOnlineTurn: number | null;
   /** Turn the SOONEST outstanding order lands. Null when the queue is empty. */
   nextOnlineTurn: number | null;
-    /**
+  /**
    * Soonest turn any outstanding order next adds capacity. Earlier than
    * `nextOnlineTurn` when a whole-plant order steps a plant in mid-build.
    */

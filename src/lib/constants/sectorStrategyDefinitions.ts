@@ -1398,7 +1398,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       id: "natural_gas_drilling",
       name: "Natural Gas Focus",
       description: "Gas-led drilling. Main output natural gas, with crude oil as a byproduct.",
-      // Suggestion S#422: Oil & Gas always made more oil than gas, so a producer
+      // Oil & Gas always made more oil than gas, so a producer
       // facing a gas shortage and an oil glut had no recipe to lean on. Mirror of
       // oil_gas with the two outputs swapped. Inputs are a share of nameplate
       // revenue, so the base margin matches oil_gas whatever the output mix.

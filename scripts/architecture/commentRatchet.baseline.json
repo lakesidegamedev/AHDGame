@@ -6211,7 +6211,7 @@
     },
     "src/lib/constants/alignmentRoster.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/alignmentSeeds.ts": {
       "longBlocks": 1,
@@ -6220,10 +6220,6 @@
     "src/lib/constants/blocList.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/bonds.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 6
     },
     "src/lib/constants/cabinetEstates.ts": {
       "longBlocks": 1,
@@ -6237,28 +6233,16 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/cabinetTierEffects.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/cabinetYearGating.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/calendar.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/constants/capacityEconomy.strategyPricing.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/constants/capacityEconomy.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/constants/capacityEconomy.ts": {
-      "longBlocks": 13,
+      "longBlocks": 9,
       "narrativeLines": 1
     },
     "src/lib/constants/capacityPricing.guard.test.ts": {
@@ -6278,8 +6262,8 @@
       "narrativeLines": 2
     },
     "src/lib/constants/commandEconomy.ts": {
-      "longBlocks": 10,
-      "narrativeLines": 5
+      "longBlocks": 9,
+      "narrativeLines": 2
     },
     "src/lib/constants/commandEconomyOffices.ts": {
       "longBlocks": 1,
@@ -6287,15 +6271,15 @@
     },
     "src/lib/constants/commodities.ledgerUnitScale.test.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
+      "narrativeLines": 2
     },
     "src/lib/constants/commodities.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/constants/commodities.ts": {
-      "longBlocks": 17,
-      "narrativeLines": 22
+      "longBlocks": 11,
+      "narrativeLines": 7
     },
     "src/lib/constants/commodityDemandCalibration.test.ts": {
       "longBlocks": 0,
@@ -6303,29 +6287,21 @@
     },
     "src/lib/constants/commodityDemandCalibration.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/corporations.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 9
-    },
-    "src/lib/constants/corporationsClient.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 2
     },
     "src/lib/constants/countries.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 6
+      "longBlocks": 3,
+      "narrativeLines": 2
     },
     "src/lib/constants/countriesCore.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/constants/countryClientConfig.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/constants/countryClientConfig.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -6345,25 +6321,13 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/constants/currencies.eraRate.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/currencies.rub2027.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/constants/currencies.ts": {
-      "longBlocks": 7,
-      "narrativeLines": 6
+      "longBlocks": 5,
+      "narrativeLines": 2
     },
     "src/lib/constants/devolution.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/constants/easternBlocCabinet.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/economicModels.ts": {
       "longBlocks": 0,
@@ -6371,11 +6335,7 @@
     },
     "src/lib/constants/electionDurations.ts": {
       "longBlocks": 2,
-      "narrativeLines": 4
-    },
-    "src/lib/constants/era1953ExchangeRates.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/constants/eraConfigOverrides.test.ts": {
       "longBlocks": 1,
@@ -6389,25 +6349,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/facilityVocabulary.ts": {
+    "src/lib/constants/fiscalAnchors1991.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/fiscalAnchors1991.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/fiscalAnchors1991.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/constants/hewPortfolios.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/constants/historicalSeats.ts": {
       "longBlocks": 20,
-      "narrativeLines": 10
+      "narrativeLines": 9
     },
     "src/lib/constants/impeachment.ts": {
       "longBlocks": 0,
@@ -6415,31 +6363,19 @@
     },
     "src/lib/constants/internationalOrganizations.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/constants/internationalOrganizations.ts": {
       "longBlocks": 3,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/japan.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/justiceActions.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/constants/layoutPaths.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/marginLogisticsSprawl.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/constants/marginStateOwned.test.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/marketizationSchedule.ts": {
       "longBlocks": 1,
@@ -6447,27 +6383,19 @@
     },
     "src/lib/constants/metricDefinitions.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/constants/military.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 3
-    },
-    "src/lib/constants/militaryCore.ts": {
-      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/constants/monetaryEra.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/constants/monetaryEra.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/constants/moneyTimescale.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/constants/mutualDefence.ts": {
       "longBlocks": 1,
@@ -6475,7 +6403,7 @@
     },
     "src/lib/constants/nationalIdentity.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/nationalScope.ts": {
       "longBlocks": 0,
@@ -6507,7 +6435,7 @@
     },
     "src/lib/constants/presetSeatGroups.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 3
     },
     "src/lib/constants/presetSeatGroups.ts": {
       "longBlocks": 1,
@@ -6516,10 +6444,6 @@
     "src/lib/constants/primaryCalendar.ts": {
       "longBlocks": 3,
       "narrativeLines": 2
-    },
-    "src/lib/constants/prospecting.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/constants/readinessChecks.ts": {
       "longBlocks": 1,
@@ -6530,12 +6454,8 @@
       "narrativeLines": 0
     },
     "src/lib/constants/readinessExpectations.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/referendum.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/constants/referendumCohorts.ts": {
       "longBlocks": 4,
@@ -6546,76 +6466,44 @@
       "narrativeLines": 0
     },
     "src/lib/constants/sectorSeedEra.ts": {
-      "longBlocks": 6,
-      "narrativeLines": 1
+      "longBlocks": 4,
+      "narrativeLines": 0
     },
     "src/lib/constants/sectorStrategies.fairness.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/constants/sectorStrategies.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/sectorStrategies.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/sectorStrategyAdvertisingOverlay.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/constants/sectorStrategyDefinitions.ts": {
       "longBlocks": 1,
       "narrativeLines": 24
-    },
-    "src/lib/constants/sectorTypeDossier.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/seedPreset.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/constants/settlementCrisis.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/constants/settlementCrisis.ts": {
-      "longBlocks": 14,
+      "longBlocks": 9,
       "narrativeLines": 0
     },
     "src/lib/constants/stateAdjacency.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/constants/states.ts": {
       "longBlocks": 3,
-      "narrativeLines": 8
-    },
-    "src/lib/constants/techTree/breakthrough.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/constants/techTree/costs.ts": {
-      "longBlocks": 1,
       "narrativeLines": 2
     },
-    "src/lib/constants/techTree/decades.ts": {
+    "src/lib/constants/techTree/costs.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/constants/techTree/diffusion.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/techTree/effects.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/techTree/frontier.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/constants/techTree/nodes.ts": {
       "longBlocks": 1,
@@ -6623,23 +6511,15 @@
     },
     "src/lib/constants/techTree/selectors.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
-    },
-    "src/lib/constants/techTree/sunset.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/techTree/v3/index.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/treasuryIdentity.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/constants/turnTime.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
     "src/lib/constants/ukCommonsSeats1991.test.ts": {
       "longBlocks": 0,
@@ -6657,14 +6537,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/abandonSectorClient.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/applyPriceMultipliers.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/brandColor.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -6678,15 +6550,11 @@
       "narrativeLines": 0
     },
     "src/lib/corporations/buildDelivery.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 3
-    },
-    "src/lib/corporations/cancelShareOrder.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/corporations/capacityCapture.ts": {
-      "longBlocks": 5,
+      "longBlocks": 4,
       "narrativeLines": 0
     },
     "src/lib/corporations/capacityConservation.test.ts": {
@@ -6709,29 +6577,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/ceoResidency.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/ceoResidency.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/commands/acquisitions/acquisitionLegacyControl.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/acquisitions/acquisitionOffers.settlement.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/acquisitions/acquisitionOffers.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/corporations/commands/acquisitions/acquisitionSettlement.idempotency.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 5
+      "narrativeLines": 3
     },
     "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts": {
       "longBlocks": 1,
@@ -6743,23 +6595,11 @@
     },
     "src/lib/corporations/commands/acquisitions/executeAgreedAcquisition.ts": {
       "longBlocks": 1,
-      "narrativeLines": 4
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/acquisitions/rules.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/acquisitions/rules/acquisitionPayoutPlan.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/corporations/commands/acquisitions/rules/subsidiaryOutcome.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/commands/capitalOperations/goPublic.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/corporations/commands/capitalOperations/goPublic.ts": {
       "longBlocks": 0,
@@ -6769,73 +6609,49 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/commands/capitalOperations/updateCorporationSettings.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/capitalOperations/updateCorporationSettings.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 4
-    },
-    "src/lib/corporations/commands/plantSectorSplitAttempt.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/privatization/fundOnlyBuyout.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/commands/privatization/fundOnlyBuyout.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/privatization/openPrivatizationVote.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/privatization/resolvePrivatizationVote.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/commands/sectorOperations/abandonSector.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/sectorOperations/attemptUnionBusting.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 1
     },
     "src/lib/corporations/commands/sectorOperations/attemptUnionBusting.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/corporations/commands/sectorOperations/buildCapacity.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 2
     },
     "src/lib/corporations/commands/sectorOperations/buildCapacity.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 5
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/sectorOperations/buyListedSector.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/sectorOperations/cancelSectorStrategy.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/sectorOperations/commandEconomy.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/commands/sectorOperations/expandSector.founding.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 4
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/sectorOperations/listSectorForSale.ts": {
       "longBlocks": 0,
@@ -6845,41 +6661,17 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/commands/sectorOperations/setSectorGrowth.preview.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/sectorOperations/setSectorGrowth.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/commands/sectorOperations/setSectorStrategy.ledger.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/commands/shareTrading/buyPublicShares.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/shareTrading/fillShareOrder.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/commands/shareTrading/fillShareOrderSettlement.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 4
-    },
-    "src/lib/corporations/commands/shareTrading/placeShareOrder.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/corporations/commands/shareTrading/shareFillAudit.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 2
     },
     "src/lib/corporations/commands/shareTrading/shareFillAudit.ts": {
       "longBlocks": 3,
-      "narrativeLines": 3
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/shareTrading/shareFillMoney.test.ts": {
       "longBlocks": 1,
@@ -6887,7 +6679,7 @@
     },
     "src/lib/corporations/commands/shareTrading/shareFillMoney.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/commands/shareTrading/submitShareOffer.ts": {
       "longBlocks": 0,
@@ -6899,18 +6691,6 @@
     },
     "src/lib/corporations/commands/takeovers/hostileTakeover.ts": {
       "longBlocks": 0,
-      "narrativeLines": 6
-    },
-    "src/lib/corporations/commands/takeovers/rules/bankNavFloor.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/techTree/unlockTechNode.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/commands/techTree/unlockTechNode.ts": {
-      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/corporations/commodityDominanceContext.test.ts": {
@@ -6918,36 +6698,24 @@
       "narrativeLines": 1
     },
     "src/lib/corporations/convertCorpCurrency.ts": {
-      "longBlocks": 3,
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/corporations/corpCommodityFlows.ts": {
       "longBlocks": 2,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/corpMarketShare.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/corporations/corpMoneyLock.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/dailyGrossRevenue.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/dissolutionSectorSalvage.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/corporations/distributeCrossEquityInKind.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/dividendIncomeFromHistory.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/corporations/economicActionLog.ts": {
       "longBlocks": 1,
@@ -6955,35 +6723,15 @@
     },
     "src/lib/corporations/entertainmentRemovalRescale.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/financialFogOfWar.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/corporations/financialFogOfWar.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/foundingCooldown.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/foundingPlant.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/groups/applyTransferPricingAudit.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/groups/controlGroups.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/corporations/groups/groupBalanceSheet.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/corporations/groups/groupMembership.ts": {
       "longBlocks": 1,
@@ -6993,10 +6741,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/groups/rules/inputDemand.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/groups/synergies.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -7005,72 +6749,36 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/indexOwnership.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/inKindEquityDistribution.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/issueRelocationBond.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/issueRelocationBond.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/legalStructure.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/marketExecution.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/corporations/marketShare.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 2
     },
     "src/lib/corporations/marketShare.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 9
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
     "src/lib/corporations/mergerReview/authority.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/mergerReview/concentration.test.ts": {
+    "src/lib/corporations/mergerReview/concentration.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/mergerReview/concentration.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 3
-    },
     "src/lib/corporations/mergerReview/constants.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/corporations/mergerReview/divestiture.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/mergerReview/gate.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/mergerReview/lifecycle.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/mergerReview/lifecycle.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/moveSector.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/corporations/negotiatedSaleGuards.ts": {
@@ -7079,7 +6787,7 @@
     },
     "src/lib/corporations/nppOperatorTelemetry/rules.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/nppOwned.test.ts": {
       "longBlocks": 0,
@@ -7099,79 +6807,35 @@
     },
     "src/lib/corporations/orderFlowWashGuard.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/payFundShareholders.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/physicalPnl.idleUpkeep.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/corporations/physicalPnl.ts": {
-      "longBlocks": 10,
-      "narrativeLines": 4
+      "longBlocks": 8,
+      "narrativeLines": 0
     },
     "src/lib/corporations/plantsPnlBasis.ts": {
       "longBlocks": 2,
-      "narrativeLines": 4
-    },
-    "src/lib/corporations/playerRunCeo.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/portfolioAnchorValuation.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/previewQuickDissolve.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/queries/corporationDefenceContracts.ts": {
       "longBlocks": 0,
-      "narrativeLines": 6
+      "narrativeLines": 4
     },
     "src/lib/corporations/queries/corporationDetail.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/queries/corporationDetail/brandLoyalty.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/ceoView.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/currencyRestatement.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/financials.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 5
-    },
-    "src/lib/corporations/queries/corporationDetail/incomeStatement.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/marketViewContext.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/queries/corporationDetail/physicalPnl.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/portfolioHoldings.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
     },
     "src/lib/corporations/queries/corporationDetail/realizationRatio.test.ts": {
       "longBlocks": 0,
@@ -7179,83 +6843,47 @@
     },
     "src/lib/corporations/queries/corporationDetail/realizationRatio.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
-    },
-    "src/lib/corporations/queries/corporationDetail/referenceSectors.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/queries/corporationDetail/sectorRows.payload.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/queries/corporationDetail/sectorRows.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 7
-    },
-    "src/lib/corporations/queries/corporationDetail/shareholders.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/queries/corporationDetail/stateViewContext.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/subsidiaryContext.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
     "src/lib/corporations/queries/defenceSuppliers.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 1
     },
     "src/lib/corporations/queries/defenceSuppliers.ts": {
       "longBlocks": 1,
-      "narrativeLines": 8
+      "narrativeLines": 3
     },
     "src/lib/corporations/queries/extractionOpportunities.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/receiptLanePrices.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/queries/sectorDetail.ts": {
       "longBlocks": 0,
-      "narrativeLines": 9
-    },
-    "src/lib/corporations/queries/sectorDetailCommodities.ts": {
-      "longBlocks": 0,
       "narrativeLines": 3
     },
-    "src/lib/corporations/queries/sectorDetailEnginePnl.test.ts": {
+    "src/lib/corporations/queries/sectorDetailCommodities.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/corporations/queries/sectorDetailPlants.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/corporations/queries/sectorDetailSections.ts": {
       "longBlocks": 1,
-      "narrativeLines": 17
+      "narrativeLines": 5
     },
     "src/lib/corporations/queries/sectorPlantsTypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 4
-    },
-    "src/lib/corporations/queries/sectorRunReport.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/lib/corporations/realizedGrowth.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/redaction.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/redaction.ts": {
       "longBlocks": 1,
@@ -7277,25 +6905,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/relocationCommandEconomyGate.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/repairDuplicateSectors.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/corporations/resolveCorpDisplayCurrency.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/restoreSectorsToUnowned.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/corporations/restoreSectorsToUnowned.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/retoolHint.test.ts": {
       "longBlocks": 0,
@@ -7314,34 +6930,22 @@
       "narrativeLines": 1
     },
     "src/lib/corporations/retooling/rules.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 3
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/corporations/retoolRescale.ts": {
       "longBlocks": 2,
-      "narrativeLines": 3
-    },
-    "src/lib/corporations/rules/commodityDominance.ts": {
-      "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/corporations/rules/dominanceRunningCost.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+    "src/lib/corporations/rules/commodityDominance.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/corporations/rules/energyProductivityRamp.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/corporations/rules/lossCarryforward.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/rules/marketEntry.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/rules/netMargin.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7353,21 +6957,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/rules/plantAccountTotals.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/corporations/rules/plantlessSector.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/rules/sizeCostCap.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/rules/unsoldReason.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/corporations/sectorBuildQueue.ts": {
       "longBlocks": 1,
@@ -7377,32 +6973,12 @@
       "longBlocks": 1,
       "narrativeLines": 2
     },
-    "src/lib/corporations/sectorGrowthCost.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/sectorGrowthCost.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/sectorInventory.ts": {
       "longBlocks": 2,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/sectorMetricMarginProfiles.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/sectorProfitBasis.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/sectorRetoolTxLog.ts": {
-      "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/sectorRevenueBasis.ts": {
-      "longBlocks": 1,
+    "src/lib/corporations/sectorProfitBasis.ts": {
+      "longBlocks": 4,
       "narrativeLines": 1
     },
     "src/lib/corporations/sectorRevenueWriters.guard.test.ts": {
@@ -7419,7 +6995,7 @@
     },
     "src/lib/corporations/shareConsolidation.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/corporations/shareInvariant.ts": {
       "longBlocks": 1,
@@ -7430,12 +7006,8 @@
       "narrativeLines": 1
     },
     "src/lib/corporations/sharePriceFormula.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 6
-    },
-    "src/lib/corporations/shareTradeHistory.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "longBlocks": 2,
+      "narrativeLines": 1
     },
     "src/lib/corporations/shortageRetool.ts": {
       "longBlocks": 1,
@@ -7445,10 +7017,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/corporations/strandedPlant.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/corporations/strengthUpkeep.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -7457,41 +7025,17 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/corporations/subsidiaries/commands/spinOff.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/corporations/subsidiaries/cycleGuard.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/corporations/superShares.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/corporations/supplyAgreementCash.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/supplyExchange/negotiateLink.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/corporations/techAssetValue.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/corporations/techTree/migrateUnlocksOnTypeSwitch.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/corporations/techTree/techUnlockLedger.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/corporations/techTree/techUnlockLedger.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/corporations/tradeLedger.ts": {
       "longBlocks": 1,
@@ -7504,10 +7048,6 @@
     "src/lib/corporations/votes/fundStewardship.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/corporations/votes/voteEffects.relocation.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/corporations/wholePlants/rules.ts": {
       "longBlocks": 2,
@@ -9261,28 +8801,12 @@
       "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/db/caucusLookup.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/db/collections/defenceContracts.ts": {
       "longBlocks": 1,
-      "narrativeLines": 4
-    },
-    "src/lib/db/collections/defenceProcurementAllocations.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/db/collections/defenseAppropriation.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 2
     },
     "src/lib/db/collections/defenseAppropriation.ts": {
       "longBlocks": 3,
-      "narrativeLines": 1
-    },
-    "src/lib/db/collections/extractionContracts.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/db/collections/gameState.test.ts": {
@@ -9293,41 +8817,21 @@
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/db/collections/manifestos.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/collections/militaryCommands.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/db/collections/militaryCommands.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/db/collections/moneyFlowReceipts.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/db/collections/pendingTreasuryTransactions.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/collections/politicalCabinetContribution.ts": {
       "longBlocks": 1,
-      "narrativeLines": 4
-    },
-    "src/lib/db/electedOfficialScope.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 3
     },
     "src/lib/db/electedOfficialScope.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/db/nonAtomicMoneyFlow.ts": {
       "longBlocks": 2,
-      "narrativeLines": 4
+      "narrativeLines": 0
     },
     "src/lib/db/partyLookup.ts": {
       "longBlocks": 1,
@@ -9343,11 +8847,11 @@
     },
     "src/lib/db/recruitmentSlateLookup.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/db/runRequiredTransaction.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/db/runWithOptionalTransaction.ts": {
       "longBlocks": 1,
@@ -9357,17 +8861,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/db/transactionWithRetry.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/transactionWithRetry.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/__tests__/primeRateGrid.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/db/types/actionAuditLog.ts": {
       "longBlocks": 1,
@@ -9377,33 +8873,21 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/db/types/adminLog.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/types/altDetection.ts": {
       "longBlocks": 2,
       "narrativeLines": 0
-    },
-    "src/lib/db/types/bank.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/db/types/battleReport.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/bond.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/db/types/bondMarketPool.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/budget.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 27
+      "longBlocks": 2,
+      "narrativeLines": 1
     },
     "src/lib/db/types/cabinetEstate.ts": {
       "longBlocks": 1,
@@ -9423,11 +8907,11 @@
     },
     "src/lib/db/types/centralBank.ts": {
       "longBlocks": 0,
-      "narrativeLines": 7
+      "narrativeLines": 3
     },
     "src/lib/db/types/character.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 5
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/lib/db/types/coalition.ts": {
       "longBlocks": 0,
@@ -9435,23 +8919,15 @@
     },
     "src/lib/db/types/committeeProposal.ts": {
       "longBlocks": 2,
-      "narrativeLines": 4
-    },
-    "src/lib/db/types/commodityFlow.ts": {
-      "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/lib/db/types/commodityPrice.ts": {
       "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/db/types/commodityPriceHistory.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/db/types/conflict.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/db/types/contestRound.ts": {
       "longBlocks": 1,
@@ -9459,15 +8935,15 @@
     },
     "src/lib/db/types/corporation.ts": {
       "longBlocks": 0,
-      "narrativeLines": 8
+      "narrativeLines": 1
     },
     "src/lib/db/types/corporationHistory.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 2
     },
     "src/lib/db/types/corporationSector.ts": {
-      "longBlocks": 10,
-      "narrativeLines": 11
+      "longBlocks": 7,
+      "narrativeLines": 0
     },
     "src/lib/db/types/corporationShareInvite.ts": {
       "longBlocks": 1,
@@ -9486,16 +8962,16 @@
       "narrativeLines": 0
     },
     "src/lib/db/types/countryState.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/crisis.ts": {
       "longBlocks": 4,
-      "narrativeLines": 4
+      "narrativeLines": 2
     },
     "src/lib/db/types/defenceContract.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/db/types/demographics.ts": {
       "longBlocks": 2,
@@ -9505,49 +8981,29 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/db/types/economicVitalSigns.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 6
-    },
     "src/lib/db/types/election.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 6
-    },
-    "src/lib/db/types/electionResultSnapshot.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/db/types/equityMarketPool.ts": {
       "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 2
     },
     "src/lib/db/types/events.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/financialTxLog.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 3
+      "longBlocks": 3,
+      "narrativeLines": 0
     },
     "src/lib/db/types/gameConfig.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 15
-    },
-    "src/lib/db/types/gameHealthSnapshot.ts": {
-      "longBlocks": 0,
+      "longBlocks": 4,
       "narrativeLines": 1
     },
     "src/lib/db/types/gameState.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 14
+      "longBlocks": 3,
+      "narrativeLines": 5
     },
     "src/lib/db/types/governmentApproval.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
-    },
-    "src/lib/db/types/governmentFormation.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
     },
     "src/lib/db/types/governorOfficeState.ts": {
       "longBlocks": 0,
@@ -9555,7 +9011,7 @@
     },
     "src/lib/db/types/indexFund.ts": {
       "longBlocks": 0,
-      "narrativeLines": 4
+      "narrativeLines": 1
     },
     "src/lib/db/types/indexListingPetition.ts": {
       "longBlocks": 1,
@@ -9563,41 +9019,17 @@
     },
     "src/lib/db/types/legislation.ts": {
       "longBlocks": 3,
-      "narrativeLines": 10
-    },
-    "src/lib/db/types/longHorizonTelemetry.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 5
     },
     "src/lib/db/types/macroMetrics.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/db/types/manifesto.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/manualOfficeHistory.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/types/marketCapHistory.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/db/types/marketFormation.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/types/ministerialOrder.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/moneySupply.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/nationalPartyElection.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -9606,16 +9038,12 @@
       "narrativeLines": 1
     },
     "src/lib/db/types/npp.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/db/types/officials.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/types/party.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 5
+      "longBlocks": 2,
+      "narrativeLines": 2
     },
     "src/lib/db/types/partyBudget.ts": {
       "longBlocks": 1,
@@ -9623,62 +9051,34 @@
     },
     "src/lib/db/types/partyCharter.ts": {
       "longBlocks": 2,
-      "narrativeLines": 3
+      "narrativeLines": 2
     },
     "src/lib/db/types/partyGroupFavorability.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/db/types/partyPoliticalStrengthLedger.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/db/types/partyStrengthPressure.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/db/types/patreon.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/peaceOffer.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 2
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/lib/db/types/pendingTreasuryTransaction.ts": {
       "longBlocks": 2,
-      "narrativeLines": 2
-    },
-    "src/lib/db/types/politicalMetrics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 3
-    },
-    "src/lib/db/types/producerEconomy.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/db/types/prospectingSurvey.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/db/types/recruitmentSlate.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/referendum.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/db/types/regimeEscalation.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/regionalBudget.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/db/types/retiredCharacter.ts": {
-      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/savingsAccount.ts": {
@@ -9687,25 +9087,9 @@
     },
     "src/lib/db/types/scotus.ts": {
       "longBlocks": 1,
-      "narrativeLines": 9
-    },
-    "src/lib/db/types/settlementCrisis.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/db/types/shareTradeHistory.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/db/types/state.ts": {
-      "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/db/types/stateBill.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/db/types/stateDemographicTurnout.ts": {
+    "src/lib/db/types/shareTradeHistory.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9713,51 +9097,23 @@
       "longBlocks": 0,
       "narrativeLines": 11
     },
-    "src/lib/db/types/statePartyOrg.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/db/types/stateRegistrationPool.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/db/types/stockExchangeSnapshot.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/lib/db/types/suggestion.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/db/types/supplyAgreement.ts": {
-      "longBlocks": 6,
-      "narrativeLines": 5
+      "longBlocks": 3,
+      "narrativeLines": 2
     },
     "src/lib/db/types/ticket.ts": {
       "longBlocks": 0,
       "narrativeLines": 9
     },
-    "src/lib/db/types/tradeFlowSnapshot.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/db/types/tradeHistory.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/db/types/treasuryTransaction.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
     "src/lib/db/types/turnLog.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/db/types/turnPhaseTelemetry.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/db/types/unifiedCabinetMember.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
@@ -9769,15 +9125,7 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/db/types/voteSnapshot.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/db/types/voteTally.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/db/types/watchlist.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10061,13 +9409,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/candidateEnrichment.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
     "src/lib/electionEngine/constants.ts": {
-      "longBlocks": 12,
-      "narrativeLines": 7
+      "longBlocks": 9,
+      "narrativeLines": 3
     },
     "src/lib/electionEngine/economicReferendum.ts": {
       "longBlocks": 3,
@@ -10078,62 +9422,50 @@
       "narrativeLines": 2
     },
     "src/lib/electionEngine/electionFormulaFactors.ts": {
-      "longBlocks": 12,
-      "narrativeLines": 8
+      "longBlocks": 7,
+      "narrativeLines": 1
     },
     "src/lib/electionEngine/factorLedger.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/electionEngine/fundsByParty.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 2
-    },
-    "src/lib/electionEngine/govCoattail.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 4
-    },
-    "src/lib/electionEngine/incumbentSeatShare.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 3
-    },
-    "src/lib/electionEngine/majorParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/medianVoter.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
+    "src/lib/electionEngine/incumbentSeatShare.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
-    "src/lib/electionEngine/persuasionDrivers.test.ts": {
-      "longBlocks": 0,
+    "src/lib/electionEngine/majorParties.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/electionEngine/medianVoter.ts": {
+      "longBlocks": 2,
       "narrativeLines": 1
     },
     "src/lib/electionEngine/persuasionDrivers.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 8
+      "longBlocks": 3,
+      "narrativeLines": 0
     },
     "src/lib/electionEngine/presidentialCoattail.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/electionEngine/resolvedTurnout.ts": {
-      "longBlocks": 3,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/electionEngine/singleSeatIncumbency.ts": {
       "longBlocks": 2,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/electionEngine/slateAllocation.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/electionEngine/stateAttackMultiplier.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/electionEngine/tallyCleaner.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -10145,23 +9477,15 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/tallyManagement.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 4
-    },
     "src/lib/electionEngine/types.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 14
+      "longBlocks": 2,
+      "narrativeLines": 4
     },
     "src/lib/electionEngine/voteCalculations.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/electionEngine/voteDistribution.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/electionEngine/voteDistribution.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
@@ -10171,7 +9495,7 @@
     },
     "src/lib/electionEngine/voteDistributionSwingFlow.ts": {
       "longBlocks": 1,
-      "narrativeLines": 4
+      "narrativeLines": 0
     },
     "src/lib/electionEngine/voteDistributionSwingFlowDiff.test.ts": {
       "longBlocks": 1,
@@ -10682,10 +10006,6 @@
       "narrativeLines": 1
     },
     "src/lib/indexFunds/domesticSovereignCoverage/ensure.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/indexFunds/domesticSovereignCoverage/rules.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
@@ -11897,10 +11217,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/military/__tests__/acceptPeace.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/military/__tests__/battle.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -11919,7 +11235,7 @@
     },
     "src/lib/military/__tests__/commands.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/military/__tests__/contingentSustain.test.ts": {
       "longBlocks": 0,
@@ -11962,8 +11278,8 @@
       "narrativeLines": 0
     },
     "src/lib/military/applyPeaceTerm.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 2
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
     "src/lib/military/appropriation.ts": {
       "longBlocks": 2,
@@ -11974,16 +11290,16 @@
       "narrativeLines": 1
     },
     "src/lib/military/arsenal.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 1
+      "longBlocks": 3,
+      "narrativeLines": 0
     },
     "src/lib/military/arsenalComponents.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/military/battle.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 4
+      "longBlocks": 4,
+      "narrativeLines": 3
     },
     "src/lib/military/belligerentRoll.test.ts": {
       "longBlocks": 0,
@@ -11991,43 +11307,23 @@
     },
     "src/lib/military/belligerentRoll.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/military/bloc.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/military/calc.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/military/coalition.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/military/combat.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
+      "longBlocks": 2,
+      "narrativeLines": 0
     },
     "src/lib/military/commandChain.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/military/commands.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 2
-    },
-    "src/lib/military/config.ts": {
-      "longBlocks": 7,
-      "narrativeLines": 5
-    },
-    "src/lib/military/conflictLifecycle.ts": {
-      "longBlocks": 1,
+      "longBlocks": 3,
       "narrativeLines": 0
     },
-    "src/lib/military/conflictVisibility.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
+    "src/lib/military/config.ts": {
+      "longBlocks": 4,
+      "narrativeLines": 3
     },
     "src/lib/military/conscriptionLaw.ts": {
       "longBlocks": 1,
@@ -12037,79 +11333,35 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/military/countryPeaceNotice.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/military/covertNuclear.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/military/createConflict.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/military/declareWar.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/military/defenceContractLimits.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/military/defenceContractLimits.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/military/defenceFillEligibility.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 8
-    },
-    "src/lib/military/defenceFillEligibility.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 3
+      "narrativeLines": 6
     },
     "src/lib/military/defenceLotEconomics.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 8
+      "narrativeLines": 5
     },
     "src/lib/military/defenceLotEconomics.ts": {
-      "longBlocks": 6,
-      "narrativeLines": 14
+      "longBlocks": 5,
+      "narrativeLines": 4
     },
     "src/lib/military/defenceMoneyConservation.test.ts": {
       "longBlocks": 1,
-      "narrativeLines": 3
-    },
-    "src/lib/military/defencePriceRatios.test.ts": {
-      "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/lib/military/defencePriceRatios.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/military/defenceSelfDealing.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/military/defenceTermination.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/military/defenceTurnSpendCap.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/military/defenceTurnSpendCap.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 4
-    },
     "src/lib/military/defendingSides.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/military/deriveSpec.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -12119,7 +11371,7 @@
     },
     "src/lib/military/emitWarWire.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/military/factionEntity.ts": {
       "longBlocks": 1,
@@ -12133,15 +11385,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/military/generalPosting.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/military/generals.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/military/joinSide.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -12162,20 +11406,20 @@
       "narrativeLines": 1
     },
     "src/lib/military/occupation.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 4
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/military/offensiveOptIns.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/military/peaceOffer.ts": {
-      "longBlocks": 3,
+      "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/lib/military/peaceTerm.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/military/principal.ts": {
       "longBlocks": 1,
@@ -12194,24 +11438,12 @@
       "narrativeLines": 0
     },
     "src/lib/military/readinessDrift.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/military/readinessTier.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/military/regionThreat.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/military/resolveConflict.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/military/rosterGate.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/military/seaAccess.ts": {
       "longBlocks": 1,
@@ -12223,35 +11455,23 @@
     },
     "src/lib/military/seedRosterUpkeepPin.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/military/severFromChainOfCommand.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/military/stateArmsIndustry.ts": {
       "longBlocks": 3,
       "narrativeLines": 0
     },
-    "src/lib/military/theaters.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "src/lib/military/treatyDefence.ts": {
       "longBlocks": 3,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/military/treatyEntryNotice.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/military/types.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/military/validateDeclareWar.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/military/warApproval.test.ts": {
       "longBlocks": 0,
@@ -12264,10 +11484,6 @@
     "src/lib/military/warDamage.ts": {
       "longBlocks": 2,
       "narrativeLines": 0
-    },
-    "src/lib/military/warGoals.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/military/warWire.test.ts": {
       "longBlocks": 0,
@@ -16996,6 +16212,10 @@
     "src/simulation/phases/turnPhaseRegistry.ts": {
       "longBlocks": 0,
       "narrativeLines": 5
+    },
+    "src/lib/indexFunds/domesticSovereignCoverage/rules.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
     }
   }
 }

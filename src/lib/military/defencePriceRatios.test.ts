@@ -52,7 +52,7 @@ describe("priceRatiosFrom", () => {
  * was a constant dressed up as a cost.
  */
 describe("live commodity prices move the cost floor and the price band", () => {
-  // Cost is a share of the lot price now (ticket #1134); the ratios move it around that share.
+  // Cost is a share of the lot price now; the ratios move it around that share.
   const ANCHOR = 10_000_000;
   const nominal = lotProductionCost("heavy_armor", ANCHOR)!;
 
@@ -107,7 +107,7 @@ describe("live commodity prices move the cost floor and the price band", () => {
     // The GDP anchor is the designed price and does NOT move with inputs, so a commodity
     // spike squeezes the supplier's margin from below rather than letting it charge more.
     // That is the intended direction: a shortage is the supplier's problem to manage, not the
-    // taxpayer's to fund (ticket #1134).
+    // taxpayer's to fund.
     expect(dear.ceiling).toBe(calm.ceiling);
     expect(dear.ceiling).toBeLessThanOrEqual(anchorPrice);
     expect(dear.ceiling - dear.floor).toBeLessThan(calm.ceiling - calm.floor);

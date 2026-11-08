@@ -2,7 +2,7 @@
  * Frozen result of a single legislature voting phase, captured at the moment the
  * phase closes. Non-destructive: the raw vote map is preserved separately. Display
  * surfaces use this in place of live re-scoping so a concluded bill's tally cannot
- * be recomputed against a post-election chamber (#0982).
+ * be recomputed against a post-election chamber.
  */
 export interface BillVoteSnapshot {
   /** Scoped survivor vote map as of phase close (subset of the raw votes map). */

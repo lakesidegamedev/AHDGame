@@ -56,7 +56,7 @@ export interface CommitteeProposal {
    * Only `economic | social` can be proposed — those are the axes the
    * engines actually read. A 2026-05-22 redesign also offered
    * `foreignPolicy` and `culture`, but nothing ever consumed them, so
-   * they were retired (ticket #1032). Rows created before that retirement
+   * they were retired. Rows created before that retirement
    * still carry the old values, so the stored type stays wide enough to
    * describe them honestly; creation is narrowed by the zod schema and
    * `applyPositionShiftEffect` refuses them. Each axis has its own
@@ -72,7 +72,7 @@ export interface CommitteeProposal {
   electionMethod?: { method: "party" | "committee" | "influence" };
   /** Populated for type === "electionDuration" */
   electionDuration?: { durationTurns: number };
-    /**
+  /**
    * Populated for type === "removeOfficeHolder".
    *
    * Vacates a specific elected seat on the party. The chair-appointed

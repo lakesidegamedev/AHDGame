@@ -226,7 +226,7 @@ export function computeSharePrices(
       i.isPrivate ?? false
     );
 
-    // Index-inclusion premium (suggestion #62): the mirror of the concentration
+    // Index-inclusion premium: the mirror of the concentration
     // discount. A broad passive holder base is a firmer bid under the stock, so
     // it earns a bounded premium. Private corps have no float for a fund to
     // hold, so they are exempt exactly as they are from the discount.
@@ -262,7 +262,7 @@ export function computeSharePrices(
 }
 
 /**
- * Per-turn share-price rate limiter (issue #2888).
+ * Per-turn share-price rate limiter.
  *
  * Clamps `rawPrice` to within ±{@link SHARE_PRICE_MAX_TURN_MOVE} of `prevPrice`
  * so the fundamental price can never jump/collapse more than 35% in a single

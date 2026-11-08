@@ -19,7 +19,7 @@ export interface Caucus {
    * current slug.
    */
   slug: string;
-    /**
+  /**
    * Previously held slugs, used to redirect old links. Reclaimable: if another
    * caucus in the same party later claims one, remove it here so the new caucus
    * owns the URL. Swepthandled by any write path that claims a slug.

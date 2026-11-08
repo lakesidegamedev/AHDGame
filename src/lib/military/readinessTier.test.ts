@@ -9,7 +9,7 @@ import { TIER_FORCE_MODIFIER, aggregateForce } from "@/lib/constants/military";
 import type { MilitaryUnit, Posture } from "@/lib/db/types/militaryUnit";
 
 /**
- * Ticket #1140. The department-wide readiness tier used to scale only the in-memory
+ * The department-wide readiness tier used to scale only the in-memory
  * `avgReadiness` inside `aggregateForce`. No stored unit ever moved, so a player on
  * Elevated + High Alert paid 25% more upkeep and watched an unchanged roster. The tier now
  * scales the baseline units drift toward, and must NOT also be re-applied in the aggregate.

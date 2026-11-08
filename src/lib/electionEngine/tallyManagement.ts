@@ -167,7 +167,7 @@ export async function accumulateVoteTurn(
   options?: {
     /**
      * When present, the tally update is appended here instead of written, so
-     * the caller can flush every race's update in one bulk write (#2695).
+     * the caller can flush every race's update in one bulk write.
      */
     tallyWrites?: AnyBulkWriteOperation<ElectionVoteTally>[];
     approvalMap?: Map<string, number>;
@@ -782,7 +782,7 @@ export async function accumulateVoteTurn(
     }
   }
 
-  // UK manifesto policy-popularity map (epic #856). Off by default: the
+  // UK manifesto policy-popularity map. Off by default: the
   // resolver short-circuits to undefined unless UK_MANIFESTO_VOTE_EFFECT=1 and
   // this is a UK general election with locked manifestos — so no DB read and no
   // behaviour change in prod until the coefficient is worldsim-calibrated.

@@ -113,7 +113,7 @@ export async function buildSectorCommoditySections(args: {
   currentTurn?: number;
   /**
    * Last turn's average price buyers paid per book lane (producerMarketOutcomes),
-   * for saying why an output went unsold (issue #5448). Absent: no reason shown.
+   * for saying why an output went unsold. Absent: no reason shown.
    */
   laneClearingPrices?: Readonly<Record<string, number | undefined>>;
 }) {

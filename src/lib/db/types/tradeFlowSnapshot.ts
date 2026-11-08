@@ -25,7 +25,7 @@ export interface TradeFlowSnapshot {
    */
   books?: ReachableBooksDoc;
   /**
-   * Shadow measurement for price-gap routing (#4379): per commodity, uncleared
+   * Shadow measurement for price-gap routing: per commodity, uncleared
    * surplus that could reach a higher-priced unmet deficit, and shipped units
    * that went to a lower-priced market. Telemetry only; nothing reads it back.
    */

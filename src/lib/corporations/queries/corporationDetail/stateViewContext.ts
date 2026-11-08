@@ -39,7 +39,7 @@ export interface StateViewContext {
 type StateMetricsDoc = Awaited<ReturnType<typeof findMergedRegionMetricsMany>>[number];
 
 /**
- * State-scoped view context for the corporation detail view (#587).
+ * State-scoped view context for the corporation detail view.
  *
  * Loads the merged region metrics, extraction capacities, game era state,
  * political margin overlays (SP4 §4a, playable regions only among this

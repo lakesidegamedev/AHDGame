@@ -855,7 +855,7 @@ export function computeSectorMarketPosition(args: {
   unownedDoc: UnownedSector | null;
   /**
    * Active world preset, for the era-correct GDP→₳ normalization of the
-   * GDP-derived market size (refs #3778). Omitted = modern base config.
+   * GDP-derived market size. Omitted = modern base config.
    */
   preset?: string;
 }) {
@@ -897,7 +897,7 @@ export function computeSectorMarketPosition(args: {
   );
 
   // Market = the TOTAL real revenue produced in this (state, sectorType) cell
-  // (ticket #1145). No unowned pool, no GDP floor: a sector's share is its
+  // No unowned pool, no GDP floor: a sector's share is its
   // revenue over what every producer actually earns, and the shares add to 100%.
   const effectiveMarket = Math.max(0, Math.round(totalOwnedRevenue));
   // Focal sector's own revenue in ₳ for market-share + competitor ratios.
@@ -935,7 +935,7 @@ export function computeSectorMarketPosition(args: {
     });
 
   // No unclaimed market any more: every bit of the cell's revenue belongs to a
-  // real producer, so the "unowned" slice is gone (ticket #1145).
+  // real producer, so the "unowned" slice is gone.
   const unownedRevenue = 0;
   const unownedPercent = 0;
 
@@ -1208,7 +1208,7 @@ export function computeSectorMarginSection(args: {
     typeof sector.effectiveProfitMargin === "number" ? sector.effectiveProfitMargin : null;
   const effectiveMargin = engineMargin ?? stackMargin;
   const effectiveMods = { ...mods, effective: effectiveMargin };
-  // Ticket 1122: prefer the P&L the turn actually booked over inverting the
+  // Prefer the P&L the turn actually booked over inverting the
   // margin. `effectiveProfitMargin` is that P&L's OUTPUT, capped at 100, so
   // inverting it recovers a zero operating cost from a genuinely negative one
   // (profit == revenue, the reported defect) and drops upkeep + compliance on

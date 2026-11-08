@@ -23,7 +23,7 @@ export interface SovereignCountryIssuanceSnapshot {
   medianSpreadToParPct: number;
   maturityHhi: number;
   thinIssueCount: number;
-    /**
+  /**
    * Unheld issues by primary exclusion reason; counts sum to
    * `unheldIssueCount`. Absent when computed without fund demand inputs.
    */
@@ -73,9 +73,9 @@ export interface EconomicVitalSigns {
   };
   production: {
     sectorsObserved: number;
-    /** Commodities whose recorded demand the 1.5x caps cut this turn (#1460). */
+    /** Commodities whose recorded demand the 1.5x caps cut this turn. */
     demandTruncatedCommodities: EconomicMetric;
-    /** Worst (demand + truncated) / supply among capped commodities (#1460). */
+    /** Worst (demand + truncated) / supply among capped commodities. */
     maxLatentShortageMultiple: EconomicMetric;
     throughputFloorShare: EconomicMetric;
     physicalSellThrough: EconomicMetric;
@@ -166,7 +166,7 @@ export interface EconomicVitalSigns {
      * medium = current method but still warming up, low = legacy/unversioned.
      */
     observationConfidence: Record<string, "high" | "medium" | "low">;
-    /** Bond-pool settlement inventory excluded from observed M2 (#2021). */
+    /** Bond-pool settlement inventory excluded from observed M2. */
     excludedBondPoolCash: EconomicMetric;
     medianAnnualizedM2GrowthPct: EconomicMetric;
     medianInflationPct: EconomicMetric;
@@ -247,7 +247,7 @@ export interface EconomicVitalSigns {
     stockVsFlowDivergentCount: number | null;
     stockVsFlowSkipped: boolean | null;
     moneySupplyFindingCount: number | null;
-        /**
+    /**
      * Per-kind stock-vs-flow inventory (ranked by unexplained ₳). null when no
      * reconciliation ran: unknown, not zero. Computed pre-cap so it survives
      * the findings cap.

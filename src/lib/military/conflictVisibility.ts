@@ -8,8 +8,6 @@ import { isArchiveOpen } from "./conflictLifecycle";
  * Visibility and ACTIONS are separate axes: a posted general and a defense minister
  * see the same thing and differ only in what they may do (actions stay with
  * `canActAtTheater`). Pure — the page gathers the facts, this decides the tier.
- *
- * Spec: docs/superpowers/specs/2026-07-26-conflict-viewer-tiers-design.md
  */
 
 export type ConflictTier = "public" | "command" | "archive";

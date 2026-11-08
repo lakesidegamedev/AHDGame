@@ -58,7 +58,7 @@ export async function loadIndustryBasis(
   countryId: CountryId,
   types: CorporationType[],
   // Retained for call-site compatibility; market share is revenue-basis in every
-  // tier now (ticket #1145), so the tier no longer selects a different basis.
+  // tier now, so the tier no longer selects a different basis.
   _plantsEnabled: boolean = false
 ): Promise<Map<CorporationType, IndustryBasis>> {
   const out = new Map<CorporationType, IndustryBasis>();

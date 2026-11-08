@@ -119,7 +119,7 @@ export interface Bond {
   };
   /** Whether the bond has fully matured and been settled */
   matured: boolean;
-    /**
+  /**
    * Turn the bond was auto-redeemed and holdings cleared. Set with `matured: true`
    * by the turn processor. Distinguishes a settled bond from legacy `matured`
    * rows that still carry `holders` and were never paid. Absent on unmatured bonds.

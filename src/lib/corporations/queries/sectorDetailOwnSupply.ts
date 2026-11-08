@@ -120,7 +120,7 @@ export async function explainOwnSupplyReach(args: {
         buyerStateId: args.sector.stateId,
         sourceStateIds,
         output: outputByCommodity.get(commodity) ?? { made: 0, ownSites: 0, soldOutside: 0 },
-        // Only an explicit choice sells on the market first (issue 5505).
+        // Only an explicit choice sells on the market first.
         marketFirst: args.corporation.internalSupplyPolicy?.priority === "market",
         stateScoped: isStateScopedCommodity(commodity as CommodityType),
         hasAgreement: agreed.has(commodity),

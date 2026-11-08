@@ -150,7 +150,7 @@ export async function getIncumbentSeatShareByParty(
 }
 
 /**
- * Incumbent seat share for every election in one pass (#2695).
+ * Incumbent seat share for every election in one pass.
  *
  * Same selection as `getIncumbentSeatShareByParty`: the most recent resolved
  * election in an earlier cycle for the same country, state and canonical seat

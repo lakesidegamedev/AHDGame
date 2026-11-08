@@ -67,9 +67,9 @@ export const MAX_BOND_ISSUANCE_EXIT_EQUITY_FRACTION = 1.0;
 /**
  * The issuance window a corporation may actually use, all in ₳. `maxAllowed` is
  * the smallest of the per-issuance cap, the remaining 2x going-concern leverage
- * headroom, and the remaining 1x exit-equity headroom (#1198).
+ * headroom, and the remaining 1x exit-equity headroom.
  * `effectiveMin` clamps the flat `MIN_BOND_ISSUANCE` down to that
- * ceiling so a small corp is never locked out by min > max (ticket #1083).
+ * ceiling so a small corp is never locked out by min > max.
  * `available` is false below the dust floor, where bonds are offered at all.
  * `limitedBy` names the binding constraint so callers can explain a refusal in
  * the terms that actually caused it.
@@ -207,7 +207,7 @@ export function calculateCreditScore(
     insiderConcentrationPenalty?: boolean;
     /**
      * One-notch UPGRADE for a corp whose shares are meaningfully held by index
-     * funds (suggestion #62). The mirror of the concentration penalty: a broad,
+     * funds. The mirror of the concentration penalty: a broad,
      * sticky passive holder base is cheaper capital. Nets against it — a corp
      * that is both insider-concentrated and index-held ends where it started.
      */

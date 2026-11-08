@@ -285,7 +285,7 @@ describe("FOREIGN_AFFAIRS_POSITION_BY_COUNTRY", () => {
     }
   });
 
-  // Regression (#980): countries that define a real foreign-affairs cabinet seat
+  // Regression: countries that define a real foreign-affairs cabinet seat
   // must map to it, not null — otherwise a player foreign minister is never
   // recognized at all.
   it.each([

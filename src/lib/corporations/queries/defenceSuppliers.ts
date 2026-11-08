@@ -37,10 +37,10 @@ export interface DefenceSupplierView {
   allowanceWindowEndTurn?: number;
   /**
    * What one lot costs this plant to build, at current input prices. The floor of the price
-   * band the minister may negotiate inside (suggestion #291) is this plus a margin.
+   * band the minister may negotiate inside is this plus a margin.
    */
   unitProductionCost: number;
-  /** Production lines this plant has free, out of its total (suggestion #281). */
+  /** Production lines this plant has free, out of its total. */
   freeFactories: number;
   totalFactories: number;
   /** True when this is a National Corporation. The ministerial window then has no private cap. */
@@ -55,7 +55,7 @@ export interface DefenceSupplierView {
  * currency rule. A picker that offered a plant the route would refuse would turn every one of
  * those clear 400s into a dead option the minister cannot diagnose.
  *
- * Domestic is the CORPORATION, not the plant's host state (ticket #1149). `canSupply` and
+ * Domestic is the CORPORATION, not the plant's host state. `canSupply` and
  * the delivery sweep both key on corp HQ / currency; filtering sectors by `countryId` hid
  * every overseas works of a home-country supplier, so a UK minister could only award
  * Streibl's tiny East-of-England line while the same corp's Greek and French plants — which
@@ -70,7 +70,7 @@ export async function listDefenceSuppliers(
   countryId: string,
   currentYear: number,
   /**
-   * The country's anchored lot price. Build cost is a share of it (ticket #1134), so the
+   * The country's anchored lot price. Build cost is a share of it, so the
    * picker cannot quote a cost without it. A null or unusable price yields a zero cost, which
    * is what the caller already shows when a country has no usable GDP.
    */
@@ -127,7 +127,7 @@ export async function listDefenceSuppliers(
     const committed = committedSlots.get(sector._id.toString()) ?? 0;
     const freeFactories = Math.max(0, DEFENCE_FACTORY_SLOTS_PER_PLANT - committed);
     const stateOwned = isStateOwned(corp);
-    // Ticket #1134: project what the award will actually assign. A vacant NatCorp CEO
+    // Project what the award will actually assign. A vacant NatCorp CEO
     // cannot re-allocate, so the picker must not advertise a half-plant rate the order
     // will then double.
     const assignedForProjection = awardFactoryAllocation({
@@ -136,7 +136,9 @@ export async function listDefenceSuppliers(
       stateOwned,
     });
 
-    // Must use the same resolver as the award route and delivery sweep. A picker that offers a plant the route rejects produces undiagnosable errors.
+    // The SAME resolver the award route and the delivery sweep use. A picker that offered a
+    // plant the route would refuse turned every clear 400 into a dead option the minister
+    // could not diagnose, and every divergence between these checks has shipped as a ticket.
     const fill = resolveFillEligibility({
       corp,
       sector,

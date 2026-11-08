@@ -26,7 +26,7 @@ export interface CorporationHistory {
    * The `currencyCode` FX rate (local per 1 ₳) in effect when this row was
    * written. Readers converting this row's money fields back to ₳ MUST use
    * this rate, not the live/current rate — reconverting with today's rate
-   * drifts by however much FX has moved since this turn (#2958). Missing on
+   * drifts by however much FX has moved since this turn. Missing on
    * rows written before this field existed, or when `currencyCode` itself is
    * absent (pre-forex ₳ passthrough — no conversion needed).
    */
@@ -49,7 +49,7 @@ export interface CorporationHistory {
   publicFloat?: number;
   marketCap: number;
   liquidCapital: number;
-    /**
+  /**
    * SOE treasury-backing reconciliation this turn, in `currencyCode` (matches
    * other money fields here; `CorpSnapshot.soeBacking` is ₳-denominated).
    * Absent on private corps, SOEs with no shortfall, and pre-migration rows.
@@ -69,7 +69,7 @@ export interface CorporationHistory {
     /** `shortfall − covered`. */
     residual: number;
   };
-    /**
+  /**
    * Market-making buyback escrow balance at snapshot time, in liquidCurrencyCode units. May be negative (tracked buyback debt). Snapshotted so net cash (`liquidCapital + shareEscrowBalance`) is visible per turn and escrow drift inflating gross liquidCapital is caught. Omitted on entries written before this field existed.
    */
   shareEscrowBalance?: number;
@@ -78,7 +78,7 @@ export interface CorporationHistory {
   income: number;
   /** Total dividend paid to all shareholders this turn (matches turn processor). */
   dividendPaidPerTurn?: number;
-    /**
+  /**
    * Net dividend income (local ccy, per-turn) this corp received from holding other corps' shares, after FX spread and the 50% dividend-received-deduction tax. Reporting only: the cash was credited to liquidCapital in the dividend phase, not via `income`. Surfaced as a Financials P&L line. Absent when the corp holds no dividend-paying corp shares.
    */
   dividendIncomeReceived?: number;

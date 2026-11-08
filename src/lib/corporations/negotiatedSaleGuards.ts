@@ -1,5 +1,5 @@
 /**
- * Safeguards for a negotiated private share sale (suggestion 397).
+ * Safeguards for a negotiated private share sale.
  *
  * A negotiated sale settles at any price the two players agree, so it can move
  * more money in one step than the daily personal wire allows. The deal is

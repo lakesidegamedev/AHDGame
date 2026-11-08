@@ -1,6 +1,6 @@
 import { rejectWhileTurnProcessing } from "./turnGuard";
 /**
- * Build capacity across many sectors in one request (suggestion 391).
+ * Build capacity across many sectors in one request.
  *
  * Every sector goes through `placeCapacityBuild`, the exact single-sector build
  * path behind POST /api/corporations/[id]/sectors/[sectorId]/build, one sector

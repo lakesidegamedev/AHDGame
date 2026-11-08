@@ -120,7 +120,7 @@ export interface Union {
   /** Visible target wageLevel this union is demanding from CEOs in its scope, or null if none set. */
   demandedWageLevel: number | null;
   /**
-   * Union ban (player suggestion #93): true while this union's country has
+   * Union ban: true while this union's country has
    * `FederalBudget.unionsBanned` set by an enacted ban. Suspended unions are
    * frozen: `processUnionsTurn` skips dues/decay/inactivity-vacancy for them
    * and player actions 403, but the document (leadership, treasury,

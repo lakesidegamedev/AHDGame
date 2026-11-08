@@ -159,7 +159,7 @@ function validateKey(key: string): void {
 
 /**
  * Derive a deterministic subkey for one leg, step, or compensation of a flow
- * (issue #1672). A client key near the accepted 128-character limit would
+ * A client key near the accepted 128-character limit would
  * overflow the cap once a `:holder:...` / `:pool:...` / `:compensate:...`
  * suffix is appended, and the derived write would then throw `RangeError`
  * instead of moving money. This keeps ordinary short keys byte-identical to

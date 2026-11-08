@@ -53,11 +53,11 @@ export const CEO_SALARY_MAX_REVENUE_MULTIPLE = 1.25;
  * capped at this multiple of gross revenue. Enforced at set time by
  * `updateCorporationSettings` and at pay time by `sectorCalculations`, on the
  * same gross-revenue basis as the CEO salary cap above. At zero gross revenue
- * the ceiling is $0 (ticket #1237).
+ * the ceiling is $0.
  */
 export const CORP_OVERHEAD_MAX_REVENUE_MULTIPLE = 1.5;
 
-/** Turns a user must wait after their corporation ends before founding another (Bug #0728). */
+/** Turns a user must wait after their corporation ends before founding another. */
 export const CORPORATION_FOUNDING_COOLDOWN_TURNS = 96;
 
 /** Default starting liquid capital for a new corporation */
@@ -1526,7 +1526,7 @@ export const RD_MORALE_MAX_SWING = 0.15;
 export const RD_MORALE_SENSITIVITY = 0.5;
 
 /**
- * Worker-morale multiplier on R&D efficiency (#84 — happy workers get more done).
+ * Worker-morale multiplier on R&D efficiency.
  * Driven by the corp's revenue-weighted average sector `wageLevel`: 1.0 (baseline
  * pay) is neutral, paying above baseline lifts R&D output up to +{@link
  * RD_MORALE_MAX_SWING}, paying below drags it down by the same. Clamped to the
@@ -1770,7 +1770,7 @@ export function computeAllMarginModifiers(
    * market dominance, off-type sectors, and logistical sprawl — a NatCorp is a
    * diversified state holding company that holds nationalized sectors and
    * dominates by design. Its state-run inefficiency is modelled by the dedicated
-   * SOE efficiency penalty, not these (Bug #0775).
+   * SOE efficiency penalty, not these.
    */
   stateOwned: boolean = false,
   regionalConditionsModifier: number = 0,

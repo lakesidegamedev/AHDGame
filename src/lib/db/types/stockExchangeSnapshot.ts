@@ -51,7 +51,7 @@ export interface StockExchangeListing {
   /** Shares available in the public float (0 = no shares on market) */
   publicFloat: number;
   /**
-   * Canonical tradability flag (#2033): false when the row cannot be traded
+   * Canonical tradability flag: false when the row cannot be traded
    * (zero/non-finite totalShares or publicFloat). Absent on pre-#2033
    * snapshots; readers fall back to `isTradableListing(listing)` from the
    * canonical module, never a local re-derivation. Lets the UI tell a

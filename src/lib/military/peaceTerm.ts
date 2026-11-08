@@ -7,8 +7,6 @@ import type { CountryId, GovernmentType } from "@/lib/constants/countries";
  * shape is representable at a time, so a settlement carrying two terms cannot be
  * constructed, stored, or hand-rolled over the API. "Pick one" is a schema rule
  * here rather than a convention the UI is trusted to keep.
- *
- * Spec: docs/superpowers/specs/2026-08-27-peace-terms-design.md
  */
 export type PeaceTerm =
   /**

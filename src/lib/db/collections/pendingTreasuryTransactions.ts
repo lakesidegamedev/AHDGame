@@ -7,7 +7,6 @@ import type { PendingTreasuryTransaction } from "../types";
  * Holds in-flight two-person-approval rows for Send to Member and
  * Transfer to State Party actions when a party's
  * `transactionApprovalMode === "double"`. See
- * `docs/plans/archive/2026-05/2026-05-22-treasury-two-person-approval.md`.
  */
 export async function getPendingTreasuryTransactionsCollection() {
   const db = await getDb();

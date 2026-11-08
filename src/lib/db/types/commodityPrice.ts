@@ -16,7 +16,7 @@ export interface CommodityPrice {
   globalSupply: number;
   /** Global demand in units/day, AFTER the 1.5x demand caps. */
   globalDemand: number;
-    /**
+  /**
    * Demand units removed by the supply caps this turn. Absent when nothing was
    * truncated. Not a price input, but feeds read-only build signals (NPP
    * shortage scores, expansion advisor gap) so builders see the hidden shortage.

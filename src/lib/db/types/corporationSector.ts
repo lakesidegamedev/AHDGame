@@ -69,7 +69,7 @@ export interface SectorBuildOrder {
 }
 
 export interface CorporateSector {
-  /** Unified producer market (#4322): written only once the new market settles a turn. */
+  /** Unified producer market: written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
   /**
    * Funded-market cutover transition package: the classification frozen into
@@ -256,7 +256,7 @@ export interface CorporateSector {
    * gap unattributed.
    */
   labourStaffingFactor?: number;
-    /**
+  /**
    * Labour system (labourSystemMode ≥ "wages"): wage-level multiplier on the sector's baseline labor cost. 1.0 = baseline, which is profit-invariant (the labor slice is carved out of existing maintenance, not added on top). Player-editable; absent/undefined treated as 1.0.
    */
   wageLevel?: number;
@@ -413,7 +413,7 @@ export interface CorporateSector {
   /** Optional industrial input-indexed pricing; ignored while explicit plant costs are off. */
   pricingMode?: "market" | "costPlus";
   /**
-   * Owner opt-in (suggestion 427): this sector's output goes to outside buyers
+   * Owner opt-in: this sector's output goes to outside buyers
    * before the company's own plants. The own plants then get what is left, free.
    * Unset/false = the company's own plants are served first.
    */
@@ -541,9 +541,13 @@ export interface CorporateSector {
    * first turn instead of being held near the governor anchor for the ramp.
    */
   plantsGovernorExempt?: boolean;
-    /**
-   * Last turn whose build deliveries landed on this sector, written in the same update as the deliveries. The next run delivers every slice due after it, so an economy pause defers builds instead of dropping them, and a replayed turn delivers nothing twice. Absent until the sector's first run.
-   */
+  /**
+   * Plants tier (P3a): outstanding capacity build orders, oldest first. Each
+   * order is capacity that has been PAID FOR but is not yet productive; it
+   * converts into `capitalStock` on the turn `onlineTurn` is reached, and the
+   * order is then removed from the queue.
+   *
+   * Absent/empty on every sector that has never ordered a build, and never
    * written outside plants mode.
    */
   buildQueue?: SectorBuildOrder[];
@@ -552,7 +556,7 @@ export interface CorporateSector {
    * corporation turn in the same update as the deliveries. The next run
    * delivers every slice due after it, so an economy pause defers builds
    * instead of dropping them, and a replayed turn delivers nothing twice
-   * (#5169). Absent until the sector's first run.
+   * Absent until the sector's first run.
    */
   buildDeliverySettledTurn?: number;
   /** Frozen funded build claim and its cash escrow; absent on legacy sectors. */
@@ -562,7 +566,7 @@ export interface CorporateSector {
     key: string;
     kind: string;
     /**
-     * Abandon resume bookkeeping (#4190). Records the last durable step so a
+     * Abandon resume bookkeeping. Records the last durable step so a
      * retry resumes instead of repeating a brand hit or a build refund.
      */
     stage?: "reserved" | "brandApplied" | "refunded";
@@ -584,7 +588,7 @@ export interface CorporateSector {
    * land, and by the build/cancel commands when orders are pushed or removed.
    */
   constructionInProgressAnchor?: number;
-    /**
+  /**
    * Plants tier (P5): the PAID BASIS of the capacity in `capitalStock`, in ₳
    * (anchor): cumulative cash actually spent on the units the sector still owns,
    * after depreciation.
@@ -746,7 +750,7 @@ export interface CorporateSector {
    * side of a merge carried a restore point; readers treat that as absent.
    */
   legacyRevenueShadow?: number | null;
-    /**
+  /**
    * Pre-plants growth chain frozen on the mode flip, so {@link legacyRevenueShadow}
    * compounds at capital rates instead of the zeroed plants rate. A rollback
    * restores the live growth fields from these.
@@ -826,7 +830,7 @@ export interface CorporateSector {
    * cooldown (spec §13.4); absent on seeded / split-off / private sectors.
    */
   absorbedAtTurn?: number;
-    /**
+  /**
    * Prior-owner data stamped at taking time so a nationalization can be undone.
    * Absent on seeded sectors and takings that predate this field. On a NatCorp
    * merge this reflects the most recent taking folded into the surviving row.

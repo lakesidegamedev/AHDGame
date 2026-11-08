@@ -95,7 +95,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     const inherited =
       effective?.root !== undefined && effective.root !== corporation._id.toString();
     // Funded worlds send own output to own sites first unless the company
-    // explicitly chose the open market (issue 5505), so an unset policy reads
+    // explicitly chose the open market, so an unset policy reads
     // as own sites first there. Elsewhere the unset default stays the market.
     const unsetPolicy: InternalSupplyPolicy = fundedMarket
       ? FUNDED_DEFAULT_SUPPLY_POLICY

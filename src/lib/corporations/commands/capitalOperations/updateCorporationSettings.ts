@@ -264,7 +264,6 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
 
         // Sector research is lane-specific: drop it on switch (no remap,
         // no refund). Corporate-lane unlocks + new-type past-decade baseline keep
-        // (ticket #1040).
         if (primaryType !== currentLane) {
           const startingYear = gameState?.startingYear ?? STARTING_YEAR;
           const currentYear =

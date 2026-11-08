@@ -161,7 +161,7 @@ export function resolveTurnWindow(args: {
 // the general-election start (`primaryEndTurn`), not the overall election
 // `startTurn`. If it spans the primary too, the "early" share is smeared over
 // primary turns that cast no general votes and the final turns balloon to
-// ~66% of the vote instead of the intended ~30% (ticket #955).
+// ~66% of the vote instead of the intended ~30%.
 export const ELECTION_DAY_TURNS = 4 as const; // sharp final-day spike band
 export const RAMP_TURNS = 8 as const; // gentle build-up band before it
 // Pool shares by tier — early / ramp / election-day. Must sum to 1.
