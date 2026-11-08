@@ -31,7 +31,11 @@ import { enactRulingBill } from "@/lib/scotus/enactRulingBill";
 import type { DocketCase, DocketCaseEffect, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
 import { decideCaseOutcome, type SeatedJusticeLean } from "@/lib/scotus/divergence";
-import { rollSurpriseCaseSpawn } from "@/lib/scotus/surpriseCaseSpawn";
+import {
+  drawableTemplates,
+  rollSurpriseCaseSpawn,
+  surpriseCaseSpawnProbabilityForYear,
+} from "@/lib/scotus/surpriseCaseSpawn";
 import { SURPRISE_CASE_TEMPLATES, templatesForYear } from "@/lib/scotus/surpriseCaseTemplates";
 import { generateScotusSurpriseNews } from "@/lib/scotus/scotusNews";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -60,10 +64,6 @@ export async function processScotusSurpriseCaseTurn(
 ): Promise<ScotusSurpriseCaseTurnResult> {
   const database = db ?? (await getDb());
 
-  if (!rollSurpriseCaseSpawn(spawnRandomDraw)) {
-    return { spawned: false };
-  }
-
   const gameState = await getGameState();
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const startingYear = gameState?.startingYear ?? getStartingYearForPreset(preset);
@@ -76,25 +76,25 @@ export async function processScotusSurpriseCaseTurn(
     preIterationTurns: gameState?.preIterationTurns,
   });
 
-  const usedTemplateKeys = new Set(
-    (
-      await database
-        .collection<DocketCase>("docketCases")
-        .find({ countryId: "US", isSurprise: true }, { projection: { caseKey: 1 } })
-        .toArray()
-    ).map((c) => c.caseKey)
-  );
+  if (!rollSurpriseCaseSpawn(spawnRandomDraw, surpriseCaseSpawnProbabilityForYear(decisionYear))) {
+    return { spawned: false };
+  }
+
+  const heardCases = (
+    await database
+      .collection<DocketCase>("docketCases")
+      .find({ countryId: "US", isSurprise: true }, { projection: { caseKey: 1, decisionYear: 1 } })
+      .toArray()
+  ).map((c) => ({ caseKey: c.caseKey, decisionYear: c.decisionYear }));
   // Era filter runs BEFORE the dedup pick so the draw is uniform over cases
   // that could actually be heard this year. The windows cut both ways: a 1953
   // Court cannot hear a solar-cartel antitrust suit, and a 2019 Court cannot sue
   // the Bureau of the Budget, which became OMB in 1970.
   // Filtered on the era clock, not on decisionYear. `decisionYear` is just
   // startingYear + turns and is what the case is stamped with.
-  const eraEligible = templatesForYear(
-    SURPRISE_CASE_TEMPLATES,
-    (await getEraContext(database)).year
-  );
-  const available = eraEligible.filter((t) => !usedTemplateKeys.has(t.templateKey));
+  const eraYear = (await getEraContext(database)).year;
+  const eraEligible = templatesForYear(SURPRISE_CASE_TEMPLATES, eraYear);
+  const available = drawableTemplates(eraEligible, heardCases, decisionYear);
   if (available.length === 0) {
     // Pool exhausted for this era — no unused flavor content left that this
     // year could plausibly produce. Not an error: the spawn hazard just yields

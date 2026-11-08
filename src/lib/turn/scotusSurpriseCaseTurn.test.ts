@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { SURPRISE_CASE_TEMPLATES } from "@/lib/scotus/surpriseCaseTemplates";
+import { SURPRISE_CASE_TEMPLATES, templatesForYear } from "@/lib/scotus/surpriseCaseTemplates";
 import { SURPRISE_CASE_SPAWN_PROBABILITY_PER_TURN } from "@/lib/scotus/surpriseCaseSpawn";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -264,10 +264,12 @@ describe("processScotusSurpriseCaseTurn", () => {
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([seat({ seatNumber: 1, economicLean: 1, socialLean: 1 })]),
     });
-    // Every template except the last one has already spawned.
-    const alreadyUsed = SURPRISE_CASE_TEMPLATES.slice(0, -1).map((t) => ({
-      caseKey: t.templateKey,
-    }));
+    // Every template except the last 1953-eligible one has already spawned.
+    const eligible = templatesForYear(SURPRISE_CASE_TEMPLATES, 1953);
+    const lastTemplate = eligible[eligible.length - 1];
+    const alreadyUsed = SURPRISE_CASE_TEMPLATES.filter(
+      (t) => t.templateKey !== lastTemplate.templateKey
+    ).map((t) => ({ caseKey: t.templateKey, decisionYear: 1953 }));
     db.collectionMocks.docketCases!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue(alreadyUsed),
     });
@@ -277,7 +279,6 @@ describe("processScotusSurpriseCaseTurn", () => {
     // last template remains available, so it must be picked instead.
     const result = await processScotusSurpriseCaseTurn(1, db as unknown as Db, 0, 0);
 
-    const lastTemplate = SURPRISE_CASE_TEMPLATES[SURPRISE_CASE_TEMPLATES.length - 1];
     expect(result.caseKey).toBe(lastTemplate.templateKey);
   });
 
@@ -285,7 +286,10 @@ describe("processScotusSurpriseCaseTurn", () => {
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     });
-    const allUsed = SURPRISE_CASE_TEMPLATES.map((t) => ({ caseKey: t.templateKey }));
+    const allUsed = SURPRISE_CASE_TEMPLATES.map((t) => ({
+      caseKey: t.templateKey,
+      decisionYear: 1953,
+    }));
     db.collectionMocks.docketCases!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue(allUsed),
     });
