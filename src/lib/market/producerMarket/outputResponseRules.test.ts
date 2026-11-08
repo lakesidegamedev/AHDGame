@@ -434,6 +434,29 @@ describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
     ).toBeGreaterThanOrEqual(0.5);
   });
 
+  it("stage 3: a sold-out line selling below its running cost steps down below its sales", () => {
+    // Sold all 50 it made at 2 a unit; inputs 1, wages 2 and site 1 a unit.
+    const losing = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 50,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 50,
+      labourPaid: 100,
+      otherOperatingPaid: 50,
+    });
+    const held = planRecoveryRunShare(losing, { demandPlan: true });
+    const cut = planRecoveryRunShare(losing, { demandPlan: true, lossCutBelowSales: true });
+    expect(held).toBeGreaterThanOrEqual(0.5);
+    expect(cut).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 10);
+    // A sold-out line that pays its running costs keeps growing.
+    const paying = receipt({ ...losing, revenue: 400 });
+    expect(
+      planRecoveryRunShare(paying, { demandPlan: true, lossCutBelowSales: true })
+    ).toBeGreaterThan(0.5);
+  });
+
   it("an input or cash cut does not lower the next plan", () => {
     for (const runCutBy of [["cash"], ["inputs"]]) {
       const next = planRecoveryRunShare({ ...cut, runCutBy }, { demandPlan: true });
