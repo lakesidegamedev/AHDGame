@@ -63,14 +63,9 @@ import { politicalNodeTargets } from "@/lib/politicalMetrics/engineNodes";
 import { engineTermFor } from "@/lib/politicalMetrics/engineTerm";
 import { loadLabourRelationsPoliticalNudgesByCountry } from "@/lib/unions/labourRelationsPoliticalProvider";
 import {
-  loadPublicHealthDeliveryMultiplier,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "@/lib/governmentFinance/deliveryMultiplier";
-import {
   loadDepartmentDeliveryMultipliersByCountry,
   loadRegionalDeliveryMultipliersByRegion,
 } from "@/lib/governmentFinance/deliveryMultipliers";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 
 // Defined in politicalMetrics/historyCadence so a client component can read the
 // cadence without importing this module (and with it the whole turn engine).
@@ -169,9 +164,6 @@ export async function processPoliticalMetricsDynamics(
           currentTurn: 1,
           startingYear: 1,
           eraSystemEnabled: 1,
-          departmentProgramSliceEnabled: 1,
-          departmentFinanceEnabled: 1,
-          regionalLegislationFinanceEnabled: 1,
           livingConflictsEnabled: 1,
         },
       }
@@ -197,21 +189,9 @@ export async function processPoliticalMetricsDynamics(
   const eraYear = eraGameState?.eraSystemEnabled
     ? (resolveGameYear(eraGameState) ?? undefined)
     : undefined;
-  const generalizedFinanceEnabled = eraGameState?.departmentFinanceEnabled === true;
-  const regionalFinanceEnabled = eraGameState?.regionalLegislationFinanceEnabled === true;
-  const [deliveryByCountry, deliveryByRegion, publicHealthDelivery] = await Promise.all([
-    loadDepartmentDeliveryMultipliersByCountry(
-      db,
-      turnNumber,
-      generalizedFinanceEnabled,
-      countryIds
-    ),
-    loadRegionalDeliveryMultipliersByRegion(db, turnNumber, regionalFinanceEnabled),
-    loadPublicHealthDeliveryMultiplier(
-      db,
-      turnNumber,
-      !generalizedFinanceEnabled && eraGameState?.departmentProgramSliceEnabled === true
-    ),
+  const [deliveryByCountry, deliveryByRegion] = await Promise.all([
+    loadDepartmentDeliveryMultipliersByCountry(db, turnNumber, true, countryIds),
+    loadRegionalDeliveryMultipliersByRegion(db, turnNumber, true),
   ]);
 
   await Promise.all(
@@ -237,11 +217,7 @@ export async function processPoliticalMetricsDynamics(
       if (docs.length === 0) return;
       countriesProcessed++;
 
-      const nationalMultipliers = generalizedFinanceEnabled
-        ? deliveryByCountry.get(countryId)
-        : countryId === COUNTRY_CONFIGS.US.id
-          ? new Map([[US_PUBLIC_HEALTH_POLITICAL_LAW_ID, publicHealthDelivery.multiplier]])
-          : undefined;
+      const nationalMultipliers = deliveryByCountry.get(countryId);
       const national = lawTargets(countryId, nationalLevels, nationalMultipliers);
       const labourRelationsContribution = labourRelationsNudgesByCountry.get(countryId);
       const labourRelationsOf = (id: PoliticalMetricId) =>
@@ -298,10 +274,8 @@ export async function processPoliticalMetricsDynamics(
       const ops: AnyBulkWriteOperation<PoliticalMetricsDoc>[] = [];
       for (const doc of docs) {
         const regionalLevels = regionalLevelsByRegion.get(doc._id);
-        const regionalMultipliers = regionalFinanceEnabled
-          ? new Map(deliveryByRegion.get(doc._id) ?? [])
-          : undefined;
-        if (regionalLevels && regionalMultipliers) {
+        const regionalMultipliers = new Map(deliveryByRegion.get(doc._id) ?? []);
+        if (regionalLevels) {
           for (const law of getCatalog(countryId)) {
             if (
               law.kind !== "tax" &&

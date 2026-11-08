@@ -1374,13 +1374,13 @@ describe("resolveBattleDeclarations - allied auto-join", () => {
   });
 });
 
-describe("resolveBattleDeclarations - NPP auto-join switch", () => {
+describe("resolveBattleDeclarations - NPP auto-join", () => {
   let db: MockDb;
 
   /**
    * UK is the ally under test. It never declares and never writes a
    * `theaterState.autoJoin` order, because an NPP-run country has no player to write
-   * one: `nppOffensiveJoinEnabled` is what stands in for that order.
+   * one, so being NPP-run is what stands in for that order.
    */
   const coalitionConflict = {
     _id: "afghan",
@@ -1412,11 +1412,8 @@ describe("resolveBattleDeclarations - NPP auto-join switch", () => {
     status: "pending",
   };
 
-  /**
-   * `joinEnabled` is the admin switch; `ukIsNpp` is whether UK reads as NPP-run. Both
-   * vary because the switch must be inert for a player government even when on.
-   */
-  function setup(joinEnabled: boolean, ukIsNpp = true) {
+  /** `ukIsNpp` is whether UK reads as NPP-run; a player government is never enrolled. */
+  function setup(ukIsNpp = true) {
     vi.clearAllMocks();
     db = createMockDb();
     for (const c of [
@@ -1435,10 +1432,7 @@ describe("resolveBattleDeclarations - NPP auto-join switch", () => {
     db.collectionMocks.militaryFormations.findOne.mockResolvedValue(null);
     db.collectionMocks.nationalDoctrine.findOne.mockResolvedValue(null);
     db.collectionMocks.conflicts.findOne.mockResolvedValue(coalitionConflict);
-    db.collectionMocks.gameState.findOne.mockResolvedValue({
-      _id: "current",
-      nppOffensiveJoinEnabled: joinEnabled,
-    });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current" });
     db.collectionMocks.countryGameStates.find.mockReturnValue({
       toArray: vi
         .fn()
@@ -1447,7 +1441,7 @@ describe("resolveBattleDeclarations - NPP auto-join switch", () => {
     db.collectionMocks.battleDeclarations.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([usDeclares]),
     });
-    // No standing order anywhere: the switch is the only thing that can enrol UK.
+    // No standing order anywhere: being NPP-run is the only thing that can enrol UK.
     db.collectionMocks.theaterState.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     });
@@ -1461,23 +1455,16 @@ describe("resolveBattleDeclarations - NPP auto-join switch", () => {
   const reportOf = () =>
     db.collectionMocks.battleReports.insertOne.mock.calls[0]?.[0] as { attackers?: string[] };
 
-  it("enrols an NPP ally deployed at the front when the switch is on", async () => {
-    setup(true);
+  it("enrols an NPP ally deployed at the front", async () => {
+    setup();
     await resolveBattleDeclarations(db as unknown as Db, 41);
     expect(reportOf().attackers).toEqual(["US", "UK"]);
   });
 
-  it("leaves the NPP ally out when the switch is off", async () => {
-    // The default, and the whole point of the switch: silence stays defensive.
+  it("never enrols a player government", async () => {
+    // Players opt in through `theaterState.autoJoin` and nowhere else. Enrolling them
+    // here would attack with an army whose owner never ordered it.
     setup(false);
-    await resolveBattleDeclarations(db as unknown as Db, 41);
-    expect(reportOf().attackers).toEqual(["US"]);
-  });
-
-  it("never enrols a player government, switch on or not", async () => {
-    // Players opt in through `theaterState.autoJoin` and nowhere else. If the switch
-    // reached them it would attack with an army whose owner never ordered it.
-    setup(true, false);
     await resolveBattleDeclarations(db as unknown as Db, 41);
     expect(reportOf().attackers).toEqual(["US"]);
   });

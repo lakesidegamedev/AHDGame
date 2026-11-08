@@ -15,8 +15,7 @@
  * cannot extract.
  *
  * Pure functions only; DB wiring lives in
- * `src/lib/turn/extractionAutoStrategy.ts`, gated by
- * `gameState.extractionAutoStrategyEnabled`.
+ * `src/lib/turn/extractionAutoStrategy.ts`.
  */
 
 import {

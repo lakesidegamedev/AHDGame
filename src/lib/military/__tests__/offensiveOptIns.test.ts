@@ -43,7 +43,7 @@ describe("offensiveOptInsAtFront", () => {
   it("still honours a player standing order from a country off the roster", () => {
     // The narrowing applies to the blanket set only. A standing order names its front
     // deliberately, and `sideOf`'s bloc placement for such a player is long-standing
-    // behaviour this switch does not get to change.
+    // behaviour the blanket set does not get to change.
     const state = [{ countryId: "FR", cohesion: 85, committed: {}, autoJoin: { afghan: true } }];
     expect([...offensiveOptInsAtFront(sources(state), conflict, "afghan")]).toEqual(["FR"]);
   });
@@ -55,30 +55,19 @@ describe("offensiveOptInsAtFront", () => {
 });
 
 describe("loadOffensiveOptInSources", () => {
-  function db(gameState: Record<string, unknown> | null, countryRows: unknown[] = []): MockDb {
+  function db(countryRows: unknown[] = []): MockDb {
     const mock = createMockDb();
     mock.collection("theaterState").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     });
-    mock.collection("gameState").findOne.mockResolvedValue(gameState);
     mock.collection("countryGameStates").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue(countryRows),
     });
     return mock;
   }
 
-  it("reads no country access at all while the switch is off", async () => {
-    // The cost argument for the early exit: a world that never enabled this pays one
-    // projected gameState read per tick and nothing else.
-    const mock = db({ _id: "current" });
-    const out = await loadOffensiveOptInSources(mock as unknown as Db);
-
-    expect(out.nppAutoJoiners.size).toBe(0);
-    expect(mock.collectionMocks.countryGameStates.find).not.toHaveBeenCalled();
-  });
-
-  it("collects every non-player-enabled country when the switch is on", async () => {
-    const mock = db({ _id: "current", nppOffensiveJoinEnabled: true }, [
+  it("collects every non-player-enabled country", async () => {
+    const mock = db([
       { _id: "UK", status: "active", enabledForPlayers: false },
       { _id: "US", status: "active", enabledForPlayers: true },
     ]);
@@ -86,11 +75,5 @@ describe("loadOffensiveOptInSources", () => {
 
     expect(out.nppAutoJoiners.has("UK")).toBe(true);
     expect(out.nppAutoJoiners.has("US")).toBe(false);
-  });
-
-  it("treats a missing gameState row as off", async () => {
-    // Fail-closed: an unconfigured world must not send NPP armies on the attack.
-    const out = await loadOffensiveOptInSources(db(null) as unknown as Db);
-    expect(out.nppAutoJoiners.size).toBe(0);
   });
 });

@@ -8,14 +8,9 @@ import type {
   PoliticalMetricsHistoryDoc,
 } from "@/lib/db/types/politicalMetrics";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { loadDemocraticCompetition } from "@/lib/governanceStyle/loadCompetition";
 import { scoreGovernanceStyle, type GovernanceStyleScore } from "@/lib/governanceStyle/score";
 import { getEnactedLevels } from "@/lib/politicalLegislation/enactedLevels";
-import {
-  loadPublicHealthDeliveryMultiplier,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "@/lib/governmentFinance/deliveryMultiplier";
 import { loadDepartmentDeliveryMultipliersByCountry } from "@/lib/governmentFinance/deliveryMultipliers";
 import { loadProgramCostScale } from "@/lib/politicalLegislation/programCostScale";
 import { lawTargets } from "@/lib/politicalLegislation/dynamics";
@@ -146,8 +141,6 @@ export async function loadCountryPoliticalMetrics(
           currentTurn: 1,
           startingYear: 1,
           preset: 1,
-          departmentProgramSliceEnabled: 1,
-          departmentFinanceEnabled: 1,
           presidentialTenureByCountry: 1,
         },
       }
@@ -165,27 +158,11 @@ export async function loadCountryPoliticalMetrics(
     countryId,
     states
   );
-  const generalizedFinanceEnabled = gameState?.departmentFinanceEnabled === true;
-  const nationalContributionMultipliers = generalizedFinanceEnabled
-    ? (
-        await loadDepartmentDeliveryMultipliersByCountry(db, gameState?.currentTurn ?? 1, true, [
-          countryId,
-        ])
-      ).get(countryId)
-    : countryId === COUNTRY_CONFIGS.US.id
-      ? new Map([
-          [
-            US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-            (
-              await loadPublicHealthDeliveryMultiplier(
-                db,
-                gameState?.currentTurn ?? 1,
-                gameState?.departmentProgramSliceEnabled === true
-              )
-            ).multiplier,
-          ],
-        ])
-      : undefined;
+  const nationalContributionMultipliers = (
+    await loadDepartmentDeliveryMultipliersByCountry(db, gameState?.currentTurn ?? 1, true, [
+      countryId,
+    ])
+  ).get(countryId);
 
   // SP2 (§5/§6): trend history + the modifiers decomposition — the dynamics
   // engine's own arithmetic served read-time. The stored series caps at 365

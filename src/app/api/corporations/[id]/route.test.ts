@@ -424,19 +424,17 @@ describe("GET /api/corporations/[id]", () => {
 
 describe("acquisition navigation capability", () => {
   it.each([
-    { role: "ceo", vacant: false, enabled: true, paused: false, expected: true },
-    { role: "spectator", vacant: false, enabled: true, paused: false, expected: false },
-    { role: "ceo", vacant: true, enabled: true, paused: false, expected: false },
-    { role: "ceo", vacant: false, enabled: false, paused: false, expected: false },
-    { role: "ceo", vacant: false, enabled: true, paused: true, expected: false },
+    { role: "ceo", vacant: false, paused: false, expected: true },
+    { role: "spectator", vacant: false, paused: false, expected: false },
+    { role: "ceo", vacant: true, paused: false, expected: false },
+    { role: "ceo", vacant: false, paused: true, expected: false },
   ])(
-    "returns $expected for $role with vacancy $vacant, enabled $enabled and paused $paused",
-    async ({ role, vacant, enabled, paused, expected }) => {
+    "returns $expected for $role with vacancy $vacant and paused $paused",
+    async ({ role, vacant, paused, expected }) => {
       await wireDb();
       const corporation = makeCorporation({ countryId: "US", ceoVacant: vacant });
       db.collection("corporations").findOne.mockResolvedValue(corporation);
       db.collection("gameState").findOne.mockResolvedValue({
-        corpDealsEnabled: enabled,
         corporationActionsPaused: paused,
       });
       const { getAuthUser } = await import("@/lib/auth");
