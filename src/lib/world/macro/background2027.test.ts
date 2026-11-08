@@ -12,6 +12,7 @@ import {
   background2027Scale,
   buildBackground2027MacroCountry,
 } from "./background2027";
+import { NATIONAL_FIGURES_2027 } from "@/lib/seeds/reference/nationalFigures2027";
 import { buildBackgroundMacroCountry } from "./backgroundSeed";
 import {
   addBackgroundBooksToCountries,
@@ -77,10 +78,10 @@ describe("2027 background macro seeds", () => {
       expect(capacity).toBeCloseTo(annualGdpMillions * BACKGROUND_2027_CAPACITY_PER_GDP, -2);
       worldGdp += annualGdpMillions;
     }
-    // The sixteen together: roughly $12T to $20T a year.
-    expect(worldGdp).toBeGreaterThan(12_000_000);
-    expect(worldGdp).toBeLessThan(20_000_000);
-    expect(background2027Scale("FR").population).toBe(67_000_000);
+    // The sixteen together: the IMF projects about $21.7T for 2027.
+    expect(worldGdp).toBeGreaterThan(17_000_000);
+    expect(worldGdp).toBeLessThan(25_000_000);
+    expect(background2027Scale("FR").population).toBe(NATIONAL_FIGURES_2027.FR.population);
   });
 
   it("leaves other presets on their existing seeds", async () => {

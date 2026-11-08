@@ -23,7 +23,7 @@ import { eraPriceLevelFor } from "@/lib/campaigns/rules/priceLevel";
 import { shouldReconcileStateGdpForPreset } from "@/lib/admin/seed/reconcileStateGdp";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
-import { PRESET_DATASETS, type PresetDataset } from "./registry";
+import { PRESET_DATASETS, simulatesRegions, type PresetDataset } from "./registry";
 import { REGION_TABLES } from "./regionTables";
 import { SeedContractError, type SeedContractGap } from "./seedContractError";
 import { DUPLICATE_SIMILARITY_THRESHOLD, numericSimilarity } from "./rules/similarity";
@@ -54,10 +54,12 @@ function coverageGaps(preset: SeedPresetId): SeedContractGap[] {
 }
 
 function duplicateGap(dataset: PresetDataset, preset: SeedPresetId): SeedContractGap | null {
+  if (dataset.regionalCountry && !simulatesRegions(preset, dataset.regionalCountry)) return null;
   const own = dataset.provide(preset);
   if (isEmpty(own)) return null;
   const year = getStartingYearForPreset(preset);
-  const reduce = dataset.fingerprint ?? ((value: unknown) => value);
+  const reduce = (value: unknown) =>
+    dataset.fingerprint ? dataset.fingerprint(value, preset) : value;
   const mine = reduce(own);
   for (const other of SEED_PRESET_IDS) {
     if (getStartingYearForPreset(other) >= year) continue;
@@ -124,6 +126,7 @@ function scaleGaps(preset: SeedPresetId): SeedContractGap[] {
       });
     }
 
+    if (!simulatesRegions(preset, countryId)) continue;
     const regions = REGION_TABLES[countryId];
     const rows = regions?.seededIn.includes(preset) ? regions.table[preset] : undefined;
     if (!rows || rows.length === 0) continue;

@@ -4,6 +4,7 @@ import type { CountryGeography } from "../contract";
 import { deMetricPresets1953 } from "./data/deMetricPresets1953";
 import { deMetricPresets1979 } from "./data/deMetricPresets1979";
 import { deMetricPresets1991, deMetricPresets2019 } from "./data/deMetricPresets";
+import { deMetricPresets2027 } from "./data/deMetricPresets2027";
 import { dePopulationAnchors1991, dePopulationAnchors2019 } from "./data/dePopulationAnchors";
 import { deRegionCensusData } from "./data/deRegionCensusData";
 import { deRegionCensusData1953 } from "./data/deRegionCensusData1953";
@@ -60,6 +61,7 @@ const censusBundles = {
 };
 
 const metricPresetBundles = {
+  "2027-default": deMetricPresets2027,
   "2019-default": deMetricPresets2019,
   "1991-default": deMetricPresets1991,
   "1979-default": deMetricPresets1979,

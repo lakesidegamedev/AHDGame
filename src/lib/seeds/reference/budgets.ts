@@ -7,6 +7,8 @@ import { initializeCapitalGainsTaxRates } from "@/lib/budget/rules/capitalGainsT
 import { NG_1991_NOMINAL_GDP_NGN } from "@/lib/countries/ng/data/ngGdp1991";
 import { rebaseBudgetNominals } from "./rules/rebaseBudgetNominals";
 import { anchorBudget1991 } from "./rules/anchorBudget1991";
+import { projectBudget2027 } from "./rules/projectBudget2027";
+import { NATIONAL_FIGURES_2027 } from "./nationalFigures2027";
 import { calibrateOpeningInflation1991 } from "./openingInflation1991";
 import {
   FISCAL_ANCHORS_1991,
@@ -5789,12 +5791,14 @@ function getUncalibratedNationalBudgetSeedConfigsForPreset(
     );
   }
   if (preset === "2027-default") {
-    return rebaseLegacyUnitBudgetsFor2027(
-      convertEuroMemberBudgetsFor2027(
-        overlayNationalBudgetConfigs(
-          getUncalibratedNationalBudgetSeedConfigsForPreset("2023-default"),
-          NATIONAL_BUDGET_SEED_CONFIGS_2027,
-          2027
+    return projectCarriedBudgetsTo2027(
+      rebaseLegacyUnitBudgetsFor2027(
+        convertEuroMemberBudgetsFor2027(
+          overlayNationalBudgetConfigs(
+            getUncalibratedNationalBudgetSeedConfigsForPreset("2023-default"),
+            NATIONAL_BUDGET_SEED_CONFIGS_2027,
+            2027
+          )
         )
       )
     );
@@ -5979,6 +5983,28 @@ function rebaseLegacyUnitBudgetsFor2027(
     const rate = rates[rule.countryId];
     if (!legacyRate || !rate || legacyRate <= 0 || rate <= 0) return config;
     return scaleBudgetMoney(config, rate / legacyRate, rule.currencyCode);
+  });
+}
+
+/**
+ * Rows still carrying an earlier era's calibration take their size, debt,
+ * revenue ratio and macro factors from the sourced 2027 national figures.
+ */
+function projectCarriedBudgetsTo2027(
+  configs: NationalBudgetSeedConfig[]
+): NationalBudgetSeedConfig[] {
+  return configs.map((config) => {
+    const figures = NATIONAL_FIGURES_2027[config.countryId];
+    if (!figures || config.sourceFiscalYear === undefined) return config;
+    const atNewGdp = rebaseBudgetNominals(config, figures.gdp);
+    const modeledRevenue = buildNationalBudgetSeed(atNewGdp).revenue.total / figures.gdp;
+    const { sourceFiscalYear: _carried, ...projected } = projectBudget2027(
+      config,
+      figures,
+      modeledRevenue
+    );
+    void _carried;
+    return projected;
   });
 }
 

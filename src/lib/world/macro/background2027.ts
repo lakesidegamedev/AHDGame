@@ -35,7 +35,8 @@ export interface Background2027Profile {
   rationale: string;
   /**
    * Population and annual GDP (billions of ₳) for a country the 2027 budget
-   * seed does not cover. Absent when the budget seed supplies both.
+   * seed does not cover, from the IMF World Economic Outlook (October 2026)
+   * 2027 projection. Absent when the budget seed supplies both.
    */
   scale?: { population: number; gdpBillions: number };
 }
@@ -68,7 +69,7 @@ export const BACKGROUND_2027_PROFILES: Readonly<Record<string, Background2027Pro
     tradeExposure: 0.3,
     trendGrowth: 0.01,
     rationale: "Energy exporter under sanctions; war economy holds output but caps trade.",
-    scale: { population: 143_000_000, gdpBillions: 2_100 },
+    scale: { population: 143_040_000, gdpBillions: 2_675 },
   },
   PL: {
     fiscalCapacity: 0.38,
@@ -76,7 +77,7 @@ export const BACKGROUND_2027_PROFILES: Readonly<Record<string, Background2027Pro
     tradeExposure: 0.55,
     trendGrowth: 0.03,
     rationale: "Fast-converging EU manufacturing hub tied into German supply chains.",
-    scale: { population: 36_600_000, gdpBillions: 950 },
+    scale: { population: 36_260_000, gdpBillions: 1_207 },
   },
   HU: {
     fiscalCapacity: 0.43,
@@ -91,7 +92,7 @@ export const BACKGROUND_2027_PROFILES: Readonly<Record<string, Background2027Pro
     tradeExposure: 0.45,
     trendGrowth: 0.025,
     rationale: "Converging EU economy with a persistent budget deficit.",
-    scale: { population: 18_900_000, gdpBillions: 400 },
+    scale: { population: 18_940_000, gdpBillions: 500 },
   },
   BG: {
     fiscalCapacity: 0.36,

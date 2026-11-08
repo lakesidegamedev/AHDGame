@@ -103,6 +103,7 @@ import { trRegions1953 } from "@/lib/seeds/tr/trRegions1953";
 import { trRegions1991 } from "@/lib/countries/tr/data/trRegions1991";
 import { trRegions2013 } from "@/lib/countries/tr/data/trRegions2013";
 import { trRegionsModern } from "@/lib/countries/tr/data/trRegionsModern";
+import { TR_GEOGRAPHY } from "@/lib/countries/tr/geography";
 import { ukRegions } from "@/lib/seeds/uk/ukRegions";
 import { ukRegions1953 } from "@/lib/seeds/uk/ukRegions1953";
 import { ukRegions1979 } from "@/lib/seeds/uk/ukRegions1979";
@@ -277,7 +278,7 @@ export const REGION_TABLES: Readonly<Record<string, CountryRegionTable>> = {
       "2007-default": trRegions2013,
       "2019-default": trRegionsModern,
       "2023-default": trRegionsModern,
-      "2027-default": trRegionsModern,
+      "2027-default": TR_GEOGRAPHY.regionBundles["2027-default"],
     },
   },
   GR: {

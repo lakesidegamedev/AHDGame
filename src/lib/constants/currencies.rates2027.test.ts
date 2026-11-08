@@ -13,6 +13,7 @@ import {
   getRuntimeInitialRates,
 } from "./currencies";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
+import { NATIONAL_FIGURES_2027 } from "@/lib/seeds/reference/nationalFigures2027";
 
 const PRESET = "2027-default";
 
@@ -89,32 +90,22 @@ describe("2027 budgets on the new rate scale", () => {
     ["SE", "SEK", "SEK"],
     ["TR", "TRL", "TRY"],
   ] as const)(
-    "rebases the inherited %s book at constant USD value",
+    "moves the inherited %s book onto its 2027 figures",
     (countryId, legacyCode, code) => {
       const legacy = budgetFor("2023-default", countryId);
       const modern = budgetFor(PRESET, countryId);
       expect(legacy.currencyCode).toBe(legacyCode);
       expect(modern.currencyCode).toBe(code);
-      const legacyRate = INITIAL_RATES[countryId]!;
-      const rate = getInitialRates(PRESET)[countryId]!;
-      expect(modern.gdp / rate).toBeCloseTo(legacy.gdp / legacyRate, 0);
-      expect(modern.debt.principal / rate).toBeCloseTo(legacy.debt.principal / legacyRate, 0);
-      expect(modern.otherRevenue / rate).toBeCloseTo(legacy.otherRevenue / legacyRate, 0);
-      expect(modern.baselineStateGrants / rate).toBeCloseTo(
-        legacy.baselineStateGrants / legacyRate,
-        0
-      );
-      for (const [key, value] of Object.entries(legacy.baselineSpendingByCategory)) {
-        expect(modern.baselineSpendingByCategory[key]! / rate, key).toBeCloseTo(
-          value / legacyRate,
-          0
-        );
-      }
-      // Ratios do not move.
+      expect(modern.gdp).toBe(NATIONAL_FIGURES_2027[countryId].gdp);
+      expect(modern.population).toBe(NATIONAL_FIGURES_2027[countryId].population);
       expect(modern.taxBaseRatios).toEqual(legacy.taxBaseRatios);
-      expect(modern.debt.interestRate).toBe(legacy.debt.interestRate);
     }
   );
+
+  it("sizes Turkey at the IMF dollar projection, since the seeded lira rate is stale", () => {
+    const rate = getInitialRates(PRESET).TR!;
+    expect(budgetFor(PRESET, "TR").gdp / rate / 1e9).toBeCloseTo(1_950.781, 2);
+  });
 
   it("keeps budgets already authored in real local money as they are", () => {
     // JP, UK, BR, CN and NG rows hold real local amounts, so only the rate moves.
