@@ -5,6 +5,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { isStateOwned } from "./nationalCorporation";
 import { privatizeAsset } from "./privatizeAsset";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { clawBackNationalizationCompensation } from "./clawbackCompensation";
 
 export interface ReverseNationalizationParams {
@@ -77,23 +78,8 @@ export async function reverseNationalizationTaking(
       // Claim the compensation before the asset moves so a retry cannot recover
       // it twice; the claim is handed back below if the return does not happen.
       let claimedAnchor = 0;
-      if (prov && priorOwner && (prov.compensationAnchor ?? 0) > 0) {
-        const claim = await sectorsCol.updateOne(
-          {
-            _id: sector._id,
-            "nationalizationProvenance.compensationAnchor": prov.compensationAnchor,
-          },
-          { $unset: { "nationalizationProvenance.compensationAnchor": "" } }
-        );
-        if (claim.modifiedCount === 1) claimedAnchor = prov.compensationAnchor ?? 0;
-      }
-      releaseClaim = async () => {
-        if (claimedAnchor <= 0) return;
-        await sectorsCol.updateOne(
-          { _id: sector._id, nationalizationProvenance: { $exists: true } },
-          { $set: { "nationalizationProvenance.compensationAnchor": claimedAnchor } }
-        );
-      };
+      if (prov && priorOwner) claimedAnchor = await claimCompensation(db, sector._id, prov);
+      releaseClaim = () => restoreCompensationClaim(db, sector._id, claimedAnchor);
       const recoverCompensation = async () => {
         if (claimedAnchor <= 0 || !priorOwner) return;
         const recovered = await clawBackNationalizationCompensation(db, {
@@ -215,7 +201,7 @@ async function returnMergedPortion(
 ): Promise<boolean> {
   const prov = survivor.nationalizationProvenance;
   if (!prov) return false;
-  const sectorsCol = db.collection<CorporateSector>("corporateSectors");
+  const sectorsCol = await getCorporateSectorsCollection(db);
   const plants = typeof prov.foldedCapitalStock === "number";
   const foldedStock = plants
     ? Math.min(prov.foldedCapitalStock ?? 0, survivor.capitalStock ?? 0)
@@ -328,4 +314,32 @@ async function returnMergedPortion(
     updatedAt: now,
   } as CorporateSector);
   return true;
+}
+
+/** Take the recorded compensation off the sector so it can be recovered exactly once. */
+async function claimCompensation(
+  db: Db,
+  sectorId: ObjectId,
+  prov: NonNullable<CorporateSector["nationalizationProvenance"]>
+): Promise<number> {
+  const amount = prov.compensationAnchor ?? 0;
+  if (!(amount > 0)) return 0;
+  const claim = await (
+    await getCorporateSectorsCollection(db)
+  ).updateOne(
+    { _id: sectorId, "nationalizationProvenance.compensationAnchor": amount },
+    { $unset: { "nationalizationProvenance.compensationAnchor": "" } }
+  );
+  return claim.modifiedCount === 1 ? amount : 0;
+}
+
+/** Hand a claimed compensation back to the sector when the asset did not return. */
+async function restoreCompensationClaim(db: Db, sectorId: ObjectId, amount: number): Promise<void> {
+  if (!(amount > 0)) return;
+  await (
+    await getCorporateSectorsCollection(db)
+  ).updateOne(
+    { _id: sectorId, nationalizationProvenance: { $exists: true } },
+    { $set: { "nationalizationProvenance.compensationAnchor": amount } }
+  );
 }

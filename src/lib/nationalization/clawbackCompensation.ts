@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   anchorToCorpLiquidCapital,
@@ -29,7 +29,7 @@ export async function clawBackNationalizationCompensation(
 ): Promise<CompensationClawbackResult> {
   const { countryId, corporationId, compensationAnchor, now } = args;
   if (!(compensationAnchor > 0)) return { recoveredAnchor: 0, owedAnchor: 0 };
-  const corps = db.collection<Corporation>("corporations");
+  const corps = await getCorporationsCollection(db);
   const corp = await corps.findOne({ _id: corporationId });
   if (!corp) return { recoveredAnchor: 0, owedAnchor: 0 };
 

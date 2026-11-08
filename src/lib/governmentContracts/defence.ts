@@ -9,6 +9,7 @@ import { selfDealingDisclosure } from "@/lib/military/defenceSelfDealing";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { assignedFactoriesForSector } from "@/lib/db/collections/defenceContracts";
 import {
   awardFactoryAllocation,
