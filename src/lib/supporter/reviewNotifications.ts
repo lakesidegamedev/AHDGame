@@ -32,7 +32,7 @@ export async function notifyModeratorsOfSupporterRequest(opts: {
         type: "supporter_request_pending",
         title: "New supporter request",
         message: `${opts.submitterName} submitted a ${kindLabel(opts.kind)} request: ${opts.summary}`,
-        metadata: { kind: opts.kind, href: "/moderator?tab=content&sub=supporter-requests" },
+        metadata: { kind: opts.kind, href: "/control/community/supporter-requests" },
       })
     )
   );

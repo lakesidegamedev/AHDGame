@@ -43,6 +43,7 @@ const ALLOWED_WITHOUT_CHARACTER = [
   "/guides",
   "/feedback",
   "/admin",
+  "/control",
   // A logged-in, characterless user who clicks "Just want to explore first?"
   // on /register should land on the world map, not get force-redirected to
   // /settings by the effect below.
@@ -73,6 +74,7 @@ interface NavbarWrapperState {
     username: string;
     isAdmin?: boolean;
     isModerator?: boolean;
+    isJuniorDev?: boolean;
     singleplayer?: boolean;
     canSeeCampaignManager?: boolean;
     patreonTier?: string | null;

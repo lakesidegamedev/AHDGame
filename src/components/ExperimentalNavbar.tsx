@@ -503,14 +503,13 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     unionsEnabled,
   });
 
-  const staffSubItems =
-    user?.isAdmin || user?.isModerator
-      ? visibleStaffNavItems({
-          isAdmin: !!user?.isAdmin,
-          isModerator: !!user?.isModerator,
-          isSingleplayerOwner: viewerIsSingleplayerOwner(user),
-        })
-      : [];
+  // Empty for non-staff: every staff item is gated on a staff role.
+  const staffSubItems = visibleStaffNavItems({
+    isAdmin: !!user?.isAdmin,
+    isModerator: !!user?.isModerator,
+    isJuniorDev: !!user?.isJuniorDev,
+    isSingleplayerOwner: viewerIsSingleplayerOwner(user),
+  });
 
   // ── Dropdown panels ────────────────────────────────────────────────────────
   const worldMenu = (
@@ -1203,7 +1202,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 </div>
 
                 {/* Staff — admin/mod only */}
-                {(user?.isAdmin || user?.isModerator) && staffSubItems.length > 0 && (
+                {staffSubItems.length > 0 && (
                   <div
                     className="relative shrink-0"
                     ref={open === "staff" ? dropdownAnchorRef : undefined}

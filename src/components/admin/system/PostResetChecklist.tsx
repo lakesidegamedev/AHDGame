@@ -16,37 +16,37 @@ const FOLLOW_UP_STEPS: ChecklistStep[] = [
   {
     title: "Verify country readiness",
     desc: "Confirm every enabled country's reference data seeded cleanly for the chosen preset.",
-    href: "/admin?tab=system&sub=seed",
+    href: "/control/system/seed",
     linkLabel: "Seed Database",
   },
   {
     title: "Bootstrap remaining countries",
     desc: "Run the universal seeder for any country whose runtime state (regions, demographics, NPPs, seats, economy) still needs building.",
-    href: "/admin?tab=system&sub=universal-seeder",
+    href: "/control/system/universal-seeder",
     linkLabel: "Universal Seeder",
   },
   {
     title: "Spawn missing elections",
     desc: "Scan all states and fill any races that should exist but aren't running — plus per-country spawners (UK, JP, DE, CN, BR, IE).",
-    href: "/admin?tab=politics&sub=elections",
+    href: "/control/politics/elections",
     linkLabel: "Politics · Elections",
   },
   {
     title: "Seed unowned sectors",
     desc: "Populate sector slots so the corporate economy has something to run on (auto re-seed only covers gates left on).",
-    href: "/admin?tab=economy&sub=sector-seed",
+    href: "/control/economy/sector-seed",
     linkLabel: "Economy · Sector Seed",
   },
   {
     title: "Review kill switches & feature gates",
     desc: "Registration, random events, transfers, and gates carry over — make sure the world posture matches the new iteration.",
-    href: "/admin?tab=dashboard",
+    href: "/control/overview/dashboard",
     linkLabel: "Dashboard",
   },
   {
     title: "Set the iteration & resume the cron",
     desc: "Stamp the new Alpha/Beta number if you didn't during reset, run a manual turn to smoke-test, then start the clock.",
-    href: "/admin?tab=dashboard",
+    href: "/control/overview/dashboard",
     linkLabel: "Turn Controls",
   },
 ];

@@ -169,6 +169,7 @@ export const USER_FIELD_CONTRACT: PreservedFieldContract = Object.freeze({
   modNotes: keep(MODERATION),
   notificationBundleUserIds: keep("Staff-configured inbox bundle between accounts."),
   moderatorSince: keep("Staff role."),
+  juniorDevSince: keep("Staff role."),
   lastRetiredAt: keep("Wall-clock anti-abuse cooldown, not a game-turn value."),
   wireQuotaUsed: clear("Counts transfers made with old-world money."),
   wireQuotaWindowStart: clear("Pairs with wireQuotaUsed."),

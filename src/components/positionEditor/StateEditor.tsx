@@ -133,7 +133,7 @@ export function StateEditor({
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-card-border bg-card/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <Link
-          href="/admin/position-editor"
+          href="/control/world/position-editor"
           className="text-sm text-muted transition-colors hover:text-foreground"
         >
           ← Map

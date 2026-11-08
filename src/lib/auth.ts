@@ -1,4 +1,5 @@
 import { isTokenRevokedByCutoff } from "@/lib/auth/revocationCutoff";
+import type { StaffRole } from "@/lib/staff/rules";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { jwtVerify, SignJWT, errors as joseErrors } from "jose";
@@ -192,6 +193,9 @@ function mapUserToAuthUser(user: User, payload: UserPayload): AuthUser {
   // signed but stale token minted before a demotion must never re-grant
   // staff access, and a stale player-claim token must never mask a promotion.
   const isAdmin = user.isAdmin === true || user.role === "admin";
+  // junior_dev is read-only staff. It is deliberately NOT isModerator: every
+  // gameplay bypass keyed on isModerator stays closed to it.
+  const isJuniorDev = !isAdmin && user.role === "junior_dev";
   return {
     userId: payload.userId,
     username: payload.username,
@@ -199,6 +203,7 @@ function mapUserToAuthUser(user: User, payload: UserPayload): AuthUser {
     role: user.role,
     isAdmin,
     isModerator: isAdmin || user.role === "moderator",
+    ...(isJuniorDev ? { isJuniorDev: true } : {}),
     isBanned: user.isBanned === true,
     activeCharacterId: user.activeCharacterId ? user.activeCharacterId.toString() : null,
     // Only present when opted in, so the rest of the auth shape is unchanged.
@@ -213,6 +218,8 @@ export interface AuthUser {
   role: string;
   isAdmin?: boolean;
   isModerator?: boolean;
+  /** Read-only staff. Never implies isAdmin or isModerator. */
+  isJuniorDev?: boolean;
   /** True when the underlying user has been banned. Read directly from the DB
    * record on every auth resolution so banned accounts with stale JWTs are
    * caught immediately without waiting for cookie expiry. */
@@ -340,9 +347,11 @@ function isStaffCandidate(payload: UserPayload, cached: User | undefined): boole
     payload.isAdmin === true ||
     payload.role === "admin" ||
     payload.role === "moderator" ||
+    payload.role === "junior_dev" ||
     cached?.isAdmin === true ||
     cached?.role === "admin" ||
-    cached?.role === "moderator"
+    cached?.role === "moderator" ||
+    cached?.role === "junior_dev"
   );
 }
 
@@ -473,6 +482,38 @@ export async function getAuthModerator(): Promise<AuthUserWithCharacter | null> 
   if (!user || !user.isModerator) return null;
 
   return user;
+}
+
+/**
+ * Get an authenticated junior dev (read-only staff). Returns null for anyone
+ * else, admins included: callers use this only as the read-only fallback after
+ * the admin or moderator check has already failed.
+ */
+export async function getAuthJuniorDev(): Promise<AuthUserWithCharacter | null> {
+  const user = await getAuthUserWithCharacter();
+  if (!user || !user.isJuniorDev) return null;
+
+  return user;
+}
+
+/**
+ * Get an authenticated staff member of any role (admin, moderator, junior
+ * dev) with the role resolved. Returns null for everyone else. Page loaders
+ * use this; API routes use requireAdmin / requireModerator.
+ */
+export async function getAuthStaff(): Promise<
+  (AuthUserWithCharacter & { staffRole: StaffRole }) | null
+> {
+  const user = await getAuthUserWithCharacter();
+  if (!user) return null;
+  const staffRole: StaffRole | null = user.isAdmin
+    ? "admin"
+    : user.isModerator
+      ? "moderator"
+      : user.isJuniorDev
+        ? "junior_dev"
+        : null;
+  return staffRole ? { ...user, staffRole } : null;
 }
 
 /**

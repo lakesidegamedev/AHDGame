@@ -42,8 +42,7 @@ describe("nav link inventory parity", () => {
     // covered in staffNavItems.test.ts. The inventory only guards the route list.
     const labels = buildStaffNavItems({ isAdmin: true, isModerator: true }).map((i) => i.label);
 
-    expect(labels).toContain("Admin Panel");
-    expect(labels).toContain("Mod Panel");
+    expect(labels).toContain("Control Panel");
     expect(labels).toContain("Ops Dashboard");
   });
 

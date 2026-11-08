@@ -258,11 +258,12 @@ export function NavbarMobileMenu({
         {/* Staff tools - collapsible, admin/mod only. Kept OUT of the flat
             top-level list on purpose: ops/staff links live under this one
             gated "Staff" section, never as headlining tabs. */}
-        {(user?.isAdmin || user?.isModerator) &&
+        {(user?.isAdmin || user?.isModerator || user?.isJuniorDev) &&
           (() => {
             const staffItems = visibleStaffNavItems({
               isAdmin: !!user?.isAdmin,
               isModerator: !!user?.isModerator,
+              isJuniorDev: !!user?.isJuniorDev,
               isSingleplayerOwner: viewerIsSingleplayerOwner(user),
             });
             if (staffItems.length === 0) return null;

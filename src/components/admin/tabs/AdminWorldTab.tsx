@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { DemographicsManager } from "@/components/DemographicsManager";
-import { SubNavLayout } from "./SubNavLayout";
 
 const NPPManagement = dynamic(
   () =>
@@ -61,12 +60,11 @@ export type WorldSubTab =
 
 interface AdminWorldTabProps {
   activeSub: WorldSubTab;
-  onSubChange: (sub: WorldSubTab) => void;
 }
 
-export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
+export function AdminWorldTab({ activeSub }: AdminWorldTabProps) {
   return (
-    <SubNavLayout tab="world" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         {activeSub === "demographics" && (
           <div className="space-y-4">
@@ -80,7 +78,7 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
                   </p>
                 </div>
                 <Link
-                  href="/admin/position-editor"
+                  href="/control/world/position-editor"
                   className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
                 >
                   Open position editor →
@@ -98,6 +96,6 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
         {activeSub === "countries" && <CountryManagement />}
         {activeSub === "conflicts" && <ConflictsManager />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }
