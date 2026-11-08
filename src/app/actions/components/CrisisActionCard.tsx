@@ -10,6 +10,8 @@ import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/typ
 import { crisisSeverity } from "@/lib/crises/severity";
 import { formatCrisisEffectValue } from "@/lib/crises/effectLabels";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
+import type { CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import { EventItem, type EventTone } from "./EventsPanel";
 
 interface ActiveCrisisData {
@@ -24,6 +26,8 @@ interface ActiveCrisisData {
    * detail page receives it. Null for crises that carry no such requirements.
    */
   optionAvailability?: Record<string, { eligible: boolean; reasons: string[] }> | null;
+  /** Stage, severity, forecast and the viewer's levers for Crisis v2 crises. */
+  v2?: CrisisV2Summary | null;
 }
 
 function formatTimeRemaining(minutes: number): string {
@@ -199,6 +203,7 @@ export default function CrisisActionCard() {
           timeRemainingMinutes,
           hasContributed,
           optionAvailability,
+          v2,
         } = data;
         const severity = crisisSeverity(crisis);
         const styles = SEVERITY_STYLES[severity];
@@ -278,6 +283,10 @@ export default function CrisisActionCard() {
                   </Link>
                 )}
               </div>
+            )}
+
+            {v2 && (
+              <CrisisV2Strip crisisId={crisis._id.toString()} v2={v2} onPulled={fetchCrises} />
             )}
 
             {/* Interaction Section — only when this character can act */}

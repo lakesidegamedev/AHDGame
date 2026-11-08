@@ -187,7 +187,9 @@ function CrisisBoardPage() {
                   selectedId={selectedId}
                   onSelect={focus}
                 />
-                {selected && <BoardCard crisis={selected} selected onFocus={focus} />}
+                {selected && (
+                  <BoardCard crisis={selected} selected onFocus={focus} onPulled={load} />
+                )}
               </div>
               <ExposurePanel crises={board.crises} authenticated={board.authenticated} />
             </div>
@@ -213,6 +215,7 @@ function CrisisBoardPage() {
                         crisis={c}
                         selected={c.id === selectedId}
                         onFocus={focus}
+                        onPulled={load}
                       />
                     ))}
                   </div>

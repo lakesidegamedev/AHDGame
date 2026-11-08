@@ -17,9 +17,11 @@ import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/cri
 import { CRISIS_TOOLTIPS, tooltipForEffect } from "@/lib/crises/tooltipCopy";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { getSiteUrl } from "@/lib/siteMetadata";
-import { getAuthAdmin } from "@/lib/auth";
+import { getAuthAdmin, getAuthUserWithCharacter } from "@/lib/auth";
 import CrisisInteractionPanel from "./CrisisInteractionPanel";
 import CrisisAdminActions from "./CrisisAdminActions";
+import CrisisV2Detail from "./CrisisV2Detail";
+import { loadCrisisV2Detail } from "@/lib/crises/queries/crisisV2View";
 
 // UN General Assembly — shared with the crises list hero so the two surfaces
 // read as one section. https://unsplash.com/photos/41Wj4KxB7BA
@@ -204,13 +206,19 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   if (!ObjectId.isValid(id)) notFound();
 
   const db = await getDb();
-  const [crisis, gameState, admin] = await Promise.all([
+  const [crisis, gameState, admin, viewer] = await Promise.all([
     db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) }),
     getGameState(db),
     getAuthAdmin(),
+    getAuthUserWithCharacter(),
   ]);
 
   if (!crisis) notFound();
+  const v2Detail = await loadCrisisV2Detail(
+    db,
+    crisis,
+    viewer?.hasCharacter && viewer.character ? viewer.character._id : null
+  );
 
   // Affected regions — used for the dollar value of a one-time GDP loss and to
   // resolve real place names for the `{location}` flavor substitution.
@@ -393,6 +401,8 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                 </p>
               </div>
             )}
+
+            {v2Detail && <CrisisV2Detail crisisId={id} detail={v2Detail} />}
 
             {/* Interactive decision panel (interactive crises only) */}
             {crisis.interactionDefinition && <CrisisInteractionPanel crisisId={id} />}

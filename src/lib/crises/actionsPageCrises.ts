@@ -5,6 +5,12 @@ export interface ActionsPageCrisisEntry {
   interaction: CrisisInteraction | null;
   currentNode: CrisisDecisionNode | null;
   canInteract: boolean;
+  /** Crisis v2 summary when the crisis carries v2 state. */
+  v2?: { levers: readonly unknown[] } | null;
+}
+
+function hasLevers(entry: ActionsPageCrisisEntry): boolean {
+  return (entry.v2?.levers.length ?? 0) > 0;
 }
 
 /**
@@ -24,9 +30,13 @@ export function shouldShowCrisisOnActionsPage(
   entry: ActionsPageCrisisEntry,
   isLocalCrisis: boolean
 ): boolean {
+  if (hasLevers(entry)) return true;
+
   if (!isLocalCrisis) {
     return entry.currentNode?.type === "collective" && entry.canInteract;
   }
+
+  if (entry.v2) return true;
 
   if (entry.currentNode && entry.canInteract && !entry.interaction?.resolvedAt) {
     return true;
@@ -45,10 +55,13 @@ export function shouldShowCrisisOnActionsPage(
  *    and this feed is polled once a minute by every player.
  */
 export function sanitizeCrisisForActionsPage<T extends ActionsPageCrisisEntry>(entry: T): T {
-  if (entry.canInteract) return entry;
+  // The v2 state carries the whole accountability ledger; the card reads the
+  // trimmed `v2` summary instead.
+  const { v2: _instance, ...base } = entry.crisis;
+  if (entry.canInteract) return { ...entry, crisis: base as T["crisis"] };
 
-  const { interactionDefinition: _omitted, ...crisis } = entry.crisis;
-  return { ...entry, crisis, currentNode: null, interaction: null };
+  const { interactionDefinition: _omitted, ...crisis } = base;
+  return { ...entry, crisis: crisis as T["crisis"], currentNode: null, interaction: null };
 }
 
 /**
@@ -66,7 +79,7 @@ export function compareActionsPageCrises(
   a: ActionsPageCrisisEntry,
   b: ActionsPageCrisisEntry
 ): number {
-  const actionable = Number(b.canInteract) - Number(a.canInteract);
+  const actionable = Number(b.canInteract || hasLevers(b)) - Number(a.canInteract || hasLevers(a));
   if (actionable !== 0) return actionable;
   const recency = b.crisis.startTurn - a.crisis.startTurn;
   if (recency !== 0) return recency;
