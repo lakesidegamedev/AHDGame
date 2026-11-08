@@ -87,7 +87,7 @@ const ActivityLogTab = lazy(() =>
 const SuspiciousActivityTab = lazy(() =>
   import("@/components/admin/players/SuspiciousActivityTab").then((m) => m.SuspiciousActivityTab)
 );
-const WikiManagementTab = lazy(() =>
+const WikiManagementTab = lazy<{ isAdmin?: boolean }>(() =>
   import("@/components/admin/wiki/WikiManagementTab").then((m) => m.WikiManagementTab)
 );
 const WikiReviewTab = lazy(() =>
