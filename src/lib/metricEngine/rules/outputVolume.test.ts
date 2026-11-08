@@ -5,6 +5,8 @@ import {
   sumObservedOutput,
   blendOutputGrowthSignal,
   outputHistorySpanTurns,
+  intermediateShare,
+  valueAddedOutput,
 } from "./outputVolume";
 
 describe("constant-price production", () => {
@@ -77,5 +79,85 @@ describe("physical measurement transition", () => {
       expect(blendOutputGrowthSignal(prior, -5, 48)).toBe(-5);
       expect(blendOutputGrowthSignal(prior, null, 48)).toBe(prior);
     }
+  });
+});
+
+describe("value added versus gross output", () => {
+  type Sector = Parameters<typeof constantPriceOutput>[0];
+  const LANES = [
+    "energy",
+    "manufacturing",
+    "retail",
+    "technology",
+    "financial",
+  ] as const satisfies readonly Sector["sectorType"][];
+  // Units that make every lane produce 100 of gross output at the basket.
+  const unitsFor = (sectorType: Sector["sectorType"], gross: number): number =>
+    gross / constantPriceOutput({ sectorType, producedUnits: 1 }, 48)!;
+  const region = (gross: Partial<Record<(typeof LANES)[number], number>>): Sector[] =>
+    LANES.map((sectorType) => ({
+      sectorType,
+      producedUnits: unitsFor(sectorType, gross[sectorType] ?? 100),
+    }));
+  const total = (sectors: Sector[], f: typeof constantPriceOutput) =>
+    sectors.reduce((sum, s) => sum + (f(s, 48) ?? 0), 0);
+  const growthPct = (before: Sector[], after: Sector[], f: typeof constantPriceOutput) =>
+    (total(after, f) / total(before, f) - 1) * 100;
+
+  it("subtracts the inputs a production method buys", () => {
+    for (const sectorType of LANES) {
+      const s = { sectorType, producedUnits: unitsFor(sectorType, 100) };
+      const share = intermediateShare(s, 48);
+      expect(share).toBeGreaterThan(0.3);
+      expect(share).toBeLessThan(0.8);
+      expect(valueAddedOutput(s, 48)!).toBeCloseTo(100 * (1 - share), 6);
+    }
+  });
+
+  it("reconciles a hand-worked chain: only the last stage's value added is new output", () => {
+    // Ore 100 (no inputs) -> steel 150 (uses 100 ore) -> cars 300 (uses 150 steel).
+    // Gross output sums to 550; value added is 100 + 50 + 150 = 300 = final cars.
+    const stages = [
+      { gross: 100, inputs: 0 },
+      { gross: 150, inputs: 100 },
+      { gross: 300, inputs: 150 },
+    ];
+    expect(stages.reduce((s, x) => s + x.gross, 0)).toBe(550);
+    expect(stages.reduce((s, x) => s + (x.gross - x.inputs), 0)).toBe(300);
+  });
+
+  it("matches gross output growth when every lane grows together", () => {
+    const before = region({});
+    const after = region({
+      energy: 103,
+      manufacturing: 103,
+      retail: 103,
+      technology: 103,
+      financial: 103,
+    });
+    expect(growthPct(before, after, constantPriceOutput)).toBeCloseTo(3, 6);
+    expect(growthPct(before, after, valueAddedOutput)).toBeCloseTo(3, 6);
+  });
+
+  it("weights lanes by what they add, not what they churn", () => {
+    const before = region({});
+    const techUp = region({ technology: 110 });
+    const retailUp = region({ retail: 110 });
+    const gross = (a: Sector[]) => growthPct(before, a, constantPriceOutput);
+    const added = (a: Sector[]) => growthPct(before, a, valueAddedOutput);
+    // Same gross lift, but technology keeps more of its output than retail.
+    expect(gross(techUp)).toBeCloseTo(gross(retailUp), 6);
+    expect(added(techUp)).toBeGreaterThan(added(retailUp) * 2);
+    // Recorded comparison (percent growth, current -> corrected).
+    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.86]);
+    expect([gross(retailUp), added(retailUp)].map((x) => +x.toFixed(2))).toEqual([2, 1.24]);
+  });
+
+  it("counts unsold output as production and ignores price-only changes", () => {
+    const s = { sectorType: "manufacturing" as const, producedUnits: 100 };
+    // Units produced but unsold go to inventory: soldUnits is not an input here.
+    expect(valueAddedOutput({ ...s, ...{ soldUnits: 10 } }, 48)).toBe(valueAddedOutput(s, 48));
+    // No price argument exists on the basis: price-only changes cannot move it.
+    expect(valueAddedOutput(s, 48)).toBe(valueAddedOutput({ ...s }, 49));
   });
 });

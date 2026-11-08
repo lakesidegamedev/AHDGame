@@ -37,6 +37,38 @@ export function constantPriceOutput(sector: OutputVolumeSector, turn: number): n
   return Number.isFinite(output) ? output : null;
 }
 
+/** Share of constant-price output a sector buys back as inputs, kept below 1 so value added stays positive. */
+const MAX_INTERMEDIATE_SHARE = 0.95;
+
+/**
+ * Inputs the sector's current production method consumes, as a share of its
+ * output at the canonical basket. Recipe demand rates are shares of nominal
+ * output, so the sum is the intermediate share directly.
+ */
+export function intermediateShare(sector: OutputVolumeSector, turn: number): number {
+  const rates = getEffectiveStrategyRatesForOperatingModel(
+    sector.sectorType,
+    sector.strategyId ?? "standard",
+    sector.transitionFromStrategyId,
+    sector.transitionStartTurn,
+    turn,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
+  let total = 0;
+  for (const rate of Object.values(rates.demand ?? {})) {
+    if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) total += rate;
+  }
+  return Math.min(MAX_INTERMEDIATE_SHARE, total);
+}
+
+/** Gross output less the inputs it consumed, both at the canonical basket. */
+export function valueAddedOutput(sector: OutputVolumeSector, turn: number): number | null {
+  const gross = constantPriceOutput(sector, turn);
+  if (gross === null) return null;
+  return gross * (1 - intermediateShare(sector, turn));
+}
+
 /** A partial observation must never be mistaken for a regional output loss. */
 export function sumObservedOutput(sectors: readonly { outputVolume?: number }[]): number | null {
   if (sectors.length === 0) return null;
