@@ -253,6 +253,12 @@ export interface DocketCase {
    * historical cases. Absent/false for every historical Docket case.
    */
   isSurprise?: boolean;
+  /**
+   * Turn on which a pending template-drawn surprise case is heard. Present only
+   * on those rows, which `scotusSurpriseCaseTurn.ts` decides; the curated docket
+   * turn skips any pending row carrying it.
+   */
+  hearingDueTurn?: number;
 
   createdAt: Date;
   updatedAt: Date;

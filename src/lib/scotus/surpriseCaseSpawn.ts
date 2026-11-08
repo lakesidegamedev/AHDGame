@@ -74,3 +74,15 @@ export function drawableTemplates<T extends { templateKey: string }>(
       currentYear - (lastHeard.get(t.templateKey) ?? -Infinity) >= SURPRISE_CASE_REUSE_AFTER_YEARS
   );
 }
+
+/**
+ * Turns a surprise case waits on the docket between filing and its ruling
+ * (48 turns a year, so roughly three to nine months). The delay is drawn
+ * uniformly between the two bounds.
+ */
+export const SURPRISE_CASE_HEARING_DELAY_TURNS = { min: 12, max: 36 } as const;
+
+export function surpriseCaseHearingDelayTurns(randomDraw: number): number {
+  const { min, max } = SURPRISE_CASE_HEARING_DELAY_TURNS;
+  return min + Math.min(max - min, Math.floor(randomDraw * (max - min + 1)));
+}

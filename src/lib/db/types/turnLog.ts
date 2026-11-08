@@ -181,7 +181,7 @@ export interface TurnLog {
       surpriseCase?: {
         spawned: boolean;
         caseKey?: string;
-        majoritySide?: -1 | 0 | 1;
+        decided?: number;
       };
       nominations: {
         nominationsProcessed: number;
