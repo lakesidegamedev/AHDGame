@@ -1,6 +1,6 @@
 {
   "note": "Literal country-code branches outside src/lib/countries. Counts may only go down. Move the rule into the country folder, then run `npm run country-branches:lower`.",
-  "total": 742,
+  "total": 744,
   "files": {
     "src/app/api/admin/country/[code]/cabinet-nominations/route.ts": 1,
     "src/app/api/admin/country/[code]/region/[id]/redistrict/trigger/route.ts": 1,
@@ -125,6 +125,7 @@
     "src/components/wiki/widgets/StartingStateDashboardData.ts": 1,
     "src/components/wiki/widgets/StartingStateSectorSpecialties.tsx": 1,
     "src/lib/actions/granularPollPayload.ts": 1,
+    "src/lib/actions/pollCommission.ts": 1,
     "src/lib/admin/seed/seedBudgets.ts": 4,
     "src/lib/admin/seed/seedCnBudgets.ts": 1,
     "src/lib/admin/seed/seedCountryGameStates.ts": 3,
@@ -140,6 +141,7 @@
     "src/lib/admin/seedDiagnostic/drift.ts": 1,
     "src/lib/admin/seedDiagnostic/economicOpening.ts": 2,
     "src/lib/admin/seedDiagnostic/regionalCoverage.ts": 1,
+    "src/lib/auth/characterCreation.ts": 1,
     "src/lib/banking/rules/charterAccess.ts": 1,
     "src/lib/billEnactment.ts": 8,
     "src/lib/budget/borrowingLimit.ts": 1,

@@ -3781,6 +3781,10 @@
       "longBlocks": 1,
       "narrativeLines": 1
     },
+    "src/lib/auth/characterCreation.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/auth/providerLinkContext.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
