@@ -92,16 +92,15 @@ export const DEFAULT_DURATIONS: Record<
   holyrood: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // WAL Senedd Cymru — 5-year AMS cycle, 48h election window. Stood up at secession.
   senedd: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
-  // Beta-country parliamentary lower chambers: 48h window; multi-year cycle gap handled by canonical schedule in ensureBetaParliamentElections.
+  // Beta-country parliamentary lower chambers: 48h window; multi-year cycle gap handled by canonical schedule in the beta chamber specs.
   assembleeNationale: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   cameraDeputati: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   congresoDiputados: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   riksdag: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   milletMeclisi: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // GR/AT/FI unicameral lower chambers — same beta-tier treatment as
-  // FR/IT/ES/SE/TR. Previously missing entirely: `ensureBetaParliamentElections`
-  // no-ops when `DEFAULT_DURATIONS[electionType]` is undefined, so even after
-  // the countryGameStates status fix these three still would not have spawned.
+  // FR/IT/ES/SE/TR. A chamber spec is rejected without a duration entry, so
+  // each type needs one here before its country can spawn.
   vouli: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   nationalrat: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   eduskunta: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },

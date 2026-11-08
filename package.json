@@ -34,6 +34,7 @@
     "seed:policies": "npx tsx scripts/seed/seed-policies.ts",
     "seed:policies:reset": "npx tsx scripts/seed/seed-policies.ts --reset",
     "seed:demographics": "npx tsx scripts/seed/seed-demographics.ts",
+    "seed:report": "npx tsx scripts/seed/seedMasterReport.ts",
     "seed:budgets": "npx tsx scripts/seed/seedBudgets.ts",
     "seed:uk": "npx tsx scripts/seed/seed-uk.ts",
     "seed:de": "npx tsx scripts/seed/seed-de.ts",

@@ -76,7 +76,7 @@ describe("saved electorate priorities on region pages", () => {
     expect(db.collection("electoratePriorityOverrides").deleteOne).not.toHaveBeenCalled();
   });
 
-  it("restoration and editor defaults track the live clock and honour the era flag", async () => {
+  it("restoration and editor defaults track the live clock", async () => {
     const target = { countryId: "UK", regionId: "SCO", bucketId: "age:young" } as const;
     const gameState = db.collection("gameState");
     gameState.findOne.mockResolvedValue({
@@ -88,15 +88,6 @@ describe("saved electorate priorities on region pages", () => {
     expect((await loadPriorityDefaults(db as unknown as Db, target)).primary.policyOptionId).toBe(
       "uk_tuition_fees_opt_0"
     );
-    gameState.findOne.mockResolvedValue({
-      preset: "1953-default",
-      currentYear: 2000,
-      startingYear: 1953,
-      eraSystemEnabled: false,
-    });
-    expect(
-      (await loadPriorityDefaults(db as unknown as Db, target)).primary.policyOptionId
-    ).not.toBe("uk_tuition_fees_opt_0");
   });
 
   it("uses durable checkpoint position and turnout overlays for editor/restoration defaults", async () => {

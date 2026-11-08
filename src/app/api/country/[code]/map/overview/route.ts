@@ -89,7 +89,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
             currentYear: 1,
             currentTurn: 1,
             startingYear: 1,
-            eraSystemEnabled: 1,
           },
         }
       ),
@@ -98,7 +97,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // hero / stored snapshot under non-2019 presets.
     const preset = (presetDoc?.preset as string | undefined) ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
-    const year = presetDoc?.eraSystemEnabled ? resolveGameYear(presetDoc) : null;
+    const year = presetDoc ? resolveGameYear(presetDoc) : null;
 
     const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
 

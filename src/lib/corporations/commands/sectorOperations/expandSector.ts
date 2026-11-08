@@ -416,7 +416,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       lane,
       corporation,
       currentYear: quoteYear,
-      techTreesEnabled: gameState?.sectorTechTreesEnabled === true,
+      techTreesEnabled: true,
     });
     if (foundingSuccessor) {
       newSector.strategyId = foundingSuccessor;

@@ -46,7 +46,6 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
           metricsSystemVersion: 1,
           legislationSystemVersion: 1,
           resetVersionSeeds: 1,

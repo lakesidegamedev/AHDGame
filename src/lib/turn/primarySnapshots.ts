@@ -198,12 +198,8 @@ export async function recordPrimarySnapshots(
         preset?: string;
         currentYear?: number;
         startingYear?: number;
-        eraSystemEnabled?: boolean;
       }>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
+      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
   ]);
 
   // Use composite keys to avoid cross-country sequential ID collisions

@@ -62,7 +62,7 @@ export async function runMilitaryBranchYearCrossing(
     await getGameStateCollection(db)
   ).findOne(
     { _id: "current" },
-    { projection: { currentYear: 1, lastMilitaryBranchYearProcessed: 1, eraSystemEnabled: 1 } }
+    { projection: { currentYear: 1, lastMilitaryBranchYearProcessed: 1 } }
   );
   if (!gameState) return result;
 
@@ -87,7 +87,7 @@ export async function runMilitaryBranchYearCrossing(
     )
   );
 
-  const postNews = !firstRun && !!gameState.eraSystemEnabled;
+  const postNews = !firstRun;
   const staged: MilitaryUnit[] = [];
 
   // Registered countries only: an era crossing that activates a branch must

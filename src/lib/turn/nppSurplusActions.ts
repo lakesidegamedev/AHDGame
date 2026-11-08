@@ -504,7 +504,6 @@ export async function foundNppCorporationsSurplus(
       projection: {
         worldEpochId: 1,
         producerOpening: 1,
-        sectorTechTreesEnabled: 1,
         currentYear: 1,
         startingYear: 1,
         currentTurn: 1,
@@ -519,10 +518,10 @@ export async function foundNppCorporationsSurplus(
       world?.currentYear ??
       (world?.startingYear ?? STARTING_YEAR) +
         Math.floor(((world?.currentTurn ?? currentTurn) - 1) / TURNS_PER_YEAR),
-    techTreesEnabled: world?.sectorTechTreesEnabled === true,
+    techTreesEnabled: true,
     // Diffusion worlds: an AI founding adopts at its country's lag.
     techDiffusion:
-      world?.sectorTechTreesEnabled === true && presetUsesTechDiffusion(world.preset)
+      world && presetUsesTechDiffusion(world.preset)
         ? await loadTechDiffusionSnapshot(db)
         : undefined,
   };

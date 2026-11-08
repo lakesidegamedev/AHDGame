@@ -3,22 +3,83 @@ import { getDb } from "@/lib/mongodb";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Election, ElectionStatus, State } from "@/lib/db/types";
+import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
+import { turnToWallClock } from "@/lib/elections/canonicalCycle";
+import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
+import { getSeatIdFromElection } from "@/lib/seats";
 import { seatsForRegion, type ChamberSpec } from "./chamberSpec";
 import {
   buildCanonicalSpawn,
+  endTimeToLarpTurn,
   getCurrentTurnAndCtx,
   justResolvedInSameTurn,
   sendBatchedElectionAnnouncements,
 } from "./engine";
-import { countryElectionsLive, mirrorPeerRaceTiming } from "./shared";
+import { buildDelegateSeatHealOps, countryElectionsLive, mirrorPeerRaceTiming } from "./shared";
 
 type StateSeatFields = Pick<State, "houseDistricts" | "stateSenateSeats">;
 
 function enforcedSeats(spec: ChamberSpec, seats: number): number | undefined {
-  if (spec.seats.kind !== "stateField") return undefined;
+  if (spec.seats.kind === "single") return spec.seats.forceSeat ? 1 : undefined;
   if (spec.seats.enforce === "positive") return seats > 0 ? seats : undefined;
   if (spec.seats.enforce === "multiSeat") return seats > 1 ? seats : undefined;
   return undefined;
+}
+
+/**
+ * Next regular race for a chamber whose term clock a snap can move. The primary
+ * opens at once; the general stays on the date the planner picks.
+ */
+function buildSnapShiftedSpawn(
+  spec: ChamberSpec,
+  params: {
+    regionId: string;
+    seats: number;
+    snapType: string;
+    prev: Election | undefined;
+    currentTurn: number;
+    now: Date;
+    ctx: Parameters<typeof planNextLowerChamberCycle>[0]["ctx"];
+  }
+): Omit<Election, "_id"> | null {
+  const { regionId, seats, snapType, prev, currentTurn, now, ctx } = params;
+  const { countryId, electionType } = spec;
+  const dur = DEFAULT_DURATIONS[electionType];
+  if (!dur) return null;
+  const plan = planNextLowerChamberCycle({
+    electionType,
+    snapType,
+    prev,
+    currentTurn,
+    ctx,
+    endTimeToTurn: (endTime) => endTimeToLarpTurn(endTime, now, currentTurn),
+    countryId,
+  });
+  if (!plan) return null;
+  const { spawn } = plan;
+  return {
+    countryId,
+    electionType,
+    state: regionId,
+    seatId: getSeatIdFromElection({ countryId, electionType, state: regionId }),
+    cycle: spawn.cycle,
+    electionYear: plan.electionYear,
+    ...(plan.shiftedScheduleEndTurn != null && {
+      shiftedScheduleEndTurn: plan.shiftedScheduleEndTurn,
+    }),
+    status: "active",
+    totalSeats: prev?.totalSeats ?? seats,
+    startTime: now,
+    primaryEndTime: turnToWallClock(spawn.primaryEndTurn, now, currentTurn),
+    endTime: turnToWallClock(spawn.endTurn, now, currentTurn),
+    startTurn: currentTurn,
+    primaryEndTurn: spawn.primaryEndTurn,
+    endTurn: spawn.endTurn,
+    durationHours: dur.durationHours,
+    primaryDurationHours: dur.durationHours - dur.generalDurationHours,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 /**
@@ -49,21 +110,35 @@ export async function ensureChamberElections(
       .toArray();
     for (const state of states) {
       const id = state._id as string;
-      regions.push({ id, seats: seatsForRegion(spec, id, state as StateSeatFields) });
+      regions.push({ id, seats: seatsForRegion(spec, id, state as StateSeatFields, ctx.preset) });
     }
     if (regions.length === 0) return;
   } else {
     regions.push({ id: countryId, seats: 1 });
   }
 
+  const snapType = `snap_${electionType}`;
+  const typeFilter = spec.snap === "shiftsCycle" ? { $in: [electionType, snapType] } : electionType;
+
   const liveElections = await elections
-    .find({ countryId, electionType, status: { $in: ["active", "upcoming"] } })
+    .find({ countryId, electionType: typeFilter, status: { $in: ["active", "upcoming"] } })
     .toArray();
   if (spec.constituencies === "nation" && liveElections.length > 0) return;
   const liveRegions = new Set(liveElections.map((e) => e.state));
 
+  if (spec.healLiveSeats) {
+    const seatMap = Object.fromEntries(regions.map((r) => [r.id, r.seats]));
+    const healOps = buildDelegateSeatHealOps(liveElections, seatMap, now);
+    if (healOps.length > 0) {
+      await elections.bulkWrite(healOps);
+      console.log(
+        `[Turn] ensureChamberElections(${countryId} ${spec.chamberId}): healed ${healOps.length} in-flight seat count(s)`
+      );
+    }
+  }
+
   const completedElections = await elections
-    .find({ countryId, electionType, status: { $in: ["completed", "resolved"] } })
+    .find({ countryId, electionType: typeFilter, status: { $in: ["completed", "resolved"] } })
     .sort({ updatedAt: -1 })
     .toArray();
   const lastCompleted = (regionId: string): Election | undefined =>
@@ -79,17 +154,27 @@ export async function ensureChamberElections(
     const peer = spec.lateJoiners === "mirrorLivePeer" && !prev ? liveElections[0] : undefined;
     const doc = peer
       ? mirrorPeerRaceTiming(countryId, peer, region.id, electionType, region.seats, now)
-      : buildCanonicalSpawn({
-          electionType,
-          countryId,
-          state: region.id,
-          prev,
-          currentTurn,
-          now,
-          fallbackTotalSeats: region.seats,
-          ctx,
-          openPrimaryImmediately: spec.openPrimaryImmediately,
-        });
+      : spec.snap === "shiftsCycle"
+        ? buildSnapShiftedSpawn(spec, {
+            regionId: region.id,
+            seats: region.seats,
+            snapType,
+            prev,
+            currentTurn,
+            now,
+            ctx,
+          })
+        : buildCanonicalSpawn({
+            electionType,
+            countryId,
+            state: region.id,
+            prev,
+            currentTurn,
+            now,
+            fallbackTotalSeats: region.seats,
+            ctx,
+            openPrimaryImmediately: spec.openPrimaryImmediately,
+          });
     if (!doc) continue;
 
     const forced = enforcedSeats(spec, region.seats);

@@ -123,10 +123,7 @@ async function renderUKRegion(regionCode: string) {
     // Independent of every other query — batch it instead of a trailing RTT (O2).
     db
       .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
+      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
     db
       .collection<StateDemographics>("demographicDefaults")
       .findOne(
@@ -351,10 +348,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
     getStateRegLedger(db, { countryId, stateId }),
     db
       .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
+      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } }),

@@ -25,17 +25,12 @@ import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
  * round out the floor: an armed, embroiled world never reads calm, however
  * long nobody tests anything. A war between nuclear-armed coalitions reads
  * CRISIS at minimum, not "elevated".
- *
- * Gated on `gameState.coldWarEnabled`; a world with the subsystem off skips
- * without touching the tension document at all.
  */
 export async function processColdWarTensionTurn(
   db: Db,
   turn: number,
-  gameState: { coldWarEnabled?: boolean; livingConflictsEnabled?: boolean; currentYear?: number }
+  gameState: { livingConflictsEnabled?: boolean; currentYear?: number }
 ): Promise<ColdWarTensionState | null> {
-  if (gameState.coldWarEnabled !== true) return null;
-
   await syncLimitedWarPressureClocks(db, turn);
   const snapshot = await readStandingPressureSnapshot(db, gameState, turn);
   if ((gameState.currentYear ?? 0) < BLOC_TENSION_FIRST_YEAR) {

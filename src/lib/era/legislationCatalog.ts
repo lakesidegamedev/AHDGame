@@ -1,8 +1,7 @@
 /**
  * Era-Aware Legislation catalog (Spec A). Single source of truth for WHEN a
- * legislation type may exist. Inert while `eraSystemEnabled` is off: every
- * resolver treats a null year as "legacy" (all types active), so flag-off
- * behavior is byte-identical.
+ * legislation type may exist. Every resolver treats a null year as
+ * "legacy" (all types active).
  *
  * EVERY seed legislation type appears here explicitly — windowed types as a
  * number (first fileable year), era-universal types as the literal "always".

@@ -32,7 +32,6 @@ export {
   countryElectionsLive,
   ddElectionsLive,
   easternBlocElectionsLive,
-  ensureBetaParliamentElections,
   ensureBetaSenateElections,
   ensureEasternBlocAssemblyElections,
   ensurePresidentialElection,

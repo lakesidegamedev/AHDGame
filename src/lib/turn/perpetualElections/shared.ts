@@ -378,156 +378,8 @@ export async function ruElectionsLive(db: Db, _countryId: CountryId = "RU"): Pro
 }
 
 /**
- * Ensure every region of a beta parliamentary country (FR/IT/ES/SE/TR) has an
- * active/upcoming lower-chamber election. Modeled on `ensureIEElections`:
- * one multi-seat regional election per region (seats = the seeded State doc's
- * `houseDistricts`, so chamber size tracks the world's preset — e.g. SE 1953
- * seeds the 230-seat Second Chamber, the modern seed the 349-seat Riksdag),
- * anchored to the preset's cycle anchor via `BETA_PARLIAMENT_CYCLES` in
- * canonicalCycle.ts. Era-gated presets (ES 1953-default: Franco dictatorship)
- * have a `null` anchor, so `buildCanonicalSpawn` returns null and the country
- * stays static by design.
- *
- * Gated on the runtime country status (beta/active) like NG, so coming-soon
- * worlds are unaffected.
- */
-export async function ensureBetaParliamentElections(
-  countryId: CountryId,
-  electionType: string,
-  now: Date,
-  inFlightTurn?: number
-): Promise<void> {
-  const db = await getDb();
-  if (!(await countryElectionsLive(db, countryId))) return;
-  const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-
-  const regions = await db
-    .collection<State>("states")
-    .find({ countryId }, { projection: { _id: 1, houseDistricts: 1 } })
-    .toArray();
-  const regionIds = regions.map((r) => r._id as string);
-  if (regionIds.length === 0) return;
-  const seatsByRegion = new Map<string, number>(
-    regions.map((r) => [r._id as string, (r as State).houseDistricts ?? 1])
-  );
-
-  // Include the country's snap type so a live snap suppresses regulars and a
-  // resolved snap shifts the next regular's anchor (parity with UK/JP/DE).
-  const snapType = `snap_${electionType}`;
-
-  const liveElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId,
-      electionType: { $in: [electionType, snapType] },
-      status: { $in: ["active", "upcoming"] },
-    })
-    .toArray();
-  const liveRegions = new Set(liveElections.map((e) => e.state));
-
-  const completedElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId,
-      electionType: { $in: [electionType, snapType] },
-      status: { $in: ["completed", "resolved"] },
-    })
-    .sort({ updatedAt: -1 })
-    .toArray();
-
-  function lastCompleted(regionId: string): Election | undefined {
-    return completedElections.find((e) => e.state === regionId);
-  }
-
-  const dur = DEFAULT_DURATIONS[electionType];
-  if (!dur) return;
-
-  const toInsert: Omit<Election, "_id">[] = [];
-
-  for (const regionId of regionIds) {
-    if (liveRegions.has(regionId)) continue;
-
-    const prev = lastCompleted(regionId);
-    if (justResolvedInSameTurn(prev, now, currentTurn)) continue;
-
-    // A called snap, and every regular spawned on its shifted term clock,
-    // anchors the next regular; an IMPOSED snap and admin-accelerated regulars
-    // do not move the calendar. See `planNextLowerChamberCycle`.
-    const plan = planNextLowerChamberCycle({
-      electionType,
-      snapType,
-      prev,
-      currentTurn,
-      ctx,
-      endTimeToTurn: (endTime) => endTimeToLarpTurn(endTime, now, currentTurn),
-      countryId,
-    });
-    if (!plan) continue; // era-gated (ES 1953) or gate exhausted
-    const { spawn } = plan;
-
-    // Open the primary immediately (mirrors IE/BR/UK): the multi-year cycle
-    // far exceeds the 48h window, so the canonical startTurn would otherwise
-    // leave a long "Opens in X turns" dead zone. `primaryEndTurn`/`endTurn`
-    // stay canonical so the general lands on its real-world year.
-    const startTurn = currentTurn;
-    const startTime = now;
-    const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-    const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-    toInsert.push({
-      countryId,
-      electionType,
-      state: regionId,
-      seatId: getSeatIdFromElection({ countryId, electionType, state: regionId }),
-      cycle: spawn.cycle,
-      electionYear: plan.electionYear,
-      ...(plan.shiftedScheduleEndTurn != null && {
-        shiftedScheduleEndTurn: plan.shiftedScheduleEndTurn,
-      }),
-      status: "active",
-      totalSeats: prev?.totalSeats ?? seatsByRegion.get(regionId) ?? 1,
-      startTime,
-      primaryEndTime,
-      endTime,
-      startTurn,
-      primaryEndTurn: spawn.primaryEndTurn,
-      endTurn: spawn.endTurn,
-      durationHours: dur.durationHours,
-      primaryDurationHours: dur.durationHours - dur.generalDurationHours,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (toInsert.length === 0) return;
-
-  const orFilters = toInsert.map((e) => ({
-    electionType,
-    state: e.state,
-    status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-  }));
-  const existing = await db
-    .collection<Election>("elections")
-    .find({ countryId, $or: orFilters }, { projection: { state: 1 } })
-    .toArray();
-  const existingStates = new Set(existing.map((e) => e.state));
-  const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-  if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-    console.log(
-      `[Turn] ensureBetaParliamentElections(${countryId}): spawned ${toActuallyInsert.length} ${electionType} election(s)`
-    );
-    sendBatchedElectionAnnouncements(toActuallyInsert, now);
-  }
-}
-
-/**
  * Ensure every region of a beta-tier country's SENATE has an active/upcoming
- * election. Sibling to `ensureBetaParliamentElections`, but seats come from
+ * election. Sibling to the beta lower-chamber chamber specs, but seats come from
  * `state.stateSenateSeats`, NOT `houseDistricts` (that is the lower chamber's
  * seat map, seeded independently).
  *
@@ -535,7 +387,7 @@ export async function ensureBetaParliamentElections(
  * trend toward empty as terms lapse.
  *
  * No snap-election handling: no snap-senate concept exists, unlike the
- * lower-chamber spawner's `snap_${electionType}` family.
+ * lower-chamber specs' `snap_${electionType}` family.
  */
 export async function ensureBetaSenateElections(
   countryId: CountryId,
@@ -621,7 +473,7 @@ export async function ensureBetaSenateElections(
     });
     if (!spawn) continue; // era-gated (ES 1953, TR outside 1953-default) or gate exhausted
 
-    // Open the primary immediately (mirrors ensureBetaParliamentElections):
+    // Open the primary immediately (mirrors the beta lower-chamber spawner):
     // the multi-year cycle far exceeds the 48h window, so the canonical
     // startTurn would otherwise leave a long dead zone.
     const startTurn = currentTurn;

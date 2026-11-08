@@ -438,12 +438,6 @@ export interface AccumulateVoteTurnPreload {
    * `checkpointBakedShifts.ts`.
    */
   startingYear?: number;
-  /**
-   * gameState.eraSystemEnabled — when true the Layer-1 substrate resolves from
-   * `currentYear` instead of the frozen seed preset. Flag off = legacy
-   * behavior, byte-identical.
-   */
-  eraSystemEnabled?: boolean;
   /** When true, the seat-share incumbency shield stops growing past half the seats. */
   partyRenewalEnabled?: boolean;
   /**

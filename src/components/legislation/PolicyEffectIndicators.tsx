@@ -329,7 +329,7 @@ export function PolicyEffectIndicators({
   policyOptionScores,
 }: PolicyEffectIndicatorsProps) {
   // Era flags — read before any early return (rules of hooks).
-  const { eraSystemEnabled, currentYear } = useWorldFlags();
+  const { currentYear } = useWorldFlags();
   // Calculate shift-based approvals if we have the necessary data
   // This takes priority over static archetypeApprovals
   let approvals: Record<string, number> | undefined;
@@ -367,7 +367,7 @@ export function PolicyEffectIndicators({
     proposedPolicyIndex,
     policyOptions,
     countryId: billCountry,
-    year: eraSystemEnabled ? currentYear : null,
+    year: currentYear,
   });
 
   // Compute per-bucket approval effects

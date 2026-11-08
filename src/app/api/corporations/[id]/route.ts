@@ -85,9 +85,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       getAuthUser().catch(() => null),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;
-    // Global, non-sensitive feature flag — surfaced on the corp payload so the
-    // page can show/hide the Tech tab without an extra round-trip.
-    const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
+    const techTreesEnabled = true;
     const supplyAgreementsEnabled = config?.supplyAgreementsEnabled === true;
     // Extraction-contract gate — surfaced on the corp payload so the Contracts
     // tab (offers / active contracts) can show/hide without an extra round-trip.

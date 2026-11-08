@@ -82,7 +82,6 @@ export async function loadStateViewContext(
                 stockHoldingTaxStartTurn: 1,
                 passThroughOwnerTaxStartTurn: 1,
                 startingYear: 1,
-                eraSystemEnabled: 1,
               },
             }
           ),

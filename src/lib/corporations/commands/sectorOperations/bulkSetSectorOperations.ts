@@ -26,7 +26,6 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -155,9 +154,7 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
             .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
         : null;
       const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
-      // Sector tech-tree growth-cost discount — scoped per sector type. Read the
-      // gate once; compute the multiplier per sector synchronously.
-      const techEnabled = await isSectorTechTreesEnabled();
+      // Sector tech-tree growth-cost discount, scoped per sector type.
       const techCorpView = {
         type: corporation.type,
         industryModel: corporation.industryModel,
@@ -166,10 +163,8 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         techDecadeLane: corporation.techDecadeLane,
       };
       const techMultFor = (s: CorporateSector) =>
-        techEnabled
-          ? getSectorTechEffects(techCorpView, s.sectorType, s.industryModel, s.mediaDiscriminator)
-              .growthCostMultiplier
-          : 1;
+        getSectorTechEffects(techCorpView, s.sectorType, s.industryModel, s.mediaDiscriminator)
+          .growthCostMultiplier;
       let projectedTotal = 0;
       let currentTotal = 0;
       for (const s of sectors) {

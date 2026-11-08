@@ -21,7 +21,6 @@ import {
 import type { Corporation } from "@/lib/db/types";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   RD_INNOVATION_INTERVAL,
@@ -83,9 +82,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     const gameState = await getGameState();
-    if (!(await isSectorTechTreesEnabled(gameState ?? undefined))) {
-      return NextResponse.json({ enabled: false });
-    }
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;

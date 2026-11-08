@@ -1,28 +1,39 @@
-import { ensureBetaParliamentElections, ensureBetaSenateElections } from "../shared";
+import {
+  AT_LOWER_CHAMBER_SPEC,
+  ES_LOWER_CHAMBER_SPEC,
+  FI_LOWER_CHAMBER_SPEC,
+  FR_LOWER_CHAMBER_SPEC,
+  GR_LOWER_CHAMBER_SPEC,
+  IT_LOWER_CHAMBER_SPEC,
+  SE_LOWER_CHAMBER_SPEC,
+  TR_LOWER_CHAMBER_SPEC,
+} from "./betaParliamentSpecs";
+import { ensureBetaSenateElections } from "../shared";
+import { ensureChamberElections } from "../chamberSpawner";
 
 /** FR Assemblée nationale spawner (5-year cycle; era-aware via preset anchors). */
 export async function ensureFRElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("FR", "assembleeNationale", now, inFlightTurn);
+  await ensureChamberElections(FR_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 /** IT Camera dei Deputati spawner (5-year cycle). */
 export async function ensureITElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("IT", "cameraDeputati", now, inFlightTurn);
+  await ensureChamberElections(IT_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 /** ES Congreso de los Diputados spawner (4-year cycle; NO-OP in 1953-default — Franco era). */
 export async function ensureESElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("ES", "congresoDiputados", now, inFlightTurn);
+  await ensureChamberElections(ES_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 /** SE Riksdag spawner (4-year cycle; 1953 seed contests the 230-seat Second Chamber). */
 export async function ensureSEElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("SE", "riksdag", now, inFlightTurn);
+  await ensureChamberElections(SE_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 /** TR Grand National Assembly spawner (4-year cycle). */
 export async function ensureTRElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("TR", "milletMeclisi", now, inFlightTurn);
+  await ensureChamberElections(TR_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 /**
@@ -34,15 +45,15 @@ export async function ensureTRElections(now: Date, inFlightTurn?: number): Promi
  * for a healthy TR phase and strictly more correct for an unhealthy one.
  */
 export async function ensureGRElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("GR", "vouli", now, inFlightTurn);
+  await ensureChamberElections(GR_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 export async function ensureATElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("AT", "nationalrat", now, inFlightTurn);
+  await ensureChamberElections(AT_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 export async function ensureFIElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaParliamentElections("FI", "eduskunta", now, inFlightTurn);
+  await ensureChamberElections(FI_LOWER_CHAMBER_SPEC, now, inFlightTurn);
 }
 
 // ─── Beta parliamentary countries: upper chambers / Senates (#3791) ─────────

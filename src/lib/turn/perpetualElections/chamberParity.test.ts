@@ -10,6 +10,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { CANONICAL_REAL_ELECTION_YEARS_BY_PRESET } from "@/lib/elections/cycleAnchorContext";
+import { dataPresetFor } from "@/lib/seeds/presetSelector";
+import { REGION_TABLES } from "@/lib/seeds/contract/regionTables";
+import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { IE_DAIL_SEATS_PER_REGION } from "@/lib/seeds/ie/ieRegions";
 import { NG_SEATS_PER_REGION } from "@/lib/seeds/ng/ngRegions";
 import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSeats";
@@ -21,6 +24,7 @@ const dbState = vi.hoisted(() => ({
   elections: [] as Doc[],
   gameState: null as Doc | null,
   inserted: [] as Doc[],
+  healed: [] as Doc[],
   accessStatus: "active",
 }));
 
@@ -91,6 +95,10 @@ function fakeDb(): Db {
         dbState.inserted.push(...docs);
         return {};
       },
+      bulkWrite: async (ops: Doc[]) => {
+        dbState.healed.push(...ops);
+        return {};
+      },
     };
   };
   return { collection } as unknown as Db;
@@ -103,76 +111,94 @@ const ERAS = Object.keys(CANONICAL_REAL_ELECTION_YEARS_BY_PRESET);
 
 interface Spawner {
   name: string;
-  countryId: "IE" | "NG";
+  countryId: string;
   electionType: string;
   national: boolean;
+  /** The chamber has a snap election type that shifts its term clock. */
+  snap?: boolean;
   run: (now: Date, turn: number) => Promise<void>;
 }
 
-async function loadSpawners(): Promise<Spawner[]> {
+interface Group {
+  /** Snapshot file infix; empty keeps the original IE and NG file names. */
+  id: string;
+  title: string;
+  spawners: () => Promise<Spawner[]>;
+  regionsFor: (countryId: string, era: string) => Doc[];
+  scenarios: Scenario[];
+}
+
+function spawner(
+  name: string,
+  countryId: string,
+  electionType: string,
+  national: boolean,
+  run: Spawner["run"],
+  snap = false
+): Spawner {
+  return { name, countryId, electionType, national, run, ...(snap ? { snap } : {}) };
+}
+
+async function ieNgSpawners(): Promise<Spawner[]> {
   const ie = await import("@/lib/countries/ie/elections/perpetual");
   const ng = await import("@/lib/countries/ng/elections/perpetual");
   return [
-    {
-      name: "ie.dail",
-      countryId: "IE",
-      electionType: "dail",
-      national: false,
-      run: ie.ensureIEElections,
-    },
-    {
-      name: "ie.uachtaran",
-      countryId: "IE",
-      electionType: "uachtaran",
-      national: true,
-      run: ie.ensureIEUachtaranElections,
-    },
-    {
-      name: "ie.localCouncil",
-      countryId: "IE",
-      electionType: "localCouncil",
-      national: false,
-      run: ie.ensureIELocalCouncilElections,
-    },
-    {
-      name: "ng.house",
-      countryId: "NG",
-      electionType: "house",
-      national: false,
-      run: ng.ensureNGElections,
-    },
-    {
-      name: "ng.senate",
-      countryId: "NG",
-      electionType: "senate",
-      national: false,
-      run: ng.ensureNGSenateElections,
-    },
-    {
-      name: "ng.governor",
-      countryId: "NG",
-      electionType: "governor",
-      national: false,
-      run: ng.ensureNGGovernorElections,
-    },
-    {
-      name: "ng.regionalCouncil",
-      countryId: "NG",
-      electionType: "regionalCouncil",
-      national: false,
-      run: ng.ensureNGRegionalCouncilElections,
-    },
-    {
-      name: "ng.president",
-      countryId: "NG",
-      electionType: "president",
-      national: true,
-      run: ng.ensureNGPresidentialElection,
-    },
+    spawner("ie.dail", "IE", "dail", false, ie.ensureIEElections),
+    spawner("ie.uachtaran", "IE", "uachtaran", true, ie.ensureIEUachtaranElections),
+    spawner("ie.localCouncil", "IE", "localCouncil", false, ie.ensureIELocalCouncilElections),
+    spawner("ng.house", "NG", "house", false, ng.ensureNGElections),
+    spawner("ng.senate", "NG", "senate", false, ng.ensureNGSenateElections),
+    spawner("ng.governor", "NG", "governor", false, ng.ensureNGGovernorElections),
+    spawner(
+      "ng.regionalCouncil",
+      "NG",
+      "regionalCouncil",
+      false,
+      ng.ensureNGRegionalCouncilElections
+    ),
+    spawner("ng.president", "NG", "president", true, ng.ensureNGPresidentialElection),
   ];
 }
 
-function regionsFor(countryId: "IE" | "NG"): Doc[] {
+async function betaSpawners(): Promise<Spawner[]> {
+  const b = await import("@/lib/turn/perpetualElections/countries/betaParliaments");
+  return [
+    spawner("fr.assembleeNationale", "FR", "assembleeNationale", false, b.ensureFRElections, true),
+    spawner("it.cameraDeputati", "IT", "cameraDeputati", false, b.ensureITElections, true),
+    spawner("es.congresoDiputados", "ES", "congresoDiputados", false, b.ensureESElections, true),
+    spawner("se.riksdag", "SE", "riksdag", false, b.ensureSEElections, true),
+    spawner("tr.milletMeclisi", "TR", "milletMeclisi", false, b.ensureTRElections, true),
+    spawner("gr.vouli", "GR", "vouli", false, b.ensureGRElections, true),
+    spawner("at.nationalrat", "AT", "nationalrat", false, b.ensureATElections, true),
+    spawner("fi.eduskunta", "FI", "eduskunta", false, b.ensureFIElections, true),
+  ];
+}
+
+async function cnSpawners(): Promise<Spawner[]> {
+  const cn = await import("@/lib/countries/cn/elections/perpetual");
+  return [
+    spawner("cn.npcDelegate", "CN", "npcDelegate", false, cn.ensureCNElections),
+    spawner(
+      "cn.peoplesCongress",
+      "CN",
+      "peoplesCongress",
+      false,
+      cn.ensureCNPeoplesCongressElections
+    ),
+    spawner("cn.governor", "CN", "governor", false, cn.ensureCNGovernorElections),
+  ];
+}
+
+async function brSpawners(): Promise<Spawner[]> {
+  const br = await import("@/lib/countries/br/elections/perpetual");
+  return [
+    spawner("br.chamber", "BR", "chamber", false, br.ensureBRElections),
+    spawner("br.senate", "BR", "senate", false, br.ensureBRSenateElections),
+    spawner("br.governor", "BR", "governor", false, br.ensureBRGovernorElections),
+  ];
+}
+
+function ieNgRegions(countryId: string): Doc[] {
   if (countryId === "NG") {
     return Object.entries(NG_SEATS_PER_REGION).map(([id, seats], i) => ({
       _id: id,
@@ -188,14 +214,22 @@ function regionsFor(countryId: "IE" | "NG"): Doc[] {
   }));
   const extra = Object.keys(IE_LOCAL_COUNCIL_SEATS)
     .filter((id) => !(id in IE_DAIL_SEATS_PER_REGION))
-    .map((id) => ({ _id: id, countryId }));
+    .map((id) => ({ _id: id, countryId, houseDistricts: 1 }));
   return [...dail, ...extra];
+}
+
+/** The regions a reset of `era` seeds for the country. */
+function seededRegions(countryId: string, era: string): Doc[] {
+  const table = REGION_TABLES[countryId]?.table ?? {};
+  const rows = table[dataPresetFor(era) as keyof typeof table] ?? [];
+  return rows.filter((r) => !NATIONAL_SCOPE_IDS.has(String(r._id))) as unknown as Doc[];
 }
 
 interface Scenario {
   name: string;
   turn: number;
   gate?: string;
+  snapOnly?: boolean;
   seed: (s: Spawner, regions: Doc[]) => Doc[];
 }
 
@@ -213,7 +247,7 @@ function completed(s: Spawner, state: string, over: Doc = {}): Doc {
   };
 }
 
-function live(s: Spawner, state: string): Doc {
+function live(s: Spawner, state: string, over: Doc = {}): Doc {
   return {
     countryId: s.countryId,
     electionType: s.electionType,
@@ -229,13 +263,14 @@ function live(s: Spawner, state: string): Doc {
     endTurn: 460,
     durationHours: 60,
     primaryDurationHours: 30,
+    ...over,
   };
 }
 
 const stateIds = (s: Spawner, regions: Doc[]): string[] =>
   s.national ? [s.countryId] : regions.map((r) => r._id as string);
 
-const SCENARIOS: Scenario[] = [
+const BASE_SCENARIOS: Scenario[] = [
   { name: "fresh-t1", turn: 1, seed: () => [] },
   { name: "fresh-t300", turn: 300, seed: () => [] },
   {
@@ -283,6 +318,111 @@ const SCENARIOS: Scenario[] = [
   { name: "gate-closed", turn: 300, gate: "coming-soon", seed: () => [] },
 ];
 
+const snapOf = (s: Spawner): string => `snap_${s.electionType}`;
+const HOURS_AGO = (h: number): Date => new Date(NOW.getTime() - h * 3_600_000);
+
+const SNAP_SCENARIOS: Scenario[] = [
+  {
+    name: "after-called-snap",
+    turn: 450,
+    snapOnly: true,
+    seed: (s, r) =>
+      stateIds(s, r).map((id) =>
+        completed(s, id, {
+          electionType: snapOf(s),
+          cycle: 4,
+          endTime: HOURS_AGO(30),
+          endTurn: 420,
+        })
+      ),
+  },
+  {
+    name: "after-imposed-snap",
+    turn: 450,
+    snapOnly: true,
+    seed: (s, r) =>
+      stateIds(s, r).map((id) =>
+        completed(s, id, {
+          electionType: snapOf(s),
+          cycle: 4,
+          imposedSnap: true,
+          endTime: HOURS_AGO(30),
+          endTurn: 420,
+        })
+      ),
+  },
+  {
+    name: "after-shifted-regular",
+    turn: 450,
+    snapOnly: true,
+    seed: (s, r) =>
+      stateIds(s, r).map((id) =>
+        completed(s, id, {
+          cycle: 4,
+          endTime: HOURS_AGO(30),
+          endTurn: 420,
+          shiftedScheduleEndTurn: 380,
+        })
+      ),
+  },
+  {
+    name: "live-snap",
+    turn: 450,
+    snapOnly: true,
+    seed: (s, r) => stateIds(s, r).map((id) => live(s, id, { electionType: snapOf(s) })),
+  },
+  {
+    name: "mixed-snap-and-regular-history",
+    turn: 450,
+    snapOnly: true,
+    seed: (s, r) => {
+      const ids = stateIds(s, r);
+      return [
+        ...ids.slice(0, 1).map((id) =>
+          completed(s, id, {
+            electionType: snapOf(s),
+            cycle: 5,
+            endTime: HOURS_AGO(40),
+            endTurn: 410,
+          })
+        ),
+        ...ids.slice(1).map((id) => completed(s, id, { cycle: 2, endTurn: 300 })),
+      ];
+    },
+  },
+];
+
+const GROUPS: Group[] = [
+  {
+    id: "",
+    title: "IE and NG",
+    spawners: ieNgSpawners,
+    regionsFor: ieNgRegions,
+    scenarios: BASE_SCENARIOS,
+  },
+  {
+    id: "beta.",
+    title: "beta parliaments",
+    spawners: betaSpawners,
+    regionsFor: seededRegions,
+    scenarios: [...BASE_SCENARIOS, ...SNAP_SCENARIOS],
+  },
+  {
+    id: "cn.",
+    title: "CN",
+    spawners: cnSpawners,
+    regionsFor: seededRegions,
+    scenarios: BASE_SCENARIOS,
+  },
+  {
+    id: "br.",
+    title: "BR",
+    spawners: brSpawners,
+    regionsFor: seededRegions,
+    scenarios: BASE_SCENARIOS,
+  },
+];
+
 function describeDoc(doc: Doc): string {
   const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v));
   return [
@@ -299,7 +439,12 @@ function describeDoc(doc: Doc): string {
   ].join(" ");
 }
 
-describe("IE and NG schedule parity", () => {
+function describeHeal(op: Doc): string {
+  const update = (op.updateOne as { update: { $set: Doc } }).update.$set;
+  return `heal seats=${update.totalSeats}`;
+}
+
+describe.each(GROUPS)("$title schedule parity", (group) => {
   beforeEach(async () => {
     vi.clearAllMocks();
     const { getDb } = await import("@/lib/mongodb");
@@ -309,15 +454,17 @@ describe("IE and NG schedule parity", () => {
   it.each(ERAS)(
     "matches the recorded schedule for era %s",
     async (era) => {
-      const spawners = await loadSpawners();
+      const spawners = await group.spawners();
       const startingYear = Number.parseInt(era, 10);
       const out: string[] = [];
-      for (const scenario of SCENARIOS) {
-        for (const spawner of spawners) {
-          const regions = regionsFor(spawner.countryId);
+      for (const scenario of group.scenarios) {
+        for (const sp of spawners) {
+          if (scenario.snapOnly && !sp.snap) continue;
+          const regions = group.regionsFor(sp.countryId, era);
           dbState.states = regions;
-          dbState.elections = scenario.seed(spawner, regions);
+          dbState.elections = scenario.seed(sp, regions);
           dbState.inserted = [];
+          dbState.healed = [];
           dbState.accessStatus = scenario.gate ?? "active";
           dbState.gameState = {
             _id: "current",
@@ -325,13 +472,16 @@ describe("IE and NG schedule parity", () => {
             preset: era,
             startingYear,
           };
-          await spawner.run(NOW, scenario.turn);
-          const lines = dbState.inserted.map(describeDoc).sort();
-          out.push(`## ${scenario.name} ${spawner.name}`, ...(lines.length ? lines : ["(none)"]));
+          await sp.run(NOW, scenario.turn);
+          const lines = [
+            ...dbState.inserted.map(describeDoc).sort(),
+            ...dbState.healed.map(describeHeal).sort(),
+          ];
+          out.push(`## ${scenario.name} ${sp.name}`, ...(lines.length ? lines : ["(none)"]));
         }
       }
       await expect(out.join("\n") + "\n").toMatchFileSnapshot(
-        `./__snapshots__/chamberParity.${era}.txt`
+        `./__snapshots__/chamberParity.${group.id}${era}.txt`
       );
     },
     60_000

@@ -1,7 +1,7 @@
 /**
  * POST /api/corporation/[id]/tech/unlock — CEO unlocks a sector tech-tree node.
  *
- * Gated by the `sectorTechTreesEnabled` feature flag. CEO only. Spends rdScore
+ * CEO only. Spends rdScore
  * (the R&D wallet) and records the per-decade pick. The unlock rules and the
  * atomic spend live in the shared command (lib/corporations/commands/techTree).
  */
@@ -13,7 +13,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { unlockTechNode } from "@/lib/corporations/commands/techTree/unlockTechNode";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { GameState } from "@/lib/db/types";
@@ -46,9 +45,6 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
-    if (!(await isSectorTechTreesEnabled(gameState ?? undefined))) {
-      return errorResponse(404, "Tech trees are not enabled");
-    }
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;

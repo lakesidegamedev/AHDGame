@@ -373,7 +373,6 @@ export async function buildExtractionAndPortfolioLookups({
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
         resetWorldId: 1,
         resetVersionSeeds: 1,
         metricsSystemVersion: 1,
@@ -385,7 +384,7 @@ export async function buildExtractionAndPortfolioLookups({
     }
   );
   // Live year for era-aware regional-condition margins; null while the flag is off.
-  const eraYear = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+  const eraYear = gameState ? resolveGameYear(gameState) : null;
 
   // Standing climate effects for worlds that opt in (the 2027 world): farm
   // yield loss and insurance premiums ride the disaster-effect channel, and

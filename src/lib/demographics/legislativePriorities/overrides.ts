@@ -86,10 +86,7 @@ export async function loadPriorityDefaults(db: Db, target: PriorityTarget) {
   const [world, defaults] = await Promise.all([
     db
       .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
+      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
     db
       .collection<StateDemographics>("demographicDefaults")
       .findOne(

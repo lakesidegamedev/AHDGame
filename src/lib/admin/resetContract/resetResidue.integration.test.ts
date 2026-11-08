@@ -8,8 +8,13 @@ import {
   OLD_WORLD_RUNTIME_ROWS,
   seedOldWorldResidue,
 } from "./__fixtures__/oldWorldResidue";
-import { runResidueScan } from "./residueScan";
+import { REFERENCE_REBUILD_KEPT_COLLECTIONS } from "@/lib/admin/seed/referenceRebuildClear";
+import { residueScanAgeCollections, runResidueScan } from "./residueScan";
 import { formatResidueViolation } from "./rules/residueScan";
+
+const OLD_WORLD_ID = ObjectId.createFromTime(
+  Math.floor(OLD_WORLD_AT.getTime() / 1000)
+).toHexString();
 
 let memory: InMemoryDb;
 
@@ -196,6 +201,28 @@ describe("reset over a world holding every known leftover", () => {
     const { resetResidueTurnRefusal } = await import("./rules/residueScan");
     expect(resetResidueTurnRefusal(config.lastReset as { residueViolations?: number })).toBeNull();
     expect(OLD_WORLD_GAME_STATE.currentTurn).toBe(1262);
+  });
+
+  it("leaves no old document in any collection the scan checks", async () => {
+    // Reference rows a reset keeps are rewritten by the real bootstrap, which this suite stubs.
+    const checked = residueScanAgeCollections(true).filter(
+      (name) => name !== "characters" && !(name in REFERENCE_REBUILD_KEPT_COLLECTIONS)
+    );
+    const bare = checked.filter((name) => !(name in OLD_WORLD_RUNTIME_ROWS));
+    for (const collection of bare) {
+      if ((await memory.collection(collection).countDocuments()) > 0) continue;
+      memory.seed(collection, [{ _id: new ObjectId(OLD_WORLD_ID), createdAt: OLD_WORLD_AT }]);
+    }
+
+    const result = await resetFixtureWorld();
+
+    expect(result.readiness.residueViolations).toEqual([]);
+    for (const collection of checked) {
+      const survivors = await memory
+        .collection(collection)
+        .countDocuments({ createdAt: OLD_WORLD_AT, type: { $nin: ["login", "logout"] } });
+      expect([collection, survivors]).toEqual([collection, 0]);
+    }
   });
 
   it("keeps the world paused and records the violation when residue survives the build", async () => {

@@ -42,6 +42,11 @@ export interface PresetDataset {
   readonly fingerprint?: (value: unknown, preset: SeedPresetId) => unknown;
   /** The country a regional dataset describes. */
   readonly regionalCountry?: string;
+  /**
+   * Why no preset is required to provide it. A dataset with an empty
+   * `requiredIn` and no reason is unclassified and fails the master report.
+   */
+  readonly optionalReason?: string;
 }
 
 export interface EraInvariantDataset {
@@ -134,6 +139,9 @@ function overlayDatasets(
     requiredIn: byPreset?.["2019-default"]
       ? readIn(countryId).filter((preset) => simulatesRegions(preset, countryId))
       : [],
+    optionalReason: byPreset?.["2019-default"]
+      ? "No preset that simulates this country's regions reads the overlay."
+      : "The country has no 2019 overlay, so no preset reads one.",
     provide: (preset) => byPreset?.[preset],
     regionalCountry: countryId,
   }));
@@ -163,6 +171,8 @@ export const PRESET_DATASETS: readonly PresetDataset[] = [
   ...BUDGET_COUNTRIES.map((countryId): PresetDataset => ({
     id: `budget:${countryId}`,
     requiredIn: [],
+    optionalReason:
+      "A budget exists only in presets that roster the country; the duplicate and scale guards check every authored row.",
     provide: budgetFor(countryId),
     fingerprint: budgetFingerprint,
   })),

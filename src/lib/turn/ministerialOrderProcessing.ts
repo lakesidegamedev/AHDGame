@@ -445,11 +445,9 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     // Nuclear stockpile accrual, right after refit so it competes for the same
     // appropriation AFTER conventional deliveries have settled: a nation short
     // of rifles equips the army before it grows the arsenal of last resort.
-    // Gates itself on coldWarEnabled and the procurement kill switch via the
-    // preloaded flags; countries with no programme return without a write.
+    // Gates itself on the procurement kill switch via the preloaded flag; countries with no programme return without a write.
     if (defenceYear != null) {
       await applyNuclearProduction(db, cid as CountryId, defenceYear, currentTurn, {
-        coldWarEnabled: defenceGameState?.coldWarEnabled,
         defenceProcurementPaused: defenceGameState?.defenceProcurementPaused,
       });
     }
@@ -457,9 +455,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     // a write when the programme was never opened. Deliberately not behind the
     // procurement pause: covert funding is off the books by design.
     if (COVERT_CAPABLE.includes(cid as CountryId)) {
-      await applyCovertNuclearTurn(db, cid as CountryId, currentTurn, {
-        coldWarEnabled: defenceGameState?.coldWarEnabled,
-      });
+      await applyCovertNuclearTurn(db, cid as CountryId, currentTurn);
     }
   }
 

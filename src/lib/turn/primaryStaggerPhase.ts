@@ -214,11 +214,9 @@ export async function runPrimaryStaggerWaveIfDue(
       currentYear?: number;
       currentTurn?: number;
       startingYear?: number;
-      eraSystemEnabled?: boolean;
     }>("gameState")
     .findOne({ _id: "current" });
   const delegatePreset = gsForDelegates?.preset;
-  // Live era clock (null while `eraSystemEnabled` is off — legacy behavior).
   const eraYear = eraYearContextFromGameState(gsForDelegates);
 
   // Bootstrapping the tally at stagger start is load-bearing: wave history,

@@ -752,7 +752,6 @@ export async function processAllStateDemographics(
           preset: 1,
           currentYear: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
         },
       }
     ),
@@ -987,7 +986,7 @@ export async function processAllStateDemographics(
       const cacheLean = computeCacheUpdate(demographics, updates, categories, {
         preset: gameState?.preset,
         demographicDefaults: stateDefaults,
-        year: gameState?.eraSystemEnabled ? gameState.currentYear : null,
+        year: gameState ? gameState.currentYear : null,
         startingYear: gameState?.startingYear,
       });
       bulkOps.push({

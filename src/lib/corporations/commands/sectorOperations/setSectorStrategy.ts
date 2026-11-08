@@ -203,8 +203,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
 
     // Tech-tree production-method gate: modern methods are locked until the
     // world reaches their era and/or the corp unlocks them in the tech tree.
-    // Inert when the feature is off.
-    const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
+    const techTreesEnabled = true;
     const currentYear =
       gameState?.currentYear ??
       STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);

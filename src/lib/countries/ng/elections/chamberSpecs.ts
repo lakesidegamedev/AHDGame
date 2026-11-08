@@ -10,13 +10,15 @@ export const NG_HOUSE_SPEC = defineChamberSpec({
   countryId: "NG",
   electionType: "house",
   constituencies: "regions",
-  seats: { kind: "stateField", field: "houseDistricts", enforce: "positive", missing: "oneSeat" },
+  seats: { kind: "stateField", field: "houseDistricts", enforce: "positive", missing: "throw" },
   electoralSystem: "plurality",
   cycle: GENERAL_CYCLE,
   gate: "countryLive",
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
   byElections: "none",
+  snap: "none",
+  healLiveSeats: false,
 });
 
 /** Senate: multi-seat zones sized by `stateSenateSeats`. */
@@ -29,7 +31,7 @@ export const NG_SENATE_SPEC = defineChamberSpec({
     kind: "stateField",
     field: "stateSenateSeats",
     enforce: "multiSeat",
-    missing: "oneSeat",
+    missing: "throw",
   },
   electoralSystem: "plurality",
   cycle: GENERAL_CYCLE,
@@ -37,6 +39,8 @@ export const NG_SENATE_SPEC = defineChamberSpec({
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
   byElections: "none",
+  snap: "none",
+  healLiveSeats: false,
 });
 
 /** Governors: one seat per zone. */
@@ -52,6 +56,8 @@ export const NG_GOVERNOR_SPEC = defineChamberSpec({
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
   byElections: "none",
+  snap: "none",
+  healLiveSeats: false,
 });
 
 /** State Houses of Assembly: multi-seat zones sized from the council seat table. */
@@ -60,13 +66,15 @@ export const NG_REGIONAL_COUNCIL_SPEC = defineChamberSpec({
   countryId: "NG",
   electionType: "regionalCouncil",
   constituencies: "regions",
-  seats: { kind: "table", table: NG_REGIONAL_COUNCIL_SEATS, missing: "oneSeat" },
+  seats: { kind: "table", table: NG_REGIONAL_COUNCIL_SEATS, missing: "throw" },
   electoralSystem: "plurality",
   cycle: GENERAL_CYCLE,
   gate: "countryLive",
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
   byElections: "none",
+  snap: "none",
+  healLiveSeats: false,
 });
 
 /** President: one nationwide seat, resolved by the bespoke federal-character engine. */
@@ -82,6 +90,8 @@ export const NG_PRESIDENT_SPEC = defineChamberSpec({
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
   byElections: "none",
+  snap: "none",
+  healLiveSeats: false,
 });
 
 export const NG_CHAMBER_SPECS = [

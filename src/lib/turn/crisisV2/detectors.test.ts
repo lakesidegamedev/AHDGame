@@ -8,7 +8,7 @@ interface Fake {
 }
 
 function makeDb(fake: Fake) {
-  const bulkWrite = vi.fn(async (_ops: unknown[]) => ({}));
+  const bulkWrite = vi.fn(async () => ({}));
   const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
   const db = {
     collection(name: string) {
@@ -49,7 +49,9 @@ describe("regional jobs detector", () => {
       unemployment: { tx: 15, oh: 5 },
     });
     expect(await provider.load({ db, turn: 20 })).toEqual([]);
-    const ops = bulkWrite.mock.calls[0][0] as { updateOne: { filter: { _id: string } } }[];
+    const ops = (bulkWrite.mock.calls as unknown as unknown[][])[0][0] as {
+      updateOne: { filter: { _id: string } };
+    }[];
     expect(ops.map((op) => op.updateOne.filter._id)).toEqual(["detector-regional-jobs|tx"]);
   });
 
@@ -115,7 +117,7 @@ describe("regional jobs detector", () => {
       unemployment: { tx: 6 },
     });
     expect(await provider.load({ db, turn: 20 })).toEqual([]);
-    const ops = bulkWrite.mock.calls[0][0] as {
+    const ops = (bulkWrite.mock.calls as unknown as unknown[][])[0][0] as {
       deleteMany: { filter: { _id: { $in: string[] } } };
     }[];
     expect(ops[0].deleteMany.filter._id.$in).toEqual(["detector-regional-jobs|tx"]);

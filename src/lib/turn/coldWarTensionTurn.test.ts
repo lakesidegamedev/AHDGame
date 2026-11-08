@@ -46,7 +46,7 @@ describe("processColdWarTensionTurn", () => {
 
   it("runs the turn from the shared live standing-pressure snapshot", async () => {
     const db = createMockDb();
-    const gameState = { coldWarEnabled: true, livingConflictsEnabled: false };
+    const gameState = { livingConflictsEnabled: false };
 
     await processColdWarTensionTurn(db as unknown as Db, 436, gameState);
 
@@ -80,7 +80,6 @@ describe("processColdWarTensionTurn", () => {
     } as never);
 
     await processColdWarTensionTurn(db as unknown as Db, 900, {
-      coldWarEnabled: true,
       currentYear: 2027,
     });
 
