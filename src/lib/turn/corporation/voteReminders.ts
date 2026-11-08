@@ -164,36 +164,44 @@ export async function processVoteAutoResolve(
 
   await Promise.all(
     genericVotes.map(async (vote) => {
-      const corp = corpById.get(vote.corporationId.toString());
-      if (!corp) return;
-      const { outcome, claimed } = await resolveCorporationVoteIfReady({
-        db,
-        vote,
-        totalEligibleShares: totalVotingPower(corp),
-        nationId: corp.countryId,
-        currentTurn,
-      });
-      if (!claimed || outcome === "open") return;
-      const notificationType =
-        outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
-      if (outcome === "passed") {
-        await applyPassedVoteEffects({ db, vote, corporation: corp, currentTurn });
+      try {
+        const corp = corpById.get(vote.corporationId.toString());
+        if (!corp) return;
+        const { outcome, claimed } = await resolveCorporationVoteIfReady({
+          db,
+          vote,
+          totalEligibleShares: totalVotingPower(corp),
+          nationId: corp.countryId,
+          currentTurn,
+        });
+        if (!claimed || outcome === "open") return;
+        const notificationType =
+          outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
+        if (outcome === "passed") {
+          await applyPassedVoteEffects({ db, vote, corporation: corp, currentTurn });
+        }
+        await notifyVoteEvent({ db, vote, corpName: corp.name, notificationType });
+      } catch (error) {
+        console.error(`[voteAutoResolve] vote ${vote._id} resolution failed:`, error);
       }
-      await notifyVoteEvent({ db, vote, corpName: corp.name, notificationType });
     })
   );
 
   const stockFx = stockTaxActive && privVotes.length ? await loadFxRatesByCurrency(db) : undefined;
   await Promise.all(
     privVotes.map(async (vote) => {
-      await resolvePrivatizationVote({
-        db,
-        vote,
-        currentTurn,
-        forexEnabled,
-        stockTaxActive,
-        fxByCurrency: stockFx,
-      });
+      try {
+        await resolvePrivatizationVote({
+          db,
+          vote,
+          currentTurn,
+          forexEnabled,
+          stockTaxActive,
+          fxByCurrency: stockFx,
+        });
+      } catch (error) {
+        console.error(`[voteAutoResolve] privatization vote ${vote._id} failed:`, error);
+      }
     })
   );
 }
