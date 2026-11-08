@@ -19,6 +19,7 @@ import { pickWeightedIndex, seededRoll } from "@/lib/events/substrate/rng";
 import { sweepExpired } from "@/lib/events/substrate/sweep";
 import type { ResolveEventHooks } from "@/lib/events/substrate/types";
 import { isCharacterEligibleForOffer } from "@/lib/events/substrate/cooldown";
+import { logger } from "@/lib/observability/logger";
 import { filterEligibleTemplates } from "./weighting";
 import type { CharacterEventContext } from "./eligibility";
 import { matchesEligibility } from "./eligibility";
@@ -41,6 +42,8 @@ export interface PlayerRandomEventsTurnResult {
   swept: number;
   offered: number;
   skippedOffers: number;
+  /** Characters for whom no event at all was eligible, even from the generic pool. */
+  exhaustedOffers?: number;
 }
 
 interface CharacterEligibilityMaps {
@@ -233,6 +236,7 @@ export async function processPlayerRandomEventsTurn(
 
   let offered = 0;
   let skippedOffers = 0;
+  let exhaustedOffers = 0;
 
   // Walk every player character in chunks — a hard cap here would silently
   // exclude everyone past the cap from ever receiving events.
@@ -270,6 +274,9 @@ export async function processPlayerRandomEventsTurn(
       );
       if (result === "offered") {
         offered++;
+      } else if (result === "exhausted") {
+        exhaustedOffers++;
+        skippedOffers++;
       } else {
         skippedOffers++;
       }
@@ -285,7 +292,14 @@ export async function processPlayerRandomEventsTurn(
   }
   await processChunk();
 
-  return { swept: sweepResult.swept.length, offered, skippedOffers };
+  if (exhaustedOffers > 0) {
+    logger.warn("pree", "player random events pool exhausted", {
+      turn: currentTurn,
+      year: preloaded?.currentYear,
+      exhaustedOffers,
+    });
+  }
+  return { swept: sweepResult.swept.length, offered, skippedOffers, exhaustedOffers };
 }
 
 async function offerEventToCharacter(
@@ -298,7 +312,7 @@ async function offerEventToCharacter(
   broadcastDef?: EventDefinition | null,
   broadcastPreset?: string,
   treasuryCashLedgerEnabled = false
-): Promise<"offered" | "skipped"> {
+): Promise<"offered" | "skipped" | "exhausted"> {
   const pendingInstance = await getEventInstancesCollection(db).findOne({
     scope: "character",
     scopeId: character._id,
@@ -351,7 +365,7 @@ async function offerEventToCharacter(
   if (useBroadcast) {
     pickedDefinition = broadcastDef;
   } else {
-    const eligible = filterEligibleTemplates(
+    let eligible = filterEligibleTemplates(
       definitions,
       characterCtx,
       ledger,
@@ -359,7 +373,22 @@ async function offerEventToCharacter(
       currentYear
     );
     if (eligible.length === 0) {
-      return "skipped";
+      // Dated packs have run out for this character. The undated modern pool
+      // keeps the world moving, even if it repeats a recent kind.
+      eligible = filterEligibleTemplates(
+        definitions,
+        characterCtx,
+        ledger,
+        currentTurn,
+        currentYear,
+        {
+          unboundedOnly: true,
+          ignoreKindCooldown: true,
+        }
+      );
+    }
+    if (eligible.length === 0) {
+      return "exhausted";
     }
     const offerRoll = seededRoll(character._id.toHexString(), currentTurn, "pree", "offer");
     pickedDefinition = eligible[pickWeightedIndex(eligible, offerRoll)].definition;

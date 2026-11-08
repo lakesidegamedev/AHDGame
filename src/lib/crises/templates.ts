@@ -2,6 +2,8 @@ import type { Crisis, CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis
 import { fx, gdpLoss, marginShock } from "@/lib/crises/templateHelpers";
 import { MODERN_2027_CRISIS_TEMPLATES } from "@/lib/crises/templates2027";
 import { OPPORTUNITY_2027_TEMPLATES } from "@/lib/crises/opportunities2027";
+import { MODERN_2050S_CRISIS_TEMPLATES } from "@/lib/crises/templates2050s";
+import { OPPORTUNITY_2050S_TEMPLATES } from "@/lib/crises/opportunities2050s";
 import { VIETNAM_LADDER_SIDES } from "@/lib/crises/vietnamEscalation";
 import { WARSAW_PACT_BLOC_COUNTRY_IDS } from "@/lib/crises/warsawPactSatellites";
 import { getVietnamEscalationLevel } from "@/lib/crises/vietnamEscalationInterface";
@@ -4911,7 +4913,9 @@ export const ALL_CRISIS_TEMPLATES: Record<
   ...WAR_EMERGENCY_CRISIS_TEMPLATES,
   ...MARKET_ADJUSTMENT_CRISIS_TEMPLATES,
   ...MODERN_2027_CRISIS_TEMPLATES,
+  ...MODERN_2050S_CRISIS_TEMPLATES,
   // Opportunities last: the random tier walks templates in order under a cap of
   // one spawn per turn, so a crisis that rolls in the same turn goes first.
   ...OPPORTUNITY_2027_TEMPLATES,
+  ...OPPORTUNITY_2050S_TEMPLATES,
 };
