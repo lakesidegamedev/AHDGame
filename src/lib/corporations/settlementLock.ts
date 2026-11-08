@@ -13,7 +13,7 @@ async function clearLock(
     .updateOne({ _id: corporationId }, { $unset: { [field]: "" } });
 }
 
-export async function claimCorporationSettlementLock(
+async function claimCorporationSettlementLock(
   db: Db,
   corporationId: ObjectId,
   field: CorporationSettlementLock,
@@ -43,12 +43,4 @@ export async function withCorporationSettlementLock<T>(
   } finally {
     await clearLock(db, corporationId, field);
   }
-}
-
-export async function releaseCorporationSettlementLock(
-  db: Db,
-  corporationId: ObjectId,
-  field: CorporationSettlementLock
-): Promise<void> {
-  await clearLock(db, corporationId, field);
 }

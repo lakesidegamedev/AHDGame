@@ -33,9 +33,6 @@ export interface CabinetEligibleCharacter {
   sequentialId?: number | null;
 }
 
-/** @deprecated Use CabinetEligibleCharacter instead */
-export type UKCabinetEligibleCharacter = CabinetEligibleCharacter;
-
 function normalizeCabinetChamberDisplayName(name: string): string {
   if (name === "ShÅ«giin") return "Shūgiin";
   return name;

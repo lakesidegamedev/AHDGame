@@ -351,26 +351,6 @@ export function unownedHeadroomUnitsOf(
   );
 }
 
-/**
- * Unit-denominated twin of {@link effectiveMarketAnchor}: owned capacity plus
- * unowned headroom when an unowned doc exists, otherwise the GDP-derived floor
- * (converted to units by the caller) but never below what is already owned —
- * the same Bug #0775 floor, in units. Not rounded: capacity is fractional.
- */
-export function effectiveMarketUnits(
-  ownedCapacityUnits: number,
-  headroomUnits: number | undefined,
-  gdpFloorUnits: number
-): number {
-  const owned =
-    Number.isFinite(ownedCapacityUnits) && ownedCapacityUnits > 0 ? ownedCapacityUnits : 0;
-  if (headroomUnits !== undefined && Number.isFinite(headroomUnits)) {
-    return Math.max(0, owned + Math.max(0, headroomUnits));
-  }
-  const floor = Number.isFinite(gdpFloorUnits) && gdpFloorUnits > 0 ? gdpFloorUnits : 0;
-  return Math.max(floor, owned);
-}
-
 interface BuildSectorMarketShareInputs {
   sectors: CorporateSector[];
   /**

@@ -14,7 +14,7 @@ export type TurnStateProjection = Pick<
   State,
   "_id" | "name" | "countryId" | "sectorSpecializations" | "gdp"
 >;
-export type TurnStateBudgetProjection = Pick<StateBudget, "_id" | "taxRates">;
+type TurnStateBudgetProjection = Pick<StateBudget, "_id" | "taxRates">;
 
 export interface TurnReferenceData {
   commodityPrices: CommodityPrice[];
@@ -105,10 +105,4 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
     stateBudgetsForTax,
     centralBanks,
   };
-}
-
-// Test hook: lets vitest reset the module cache between suites without
-// re-requiring the module (which doesn't work reliably under vi.mock).
-export function __resetTurnReferenceDataCacheForTest(): void {
-  cache.clear();
 }

@@ -6,9 +6,9 @@ import type { ObjectId } from "mongodb";
  * Replaces the overloaded `enactedByBillId` field so executive orders can
  * also drive a StatePolicy row.
  */
-export type EnactedByKind = "bill" | "order" | "expiry";
+type EnactedByKind = "bill" | "order" | "expiry";
 
-export interface EnactedBy {
+interface EnactedBy {
   kind: EnactedByKind;
   id: ObjectId;
 }
@@ -45,17 +45,4 @@ export interface StatePolicy {
 export interface StateMetricBaseline {
   _id: string; // stateId
   baselines: Record<string, Record<string, number>>; // category.metric -> baseline (40-60)
-}
-
-export interface VoteImpact {
-  _id?: ObjectId;
-  characterId: ObjectId;
-  billId: ObjectId;
-  chamber: "house" | "senate" | "state_senate";
-  vote: "for" | "against" | "abstain";
-  stateId?: string;
-  /** Per-archetype approval changes from this vote */
-  archetypeImpacts?: Record<string, number>;
-  recordedAt: Date;
-  recordedTurn: number;
 }

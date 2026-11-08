@@ -566,18 +566,6 @@ function firstFinite(values: Array<number | undefined | null>, lo: number, hi: n
 }
 
 /**
- * Signed reform-vs-orthodox policy stance in [-1, 1] from the NPP governing
- * brain's second-economy tolerance. RETAINED for back-compat / tests only — the
- * turn now uses {@link computePolicyStance} (government reformism + Gosbank
- * posture). A regime that tolerates the grey market reads as more reformist.
- * @deprecated P1 replaced this with computePolicyStance.
- */
-export function policyStanceFromTolerance(tolerance: number | undefined | null): number {
-  const tol = typeof tolerance === "number" && Number.isFinite(tolerance) ? tolerance : 0.3;
-  return Math.max(-1, Math.min(1, (tol - 0.4) * 2));
-}
-
-/**
  * Recompute every SOE's overlay from its sectors' realized output (WITHOUT
  * persisting — the caller applies directed credit for planned countries first,
  * then persists). Returns the per-country grouping and a corpId → state map

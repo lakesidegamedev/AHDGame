@@ -165,7 +165,7 @@ export const FOMC_VACANCY_REMINDER_INTERVAL_TURNS = 48;
 export type FomcVote = "hike" | "cut" | "hold";
 
 /** Who occupies a seat. "vacant" seats abstain and count against the board majority. */
-export type FomcOccupantType = "player" | "npp" | "vacant";
+type FomcOccupantType = "player" | "npp" | "vacant";
 
 /** One governor seat on the committee. */
 export interface FomcSeat {
@@ -195,7 +195,7 @@ export interface FomcBallot {
   castAt: Date;
 }
 
-export type FomcMeetingStatus = "voting" | "resolved";
+type FomcMeetingStatus = "voting" | "resolved";
 
 /** A single rate-setting meeting. At most one is active per bank at a time. */
 export interface FomcMeeting {
@@ -269,9 +269,6 @@ export interface TurnSnapshot {
   rate: number;
 }
 
-/** @deprecated Use TurnSnapshot instead */
-export type InterestRateSnapshot = TurnSnapshot;
-
 /** Executive nomination for central bank chair */
 export interface CentralBankNomination {
   characterId: ObjectId;
@@ -295,7 +292,7 @@ export interface ChairSelectionPending {
 }
 
 /** Individual lobbying contribution (aggregated for public display) */
-export interface CentralBankLobbyEntry {
+interface CentralBankLobbyEntry {
   targetCharacterId: ObjectId;
   targetCharacterName: string;
   lobbyistCharacterId: ObjectId;

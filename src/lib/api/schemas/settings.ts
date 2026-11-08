@@ -253,8 +253,6 @@ export const displayCurrencyPreferenceSchema = z.object({
   ]),
 });
 
-export type DisplayCurrencyPreferenceBody = z.infer<typeof displayCurrencyPreferenceSchema>;
-
 export const MAX_TAX_RATE = 33;
 
 export const taxRateSchema = z.object({
@@ -335,24 +333,3 @@ export const orgBuildingBudgetSchema = z.object({
       `Org building budget cannot exceed ${MAX_ORG_BUILDING_PERCENT}%`
     ),
 });
-
-export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;
-export type SetPasswordBody = z.infer<typeof setPasswordSchema>;
-export type ChangeEmailBody = z.infer<typeof changeEmailSchema>;
-export type ConfirmEmailChangeBody = z.infer<typeof confirmEmailChangeSchema>;
-export type CharacterNameBody = z.infer<typeof characterNameSchema>;
-export type CreateCharacterBody = z.infer<typeof createCharacterSchema>;
-export type CharacterTransferBody = z.infer<typeof characterTransferSchema>;
-export type PartyTransferBody = z.infer<typeof partyTransferSchema>;
-export type ThemeBody = z.infer<typeof themeSchema>;
-export type PolicyShiftBody = z.infer<typeof policyShiftSchema>;
-export type ProfileBioBody = z.infer<typeof profileBioSchema>;
-export type TaxRateBody = z.infer<typeof taxRateSchema>;
-export type StatePartyTransferBody = z.infer<typeof statePartyTransferSchema>;
-export type CampaignSongBody = z.infer<typeof campaignSongSchema>;
-export type ActionsViewModeBody = z.infer<typeof actionsViewModeSchema>;
-export type GotvBudgetBody = z.infer<typeof gotvBudgetSchema>;
-export type SuppressionBudgetBody = z.infer<typeof suppressionBudgetSchema>;
-export type RegistrationBudgetBody = z.infer<typeof registrationBudgetSchema>;
-export type CharacterDemographicsBody = z.infer<typeof characterDemographicsSchema>;
-export type OrgBuildingBudgetBody = z.infer<typeof orgBuildingBudgetSchema>;

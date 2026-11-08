@@ -47,7 +47,7 @@ export interface ShareholderInfo {
  * Corp-wide physical rollup (plants tier). Null outside plants.
  * Units are output units on the DAILY clock, matching every per-sector figure.
  */
-export interface CorporationPhysicalRollup {
+interface CorporationPhysicalRollup {
   capacityUnits: number;
   producedUnits: number;
   soldUnits: number;
@@ -434,7 +434,7 @@ export interface MyShareOrder {
   createdAt: string;
 }
 
-export interface OrderbookLevel {
+interface OrderbookLevel {
   price: number;
   shares: number;
   orderCount: number;
@@ -984,7 +984,7 @@ export interface BondData {
 }
 
 /** Inputs surfaced for the credit rating tab (same math as server-side score). */
-export interface CreditDiagnostics {
+interface CreditDiagnostics {
   totalEquity: number;
   annualIncome: number;
   annualCouponObligations: number;
@@ -993,7 +993,7 @@ export interface CreditDiagnostics {
 }
 
 /** Active IMF restructuring — tradable bonds are removed; debt lives in the facility. */
-export interface ImfFacilitySummary {
+interface ImfFacilitySummary {
   principalOutstanding: number;
   annualRatePercent: number;
   amortizationTurnsRemaining: number;
@@ -1086,22 +1086,6 @@ export interface PortfolioBondHolding {
   currencyCode?: CurrencyCode;
   /** Synthetic row for IMF bailout loan receivable (not a tradable bond). */
   imfFacilityLoan?: boolean;
-}
-
-export interface PortfolioData {
-  stockHoldings: PortfolioStockHolding[];
-  bondHoldings: PortfolioBondHolding[];
-  totalStockValue: number;
-  totalBondValue: number;
-  totalPortfolioValue: number;
-  totalUnrealizedPnl: number;
-  totalCouponIncomePerTurn: number;
-  history: Array<{
-    turn: number;
-    totalValue: number;
-    stockValue?: number;
-    bondValue?: number;
-  }>;
 }
 
 export interface VoteTally {

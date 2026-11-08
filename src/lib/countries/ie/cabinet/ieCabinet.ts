@@ -89,5 +89,3 @@ export const IE_CABINET_POSITIONS = [
     order: 18,
   },
 ] as const;
-
-export type IECabinetPositionId = (typeof IE_CABINET_POSITIONS)[number]["id"];

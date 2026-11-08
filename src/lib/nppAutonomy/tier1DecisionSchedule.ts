@@ -31,8 +31,6 @@ export const TIER1_STRATEGIC_DECISION_KINDS = [
   "sphere",
 ] as const;
 
-export type Tier1StrategicDecisionKind = (typeof TIER1_STRATEGIC_DECISION_KINDS)[number];
-
 export type Tier1DecisionSkipReason = "not-due" | "already-completed" | "player-controlled";
 
 export interface Tier1DecisionScheduleInput {

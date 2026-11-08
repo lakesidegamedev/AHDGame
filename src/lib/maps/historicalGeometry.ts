@@ -46,8 +46,6 @@ export const HISTORICAL_FEATURE_IDS = [
   "TTPI",
 ] as const;
 
-export type HistoricalFeatureId = (typeof HISTORICAL_FEATURE_IDS)[number];
-
 /**
  * ⚠️ DRAW ORDER — these must be added LAST, after the region-overlay blobs.
  *

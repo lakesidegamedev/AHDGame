@@ -64,7 +64,7 @@ export async function listFundsByIds(
 }
 
 /** Load a single fund by slug. Returns null if not found. */
-export async function getFundBySlug(
+async function getFundBySlug(
   db: Db,
   slug: string,
   options?: FundQueryOptions
@@ -326,17 +326,6 @@ export async function listCharacterPositions(
   return db
     .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
     .find({ holderKind: "character", characterId })
-    .toArray();
-}
-
-/** Load all positions for an imperial character across all funds. */
-export async function listImperialCharacterPositions(
-  db: Db,
-  imperialCharacterId: ObjectId
-): Promise<IndexFundPosition[]> {
-  return db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-    .find({ holderKind: "imperial_character", imperialCharacterId })
     .toArray();
 }
 
@@ -819,16 +808,6 @@ export async function listFundSnapshots(
     .sort({ turn: -1 })
     .limit(limit)
     .toArray();
-}
-
-/** Load the most recent snapshot for a fund. Returns null if none. */
-export async function getLatestFundSnapshot(
-  db: Db,
-  fundId: ObjectId
-): Promise<IndexFundSnapshot | null> {
-  return db
-    .collection<IndexFundSnapshot>(FUND_SNAPSHOT_COLLECTION)
-    .findOne({ fundId }, { sort: { turn: -1 } });
 }
 
 /** Recent snapshots for many funds (newest-first per fund). */

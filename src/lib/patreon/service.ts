@@ -23,11 +23,6 @@ export interface ApplyPatreonStatusInput {
   provider?: SupporterProvider;
 }
 
-export interface PatreonEventIdentity {
-  patreonUserId: string;
-  tierId?: string;
-}
-
 export type SupporterStatusSnapshot = Pick<
   User,
   "supporterProvider" | "patreonUserId" | "patreonTier" | "patreonExpiresAt"

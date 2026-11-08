@@ -21,11 +21,6 @@ import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuatio
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { markNationalIndexFund, nationalIndexFundIdentity } from "./rules/nationalIndex";
 
-/** True for a background country's national index fund. */
-export function isNationalIndexFund(fund: Pick<IndexFund, "nationalIndex">): boolean {
-  return typeof fund.nationalIndex?.entityId === "string";
-}
-
 export interface NationalIndexMark {
   countryId: string;
   displayName: string;

@@ -45,6 +45,3 @@ export const advertisingAgreementUpdateSchema = z.discriminatedUnion("action", [
     durationTurns,
   }),
 ]);
-
-export type AdvertisingAgreementProposalInput = z.infer<typeof advertisingAgreementProposalSchema>;
-export type AdvertisingAgreementUpdateInput = z.infer<typeof advertisingAgreementUpdateSchema>;

@@ -72,7 +72,6 @@ import {
   TURNS_PER_DAY,
 } from "@/lib/constants/corporations";
 import type {
-  CorporationType,
   OperatingSectorType,
   StateMetricValues,
   MacroEconomicValues,
@@ -573,7 +572,7 @@ export async function buildSectorForSaleInfo(
   };
 }
 
-export type SectorPurchaseBlockReason =
+type SectorPurchaseBlockReason =
   | "invalid_price"
   | "insufficient_funds"
   | "merge_blocked"

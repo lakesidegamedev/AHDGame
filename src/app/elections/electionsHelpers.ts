@@ -12,35 +12,6 @@ export function leaderColor(election: ElectionDisplay): string {
   return election.polling?.candidatePartyColors?.[leaderId] ?? "var(--muted)";
 }
 
-/** Human-readable phase label for an election. */
-export function getPhaseLabel(status: string, inPrimary: boolean): string {
-  if (status === "upcoming") return "Upcoming";
-  if (status === "completed") return "Completed";
-  if (status === "active") return inPrimary ? "Primary" : "General";
-  return status;
-}
-
-/** Badge CSS for each phase. */
-export function getPhaseBadgeClass(status: string, inPrimary: boolean): string {
-  if (status === "upcoming") return "bg-info/10 border-info/25 text-info";
-  if (status === "active" && inPrimary) return "bg-warning/10 border-warning/25 text-warning";
-  if (status === "active" && !inPrimary) return "bg-success/10 border-success/25 text-success";
-  return "bg-muted/10 border-muted/25 text-muted";
-}
-
-/**
- * Bespoke race-title phrasings that are NOT `${label} Race` (governor →
- * "Gubernatorial", president → "Presidential", etc.). Chamber types
- * (senate/house/stateSenate) are composed from the shared label authority
- * instead — see ElectionCard — so they stay country-aware and de-prefixed.
- */
-export const ELECTION_RACE_LABELS: Record<string, string> = {
-  governor: "Gubernatorial Race",
-  president: "Presidential Race",
-  commons: "Parliament (Commons) Race",
-  primeMinister: "Prime Minister Race",
-};
-
 export const SENATE_CLASS_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
 export const ELECTION_STATE_NAMES: Record<string, string> = {

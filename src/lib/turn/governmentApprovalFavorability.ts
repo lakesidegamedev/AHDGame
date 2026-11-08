@@ -97,17 +97,3 @@ export async function loadRulingExecutiveParties(db: Db): Promise<Map<CountryId,
   }
   return parties;
 }
-
-export async function loadGovernmentApprovalByCountry(db: Db): Promise<Map<CountryId, number>> {
-  const rows = await db
-    .collection<{ _id: CountryId; approvalRating?: number }>("governmentApprovals")
-    .find({}, { projection: { _id: 1, approvalRating: 1 } })
-    .toArray();
-  return new Map(
-    rows
-      .filter((r): r is { _id: CountryId; approvalRating: number } =>
-        Number.isFinite(r.approvalRating)
-      )
-      .map((r) => [r._id, r.approvalRating])
-  );
-}

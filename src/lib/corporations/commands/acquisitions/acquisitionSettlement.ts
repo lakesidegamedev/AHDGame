@@ -42,18 +42,10 @@ import type {
 import type { AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import type { PlannedLeg, PayoutPlan } from "./rules/acquisitionPayoutPlan";
 
-export const ACQUISITION_SETTLEMENTS = "acquisitionSettlements";
-
-/** Another live settlement already owns this target. Retry-safe abort. */
-export class AcquisitionTargetBusyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AcquisitionTargetBusyError";
-  }
-}
+const ACQUISITION_SETTLEMENTS = "acquisitionSettlements";
 
 /** A retry recomputed a plan that disagrees with the claimed one. Never retry blind. */
-export class AcquisitionSettlementConflictError extends Error {
+class AcquisitionSettlementConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AcquisitionSettlementConflictError";
@@ -363,7 +355,7 @@ export async function emitAcquisitionLegLedger(
  * acquirer (see below), never by shrinking the price refund. Counting it here
  * too would charge the acquirer twice for the same cash.
  */
-export function deliveredCostInAcquirerCapital(settlement: AcquisitionSettlement): number {
+function deliveredCostInAcquirerCapital(settlement: AcquisitionSettlement): number {
   return settlement.legs
     .filter((leg) => leg.applied && leg.kind === "holder_credit")
     .reduce((sum, leg) => sum + leg.costInAcquirerCapital, 0);
@@ -399,7 +391,7 @@ function debitLegApplied(settlement: AcquisitionSettlement): boolean {
 }
 
 /** Net refund owed on terminal compensation: price minus delivered minus already refunded. */
-export function compensationRefundOwed(settlement: AcquisitionSettlement): number {
+function compensationRefundOwed(settlement: AcquisitionSettlement): number {
   if (!debitLegApplied(settlement)) return 0;
   return Math.max(
     0,

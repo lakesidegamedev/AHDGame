@@ -132,18 +132,6 @@ export const MAP_FILTERS = [
   { id: "unassigned", label: "UNASSIGNED" },
 ];
 
-/** Static national-doctrine effects surfaced in the command detail (design's DOCTRINE list). */
-export const NATIONAL_DOCTRINE_EFFECTS = [
-  { val: "+8%", label: "joint operations — Joint Staff System" },
-  { val: "+10%", label: "supply throughput — Strategic Logistics" },
-  { val: "+6%", label: "Army/Air coordination — Air-Land Battle" },
-  { val: "+8%", label: "overseas command range — Blue-Water Navy" },
-  { val: "+10%", label: "overseas sustainment — Expeditionary Supply Chains" },
-];
-
-export const MISSING_SYNERGY =
-  "Unified Theater Commands would reduce over-capacity penalties across regional commands.";
-
 /** Attrition, manpower and retreat tuning (first-pass — expected to move in playtest). */
 export const ATTRITION = {
   /**

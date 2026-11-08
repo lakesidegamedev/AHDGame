@@ -1,26 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
-import type { CorporationVote, CorporationVoteType } from "@/lib/db/types/corporationVote";
+import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import { createNotification } from "@/lib/notifications";
-
-export function voteTypeLabel(type: CorporationVoteType): string {
-  switch (type) {
-    case "governance_change":
-      return "Restructuring Vote";
-    case "dissolution":
-      return "Dissolution Vote";
-    case "relocation":
-      return "Relocation Vote";
-    case "share_issuance":
-      return "Share Issuance Vote";
-    case "adopt_supershares":
-      return "Supershare Vote";
-    case "ticker_change":
-      return "Ticker Change Vote";
-    case "ceo_salary":
-      return "CEO Pay Vote";
-  }
-}
 
 export function proposalSummary(vote: CorporationVote): string {
   switch (vote.type) {

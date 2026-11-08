@@ -472,23 +472,6 @@ export interface Competitor {
   isNpp?: boolean;
 }
 
-export interface SplitSizeInfo {
-  splitCost: number;
-  splitMsCost: number;
-  splitEstimatedCapture: number;
-  /** Estimated net income: capture × current effective margin. Approximate for competitor sectors. */
-  splitEstimatedNetIncome: number;
-  /** Projected market share after this capture. */
-  projectedMarketShare: number;
-  /** True when the projected share would cross the 50% dominance threshold. */
-  exceedsDominanceThreshold: boolean;
-  /** Per-strength cost/capture breakdown. Present on pages loaded after the split-strength feature. */
-  splitStrengths?: {
-    full: SplitStrengthInfo;
-    half: SplitStrengthInfo;
-  };
-}
-
 export interface SplitStrengthInfo {
   splitCost: number;
   splitMsCost: number;

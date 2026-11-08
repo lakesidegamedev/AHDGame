@@ -178,5 +178,3 @@ export function buildFinancials(inputs: FinancialsInputs) {
     subsidyBenefit: Math.round(totals.totalSubsidyBenefit),
   };
 }
-
-export type FinancialsView = ReturnType<typeof buildFinancials>;

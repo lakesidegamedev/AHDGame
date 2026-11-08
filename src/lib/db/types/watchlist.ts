@@ -34,7 +34,3 @@ export interface WatchlistEntry {
    */
   lastNotifiedTurn?: number;
 }
-
-/** Input to `POST /api/admin/watchlist` — `_id`/`createdAt` are computed at
- * insert time. */
-export type WatchlistEntryInput = Pick<WatchlistEntry, "userId" | "addedBy" | "reason">;

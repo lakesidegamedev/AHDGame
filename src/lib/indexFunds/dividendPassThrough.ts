@@ -815,34 +815,6 @@ export async function processIndexFundDividendsBatch(
   await insertFundTransactionsBulk(db, fundTxDocs);
 }
 
-/**
- * Find all funds that hold shares in a given corporation.
- * Used by the turn-processing dividend pipeline to determine which funds
- * should receive pass-through from a corporation's dividend payment.
- */
-export async function findFundsHoldingCorporation(
-  db: Db,
-  corporationId: ObjectId
-): Promise<{ fundId: ObjectId; sharesHeld: number }[]> {
-  const { FUND_COLLECTION } = await import("@/lib/indexFunds/fundQueries");
-  const activeFunds = await db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .find({
-      status: "active",
-      "holdings.corporationId": corporationId,
-    })
-    .project<{ _id: ObjectId; holdings: IndexFund["holdings"] }>({ _id: 1, holdings: 1 })
-    .toArray();
-
-  return activeFunds.flatMap((fund) => {
-    const holding = fund.holdings.find(
-      (h) => h.corporationId.toString() === corporationId.toString()
-    );
-    if (!holding || holding.shares <= 0) return [];
-    return [{ fundId: fund._id, sharesHeld: holding.shares }];
-  });
-}
-
 /** Aggregate each recipient/currency before the atomic source payout. */
 async function payFundHolderIncome(
   db: Db,

@@ -1,6 +1,5 @@
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { Election, GameState } from "@/lib/db/types";
-import { DE_WAHLKREIS_SEATS } from "@/lib/constants";
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import { getSeatIdFromElection } from "@/lib/seats";
@@ -11,7 +10,6 @@ import {
   type CycleAnchorContext,
 } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
-import { generateLandeslistenForCycle } from "@/lib/elections/germanyLandesliste";
 import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
 
 /**
@@ -242,80 +240,4 @@ export async function spawnCommonsElection(
   console.log(
     `[Turn] Commons election spawned for ${fromElection.state} cycle ${spawn.cycle} status=${status} — id ${inserted.insertedId}`
   );
-}
-
-/**
- * Spawn the next Bundestag election for a Bundesland on the canonical LARP
- * schedule. Called from `generalResolution` after a per-Land Bundestag cycle
- * resolves. Mirrors `spawnCommonsElection`: one multi-seat Election doc per
- * Land, with `totalSeats` set to the Land's Wahlkreise count. The AMS list-
- * tier reconciliation (germanyAMS.ts) runs once all 16 Land elections complete.
- */
-export async function spawnBundestagElection(
-  db: Db,
-  fromElection: Election,
-  now: Date
-): Promise<void> {
-  const existing = await db.collection<Election>("elections").findOne({
-    electionType: "bundestag",
-    state: fromElection.state,
-    status: { $in: ["active", "upcoming"] },
-  });
-  if (existing) return;
-
-  const { currentTurn, ctx } = await getCurrentTurnAndCtx(db);
-  // See foundingPhaseActive: the founding cycle re-spawn loop lives here.
-  if (foundingPhaseActive(ctx)) return;
-  const spawn = pickNextCanonicalCycle({
-    electionType: "bundestag",
-    prevCycle: fromElection.cycle ?? 0,
-    currentTurn,
-    ctx,
-  });
-  if (!spawn) {
-    console.warn(
-      `[spawnBundestagElection] no canonical cycle within gate for ${fromElection.state} after cycle ${fromElection.cycle}`
-    );
-    return;
-  }
-
-  const canonical = DEFAULT_DURATIONS.bundestag ?? DEFAULT_DURATIONS.commons;
-  const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-  const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-  const newElection: Omit<Election, "_id"> = {
-    countryId: "DE",
-    state: fromElection.state,
-    electionType: "bundestag",
-    cycle: spawn.cycle,
-    electionYear: electionToLarpYear("bundestag", spawn.cycle, undefined, undefined, ctx),
-    seatId: getSeatIdFromElection({
-      countryId: "DE",
-      electionType: "bundestag",
-      state: fromElection.state!,
-    }),
-    status: "active",
-    totalSeats: fromElection.totalSeats ?? DE_WAHLKREIS_SEATS[fromElection.state!] ?? 1,
-    startTime: now,
-    primaryEndTime,
-    endTime,
-    startTurn: currentTurn,
-    primaryEndTurn: spawn.primaryEndTurn,
-    endTurn: spawn.endTurn,
-    durationHours: canonical.durationHours,
-    primaryDurationHours: canonical.primaryDurationHours,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const inserted = await db
-    .collection<Election>("elections")
-    .insertOne(withCampaignRules(newElection) as Election);
-  console.log(
-    `[Turn] Bundestag election spawned for ${fromElection.state} cycle ${spawn.cycle} status=${newElection.status} - id ${inserted.insertedId}`
-  );
-
-  // Seed Landeslisten for the new cycle so chairs have an edit window before the
-  // AMS list tier consumes them. Idempotent + preserves existing chair edits.
-  await generateLandeslistenForCycle(db, spawn.cycle);
 }
