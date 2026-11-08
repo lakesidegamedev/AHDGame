@@ -173,7 +173,7 @@
     "carveUp": {
       "title": "{state} · Carve-up",
       "viewDetails": "View state details →",
-      "explanation": "Each candidate's slice = registered voters × archetype × demographic affinity. Position alignment + influence drive appeal; favorability scales votes at resolution.",
+      "explanation": "Each candidate's slice = registered voters × voter group × demographic affinity. Position alignment + influence drive appeal; favorability scales votes at resolution.",
       "empty": "No projected slices for {state} yet. The carve-up populates once candidates have filed for this primary.",
       "regBase": "Reg base",
       "topDemographics": "Top demographics: "

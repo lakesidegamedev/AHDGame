@@ -455,7 +455,7 @@ Gains:
                   <li>• Spending campaign actions</li>
                   <li>• Media spending upgrades (+0.5%/level/turn)</li>
                   <li>• Endorsements from NPPs and players</li>
-                  <li>• Archetype approval bonuses</li>
+                  <li>• Voter group approval bonuses</li>
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
