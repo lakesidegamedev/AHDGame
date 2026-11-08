@@ -167,7 +167,6 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
   const isMail = mode.type === "mail";
 
   const formatCooldown = (seconds: number) => {
-    if (isMail) return null; // mail uses countdown timer (not needed for shareholder address)
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.ceil((seconds % 3600) / 60);
     if (hours > 0) return `${hours}h ${minutes}m remaining`;

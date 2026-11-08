@@ -499,9 +499,7 @@ function ActiveVenture({
             <h4 className="text-sm font-semibold text-foreground">{event.title}</h4>
             <p className="mt-1 text-sm">{event.body}</p>
             <p className="mt-1 text-xs text-muted">
-              {studio.isCeo
-                ? `Answer by turn ${event.deadlineTurn}. If you do not, the marked default applies.`
-                : `The CEO answers by turn ${event.deadlineTurn}, or the marked default applies.`}
+              {`Answer by turn ${event.deadlineTurn}. If you do not, the marked default applies.`}
             </p>
             <ul className="mt-2 divide-y divide-card-border/60">
               {event.choices.map((choice) => (
