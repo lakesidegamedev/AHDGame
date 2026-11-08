@@ -22,7 +22,7 @@ import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
  * The database the current probe is writing to.
  *
  * Some seed-path code reaches for `getDb()` rather than taking the `db`
- * argument - `isLayer1PositionsEnabled` is one - so the caller's
+ * argument - `loadEraFullOverride` is one - so the caller's
  * `vi.mock("@/lib/mongodb")` factory reads this to hand back the same in-memory
  * instance. Without it those calls escape to whatever `MONGODB_URI` names.
  *

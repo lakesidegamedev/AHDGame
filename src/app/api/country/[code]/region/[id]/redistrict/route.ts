@@ -6,7 +6,6 @@ import { requireAuth, requireHumanSessionWithCharacter } from "@/lib/api/require
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAuthAdmin } from "@/lib/auth";
 import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { canManageOffice } from "@/lib/governorOffice/access";
 import { checkStateTrifecta } from "@/lib/redistricting/trifecta";
 import { computeRedistrictCaps } from "@/lib/redistricting/caps";
@@ -49,9 +48,6 @@ export async function POST(
     const db = await getDb();
 
     const gs = await getGameState();
-    if (!isRedistrictingEnabled(gs)) {
-      return errorResponse(404, "Redistricting is not enabled");
-    }
     // US-only by construction: only US states have congressionalDistricts docs, so
     // non-US countries fall through to the "No districts to redraw" 404 below.
 
@@ -206,8 +202,7 @@ export async function GET(
     // Eligibility, with a human-readable reason for the first failing gate.
     let reason: string | null = null;
     const currentYear = gs?.currentYear;
-    if (!isRedistrictingEnabled(gs)) reason = "Redistricting is not enabled.";
-    else if (docs.length === 0) reason = "This state has no districts.";
+    if (docs.length === 0) reason = "This state has no districts.";
     else if (isAdmin) {
       // Admins bypass governor, trifecta, census-year, and commission gates.
       if (!character) reason = "You need an active character to submit a redraw.";

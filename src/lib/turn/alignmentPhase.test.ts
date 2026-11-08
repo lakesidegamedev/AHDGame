@@ -112,7 +112,7 @@ describe("processAlignmentTurn", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1953 });
     alignments([]);
     memberships([]);
     spheres([]);
@@ -131,26 +131,6 @@ describe("processAlignmentTurn", () => {
     // here, so the fixture's $900m play saturates the per-nation cap — cases
     // that need to observe a sub-cap effect override the amount.
     targetEconomy(625);
-  });
-
-  it("does nothing at all when the gate is off", async () => {
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: false });
-    const r = await processAlignmentTurn(db as unknown as Db, 10);
-    expect(r).toEqual({
-      countriesDrifted: 0,
-      erasCrossed: 0,
-      spheresSynced: 0,
-      rowsHealed: 0,
-      playsResolved: 0,
-      playsRefunded: 0,
-      blocStress: {},
-      defections: 0,
-      defectionWarnings: 0,
-      joinRequests: 0,
-      crisesOpened: 0,
-      crisesResolved: 0,
-    });
-    expect(db.collection("countryAlignments").find).not.toHaveBeenCalled();
   });
 
   it("snapshots the prior shares into previous so a trend can be shown", async () => {
@@ -172,7 +152,7 @@ describe("processAlignmentTurn", () => {
   });
 
   it("crosses a world that has reached the next era and clears its trend", async () => {
-    gameState({ _id: "current", currentYear: 1991, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1991 });
     alignments([
       {
         entityId: "YU",
@@ -449,7 +429,7 @@ describe("processAlignmentTurn", () => {
     // A 1953-preset world that has run past 1991. Opening shares are built in
     // the PRESET's poles (West/East); stamping them with the live era would
     // freeze West/East values in a Washington/Moscow world forever.
-    gameState({ _id: "current", currentYear: 1995, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1995 });
     alignments([]);
     spheres([
       {
@@ -492,7 +472,7 @@ describe("processAlignmentTurn", () => {
     const smallEconomyGain = written().shares.WEST! - 22;
 
     vi.clearAllMocks();
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1953 });
     spheres([]);
     crises([]);
     orgMemberships([]);
@@ -1283,7 +1263,7 @@ describe("processAlignmentTurn", () => {
     const calmGain = written().shares.WEST! - 60;
 
     vi.clearAllMocks();
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1953 });
     memberships([]);
     spheres([]);
     orgMemberships([]);
@@ -1357,13 +1337,5 @@ describe("processAlignmentTurn", () => {
       kind: string;
     };
     expect(doc.targetEntityId).toBe("YU");
-  });
-
-  it("opens nothing at all when the gate is off", async () => {
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: false });
-    const r = await processAlignmentTurn(db as unknown as Db, 4);
-    expect(r.crisesOpened).toBe(0);
-    expect(r.crisesResolved).toBe(0);
-    expect(db.collection("alignmentCrises").find).not.toHaveBeenCalled();
   });
 });

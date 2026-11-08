@@ -32,7 +32,6 @@ import {
 } from "@/lib/actions";
 import { rollDebatePrep } from "@/lib/stats/debatePrep";
 import { USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import type { ActionType, Character, State, ActionLog } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -211,12 +210,6 @@ async function executeCharacterActionImpl(
     }
   }
 
-  // Debate Prep eligibility needs the RPG-stats flag, which the rules cannot
-  // read themselves (async host state). Resolve once up front — the flag is
-  // world state, not per-iteration state — and hand the resolved value to both
-  // the shared validation and the gate below so all three read one source.
-  const rpgStatsEnabled = actionType === "debatePrep" ? await isRpgStatsEnabled() : undefined;
-
   let lastMessage = "";
   let updatedCharacter: Character | null = null;
   // One audit envelope per executed iteration (batch/convert can run count>1,
@@ -254,7 +247,6 @@ async function executeCharacterActionImpl(
       homeFxRate: campaignRate,
       preset: gameState?.preset,
       priceLevel,
-      rpgStatsEnabled,
     });
     if (!validation.canPerform) {
       if (completed > 0) {
@@ -283,15 +275,15 @@ async function executeCharacterActionImpl(
       }
     }
 
-    // Debate Prep: gated behind the RPG-stats flag and requires an allocated
-    // stat block (Debate lives in stats). Single source of truth: the same
-    // rules quote canPerformAction above validates through, so the gate and
-    // the validation reject with the same reason.
+    // Debate Prep requires an allocated stat block (Debate lives in stats).
+    // Single source of truth: the same rules quote canPerformAction above
+    // validates through, so the gate and the validation reject with the same
+    // reason.
     if (actionType === "debatePrep") {
-      const quote = quoteDebatePrepAction(
-        { debate: current.stats?.debate, hasStats: !!current.stats },
-        { rpgStatsEnabled }
-      );
+      const quote = quoteDebatePrepAction({
+        debate: current.stats?.debate,
+        hasStats: !!current.stats,
+      });
       if (!quote.ok) {
         if (completed > 0) {
           stoppedReason = quote.error;

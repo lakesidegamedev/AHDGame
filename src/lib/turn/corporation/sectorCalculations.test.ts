@@ -1289,7 +1289,6 @@ describe("corporate tax deduction", () => {
       undefined,
       false,
       false,
-      false,
       new Set(),
       true
     );
@@ -3905,7 +3904,6 @@ describe("affordability brake vs the soft budget constraint", () => {
       1953,
       undefined,
       undefined,
-      false,
       true // commandEconomyEnabled
     );
     // The plan sets the target: era trend for the year, weighted by the sector's
@@ -3943,7 +3941,6 @@ describe("affordability brake vs the soft budget constraint", () => {
         1953,
         undefined,
         undefined,
-        false,
         true
       );
       targets.set(sectorType, targetFrom(r));
@@ -3997,7 +3994,6 @@ describe("funded producer turn", () => {
       undefined,
       undefined,
       undefined,
-      false,
       false,
       false,
       new Set(),
@@ -4072,7 +4068,6 @@ describe("funded valuation (fundedValuationStage)", () => {
       { ...MARKET_DISABLED, realizationEnabled: true },
       false,
       false,
-      false,
       new Set(),
       false,
       {
@@ -4144,7 +4139,6 @@ it("does not distribute forecast bond coupons before current tax is cash-covered
     undefined,
     undefined,
     MARKET_DISABLED,
-    false,
     false,
     false,
     new Set(),

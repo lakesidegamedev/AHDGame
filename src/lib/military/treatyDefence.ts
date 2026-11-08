@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { ConflictDoc, TreatyEntry } from "@/lib/db/types/conflict";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import {
   getGameStateCollection,
@@ -75,20 +74,16 @@ export interface MutualDefenceContext {
 /**
  * Read every alliance that binds right now, plus the bloc roll and the access table.
  *
- * Null when the conflicts subsystem is off. Narrow by construction: only orgs with a
+ * Narrow by construction: only orgs with a
  * committing posture or a standing charter are loaded, so a world with no Article 5
  * posture and no Cold War blocs costs three small reads and returns no pacts.
  */
-async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceContext | null> {
+async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceContext> {
   const gs = await (
     await getGameStateCollection(db)
-  ).findOne(
-    { _id: "current" },
-    { projection: { conflictsEnabled: 1, preset: 1, coldWarEndedTurn: 1 } }
-  );
-  if (!gs?.conflictsEnabled) return null;
-  const preset = (gs as Partial<GameState>).preset;
-  const coldWarEnded = (gs as Partial<GameState>).coldWarEndedTurn != null;
+  ).findOne({ _id: "current" }, { projection: { preset: 1, coldWarEndedTurn: 1 } });
+  const preset = gs?.preset;
+  const coldWarEnded = gs?.coldWarEndedTurn != null;
 
   const postureRows = await (
     await getOrganizationPosturesCollection(db)
@@ -438,7 +433,7 @@ export function pactEntryWarnings(
 /** Read side of `pactEntryWarnings`: one context read, one conflicts read. */
 export async function loadPactEntryWarnings(db: Db): Promise<Map<string, PactEntryWarning[]>> {
   const context = await loadMutualDefenceContext(db);
-  if (!context || context.pacts.length === 0) return new Map();
+  if (context.pacts.length === 0) return new Map();
   return pactEntryWarnings(context, await loadDeclaredWarFronts(db));
 }
 
@@ -470,7 +465,7 @@ export async function reconcileMutualDefence(
   currentTurn: number
 ): Promise<MutualDefenceReconcileResult> {
   const context = await loadMutualDefenceContext(db);
-  if (!context || context.pacts.length === 0) return { conflictsChecked: 0, entered: 0 };
+  if (context.pacts.length === 0) return { conflictsChecked: 0, entered: 0 };
 
   const fronts = await loadDeclaredWarFronts(db);
 

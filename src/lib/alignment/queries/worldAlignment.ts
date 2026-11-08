@@ -18,7 +18,6 @@ import type { GameState } from "@/lib/db/types";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { resolveGameYear } from "@/lib/era/era";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
-import { isIntOrgAlignmentEnabled } from "../featureFlag";
 import type { AlignmentStatus } from "../project";
 import {
   eraPoleVocabulary,
@@ -48,7 +47,6 @@ export interface LedgerCrisis {
 }
 
 export interface WorldAlignmentView {
-  enabled: boolean;
   year: number;
   eraKey: string;
   joinGate: number;
@@ -79,7 +77,6 @@ export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        intOrgAlignmentEnabled: 1,
         // Era-aware display names read this; omitting it silently falls back
         // to the modern preset and the Cold War reads "Germany" / "Russia".
         preset: 1,
@@ -105,12 +102,6 @@ export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
     // same remainder is simply uncommitted.
     remainderLabel,
   };
-
-  // Gate off: report the shape so the page can render a disabled state, but
-  // never read the collection.
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) {
-    return { ...base, enabled: false, rows: [], crises: [] };
-  }
 
   const col = await getCountryAlignmentsCollection(db);
   const [docs, memberships] = await Promise.all([
@@ -179,5 +170,5 @@ export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
     movementCap: CRISIS_TURN_CAP,
   }));
 
-  return { ...base, enabled: true, rows, crises };
+  return { ...base, rows, crises };
 }

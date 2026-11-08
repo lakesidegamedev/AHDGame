@@ -349,7 +349,6 @@ export async function processNppCorporationDecisions(
         projection: {
           nppCorpStrategyEnabled: 1,
           frontierEntryExperimentEnabled: 1,
-          subsidiaryCorporationsEnabled: 1,
           worldEpochId: 1,
           producerOpening: 1,
           currentYear: 1,
@@ -724,7 +723,6 @@ export async function processNppCorporationDecisions(
       : undefined;
   const groupMembership = await loadGroupDirectionMembership(
     db,
-    strategyGate?.subsidiaryCorporationsEnabled === true,
     nppCorps,
     preloaded?.groupMembership
   );

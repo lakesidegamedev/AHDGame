@@ -5,7 +5,6 @@ import { getNationalDoctrine } from "@/lib/db/collections/nationalDoctrine";
 import { getCharacterCommission } from "@/lib/db/collections/characterGenerals";
 import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
-import { CUR_ERA_YEAR } from "@/lib/military/generalsTree";
 import { getDb } from "@/lib/mongodb";
 import { resolveGameYear } from "@/lib/era/era";
 import type { Filter } from "mongodb";
@@ -332,47 +331,33 @@ export async function getCharacterById(characterId: string) {
       ceoCorporation,
       statePartyOrg,
       nationalNpiOrdinalRank,
-      conflictsEnabled: !!gameState?.conflictsEnabled,
       // Conflict-path reads batched into one round; the posting load stays
       // gated on the commission (only a commissioned general has an order of
       // battle).
-      ...(gameState?.conflictsEnabled
-        ? await (async () => {
-            const [doctrine, commission, generalEra, commands] = await Promise.all([
-              getNationalDoctrine(db, character.countryId),
-              getCharacterCommission(db, character._id.toString()),
-              resolveGeneralEra(db),
-              getMilitaryCommands(db, character.countryId),
-            ]);
-            return {
-              doctrineAdopted: doctrine.adopted,
-              general: commission.general,
-              militaryService: {
-                commissioned: commission.commissioned,
-                commissionedTurn: commission.commissionedTurn,
-                dismissedTurn: commission.dismissedTurn,
-              },
-              generalPosting: commission.commissioned
-                ? await loadGeneralPosting(db, character._id.toString(), character.countryId)
-                : EMPTY_POSTING,
-              generalEra,
-              isCommandingGeneral: commands.some(
-                (c) => c.commandingGeneralId === character._id.toString()
-              ),
-            };
-          })()
-        : {
-            doctrineAdopted: {},
-            general: null,
-            militaryService: {
-              commissioned: false,
-              commissionedTurn: undefined,
-              dismissedTurn: undefined,
-            },
-            generalPosting: EMPTY_POSTING,
-            generalEra: CUR_ERA_YEAR,
-            isCommandingGeneral: false,
-          }),
+      ...(await (async () => {
+        const [doctrine, commission, generalEra, commands] = await Promise.all([
+          getNationalDoctrine(db, character.countryId),
+          getCharacterCommission(db, character._id.toString()),
+          resolveGeneralEra(db),
+          getMilitaryCommands(db, character.countryId),
+        ]);
+        return {
+          doctrineAdopted: doctrine.adopted,
+          general: commission.general,
+          militaryService: {
+            commissioned: commission.commissioned,
+            commissionedTurn: commission.commissionedTurn,
+            dismissedTurn: commission.dismissedTurn,
+          },
+          generalPosting: commission.commissioned
+            ? await loadGeneralPosting(db, character._id.toString(), character.countryId)
+            : EMPTY_POSTING,
+          generalEra,
+          isCommandingGeneral: commands.some(
+            (c) => c.commandingGeneralId === character._id.toString()
+          ),
+        };
+      })()),
       gameDateAnchor: gameState ? gameDateAnchorFromState(gameState) : undefined,
       gameYear: gameState ? resolveGameYear(gameState) : null,
       enabledCabinetSeats: gameState?.manuallyEnabledSeats,

@@ -169,28 +169,24 @@ export async function seedUKDemographics(
     ? await import("./data/ukRegionDemographics1991")
     : { ukRegionDemographics1991: ukRegionDemographicsStatic };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let ukRegionDemographics: typeof ukRegionDemographicsStatic = ukRegionDemographics1991;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("UK", era);
-    if (model) {
-      const full = await loadFullOverride("UK", era);
-      if (full) log(`[UK] Applying model override for era ${era}`);
-      ukRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[UK] Using Layer-1-derived demographics (${ukRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = eraForPreset(preset);
+  const model = getCountryLayer1Model("UK", era);
+  if (model) {
+    const full = await loadFullOverride("UK", era);
+    if (full) log(`[UK] Applying model override for era ${era}`);
+    ukRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[UK] Using Layer-1-derived demographics (${ukRegionDemographics.length} regions, era ${era})`
+    );
   }
 
   for (const category of ukDemographicCategories) {

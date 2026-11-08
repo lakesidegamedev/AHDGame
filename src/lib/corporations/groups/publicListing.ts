@@ -3,7 +3,7 @@
  * loadPublicSubsidiaryGroups converts public cash, revenue and equity into anchor currency.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, GameState } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { getControllingCorporateParent } from "../corporateOwnership";
 import { shouldRedactCorporation } from "../redaction";
 import {
@@ -24,11 +24,6 @@ import {
   type PublicGroupMember,
 } from "./rules/publicListing";
 export async function loadPublicSubsidiaryGroups(db: Db, corporationId?: string) {
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-  // Feature discovery follows the toggle; existing group bookmarks remain readable.
-  if (!world?.subsidiaryCorporationsEnabled && !corporationId) return [];
   const [corps, reserved, fx] = await Promise.all([
     db
       .collection<Corporation>("corporations")

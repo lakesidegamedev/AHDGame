@@ -3,8 +3,6 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResponse";
 import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
 
@@ -39,52 +37,47 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         cookPVI: d.cookPVI,
       }));
 
-      // Live square overlay — only when the feature flag is on.
-      const gs = await getGameState();
-      let redistricting:
-        { enabled: boolean; districts: ReturnType<typeof buildDistrictSquareViews> } | undefined;
-      if (isRedistrictingEnabled(gs)) {
-        const db = await getDb();
-        const docs = (await db
-          .collection<CongressionalDistrict>("congressionalDistricts")
-          .find({ countryId: "US", stateId: state })
-          .toArray()) as CongressionalDistrict[];
+      // Live square overlay.
+      const db = await getDb();
+      const docs = (await db
+        .collection<CongressionalDistrict>("congressionalDistricts")
+        .find({ countryId: "US", stateId: state })
+        .toArray()) as CongressionalDistrict[];
 
-        const holderIds = docs
-          .map((d) => d.holderCharacterId)
-          .filter((id): id is NonNullable<typeof id> => id != null);
-        const holderNppIds = docs
-          .map((d) => d.holderNppId)
-          .filter((id): id is NonNullable<typeof id> => id != null);
-        const holderNames: Record<string, string> = {};
-        if (holderIds.length > 0) {
-          const chars = (await db
-            .collection<Character>("characters")
-            .find({ _id: { $in: holderIds } })
-            .toArray()) as Character[];
-          for (const c of chars) holderNames[String(c._id)] = c.name;
-        }
-        // NPP holders live in a separate collection, keyed by holderNppId.
-        if (holderNppIds.length > 0) {
-          const npps = (await db
-            .collection<NPP>("npps")
-            .find({ _id: { $in: holderNppIds } })
-            .toArray()) as NPP[];
-          for (const n of npps) holderNames[String(n._id)] = n.name;
-        }
-
-        const views = buildDistrictSquareViews(
-          parsed.districts.map((d) => d.cd),
-          docs,
-          holderNames
-        );
-        redistricting = { enabled: true, districts: views };
+      const holderIds = docs
+        .map((d) => d.holderCharacterId)
+        .filter((id): id is NonNullable<typeof id> => id != null);
+      const holderNppIds = docs
+        .map((d) => d.holderNppId)
+        .filter((id): id is NonNullable<typeof id> => id != null);
+      const holderNames: Record<string, string> = {};
+      if (holderIds.length > 0) {
+        const chars = (await db
+          .collection<Character>("characters")
+          .find({ _id: { $in: holderIds } })
+          .toArray()) as Character[];
+        for (const c of chars) holderNames[String(c._id)] = c.name;
       }
+      // NPP holders live in a separate collection, keyed by holderNppId.
+      if (holderNppIds.length > 0) {
+        const npps = (await db
+          .collection<NPP>("npps")
+          .find({ _id: { $in: holderNppIds } })
+          .toArray()) as NPP[];
+        for (const n of npps) holderNames[String(n._id)] = n.name;
+      }
+
+      const views = buildDistrictSquareViews(
+        parsed.districts.map((d) => d.cd),
+        docs,
+        holderNames
+      );
+      const redistricting = { enabled: true, districts: views };
 
       return NextResponse.json({
         viewBox: parsed.viewBox,
         districts: baseDistricts,
-        ...(redistricting ? { redistricting } : {}),
+        redistricting,
       });
     } catch {
       return errorResponse(404, `No CD data available for ${state}`);

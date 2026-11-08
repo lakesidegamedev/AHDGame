@@ -19,7 +19,6 @@ import type { CorpsMember } from "@/lib/db/collections/characterGenerals";
  */
 export function CommandsTab({
   canAct,
-  conflictsEnabled,
   commands,
   units,
   commanders,
@@ -32,7 +31,6 @@ export function CommandsTab({
   positionId,
 }: {
   canAct: boolean;
-  conflictsEnabled: boolean;
   commands: MilitaryCommand[];
   units: MilitaryUnit[];
   commanders: CommanderRef[];
@@ -67,7 +65,6 @@ export function CommandsTab({
       />
       <CommandsBuilder
         canAct={canAct}
-        conflictsEnabled={conflictsEnabled}
         commands={commands}
         units={units}
         commanders={commanders}

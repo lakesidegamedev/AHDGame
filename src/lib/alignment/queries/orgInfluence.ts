@@ -40,7 +40,6 @@ import { loadGdpUsdMillionsByEntity } from "@/lib/internationalOrganizations/ent
 import { getOrganizationFund } from "@/lib/internationalOrganizations/organizationFund";
 import { PLAY_MAX_POINTS, POINT_COST_GDP_SHARE } from "../influence";
 import { NON_ALIGNED_RESISTANCE } from "../drift";
-import { isIntOrgAlignmentEnabled } from "../featureFlag";
 import type { AlignmentStatus } from "../project";
 import { JOIN_SHARE, LEAVE_SHARE, SUSTAIN_TURNS, standingFor } from "../membershipEligibility";
 import { roundToShareGrid } from "../normalize";
@@ -172,7 +171,6 @@ export interface InfluenceMemberRow {
 }
 
 export interface OrgInfluenceView {
-  enabled: boolean;
   year: number;
   /** Null when this org carries no influence in the current era. */
   channel: InfluenceChannelView | null;
@@ -249,7 +247,7 @@ export async function loadOrgInfluence(
     .collection<GameState>("gameState")
     .findOne(
       { _id: "current" },
-      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1, intOrgAlignmentEnabled: 1 } }
+      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
     );
   const currentTurn = gs?.currentTurn ?? 0;
 
@@ -266,28 +264,6 @@ export async function loadOrgInfluence(
     fundCurrencyCountryId: (fund?.currencyCountryId ?? "US") as CountryId,
   };
 
-  // Gate off: report the shape so the tab can explain itself, but never read
-  // the alignment or play collections.
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) {
-    return {
-      ...base,
-      enabled: false,
-      channel: null,
-      targets: [],
-      recent: [],
-      members: [],
-      blocStress: null,
-      sustainTurns: SUSTAIN_TURNS,
-      joinShare: JOIN_SHARE,
-      leaveShare: LEAVE_SHARE,
-      poles: [],
-      remainderLabel: eraPoleVocabulary(year).remainderLabel,
-      balance: null,
-      rivalIntel: {},
-      leviesTribute: false,
-    };
-  }
-
   const topology = await loadAlignmentTopology(db, year);
   const { era } = topology;
   const channelDef = topology.channels.find((c) => c.organizationId === organizationId);
@@ -295,7 +271,6 @@ export async function loadOrgInfluence(
     // The common case for most orgs in most eras. Not an error — the tab says so.
     return {
       ...base,
-      enabled: true,
       channel: null,
       targets: [],
       recent: [],
@@ -621,7 +596,6 @@ export async function loadOrgInfluence(
 
   return {
     ...base,
-    enabled: true,
     channel,
     targets,
     recent,

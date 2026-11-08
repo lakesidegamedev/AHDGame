@@ -90,7 +90,6 @@ interface NavbarProps {
   imperialCharacter?: ImperialCharacterNav;
   isImperialMode?: boolean;
   wikiDisabled?: boolean;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   settlementCrisisLive?: boolean;
   initialPageCountry?: CountryId | null;
@@ -137,7 +136,6 @@ export const Navbar = React.memo(function Navbar({
   imperialCharacter,
   isImperialMode = false,
   wikiDisabled = false,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
   initialPageCountry,
@@ -479,7 +477,6 @@ export const Navbar = React.memo(function Navbar({
                 myCorporationId={myCorporationId}
                 myCorporationHasGroup={myCorporationHasGroup}
                 myUnionId={myUnionId}
-                conflictsEnabled={conflictsEnabled}
                 unionsEnabled={unionsEnabled}
                 settlementCrisisLive={settlementCrisisLive}
               />
@@ -699,7 +696,6 @@ export const Navbar = React.memo(function Navbar({
           onOpenFeedback={onOpenFeedback}
           feedbackCapturing={feedbackCapturing}
           wikiDisabled={wikiDisabled}
-          conflictsEnabled={conflictsEnabled}
           unionsEnabled={unionsEnabled}
           settlementCrisisLive={settlementCrisisLive}
           pageCountry={pageCountry}

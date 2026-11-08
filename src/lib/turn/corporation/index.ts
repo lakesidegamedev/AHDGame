@@ -97,30 +97,20 @@ export async function processCorporationTurn(
   // instead of ~7 serial ones. marketGovernorConfig must be read here, before
   // the lookup build: the market-share basis below needs the mode and the mode
   // lives in this same document, so we resolve it exactly once per turn.
-  const [
-    forexEnabled,
-    techTreesEnabled,
-    thresholds,
-    // Subsidiary corporations feature gate (default off). Read once and thread
-    // into processSectors so the parent dividend floor is only honored when on.
-    { isSubsidiaryCorporationsEnabled },
-    marketGovernorConfig,
-    gameState,
-    labourMode,
-  ] = await Promise.all([
-    isForexEnabled(),
-    isSectorTechTreesEnabled(),
-    loadTxThresholds(db),
-    import("@/lib/corporations/subsidiaries/featureFlag"),
-    db.collection<GameConfig>("gameConfig").findOne(
-      { _id: "default" },
-      {
-        projection: CORPORATION_TURN_GAME_CONFIG_PROJECTION,
-      }
-    ),
-    getGameState(),
-    getLabourSystemMode(),
-  ]);
+  const [forexEnabled, techTreesEnabled, thresholds, marketGovernorConfig, gameState, labourMode] =
+    await Promise.all([
+      isForexEnabled(),
+      isSectorTechTreesEnabled(),
+      loadTxThresholds(db),
+      db.collection<GameConfig>("gameConfig").findOne(
+        { _id: "default" },
+        {
+          projection: CORPORATION_TURN_GAME_CONFIG_PROJECTION,
+        }
+      ),
+      getGameState(),
+      getLabourSystemMode(),
+    ]);
   mark("preamble");
   if (marketGovernorConfig?.privateBankingEnabled === true) {
     await resumeFoundingUnderwritingPlans(db, now);
@@ -270,9 +260,6 @@ export async function processCorporationTurn(
     (marketGovernorConfig as { privateBankingEnabled?: boolean } | null)?.privateBankingEnabled ===
     true;
   const treasuryCashLedgerEnabled = marketGovernorConfig?.treasuryCashLedgerEnabled === true;
-  const subsidiaryCorporationsEnabled = await isSubsidiaryCorporationsEnabled(
-    gameState ?? undefined
-  );
   mark("buildLookups+gameState");
 
   // Labour/Unions system: when labourSystemMode ≥ "wages", sector profit carves
@@ -415,7 +402,6 @@ export async function processCorporationTurn(
   const groupMembership = await configureGroupSupply(
     db,
     market,
-    subsidiaryCorporationsEnabled,
     marketGovernorConfig?.groupSupplyCoordinationEnabled === true
   );
   // The producer path is read here, before the clearing pre-pass, so a funded
@@ -780,7 +766,6 @@ export async function processCorporationTurn(
     currentYear,
     labour,
     market,
-    subsidiaryCorporationsEnabled,
     commandEconomyEnabled,
     privateBankingEnabled,
     new Set(equityPoolTurn.activeCurrencies),
@@ -875,7 +860,6 @@ export async function processCorporationTurn(
       capitalDividendPayments,
       passThroughTaxedDividendPayments,
       forexEnabled,
-      subsidiaryCorporationsEnabled,
     });
 
   timer.finish(turn);

@@ -264,7 +264,6 @@
       "military": "Military",
       "business": "CEO / Investor",
       "militaryLocked": "No military service record is available.",
-      "militaryDisabled": "Military is disabled in this world.",
       "businessLocked": "No current CEO role or investment holdings.",
       "locked": "Locked",
       "active": "Active commission",

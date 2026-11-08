@@ -810,7 +810,7 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "energyPlants", category: "runtime" },
   { name: "infraProjects", category: "runtime" },
 
-  // ── Conflicts subsystem (WIRE W1–W6; gated behind conflictsEnabled) ─────────
+  // ── Conflicts subsystem (WIRE W1–W6) ─────────────────────────────────────────
   // All per-world military state, siblings of militaryUnits (already runtime
   // above). Every one is built by gameplay in a specific world and must not
   // outlive it — a command roster or half-fought battle carried into a fresh

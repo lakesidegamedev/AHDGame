@@ -1,12 +1,11 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
-import { isSubsidiaryCorporationsEnabled } from "./featureFlag";
 
 /**
  * True iff `callerUserId` is the sitting CEO (owner) of the corporation that
  * currently controls `sub` (>50% voting power), AND `sub` is formalized as a
- * managed subsidiary, AND the feature flag is on.
+ * managed subsidiary.
  *
  * Parent authority is DERIVED here on every call: the controlling parent is
  * recomputed from `sub.shareholders` plus unsold shares still reserved in
@@ -19,7 +18,6 @@ export async function canActOnCorporationAsParent(
   callerUserId: ObjectId,
   sub: Corporation
 ): Promise<boolean> {
-  if (!(await isSubsidiaryCorporationsEnabled())) return false;
   if (sub.subsidiaryFormalizedAtTurn == null) return false;
   if (sub.countryOwnerId) return false;
 

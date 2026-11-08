@@ -64,7 +64,6 @@ const livingConflict = {
   updatedAt: new Date(),
 };
 
-vi.mock("./_coldwar/gate", () => ({ requireConflictsEnabled: vi.fn() }));
 vi.mock("@/lib/time/gameTime", () => ({
   getGameTime: vi.fn(async () => ({
     currentTurn: 4,

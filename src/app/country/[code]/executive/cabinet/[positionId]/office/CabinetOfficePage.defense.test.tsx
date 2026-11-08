@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, cleanup, fireEvent } from "@testing-library/react";
 import { renderWithMessages as render } from "@/lib/test-utils/renderWithMessages";
 import type { ForceSummaryView } from "./useCabinetOffice";
@@ -32,12 +32,8 @@ const fixtures = vi.hoisted(() => ({
 const _typeCheck: ForceSummaryView = fixtures.forceSummary;
 void _typeCheck;
 
-// Defaults to false so every pre-existing test in this file keeps the tab set it
-// was written against; the deep-link block below opts in.
-const conflictsSpy = vi.hoisted(() => vi.fn().mockReturnValue(false));
 vi.mock("@/contexts/AuthDataContext", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  useConflictsEnabled: () => conflictsSpy(),
   useAuthMe: () => ({ user: { id: "stable-account-id" } }),
 }));
 
@@ -141,10 +137,8 @@ describe("CabinetOfficePage — defense seat", () => {
 });
 
 describe("CabinetOfficePage — tab deep-link via hash", () => {
-  beforeEach(() => conflictsSpy.mockReturnValue(true));
   afterEach(() => {
     window.location.hash = "";
-    conflictsSpy.mockReturnValue(false);
   });
 
   it("opens the Commands tab when the URL names it", async () => {

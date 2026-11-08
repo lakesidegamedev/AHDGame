@@ -27,12 +27,11 @@ export const GET = withAdminRoute(async (_auth) => {
 });
 
 // POST /api/admin/conflicts/cold-war/toggle - Refused: this legacy flag is retired.
-// The live conflict system uses conflictsEnabled as its single master gate.
 // Auth: requireAdmin
 // Errors: 403, 409
 export const POST = withAdminRoute(async (_auth) => {
   return errorResponse(
     409,
-    "The legacy coldWarEnabled flag is retired. Use conflictsEnabled for the live conflict system."
+    "The legacy coldWarEnabled flag is retired. The live conflict system is always on."
   );
 });

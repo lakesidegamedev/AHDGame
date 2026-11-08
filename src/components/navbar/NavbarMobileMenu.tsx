@@ -81,7 +81,6 @@ export interface NavbarMobileMenuProps {
   onOpenFeedback?: () => void;
   feedbackCapturing: boolean;
   wikiDisabled: boolean;
-  conflictsEnabled: boolean;
   unionsEnabled: boolean;
   settlementCrisisLive: boolean;
   pageCountry: CountryId;
@@ -144,7 +143,6 @@ export function NavbarMobileMenu({
   onOpenFeedback,
   feedbackCapturing,
   wikiDisabled,
-  conflictsEnabled,
   unionsEnabled,
   settlementCrisisLive,
   pageCountry,
@@ -570,7 +568,6 @@ export function NavbarMobileMenu({
                 myCorporationId={myCorporationId}
                 myCorporationHasGroup={myCorporationHasGroup}
                 myUnionId={myUnionId}
-                conflictsEnabled={conflictsEnabled}
                 unionsEnabled={unionsEnabled}
                 settlementCrisisLive={settlementCrisisLive}
               />

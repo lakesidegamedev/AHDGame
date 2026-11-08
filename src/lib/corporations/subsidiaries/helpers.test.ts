@@ -137,7 +137,6 @@ describe("activeParentDividendFloorPct", () => {
   it("returns the clamped floor while the setter still controls", () => {
     expect(
       activeParentDividendFloorPct({
-        enabled: true,
         parentDividendFloorPct: 10,
         parentDividendFloorSetByCorpId: setter,
         controllingParent: { corporationId: setter },
@@ -148,7 +147,6 @@ describe("activeParentDividendFloorPct", () => {
   it("clamps to maxRate", () => {
     expect(
       activeParentDividendFloorPct({
-        enabled: true,
         parentDividendFloorPct: 99,
         parentDividendFloorSetByCorpId: setter,
         controllingParent: { corporationId: setter },
@@ -156,7 +154,7 @@ describe("activeParentDividendFloorPct", () => {
       })
     ).toBe(25);
   });
-  it("lapses when the flag is off, the setter no longer controls, or nobody controls", () => {
+  it("lapses when the setter no longer controls, or nobody controls", () => {
     const base = {
       parentDividendFloorPct: 10,
       parentDividendFloorSetByCorpId: setter,
@@ -165,19 +163,9 @@ describe("activeParentDividendFloorPct", () => {
     expect(
       activeParentDividendFloorPct({
         ...base,
-        enabled: false,
-        controllingParent: { corporationId: setter },
-      })
-    ).toBe(0);
-    expect(
-      activeParentDividendFloorPct({
-        ...base,
-        enabled: true,
         controllingParent: { corporationId: new ObjectId() },
       })
     ).toBe(0);
-    expect(activeParentDividendFloorPct({ ...base, enabled: true, controllingParent: null })).toBe(
-      0
-    );
+    expect(activeParentDividendFloorPct({ ...base, controllingParent: null })).toBe(0);
   });
 });

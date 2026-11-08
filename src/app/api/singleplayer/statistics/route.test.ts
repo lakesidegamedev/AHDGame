@@ -97,7 +97,7 @@ describe("GET /api/singleplayer/statistics", () => {
     );
     expect(payload.setup.featureFlags.forexEnabled).toBe(false);
     expect(payload.setup.featureFlags.playerRandomEventsEnabled).toBe(true);
-    expect(payload.setup.featureFlags.rpgStatsEnabled).toBe(false);
+    expect(payload.setup.featureFlags.sectorTechTreesEnabled).toBe(false);
     expect(payload.metricDefinitionVersion).toBe(METRIC_DEFINITION_VERSION);
   });
 

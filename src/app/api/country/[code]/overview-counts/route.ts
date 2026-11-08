@@ -160,18 +160,9 @@ async function resolveFiscalFigures(
   };
 }
 
-/**
- * Cold War readiness for a principal, or null. Gated on the same
- * `conflictsEnabled` switch as `/world/conflicts` itself, so switching the
- * subsystem off removes the directory row rather than leaving a link to a page
- * that redirects.
- */
+/** Cold War readiness for a principal, or null. */
 async function resolveColdWarDefcon(db: Db, countryId: CountryId): Promise<number | null> {
   if (!isColdWarPrincipal(countryId)) return null;
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-  if (!gameState?.conflictsEnabled) return null;
   return (await getColdWarDials(db)).defcon;
 }
 

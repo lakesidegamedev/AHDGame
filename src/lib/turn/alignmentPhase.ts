@@ -31,7 +31,6 @@ import { closeDueCrises, openCrisisTargets, openDueCrises } from "@/lib/alignmen
 import { JOIN_SHARE, SUSTAIN_TURNS, standingFor } from "@/lib/alignment/membershipEligibility";
 import { resolveOpeningShares } from "@/lib/alignment/seedAlignment";
 import { getDissolvedCountryIds } from "@/lib/country/registeredCountries";
-import { isIntOrgAlignmentEnabled } from "@/lib/alignment/featureFlag";
 import { applyAlignmentToMembership } from "@/lib/alignment/sphereProjection";
 import { leadFor } from "@/lib/alignment/project";
 import {
@@ -133,28 +132,9 @@ export async function processAlignmentTurn(
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        intOrgAlignmentEnabled: 1,
       },
     }
   );
-
-  // Gate off: touch nothing. Alignment must be invisible until it is switched on.
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) {
-    return {
-      countriesDrifted: 0,
-      erasCrossed: 0,
-      spheresSynced: 0,
-      rowsHealed: 0,
-      playsResolved: 0,
-      playsRefunded: 0,
-      blocStress: {},
-      defections: 0,
-      defectionWarnings: 0,
-      joinRequests: 0,
-      crisesOpened: 0,
-      crisesResolved: 0,
-    };
-  }
 
   const cashContext = await loadOrganizationCashContext(db, currentTurn);
   return withOrganizationCashBatch(db, cashContext, (batch) =>

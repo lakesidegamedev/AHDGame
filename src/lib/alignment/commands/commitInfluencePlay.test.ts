@@ -25,7 +25,6 @@ describe("commitInfluencePlay", () => {
     db.collection("gameState").findOne.mockResolvedValue({
       _id: "current",
       currentYear: 1953,
-      intOrgAlignmentEnabled: true,
     });
     // Yugoslavia: contested, well below the locked gate.
     db.collection("countryAlignments").findOne.mockResolvedValue({
@@ -123,18 +122,6 @@ describe("commitInfluencePlay", () => {
     expect(r).toEqual({ ok: false, reason: "target-locked" });
     expect(db.collection("organizationFunds").updateOne).not.toHaveBeenCalled();
     expect(db.collection("alignmentPlays").insertOne).not.toHaveBeenCalled();
-  });
-
-  it("refuses when the gate is off", async () => {
-    db.collection("gameState").findOne.mockResolvedValue({
-      _id: "current",
-      currentYear: 1953,
-      intOrgAlignmentEnabled: false,
-    });
-    const r = await commitInfluencePlay({ db: db as unknown as Db, ...base });
-
-    expect(r).toEqual({ ok: false, reason: "gate-off" });
-    expect(db.collection("organizationFunds").updateOne).not.toHaveBeenCalled();
   });
 
   it("refuses an org with no channel in this era", async () => {

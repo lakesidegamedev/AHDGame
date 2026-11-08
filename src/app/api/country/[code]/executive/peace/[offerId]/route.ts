@@ -43,11 +43,8 @@ export async function POST(
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
-    const currentTurn = gs.currentTurn ?? 0;
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const currentTurn = gs?.currentTurn ?? 0;
 
     const gate = await requirePeaceNegotiator(db, countryId, character._id, auth.user.isAdmin);
     if (!gate.ok) return gate.response;

@@ -42,12 +42,8 @@ export const FEATURE_GATE_BOOLEAN_KEYS = [
   "playerRandomEventsEnabled",
   "livingConflictsEnabled",
   "autoDisastersEnabled",
-  "demographicsLayer1PositionsEnabled",
-  "rpgStatsEnabled",
-  "redistrictingEnabled",
   "sectorTechTreesEnabled",
   "eraSystemEnabled",
-  "intOrgAlignmentEnabled",
   "nppCorpStrategyEnabled",
 ] as const;
 

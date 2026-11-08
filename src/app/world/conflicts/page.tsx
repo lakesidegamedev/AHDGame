@@ -1,4 +1,3 @@
-import { requireConflictsEnabled } from "./_coldwar/gate";
 import { GlobalConflictsBoard } from "./_coldwar/GlobalConflictsBoard";
 import { getGameTime } from "@/lib/time/gameTime";
 import { getDb } from "@/lib/mongodb";
@@ -32,12 +31,11 @@ import { LivingConflictStrip } from "./_coldwar/LivingConflictStrip";
 const HISTORY_LIMIT = 24;
 
 // Conflicts hub: every live conflict in the world, on the map and in the list,
-// under one headline: the global cold-war tension reading. Gated by
-// `conflictsEnabled`; the themed-island shell and fonts come from the layout.
+// under one headline: the global cold-war tension reading. The themed-island
+// shell and fonts come from the layout.
 // The Cold War framing around the list still describes the conflicts a bloc actually
 // backs; one nobody backs renders neutrally (see conflictView).
 export default async function ConflictsPage() {
-  await requireConflictsEnabled();
   // Use the pinned display year so the founding phase shows the era start.
   // getGameTime always populates currentYear; startingYear is a defensive floor.
   const { currentTurn, currentYear, startingYear, preIterationTurns } = await getGameTime();

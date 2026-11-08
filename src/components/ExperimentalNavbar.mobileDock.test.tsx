@@ -64,7 +64,6 @@ function renderNav(overrides: Partial<ExperimentalNavbarProps> = {}) {
         myCorporationHasGroup
         myUnionId="union"
         unionsEnabled
-        conflictsEnabled
         settlementCrisisLive
         {...overrides}
       />

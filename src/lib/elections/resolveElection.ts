@@ -146,7 +146,7 @@ export async function resolveElection(
   if (!election) return null;
 
   // Fetch game state and game time in parallel with election deps.
-  // Summary views only consume preset/currentYear/redistrictingEnabled, so
+  // Summary views only consume preset/currentYear, so
   // project the read; full view keeps the whole document.
   const [gameState, gameTime, deps] = await Promise.all([
     isFull
@@ -540,7 +540,6 @@ export async function resolveElections(
     _id: { $in: [...ids] },
   }));
   const shouldBatchHouseDistricts =
-    gameState?.redistrictingEnabled === true &&
     elections.some((e) => (e.countryId ?? "US") === "US" && e.electionType === "house") &&
     elections.some(
       (e) =>

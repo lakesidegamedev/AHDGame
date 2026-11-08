@@ -142,7 +142,7 @@ describe("missingGameStateFlagDefaults", () => {
   it("preserves an explicit false on an existing world", () => {
     const out = missingGameStateFlagDefaults({ autoDisastersEnabled: false });
     expect(out).not.toHaveProperty("autoDisastersEnabled");
-    expect(out).toMatchObject({ forexEnabled: true, rpgStatsEnabled: true });
+    expect(out).toMatchObject({ forexEnabled: true, sectorTechTreesEnabled: true });
   });
 
   it("treats the NPP autonomy pair as one flag: legacy explicit disable wins", () => {

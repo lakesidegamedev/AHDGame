@@ -5,7 +5,6 @@ import { frontSupportFor } from "@/lib/navair/frontSupport";
 import { loadNavairChannels } from "@/lib/db/collections/navairChannels";
 import type { NavairUnit } from "@/lib/navair/types";
 import { notFound } from "next/navigation";
-import { requireConflictsEnabled } from "../_coldwar/gate";
 import { entityName } from "@/app/world/international-organizations/entityLabel";
 import { getDb } from "@/lib/mongodb";
 import { getConflictByNumber } from "@/lib/db/collections/conflicts";
@@ -67,8 +66,8 @@ const MOMENTUM_WINDOW = 60;
 /** How many events the momentum track marks, newest first. */
 const MOMENTUM_MARKS = 5;
 
-// One conflict's public record, at /world/conflicts/<conflictId>. Gated by
-// `conflictsEnabled`. Works for a RESOLVED conflict too — that is the historical
+// One conflict's public record, at /world/conflicts/<conflictId>.
+// Works for a RESOLVED conflict too — that is the historical
 // point — so the lookup does not filter on status.
 //
 // THE FOG RULE: everything a tier may not see is omitted HERE, on the server.
@@ -79,7 +78,6 @@ export default async function ConflictRecordPage({
 }: {
   params: Promise<{ conflictId: string }>;
 }) {
-  await requireConflictsEnabled();
   const { conflictId } = await params;
 
   // This dynamic segment would otherwise swallow any unmatched path under

@@ -111,9 +111,8 @@ function clampLean(v: number): number {
 
 /**
  * Derive an archetype's econ/social position as the state-share-weighted average
- * of its constituent Layer-1 positions. Selected at seed time when the
- * demographicsLayer1PositionsEnabled flag is on. State sensitivity emerges from
- * the state's own Layer-1 shares — no ad-hoc ideology nets.
+ * of its constituent Layer-1 positions. State sensitivity emerges from the
+ * state's own Layer-1 shares — no ad-hoc ideology nets.
  * NOTE: a lean is a weighted AVERAGE — do NOT apply civicMultiplier here.
  */
 export function deriveGroupLeanFromLayer1(

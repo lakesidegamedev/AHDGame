@@ -57,7 +57,6 @@ interface DockNav {
   governorOffice: { stateId: string; stateName: string; countryCode: string } | null;
   isImperialMode: boolean;
   wikiDisabled: boolean;
-  conflictsEnabled: boolean;
   settlementCrisisLive: boolean;
   unionsEnabled: boolean;
   pendingCharterCount: number;
@@ -150,7 +149,6 @@ export async function GET(request: Request) {
       myCorporationId: nav.myCorporationId,
       myCorporationHasGroup: nav.myCorporationHasGroup,
       myUnionId: nav.myUnionId,
-      conflictsEnabled: nav.conflictsEnabled,
       unionsEnabled: nav.unionsEnabled,
       settlementCrisisLive: nav.settlementCrisisLive,
       nationalDetailSections,

@@ -69,21 +69,6 @@ export const BOOLEAN_GATES: BooleanGate[] = [
     desc: "Master gate for the automatic crisis/disaster system.",
   },
   {
-    key: "demographicsLayer1PositionsEnabled",
-    label: "Demographics Layer-1 positions",
-    desc: "Seed derives archetype econ/social from Layer-1 positions.",
-  },
-  {
-    key: "rpgStatsEnabled",
-    label: "RPG stats",
-    desc: "Character stat allocation, drift, debates.",
-  },
-  {
-    key: "redistrictingEnabled",
-    label: "US House redistricting",
-    desc: "Districted redistricting system.",
-  },
-  {
     key: "sectorTechTreesEnabled",
     label: "Sector tech trees",
     desc: "Decade-gated R&D tech trees per sector.",
@@ -92,11 +77,6 @@ export const BOOLEAN_GATES: BooleanGate[] = [
     key: "eraSystemEnabled",
     label: "Era system",
     desc: "Decade eras: era stamps + wire news at rollover, and approval/metric thresholds drift with the in-game decade. Review scripts/debug/era-approval-dryrun.ts before enabling.",
-  },
-  {
-    key: "intOrgAlignmentEnabled",
-    label: "IntOrg alignment",
-    desc: "Cold War alignment: every nation holds a share per bloc pole plus a non-aligned remainder, drifting each turn and moved by influence plays. Adds the Cold War Ledger and the per-org Influence tab. On for fresh worlds. Seeded values are written regardless, so flipping this on shows a populated map rather than blank rows.",
   },
 ];
 

@@ -23,8 +23,6 @@ export type SubsidiaryCeoConflict = "parent" | "sibling";
  * and enums only, so the judgement is deterministic and easy to replay anywhere.
  */
 export interface SubsidiaryAcquisitionFacts {
-  /** The world-level subsidiary feature gate. */
-  featureEnabled: boolean;
   acquirerStateOwned: boolean;
   /** The acquirer is itself a formalized subsidiary (no chaining). */
   acquirerIsFormalizedSubsidiary: boolean;
@@ -59,13 +57,6 @@ export interface SubsidiaryBlock {
 export function subsidiaryAcquisitionBlock(
   facts: SubsidiaryAcquisitionFacts
 ): SubsidiaryBlock | null {
-  if (!facts.featureEnabled) {
-    return {
-      error:
-        "Subsidiary corporations are not enabled in this world, so only outright acquisition is available.",
-      status: 400,
-    };
-  }
   if (facts.acquirerStateOwned || facts.acquirerIsFormalizedSubsidiary) {
     return {
       error:

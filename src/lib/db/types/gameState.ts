@@ -353,17 +353,6 @@ export interface GameState {
   /** Temporary pause: the system stays enabled/configured but no new crises or
    *  disasters spawn while true. Existing crises continue to run. */
   autoCrisisPaused?: boolean;
-  /** When true, seed/reseed derives archetype econ/social from Layer-1 positions
-   *  (deriveGroupLeanFromLayer1) instead of the legacy ideology-net path. Default false. */
-  demographicsLayer1PositionsEnabled?: boolean;
-  demographicsLayer1PositionsEnabledBy?: string;
-  demographicsLayer1PositionsEnabledAt?: string;
-  /** When true, the Conflicts subsystem is live: the "Conflicts" link appears in
-   *  the World navbar and the public /world/conflicts page is surfaced. Default
-   *  false (hidden). Toggled from Admin → World → Conflicts → General. */
-  conflictsEnabled?: boolean;
-  conflictsEnabledBy?: string;
-  conflictsEnabledAt?: string;
   /** Living-conflict engine: generic phased conflicts/pandemics with per-role
    *  responses and an event broadcast bus. Default off; fail-closed at runtime. */
   livingConflictsEnabled?: boolean;
@@ -383,14 +372,6 @@ export interface GameState {
   coldWarEnabled?: boolean;
   coldWarEnabledBy?: string;
   coldWarEnabledAt?: string;
-  /**
-   * When true, the RPG stat system is live: character creation allocates stats,
-   * grandfathered characters are prompted to allocate, stat efficacy/drift apply,
-   * and the election-debate subsystem can fire. Default false (system inert).
-   */
-  rpgStatsEnabled?: boolean;
-  rpgStatsEnabledBy?: string;
-  rpgStatsEnabledAt?: string;
   /** When true, turns run at 30-minute cycles instead of 60-minute cycles */
   fastMode?: boolean;
   /** Concurrency guard - true while a turn is being processed */
@@ -475,18 +456,10 @@ export interface GameState {
   nppCorpStrategyEnabled?: boolean;
   nppCorpStrategyEnabledBy?: string;
   nppCorpStrategyEnabledAt?: string;
-  /** Master gate for the US House districted-redistricting system. Default off. */
-  redistrictingEnabled?: boolean;
-  redistrictingEnabledBy?: string;
-  redistrictingEnabledAt?: string;
   /** Master gate for the decade-gated sector tech trees. Default off. */
   sectorTechTreesEnabled?: boolean;
   sectorTechTreesEnabledBy?: string;
   sectorTechTreesEnabledAt?: string;
-  /** Master gate for subsidiary corporations (acquisition management + spin-off). Default off. */
-  subsidiaryCorporationsEnabled?: boolean;
-  subsidiaryCorporationsEnabledBy?: string;
-  subsidiaryCorporationsEnabledAt?: string;
   /** Reset-era metrics engine. Absent and invalid values run the live v1 path. */
   /** Changes on every world reset; an opening-seed receipt is valid only for this world. */
   resetWorldId?: string;
@@ -510,18 +483,6 @@ export interface GameState {
   demographicsSystemVersion?: "v1" | "v2";
   demographicsSystemVersionBy?: string;
   demographicsSystemVersionAt?: string;
-  /**
-   * Master gate for IntOrg alignment. When false or absent the system is inert:
-   * the alignment turn phase writes nothing, no drift accrues, plays cannot be
-   * committed, and neither the Cold War Ledger nor the Influence tab renders.
-   * Seeding is the deliberate exception — opening values are written regardless
-   * so flipping this on a live world shows a populated map, not blank rows.
-   * Fail-closed: only an explicit `true` enables. Fresh worlds seed it on
-   * (DEFAULT_GAME_STATE_FLAGS).
-   */
-  intOrgAlignmentEnabled?: boolean;
-  intOrgAlignmentEnabledBy?: string;
-  intOrgAlignmentEnabledAt?: string;
   /**
    * Highest Bundestag cycle whose AMS list-seat reconciliation has completed.
    * Scopes `maybeReconcileBundestag` so each cycle reconciles exactly once and

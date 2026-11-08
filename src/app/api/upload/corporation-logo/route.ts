@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       const origin = assertSameOrigin(request);
       if (origin) return origin;
       const context = await loadGroupManagement(db, corporation, authUser.userId);
-      if (!context?.parent || !context.enabled || !context.root._id.equals(corporation._id)) {
+      if (!context?.parent || !context.root._id.equals(corporation._id)) {
         return errorResponse(403, "Only the parent CEO can change the group logo.");
       }
     }

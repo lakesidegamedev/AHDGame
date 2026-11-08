@@ -96,11 +96,8 @@ export async function processCrisisTurn(
     await refreshVietnamEscalationLevel(db);
   }
   // The ladder decides how deep the superpowers are in; the front is what that
-  // adds up to on the ground. Gated on the conflicts subsystem: a world with it
-  // switched off gets the ladder and its dials but no combat document.
-  if (gameState?.conflictsEnabled) {
-    await announceVietnamFront(await syncVietnamFront(db, vietnam, turn));
-  }
+  // adds up to on the ground.
+  await announceVietnamFront(await syncVietnamFront(db, vietnam, turn));
 
   if (crises.length === 0) return 0;
 

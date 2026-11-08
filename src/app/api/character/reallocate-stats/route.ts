@@ -8,7 +8,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { Character, User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 
 const reallocateStatsSchema = z.object({
   stats: z.record(z.string(), z.number()),
@@ -30,7 +29,7 @@ async function loadActiveCharacter(userId: string) {
 // POST /api/character/reallocate-stats — Spends the character's single free stat
 // reallocation. Full reset: rewrites the 28-point spread, clears earned growth
 // (statXp), and resets the Debate decay anchor. One per character, ever.
-// Auth: requireHumanSession. Errors: 400, 401, 403, 404, 409, 429.
+// Auth: requireHumanSession. Errors: 400, 401, 404, 409, 429.
 export async function POST(request: Request) {
   try {
     const auth = await requireHumanSession(request);
@@ -42,10 +41,6 @@ export async function POST(request: Request) {
       60000
     );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
-
-    if (!(await isRpgStatsEnabled())) {
-      return errorResponse(403, "The stat system is not currently enabled.");
-    }
 
     const parsed = await parseJsonBody(request, reallocateStatsSchema);
     if (!parsed.success) {

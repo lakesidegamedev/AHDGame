@@ -22,7 +22,6 @@ describe("nav link inventory parity", () => {
       countryId: "US",
       myCorporationId: 1,
       myUnionId: "u1",
-      conflictsEnabled: true,
       unionsEnabled: true,
       settlementCrisisLive: true,
     })
@@ -79,7 +78,6 @@ describe("nav link inventory parity", () => {
     const worldItems = buildWorldNavItems({
       countryId: "US",
       myCorporationId: 1,
-      conflictsEnabled: true,
       unionsEnabled: true,
     });
     const nationSections = buildNationalDetailsSections("US", {

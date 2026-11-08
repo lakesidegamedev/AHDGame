@@ -68,15 +68,13 @@ describe("GET /api/country/[code]/overview-counts", () => {
       // rather than reading as a balanced budget on a zero economy.
       gdpMillions: null,
       budgetBalancePctGdp: null,
-      // Conflicts is off in this fixture, so no Cold War row is offered.
-      coldWarDefcon: null,
+      // Vietnam has not started in this fixture, so the ladder is at peacetime.
+      coldWarDefcon: 5,
       navairFormations: 0,
     });
   });
 
-  it("serves a DEFCON only for a principal in a conflicts-enabled world", async () => {
-    db.collection("gameState");
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+  it("serves a DEFCON only for a Cold War principal", async () => {
     const { body } = await call();
     // Vietnam has not started in this fixture, so the ladder is at peacetime.
     expect(body.coldWarDefcon).toBe(5);

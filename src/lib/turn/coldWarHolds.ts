@@ -28,9 +28,6 @@ export const POLE_HOLD_TURNS = 3;
  * a battle moves the front and early-returns when `control` is unchanged, so
  * a pinned front would never re-enter it. This sweeps by `poleSinceTurn`
  * alone, on every turn.
- *
- * Reads `conflictsEnabled` itself: it is reached from a stamp on a document,
- * not from a declaration, so it does not inherit the upstream gate.
  */
 export async function resolveColdWarHolds(
   db: Db,
@@ -41,8 +38,6 @@ export async function resolveColdWarHolds(
       { _id: "current" },
       {
         projection: {
-          conflictsEnabled: 1,
-          intOrgAlignmentEnabled: 1,
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
@@ -50,7 +45,6 @@ export async function resolveColdWarHolds(
       }
     )
   );
-  if (!gameState?.conflictsEnabled) return { resolved: 0 };
 
   const held = await getConflictsCollection(db)
     .find({
@@ -90,12 +84,9 @@ export async function resolveColdWarHolds(
     await resolveConflict(db, conflict, conflict.poleSide, currentTurn, { endingType: "victory" });
     await admitHostsToWinningBloc(db, conflict, conflict.poleSide, currentTurn, preset);
 
-    // The alignment shift is gated SEPARATELY. `intOrgAlignmentEnabled` governs the
-    // influence subsystem, not the war: with it off the hosts still change hands,
-    // they simply do not also swing on a meter nobody is playing.
     const backer = conflict.poleSide === "A" ? conflict.sideA.backer : conflict.sideB.backer;
-    const year = resolveGameYear(gameState);
-    if (gameState.intOrgAlignmentEnabled === true && backer && year != null) {
+    const year = gameState ? resolveGameYear(gameState) : null;
+    if (backer && year != null) {
       await applyConflictOutcomeAlignment(db, {
         entityIds: hostEntitiesOf(conflict),
         bloc: backer as WorldBloc,

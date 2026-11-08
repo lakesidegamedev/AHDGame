@@ -277,8 +277,6 @@ export interface ElectionDetail {
     pausedAt: string | null;
     lastTurnProcessed?: string | null;
     currentTurn?: number | null;
-    /** When true, US House primaries advance top-3 (districted nominee split). */
-    redistrictingEnabled?: boolean;
   } | null;
 
   /**

@@ -43,7 +43,6 @@ import {
   loadSurvivingPartyResolver,
   type SurvivingPartyResolver,
 } from "@/lib/parties/survivingParty";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
 import { allocateSeats } from "@/lib/turn/election/seatAllocation";
 import {
@@ -147,7 +146,7 @@ async function projectChamberRace(
   const totalVotesCast = ranked.reduce((sum, { votes }) => sum + votes, 0);
 
   let districted: Awaited<ReturnType<typeof districtedHouseResolution>> = null;
-  if (race.electionType === "house" && isRedistrictingEnabled(gameState)) {
+  if (race.electionType === "house") {
     const candidateParty: Record<string, string> = {};
     const candidateCharacterId: Record<string, string | null> = {};
     const candidateNppId: Record<string, string | null> = {};

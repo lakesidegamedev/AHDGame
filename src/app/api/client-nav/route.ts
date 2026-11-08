@@ -143,10 +143,7 @@ export async function GET() {
         {
           projection: {
             wikiDisabled: 1,
-            subsidiaryCorporationsEnabled: 1,
             singleplayerConfig: 1,
-            rpgStatsEnabled: 1,
-            conflictsEnabled: 1,
           },
         }
       )
@@ -185,7 +182,6 @@ export async function GET() {
           imperialCharacter: null,
           isImperialMode: false,
           wikiDisabled: !!gameState?.wikiDisabled,
-          conflictsEnabled: !!gameState?.conflictsEnabled,
           settlementCrisisLive: await isSettlementCrisisLive(),
           unionsEnabled: false,
           pendingCharterCount: 0,
@@ -245,8 +241,6 @@ export async function GET() {
         )?.sandboxTesterAccessEnabled === true
       : false;
     const wikiDisabled = !!gameState?.wikiDisabled;
-    const rpgStatsEnabled = !!gameState?.rpgStatsEnabled;
-    const conflictsEnabled = !!gameState?.conflictsEnabled;
     const settlementCrisisLive = await isSettlementCrisisLive();
 
     if (!user) {
@@ -277,7 +271,6 @@ export async function GET() {
           imperialCharacter: null,
           isImperialMode: false,
           wikiDisabled,
-          conflictsEnabled,
           settlementCrisisLive,
           unionsEnabled,
           pendingCharterCount: 0,
@@ -577,8 +570,7 @@ export async function GET() {
 
     const myCorporationHasGroup = await resolveMySubsidiaryGroupNav(
       db,
-      myCorporationId != null ? myCorporationObjectId : null,
-      gameState?.subsidiaryCorporationsEnabled === true
+      myCorporationId != null ? myCorporationObjectId : null
     );
 
     // Admin: character switcher + imperial mode
@@ -728,7 +720,6 @@ export async function GET() {
           isModerator:
             (authUser.isAdmin ?? false) || user.role === "moderator" || user.role === "admin",
           forexEnabled,
-          rpgStatsEnabled,
           canSeeCampaignManager,
           patreonAdPreference:
             user.patreonAdPreference ?? (user.adsDisabled ? "ad-free" : "all-ads"),
@@ -762,8 +753,7 @@ export async function GET() {
                 displayCurrencyPreference:
                   character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),
                 // Grandfather flag: drives the blocking stat-allocation modal.
-                // Gated behind the RPG-stats feature flag.
-                needsStatAllocation: rpgStatsEnabled && !character.statsAllocated,
+                needsStatAllocation: !character.statsAllocated,
                 // One-time wealth background re-pick after an economy reset.
                 needsWealthTierRepick: character.wealthTierRepickPending === true,
               }
@@ -797,7 +787,6 @@ export async function GET() {
         imperialCharacter: adminImperialCharacter,
         isImperialMode,
         wikiDisabled,
-        conflictsEnabled,
         settlementCrisisLive,
         unionsEnabled,
         pendingCharterCount,

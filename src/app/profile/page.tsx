@@ -61,7 +61,6 @@ import {
 } from "@/lib/parties/influenceQueries";
 import { PolicyDemographicsCard } from "./components/PolicyDemographicsCard";
 import { CharacterStatsPanel } from "./components/CharacterStatsPanel";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import type { CompassMarker } from "@/components/PoliticalCompass";
 import { ProfileAchievements } from "@/components/ProfileAchievements";
 import { checkPassiveProfileAchievements } from "@/lib/achievements/triggers";
@@ -74,7 +73,6 @@ import { getNationalDoctrine } from "@/lib/db/collections/nationalDoctrine";
 import { getCharacterCommission } from "@/lib/db/collections/characterGenerals";
 import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
-import { CUR_ERA_YEAR } from "@/lib/military/generalsTree";
 import { PoliticalStanding } from "./components/PoliticalStanding";
 import { FinancialStrip } from "./components/FinancialStrip";
 import { CareerHistory } from "./components/CareerHistory";
@@ -205,10 +203,6 @@ async function getCharacterData() {
     db.collection<GameState>("gameState").findOne({ _id: "current" }),
     fetchPartyHistory(db, character._id),
   ]);
-
-  const rpgStatsEnabled = await isRpgStatsEnabled({
-    rpgStatsEnabled: gameState?.rpgStatsEnabled,
-  });
 
   // Record first-completion times for every onboarding step (whether or not
   // the card is shown), after the response so the page never waits on it.
@@ -348,46 +342,31 @@ async function getCharacterData() {
   const nationalNpiOrdinalRank = await getNationalNpiOrdinalRank(db, character);
 
   // Conflict-path reads are independent of one another — one round, with the
-  // posting load still gated on the commission (an uncommissioned character
-  // has no order of battle).
-  const conflictExtras = gameState?.conflictsEnabled
-    ? await (async () => {
-        const [doctrine, commission, generalEra, commands] = await Promise.all([
-          getNationalDoctrine(db, charCountryId ?? "US"),
-          getCharacterCommission(db, character._id.toString()),
-          resolveGeneralEra(db),
-          getMilitaryCommands(db, charCountryId ?? "US"),
-        ]);
-        return {
-          doctrineAdopted: doctrine.adopted,
-          // Retain former service for the read-only military profile.
-          general: commission.general,
-          militaryService: {
-            commissioned: commission.commissioned,
-            commissionedTurn: commission.commissionedTurn,
-            dismissedTurn: commission.dismissedTurn,
-          },
-          generalPosting: commission.commissioned
-            ? await loadGeneralPosting(db, character._id.toString(), charCountryId ?? "US")
-            : EMPTY_POSTING,
-          generalEra,
-          isCommandingGeneral: commands.some(
-            (c) => c.commandingGeneralId === character._id.toString()
-          ),
-        };
-      })()
-    : {
-        doctrineAdopted: {},
-        general: null,
-        militaryService: {
-          commissioned: false,
-          commissionedTurn: undefined,
-          dismissedTurn: undefined,
-        },
-        generalPosting: EMPTY_POSTING,
-        generalEra: CUR_ERA_YEAR,
-        isCommandingGeneral: false,
-      };
+  // posting load gated on the commission (an uncommissioned character has no
+  // order of battle).
+  const conflictExtras = await (async () => {
+    const [doctrine, commission, generalEra, commands] = await Promise.all([
+      getNationalDoctrine(db, charCountryId ?? "US"),
+      getCharacterCommission(db, character._id.toString()),
+      resolveGeneralEra(db),
+      getMilitaryCommands(db, charCountryId ?? "US"),
+    ]);
+    return {
+      doctrineAdopted: doctrine.adopted,
+      // Retain former service for the read-only military profile.
+      general: commission.general,
+      militaryService: {
+        commissioned: commission.commissioned,
+        commissionedTurn: commission.commissionedTurn,
+        dismissedTurn: commission.dismissedTurn,
+      },
+      generalPosting: commission.commissioned
+        ? await loadGeneralPosting(db, character._id.toString(), charCountryId ?? "US")
+        : EMPTY_POSTING,
+      generalEra,
+      isCommandingGeneral: commands.some((c) => c.commandingGeneralId === character._id.toString()),
+    };
+  })();
 
   return {
     character,
@@ -424,11 +403,9 @@ async function getCharacterData() {
     partyHistory,
     ceoCorporation,
     forexEnabled,
-    rpgStatsEnabled,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
-    conflictsEnabled: !!gameState?.conflictsEnabled,
     ...conflictExtras,
     gameDateAnchor: gameState ? gameDateAnchorFromState(gameState) : undefined,
     preset: gameState?.preset,
@@ -488,7 +465,6 @@ export default async function ProfilePage() {
     partyHistory,
     ceoCorporation,
     forexEnabled,
-    rpgStatsEnabled,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
@@ -496,7 +472,6 @@ export default async function ProfilePage() {
     preset,
     gameYear,
     enabledCabinetSeats,
-    conflictsEnabled,
     doctrineAdopted,
     general,
     militaryService,
@@ -773,7 +748,6 @@ export default async function ProfilePage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-16" data-replay-block>
       <ProfileTabs
-        conflictsEnabled={conflictsEnabled}
         adopted={doctrineAdopted}
         general={general}
         militaryService={militaryService}
@@ -822,7 +796,7 @@ export default async function ProfilePage() {
               bannerDismissed={!!character.onboardingDismissed}
             />
             {/* Persistent reminder when the one-time stat allocation was set aside */}
-            {rpgStatsEnabled && !character.statsAllocated && character.statAllocationDismissed && (
+            {!character.statsAllocated && character.statAllocationDismissed && (
               <StatAllocationBanner />
             )}
           </>
@@ -860,7 +834,7 @@ export default async function ProfilePage() {
               partyInfluenceShare={partyInfluenceShare}
             />
 
-            {rpgStatsEnabled && character.stats && (
+            {character.stats && (
               <CharacterStatsPanel
                 stats={character.stats}
                 canReallocate={!!character.statsAllocated && !character.statsReallocationUsed}

@@ -69,10 +69,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
       .toArray(),
     db
       .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, subsidiaryCorporationsEnabled: 1 } }
-      ),
+      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     db.collection<GameConfig>("gameConfig").findOne(
       { _id: "default" },
       {
@@ -91,7 +88,6 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
   const root = corps.find((c) => c._id.toString() === rootId);
   if (!root) return null;
   const parent =
-    world?.subsidiaryCorporationsEnabled === true &&
     !requireCeo(root, userId) &&
     root.ceoType !== "npp" &&
     !root.suspended &&
@@ -107,12 +103,10 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
     parent,
     regions,
     ...groupCapabilities({
-      subsidiariesEnabled: world?.subsidiaryCorporationsEnabled,
       marketSystemMode: config?.marketSystemMode,
       groupSupplyCoordinationEnabled: config?.groupSupplyCoordinationEnabled,
     }),
     supplyAgreementsEnabled: config?.supplyAgreementsEnabled === true,
-    enabled: world?.subsidiaryCorporationsEnabled === true,
   };
 }
 export async function groupManagementView(db: Db, corporation: Corporation, userId: string) {
@@ -199,7 +193,6 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
     settings: defaultGroupManagement(ctx.root),
     currentTurn: ctx.turn,
     canManage: ctx.parent,
-    managementEnabled: ctx.enabled,
     /** No economic activation is implied by saving a direction or participation preference. */
     supplyEngineEnabled: ctx.supplyEngineEnabled,
     directionsEnabled: ctx.directionsEnabled,
@@ -233,7 +226,7 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
         history: privateAccess ? (historyByCorp.get(c._id.toString()) ?? []) : null,
         operator: operator.operator,
         isRoot: c._id.equals(ctx.root._id),
-        canEdit: own && ctx.enabled && !operator.vacant,
+        canEdit: own && !operator.vacant,
         receiving: privateAccess ? effectiveGroupReceiving(operator, preference, ctx.turn) : null,
         requested:
           privateAccess && validPreference ? preference.enabled : privateAccess ? false : null,
@@ -253,7 +246,7 @@ export async function updateGroupManagement(
   const paused = await requireCorporationActionsEnabled(db);
   if (paused) return deny("Corporation actions are paused.", 409);
   const ctx = await loadGroupManagement(db, corporation, userId);
-  if (!ctx || !ctx.enabled) return deny("Subsidiary group management is unavailable.", 409);
+  if (!ctx) return deny("Subsidiary group management is unavailable.", 409);
   const rootId = ctx.root._id.toString(),
     now = new Date();
   const own =

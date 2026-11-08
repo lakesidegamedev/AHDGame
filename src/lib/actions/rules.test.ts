@@ -55,7 +55,6 @@ import {
   DEBATE_PREP_ACTION_COST,
   DEBATE_PREP_SUCCESS_CHANCE,
   DEBATE_PREP_DEBATE_GAIN,
-  DEBATE_PREP_DISABLED_ERROR,
   DEBATE_PREP_UNALLOCATED_ERROR,
   quoteDebatePrepAction,
   describeDebatePrepAction,
@@ -1410,12 +1409,6 @@ describe("quoteDebatePrepAction happy path", () => {
       });
     }
   });
-  it("an explicit enabled flag and an omitted flag both skip the flag leg", () => {
-    for (const options of [undefined, {}, { rpgStatsEnabled: true }]) {
-      const quote = quoteDebatePrepAction({ debate: 5, hasStats: true }, options);
-      expect(quote.ok).toBe(true);
-    }
-  });
   it("the quoted chance is the constant the roll resolves against", () => {
     expect(DEBATE_PREP_SUCCESS_CHANCE).toBe(0.15);
     expect(DEBATE_PREP_SUCCESS_CHANCE).toBe(RESOLVED_DEBATE_CHANCE);
@@ -1424,18 +1417,8 @@ describe("quoteDebatePrepAction happy path", () => {
 });
 
 describe("quoteDebatePrepAction strictness", () => {
-  it("pins the execute-gate rejection strings as independent literals", () => {
-    expect(DEBATE_PREP_DISABLED_ERROR).toBe("The stat system is not currently enabled.");
+  it("pins the execute-gate rejection string as an independent literal", () => {
     expect(DEBATE_PREP_UNALLOCATED_ERROR).toBe("Allocate your stats before using Debate Prep.");
-  });
-  it("a disabled flag rejects before the stat check, mirroring gate order", () => {
-    expect(
-      quoteDebatePrepAction({ debate: 5, hasStats: true }, { rpgStatsEnabled: false })
-    ).toEqual({ ok: false, error: DEBATE_PREP_DISABLED_ERROR });
-    expect(quoteDebatePrepAction({}, { rpgStatsEnabled: false })).toEqual({
-      ok: false,
-      error: DEBATE_PREP_DISABLED_ERROR,
-    });
   });
   it("a missing stat block or debate rejects with the allocate reason", () => {
     for (const actor of [
@@ -1522,11 +1505,6 @@ describe("debate prep failure agreement", () => {
       ok: false,
       reason,
     });
-  });
-  it("a resolved-disabled flag rejects validation with the gate reason", () => {
-    expect(
-      canPerformAction(debateCharacter(5), "debatePrep", undefined, { rpgStatsEnabled: false })
-    ).toEqual({ canPerform: false, reason: DEBATE_PREP_DISABLED_ERROR });
   });
   it("validation passes and batch simulates for allocated stats", () => {
     const char = debateCharacter(5);
