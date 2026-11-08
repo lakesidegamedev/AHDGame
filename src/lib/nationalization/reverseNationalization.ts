@@ -81,22 +81,33 @@ async function reverseSector(
   now: Date,
   result: ReverseNationalizationResult
 ): Promise<void> {
+  const progress = { reversedAny: false };
+  while (await reverseNextTaking(db, params, sectorId, now, result, progress)) {
+    // Each pass hands back one taking and reports whether another remains.
+  }
+  if (!progress.reversedAny) result.skipped++;
+}
+
+/** Hand back the newest taking on the row; true when another taking is left to try. */
+async function reverseNextTaking(
+  db: Db,
+  params: ReverseNationalizationParams,
+  sectorId: ObjectId,
+  now: Date,
+  result: ReverseNationalizationResult,
+  progress: { reversedAny: boolean }
+): Promise<boolean> {
   const sectorsCol = db.collection<CorporateSector>("corporateSectors");
   const corps = db.collection<Corporation>("corporations");
-  let reversedAny = false;
-  const done = (): void => {
-    if (!reversedAny) result.skipped++;
-  };
-
-  for (;;) {
+  {
     const sector = await sectorsCol.findOne({ _id: sectorId });
-    if (!sector) return done();
+    if (!sector) return false;
 
     // Only reverse a sector that is STILL held by a state-owned NatCorp of this
     // country. A row already handed back (idempotent re-run) is left alone.
     const holder = await corps.findOne({ _id: sector.corporationId });
     if (!holder || !isStateOwned(holder) || holder.countryOwnerId !== params.countryId) {
-      return done();
+      return false;
     }
 
     const prov = sector.nationalizationProvenance;
@@ -137,17 +148,17 @@ async function reverseSector(
       // A row that folded this taking into holdings the state already had is
       // never handed back whole: only what the taking added returns.
       if (prov?.mergedIntoExisting) {
-        if (!priorOwner || priorOwner._id.equals(holder._id)) return done();
+        if (!priorOwner || priorOwner._id.equals(holder._id)) return false;
         await recordRecovery(priorOwner._id);
         if (!(await returnMergedPortion(db, sector, priorOwner._id, now))) {
           await abandonRecovery();
-          return done();
+          return false;
         }
         moved = true;
         result.restoredToPriorOwner++;
-        reversedAny = true;
+        progress.reversedAny = true;
         await finishRecovery();
-        continue;
+        return (prov.earlierTakings?.length ?? 0) > 0;
       }
 
       if (prov && priorOwner && !priorOwner._id.equals(holder._id)) {
@@ -186,8 +197,9 @@ async function reverseSector(
         );
         moved = true;
         result.restoredToPriorOwner++;
+        progress.reversedAny = true;
         await finishRecovery();
-        return;
+        return false;
       }
 
       // Fallback: no surviving prior owner. Spin the sector out to a fresh private
@@ -214,7 +226,8 @@ async function reverseSector(
         await recordRecovery(spun.newCorporationId);
         await finishRecovery();
       }
-      return;
+      progress.reversedAny = true;
+      return false;
     } catch (err) {
       await abandonRecovery();
       throw err;

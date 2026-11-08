@@ -113,6 +113,7 @@ describe("reverseNationalizationTaking compensation clawback", () => {
     const result = await reverseNationalizationTaking(w.db, params(w.sectorId));
 
     expect(result.restoredToPriorOwner).toBe(1);
+    expect(result.spunOut).toBe(0);
     const survivor = await w.memory.collection("corporateSectors").findOne({ _id: w.sectorId });
     expect(survivor?.corporationId).toEqual(w.natCorp);
     expect(survivor?.revenue).toBe(150);
