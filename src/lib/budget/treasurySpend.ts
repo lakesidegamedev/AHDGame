@@ -72,7 +72,6 @@ async function moveTreasury(
     delta < 0 ? computeFiscalImpact(before, -delta) : { fromSurplus: 0, addedToDebt: 0 };
 
   const now = new Date();
-  const set: Record<string, unknown> = { treasuryBalance: after, updatedAt: now };
   const newDebtPrincipal = Math.max(0, budget?.debt?.principal ?? 0);
 
   const ledger = witness ? await resolveTreasuryCashOptions(db, witness.ledger) : undefined;
@@ -146,15 +145,20 @@ async function moveTreasury(
     };
   }
 
+  // $inc, not $set of a value computed from the read above: two concurrent
+  // spends on one country would otherwise overwrite each other.
   const result = await db
     .collection<FederalBudget>("federalBudget")
-    .updateOne({ countryId: countryId as FederalBudget["countryId"] }, { $set: set });
+    .updateOne(
+      { countryId: countryId as FederalBudget["countryId"] },
+      { $inc: { treasuryBalance: after - before }, $set: { updatedAt: now } }
+    );
   if (witness && (result?.matchedCount ?? 0) > 0) {
     await witnessTreasuryCash(db, ledger, {
       flow: witness.flow,
       account: { kind: "government", countryId: countryId as CountryId },
       amount: after - before,
-      now: set.updatedAt as Date,
+      now,
       site: witness.site,
     });
   }
