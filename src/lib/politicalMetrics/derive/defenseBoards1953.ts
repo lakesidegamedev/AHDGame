@@ -1,40 +1,32 @@
 /**
  * Authored 1953 defense boards for non-playable countries.
  *
- * The ONLY part of a derived board that no legacy data can produce: stateMetrics
- * has no defense layer beyond a single militaryReadiness field, and defense
- * posture — diplomatic engagement, multilateral standing, power projection — is
- * not recoverable from outcome metrics like crime rates or literacy. So these
- * are hand-authored per country.
+ * The ONLY part of a derived board that no legacy data can produce:
+ * stateMetrics has no defense layer beyond militaryReadiness, and defense
+ * posture is not recoverable from outcome metrics. Hand-authored per country.
  *
- * The seven families and what they measure (lean in brackets — a POSITION on
- * the axis, never a quality judgment):
+ * The seven families (lean in brackets; a POSITION on the axis, never a
+ * quality judgment):
  *   diplomacy       [-5]  engagement, alliance-building, arms restraint
  *   institutions    [-3]  standing in international bodies, development aid
  *   softPower       [-1]  attraction of culture, science, and model abroad
- *   security        [ 0]  protection against espionage, subversion, direct threats
+ *   security        [ 0]  protection against espionage, subversion, threats
  *   defenseIndustry [+1]  defense production and military technology
  *   armedForces     [+3]  manpower, training, readiness
  *   projection      [+5]  power projection and deterrence at distance
  *
- * Authoring rules (binding — see the Plan 4 spec):
+ * Authoring rules (binding):
  *   1. Score the country AS IT WAS at campaign start, not its later self.
  *   2. Lean is not quality: high projection is not "better" than high diplomacy.
- *   3. 50 is genuinely neutral, not a default — use the full range.
+ *   3. 50 is genuinely neutral, not a default; use the full range.
  *   4. `institutions` tracks STANDING, not alignment.
- *   5. The Yugoslav split is real; Tito is not a satellite.
  *
- * Playable countries are deliberately absent: US/UK/RU/DD have authored boards
- * via POLITICAL_BASELINE_ANCHORS already.
+ * Playable US/UK/RU/DD use POLITICAL_BASELINE_ANCHORS instead.
  *
- * ERA COVERAGE — 1953 ONLY. Rule 1 above ("score the country AS IT WAS at
- * campaign start") makes these values era-specific by construction, and the
- * 1979/1991/2019 presets carry the SAME 22 countries. Authoring them is
- * 22 x 7 x 3 = 462 values of per-country historical judgment that has not been
- * done. Until it is, `defenseBoardFor` hands 1953 values to those eras and
- * RECORDS the substitution (see DEFENSE_BOARDS_BY_YEAR below), so the emit
- * script prints the gap per preset instead of shipping a 2019 board where
- * Germany has `armedForces: 8` and reading as though someone meant it.
+ * ERA COVERAGE: 1953 ONLY. Values are era-specific by rule 1, and the
+ * 1979/1991/2019 presets carry the same 22 countries. Until those boards are
+ * authored, `defenseBoardFor` hands 1953 values to those eras and records the
+ * substitution in DEFENSE_BOARDS_BY_YEAR so the emit script prints the gap.
  */
 
 export const DEFENSE_FAMILY_IDS = [

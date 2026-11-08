@@ -80,7 +80,7 @@ export async function chargeOrganizationTribute(
   // Era-aware, and doing double duty. It scopes tribute to the 1953 start, and
   // it is the same resolver `chargeOrganizationDues` uses to normalise currency
   // — reading the BASE config would price a 1953 world at 2019 rates and leave
-  // dues and tribute disagreeing about what a currency is worth (refs #3778).
+  // dues and tribute disagreeing about what a currency is worth.
   const preset = await loadWorldPreset(db);
   const rateAnnual = orgTributeRateAnnual(organizationId, preset);
   if (rateAnnual <= 0) return { ...EMPTY };

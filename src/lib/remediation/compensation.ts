@@ -1,10 +1,8 @@
 // Compensation: paying corporations what a bug cost them, with a receipt.
 //
-// Why this exists: on 2026-10-12, 28 owner-approved credits after the turn 134
-// governor cliff were written as direct balance edits (an ad-hoc `set` of
-// liquidCapital and a script). The money landed, but no financialTxLog row
-// and no shadow-ledger entry recorded it, so the corporations' histories show
-// cash appearing from nowhere and the ledger cannot attribute the mint.
+// Direct balance edits to affected corporations landed money without a
+// financialTxLog row or shadow-ledger entry, so their histories showed cash
+// appearing from nowhere and the ledger could not attribute the mint.
 //
 // A compensation spec is compiled into a real `Defect`, like an ad-hoc spec,
 // so it runs down the same path: dry run, confirm token, turn lock, row cap,
@@ -13,9 +11,9 @@
 // corporation so a repeat run pays nobody twice, reports the real moneyDelta,
 // and emits one `restitution_credit` receipt per credit.
 //
-// `receipt-only` mode exists for money that already moved outside the heal
-// engine: it writes the missing receipt, stamped to when and in which ledger
-// turn the money actually moved, without touching the balance again.
+// `receipt-only` mode is for money that already moved outside the heal engine:
+// it writes the missing receipt, stamped to when and in which ledger turn the
+// money actually moved, without touching the balance again.
 
 import { createHash } from "crypto";
 import { ObjectId, type Db } from "mongodb";

@@ -1,27 +1,25 @@
 /**
  * Policy Effects Processing Module
  *
- * Processes active policies for states and applies their effects to state metrics
- * using exponential decay toward target values.
+ * Processes active policies for states and applies their effects to state
+ * metrics using exponential decay toward target values.
  *
  * KEY DESIGN DECISIONS:
  *
- * 1. Federal multiplier (country-aware): US federal policies apply at 1/50 strength
- *    per state; UK national policies apply at 1/12 strength per region. The multiplier
- *    is chosen so the sum of per-region effects equals the intended national total.
- *    Prevents a single federal bill from dominating state/region metrics.
+ * 1. Federal multiplier (country-aware): US federal policies apply at 1/50
+ *    strength per state; UK national policies at 1/12 per region. Sum of
+ *    per-region effects equals the intended national total.
  *
- * 2. Exponential decay toward target: Policies don't apply flat deltas; they move
- *    metrics toward a target value with exponential decay. This creates smooth,
- *    asymptotic change rather than jarring step functions.
+ * 2. Exponential decay toward target: policies move metrics toward a target
+ *    with exponential decay rather than flat deltas (smooth asymptotic
+ *    change, not step functions).
  *
- * 3. Per-turn additive effects: policyOptions[].metricEffects apply direct additive
- *    changes each turn the policy is active. Scaled for ~10-year full reversal:
- *    extreme ≈ ±0.06/turn, center = 0.
+ * 3. Per-turn additive effects: policyOptions[].metricEffects apply direct
+ *    additive changes each active turn. Scaled for ~10-year full reversal:
+ *    extreme \u2248 \u00b10.06/turn, center = 0.
  *
- * 4. Natural metric decay: All metrics decay naturally toward baseline at 0.25%/turn
- *    when no active policy is pushing them. This prevents metrics from permanently
- *    deviating after extreme legislation passes and expires.
+ * 4. Natural metric decay: metrics decay toward baseline at 0.25%/turn
+ *    when no active policy pushes them.
  */
 
 import type { Db } from "mongodb";
@@ -188,13 +186,10 @@ export function calculateMetricTarget(
   // anachronistic pre-window level (e.g. a 1991 world's broadband seed of 0 in
   // 2010). Decay toward the era-band `best` so it settles at the era-normal.
   // Non-windowed metrics (getEraBand → null), in-band seeds, large-range metrics,
-  // and flag-off (eraYear === null) are all untouched — legacy behavior.
-  // DIRECTION-AWARE (#3238): "out of era" means the seed sits on the WRONG side
-  // of the band's worst bound. The old direction-blind `baseline < band.worst`
-  // was satisfied by any GOOD value on a lower-is-better metric (being below
-  // "worst" is being good), silently rewriting decay targets to band.best —
-  // e.g. povertyRate baselines were dragged toward the era BEST in flag-on
-  // worlds (#2547-class free-improvement drift).
+  // and flag-off (eraYear === null) are all untouched.
+  // "Out of era" means the seed sits on the WRONG side of the band's worst bound;
+  // a direction-blind comparison would drag good values on lower-is-better
+  // metrics (e.g. povertyRate) toward the era best.
   if (eraYear != null && !useCurrentValueAsBaseline) {
     const band = getEraBand(metricId, countryId, eraYear);
     const outOfEra =
@@ -203,7 +198,7 @@ export function calculateMetricTarget(
       baseline = band.best;
     }
   }
-  // Per-metric magnitude scale (Bug #0962 #1): policy effects are 0-100-index sized,
+  // Per-metric magnitude scale: policy effects are 0-100-index sized,
   // so a large-range metric (educationSpending ~£13k, capped at 10M) needs the contribution
   // scaled to its OPERATING value or the movement is imperceptible. `baseline` is that value
   // (currentValue for large metrics via useCurrentValueAsBaseline). Index metrics → 1.0.
@@ -222,7 +217,7 @@ export function calculateMetricTarget(
 
     if (!legType) continue;
 
-    // Graded intensity from the option ladder (Bug #0962): "Maximum" beats "Moderate"
+    // Graded intensity from the option ladder: "Maximum" beats "Moderate"
     // even on the same side. Falls back to the 3-valued effectDirection sign only when
     // the option can't be resolved. Center option → 0 → no-op (unchanged for neutral laws).
     const options = legType.policyOptions ?? [];
@@ -238,7 +233,7 @@ export function calculateMetricTarget(
     const intensity =
       optIdx >= 0 ? optionIntensity(options, optIdx) : Math.sign(policy.effectDirection);
     const strength = effectiveIntensity(intensity) * 3; // calculatePolicyContribution normalizes /3
-    // Normalized decay scope (#0962): national laws use a region-count-independent
+    // Normalized decay scope: national laws use a region-count-independent
     // multiplier so their decay effect is uniform across countries; state laws (scope 1)
     // are unchanged. The tick path (computeTickRates) keeps the per-country multiplier.
     const decayScope = nationalDecayScope(policy.scopeMultiplier);

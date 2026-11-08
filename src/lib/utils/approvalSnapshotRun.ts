@@ -45,18 +45,10 @@ export interface ApprovalSnapshotRun {
 /**
  * Run the per-turn approval snapshot across every country that needs one.
  *
- * This used to be the `active` countries alone, which left a hole: every country
- * in the game has a reachable approval page backed by full metrics, but a
- * country at war and not yet playable had no `governmentApprovals` document at
- * all. Its war block was therefore computed nowhere and shown nowhere, and its
- * page fell back to the live recompute in `loadNationalApproval` — which by
- * design carries none of the national providers. Both of the non-playable
- * belligerents in the War for Germany sat in exactly that state, each with a
- * scoring war block nobody could see.
- *
- * Guests (belligerents that are not `active`) are released again once their war
- * is over AND their exhaustion has finished healing, which can be many hundreds
- * of turns after the last shot. See `releaseApprovalGuests` for why that matters.
+ * Must include non-`active` belligerents: every country has a reachable
+ * approval page, but one without a `governmentApprovals` document falls back to
+ * the live recompute, which carries none of the national providers. Guests are
+ * released once their war is over and their exhaustion has healed.
  */
 export async function snapshotApprovalsForTurn(
   db: Db,
@@ -123,22 +115,16 @@ export async function snapshotApprovalsForTurn(
 }
 
 /**
- * Drop the approval documents of guests whose war is finished.
+ * Drop approval documents of guests whose war is finished.
  *
- * `loadNationalApproval` prefers a stored rating over its live recompute
- * unconditionally, and nothing refreshes a non-active country that is not at
- * war — so a document left behind here would pin that country's page to its
- * last wartime number permanently. Releasing it puts the country back exactly
- * where it was before the war: no document, live recompute, the same as every
- * other country at peace.
+ * `loadNationalApproval` prefers a stored rating over live recompute, and
+ * nothing refreshes a non-active country at peace. A document left behind
+ * would pin that country's page to its last wartime number permanently.
+ * A document written by another system without a snapshot keeping it current
+ * is stale by construction; a stale rating is worse than none.
  *
- * The same argument covers a document some other system (a crisis effect, say)
- * wrote for one of these countries: with no snapshot keeping it current it is
- * stale by construction, and a stale rating is worse than none.
- *
- * Active countries are filtered out a second time even though `plan.guests`
- * already excludes them. This deletes live production documents, and one
- * redundant guard is cheap next to dropping a playable country's history.
+ * Active countries are re-filtered as a cheap guard before deleting live
+ * production documents.
  */
 async function releaseApprovalGuests(
   db: Db,

@@ -31,7 +31,7 @@ export interface SectorRevenueTax {
       /** Operating lane, so lane-keyed tables (carbon mix, model alignment) resolve. */
       sectorType?: OperatingSectorType;
       realizedRevenue?: number;
-      /** Host-currency nameplate — plants GDP signal (ticket #1084). */
+      /** Host-currency nameplate, plants GDP signal. */
       hostRevenue: number;
       /** Host-currency realized revenue when the sector has one. */
       hostRealizedRevenue?: number;
@@ -174,10 +174,10 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
   );
 
   // Host-currency lookup: sector economic fields are stored in the HOST state's
-  // currency (PR #3466), not the owning corp's. Convert to ₳ with the host rate
+  // currency, not the owning corp's. Convert to ₳ with the host rate
   // so a foreign owner's FX cannot revalue host-market earnings. Raw host
   // amounts ride along for the plants GDP signal, which must compare
-  // host-to-host so FX noise cannot annualize into phantom growth (#1084).
+  // host-to-host so FX noise cannot annualize into phantom growth.
   const corpById = new Map(corporations.map((c) => [c._id.toString(), c]));
 
   const ownedByState = new Map<
@@ -293,24 +293,20 @@ export async function governmentApprovalProvider(db: Db): Promise<Map<string, nu
 const clampRange = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /**
- * Provider #3 (📊 budget-sync): per-country real fiscal ratios from
- * `federalBudget`, so the readout metrics (debtToGdp / budgetBalance /
- * schuldenbremseHeadroom) MIRROR reality instead of drifting from a seed.
- * debtToGdp reads the canonical outstanding sovereign stock (haircut-adjusted
- * active non-defaulted face, see bonds/sovereignPrincipal.ts), never
- * `treasuryBalance` and never `deriveFiscalState`: cash and bond debt are
- * separate positions, so a negative balance is not debt (refs #1975). The
- * ratio basis is `resolveRatioGdp` (smoothed GDP), the same denominator the
- * stored `debtToGdpRatio` uses. Clamped to the metric bounds here;
- * `fiscalMirror` only rounds + persist-gates downstream.
+ * Provider #3 (budget-sync): per-country real fiscal ratios from
+ * `federalBudget`, so readout metrics mirror reality instead of drifting from
+ * a seed. debtToGdp reads the canonical outstanding sovereign stock
+ * (haircut-adjusted active non-defaulted face, see
+ * bonds/sovereignPrincipal.ts), never `treasuryBalance` and never
+ * `deriveFiscalState`: cash and bond debt are separate positions, so a
+ * negative balance is not debt. Uses `resolveRatioGdp` (smoothed GDP), the same
+ * denominator as the stored `debtToGdpRatio`. Clamped to metric bounds here;
+ * `fiscalMirror` only rounds and persist-gates downstream.
  *
- * Empty-ledger rule: a country with no bond rows holds no stock (repudiated,
- * merged away, or never indebted), so its debtToGdp is 0 even when the budget
- * still carries a stored principal or a negative cash balance. Those are
- * drift the end-of-turn reconcile heals, not debt, and the readout must agree
- * with the stored value AFTER the reconcile, not mirror the drift. There is
- * deliberately no fallback to the stored `debt.principal`: a second source
- * for the same number is what #1975 removes.
+ * Empty-ledger rule: a country with no bond rows holds no stock, so its
+ * debtToGdp is 0 even when the budget carries a stored principal or negative
+ * cash balance. Those are drift the end-of-turn reconcile heals, not debt, and
+ * there is deliberately no fallback to stored `debt.principal`.
  */
 export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRatios>> {
   const [budgets, bonds] = await Promise.all([
@@ -344,7 +340,7 @@ export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRa
         countryId: 1,
         // The outstanding helper re-checks these query-filtered fields, so
         // they must be projected: a doc arriving without `issuerType` reads
-        // as non-sovereign and contributes 0 (refs #1975).
+        // as non-sovereign and contributes 0.
         issuerType: 1,
         matured: 1,
         defaulted: 1,

@@ -1,30 +1,22 @@
 // src/lib/nppAutonomy/governingArchetype.ts
 /**
- * Governing Archetypes (V1)
+ * Derives a governing archetype from the existing NPPPersonality sliders
+ * rather than a parallel system, then maps it to modifiers for autonomous
+ * governing logic (agenda breadth, weighting, spend, reshuffle).
  *
- * NPP officeholders already carry an `NPPPersonality` ({ loyalty, ambition,
- * stubbornness }). Rather than introduce a parallel governing-personality
- * system, we *derive* a governing archetype from those existing sliders and
- * translate it into concrete, formula-driven modifiers that bias the autonomous
- * governing logic (agenda breadth, how the three agenda inputs are weighted,
- * fiscal spend appetite, cabinet-reshuffle propensity).
+ * Same derive -> modifier -> clamp shape as turn/ceoArchetype.ts, so NPPs
+ * behave from the same personality axes whether running a corp or a government.
  *
- * This deliberately mirrors `turn/ceoArchetype.ts`: same `derive → modifier
- * table → clamp` shape, so an NPP that runs a corp and an NPP that runs a
- * government behave from the same two personality axes.
- *
- * Two axes drive the classification (loyalty stays reserved for its existing
- * political role — party donations / influence):
- *   - ambition     → agenda breadth, spend appetite, reshuffle appetite
- *   - stubbornness → ideology-over-conditions weighting, agenda stability
+ * Classification axes (loyalty stays reserved for its political role):
+ *   ambition     -> agenda breadth, spend appetite, reshuffle appetite
+ *   stubbornness -> ideology-over-conditions weighting, agenda stability
  *
  *            low stubbornness        high stubbornness
  *   high ambition   reformer              ideologue
  *   low  ambition   technocrat            steward
  *
- * All modifiers are multipliers/deltas applied to base constants, then clamped
- * to safe bounds by the caller (see GOVERNING_ARCHETYPE_CLAMP) so no archetype
- * can drive a runaway agenda or a player-ungovernable fiscal stance.
+ * Modifiers are multipliers/deltas on base constants; callers clamp to safe
+ * bounds (GOVERNING_ARCHETYPE_CLAMP) so no archetype runs away.
  */
 
 import type { NPPPersonality } from "@/lib/db/types/npp";

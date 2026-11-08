@@ -187,10 +187,9 @@ export interface ElectionResponse {
    * one-party states=7, US House=3 when redistricting is on; single-winner
    * executive races always 1).
    *
-   * Display surfaces MUST read this rather than recomputing the cap — a client
-   * component has no access to gameState, so its own call would fall back to
-   * the legacy cap and disagree with what the turn resolver enforced
-   * (ticket-1041).
+   * Display surfaces MUST read this rather than recomputing: a client has no
+   * gameState, so its own call would fall back to the legacy cap and disagree
+   * with the turn resolver.
    */
   primaryAdvanceCount: number;
 
@@ -369,7 +368,7 @@ export interface ElectionResponse {
   /**
    * Party display info (abbreviation + color) keyed by `partyId`
    * (the party's `sequentialId` as a string), used to render the
-   * `regByState` breakdown. Populated alongside `regByState`.
+   * `regByState` breakdown.
    */
   partyDisplayById?: Record<string, { abbr: string; color: string }>;
 

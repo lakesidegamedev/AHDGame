@@ -138,12 +138,9 @@ export async function advanceWindDowns(
             note: "Wind-up liquidation",
           });
         }
-        // A holding in a corporation that no longer exists can never be sold:
-        // the sale path skips it, so without this the fund retries the same
-        // dead position every pass and never reaches completion, with no error
-        // to show for it. A dead corporation's shares are worth zero, so write
-        // the position off (as the constituent rebalance already does) and let
-        // a later pass finish the fund.
+        // A holding in a dead corporation can't be sold, so without writing it off the fund
+        // retries the same dead position forever and never completes. Shares are worth zero;
+        // write off (as the constituent rebalance does) so a later pass can finish.
         const afterSale = (await getFundById(db, fund._id)) ?? fund;
         await writeOffDeadConstituentHoldings(db, afterSale, afterSale.holdings ?? []);
         continue;
@@ -188,7 +185,7 @@ export async function advanceWindDowns(
     if (stillHoldingBonds.has(String(fund._id))) continue;
     try {
       // Orders and subscriptions both block completion and neither is served
-      // once the fund is winding down, so clear them here (#4219). Cancelling an
+      // once the fund is winding down, so clear them here. Cancelling an
       // order returns its unspent escrow to the fund; refunding a subscription
       // returns the investor's reserved cash.
       await clearSettlementBlockers(db, fund, currentTurn);
@@ -326,9 +323,8 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
-  // Every remaining holder is paid from one bulk write per holder collection and
-  // one receipt write, in position order. The book used to cost one exchange-rate
-  // read, one credit and one receipt per holder.
+  // Every remaining holder is paid from one bulk write per holder collection
+  // and one receipt write, in position order.
   const holderPayouts: FundHolderCashPayout[] = [];
   for (const position of positions) {
     if (position.holderKind === "corporation") continue;
@@ -401,7 +397,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
           meta: {
             kind: "fund_seed_capital_return",
             fundId: fund._id.toString(),
-            // #992 tranche 3: lets the shadow ledger mirror this row against
+            // Lets the shadow ledger mirror this row against
             // the fund cash account (fail-closed on currency mismatch).
             fundCurrency: fund.anchorCurrencyCode,
             seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,

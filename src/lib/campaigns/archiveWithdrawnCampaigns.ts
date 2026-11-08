@@ -6,7 +6,7 @@ export type CampaignArchiveReason = NonNullable<Campaign["archivedReason"]>;
 /**
  * Minimal candidate identity needed to locate their campaign docs.
  * Player campaigns key `candidateId` by character; NPP campaigns may key by
- * the NPP id instead, so both are matched (see ticket #1310 follow-ups).
+ * the NPP id instead, so both are matched.
  */
 export interface WithdrawnCandidateKeys {
   electionId: ObjectId;
@@ -16,10 +16,9 @@ export interface WithdrawnCandidateKeys {
 }
 
 /**
- * Archive (never delete) the campaigns of withdrawn candidates so they stop
- * appearing on active surfaces such as Campaign Operations (ticket #1313).
- * A re-entry reactivates the campaign with its funds/levels intact via
- * `ensureCampaignForCandidate` / `createInitialCampaign`.
+ * Archive (never delete) campaigns of withdrawn candidates so they stop
+ * appearing on active surfaces. Re-entry reactivates the campaign with funds
+ * and levels intact via `ensureCampaignForCandidate` / `createInitialCampaign`.
  *
  * Returns the number of campaigns archived.
  */

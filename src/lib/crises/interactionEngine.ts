@@ -110,16 +110,11 @@ export function deriveCharacterRoles(
  * Like `deriveCharacterRoles` but also grants `headOfState` to executives whose
  * `currentOffice` is not a head-of-state office type:
  *
- *  - Parliamentary PMs, whose `currentOffice` is their legislative seat
- *    (e.g. `shugiin`), not a `primeMinister` type.
- *  - Ceremonial / office-seated heads of state whose head-of-state role stacks
- *    on top of a primary seat via an `electedOfficials` row rather than
- *    `currentOffice` — e.g. the CN President of the PRC (the CCP chair, seated
- *    by `partyChairHeadOfState`, whose `currentOffice` stays their NPC/party seat) or
- *    the IE Uachtarán. This mirrors the executive route's canonical head-of-state
- *    resolution (`electedOfficials` keyed by the `isHeadOfState` officeType) so
- *    the "who can resolve this crisis" check agrees with who the game shows as
- *    head of state.
+ *  - Parliamentary PMs, whose `currentOffice` is their legislative seat.
+ *  - Ceremonial heads of state seated via an `electedOfficials` row rather than
+ *    `currentOffice` (e.g. the CCP chair, the IE Uachtarán). Mirrors the
+ *    executive route's canonical head-of-state resolution so the "who can
+ *    resolve this crisis" check agrees with who the game shows as head of state.
  */
 export async function resolveCharacterRoles(
   db: Db,
@@ -931,29 +926,20 @@ export function calculateCollectiveReduction(
 }
 
 /**
- * Turns cut from a crisis by the decisions its leaders actually took.
+ * Turns cut from a crisis by the options its leaders actually chose.
  *
- * `resolutionPath` accumulates the ids of every option chosen (and every node
- * traversed) as the tree is walked, so the options that were picked are exactly
- * those the tree declares whose `optionId` appears in it. Node ids never
- * collide with option ids, and a node id simply matches no option.
+ * `resolutionPath` holds every option and node id traversed; node ids never
+ * collide with option ids, so matched options are exactly the chosen ones.
+ * Counted per option id so a role-specific menu and its `options` fallback
+ * declaring the same option cannot double-charge.
  *
- * Separate from `calculateCollectiveReduction`, which measures funding of a
- * shared aid tally rather than a choice; a crisis carrying both gets both.
+ * Distinct from `calculateCollectiveReduction` (funding of a shared aid
+ * tally); a crisis carrying both gets both. Global multi-responder crises
+ * record into `leaderResponses` and never touch `resolutionPath`, so they
+ * earn nothing here; the `optionsByRole` scan is defensive for mixed trees.
  *
- * MULTI-RESPONDER (global) crises earn nothing here, by construction: that
- * branch of `submitCrisisDecision` records into `leaderResponses` and returns
- * without touching `resolutionPath`, because each leader answers only for their
- * own nation. Summing one shared duration across every responding government
- * would be wrong, and no global template authors a reduction today. The
- * `optionsByRole` scan below is therefore defensive rather than reachable: it
- * keeps the count correct if a mixed tree ever puts a role menu on a
- * single-responder node.
- *
- * Note the reduction is read from the interaction's OWN snapshot of the tree,
- * not from the live template, so authoring a new reduction does not retroactively
- * shorten crises already running. Backfilling one deliberately is what
- * `scripts/debug/backfill-crisis-duration-reductions.mjs` is for.
+ * Reads the interaction's own tree snapshot, not the live template, so new
+ * authored reductions do not retroactively shorten running crises.
  */
 export function calculateDecisionDurationReduction(
   interaction: Pick<CrisisInteraction, "decisionTree" | "resolutionPath">

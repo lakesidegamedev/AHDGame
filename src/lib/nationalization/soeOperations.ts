@@ -99,20 +99,15 @@ type MetricBulkOp = {
  * Convert the POLITICAL half of a state's mandate contributions into board
  * deltas.
  *
- * Most mandate targets are political — `healthcare.physicianRate`,
- * `infrastructure.roadCondition`, `governance.publicTrust` — so once the
- * political store stopped being written this half of the mechanic went inert:
- * the merged doc no longer carried those values, `buildMandateMetricOps`
- * skipped them on the absent-metric check, and a state-owned hospital network
- * quietly stopped improving healthcare.
+ * Most mandate targets are political, so when the political store stopped
+ * being written `buildMandateMetricOps` skipped them on the absent-metric
+ * check and SOE-driven metrics silently stopped moving.
  *
- * VALUE, not residual. An SOE's mandate contribution is ONGOING OPERATING
- * PRESSURE, re-applied every turn for as long as the state owns the sector. On
- * the board that composes correctly with the dynamics phase: each turn's push
- * is drifted back toward the law-implied target, so the metric settles at a
- * steady elevation proportional to the SOE's share, and relaxes back on its own
- * once the sector is sold or shut down. A residual would instead bank every
- * turn's contribution permanently and never let go.
+ * VALUE, not residual: mandate contributions are ongoing operating pressure,
+ * re-applied every turn while the state owns the sector. On the board this
+ * composes with the dynamics phase: each turn's push drifts back toward the
+ * law-implied target, settling at a steady elevation, and relaxes once the
+ * sector is sold. A residual would bank each turn permanently and never let go.
  */
 function buildMandateBoardDeltas(
   contributions: MandateContribution[]
@@ -156,28 +151,23 @@ type RdModernizationOp = {
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 
 /**
- * Per-turn NatCorp modernization: `rdScore` is a *momentum* on the 0–MAX
- * innovation scale that each turn tracks a funding-driven target and bleeds
- * toward it at a flat decay rate. The CEO's per-turn budget is a ceiling — the
- * corp spends only up to the full-fund cost (a fraction of its own per-turn
- * revenue), so modernization is scale-proportional: a giant corp needs a giant
- * budget to hold a high score, and momentum lapses to 0 over a year if unfunded.
+ * Per-turn NatCorp modernization: `rdScore` is momentum on 0-MAX that tracks
+ * a funding-driven target and bleeds toward it at a flat decay rate.
  *
- * intensity   = min(1, spend / (revenue × FULL_FUND_FRACTION))   // 0–1
- * target      = intensity × MAX
- * next        = clamp(momentum + clamp(target−momentum, −DECAY, +RAMP_UP), 0, MAX)
+ * intensity = min(1, spend / (revenue × FULL_FUND_FRACTION))   // 0-1
+ * target    = intensity × MAX
+ * next      = clamp(momentum + clamp(target-momentum, -DECAY, +RAMP_UP), 0, MAX)
  *
- * FUNDING. `spend` is capped at `revenue × FULL_FUND_FRACTION` — the corp's own
- * per-turn revenue — so it is affordable from operations by construction. The
- * cost is charged as an operating expense in
- * {@link estimateNationalizedOperatingIncome}, which drives BOTH the treasury
- * remittance and the budget page's State Enterprises line, so the treasury funds
- * R&D by remitting less (never silently, never for free). It is deliberately NOT
- * debited from `liquidCapital`: SOE operating profit is remitted to the treasury
- * each turn and never banked as corp cash, so a `liquid >= spend` gate could
- * never pass for a normally-operating SOE and pinned every player-run corp at
- * rdScore 0 regardless of budget (ticket #1072). Returns one op per corp whose
- * score moves.
+ * `spend` is capped at the corp's own per-turn revenue, so it is affordable
+ * by construction and scale-proportional: a giant corp needs a giant budget
+ * to hold a high score.
+ *
+ * The cost is charged as an operating expense in
+ * {@link estimateNationalizedOperatingIncome}, which drives both the treasury
+ * remittance and the budget page's State Enterprises line, so the treasury
+ * funds it by remitting less. It is deliberately NOT debited from
+ * `liquidCapital`: SOE profit is remitted each turn and never banked, so a
+ * `liquid >= spend` gate would pin every SOE at rdScore 0.
  */
 export function buildRdModernizationOps(
   corps: Array<Pick<Corporation, "_id" | "rdScore" | "rdBudgetPerTurn">>,
@@ -215,71 +205,15 @@ export function buildRdModernizationOps(
 }
 
 /**
- * P3b — SOE capex discipline (plants tier).
- *
- * Below plants, treasury backing zeroes ANY negative `liquidCapital`: whatever
- * hole an SOE is in, the state fills it. That was defensible when the only way
- * an SOE could go negative was by LOSING MONEY OPERATING — the soft budget
- * constraint the mechanic is meant to model. Under plants it is not: a director
- * can place a build order for an arbitrarily large amount of capacity, drain the
- * corp's cash into construction-in-progress, and have the treasury comp the
- * whole thing on the same turn. Capacity would be free for every state
- * enterprise in the game.
- *
- * So the shortfall is SPLIT. The treasury covers this turn's realized OPERATING
- * loss and nothing more:
- *
- *     coverable = min(totalShortfall, max(0, −realizedOperatingLossThisTurn))
- *
- * The residual — cash the corp spent on build orders — stays as negative
- * `liquidCapital`. An SOE that overbuilds stays negative until it earns its way
- * out (or a caretaker cancels the order and recovers the refundable CIP; there
- * is no automatic caretaker cancellation today, so in practice it simply stays
- * negative and cannot place further builds, which is the intended pressure).
- *
- * `realizedOperatingLossThisTurn` is the REALIZED per-corporation operating
- * loss for this turn, read from the corporation turn's own snapshots
- * (`CorpSnapshot.income`, ₳/turn — the same figure that moved `liquidCapital`
- * and that `corporationHistory.income` persists), NOT an estimate. That figure
- * already includes every cost line the turn actually charged — idle / mothball
- * upkeep, the regulatory burden, growth — which is what makes the upkeep-heavy
- * construction SOE (#2043) coverable: the old margin estimator below is blind
- * to upkeep by construction (`operatingCost` excludes it), so it reported a
- * fraction of the true loss and the enterprise carried the rest forever.
- *
- * The margin estimator survives ONLY as an explicit fallback
- * (`estimateSoeOperatingLossAnchor`) for callers that have no realized snapshot
- * map — direct unit tests, ad-hoc callers. It is never preferred when the
- * realized figure is available.
- *
- * WHAT NEITHER LEG SEES — the full list, because a partial one reads as a
- * complete one:
- *   - bond coupon interest and bond maturity face value (bondTurn)
- *   - corporate tax and dividend payouts (sectorCalculations)
- *
- * The debt and tax lines are DELIBERATELY out of scope: this covers the
- * OPERATING loss, and an SOE whose hole is interest- or tax-driven is therefore
- * not covered here and can stay negative. That is a known gap, not an
- * oversight — closing it is not a one-line change:
- *   - coupon interest on a corp with `countryOwnerId` is ALREADY government-
- *     covered (natcorps skip the coupon cost entirely in bondTurn), so adding
- *     an interest term here would double-cover the common case; only
- *     `ownershipState: "stateOwned"` SOEs without `countryOwnerId` actually pay
- *     coupons, and
- *   - this function reads no bond documents at all, so covering debt service
- *     means new per-corp plumbing and a deliberate decision about how far the
- *     soft budget constraint reaches.
- * Revisit as its own change, with a stated rule, rather than widening the
- * approximation by accident.
- *
- * CIP (outstanding `constructionInProgressAnchor`) NEVER enters cover math. It
- * is read only to NAME the residual: after covering, whatever shortfall
- * remains is reconciled against held CIP, never funded by it. Covering at most
- * one turn of realized loss also means legacy holes are NOT forgiven and
- * landed build spending (already out of CIP into the paid capacity basis) is
- * NOT covered as free growth.
- *
- * Returns ₳. Non-plants callers get the full shortfall, exactly as before.
+ * SOE capex discipline (plants tier): cover only this turn's realized
+ * operating loss, not build spend. Treasury covers up to
+ * `min(shortfall, max(0, -realizedOperatingLossThisTurn))`; the build-funded
+ * residual stays negative `liquidCapital` so overbuilders self-correct.
+ * The realized loss comes from the corporation turn's snapshots and includes
+ * upkeep and compliance, unlike the margin estimator, which survives only
+ * as a fallback for callers without a snapshot map. Bond interest and taxes
+ * are deliberately out of scope. CIP never enters cover math; it only names
+ * the residual. Returns ₳. Non-plants callers get the full shortfall.
  */
 export function coverableSoeShortfallAnchor(args: {
   corporation: Corporation;
@@ -308,14 +242,12 @@ export function coverableSoeShortfallAnchor(args: {
  * Fallback operating-loss estimate used ONLY when no realized per-corp loss is
  * available (see `coverableSoeShortfallAnchor`). Built from the plants-aware
  * sector profit basis (realized-preferring revenue less maintenance, no growth
- * charge) net of corp-level overhead, converted from the daily basis those
- * fields are stored on to one turn.
+ * charge) net of corp-level overhead, converted from daily basis to one turn.
  *
- * Blind by construction to idle / mothball upkeep (`plantsUpkeepCost` in
- * sectorTurn) and the regulatory burden the turn processor charges — both live
- * outside `operatingCost`. Prefer the realized snapshot whenever it exists;
- * this exists so a missing map degrades to a conservative partial cover, never
- * to zero cover by accident and never to a full-hole comp.
+ * Blind to idle / mothball upkeep (`plantsUpkeepCost` in sectorTurn) and the
+ * regulatory burden the turn processor charges; both live outside
+ * `operatingCost`. Prefer the realized snapshot when it exists; this exists so
+ * a missing map degrades to conservative partial cover, never zero or full.
  *
  * Returns ₳ (positive = loss, 0 = no estimated loss).
  */
@@ -329,25 +261,16 @@ export function estimateSoeOperatingLossAnchor(args: {
   for (const sector of args.sectors) {
     const code = resolveSectorHostCurrencyCode(sector, args.corporation);
     const rate = fxRateForSectorHostFromMap(sector, args.corporation, args.fxByCurrency);
-    // REALIZED margin, not the seeded one. `sector.profitMargin` is a constant
-    // nothing ever writes (12 for every state enterprise in the world, 35 for
-    // every private one); under plants the turn processor DERIVES the margin
-    // from the physical cost lines and persists it as `effectiveProfitMargin`
-    // (see `sectorTurn` — "under plants this field is an OUTPUT, not an
-    // input"). Reading the frozen constant here made this function report a
-    // healthy PROFIT for enterprises that were in fact running at a large
-    // physical loss, so `operatingLoss` came out 0 and the treasury covered
-    // NOTHING — the SOE simply carried the whole loss forward, every turn,
-    // forever. Measured on the 96-turn plants A/B (`ab5_plants`): the Soviet
-    // manufacturing enterprise's sectors reported `profitMargin` 12 against a
-    // derived `effectiveProfitMargin` of −52, an estimated +₳4.2M/turn against
-    // a real ≈−₳2M/turn, and −173,259,460 of accumulated uncovered loss. All
-    // 38 command SOEs and all 5 loss-making NatCorps were insolvent this way.
+    // REALIZED margin, not the seeded one. `sector.profitMargin` is a frozen
+    // constant nothing writes; under plants the turn processor derives the margin
+    // from physical cost lines and persists it as `effectiveProfitMargin`.
+    // Reading the constant made this report a profit for enterprises running at a
+    // large physical loss.
     //
-    // The anti-exploit scope is UNCHANGED: `derivedMarginPct` is
-    // `1 − operatingCost/revenue` and `operatingCost` excludes growth/build
-    // spend entirely, so capex is still not coverable — this makes the
-    // OPERATING half honest, it does not widen what "operating" means.
+    // Anti-exploit scope is UNCHANGED: `derivedMarginPct` is
+    // `1 - operatingCost/revenue` and `operatingCost` excludes growth/build spend,
+    // so capex remains uncovered. This makes the OPERATING half honest, it does not
+    // widen what "operating" means.
     const realizedMarginPct = sector.effectiveProfitMargin;
     const marginSector =
       typeof realizedMarginPct === "number" && Number.isFinite(realizedMarginPct)
@@ -391,8 +314,8 @@ export interface SoeCorpBacking {
 }
 
 /**
- * Orchestrate SOE operations for the turn. Reads all state-owned corps, their
- * sectors, and the metrics of every state they operate in; applies mandate
+ * Orchestrate SOE operations for the turn. Reads state-owned corps, their
+ * sectors, and metrics of the states they operate in; applies mandate
  * contributions (scaled by SOE share of each state-sector) and backs any
  * negative liquidCapital from the treasury. Money math is ₳-anchor internal.
  *
@@ -401,16 +324,16 @@ export interface SoeCorpBacking {
  * When present for a corp it IS the coverable basis; when absent the margin
  * estimate is used as an explicit fallback (and recorded as such).
  *
- * WRITE ORDER (loud failure, #2043): every per-corp cover amount is computed
- * PURE first; then each owning treasury is debited; only then are the corp
- * credits bulk-written. A treasury failure therefore THROWS before any corp is
- * credited — never free money. The boundary is deliberate: a failure BETWEEN
- * the treasury debits and the corp bulk-write leaves debits without matching
- * credits on the treasury ledger (visible, auditable), and a retry recomputes
- * the same cover from the still-negative corp cash — so an operator rerun
- * after such a mid-pass failure must account for already-issued debits first.
- * Turn-level rerun atomicity beyond this window belongs to the turn framework,
- * like every other treasury leg in this turn.
+ * WRITE ORDER (loud failure): every per-corp cover amount is computed PURE
+ * first; then each owning treasury is debited; only then are the corp credits
+ * bulk-written. A treasury failure therefore THROWS before any corp is
+ * credited, never free money. A failure BETWEEN the treasury debits and the
+ * corp bulk-write leaves debits without matching credits on the treasury
+ * ledger (visible, auditable), and a retry recomputes the same cover from the
+ * still-negative corp cash, so an operator rerun after such a mid-pass failure
+ * must account for already-issued debits first. Turn-level rerun atomicity
+ * beyond this window belongs to the turn framework, like every other treasury
+ * leg in this turn.
  */
 export async function processSoeOperations(
   db: Db,
@@ -460,10 +383,9 @@ export async function processSoeOperations(
     .toArray();
 
   const stateIds = Array.from(new Set(sectors.map((s) => s.stateId)));
-  // Legacy-shaped per-region view so the presence checks in
-  // buildMandateMetricOps see the doc they were written against. Mandate
-  // targets that used to live on the political half are now board families and
-  // are handled by the board branch below.
+  // Legacy-shaped per-region view required by buildMandateMetricOps presence
+  // checks. Mandate targets formerly on the political half are now board
+  // families, handled below.
   const [mergedMetrics, fxByCurrency] = await Promise.all([
     findMergedRegionMetricsMany(db, { _id: { $in: stateIds } }),
     loadFxRatesByCurrency(db),
@@ -551,32 +473,14 @@ export async function processSoeOperations(
 
   // ── State capex grant (the non-command SOE capacity channel) ───────────────
   //
-  // Command economies fund SOE capacity through the Gosbank (directed credit,
-  // floored at replacement in `commandEconomyTurn`). A nationalized corp in a
-  // MARKET economy has no such channel: it is excluded from the private,
-  // cash-rationed NPP reinvestment path (a state enterprise does not fund
-  // capacity out of its own operating cash) and the treasury backstop below
-  // deliberately refuses to pay for build orders. So its plant decayed one-way.
-  //
-  // This is that channel, and it is a BUDGETED LINE, not a free grant: the
-  // owning treasury is debited (`debitTreasurySoeCapex`, the same signed
-  // `treasuryBalance` every other government flow moves) and the same amount
-  // shows up as an expenditure in `estimateCountryOwnedBudgetNetLocal`, which
-  // drives the budget page's State Enterprises line.
-  //
-  // Bounded by construction — see `soeCapacityReplacementCostAnchor`: it buys
-  // back exactly the units that wore out this turn, at the standing list price
-  // (`capacityBookAnchor` is raised by the cash actually paid, so no exit can
-  // mint against it), leaving `capitalStock` flat. The replacement itself never
-  // grows the enterprise, and nothing here touches `liquidCapital`, so an SOE
-  // cannot divert it into a build order of its own choosing. The P3b exploit
-  // stays closed.
-  //
-  // Growth is a separate, rule-bound leg (`planSoeCapexGrowth`): where the
-  // market a sector sells into is short, the same treasury may also pay for one
-  // small build order per sector, which goes through the normal build queue and
-  // lands after the usual build time. The state, not the enterprise, decides and
-  // pays, and a treasury near its debt ceiling pays nothing.
+  // Market-economy nationalized corps are excluded from the private NPP
+  // reinvestment path and the treasury backstop refuses build orders, so their
+  // plant would decay one-way without this channel. It is a BUDGETED LINE: the
+  // owning treasury is debited and it appears in `estimateCountryOwnedBudgetNetLocal`.
+  // Bounded: it buys back exactly the units that wore out this turn at the standing
+  // list price (`capacityBookAnchor` rises by cash paid, so no exit can mint against
+  // it), leaving `capitalStock` flat and never touched `liquidCapital`.
+  // Growth is a separate rule-bound leg (`planSoeCapexGrowth`).
   if (plantsEnabled) {
     await applyStateCapexGrants(
       db,
@@ -661,13 +565,12 @@ export async function processSoeOperations(
   const backingCredits: { corpId: string; currency: CurrencyCode; amount: number }[] = [];
   for (const b of backing) {
     if (!(b.coveredAnchor > 0)) continue; // nothing operating-related to comp
-    // The OWNING treasury covers the loss — the same key the remittance,
-    // the state capex grant, and both budget estimators use. A firm
-    // nationalised abroad keeps its domicile on `countryId`, so debiting
-    // that would drain a treasury for an enterprise it does not own while
-    // the owner's books show the profit estimate (ticket #1269). The debit is
-    // unconditional: an unaffordable cover pushes the treasury negative
-    // (national debt) rather than being withheld — soft-budget semantics.
+    // Debit the OWNING treasury: the same key the remittance, state capex
+    // grant, and both budget estimators use. A firm nationalised abroad keeps
+    // its domicile on `countryId`, but debiting that would drain a treasury
+    // for an enterprise it does not own. The debit is unconditional: an
+    // unaffordable cover pushes the treasury negative (national debt) rather
+    // than being withheld.
     const cashLedger = await treasuryLedger();
     await coverSoeOperatingLoss(
       db,

@@ -25,23 +25,13 @@ export interface ReverseNationalizationResult {
 }
 
 /**
- * Reverse an emergency nationalization taking: return the named sectors to
- * PRIVATE hands. Called when the Supreme Court strikes down an executive taking
- * (`scotusDocketTurn` on a diverged case carrying `nationalizationReversal`).
- *
- * For each surviving NatCorp sector row:
- *   - If `nationalizationProvenance.formerCorporationId` is recorded and that
- *     corporation still exists, RE-PARENT the row back to it and restore its
- *     pre-haircut economics, clearing the nationalization stamps. This is the
- *     literal "undo the taking".
- *   - Otherwise (prior owner dissolved, or a legacy row with no provenance) fall
- *     back to the normal privatization path (`privatizeAsset`, IPO) so the asset
- *     still leaves state hands. The re-privatization cooldown is bypassed here —
- *     a court order overrides it — by clearing `absorbedAtTurn` first.
- *
- * Sectors already back in private hands (idempotent re-runs) and missing rows are
- * skipped. Best-effort: a per-sector throw is caught and counted as skipped so a
- * single bad row never wedges the docket turn.
+ * Reverse an emergency nationalization: return taken sectors to private hands.
+ * Re-parents each sector to its recorded prior owner if that corporation still
+ * exists, restoring pre-haircut economics; otherwise falls back to normal
+ * privatization. Clears `absorbedAtTurn` to bypass the re-privatization cooldown,
+ * since a court order overrides it. Idempotent: already-private sectors and
+ * missing rows are skipped. A per-sector throw is caught and counted as skipped
+ * so one bad row never wedges the docket turn.
  */
 export async function reverseNationalizationTaking(
   db: Db,

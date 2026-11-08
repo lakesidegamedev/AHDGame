@@ -135,16 +135,12 @@ const BESPOKE_NODE_IDS = new Set([
 ]);
 
 /**
- * The engine animates the MACRO categories only.
- *
- * Its political nodes still exist and are still modelled — they just no longer
- * own a stored value. They are evaluated by `processPoliticalMetricsDynamics`
- * as pure target functions and folded into the board through the engine term
- * (see politicalMetrics/engineNodes.ts). Persisting them here as well would
- * write a legacy political value nothing reads, into a store being retired.
- *
- * Filtering a topologically sorted list keeps it topologically sorted, so the
- * remaining nodes' same-turn dependencies still resolve in order.
+ * The engine animates MACRO categories only. Political nodes are still
+ * evaluated but hold no stored value: they are pure target functions folded in
+ * through the engine term (see politicalMetrics/engineNodes.ts). Persisting
+ * them here would write a legacy value nothing reads into a retiring store.
+ * Filtering a topologically sorted list keeps it sorted, so same-turn
+ * dependencies still resolve in order.
  */
 const MACRO_NODES = METRIC_REGISTRY_SORTED.filter((n) => MACRO_CATEGORIES.has(n.categoryId));
 const CABINET_V2_MACRO_NODES = cabinetMacroRegistry(MACRO_NODES);
@@ -703,7 +699,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     const ownedForState = sectorTax.ownedByState.get(state._id) ?? [];
     // P2/D7: prior realized-revenue baseline + how many turns ago it was taken.
     // Only meaningful under plants; the node ignores both fields otherwise.
-    // Ticket #1084: once the snapshot is tagged `host`, compare host-currency
+    // Once the snapshot is tagged `host`, compare host-currency
     // sums so FX restatement cannot annualize into a per-turn GDP jig. Untagged
     // (legacy ₳) snapshots keep the ₳ path for one turn, then we rewrite as host.
     const prevRealized = finite(state.sectorRealizedRevenue);
@@ -712,7 +708,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     const nowHost = sumHostRealizedRevenue(ownedForState);
     const nowAnchor = sumRealizedRevenue(ownedForState, sectorTax.plantsEnabled);
     // Trailing revenue trend (host currency only, so FX cannot leak into it —
-    // same rule as the one-turn snapshot, ticket #1084). On the legacy→host
+    // same rule as the one-turn snapshot). On the legacy→host
     // flip turn the EMA seeds fresh from this turn's host sum and the snapshot
     // log restarts; until a snapshot matures past the minimum span the node
     // keeps using the one-turn fallback.
@@ -996,11 +992,11 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       if (automationDelta !== undefined) {
         seedCurrent["economic.automationIndexDelta"] = automationDelta;
       }
-      // #791: use a same-turn demand-over-supply reading when the corporation
+      // Use a same-turn demand-over-supply reading when the corporation
       // phase produced a fresh demand snapshot. If corporations were paused,
       // retain the last measured tightness rather than pairing stale demand
-      // with today's labor force. Corporate staffing itself continues to use
-      // the previous turn's ratio, so no same-turn feedback loop is introduced.
+      // with today's labor force. Corporate staffing uses the previous turn's
+      // ratio, so no same-turn feedback loop is introduced.
       const tightness = hasCurrentLabourDemand
         ? currentLabourTightness
         : readMetricPath(prevDoc, "economic.labourTightness", "value");
@@ -1202,7 +1198,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       if (prevVal === undefined) continue;
       setFields[`${n.id}.value`] = r.value;
       setFields[`${n.id}.simBaseline`] = r.simBaseline;
-      // #909: persist the per-turn delta so the UI's rate-of-change / TrendChip
+      // Persist the per-turn delta so the UI's rate-of-change / TrendChip
       // has data for every engine-animated metric. Previously only
       // independenceDesire wrote a `trend`, so every other metric rendered
       // "flat" regardless of actual movement (the reported "rate of change is
@@ -1313,14 +1309,11 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
             outputTrendGrowth: trendStep.trendGrowth,
             realOutputStartTurn,
             ...(legacyGapStep ? { legacyOutputGap: legacyGapStep.gap } : {}),
-            // P2/D7: snapshot THIS turn's realized owned-sector revenue as the
-            // next turn's baseline. Written in every mode (not just plants) so a
-            // flip to plants already has a one-turn-old baseline and does not
-            // spend a turn on the legacy fallback. The BASIS is still plants-
-            // gated: below plants this stays the nameplate sum it has always
-            // been, so non-plants worlds see no level shift.
-            // Under plants the snapshot is HOST currency (ticket #1084) so the
-            // next turn's ratio is FX-invariant.
+            // Snapshot THIS turn's realized owned-sector revenue as next turn's
+            // baseline, in every mode so a flip to plants has a one-turn-old baseline.
+            // BASIS stays plants-gated: below plants it is the nameplate sum, so
+            // non-plants worlds see no level shift. Under plants the snapshot is HOST
+            // currency so next turn's ratio is FX-invariant.
             sectorRealizedRevenue: sectorTax.plantsEnabled
               ? nowHost
               : sumRealizedRevenue(ownedForState, false),

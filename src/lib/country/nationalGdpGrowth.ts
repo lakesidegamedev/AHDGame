@@ -71,22 +71,14 @@ export function resolvePipelineGdpGrowth(input: {
 /**
  * The country's national GDP growth rate, in percent.
  *
- * Resolution order, all three producing the same quantity:
+ * Resolution order, all producing the same quantity:
+ *   1. National `macroMetrics` document (a cache of step 2).
+ *   2. GDP-weighted mean of the country's own regions.
+ *   3. Authored era trend, only when no region carries a growth metric.
  *
- *   1. The national `macroMetrics` document. Verified at turn 369 to reproduce
- *      the GDP-weighted regional mean to three decimals for all ten countries
- *      that have one, so this is a cache of step 2 rather than a rival figure.
- *   2. The GDP-weighted mean of the country's own regions, for the 17 countries
- *      that have no national document.
- *   3. The authored era trend, only when no region carries a growth metric at
- *      all (an unseeded or pre-reconciliation world).
- *
- * Step 2 is load-bearing and was NOT in the original plan. Falling straight from
- * step 1 to step 3 looked reasonable but is badly wrong on the live world: those
- * 17 economies are mostly contracting (CS -8.9%, HU -7.4%, RO -6.9%) while their
- * era trends read +3.5% to +6.5%. The era trend is an authored starting
- * assumption, not a live measurement, so it must never stand in for regions that
- * are right there and can be measured.
+ * Step 2 is load-bearing: many economies with no national document are
+ * contracting while their era trends read positive. The era trend is an
+ * authored assumption, never a substitute for measurable regions.
  */
 export async function loadNationalGdpGrowth(
   db: Db,

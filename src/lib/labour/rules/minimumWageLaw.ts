@@ -1,41 +1,25 @@
 /**
- * National minimum wage laws set the plant wage floor.
+ * National minimum wage laws set the plant wage floor (Kaitz ratio).
  *
- * The labour system already floors low-pay sectors' wages with a Kaitz ratio
- * (minimum wage as a share of the median wage, see `minWageFloorMultiplier` in
- * `src/lib/labour/laborCost.ts`). Until this module the only writer of that
- * ratio was the admin route, so the national minimum wage laws players pass
- * only nudged macro metrics. With `minimumWageLawStage` on, the national law in
- * force each turn sets the ratio:
+ * The ratio is derived from the law every turn rather than stored, so
+ * enactment, repeal, court ruling or world reset cannot leave it stale.
  *
  * - Enacting or amending the law changes the ratio from the next turn.
- * - Repealing it (no national policy row) or enacting an abolition option
- *   clears the floor.
- * - An admin-set `federalBudget.minimumWageKaitzRatio` is an override and wins,
- *   including an explicit 0 (no floor). Clearing the admin value hands the
- *   country back to its law.
- *
- * The ratio is derived from the law every turn rather than stored, so there is
- * no copy that enactment, repeal, a court ruling or a world reset could leave
- * stale.
- *
- * ## How a law maps to a ratio
+ * - Repealing it or an abolition option clears the floor.
+ * - An admin-set `federalBudget.minimumWageKaitzRatio` overrides, including
+ *   explicit 0. Clearing it hands the country back to its law.
  *
  * Laws whose options carry an hourly rate map rate / reference median hourly
- * wage. The reference medians are present-day full-time medians in the same
- * currency the option text uses, chosen so each country's current statutory
- * option lands on its real OECD Kaitz ratio (US 0.28 at $7.25, Germany 0.55 at
- * EUR 12, Ireland 0.6 at EUR 13.50, Japan 0.45 at JPY 1,000). The option
- * rates are nominal present-day amounts in every era, so the ratio is too.
+ * wage. Reference medians are present-day full-time medians in the option's
+ * own currency, chosen so each country's current statutory option lands on
+ * its real OECD Kaitz ratio. Option rates are nominal present-day amounts, so
+ * the ratio is too.
  *
- * Laws without a rate on their options (China's are monthly amounts in the
- * text only, Nigeria's carry none) use an explicit ratio per option on the same
- * scale. Real national floors sit between about 0.3 and 0.6 of the median; the
- * strongest player options go above that, and the existing cap
- * (`MIN_WAGE_KAITZ_MAX`) still applies.
+ * Laws without a rate (China monthly amounts, Nigeria none) use an explicit
+ * ratio per option. Real floors sit between about 0.3 and 0.6 of the median;
+ * player options may exceed that and are capped by `MIN_WAGE_KAITZ_MAX`.
  *
- * State-scope laws (`us_state_minimum_wage`) are not national floors and are
- * not read here.
+ * State-scope laws (`us_state_minimum_wage`) are not national floors.
  */
 
 /** Same ceiling as `MIN_WAGE_KAITZ_MAX` in laborCost.ts (a floor at the median itself). */

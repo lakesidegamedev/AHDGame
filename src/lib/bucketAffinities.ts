@@ -13,36 +13,17 @@ import { CN_DOMAIN_BUCKET_AFFINITIES } from "@/lib/countries/cn/data/cnBucketAff
  *
  *     impact = (newPosition - oldPosition) x affinity x SHIFT_IMPACT_SCALE
  *
- * WHY BUCKETS
- * -----------
- * The tables these replace were keyed on each country's voter ARCHETYPES. An
- * archetype is an authoring format: the vote engine counts census cells, so an
- * archetype-keyed approval only ever reached voters by being projected onto
- * buckets at read time. Authoring on buckets removes the round trip, and with
- * it the failure mode that came along for the ride — an archetype id with no
- * mapping projected onto nothing and vanished, which is how an entire country's
- * approval effects could be dropped with no error anywhere.
+ * Buckets are the unit the vote engine counts; archetypes were an authoring
+ * format that had to be projected onto buckets at read time, and an archetype
+ * with no mapping silently vanished.
  *
- * HOW THESE VALUES WERE PRODUCED
- * ------------------------------
- * By running each country's authored archetype table through
- * `archetypeValuesToBuckets`, the exact projection the engine applied at read
- * time. This file is therefore behaviour-identical to the tables it replaces by
- * construction rather than by inspection, and any later hand-tuning is a design
- * change measurable against a known-equal baseline instead of a design change
- * entangled with a migration.
+ * Tuning notes:
+ * - Where two archetypes shared a bucket, their affinities SUMMED, so a bucket
+ *   can carry more weight than any single archetype did.
+ * - Buckets are not mutually exclusive: a cell picks up the sum of every bucket
+ *   it matches, one per dimension.
  *
- * Two things to know before tuning:
- *
- * - Weight is redistributed, not re-derived. Where two archetypes shared a
- *   bucket their affinities SUMMED, so a bucket can carry more weight than any
- *   single archetype did. That is what the engine already computed.
- * - Buckets are not mutually exclusive the way archetypes were. A cell picks up
- *   the sum of every bucket it matches, one per dimension.
- *
- * From here on this file is the source and is hand-edited: the archetype
- * tables it was generated from are gone, so there is nothing left to
- * regenerate from.
+ * This file is now hand-edited and is the source of truth.
  */
 
 /** Per-country, per-domain bucket affinities. Countries absent fall back to US. */

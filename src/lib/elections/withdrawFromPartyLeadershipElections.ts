@@ -14,21 +14,11 @@ export interface WithdrawFromPartyLeadershipElectionsResult {
 /**
  * Remove departing members from a party's national leadership elections.
  *
- * When a member leaves a party (founding a chartered breakaway, defecting in a
- * one-party-state faction split, …) their participation in the OLD party's
- * chair / vice-chair / treasurer races must be torn down: they can no longer
- * stand as a candidate, their own ballot no longer counts, and ballots cast for
- * them must not keep tallying toward a seat in a party they left.
+ * A departed member's active candidacies are withdrawn and every vote where
+ * they are the voter or candidate is deleted, so they are fully removed from
+ * the race (live aggregates and withdrawn-candidate filtering do the rest).
  *
- * Scoped to the party's currently-`voting` elections only — concluded races are
- * historical record and left untouched. For each such election this:
- *   - withdraws the departing members' still-`active` candidacies, and
- *   - deletes every vote where a departing member is the voter OR the candidate.
- *
- * National-party vote tallies are aggregated live from `nationalPartyVotes` at
- * resolution (no denormalized tally), and the candidate list filters out
- * `withdrawn` rows, so these two writes fully remove the member from the race.
- *
+ * Only `voting` elections are touched; concluded races are historical record.
  * No-op when `characterIds` is empty or the party has no voting elections.
  */
 export async function withdrawFromPartyLeadershipElections(

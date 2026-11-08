@@ -304,9 +304,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         : governmentLiquidFromTreasury(budget.treasuryBalance)
     );
   // Fund cash is ₳ and the rate table is local-per-₳, so cashAnchor × rate is
-  // the native figure. This used to be left at 0 because the equity leg of a
-  // fund was denominated inconsistently; with one unit across every fund leg
-  // the conversion is well defined and the cash is real money that moves.
+  // the native figure.
   const rateByCurrency = new Map<string, number>(
     exchangeRateRows
       .filter((r) => Number.isFinite(r.rate) && r.rate > 0)
@@ -340,11 +338,9 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       "organizationLiquid",
       fund.balanceLocal
     );
-  // Bond-pool cash enters as a raw audit component plus its QE lifetime legs,
-  // so calculateMoneyAggregates can net the QE-parked portion back into
-  // observed M2 while the settlement inventory stays outside it (v3 boundary,
-  // issue #2021). Pools without flow counters contribute zero QE legs and
-  // read as pure settlement inventory.
+  // Bond-pool cash is a raw audit component; its QE lifetime legs let
+  // calculateMoneyAggregates net the QE-parked portion back into observed M2 while
+  // settlement inventory stays outside. Pools without flow counters add zero QE legs.
   for (const pool of bondPools) {
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolCash", pool.cashLocal ?? 0);
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolQeIn", pool.lifetime?.qeIn ?? 0);
@@ -434,25 +430,13 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     await writeSnapshot(bank.countryId, bank._id, bank.netMoneyCreatedLifetime ?? 0);
   }
 
-  // Countries with no central bank (Warsaw Pact / non-aligned command
-  // economies excluded from FOREX_ACTIVE_COUNTRIES — see updateCentralBanks
-  // in src/lib/currency/migration.ts) still accumulate real money-supply
-  // components above: household money from demography, government liquid
-  // from federalBudget.treasuryBalance, NPP/party liquid, all keyed by their
-  // OWN currency. But this write loop iterated `banks` alone, so those
-  // currencies' aggregates were computed and then silently discarded every
-  // turn — every one of these countries had zero moneySupplySnapshot rows
-  // for the entire run. This is the same shape as the bug already fixed in
-  // inflationRecalc.ts's "unbanked" pass (PL/HU/CS/RO/BG/YU). UKR/BLR/BAL do NOT
-  // need an entry here: they are on the Soviet ruble, and RU's central bank
-  // already writes the SUR aggregate, so the currency guard below skips them
-  // correctly rather than by accident. A command
-  // economy genuinely has no central-bank monetary policy to model — that's
-  // real (`monetaryOverhang`/`blackMarketPremium` on FederalBudget model
-  // exactly this) — but "no central bank" must not mean "no money-supply
-  // record". The synthetic bankId (the country's own id) and
-  // netMoneyCreatedLifetime: 0 reflect that there is no CB operations ledger
-  // behind these currencies.
+  // Countries with no central bank still accumulate real money-supply
+  // components above, keyed by their own currency. The loop below writes a
+  // snapshot for each unbanked currency once, with the country's own id as a
+  // synthetic bankId and netMoneyCreatedLifetime: 0, since no CB operations
+  // ledger exists. Currencies already covered by a bank are skipped: UKR/BLR/BAL
+  // are on the Soviet ruble, so RU's central bank writes the SUR aggregate.
+  // No central bank must not mean no money-supply record.
   const bankedCountryIds = new Set(banks.map((bank) => bank.countryId));
   const writtenCurrencies = new Set(banks.map((bank) => currencyFor(bank.countryId)));
   for (const budget of budgets) {

@@ -7,23 +7,18 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
 /**
  * Record each equity market pool's opening balance as `seedLocal`.
  *
- * The pools were inserted at `m2 x EQUITY_POOL_M2_SHARE` with no ledger counter
- * for that opening balance, so today the conservation identity cannot be
- * evaluated at all: there is no way to distinguish the ~41.5B USD the pool
- * STARTED with from the ~22.0B it later created out of nothing. Without this
- * field `poolConservationResidual` can only return NaN on live data.
+ * Pools were inserted at `m2 x EQUITY_POOL_M2_SHARE` with no ledger counter for
+ * that opening balance, so the conservation identity cannot be evaluated: there
+ * is no way to distinguish what the pool STARTED with from what it later
+ * created out of nothing. Without this field `poolConservationResidual` can
+ * only return NaN on live data.
  *
- * ─── THE DELIBERATE ASYMMETRY ───────────────────────────────────────────────
- * {@link inferSeedLocal} DOES count `inflowIn`, because it reconstructs history
- * as it actually happened: the pool really did receive that cash, however
- * improperly. `poolConservationResidual` does NOT count it, because it measures
- * what the pool was ENTITLED to.
- *
+ * {@link inferSeedLocal} DOES count `inflowIn`, reconstructing history as it
+ * actually happened (the pool really received that cash);
+ * `poolConservationResidual` does NOT, measuring what the pool was ENTITLED to.
  * Backfilling with `inferSeedLocal` therefore leaves each pool reading a
- * residual of exactly its lifetime `inflowIn` — the amount already minted. That
- * is the correct and honest starting reading, not a bug: the money was created,
- * the counter should say so, and the per-turn warning will keep saying so until
- * somebody decides what to do about the historical mint. It does not grow,
+ * residual of exactly its lifetime `inflowIn`: the money was minted, the
+ * counter says so, and the per-turn warning keeps saying so. It does not grow,
  * because the inflow leg is gone.
  *
  * Idempotent: pools that already carry `seedLocal` are skipped.

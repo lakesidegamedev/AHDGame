@@ -1,24 +1,23 @@
 /**
- * Per-turn synthetic-actor driver (issue #1993).
+ * Per-turn synthetic-actor driver.
  *
  * Shell module: takes a Db, performs a bounded set of player-only actions
  * through the REAL production seams, and never throws. runWorld calls it once
  * per turn after `processTurn` in synthetic mode only; pure-NPP runs never
  * call it, so their passive-lifecycle behavior is byte-identical.
  *
- * Per-turn budget (hard caps, first success wins per step):
+ * Per-turn budgets (first success wins per step):
  * - Crisis: at most one `submitCrisisDecision` on the first open interaction
  *   the synthetic head of state is authorized for.
  * - Survey: at most 3 `launchGovernmentProspect` attempts for the synthetic DD
- *   finance minister; stops at the first acceptance.
+ *   finance minister.
  * - Chair: at most one `acceptCentralBankChairSelection` when the US bank
  *   holds a pending appointment for the synthetic nominee.
  *
  * Every step is individually guarded: a missing population, an ineligible
- * minister, a closed window, or any production error is a quiet no-op (one
- * log line), never a turn failure. The manifest's turn-derived evidence
- * counters (`crisisDecidedInteractions`, `wealthListRows`, `playerFoundedCorps`)
- * are what prove these steps ran — this driver never claims coverage itself.
+ * minister, a closed window, or a production error is a quiet no-op (one log
+ * line), never a turn failure. The manifest's turn-derived counters are the
+ * evidence these steps ran; this driver never claims coverage itself.
  */
 
 import { ObjectId, type Db } from "mongodb";

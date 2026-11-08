@@ -228,7 +228,7 @@ export async function cascadeCharacterDeletion(
     );
 
   // Archive the deleted character's campaigns so they stop appearing on
-  // Campaign Operations alongside candidates still in the race (#1313).
+  // Campaign Operations alongside candidates still in the race.
   await archiveCampaignsForCandidates({
     db,
     candidates: activeCandidacies

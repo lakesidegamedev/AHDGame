@@ -637,22 +637,22 @@ export async function processCompletedElections(
 /**
  * Evict genuinely inactive holders from state-party leadership seats.
  *
- * Root cause this fixes: when a leadership election resolves with no candidates,
- * {@link processCompletedElections} leaves the incumbent in place unconditionally
- * — there was no inactivity-based eviction anywhere, so an abandoned chair could
- * hold a seat indefinitely (ticket #972: NJ Democratic chair inactive ~869h).
+ * Without this, a leadership election resolving with no candidates leaves the
+ * incumbent in place unconditionally, so an abandoned chair can hold a seat
+ * indefinitely.
  *
- * For every `statePartyOrg` seat (chair / vice chair / treasurer) whose holder's
- * user fails {@link isUserActive} at the lenient
- * {@link LEADERSHIP_INACTIVE_TURN_THRESHOLD}, the seat field is `$set` to `null`
- * and the existing leadership-removed notification is emitted. Callers run this
- * BEFORE `createMissingElections` so the next cycle opens against an empty seat.
+ * For every `statePartyOrg` seat (chair / vice chair / treasurer) whose holder
+ * fails {@link isUserActive} at the lenient
+ * {@link LEADERSHIP_INACTIVE_TURN_THRESHOLD}, the seat field is `$set` to
+ * `null` and the existing leadership-removed notification is emitted. Callers
+ * run this BEFORE `createMissingElections` so the next cycle opens against an
+ * empty seat.
  *
  * Batched: exactly one `characters` find and one `users` find over the collected
- * holder ids (never per-seat). Fully inert when everything is active — no writes,
- * no notifications. Data gaps never punish a holder: a missing character or user,
- * or missing activity timestamps, is treated as active (skip-on-missing, matching
- * `activeUserIds`). State-party scope only.
+ * holder ids (never per-seat). Fully inert when everything is active: no
+ * writes, no notifications. Data gaps never punish a holder: a missing
+ * character or user, or missing activity timestamps, is treated as active
+ * (skip-on-missing, matching `activeUserIds`). State-party scope only.
  *
  * @returns the number of seats vacated.
  */
@@ -780,7 +780,7 @@ export async function processStatePartyElections(
   try {
     const electionsCompleted = await processCompletedElections(currentTurn, effectiveNow);
     // Evict genuinely inactive holders BEFORE opening new elections, so a
-    // freshly-vacated seat's next election opens against an empty seat (#972).
+    // freshly-vacated seat's next election opens against an empty seat.
     const db = await getDb();
     await vacateInactiveLeadership(db, currentTurn, effectiveNow);
     const founding = await isFoundingPhaseActive(db);

@@ -1,26 +1,16 @@
 /**
- * European 1953 sphere-macro roster (#3719, #3723).
+ * European 1953 sphere-macro roster.
  *
- * GDP magnitudes are authored in the same game units as Austria's oracle
- * (AT = 7_500 ≈ 12% of West German 1953 regional sum). Historical notes cite
- * UN / national statistical yearbooks and Maddison-scale relative sizes;
- * values are strong defaults, not rails. Planned economies deliberately use
- * lower tradeExposure and never seed market corporations.
+ * GDP magnitudes use the same game units as Austria's oracle (AT = 7_500).
+ * Values are strong defaults, not rails. Planned economies use lower
+ * tradeExposure and never seed market corporations.
  *
- * AT/FI/GR/IE/FR/IT/SE/TR were briefly demoted to sphere-macro by false readiness
- * claim (#3723); contract probes re-promoted them to full-autonomous
- * economy-preview. Their authored macro specs remain below as dormant
- * reference for a possible future Tier-2 migration — they are NOT in
- * {@link EUROPE_1953_MACRO_SPECS} and must not be seeded by seedMacroCountries.
+ * AT/FI/GR/IE/FR/IT/SE/TR specs below are dormant reference: they are NOT in
+ * {@link EUROPE_1953_MACRO_SPECS} and must not be seeded.
  *
- * ES is the inverse case: demoted FROM full-autonomous TO sphere-macro for
- * 1953-default only (owner decision, 2026-07-28) — Franco's Spain has both
- * chambers (congresoDiputados, Senado) era-gated off, so a full-autonomous
- * classification modeled a legislature that never held an election. Its
- * authored spec below is active (not dormant) and IS seeded by
- * seedMacroCountries. ES stays full-autonomous in every later 1953+ preset
- * (1979/1991/1999/2007-default) and historical-presence in 2019-default —
- * this file only ever contributes to the 1953-default manifest.
+ * ES is active: era-gated off both chambers, so full-autonomous misclassified
+ * it. Its spec IS seeded. ES stays full-autonomous in later presets; this file
+ * only contributes to the 1953-default manifest.
  */
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
@@ -34,10 +24,10 @@ export const GREECE_ENTITY_ID = "GR";
 export const IRELAND_ENTITY_ID = "IE";
 
 /**
- * CountryId-backed market economies re-promoted to full-autonomous (#3723).
+ * CountryId-backed market economies re-promoted to full-autonomous.
  * Entity ids retained for dormant macro-spec reference / future migration.
  * ES is the exception: demoted back to sphere-macro for 1953-default only
- * (2026-07-28) — see the file-level doc comment above.
+ *, see the file-level doc comment above.
  */
 export const FRANCE_ENTITY_ID = "FR";
 export const ITALY_ENTITY_ID = "IT";
@@ -82,11 +72,9 @@ const ES_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
  * Authored 1953 specs. Populations: national censuses / UN early-1950s.
  * GDP: relative Maddison-scale sizing anchored to Austria = 7_500.
  *
- * Active Tier-2 roster excludes IE/FR/IT/SE/TR and Eastern bloc PL/CS/HU/RO/BG/YU
- * plus the union republics UKR/BLR/BAL
- * (re-promoted to full-autonomous). Their specs live in
- * {@link DORMANT_REPROMOTED_EUROPE_1953_MACRO_SPECS}. ES rejoins this active
- * roster (owner decision, 2026-07-28) — see the file-level doc comment above.
+ * Active roster excludes IE/FR/IT/SE/TR and Eastern bloc PL/CS/HU/RO/BG/YU
+ * plus union republics UKR/BLR/BAL, whose specs live in
+ * {@link DORMANT_REPROMOTED_EUROPE_1953_MACRO_SPECS}.
  */
 export const EUROPE_1953_MACRO_SPECS: readonly MacroCountrySeedSpec[] = [
   {

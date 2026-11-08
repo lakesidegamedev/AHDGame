@@ -1,24 +1,20 @@
 /**
  * The banking invariant catalog, as code.
  *
- * Private banking's failures never showed up as exceptions. Every write was
- * correct against its own local arithmetic, and the disease lived between two
- * correct writes: a deposit book credited back to the money supply while the
- * cash stayed in the vault, interest credited with nothing debited, a player
- * balance "held" by a bank that never received it. A catalog that lives in a
- * design document cannot catch that. One that runs can.
+ * Banking failures rarely raise exceptions: each write is locally correct and
+ * the disease lives between writes (money supply credited without a matching
+ * vault movement, interest credited with nothing debited, a hold the bank never
+ * received). A catalog in a design doc cannot catch that; one that runs can.
  *
- * Each invariant below is a pure predicate over plain data. Nothing here knows
- * about the database, the clock, or a request. Turn phases, the settlement
- * journal, the simulation harness and the tests all feed it the same shapes
- * and get the same verdicts, which is the point: there is one definition of
- * "the books balance", not one per caller.
+ * Each invariant is a pure predicate over plain data, with no DB, clock, or
+ * request. Turn phases, the settlement journal, the simulation harness and the
+ * tests all feed it the same shapes and get the same verdicts: one definition
+ * of "the books balance", not one per caller.
  *
- * Sign convention, shared with the money-movement primitive: a debit takes
- * from a balance, a credit gives to one, a mint is the outside world's side of
- * a credit and a burn the outside world's side of a debit. `mint X + credit X`
- * nets to zero and so does `debit X + burn X`, so a closed system with two
- * explicit doors in it can be checked with one sum.
+ * Sign convention: a debit takes, a credit gives, a mint is the outside world's
+ * side of a credit, a burn the outside world's side of a debit. `mint X +
+ * credit X` nets to zero, as does `debit X + burn X`, so a closed system with
+ * two doors can be checked with one sum.
  */
 
 export type ValueLegKind = "debit" | "credit" | "mint" | "burn" | "asset";

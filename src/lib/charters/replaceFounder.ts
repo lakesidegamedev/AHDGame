@@ -3,34 +3,15 @@ import type { Character, PartyCharter, PartyCharterSignature } from "@/lib/db/ty
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
 
 /**
- * Phase 6 — replace a founder slot. Two entry states are accepted:
- *
- *  - `founder-replacement`: the involuntary path — a founder was voided,
- *    rejected, or banned and the slot must be refilled to proceed.
- *  - `pending-signatures`: the voluntary path (suggestion #287) — the
- *    proposer / a founder swaps out an inactive founder who cannot come
- *    online before the charter expires. Only an UNSIGNED slot may be swapped
- *    this way: a founder who has already signed has committed, so their slot
- *    is not eligible for a voluntary swap.
- *
- * In both cases the charter ends in `pending-signatures` with the new
- * founder slot reset to unsigned + un-rejected.
- *
- * The replacement character must exist, be human-owned (have a `userId`),
- * and live in the same country as the charter.
- *
- * Authorization is the API route's job — this helper trusts that the
- * caller has gated on chair / admin / current-founder permission.
- *
- * Edge cases:
- *  - Outgoing characterId not on the charter → returns `outgoing-not-founder`.
- *  - Outgoing slot already signed (voluntary path) → `outgoing-already-signed`.
- *  - Replacement characterId already a founder → returns `replacement-already-founder`.
- *  - Replacement character missing / NPP / wrong-country → returns the
- *    matching `replacement-*` reason.
- *  - Charter not in a replaceable state → returns `not-replaceable`.
- *
- * See plan §"Phase 6 — Tasks" 6.2 + D3.
+ * Replace a founder slot. Accepts two entry states:
+ *  - `founder-replacement`: involuntary; the founder was voided,
+ *    rejected, or banned.
+ *  - `pending-signatures`: voluntary swap of an inactive founder; only an
+ *    UNSIGNED slot is eligible (a signed founder has committed).
+ * Both end in `pending-signatures` with the new slot unsigned and
+ * un-rejected. The replacement character must exist, be human-owned, and be
+ * in the same country as the charter. Authorization (chair / admin / current
+ * founder) is the caller's job.
  */
 export type ReplaceFounderResult =
   | { ok: true; status: "pending-signatures" }
@@ -65,7 +46,7 @@ export async function replaceFounder(
     c.equals(outgoingCharacterId)
   );
   if (outgoingIndex < 0) return { ok: false, reason: "outgoing-not-founder" };
-  // Voluntary swap (#287) may only remove a founder who has NOT signed. A
+  // Voluntary swap may only remove a founder who has NOT signed. A
   // signed founder has committed; their slot is off-limits to a swap.
   if (isVoluntary) {
     const outgoingSig = charter.signatures.find((s) => s.characterId.equals(outgoingCharacterId));
@@ -90,7 +71,7 @@ export async function replaceFounder(
     return { ok: false, reason: "replacement-wrong-country" };
   }
 
-  // Founder adjacency (2026-07-22): the replacement must live in or
+  // Founder adjacency: the replacement must live in or
   // adjacent to the anchor founder's (slot 0) home state — the same rule
   // `draftCharter` enforces on the original trio. When the anchor itself
   // is the outgoing slot, the outgoing anchor's home state still anchors

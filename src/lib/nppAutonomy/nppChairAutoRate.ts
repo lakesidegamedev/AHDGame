@@ -133,22 +133,17 @@ export async function processNppChairAutoRate(
   commonIndicators?: EuroPolicyIndicators
 ): Promise<void> {
   if (bank.chairMode !== "npp") return;
-  // A government-controlled bank (the pre-1997 Bank of England) has no rate of
-  // its own to set: the head of government or the finance minister sets it, and
-  // the technocrat chair is a forecaster, not an authority. Without this the
-  // autonomous chair moved the rate anyway and stamped `lastRateChangeTurn`,
-  // and because the government shares that one cooldown field the Treasury's
-  // window slammed shut every time it opened — the rate card sat permanently on
-  // "on cooldown" and the government could never actually set the rate (#1250).
-  // `fomcMeetingTurn` and `seedFomcBoards` already make the same check.
-  //
-  // A government that never uses the lever would otherwise freeze the rate for
-  // the whole world: the 1991 UK sat at 4.5% for its first 28 turns through 15%
-  // inflation. So once the government has left the rate alone for a quarter,
-  // the Treasury acts on the bank's standing advice: the same bounded Taylor
-  // step, recorded in the published history. It is paced by its own field and
-  // never touches `lastRateChangeTurn`, so the government's window stays open
-  // and any rate it sets wins.
+  // A government-controlled bank (e.g. the pre-1997 Bank of England) has no
+  // independent rate authority: the head of government or finance minister sets
+  // it, and the technocrat chair only forecasts. Without this special case the
+  // autonomous chair moved the rate and stamped `lastRateChangeTurn`, sharing
+  // the government's cooldown field and permanently locking the rate card to
+  // "on cooldown". A government that never uses the lever would otherwise
+  // freeze the rate indefinitely, so once it has been idle for a quarter the
+  // Treasury applies the bank's standing advice as a bounded Taylor step,
+  // recorded in published history. It never touches `lastRateChangeTurn`, so
+  // the government's window stays open and any rate it sets wins.
+  // `fomcMeetingTurn` and `seedFomcBoards` make the same check.
   const governmentControlled = isBankGovernmentControlled(bank, countryId, startingYear);
   if (isCommandEconomy(countryId, currentYear, commandEconomyEnabled)) return;
 
@@ -267,7 +262,7 @@ export async function processNppChairAutoRate(
   // produces a continuous value, and storing it raw left the bank on a rate no
   // human chair could ever step away from: the card offers base +/-0.25, which
   // from an off-grid base is still off-grid, so every submission was refused
-  // with "Rate must be in 0.25% increments" (ticket #1238).
+  // with "Rate must be in 0.25% increments".
   const newRate = snapToPrimeRateGrid(bank.primeRate + step);
   // Snapping can land back on the current rate for a sub-quarter-point step;
   // writing that would burn the cooldown on a no-op move.

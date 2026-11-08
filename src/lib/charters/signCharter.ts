@@ -3,25 +3,17 @@ import type { Character, PartyCharter } from "@/lib/db/types";
 import { ratifyCharter } from "./ratifyCharter";
 
 /**
- * Phase 6 — record a founder's signature on a charter. Transitions the
- * charter to `ratified` (and spawns the `politicalParties` row) once all
- * 3 founders have signed.
+ * Record a founder's signature on a charter. Transitions the charter to
+ * `ratified` (and spawns the `politicalParties` row) once all 3 founders
+ * have signed.
  *
- * Founder identity is `characterId` — but auth runs against the session's
- * `userId`, so the caller passes both: `signerCharacterId` (which slot to
- * sign) and `signerUserId` (the authenticated session user, used to verify
- * the character is owned by the caller).
+ * `signerCharacterId` is the founder slot to sign; `signerUserId` is the
+ * authenticated session user, used to verify ownership of that character.
  *
- * Edge cases:
- *  - Character isn't a founder → returns `not-a-founder`.
- *  - Caller doesn't own the character → returns `not-character-owner`.
- *  - Charter not in `pending-signatures` → returns `not-signable`.
- *  - Character already signed → no-op (idempotent), returns the current
- *    signature count.
- *  - Character already rejected → returns `already-rejected`; they must
- *    invalidate via `replaceFounder` first.
- *
- * See plan §"Phase 6 — Tasks" 6.2.
+ * Returns `not-a-founder`, `not-character-owner`, `not-signable`,
+ * `already-rejected` on the corresponding edge case; signing twice is an
+ * idempotent no-op. A character who rejected must be replaced via
+ * `replaceFounder` before signing.
  */
 export type SignCharterResult =
   | {

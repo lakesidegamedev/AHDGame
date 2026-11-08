@@ -10,7 +10,7 @@
  *
  *  - **Revocation did nothing at all.** It set `status: "revoked"`, refused to
  *    refund the owner while deposits existed, and left every depositor pointed
- *    at a dead bank with `npcDeposits` still on its books. That is ticket 1093:
+ *    at a dead bank with `npcDeposits` still on its books. That is:
  *    a revoke erased the balance sheet and stranded the money.
  *  - **Charter switch and admin unwind duplicated money.** Both credited the
  *    central bank's `externalBroadMoney` with the household deposit book while
@@ -388,22 +388,21 @@ async function returnDepositBookInner(
   }
   const sheetOptions = { playerDepositsAreLiabilities };
 
-  // Under the pointer model the pointer flips first, outside the money move:
-  // it is not a money movement at all, it is a label, idempotent by
-  // construction, and doing it first means a crash mid-way leaves depositors
-  // free of a dead bank rather than trapped in one.
+  // Pointer model: flip the pointer first, outside the money move. It is a
+  // label, not a money movement, and idempotent by construction, so a
+  // crash mid-way leaves depositors free of a dead bank rather than
+  // trapped in one.
   //
-  // Under the account model the player balances the bank held are part of
-  // the book it must return (their backing came into the vault with the
-  // holder change, so it leaves with the household deposits, through the same
-  // waterfall, insured the same way), the pointer is a projection of the
-  // account, and both move AFTER the money has: the accounts were frozen by
-  // the caller before the waterfall started (see `freezeAccountsAt`) and are
-  // released to the central bank, open again, together with their pointers,
-  // only once the backing and the liability have both landed there. A crash
-  // in between leaves them frozen at the dead bank, which recovery finishes;
-  // it never leaves them open at a bank that no longer holds their cash, and
-  // never leaves the pointer saying one thing and the account another.
+  // Account model: player balances the bank held are part of the book it
+  // must return (their backing came in with the holder change, so it
+  // leaves with the household deposits through the same waterfall,
+  // insured the same way). Accounts were frozen by the caller before the
+  // waterfall (see `freezeAccountsAt`) and are released to the central
+  // bank, open again, with their pointers, only once backing and liability
+  // have both landed. A crash in between leaves them frozen at the dead
+  // bank, which recovery finishes; it never leaves them open at a bank
+  // that no longer holds their cash, and never leaves the pointer and
+  // account disagreeing.
   let depositorsFlipped = 0;
   if (!playerDepositsAreLiabilities) {
     const flip = await db
@@ -522,10 +521,8 @@ async function returnDepositBookInner(
     largest.paid = toCents(largest.paid + remainder);
   }
 
-  // (4) Cash left after every creditor belongs to the owner, but only as far as
-  // book equity: anything above that is still owed to somebody, and paying it
-  // out is the "distribution funded by borrowing" hole the upstream guard
-  // already refuses to open.
+  // Cash left after every creditor belongs to the owner, but only up to
+  // book equity; anything above that is still owed to somebody.
   const surplus = Math.max(0, cashAfterDeposits - interbankPaid);
   const ownerResidual = options.releaseResidualToOwner ? Math.max(0, Math.min(surplus, equity)) : 0;
 
@@ -790,8 +787,8 @@ async function returnDepositBookInner(
   }
 
   // The journaled treasury-backstop projection moves cash (plus the
-  // spending/surplus legs); `debt.principal` belongs to the bond ledger (see
-  // bonds/sovereignPrincipal.ts) and is correctly left alone (#1975).
+  // spending/surplus legs); `debt.principal` belongs to the bond ledger
+  // (see bonds/sovereignPrincipal.ts) and is correctly left alone.
 
   const result: DepositBookReturnResult = {
     returned: true,
@@ -988,10 +985,9 @@ function creditorClaimProjections(
 /**
  * Zero the deposit aggregates AFTER the cash has moved, never before.
  *
- * Order matters and used to be the other way round: `adminUnwind` cleared the
- * aggregates so that `revokeCharter` would see an empty book and refund the
- * owner, which is how a shareholder ended up with the depositors' cash. As
- * the last projection of the transition, it cannot run before the legs.
+ * As the last projection of the transition, it cannot run before the legs: a
+ * premature clear makes the revoke path see an empty book and hand the
+ * depositors' cash to the shareholder.
  */
 function depositAggregateClearProjection(
   bankIdHex: string,
@@ -1027,7 +1023,7 @@ function depositAggregateClearProjection(
  *
  * The balance/spending/surplus legs stay `$inc` (concurrent-safe).
  * `debt.principal` belongs to the bond ledger (see bonds/sovereignPrincipal.ts)
- * and is correctly left alone (#1975).
+ * and is correctly left alone.
  */
 export async function debitTreasuryDepositInsurance(
   db: Db,

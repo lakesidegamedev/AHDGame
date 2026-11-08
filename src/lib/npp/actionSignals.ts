@@ -1,24 +1,17 @@
 /**
- * NPP ACTION CONTEXT SIGNALS (V3/V4)
+ * NPP ACTION CONTEXT SIGNALS
  *
- * The action AI historically decided what an NPP should do from three inputs:
- * whether they hold office, their personality, and what they can afford. That
- * makes for a politician who campaigns identically the week before an election
- * and three years out, who keeps buying advertising at 100 favorability where the
- * gain is capped away to nothing, and who donates to a party treasury regardless
- * of whether it is flush or empty.
- *
- * This module gathers the missing world-state — election proximity, whether the
- * NPP is actually running and actually contested, whether their party is in
- * government, and how healthy that party's treasury is — into a lookup the
- * action AI can consult per NPP with no further I/O.
+ * Gathers world-state the action AI cannot derive from office, personality,
+ * and affordability alone: election proximity, whether the NPP is actually
+ * running and contested, whether their party is in government, and how healthy
+ * that party's treasury is. Exposed as a per-NPP lookup with no further I/O.
  *
  * **The load discipline is the point.** `processNppActions` iterates every
- * non-retired NPP with action points, which is tens of thousands of documents in
- * a mature world. Every field here is fetched in a fixed number of queries
- * *before* that cursor opens and resolved from in-memory maps inside it. Nothing
- * in this file may ever grow a per-NPP round trip; that would turn a single turn
- * phase into an O(NPPs) query storm.
+ * non-retired NPP with action points, tens of thousands of documents in a
+ * mature world. Every field here is fetched in a fixed number of queries
+ * *before* that cursor opens and resolved from in-memory maps inside it.
+ * Nothing in this file may ever grow a per-NPP round trip; that would turn a
+ * single turn phase into an O(NPPs) query storm.
  */
 
 import type { Db, ObjectId } from "mongodb";

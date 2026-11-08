@@ -389,7 +389,7 @@ export function buildOfficeType(seat: HistoricalSeat): OfficeType | null {
       return { type: "peoplesCongress", state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
     case "republicSupremeSoviet":
       // RU republic Supreme Soviets — the one-party sub-national analog of the
-      // CN People's Congress (multi-seat per republic, seatsHeld-backed). #3386.
+      // CN People's Congress (multi-seat per republic, seatsHeld-backed)..
       return { type: "republicSupremeSoviet", state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
     case "bundestag":
       // DE Bundestag is a multi-seat Land-proportional chamber; seatsHeld lives on
@@ -791,7 +791,7 @@ export async function seedFromSeats(
       // (the CN People's Congress analog). Without this the backfilled
       // delegation collapses to one official per republic and the chamber seats
       // ~1 of its authored ~5000 seats, so the elections resolve near-empty
-      // (#3386). Kept in sync with backfillMissingSeats.ts SEATS_HELD_OFFICE_TYPES.
+      //. Kept in sync with backfillMissingSeats.ts SEATS_HELD_OFFICE_TYPES.
       seat.officeType === "republicSupremeSoviet" ||
       // Beta-parliament office-type keys (FR/IT/ES/SE/TR + ES 1953 Cortes).
       seat.officeType === "deputy" ||

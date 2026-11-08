@@ -239,32 +239,15 @@ export const SOUTHERN_REALIGNMENT_CHECKPOINT: EraCheckpoint = {
   // term — the sharpest, best-documented span of the defection.
   durationTurns: 15 * 48,
   historicalWindow: { startYear: 1954, endYear: 1969 },
-  // BUCKET targets only. These were authored as three archetype targets
-  // (`rural_traditionalists`, `evangelicals`, `union_trades`) plus an
-  // additive `race:white` pair; the archetype halves have been folded into
-  // the buckets they already projected onto at runtime, using the same
-  // ARCHETYPE_BUCKET_MAP weights the engine applied:
-  //   rural_traditionalists = education:no_college .5, race:white .3, age:mature .2
-  //   evangelicals          = race:white .6, education:no_college .4
-  //   union_trades          = education:no_college .4, wealth:low .35, race:black .25
-  // so, per axis, economicLean:
-  //   race:white          3.5 + .3(4.0) + .6(3.5)          = 6.8
-  //   education:no_college     .5(4.0) + .4(3.5) + .4(-1.5) = 2.8
-  //   age:mature               .2(4.0)                      = 0.8
-  //   wealth:low                        .35(-1.5)           = -0.525
-  //   race:black                        .25(-1.5)           = -0.375
-  // and socialLean:
-  //   race:white          3.0 + .3(3.5) + .6(3.0)          = 5.85
-  //   education:no_college     .5(3.5) + .4(3.0) + .4(-1.0) = 2.55
-  //   age:mature               .2(3.5)                      = 0.7
-  //   wealth:low                        .35(-1.0)           = -0.35
-  //   race:black                        .25(-1.0)           = -0.25
-  //   plus a #1165 consolidation countervail of -1.0 (see the race:black
-  //   social target below), for a social total of -1.25.
-  // Contributions landing on the same (dim, bucket, axis) are summed into one
-  // target rather than emitted as duplicates; the engine adds them either way
-  // (see `applyDurableBucketShift`'s accumulator), one row per bucket just
-  // keeps the table readable.
+  // BUCKET targets only. The archetype targets (`rural_traditionalists`,
+  // `evangelicals`, `union_trades`) were folded into the buckets they already
+  // projected onto via ARCHETYPE_BUCKET_MAP, and per-axis contributions summed:
+  //   economicLean: race:white 6.8, education:no_college 2.8, age:mature 0.8,
+  //     wealth:low -0.525, race:black -0.375
+  //   socialLean:   race:white 5.85, education:no_college 2.55, age:mature 0.7,
+  //     wealth:low -0.35, race:black -0.25, plus a -1.0 race:black countervail
+  // Contributions on the same (dim, bucket, axis) are summed into one target;
+  // the engine adds either way, one row per bucket just keeps the table readable.
   targets: [
     {
       dim: "race",
@@ -332,16 +315,10 @@ export const SOUTHERN_REALIGNMENT_CHECKPOINT: EraCheckpoint = {
       axis: "economicLean",
       totalShift: -0.375,
     },
-    // Recalibrated (#1165): the folded archetype math above leaves race:black
-    // social at -0.25 while the white-defection pulls on the SHARED buckets
-    // (education:no_college +2.55, age:mature +0.7) land on Black cells too —
-    // every Black Deep South cell is no_college-adjacent, so Brown net-drags
-    // the Black electorate rightward (+0.5 social in Alabama, worse in
-    // Mississippi) even as the authored model consolidates it Democratic.
-    // race:black is the only bucket Black cells read that white cells do not,
-    // so it carries an explicit -1.0 consolidation countervail on top of the
-    // folded -0.25. White cells are untouched (they never read this bucket);
-    // the checkpoint's white rightward movement is unchanged.
+    // race:black is the only bucket Black cells read that white cells do not.
+    // The shared buckets above net-drag the Black electorate rightward, so
+    // this explicit -1.0 consolidates it back on top of the folded -0.25.
+    // White cells never read this bucket, so their shift is unchanged.
     {
       dim: "race",
       bucket: "black",
@@ -391,27 +368,20 @@ const NORTHERN_BLACK_ELECTORATE_STATES = [
 const YANKEE_STATES = ["ME", "NH", "VT", "MA", "RI", "CT"] as const;
 
 /**
- * The road to 1960: the pre-civil-rights-era drift between the 1953 seed and
- * the Kennedy-Nixon dead heat. No single statute or ruling drives it (hence no
- * trigger case); it is the compound of four documented late-1950s movements:
+ * Pre-civil-rights-era drift between the 1953 seed and the Kennedy-Nixon dead heat.
+ * No single statute drives it, so there is no trigger case; it is the compound of
+ * four late-1950s movements:
  *
- *  - NORTHERN Black Democratic consolidation (Little Rock 1957 through the
- *    1960 sit-ins): Eisenhower took ~39% of the Black vote in 1956; Kennedy
- *    held ~70%+ in 1960. Northern-only — Southern Black voters largely could
- *    not vote until the VRA checkpoint enfranchises them.
- *  - The 1958 recession labor swing: the sharpest postwar downturn to date
- *    plus peak union density produced the 1958 Democratic wave (House D+12);
- *    working-class economics move left everywhere.
- *  - Suburbanization: the growing middle class trends mildly Republican on
- *    economics (Levittown-era homeownership), the counterweight that kept the
- *    1960 presidential result a coin flip despite the congressional wave.
- *  - Yankee New England's Democratic drift: ME/NH/VT and southern New England
- *    begin leaving the old Republican column (1958: Muskie's Maine).
+ *  - Northern Black Democratic consolidation (Little Rock through the 1960 sit-ins);
+ *    Southern Black voters largely cannot vote until the VRA checkpoint enfranchises them.
+ *  - The 1958 recession labor swing: peak union density plus the sharpest postwar
+ *    downturn produced the 1958 Democratic wave; working-class economics move left.
+ *  - Suburbanization: the new middle class trends mildly Republican on economics,
+ *    keeping 1960 a coin flip despite the congressional wave.
+ *  - Yankee New England's Democratic drift (ME/NH/VT and southern New England).
  *
- * Validation anchor: the endpoint world state should rank-correlate with the
- * real 1960 state two-party margins outside the org-dominated South, with a
- * near-even national mean (1960 two-party margin D+0.2; House 1958 D+12
- * fading to 1960 D+5.5).
+ * Validation anchor: endpoint world state should rank-correlate with real 1960 state
+ * two-party margins outside the South, with a near-even national mean.
  */
 const ROAD_TO_1960_CHECKPOINT: EraCheckpoint = {
   id: "road-to-1960",
@@ -569,16 +539,12 @@ const VOTING_RIGHTS_ACT_ENFRANCHISEMENT_CHECKPOINT: EraCheckpoint = {
 
 /**
  * Engel v. Vitale (1962, banned state-composed school prayer): a national
- * religious-conservative reaction, strongest in the South and Midwest (see
- * the historical-grounding note this ticket was scoped against). Modeled as
- * a national religious-conservative bucket nudge (race:white,
+ * religious-conservative reaction, strongest in the South and Midwest.
+ * Modeled as a national religious-conservative bucket nudge (race:white,
  * education:no_college) PLUS an additional regional (Deep South + Midwest)
- * top-up on the same buckets and axis, demonstrating a
- * SCOTUS ruling with BOTH national and regional components in one case. Not
- * a race/equal-protection case — genuinely composition-driven (see
- * divergence.ts): a differently-composed Court that upheld school prayer
- * delays this checkpoint to its fallback, same mechanism as the Southern
- * realignment above.
+ * top-up on the same buckets and axis: a SCOTUS ruling with BOTH national and
+ * regional components. Composition-driven, so a differently-composed Court
+ * that upheld school prayer delays this checkpoint to its fallback.
  */
 const ENGEL_SCHOOL_PRAYER_CHECKPOINT: EraCheckpoint = {
   id: "engel-school-prayer-1962",
@@ -620,21 +586,13 @@ const ENGEL_SCHOOL_PRAYER_CHECKPOINT: EraCheckpoint = {
 };
 
 /**
- * Reynolds v. Sims (1964, "one person, one vote" for state legislatures) —
- * the owner-flagged highest-value reapportionment case: forced reapportionment
- * shifts POWER from rural to urban/suburban voters. That is fundamentally a
- * WEIGHT/representation shift (district lines, seat counts), which this
- * lean-based mechanism does not model — see `demographicSignal` on the
- * docket entry and the file header of `src/lib/scotus/presetData/1953.ts`.
- * This checkpoint models only the LEAN-shaped ECHO of that shift: newly-
- * empowered urban/working-class Midwest voters (proxied here by the
- * `wealth:low` bucket, since "urban working class" has no single Layer-1
- * bucket) drift modestly Democratic once their votes carry proportionate
- * weight. Explicitly a small, approximate proxy — the real effect this case
- * had on American politics is not fully captured by a lean nudge, and no
- * attempt is made here to pretend otherwise. Composition-driven (not a
- * race/equality case): see `divergence.ts` and `1953.test.ts`'s
- * "branch that fires depends on composition" case for Reynolds specifically.
+ * Reynolds v. Sims (1964, "one person, one vote" for state legislatures).
+ * Forced reapportionment shifts weight/representation from rural to
+ * urban/suburban voters, which this lean-based mechanism does not model.
+ * This checkpoint models only the LEAN-shaped ECHO: newly-empowered urban
+ * working-class Midwest voters (proxied by `wealth:low`, since "urban working
+ * class" has no single Layer-1 bucket) drift modestly Democratic once their
+ * votes carry proportionate weight. An explicit small proxy, not a full model.
  */
 export const REYNOLDS_REAPPORTIONMENT_CHECKPOINT: EraCheckpoint = {
   id: "reynolds-reapportionment-1964",
@@ -736,12 +694,10 @@ export function resolveCheckpointStartTurn(
   checkpoint: EraCheckpoint,
   docketCase: DocketCaseLookupEntry | undefined,
   /**
-   * Pre-iteration clock, so both branches below return a turn in the SAME
-   * space. `fallbackStartTurn` is authored as `yearToTurn(...)`, a CALENDAR
-   * turn, but `decidedAtTurn` is stamped with the raw `currentTurn`; on a world
-   * with a founding phase those are a game year apart, so the window used to
-   * open a year early or late depending on which branch resolved (#1208).
-   * Omitted (or empty) on worlds with no founding phase, where it is identity.
+   * Pre-iteration clock, so both branches return a turn in the SAME space.
+   * `fallbackStartTurn` is a CALENDAR turn but `decidedAtTurn` is a raw game
+   * turn; on worlds with a founding phase they differ by a game year. Omitted
+   * (or empty) on worlds with no founding phase, where it is identity.
    */
   clock?: CalendarClock
 ): number {

@@ -47,7 +47,7 @@ export interface PoliticalMacroInputs {
    * a neutral whose behaviour must be preserved.
    *
    * `era` is OPT-IN and must mirror whatever the caller converts the OTHER side
-   * of its comparison with (ticket #1142). The inverse runs over
+   * of its comparison with. The inverse runs over
    * `metricQualityRange`, which moves with the era: `powerGridReliability` spans
    * 85.5-98.3 in 1958 against a modern 97-99.9, and those two barely overlap. A
    * caller that band-converts its target with a year but reads `current` without

@@ -28,9 +28,9 @@ import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/leg
 const DECAY_FACTOR = getPolicyDecayFactor();
 
 /**
- * Graded synthetic per-turn display rate for an effectTargetsWeighted target (Bug #0962).
- * Mirrors the decay path's magnitude (effectiveIntensity × rangeScale) so the metric-detail
- * forward projection matches what the turn actually applies. Center option → 0.
+ * Graded synthetic per-turn display rate for an effectTargetsWeighted target.
+ * Mirrors the decay path's magnitude (effectiveIntensity x rangeScale) so the
+ * forward projection matches the actual turn. Center option returns 0.
  */
 export function syntheticTickRate(params: {
   options: IntensityOption[];
@@ -40,7 +40,7 @@ export function syntheticTickRate(params: {
   isHigherBetter: boolean;
   minValue: number;
   maxValue: number;
-  /** Current metric value — the operating scale for large-range metrics (Bug #0962). */
+  /** Current metric value, the operating scale for large-range metrics. */
   referenceValue: number;
 }): number {
   const {
@@ -56,7 +56,7 @@ export function syntheticTickRate(params: {
   const intensity = effectiveIntensity(optionIntensity(options, optionIndex));
   if (intensity === 0) return 0;
   const effectSign = isHigherBetter ? 1 : -1;
-  // This projects the DECAY path, so use the normalized national decay scope (#0962)
+  // This projects the DECAY path, so use the normalized national decay scope
   // to match what the turn applies — state laws (scope 1) are unchanged.
   return (
     intensity *
@@ -130,7 +130,7 @@ export async function computeStateTickRates(
           .find({ stateId: { $in: [stateId, ...nationalScopeIds] } })
           .toArray(),
         db.collection<State>("states").findOne({ _id: stateId, countryId }),
-        // Current metric values give the operating scale for large-range metrics (#0962).
+        // Current metric values give the operating scale for large-range metrics.
         findMergedRegionMetrics(db, { _id: stateId }),
       ]);
       [politicalDoc, allPolicyDocs, stateDoc, stateMetricsDoc] = result;
@@ -143,8 +143,8 @@ export async function computeStateTickRates(
       : [];
 
     // National policies apply their per-region share to each region. This per-country
-    // multiplier scopes the TICK path (matching processStatePolicyEffects); the decay
-    // projection re-normalizes it via nationalDecayScope inside syntheticTickRate (#0962).
+    // multiplier scopes the TICK path; the decay projection re-normalizes it via
+    // nationalDecayScope in syntheticTickRate.
     const nationalScopeMultiplier = getFederalMultiplier(countryId);
     const activePolicies = [
       ...statePolicies.map((p: StatePolicy) => ({ ...p, scopeMultiplier: 1.0 as number })),
@@ -199,7 +199,7 @@ export async function computeStateTickRates(
           target.metricId
         );
 
-        // Current value = the operating scale for large-range metrics (#0962). When the
+        // Current value = the operating scale for large-range metrics. When the
         // state has no stored value, fall back to minValue (≈0 for the currency metrics),
         // which yields ~0 rate and is harmlessly skipped — never the midpoint, which for a
         // 10M-capped metric would re-introduce an absurd scale.
@@ -218,9 +218,8 @@ export async function computeStateTickRates(
           boardValue ??
           (typeof storedValue === "number" ? storedValue : (metricDef?.minValue ?? 0));
 
-        // Graded synthetic rate (Bug #0962): matches the decay path's magnitude so
-        // the forward projection reflects "Maximum" vs "Moderate" and scales for
-        // large-range metrics.
+        // Graded synthetic rate must match the decay path's magnitude so the forward
+        // projection reflects "Maximum" vs "Moderate" and scales for large-range metrics.
         const rate = syntheticTickRate({
           options,
           optionIndex: optIdx,

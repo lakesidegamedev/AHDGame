@@ -65,7 +65,7 @@ function mapSpendError(step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Er
 /**
  * Charge a canvass (optional surrogate-pool draw, character funds+actions)
  * and apply the turnout boost so the result is exactly-once on every
- * topology (issue #1672).
+ * topology.
  *
  * Under real transactions the legs, the turnout write, and the idempotency
  * receipt join the transaction and commit atomically, preserving the old

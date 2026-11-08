@@ -1,19 +1,14 @@
 /**
  * Atomic debit + credit for "Send to Member" treasury actions.
  *
- * Extracted from `src/app/api/country/[code]/parties/[id]/send/route.ts`
- * so the same logic runs in both the immediate path (`transactionApproval
- * Mode === "single"`) and the two-person-approval execute step
- * (`.../treasury/pending/[txnId]/approve`). Behavior must stay identical
- * to the legacy immediate path — balance race-protection, replica-set
- * vs standalone Mongo fallback, admin log, treasury audit log,
- * activity log — so existing tests against the immediate path continue
- * to apply.
+ * Shared by the immediate path (`transactionApprovalMode === "single"`) and
+ * the two-person-approval execute step. Balance race-protection, replica-set
+ * vs standalone Mongo fallback, admin log, treasury audit log, and activity
+ * log stay identical across callers.
  *
- * Auth, target lookup, and player-transfers feature gate stay in the
- * route layer (different in each calling context). Reserve breach
- * computation is also up to the caller; pass the warning string (or
- * null) so it shows in the admin log + response message.
+ * Auth, target lookup, and the player-transfers feature gate stay in the
+ * route layer. Reserve breach computation is up to the caller; pass the
+ * warning string (or null) so it shows in the admin log and response message.
  */
 
 import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
@@ -139,11 +134,9 @@ export async function executeSendToMember(
       return errorResponse(400, "Insufficient treasury funds");
     }
     // The debit has landed and there is no transaction to roll back, so
-    // every exit from here on must either complete the credit or put the
-    // money back. A THROWN credit was previously not compensated at all:
-    // it escaped with the treasury already short, and the approve route
-    // read that as "nothing happened" and reopened the row for a second
-    // debit.
+    // every exit from here must either complete the credit or refund the
+    // debit. A thrown credit that escapes leaves the treasury short and
+    // lets a retry debit again.
     const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
       try {
         await db

@@ -14,11 +14,11 @@ import type { TxThresholds } from "@/lib/db/types/financialTxLog";
  * sell that the quote can cover. Sell quote placement and cancellation live
  * here as well.
  *
- * Money conservation: at placement the fund's `cashAnchor` is debited (atomic,
- * balance-gated) by the full anchor escrow. On fill the matcher refunds the
- * unused portion (`escrow − actualCost`) back to `cashAnchor`. A float fill
- * routes cost to the issuer; a shareholder market sell routes escrow to that
- * seller. On cancel the remaining unfilled escrow returns to `cashAnchor`.
+ * Money conservation: at placement the fund's `cashAnchor` is debited by the
+ * full anchor escrow. On fill the matcher refunds `escrow - actualCost` back to
+ * `cashAnchor`. A float fill routes cost to the issuer; a shareholder market
+ * sell routes escrow to that seller. On cancel the unfilled escrow returns to
+ * `cashAnchor`.
  */
 
 /**
@@ -59,7 +59,7 @@ export interface PlaceFundShareBuyOrderInput {
   limitPriceLocal: number;
   /** FX rate (local per 1 ₳) for the target corp's home currency. */
   fxRate: number;
-  /** Game turn stamped on the ledger escrow row (#992 tranche 4). */
+  /** Game turn stamped on the ledger escrow row. */
   turn: number;
   /** Reused for a turn pass placing many fund bids. */
   thresholds?: TxThresholds;
@@ -186,7 +186,7 @@ function fundBuyOrderRows(
     note: "limit_buy_order_escrow",
     createdAt: now,
   };
-  // #992 tranche 4: fund-subject escrow leg. The debit already moved
+  // Fund-subject escrow leg. The debit already moved
   // cashAnchor, so this row evidences it (same order_escrow reason as the
   // character/corporation placement rows; the refund shares it so a
   // placement nets against its own cancel per currency). Fund-subject rows
@@ -466,7 +466,7 @@ export async function cancelFundShareOrder(
   const refundAnchor = claimed.escrowAnchor ?? 0;
   if (refundAnchor > 0) {
     await refundFundCashAnchor(db, claimed.placerFundId, refundAnchor);
-    // #992 tranche 4: fund-subject refund leg for the cash just credited back.
+    // Fund-subject refund leg for the cash just credited back.
     // Same order_escrow reason as the placement row so the pair nets per
     // currency. The claim above guarantees exactly one refund per order, so
     // exactly one row. No-op refunds (fully-filled escrow already zeroed)

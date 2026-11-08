@@ -101,7 +101,6 @@ function evaluateTier1Flags(entry: TxInput, thresholds: TxThresholds): Financial
  * shadow double-entry ledger entry from each inserted tx-log row. Fully
  * fire-and-forget — the shadow ledger must NEVER fail a game write, so any
  * error is swallowed by emitLedgerEntries/isLedgerShadowEnabled internally.
- * See docs/plans/2026-07-05-shadow-ledger-plan.md §3 (Phase 1).
  */
 async function shadowLedgerFromTx(db: Db, docs: FinancialTxLogEntry[]): Promise<void> {
   if (!(await isLedgerShadowEnabled())) return;
@@ -275,12 +274,12 @@ export function buildAuditEnvelope(doc: FinancialTxLogEntry): ActionAuditInput {
   };
 }
 
-// Fire-and-forget single emission. Failures are sent to Sentry, never thrown.
-// Accepts a caller-supplied `_id` so keyed flows (issue #1672) can re-insert
-// the same row convergently after a crash: a duplicate `_id` means the row
-// already landed, so the shadow ledger and audit spine (which fired on the
-// first apply) are skipped and `already-applied` is reported.
-/** Convergent-insert outcome for one ledger audit row (issue #1672). */
+// Fire-and-forget single emission. Failures go to Sentry, never thrown.
+// Accepts a caller-supplied `_id` so keyed flows can re-insert the same row
+// convergently after a crash: a duplicate `_id` means the row already landed,
+// so the shadow ledger and audit spine are skipped and `already-applied`
+// is reported.
+/** Convergent-insert outcome for one ledger audit row. */
 export type EmitTxOutcome = "applied" | "already-applied" | "failed";
 
 export async function emitTx(
@@ -375,27 +374,17 @@ export async function emitTxBulk(
 }
 
 /**
- * Strict single-row emission for post-commit ledger writes that must not go
- * missing (sector tech-tree unlocks, ticket #1998).
+ * Strict emission for post-commit ledger writes that must not go missing.
  *
- * Unlike `emitTx`, which is fire-and-forget by design, this THROWS when the
- * row cannot be persisted, so the caller can roll back the cash debit it just
- * committed instead of leaving a successful debit with no visible entry. The
- * insert is retried a bounded number of times for transient failures; only a
- * persistent failure throws. Doc construction (anchor derivation, suspect
- * flags, expiry) is identical to the bulk path above.
+ * Unlike `emitTx`, THROWS when the row cannot be persisted so the caller can
+ * roll back the cash debit instead of leaving a debit with no visible entry.
+ * Retried a bounded number of times; only persistent failure throws.
  *
- * Applied-but-unacknowledged adoption: retries reuse the same deterministic
- * `_id`, so a duplicate-key error most likely means an earlier attempt
- * applied server-side while its acknowledgement was lost. Re-inserting can
- * never succeed, and throwing here would roll back a debit that IS visible,
- * so the stored row is verified by `_id` and adopted when it is provably the
- * intended write (see {@link isSameTxRow}). The lost acknowledgement always
- * happens at the insert, before the shadow-ledger and audit fans run, so the
- * adoption path emits those exactly once rather than duplicating them. A
- * same-`_id` row with different content, or a duplicate with no row found,
- * is a hard failure: the original error (or a mismatch error) is thrown and
- * the caller rolls back as usual.
+ * On duplicate-key: the insert is deterministic, so a duplicate likely means
+ * an earlier attempt applied server-side with a lost acknowledgement. The row
+ * is verified by `_id` and adopted when it matches `isSameTxRow`; the adoption
+ * path then runs the shadow-ledger and audit fans exactly once. A same-`_id`
+ * row with different content, or no row found, is a hard failure.
  */
 export async function emitTxStrict(
   db: Db,

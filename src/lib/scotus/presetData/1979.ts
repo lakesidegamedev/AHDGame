@@ -1,7 +1,7 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * 1979 preset SCOTUS content (#3600, spec #3581). Seeds the Burger Court at
+ * 1979 preset SCOTUS content. Seeds the Burger Court at
  * its actual 1979 composition, plus a Docket of real landmark cases from
  * 1979 through the docket cutoff (2026, "present").
  *

@@ -43,25 +43,21 @@ export function politicalScoreFromLegacyValue(
 }
 
 /**
- * The exact inverse: a 0-100 board score back to the legacy metric's own unit.
+ * Inverse: a 0-100 board score back to the legacy metric's own unit.
  *
- * This is what a consumer that still thinks in legacy units needs once its
- * country reads the board — energy nudges toward a grid-reliability target,
- * tick-rate displays, SOE inputs. It normalizes over `metricQualityRange`, the
- * SAME span the forward direction uses, so `score → value → score` round-trips
- * to within floating-point noise for any value inside the realistic range.
+ * Normalizes over `metricQualityRange`, the same span the forward direction
+ * uses, so `score -> value -> score` round-trips within floating-point noise
+ * for any realistic value.
  *
  * NOT interchangeable with Bridge A's `legacyUnitFromPoliticalScore`. That one
- * maps a score onto a band whose mid is DERIVED FROM A CONSUMER'S OWN NEUTRAL,
- * so score 50 reproduces that engine's existing behaviour exactly — a parity
- * property. This one is the mathematical inverse of the derivation, so score 50
- * lands on the midpoint of the metric's realistic range. Use Bridge A where an
- * engine has a neutral to preserve; use this where the consumer is simply
- * asking "what value does this region's board correspond to?".
+ * maps a score onto a band whose mid is derived from a consumer's own neutral,
+ * so score 50 reproduces existing behaviour (a parity property). This is the
+ * mathematical inverse, so score 50 lands on the midpoint of the metric's
+ * realistic range. Use Bridge A where an engine has a neutral to preserve;
+ * use this to ask what value a region's board corresponds to.
  *
- * Returns null for `medianIncome`, whose forward direction is a log scale over
- * USD-converted values — inverting it would need the country's exchange rate
- * and it is a macro metric no political consumer reads.
+ * Returns null for `medianIncome`: its forward direction is a log scale over
+ * USD-converted values, and no political consumer reads it.
  */
 export function legacyValueFromPoliticalScore(
   category: string,

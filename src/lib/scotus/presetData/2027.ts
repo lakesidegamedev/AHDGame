@@ -1,17 +1,15 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * Turn-one Supreme Court for `2027-default` (#2170).
+ * Turn-one Supreme Court for `2027-default`.
  *
- * The roster is the nine-member Court listed by the Supreme Court when this
- * fallback was reviewed on 2026-09-20, carried forward to the January 2027
- * preset. No seat is vacant in the reviewed roster. This is explicitly a
- * projection, not a claim to know the future bench. The preset also cannot
- * truthfully ship a curated historical docket for decisions after its start
- * date: those outcomes do not exist yet. Its explicit, reviewed fallback is
- * therefore an empty curated docket plus the existing procedural surprise-case system.
- * This is intentionally different from copying the 2019 docket, whose
- * 2020-2024 cases would all be overdue and resolve on turn one.
+ * The roster is a projection of the nine-member Court carried forward to the
+ * January 2027 preset, not a claim to know the future bench. No seat is
+ * vacant. The preset cannot ship a curated historical docket for decisions
+ * after its start date, so its reviewed fallback is an empty curated docket
+ * plus the existing procedural surprise-case system. This is intentionally
+ * different from copying the 2019 docket, whose 2020-2024 cases would all be
+ * overdue and resolve on turn one.
  *
  * Lean and party values retain the established 2019 content model. They are
  * game inputs, not claims about formal party membership.

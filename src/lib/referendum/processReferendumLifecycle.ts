@@ -16,12 +16,9 @@ import { GG_TURNOUT_MOD_CAP } from "@/lib/constants/referendum";
  *   polling     → actuating | settled      (resolve the public vote)
  *   actuating   → completed | cancelled    (all required consent bills pass / one fails)
  *
- * Registered as the `referendumLifecycle` turn phase, after
- * `independenceDesireDrift` so a settled No-vote dampens the just-updated
- * desire value. Mirrors the structure of other per-turn processors; the
- * vote math lives in pure helpers in `@/lib/constants/referendum`.
- *
- * See docs/superpowers/specs/2026-06-16-independence-process-design.md §5.1.
+ * Runs after `independenceDesireDrift` so a settled No-vote dampens the
+ * just-updated desire value. Vote math lives in pure helpers in
+ * `@/lib/constants/referendum`.
  */
 import type { Db, Filter, ObjectId } from "mongodb";
 import type { Referendum, ReferendumStatus } from "@/lib/db/types/referendum";

@@ -130,7 +130,7 @@ const GOVERNOR_ENDORSEMENT_STATE_BONUS = 1.015;
 /** Independent candidate vote penalty (0.3 = 70% reduction). */
 export const INDEPENDENT_VOTE_PENALTY = 0.3;
 
-/** Per-point lean coefficient for full states (#3243 — was 0.25). */
+/** Per-point lean coefficient for full states (- was 0.25). */
 export const STATE_LEAN_STRENGTH = 0.1;
 /** Per-point lean coefficient for ME/NE congressional districts (their
  *  UNIT_LEAN values span only ±0.25, so the effect is already ≤ ±7.5%). */
@@ -142,15 +142,11 @@ export const LEAN_MULT_MAX = 1.2;
 /**
  * State/district partisan-lean vote multiplier for the presidential general.
  *
- * #3243: state lean is already priced into appeal — the swing-flow engine
- * computes support from the same substrate leans that produce the state's
- * display lean, so this multiplier double-counts partisanship. It is kept
- * (winner-take-all state geography is real: a deep-red state should not read
- * as a national tossup when a large field fragments the vote) but demoted to
- * tiebreaker scale. The old shape (coefficient 0.25, floor 0.5, no ceiling)
- * turned a lean −2 state into a Dem×1.5 / Rep×0.5 = 3:1 hammer; the new shape
- * (coefficient 0.10, clamped to [0.8, 1.2]) caps the same state at 1.5:1.
- * House/Senate races apply no such multiplier at all.
+ * State lean is already priced into appeal, so this double-counts partisanship,
+ * but winner-take-all geography is real: a deep-red state should not read as a
+ * national tossup when a large field fragments the vote. Kept at tiebreaker
+ * scale (coefficient 0.10, clamped to [0.8, 1.2]) rather than the old 3:1 shape.
+ * House/Senate races apply no such multiplier.
  *
  * @param lean display lean of the unit (≈ −2.5..+2.5 for US states)
  * @param epSign sign of the candidate's economic/social position (+1 right, −1 left)
@@ -203,10 +199,8 @@ export async function initPresidentVoteTally(
   const db = dbOverride ?? (await getDb());
   const now = new Date();
 
-  // Unit keys must match where the accumulator for this election's country
-  // writes (#2829). US apportionment units are US-only — seeding them into a
-  // non-US tally leaves 56 phantom zero-vote unit keys alongside the real
-  // regional keys.
+  // Unit keys must match the accumulator's country. US-only units seeded
+  // into a non-US tally create 56 phantom zero-vote unit keys.
   const election = await db
     .collection<Election>("elections")
     .findOne({ _id: electionId }, { projection: { countryId: 1 } });
@@ -484,7 +478,7 @@ export async function accumulatePresidentVoteTurn(
   // `startTurn`: presidential general votes only accrue after the primary, so
   // spanning the primary period smears the early-vote share across turns that
   // cast no general votes and inflates the final turns to ~66% of the vote
-  // (ticket #955). `?? startTurn` preserves behavior for races with no primary.
+  //. `?? startTurn` preserves behavior for races with no primary.
   const { totalTurns, turnIndex } = resolveTurnWindow({
     startTurn: election.primaryEndTurn ?? election.startTurn,
     endTurn: election.endTurn,
@@ -809,11 +803,9 @@ export async function accumulatePresidentVoteTurn(
   const participationRows: Array<{ share: number; ledger: ParticipationSummary }> = [];
 
   for (const unit of electoralVoteUnits) {
-    // A ME/NE at-large leg is not simulated: it is summed from that state's
-    // districts after the loop (#1464). Simulating it as well would draw the
-    // state's electorate a second time on top of the districts that already
-    // partition it, which is what inflated ME ~3x and NE ~4x in the national
-    // popular vote once the district split activated.
+    // ME/NE at-large legs are not simulated here; they are summed from districts
+    // after the loop. Simulating both would draw the electorate twice and inflate
+    // the popular vote.
     if (unit.derivesFromDistricts) continue;
 
     const stateId = getDemographicsStateId(unit);
@@ -978,11 +970,10 @@ export async function accumulatePresidentVoteTurn(
         // from producing EC landslides via winner-take-all aggregation. Without
         // this, a 19%-plurality in a 7-way race sweeps all EVs in that state.
         isGeneralElection: true,
-        // §7.3.2 swing-flow now drives the presidential race (D2, 2026-06-18) —
-        // same engine as every other general election. Reg enters as the
-        // transferable/persuasion-resistance peel model (not the old 1.0–1.3×
-        // tilt); Support + policy-distance act as persuasion drivers. Partial
-        // Reg maps (third parties absent) degrade to the no-Reg baseline.
+        // Swing-flow drives the presidential race like every general election.
+        // Reg enters as the transferable/persuasion-resistance peel model; Support and
+        // policy distance act as persuasion drivers. Partial Reg maps (third parties
+        // absent) degrade to the no-Reg baseline.
         regByParty,
         // Approval-scaled directional incumbency for the President's own race.
         // Calibration overrides let the replay harness isolate either source.
@@ -1010,7 +1001,7 @@ export async function accumulatePresidentVoteTurn(
         // Regional bases L1+C — same maps the primary stagger threads. The
         // swing-flow kernel consumes them in appealWeight with the general-path
         // caps selected via isGeneralElection: true (ported from the legacy
-        // engine 2026-07-09; previously these options were silently ignored).
+        // engine).
         currentStateId: stateId,
         stateOrgByCandidate: regionalBonuses.stateOrgByStateAndCandidate.get(stateId),
         homeStateByCandidate: regionalBonuses.homeStateByCandidate,
@@ -1082,7 +1073,7 @@ export async function accumulatePresidentVoteTurn(
             ? (ec.partyEcon + ec.partySocial) / 2
             : ec.charEP;
         const epSign = posForLean > 0 ? 1 : posForLean < 0 ? -1 : 0;
-        // #3243: tiebreaker-scale lean multiplier, clamped to [0.8, 1.2].
+        // Tiebreaker-scale lean multiplier, clamped to [0.8, 1.2].
         votes = Math.round(votes * leanVoteMultiplier(lean, epSign, districtLean !== undefined));
         votes = Math.max(0, votes);
       }

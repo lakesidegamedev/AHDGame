@@ -2,33 +2,26 @@
  * Crash-resumable bond-sale intents for standalone Mongo.
  *
  * The sell route claims a sale by decrementing `holders.$.units` (crediting
- * `publicFloat`), then debits the bond market pool and pays the seller. Under
+ * `publicFloat`), then debits the bond pool and pays the seller. Under
  * `runWithOptionalTransaction` that sequence is non-atomic on standalone
- * Mongo, and the old `catch`-time `rollbackClaim` never ran on process death:
- * a crash after the claim destroyed the holder's units without payment, and a
- * retry failed with "Insufficient bond holdings" against the already-claimed
- * holding.
+ * Mongo, so a crash mid-sequence can destroy holder units without payment and
+ * a retry fails with "Insufficient bond holdings".
  *
- * This module mirrors the banking `moneyMove` contract rather than reusing it
- * directly: a bond sale moves securities (holder units) plus FX-converted cash
- * across three documents, which does not fit single-path net-zero money legs.
- * The properties that matter are kept:
+ * Properties that matter:
  *
  * 1. **The intent is recorded BEFORE anything moves.** The insert is the
  *    claim; a retry finds the pending intent instead of starting a second sale.
  * 2. **Every value write carries a stamp.** The holder claim stamps the sale
- *    id on the holder element in the same write, and the pool debit and seller
- *    payout stamp per-leg keys (`<intentId>#pool`, `<intentId>#payout`) with a
- *    `$ne` guard, exactly like `legStamp` in moneyMove. A leg that already
- *    landed does not match, so resume never pays or debits twice.
+ *    id in the same write, and the pool debit and seller payout stamp per-leg
+ *    keys (`<intentId>#pool`, `<intentId>#payout`) with a `$ne` guard, so a
+ *    leg that already landed does not match and resume never double-pays.
  * 3. **Resume converges to exactly one of two terminal states.** `applied`
- *    (every leg verified landed) or `reverted` (the claim restored, the pool
- *    refunded only when its stamp proves the debit landed). A half-applied
- *    intent is a visible repair-queue row via {@link listUnfinishedBondSales}.
+ *    (every leg verified landed) or `reverted` (claim restored, pool refunded
+ *    only when its stamp proves the debit landed). A half-applied intent is a
+ *    visible repair-queue row via {@link listUnfinishedBondSales}.
  *
- * The state machine itself is seller-agnostic: the route injects
- * {@link BondSaleSettlementOps} built from the intent's stored terms, so a
- * resume replays the ORIGINAL proceeds, never a freshly computed quote.
+ * The route injects {@link BondSaleSettlementOps} from the intent's stored
+ * terms, so a resume replays the ORIGINAL proceeds, never a fresh quote.
  */
 
 import { ObjectId, type Db, type Document, type Filter } from "mongodb";

@@ -1,33 +1,23 @@
 /**
- * Summary-view read projections for the election resolver (#2168).
+ * Summary-view read projections for the election resolver.
  *
- * List views (country elections page, GET /api/elections?view=summary) render
- * candidate summary cards from `EnrichedCandidate`, which needs a fixed set
- * of display and scoring inputs. Fetching whole documents here deserializes
- * ~31KB of NPP `policies.domainPositions` per candidate (~1.5MB for a
- * 50-candidate country page) that no summary consumer reads.
+ * List views render candidate summary cards from `EnrichedCandidate`, which
+ * needs a fixed set of display and scoring inputs. Fetching whole documents
+ * deserializes ~31KB of NPP `policies.domainPositions` per candidate (~1.5MB for
+ * a 50-candidate country page) that no summary consumer reads.
  *
- * Field audit (every reader of the projected docs in summary mode):
- * - NPP: `candidateEnrichment` reads name, party, policies.economic/social,
- *   favorability, politicalInfluence, homeState, avatarUrl, sequentialId;
- *   batch incumbent matching reads name, party, countryId, currentOffice;
- *   `ownerPositionById` in _enrichElection reads policies.economic/social.
- *   Nothing reads `policies.domainPositions`, so the projection excludes
- *   exactly that subtree and keeps everything else (future-proof).
- * - Character: `candidateEnrichment` reads party, policies.economic/social,
- *   favorability, politicalInfluence, nationalInfluence, partyInfluence,
- *   infamy, homeState, avatarUrl, sequentialId, name (running mate),
- *   currentOffice is matched for incumbents; `applyStandingAds` reads
- *   targetedAds; _enrichElection maps _id/party. Inclusion list below is
- *   that closed set. ADD new fields here (not a wider fetch) when summary
- *   enrichment starts reading more.
- * - GameState: summary enrichment reads preset + currentYear
- *   (`loadApportionment`, majoritarian bonus) and redistrictingEnabled (US
- *   House districted projection). The `gameState` response block is null in
- *   summary mode, so nothing else is consumed.
+ * NPP: excludes only `policies.domainPositions`; every other field still loads.
  *
- * Full view keeps whole documents: detail pages and the turn-adjacent
- * overlays read beyond this set.
+ * Character: the inclusion list below is the closed set summary enrichment
+ * reads. ADD new fields here (not a wider fetch) when summary enrichment starts
+ * reading more.
+ *
+ * GameState: summary enrichment reads preset, currentYear and
+ * redistrictingEnabled only; the `gameState` response block is null in summary
+ * mode.
+ *
+ * Full view keeps whole documents: detail pages and turn-adjacent overlays read
+ * beyond this set.
  */
 import type { Document } from "mongodb";
 

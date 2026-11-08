@@ -53,7 +53,7 @@ export function platformFromDescriptionPrefix(description: string): TicketPlatfo
  * The description without the bot's "Platform: <label>" line, for anything
  * that reads the player's own words. The labels contain "web browser" and
  * "Mobile", which read as page words and asked for a page on reports that
- * named none (ticket 1448).
+ * named none.
  */
 export function stripPlatformPrefix(description: string): string {
   return description.replace(/^Platform:\s*[^\n]+\n+/i, "");

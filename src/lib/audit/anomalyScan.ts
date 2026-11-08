@@ -1,25 +1,18 @@
 /**
- * Anomaly scanners over the unified action-audit spine (forensics/alt-
- * detection rework plan §3.1 "Anomaly scanners", Phase 3 T3.1).
+ * Anomaly scanners over the unified action-audit spine.
  *
- * Candidate-narrowed, never a full collection scan: every detector runs
- * over a single streamed query, `actionAuditLog` rows from the last
- * `windowTurns` turns (an indexed range on `{turn:-1}`, the same idiom
- * `runFinancialSuspectScan` uses over `financialTxLog`) narrowed to rows a
- * detector can act on. The turn's system-actor mirror of every
- * `financialTxLog` row is excluded in Mongo: materializing those took the
- * process past the heap watchdog (#3366). Detectors are pure functions over plain rows
- * so each is independently unit-testable; `runAuditAnomalyScan` is the thin
- * DB wrapper that feeds them from Mongo, stamps `flags[]` back onto the
- * offending `actionAuditLog` rows, and writes one compact summary to
- * `auditAnomalies` (mirrors `apiAbuseScans`/`persistApiAbuseScan`).
+ * Candidate-narrowed, never a full collection scan: every detector runs over a
+ * single streamed query of `actionAuditLog` rows within `windowTurns` (indexed
+ * range on `{turn:-1}`), narrowed to rows a detector can act on. The system-actor
+ * mirror of each `financialTxLog` row is excluded in Mongo because materializing
+ * them exhausted the heap. Detectors are pure functions over plain rows so each is
+ * independently unit-testable; `runAuditAnomalyScan` is the thin DB wrapper that
+ * feeds them, stamps `flags[]` onto offending rows, and writes one compact
+ * summary to `auditAnomalies`.
  *
- * Report-only doctrine: nothing here bans, throttles, or auto-acts. Runs as
- * the best-effort `auditAnomalyScan` turn phase (after `activityLogging`,
- * before `suspiciousDetection` — see `turnPhaseNames.ts` /
- * `stateEffectsPhase.ts`), flag-gated on `isAuditLogEnabled()`. A throw here
- * is caught by `runtime.runPhase` and logged to Sentry without halting the
- * turn (same contract `financialSuspectScan`/`suspiciousDetection` rely on).
+ * Report-only: nothing here bans, throttles, or auto-acts. Runs as the best-effort
+ * `auditAnomalyScan` turn phase, flag-gated on `isAuditLogEnabled()`. A throw is
+ * caught by `runtime.runPhase` and logged to Sentry without halting the turn.
  */
 import * as Sentry from "@sentry/nextjs";
 import { ObjectId, type Collection, type Db, type Document } from "mongodb";
@@ -343,10 +336,8 @@ export function detectPreElectionFundingSurge(
         total >= opts.preElectionMinTotalAmount
       ) {
         surges++;
-        // Mark the qualifying range and materialize ids once after the scan.
-        // Repeated overlapping surge windows used to slice, allocate a Set,
-        // reduce, and revisit every row for every endpoint, making this O(n²)
-        // for large party-funding groups.
+        // Mark the qualifying range and materialize ids once after the scan;
+        // revisiting rows per endpoint would be O(n²) for large groups.
         flagDeltas[start]++;
         flagDeltas[end + 1]--;
       }

@@ -2,25 +2,18 @@
 // country instead of the country they operate in.
 //
 // Legacy cross-border expansion rows carried `corporateSectors.countryId` from
-// the owning corporation's HQ rather than from the authoritative state record.
-// A later hostile takeover then created a PARALLEL sector for the same
-// (corporation, state, type), because the location key disagreed.
+// the owning corporation's HQ rather than the authoritative state record; a
+// later hostile takeover then created a parallel sector for the same
+// (corporation, state, type) because the location key disagreed.
 //
 // Half A (code): sector creation derives countryId from the state.
-// Half B (this heal): normalise stamped countryId from the state record, then
-// merge the duplicate rows into one keeper.
+// Half B (this heal): normalise stamped countryId, then merge duplicate rows.
 //
-// The merge is the dangerous half and the reason this defect declares a tight
-// cap. Under PLANTS the losing rows carry built capacity and in-flight build
-// orders that must be folded into the keeper before deletion, which
-// normalizeAndMergeCorporateSectors does behind a mode gate. The gate is not
-// cosmetic: under CAPITAL mode sectorTurn owns capitalStock and re-derives it
-// from revenue every turn, so folding there would double it.
-//
-// The heal itself lives in src/lib/corporations/repairDuplicateSectors.ts and
-// is also exposed at POST /api/admin/heal/duplicate-sectors. This entry adds
-// what that route never had: a detector, a dry run, a snapshot and an audit
-// row.
+// The merge caps tightly because under PLANTS the losing rows carry built
+// capacity and in-flight orders that must be folded into the keeper before
+// deletion, and under CAPITAL mode sectorTurn owns capitalStock and re-derives
+// it from revenue, so folding there would double it. That is why the merge is
+// behind a mode gate.
 
 import type { Db } from "mongodb";
 import type { CorporateSector, State } from "@/lib/db/types";
@@ -189,7 +182,7 @@ export const defect: Defect = {
   id: "AHD-duplicate-sectors",
   title: "Cross-border corporate sectors stamped with HQ country, producing duplicate rows",
   severity: "P1",
-  // 3abeb353f "prevent duplicate cross-border sectors" (PR #1230) added
+  // 3abeb353f "prevent duplicate cross-border sectors" added
   // sectorLocation.ts, so a sector's country is derived from the authoritative
   // state record rather than the owner's HQ. A build older than this still
   // stamps the HQ country and will recreate both the misstamp and the parallel
@@ -197,20 +190,15 @@ export const defect: Defect = {
   codeFix: {
     pr: 1230,
     mergedTo: "master",
-    // The fix (3abeb353f, 2026-04-26) predates this repository's public
-    // history; the "Initial public release" snapshot carries it (the guard now
-    // lives in the sector command modules), so the gate pins the snapshot.
+    // The fix predates this repository's public history; the "Initial public
+    // release" snapshot carries it (guard lives in the sector command modules),
+    // so the gate pins the snapshot.
     requiredCommit: "8972afb65990046691e36f44f88f94b0a3c0a4cf",
   },
-  // Checked 2026-08-08. Both halves of this defect are runtime-only:
-  //   duplicates — the sovereign-issuer seeder upserts on
-  //     {corporationId, stateId, sectorType}, so re-seeding overwrites rather
-  //     than adding a parallel row.
-  //   misstamps  — generateCountryOwnedSeedData builds each sector with the
-  //     same countryId it used to filter the states, so a seeded sector's
-  //     country always matches its state by construction. The seed has no
-  //     cross-border expansion, which is the only thing that creates the
-  //     HQ-vs-operating divergence.
+  // Both halves of this defect are runtime-only: the seeder upserts on
+  // {corporationId, stateId, sectorType}, and generateCountryOwnedSeedData
+  // derives each sector's countryId from the same filter as its states, so
+  // no cross-border sectors are seeded.
   seedFix: {
     status: "not-needed",
     files: ["src/lib/seeds/reference/budgets.ts"],

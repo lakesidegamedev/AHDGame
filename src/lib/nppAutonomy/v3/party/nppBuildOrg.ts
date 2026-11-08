@@ -1,23 +1,15 @@
 /**
- * NPP party-org-building command core (V3 full-agency finance/politics).
+ * NPP party-org-building command core. Lets an autonomous NPP trigger the
+ * same Build Org action as a player, via the same `spendPoliticalStrength`
+ * command, so autonomous and player-run parties share the same accumulated
+ * investment and inactivity rules.
  *
- * Lets an autonomous NPP trigger the same Build Org action a player
- * chair/vice-chair/campaigner would, depositing one fixed contribution unit
- * into the party's regional organization bucket and using the same PS command
- * (`spendPoliticalStrength`) the player route
- * (`/api/country/[code]/region/[id]/party/[partyId]/build-org`) uses, so
- * results are indistinguishable from a player click.
+ * Always spends from the STATE PS pool (no national-pool choice). Presence,
+ * bucket derivation, and ledger bookkeeping match the player route.
  *
- * NPPs use this path so autonomous and player-run parties participate in the
- * same accumulated-investment and inactivity-clock rules.
- *
- * Scope constraint vs. the player route: always spends from the STATE PS
- * pool (no national-pool choice).
- * Presence, bucket derivation, and ledger bookkeeping match the player route.
- *
- * The 2026-09-02 treasury cost DOES apply here, from the state treasury at the
- * state rate. Exempting the sweep would let an NPP-run party organise for free
- * the moment it wakes up, which is the whole reason this file exists.
+ * The treasury cost applies here, from the state treasury at the state rate:
+ * exempting NPPs would let an NPP-run party organise for free the moment it
+ * wakes up.
  */
 
 import { ObjectId, type Db } from "mongodb";

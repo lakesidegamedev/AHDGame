@@ -185,15 +185,11 @@ export async function spendPoliticalStrength(
     currentPS = updatedPS;
   }
 
-  // Increment pressure (upsert — first spend in this geography creates the row),
-  // clamped to `PRESSURE_LADDER_MAX_VALUE`. Pressure beyond that ceiling has no
-  // effect on cost (which already saturates at `PRESSURE_LADDER_MAX_COST`) but,
-  // if allowed to accumulate unbounded via a raw `$inc`, keeps the cost pinned
-  // at max for dozens of turns after the party stops spending, since decay is
-  // only a few PS/turn — the runaway behind ticket #945. We compute the clamped
-  // value and `$set` it; the tiny concurrency window (two simultaneous spends
-  // each reading the same `currentPressure`) can at worst under-count by one
-  // increment, which is harmless given the value is capped anyway.
+  // Increment pressure (upsert: first spend here creates the row), clamped to
+  // `PRESSURE_LADDER_MAX_VALUE`. Unclamped accumulation keeps cost pinned at
+  // max for dozens of turns after spending stops, since decay is only a few
+  // PS/turn. The tiny concurrency window can at worst under-count by one
+  // increment, harmless given the value is capped.
   const newPressureValue = Math.min(
     currentPressure + PRESSURE_LADDER_INCREMENT,
     PRESSURE_LADDER_MAX_VALUE

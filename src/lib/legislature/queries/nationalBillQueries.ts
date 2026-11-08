@@ -121,7 +121,7 @@ function resolveVoteOfficeType(
 /**
  * Live-scoped origin/other tallies for a national bill-list card. Shared by the
  * US Congress list and every country legislature list so The Count cannot
- * exceed the current chamber after a seat transfer (ticket #1075).
+ * exceed the current chamber after a seat transfer.
  */
 export function nationalBillListTallies(
   bill: Bill,
@@ -246,11 +246,10 @@ export async function listNationalLegislatureBills(
     ],
   };
 
-  // The bill list is already scoped to this country by
-  // buildNationalBillCountryScopeFilter above. If the viewed country is not
-  // enabled for this (non-admin) viewer, show nothing — but do NOT replace the
-  // scope with `{ $in: enabledCountries }`, which pulled every enabled country's
-  // bills (incl. the US) into e.g. Nigeria's House/Senate tabs (#912).
+  // The bill list is already scoped to this country. If the viewed country
+  // is not enabled for this non-admin viewer, show nothing, but do NOT
+  // replace the scope with `{ $in: enabledCountries }`, which would pull in
+  // every enabled country's bills.
   if (enabledCountries && !enabledCountries.includes(countryId)) {
     billFilter.countryId = "__disabled__";
   }
@@ -276,8 +275,8 @@ export async function listNationalLegislatureBills(
   // Load both chambers' CURRENT seat holders once so every card can live-scope
   // its tally. The stored votesFor/votesAgainst counters keep de-seated NPP
   // votes after a House repair or election, so The Count can exceed the
-  // chamber (ticket #1075: 250-215 on a 435-seat House). Detail/resolution
-  // already scope; only the list card did not. Mirrors the state-list #973 fix.
+  // chamber (: 250-215 on a 435-seat House). Detail/resolution
+  // already scope; only the list card did not. Mirrors the state-list fix.
   const chamberOfficeTypes = [
     getOfficeTypeForChamber(countryId, lowerKey, preset, config),
     ...(upperKeyForGet ? [getOfficeTypeForChamber(countryId, upperKeyForGet, preset, config)] : []),
@@ -314,11 +313,9 @@ export async function listNationalLegislatureBills(
     myCharacterId = char?._id?.toString() ?? null;
     myPolicies = char?.policies;
     if (myCharacterId) {
-      // In a bill-active bicameral legislature (US/JP/NG) the upper chamber can
-      // also originate bills, so its members count as proposers. UK Lords / DE
-      // Bundesrat are `bicameral: false` and correctly excluded (#912 — NG
-      // senators were treated as non-members and could not propose).
-      // Era-aware: TR 1953 is unicameral (no Senato).
+      // In a bill-active bicameral legislature the upper chamber can also
+      // originate bills, so its members count as proposers. `bicameral: false`
+      // chambers are excluded. Era-aware: unicameral eras have no upper chamber.
       const memberOfficeTypes =
         config.legislature.bicameral && upperKeyForGet
           ? [lowerKey, upperKeyForGet].map((k) =>
@@ -966,10 +963,9 @@ export async function getNationalBillDetail(
     otherVoteOfficeType ? { countryId: country, officeType: otherVoteOfficeType } : null
   );
 
-  // A concluded voting phase has a frozen snapshot — derive its per-party
-  // breakdown (and, via billEnrichment's sumVoteByParty, the headline) from the
-  // snapshot so a later general election cannot recompute (and collapse) the
-  // historical tally (#0982). Only an in-progress phase (no snapshot) live-scopes.
+  // A concluded voting phase has a frozen snapshot: derive per-party breakdown
+  // (and headline) from it so a later election cannot recompute the tally.
+  // Only an in-progress phase (no snapshot) live-scopes.
   const voteByPartyOrigin = bill.voteSnapshot
     ? buildVotesByParty(
         bill.voteSnapshot.votes,
@@ -1055,7 +1051,7 @@ export async function getNationalBillDetail(
     bill.overrideFailedAt != null;
   if (bill.overrideDisplaySnapshot) {
     // A resolved override has a frozen per-chamber display — use it so a later
-    // election cannot recompute (and collapse) the historical override (#0982).
+    // election cannot recompute (and collapse) the historical override.
     overrideDisplay = bill.overrideDisplaySnapshot;
   } else if (hasOverrideActivity && upperKey != null) {
     const overrideOfficials = await db

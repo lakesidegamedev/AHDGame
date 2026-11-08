@@ -17,11 +17,9 @@ export type BillCardTally = { for: number; against: number; abstain: number };
 
 /**
  * Headline tally for a bill-list card. A concluded phase uses its frozen
- * snapshot (#0982). An in-progress phase live-scopes to current seat holders
- * so de-seated voters (and their old `seatsHeld`) cannot inflate the count
- * past the chamber size (bug #0836 / ticket #973 on state lists; ticket #1075
- * on the national Congress list). Falls back to the stored aggregate only
- * when there are no current-holder votes to scope.
+ * snapshot. An in-progress phase live-scopes to current seat holders so
+ * de-seated voters cannot inflate the count past chamber size. Falls back to
+ * the stored aggregate only when there are no current-holder votes to scope.
  */
 export function resolveBillCardTally(
   votes: Record<string, BillVoteValue> | undefined,
@@ -58,7 +56,7 @@ type StateBillTallySource = {
 
 /**
  * Origin + veto-override headlines for a state bill card that is not the
- * legislature list/detail (ticket #1107: governor office). Same rules as
+ * legislature list/detail (: governor office). Same rules as
  * {@link resolveBillCardTally}: freeze a concluded phase from its snapshot,
  * live-scope an in-progress phase to current seat holders.
  */
@@ -121,21 +119,15 @@ export function scopeStateBillVotesWithOfficials(
 }
 
 /**
- * Level-agnostic core shared by the national engine vote-core
- * (`resolvePhaseVotes`) and the state helpers below: parse the vote map's
- * character/NPP keys, load the matching CURRENT seat holders, and re-weight
- * surviving votes by `seatsHeld` (bug #0836 — the single implementation of
- * election-boundary vote scoping).
+ * Shared by national and state vote cores: parse the vote map's character/NPP
+ * keys, load CURRENT seat holders, and re-weight votes by `seatsHeld`. The
+ * single implementation of election-boundary vote scoping.
  *
- * `scoped: false` means no roster lookup happened (empty map or no valid
- * keys) and `votes`/`totals` are the untouched input + zeros — callers decide
- * their own fallback semantics for that case.
+ * `scoped: false` means no roster lookup happened (empty map or no valid keys)
+ * and `votes`/`totals` are untouched input plus zeros.
  *
  * The chamber filter is level-aware: with `stateId` it pins state + office +
- * country so a same-officeType seat in another region cannot leak into the
- * weight map; without it, country only (national chambers — office is
- * enforced in-memory by `buildScopedVoteInputs`, letting a multi-seat NPP's
- * other-chamber rows load harmlessly).
+ * country; without it, country only (office enforced in-memory).
  */
 export async function scopeVotesToCurrentSeatHolders(
   db: Db,
@@ -206,12 +198,11 @@ export async function scopeVotesToCurrentSeatHolders(
  * seat holders, weighting each surviving vote by that holder's current
  * `seatsHeld`. Mirrors the national `buildScopedVoteInputs` /
  * `resolveScopedVoteTotals` treatment so votes cast by a pre-election chamber
- * composition cannot inflate post-election tallies (bug #0836: 35 votes shown in
- * a 31-seat chamber after a state legislature election).
+ * cannot inflate post-election tallies.
  *
  * Voters who no longer hold the seat are dropped entirely; survivors are
- * re-weighted to their current seat count. This keeps any tally within the
- * chamber size and never double-counts across an election boundary.
+ * re-weighted to their current seat count. Keeps any tally within the chamber
+ * size and never double-counts across an election boundary.
  */
 export async function scopeStateBillVotes(
   db: Db,

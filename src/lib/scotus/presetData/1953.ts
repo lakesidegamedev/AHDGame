@@ -1,7 +1,7 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * 1953 preset SCOTUS content (#3599, spec #3581, core mechanics #3598).
+ * 1953 preset SCOTUS content.
  *
  * Original Roster: the real 9 justices sitting on the US Supreme Court in
  * January 1953 (the Vinson Court, unchanged in membership since Sherman
@@ -748,12 +748,9 @@ const SCOTUS_1953_DOCKET: ScotusPresetSeed["docket"] = [
     axis: "social",
     historicalMajorityDirection: -1, // 8-1, mandated "one person, one vote" for state legislatures
     decisionYear: 1964,
-    // No `effect` authored — see demographicSignal + file-header note. This
-    // is the owner-flagged highest-value case in the window: the engine
-    // already models seat allocation and districts, so the alternate
-    // outcome (rural over-representation persists) has a direct, visible
-    // consequence — but applying it is the demographic-realignment
-    // mechanism's job, not this system's.
+    // No `effect` authored by design: seat allocation and districts are
+    // this engine's job, but applying the alternate outcome belongs to the
+    // demographic-realignment mechanism.
     demographicSignal: {
       affirmedSignal: "scotus_state_legislature_one_person_one_vote_mandated",
       divergedSignal: "scotus_state_legislature_malapportionment_persists",

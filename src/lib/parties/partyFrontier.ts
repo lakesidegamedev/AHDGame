@@ -13,7 +13,7 @@
  * the same signal `checkPartyPresence` uses, so a recruited NPP extends the
  * frontier and a party expands outward one hop at a time.
  *
- * Party renewal (#5704) adds re-entry: a region the party held in either of the
+ * Party renewal adds re-entry: a region the party held in either of the
  * last two renewal cycles stays in its frontier, so a wipe-out is not a
  * permanent lock-out. Worlds without party renewal have no renewal rows and
  * keep the plain one-hop frontier.

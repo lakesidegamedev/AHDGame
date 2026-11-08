@@ -1,26 +1,26 @@
 // AHD-dissolution-npp-successors: leaving plants were deleted outright.
 //
 // Before NPP pickup existed, every plant that left its owner (dissolution by
-// any path, or a sector abandon) returned all of its capacity to the unowned
-// pool. Headroom is bookkeeping, not supply, so the plant simply stopped and
-// each large exit was a supply shock in every market it served.
+// any path, or a sector abandon) returned all capacity to the unowned pool.
+// Headroom is bookkeeping, not supply, so the plant simply stopped and each
+// large exit was a supply shock in every market it served.
 //
 // Half A (code): `disposeLeavingSectors` hands NPP_PICKUP_SHARE of each leaving
 // plant's built capacity to an NPP operator.
 // Half B (this heal): apply the same share to exits that already happened,
 // drawing the capacity back out of the pool it went into.
 //
-// The sector rows are gone, so each event is reconstructed from two surviving
+// Sector rows are gone, so each event is reconstructed from two surviving
 // records:
 //  - WHERE: `restoreSectorsToUnowned` leaves a per-sector restore token on each
 //    pool it credited, stamped with the moment of the restore. A dissolution's
-//    tokens carry the exit row's own `createdAt`; an abandonment's fall inside
-//    the window it ran in. Tokens prune after seven days.
-//  - HOW MUCH: `corporationHistory` carries output by commodity, which is the
-//    exact sum of the corporation's sectors' produced units. A dissolution lost
-//    its last recorded output; an abandonment lost the drop across its window.
-//    Output converts to capacity through the live fleet's capacity-per-output
-//    ratio for the same lane and country.
+//    tokens carry the exit row's `createdAt`; an abandonment's fall inside the
+//    window it ran in. Tokens prune after seven days.
+//  - HOW MUCH: `corporationHistory` carries output by commodity, the exact sum
+//    of the corporation's sectors' produced units. A dissolution lost its last
+//    recorded output; an abandonment lost the drop across its window. Output
+//    converts to capacity through the live fleet's capacity-per-output ratio
+//    for the same lane and country.
 // Each pickup takes NPP_PICKUP_SHARE of that estimate and never more than the
 // headroom still unclaimed in the pool, so capacity others have since built
 // into is not counted twice.

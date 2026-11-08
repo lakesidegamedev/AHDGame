@@ -1,11 +1,10 @@
 /**
- * Shell for durable long-horizon telemetry (issues #2099, #2100).
+ * Durable long-horizon telemetry.
  *
- * Called from the turn exactly where the bounded operational histories are
- * written (`stateEffectsPhase`: approval snapshot + metric history), so the
- * durable series can never drift a turn behind the pages. Operational reads
- * are untouched: pages keep their 20/96-point projections, and the dashboard
- * keeps consuming sanitized aggregates — reports gain the readers below.
+ * Called from the turn alongside the bounded operational histories
+ * (`stateEffectsPhase`) so the durable series never drifts a turn behind.
+ * Operational reads are untouched: pages keep their point projections,
+ * reports gain the readers below.
  *
  * Sandbox isolation: every access goes through the passed `Db` handle, which
  * on sim runs is pinned to the isolated sandbox database. Nothing here opens
@@ -258,7 +257,7 @@ function retryEnrichingUpdate<T extends ApprovalTelemetryPoint | MacroTelemetryP
 
 /**
  * Append one durable approval point for the country plus one per region
- * (#2099). Idempotent upserts on (world, country, region, turn): a retried
+ *. Idempotent upserts on (world, country, region, turn): a retried
  * turn keeps its first measured value while enriching any provenance that was
  * unavailable to the first attempt. The bounded `history` arrays are written
  * by their existing code path and are not touched here.
@@ -319,7 +318,7 @@ export async function appendApprovalTelemetry(
 
 /**
  * Append durable GDP/population levels for every region and a summed national
- * aggregate (#2100). These values come from the canonical state rows, not the
+ * aggregate. These values come from the canonical state rows, not the
  * growth-rate metrics that reports previously used to reconstruct levels
  * backwards. Non-finite values are skipped and counted: absence is never zero.
  */

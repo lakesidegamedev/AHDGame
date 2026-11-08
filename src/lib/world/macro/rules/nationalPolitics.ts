@@ -1,34 +1,17 @@
 /**
- * National politics for background countries (#5702).
+ * National politics for background countries.
  *
  * A background country has no NPP politicians, no regional elections and no
- * bill lifecycle. It has a ruling party or coalition, a named head of
- * government who ages and retires, an approval rating, and a national
- * election for its lower chamber every constitutional term (or earlier, when
- * approval collapses and stays down).
+ * bill lifecycle: just a ruling party or coalition, an aging head of government,
+ * an approval rating, and a term-limited national election (or a snap election
+ * after sustained low approval).
  *
- * Each kernel tick:
- * - the economy is read against expectations: annual growth from the change in
- *   aggregate output, inflation from the national budget, and unemployment
- *   from the growth gap (Okun's rule of thumb);
- * - approval moves part of the way toward a target set by that economy, minus
- *   fatigue for every term the government has served, minus the one-off cost
- *   of any consolidation package the budget enacted;
- * - the head of government ages, and retires late in life;
- * - an election runs when it is due, or as a snap election after half a year
- *   of very low approval.
+ * Each tick: economy read against expectations (Okun growth gap, budget-driven
+ * inflation); approval drifts toward the economy target minus fatigue and
+ * consolidation cost; election shifts party vote shares with seeded swing,
+ * founding/folding/protest rules and shared seat allocators.
  *
- * An election moves each party's previous vote share: governing parties gain
- * or lose with approval and the economy and lose a little for every term
- * served, and every party gets a seeded swing. A party enters when an
- * ideological slot has stood empty for two elections, or as a protest party
- * when the government is very unpopular. A party under 2% for two elections
- * folds into its nearest neighbour. Seats come from the shared allocators;
- * the largest party forms the government with its nearest partners until it
- * holds a majority.
- *
- * Pure: plain data in, plain data out. Randomness arrives as an injected rng
- * and time as the turn and the in-game year.
+ * Pure: plain data in, plain data out; rng and turn/year are injected.
  */
 import { largestRemainderSeats } from "@/lib/turn/election/seatAllocation";
 import { allocateViaSainteLague } from "@/lib/turn/election/sainteLagueAllocation";

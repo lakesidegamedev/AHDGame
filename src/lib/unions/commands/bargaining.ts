@@ -92,23 +92,20 @@ export async function costOfLivingByState(
 /**
  * National macro inputs for a bargaining mandate.
  *
- * Labor tightness reads the MEASURED market directly (#791): each real state's
- * persisted `economic.labourTightness` (corporate labour demand over the
- * civilian labour force, written by the corporation turn), aggregated to one
- * national ratio weighted by state labour force — which equals total national
- * demand over total national supply — then mapped onto the 0-100 score. This
- * breaks the old round-trip where tightness was derived FROM the national
- * unemployment rate while unemployment now derives FROM tightness.
+ * Labor tightness reads the MEASURED market: each real state's persisted
+ * `economic.labourTightness` (corporate labour demand over civilian labour
+ * force, written by the corporation turn), aggregated to one national ratio
+ * weighted by state labour force, then mapped onto the 0-100 score. This avoids
+ * the old round-trip where tightness was derived FROM national unemployment
+ * while unemployment now derives FROM tightness.
  *
- * COLD-START FALLBACK: when no state has a usable measured reading yet, the
- * score falls back to `laborTightnessFromUnemployment` off the national
- * unemployment rate — exactly today's behaviour.
+ * COLD-START FALLBACK: with no usable measured reading, fall back to
+ * `laborTightnessFromUnemployment` off national unemployment.
  *
- * MODE GATE: the measured path is gated on `labourSystemMode` >= "macro",
- * the same tier that gates the unemployment node's tightness channel in the
- * metric engine. Below that tier the fallback applies even when measured
- * readings exist (the corporation turn writes telemetry ungated), so a world
- * with the labour macro loop switched off behaves exactly as before.
+ * MODE GATE: the measured path requires `labourSystemMode` >= "macro", the tier
+ * that gates the unemployment node's tightness channel. Below that the fallback
+ * applies even if measured readings exist, so a disabled labour macro loop
+ * behaves exactly as before.
  */
 export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"]) {
   const nationalDocId = getNationalDocId(countryId);
@@ -204,18 +201,17 @@ export function mandateFromLocals(args: {
 
 /** Shared campaign opening used by authorized players and autonomous NPPs. */
 /**
- * Per-phase memo for the reads that depend only on country or state (#2690).
- * The NPP union phase opens many campaigns per turn and writes none of the
- * macro, budget, state or config documents these come from, so one read per
- * country (or state set) serves the whole phase. Player commands pass none.
+ * Per-phase memo for reads that depend only on country or state.
+ * The NPP union phase opens many campaigns per turn and writes none of
+ * the macro, budget, state or config documents these come from, so one
+ * read per country (or state set) serves the whole phase.
  */
 export type BargainingReadCache = Map<string, Promise<unknown>>;
 
 /**
  * Facts the NPP union phase already holds from its bulk loads, so the per-union
- * opener does not re-read them (#2690). `lastEndedAtTurn` is keyed by
- * `bargainingPairKey` and must cover every withdrawn or lapsed campaign of the
- * unions in the phase; a missing key means "never ended".
+ * opener does not re-read them. `lastEndedAtTurn` is keyed by
+ * `bargainingPairKey`; a missing key means "never ended".
  */
 export interface BargainingPhasePreload {
   employerKnownToExist: boolean;
@@ -780,11 +776,10 @@ export async function persistUnionBargainingEscalation(
   const next = escalateBargainingCampaign(refreshed, currentTurn, now);
   if ("ok" in next) return { ...next, status: 400 };
 
-  // The plan is the single rule: it decides what the escalation does, what it
-  // costs, and whether it is allowed. The union-level strike cooldown (which
-  // the retired direct-strike route enforced, and which stops a union striking
-  // a different employer every turn) used to live only here, so the preview
-  // offered escalations this gate then refused.
+  // The plan is the single rule: it decides what the escalation does, what
+  // it costs, and whether it is allowed. Keep the union-level strike cooldown
+  // in the plan, not only in this gate, or the preview offers escalations the
+  // gate then refuses.
   const plan = buildBargainingEscalationPlan(campaign, sectors, currentTurn, union);
   const targets = plan.newStrikeLocals;
   if (plan.blockedReason) {

@@ -60,15 +60,15 @@ function hasResolvedResult(status: Election["status"]): boolean {
 }
 
 /**
- * Per-candidate vote breakdown for one race, drawn from the tally the list query
- * already loaded. Surfaced only when the caller opts in with `results=true`, so a
- * bot can pull detailed seat-by-seat numbers for a whole country in ONE call
- * rather than a `/elections/[id]` request per race (ticket #1229). The heavy
- * time-series (turn-by-turn snapshots, primary snapshots) is deliberately left
- * behind `/elections/[id]` — this is the standings, not the full history.
+ * Per-candidate vote breakdown for one race, drawn from the tally the list
+ * query already loaded. Surfaced only when the caller opts in with
+ * `results=true`, so a bot can pull seat-by-seat numbers for a whole country
+ * in ONE call rather than one `/elections/[id]` request per race. The heavy
+ * time-series is deliberately left behind `/elections/[id]`: this is the
+ * standings, not the full history.
  *
- * Shares are computed off the total on the row, so they sum to ~100 even before
- * the result is finalised; `finalized` says whether the count is done.
+ * Shares are computed off the total on the row, so they sum to ~100 even
+ * before finalisation; `finalized` says whether the count is done.
  */
 type PublicCandidateStats = Pick<Character | NPP, "favorability" | "politicalInfluence">;
 
@@ -84,21 +84,16 @@ function isMultiSeatRace(election: Pick<Election, "totalSeats">): boolean {
 }
 
 /**
- * Favorability and political influence for each candidate, keyed by the
+ * Favorability and political influence per candidate, keyed by the
  * `electionCandidates` ROW id.
  *
- * The key is the whole difficulty. Vote tallies are keyed by the candidate row
- * `_id` — `initElectionVoteTally` seeds `totalVotes[c._id]`, and the primary
- * resolver writes `candidateNames[c._id]` — NOT by `characterId`. The stats
- * themselves live on the character, or on the NPP for a non-party candidate. So
- * the candidate row is the hop between the two id spaces, and a map keyed by
- * character id joins against nothing: every stat would read `null` in
- * production while mocked tests keyed to characters still pass.
+ * Vote tallies key by candidate row `_id`, NOT by `characterId`. The stats live
+ * on the character, or the NPP for a non-party candidate, so the row is the hop
+ * between the two id spaces. A map keyed by character id joins against nothing:
+ * every stat reads `null` in production while tests keyed to characters pass.
  *
- * Rows are many-to-one onto an identity, not one-to-one: entering a race
- * withdraws the prior row and inserts a fresh one, so one character can own
- * several rows in the same race. Stats are resolved per identity and then
- * projected onto every row that identity holds.
+ * Rows are many-to-one onto an identity (entering a race withdraws the prior row
+ * and inserts a fresh one), so resolve per identity and project onto every row.
  */
 async function loadCandidateStats(
   db: Db,

@@ -56,11 +56,10 @@ export interface MetricModifiersInfo {
   /** Structural residual (rounded 0.1). Population-weighted at national scope. */
   residual: number;
   /**
-   * Cabinet residual (rounded 0.1) — the standing contribution of tier
-   * settings, ministerial orders and sited estates. Ticket #1129: this term
-   * moves the target the engine drifts toward, so omitting it made the served
-   * target disagree with the engine and left a player's built estates with no
-   * visible effect anywhere.
+   * Cabinet residual (rounded 0.1): standing contribution of tier settings,
+   * ministerial orders and sited estates. This term moves the target the
+   * engine drifts toward, so omitting it desyncs the served target from the
+   * engine and hides built estates.
    */
   cabinet: number;
   /**
@@ -74,14 +73,13 @@ export interface MetricModifiersInfo {
   /**
    * Which cabinet channels actually contribute, largest first, so a player can
    * see WHICH one is moving the metric rather than one aggregate label
-   * (ticket #1142). Zero-contribution channels are omitted.
+   *. Zero-contribution channels are omitted.
    */
   cabinetBySource: CabinetSourceContribution[];
   /**
    * True when EVERY cabinet channel for this metric sits within 0.01 of
-   * ±CABINET_RESIDUAL_CAP_PER_SOURCE. Since issue #703 channels approach the
-   * asymptote without ever touching it, this means "effectively maxed": a
-   * further order or estate still buys a little more, but only just.
+   * ±CABINET_RESIDUAL_CAP_PER_SOURCE. Channels approach the asymptote without
+   * touching it, so this means "effectively maxed".
    */
   cabinetAtCap: boolean;
   /** The per-channel cap, so the UI can name the ceiling rather than hard-code it. */

@@ -2,13 +2,10 @@
  * Per-bond, per-holder write-down recorder.
  *
  * A write-down is a PAPER loss, not a cash movement. Holders already paid
- * face value out of cash when they bought the bonds (`bond_purchase` debits
- * liquidCapital / personal balances at buy time), and portfolio valuations
- * (corporation + character) price holdings at `units × face × marketPrice` —
- * so the upstream marketPrice stamp (repudiate → 0.05, restructure haircut)
- * already encodes the loss in displayed wealth. Debiting holder cash here
- * would charge holders twice for the same principal (ticket #1266: a 95%
- * write-down drove holder corps hundreds of millions negative).
+ * face value out of cash when they bought the bonds, and portfolio
+ * valuations price holdings at `units × face × marketPrice`, so the upstream
+ * marketPrice stamp already encodes the loss in displayed wealth. Debiting
+ * holder cash here would charge holders twice for the same principal.
  *
  * This function therefore mutates nothing. It walks the bonds being written
  * down and returns the exposure report (who held what, total paper loss in

@@ -74,21 +74,15 @@ import {
  * that escape hatch costs: cheap enough to use, dear enough that a president who
  * never bothers with confirmation votes pays for it.
  *
- * Returned as {@link ActiveModifier}s so they go through the ONE applyModifiers
- * call with everything else. They used to be subtracted after that call, which
- * moved the rating while leaving nothing in `activeNationalModifiers` to explain
- * it: a president could seat four acting secretaries, watch approval fall two
- * points, and find no chip anywhere on the page saying why. The arithmetic is
- * unchanged. Negatives are uncapped in applyModifiers. The acting penalty is a
- * multiple of 0.5 and the empty seats penalty is rounded to a tenth, so both land
- * on the tenth-of-a-point grid.
+ * Returned as {@link ActiveModifier}s so they go through the one applyModifiers
+ * call with everything else, keeping them visible in `activeNationalModifiers`.
+ * Negatives are uncapped in applyModifiers. The acting penalty is a multiple of
+ * 0.5 and the empty seats penalty is rounded to a tenth, so both land on the
+ * tenth-of-a-point grid.
  *
  * The empty cabinet penalty scales with the share of seats left empty (see
  * {@link emptyCabinetSeatsModifier}): all vacant costs the full 7.5, a full
  * cabinet costs nothing.
- *
- * Exported for its own test: this is the only pure part of an otherwise
- * database-wide aggregate, and it shipped without coverage.
  */
 export function buildCabinetApprovalModifiers(
   cabinetMembers: Array<{ acting?: boolean; positionId?: string }>,
@@ -377,10 +371,10 @@ export function computeStateApprovalBase(
   stateMetrics: StateMetrics,
   nationalAverages: Record<string, Record<string, number>>,
   weighting?: { groups: StateDemographicGroup[] },
-  // This is a CALCULATION util, not a seeder: a wrong preset here yields a
-  // wrong approval number, it does not write modern data into a historical
-  // world. It also sits after an optional parameter, so making it required
-  // needs a signature reorder across every caller. Tracked on #3908.
+  // Calculation util, not a seeder: a wrong preset yields a wrong number, it
+  // does not write modern data into a historical world. Preset sits after an
+  // optional param, so making it required needs a signature reorder across
+  // every caller.
   // eslint-disable-next-line no-restricted-syntax
   preset: string = "2019-default",
   /** Live year (null while the era flag is off) — gates inactive-metric terms. */
@@ -433,7 +427,7 @@ export function computeApprovalBaseFromAverages(
   values: Record<string, Record<string, number>>,
   referenceAverages: Record<string, Record<string, number>>,
   // Calculation util, not a seeder; see the note on computeStateApprovalBase.
-  // Tracked on #3908.
+  // Tracked on.
   // eslint-disable-next-line no-restricted-syntax
   preset: string = "2019-default",
   countryId?: string | null,
@@ -568,13 +562,11 @@ async function getActiveAddressModifiersByState(
 /**
  * Maximum points a state's stored approval rating may move per turn.
  *
- * Approval is a pure function of live metrics, so metric shocks used to jump
- * the stored rating (and everything reading it: coattails, charts, the
- * national aggregate) several points in a single turn. Issue #2891 item 1:
- * approval moving 37 to 43 in about 2 days was owner-agreed too fast.
- * Damping the SNAPSHOT keeps the derived target intact while the stored,
- * player-visible and election-consumed rating steps toward it at most this
- * many points per turn.
+ * Approval is a pure function of live metrics, so metric shocks would
+ * otherwise jump the stored rating (and coattails, charts, the national
+ * aggregate) several points in a single turn. Damping the SNAPSHOT keeps the
+ * derived target intact while the stored, player-visible, election-consumed
+ * rating steps toward it at most this many points per turn.
  */
 export const APPROVAL_MAX_STEP_PER_TURN = 2;
 
@@ -667,7 +659,7 @@ async function recordedHeadSinceTurn(
  * Called each turn. History is capped at the last 20 entries.
  *
  * When a long-horizon context is supplied, the same scored values are also
- * appended to the durable `approvalTelemetry` series (issue #2099), which
+ * appended to the durable `approvalTelemetry` series, which
  * keeps every turn. Without a context the operational write is unchanged.
  */
 export async function snapshotApprovalHistory(
@@ -788,11 +780,10 @@ export async function snapshotApprovalHistory(
     };
   });
 
-  // Per-turn damping (issue #2891 item 1): step each state's stored rating
-  // toward its freshly derived target by at most APPROVAL_MAX_STEP_PER_TURN
-  // points instead of jumping. The damped values feed both the per-state
-  // snapshot and the national aggregate, so every reader of the stored
-  // ratings (charts, rankings, coattails) sees the same smoothed series.
+  // Per-turn damping: step each state's stored rating toward its freshly
+  // derived target by at most APPROVAL_MAX_STEP_PER_TURN points instead of
+  // jumping. Damped values feed both the per-state snapshot and the national
+  // aggregate, so all readers see the same smoothed series.
   const prevDocs = await db
     .collection<StateApprovalHistory>("stateApprovalHistory")
     .find(
@@ -808,21 +799,12 @@ export async function snapshotApprovalHistory(
 
   let approval = calculateNationalApproval(dampedStateApprovals);
 
-  // Every national-scope modifier goes through ONE applyModifiers call.
-  //
-  //  - the head-of-government address bump, applied at country level rather than
-  //    cascaded through per-state approvals so it shows on the national rating
-  //    without bumping every state;
-  //  - international joint statements about this country, bounded and time
-  //    limited, which lift cleanly when the statement lapses;
-  //  - the war block, one modifier per term (exhaustion, effort, alliance
-  //    contribution), each already stepped by computeWarApproval.
-  //
-  // One call rather than a chain: each call independently clamps to [0,100] and
-  // rounds to a tenth, and each gets its own POSITIVE_MODIFIER_NET_CAP — so
-  // chaining rounds twice and lets each source spend the cap the others are
-  // subject to. The stored modifier list is exactly what this call consumed, so
-  // the chips a reader shows cannot disagree with the rating beside them.
+  // Every national-scope modifier goes through ONE applyModifiers call:
+  // head-of-government address bump (country level, not per-state), international
+  // joint statements (bounded, time limited), and the war block (one modifier
+  // per term). Chaining would round twice and let each source spend its own
+  // POSITIVE_MODIFIER_NET_CAP, and the stored modifier list must match exactly
+  // what the rating consumed so chips cannot disagree with it.
   const nationalAddressMods = await getActiveNationalAddressModifier(db, countryId, turn);
   const orgStatementMods = await getActiveOrgStatementModifiersByCountry(db, countryId, turn);
 
@@ -884,7 +866,7 @@ export async function snapshotApprovalHistory(
   } catch {
     // keep the stored tenure
   }
-  // The honeymoon lasts the head of government's whole term (owner, ticket 1455).
+  // The honeymoon lasts the head of government's whole term (owner).
   const countryConfig = getCountryConfig(countryId, gameStateDoc?.preset);
   const headOffice = countryConfig.officeTypes.find(
     (office) => office.key === getHeadOfGovernmentOfficeKey(countryId, gameStateDoc?.preset)
@@ -988,11 +970,10 @@ export async function snapshotApprovalHistory(
       .bulkWrite(stateApprovalOps as AnyBulkWriteOperation<StateApprovalHistory>[]);
   }
 
-  // Durable long-horizon series (#2099): the same damped values the pages
-  // read, one point per scope, with world/run provenance. Runs after the
-  // operational writes so a telemetry failure can never block them
-  // (runPhase logs it); a missed turn surfaces as an explicit gap, never a
-  // fabricated point.
+  // Durable long-horizon series: the same damped values the pages read, one
+  // point per scope, with world/run provenance. Runs after operational writes
+  // so a telemetry failure can never block them; a missed turn is an explicit
+  // gap, never a fabricated point.
   if (telemetryCtx) {
     const netOf = (value: number): number => value - (100 - value);
     await appendApprovalTelemetry(db, telemetryCtx, countryId, turn, {

@@ -1,17 +1,8 @@
 /**
- * Per-metric two-axis affinity — which voters weight a metric's approval
- * contribution MORE (P6d). This does NOT change a metric's good/bad direction
- * (that stays isHigherBetter-correct); it scales WHO cares, by ideology:
- *
- *   econ:   +1 = economic-right voters weight it more (high economicLean)
- *           −1 = economic-left voters weight it more (low economicLean)
- *   social: +1 = authoritarian voters weight it more (high socialLean)
- *           −1 = libertarian voters weight it more (low socialLean)
- *
- * (Lean signs verified against the demographics SSOT: +economicLean = right,
- * +socialLean = authoritarian.) Unlisted metrics are universal goods every
- * electorate wants equally → {0, 0}. First-pass values, flagged for the
- * balance pass.
+ * Per-metric two-axis affinity: which voters weight a metric's approval
+ * contribution more. Does NOT change good/bad direction (isHigherBetter).
+ * Lean signs match demographics SSOT: +economicLean = right,
+ * +socialLean = authoritarian. Unlisted metrics are universal goods → {0, 0}.
  */
 
 export interface AxisAffinity {
@@ -46,9 +37,8 @@ export const METRIC_AXIS_AFFINITY: Record<string, AxisAffinity> = {
   // ── Authoritarian social: order, security, pride, control (auth voters weight more)
   nationalPride: { econ: 0, social: 1 },
   militaryReadiness: { econ: 0, social: 1 },
-  // Low control is a libertarian good (isHigherBetter=false), so socially-liberal
-  // voters weight it — not authoritarians. (#2897: was social:+1, which punished
-  // an auth-right governor's own base for reducing media control.)
+  // Low control is a libertarian good (isHigherBetter=false); socially-liberal
+  // voters weight it, authoritarian voters do not.
   stateMediaControl: { econ: 0, social: -1 },
   crimeRate: { econ: 0, social: 1 },
   // Tight entry control (isHigherBetter=true) is an order/control good weighted
@@ -56,8 +46,7 @@ export const METRIC_AXIS_AFFINITY: Record<string, AxisAffinity> = {
   // liberal electorates down-weight it toward 0 (never inverted).
   borderSecurity: { econ: 0, social: 1 },
   // Low incarceration is a justice-reform/libertarian good (isHigherBetter=false);
-  // the order/safety signal is already carried by crimeRate (social:+1). Reform
-  // voters weight it, not authoritarians. (#2897: was social:+1.)
+  // order/safety signal is already carried by crimeRate.
   incarcerationRate: { econ: 0, social: -1 },
 
   // ── Libertarian social: liberties, free press (lib voters weight more)

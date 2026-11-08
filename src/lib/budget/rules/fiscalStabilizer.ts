@@ -1,34 +1,27 @@
 /**
  * Fiscal stabilizer: the consolidation package an AI-run government enacts at
- * fiscal-year close when its primary deficit is out of hand (#5703).
+ * fiscal-year close when its primary deficit is out of hand.
  *
- * Bill sponsorship alone cannot close a double-digit primary deficit (two
- * active bills per country, a long cooldown), so a country like the live Italy
- * ran an 11%-of-GDP primary gap for fifteen years while interest compounded.
- * This rule sizes a package directly instead:
+ * Bill sponsorship alone cannot close a double-digit primary deficit, so this
+ * rule sizes a package directly:
  *
  * - Trigger: the primary balance is below the floor. The floor is -3% of GDP,
  *   tightening to balance (0%) while debt/GDP sits above the country's debt
- *   threshold (a rating band that carries a growth penalty) and is still rising.
- * - Size: one third of the gap between the primary balance and that floor,
- *   but never less than 2% of GDP (or the whole gap when it is smaller). A
- *   third alone only ever halves the gap geometrically, so an 11% deficit would
- *   still be above 1% after five years; the minimum step closes it in five.
+ *   threshold (a rating band carrying a growth penalty) and is still rising.
+ * - Size: one third of the gap between the primary balance and that floor, but
+ *   never less than 2% of GDP (or the whole gap when smaller). A third alone
+ *   only halves the gap geometrically; the minimum step closes it in five years.
  * - Split: tax rises versus category spending cuts by the ruling party's
- *   economic position. The left leans on taxes, the right on cuts, the centre
- *   splits evenly.
- * - Limits: no category is cut more than 15% in one year or below half of its
- *   law-priced level overall; defence and debt interest are never cut; a tax
- *   rate rises at most three points a year and never above 60%. What one side
- *   cannot absorb moves to the other; anything left is reported as unfunded.
+ *   economic position. Left leans taxes, right leans cuts, centre splits evenly.
+ * - Limits: no category cut more than 15% in one year or below half its
+ *   law-priced level; defence and debt interest never cut; a tax rate rises at
+ *   most three points a year and never above 60%. What one side cannot absorb
+ *   moves to the other; anything left is reported as unfunded.
  *
- * Restructuring is the other outcome: when debt interest takes more than half
- * of revenue for two fiscal years in a row, consolidation cannot catch the
- * interest bill and the country restructures through the sovereign-default
- * path.
+ * When debt interest takes more than half of revenue for two fiscal years in a
+ * row, the country restructures through the sovereign-default path instead.
  *
- * Pure: plain data in, plain data out. Revenue is scored statically (a rate
- * rise of x% raises that line's revenue by x%).
+ * Pure: plain data in, plain data out. Revenue is scored statically.
  */
 
 /** Primary deficit tolerated in ordinary times, as a share of GDP. */

@@ -21,32 +21,16 @@ import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } 
  * Maximum NET favorability any one target can be moved by player support/attack
  * in a single turn, in either direction.
  *
- * Root cause this closes: `supportPlayer` / `attackPlayer` move favorability by
- * a flat ±1 with no cooldown, no dedupe and no per-turn cap — the only limiter
- * was the actor's own action points and infamy. Those limits are per-ACTOR, so
- * they do not bind in aggregate: a coordinated party simply spreads the cost.
+ * `supportPlayer` / `attackPlayer` move favorability by a flat ±1 with no
+ * cooldown or dedupe, limited only per-ACTOR by action points and infamy, so a
+ * coordinated party can spread the cost and swing a target far. Favorability is
+ * worth roughly 0.45 points of vote share per point because `approvalScalar`
+ * multiplies the candidate's entire vote.
  *
- * Measured on the live 1956 US presidential race (turn 227, harness
- * `scripts/sim/favorability-bomb-replay.ts`, real engine in dry-run):
- * favorability is worth ~0.45 points of vote share per point, because
- * `approvalScalar` multiplies the candidate's ENTIRE vote. Forcing the
- * incumbent from 100 → 20 moved his projected national share 64.8% → 46.6% and
- * the electoral college 531-0 → 141-390. That is 80 landed attacks: two per
- * head across a 42-member party, ~168 action points out of the 3,715 they had
- * banked. Under 5% of one party's reserves bought the presidency.
- *
- * For comparison the approval-scaled incumbency channel measures 0.04 share
- * points per point — favorability is ~11x stronger, and was the only one of the
- * two with no aggregate limit at all.
- *
- * This is a BACKSTOP, not the primary limiter. The primary limiter is the
- * action-equivalent cost of each boost, alongside the softened
- * `APPROVAL_SCALAR_EXPONENT` (favorability is deliberately less decisive).
- * 12/turn is set well above normal coordinated play — the observed median
- * target-turn is far below it — and exists only to stop the extreme case of a
- * candidate being deleted between two turns. For reference the largest observed
- * single-turn swings were -39 and -37, which this bounds without touching
- * ordinary campaigning.
+ * This is a BACKSTOP, not the primary limiter; the primary cost is per-boost
+ * action points plus the softened `APPROVAL_SCALAR_EXPONENT`. 12/turn sits well
+ * above normal coordinated play and only stops a candidate being deleted
+ * between two turns.
  */
 const MAX_NET_FAVORABILITY_SWING_PER_TURN = 12;
 

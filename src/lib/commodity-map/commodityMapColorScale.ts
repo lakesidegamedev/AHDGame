@@ -91,24 +91,16 @@ export function capacityColor(value: number, maxValue: number): string {
 }
 
 /**
- * Reachable-market diverging scale (ticket #1077).
+ * Reachable-market diverging scale.
  *
- * The data's job here is POLARITY, not magnitude: which side of a balanced
- * market (demand/supply = 1) a country sits on. So it takes two hues and a
- * NEUTRAL GRAY midpoint, never a rainbow and never a hue at the middle.
+ * The data's job is POLARITY, not magnitude: which side of a balanced market
+ * (demand/supply = 1) a country sits on. Two hues and a NEUTRAL GRAY midpoint,
+ * using the poles `ShortageHeatMap` already ships so the maps read as one
+ * system. Arms are OKLCH-even and validated with `validateOrdinal`; the
+ * categorical validator fails diverging ramps by design and does not apply.
  *
- * Poles are the ones `ShortageHeatMap` already ships (#D64545 warm shortage,
- * #3E7CB1 cool glut, #8A8F98 neutral) so the world map and the heat map read as
- * one system. Each arm was solved for even OKLCH lightness spacing and checked
- * with the dataviz `validateOrdinal` in BOTH light and dark mode: lightness
- * monotone, adjacent dL >= 0.06, light end clears the surface, single hue per
- * arm. The categorical validator FAILS a correct diverging ramp by design (it
- * spans the lightness band and the gray midpoint sits under the chroma floor),
- * so it is not the check that applies here.
- *
- * One validated mid-tone set serves every theme, matching the reasoning in
- * ShortageHeatMap: the app ships 10+ named data-theme surfaces, so a per-theme
- * override would mis-fire on the themes it does not name.
+ * One validated mid-tone set serves every theme: 10+ named data-theme surfaces
+ * mean a per-theme override would mis-fire on the themes it does not name.
  */
 const REACHABLE_SHORT_STEPS = ["#e68f8f", "#dd6363", "#c44040", "#973535"] as const;
 const REACHABLE_GLUT_STEPS = ["#8ab0d0", "#6294c0", "#3d79ad", "#325f85"] as const;

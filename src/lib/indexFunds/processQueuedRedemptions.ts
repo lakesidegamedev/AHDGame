@@ -30,13 +30,11 @@ import {
 /**
  * Queue claims one redemption pass may make, shared by every fund in the pass.
  * The pro-rata gate gives every waiting entry a slice, so an uncapped pass
- * re-settled the whole queue each turn (#3366). Entries past the budget stay
+ * would re-settle the whole queue each turn. Entries past the budget stay
  * untouched and go first next turn; cash they did not draw stays in the fund.
  *
- * NPP payouts settle in batches (queuedPayoutBatch.ts) for about one claim
- * write each, so the budget sits above the NPP rebalancing inflow (about 1,000
- * claims a turn on a 1991 world). At the old one-receipt-per-claim cost of ~30
- * round trips the pass could pay 250 and the queue grew without bound.
+ * NPP payouts settle in batches (~one claim write each), so the budget sits
+ * above the NPP rebalancing inflow (~1,000 claims a turn on a 1991 world).
  */
 export const QUEUED_REDEMPTION_CLAIMS_PER_PASS = 2000;
 
@@ -45,11 +43,9 @@ export interface QueuedRedemptionClaimBudget {
 }
 
 /**
- * What one redemption pass loads once for every fund it serves: the pending
- * queue rows, the holder documents they credit, the fund-to-native rates and
- * the audit context. Each of those used to be read inside the per-fund call,
- * so a pass over N waiting funds paid N times for data that cannot change
- * between them.
+ * Per-pass context shared across every fund: pending queue rows, holder
+ * documents they credit, fund-to-native rates and audit context. Loaded once
+ * because none of it can change during a pass.
  */
 export interface QueuedRedemptionPassContext {
   pendingByFundId: Map<string, IndexFundRedemptionQueueEntry[]>;
@@ -128,7 +124,7 @@ export async function prepareQueuedRedemptionPass(
     const rows = await db
       .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
       // Keep currencyCode: the map below is keyed by it, and a projection
-      // without it returns rows that cannot be keyed (#5083).
+      // without it returns rows that cannot be keyed.
       .find({ currencyCode: { $in: currencies } }, { projection: { currencyCode: 1, rate: 1 } })
       .toArray();
     const byCurrency = new Map(rows.map((row) => [row.currencyCode, row.rate]));
@@ -186,7 +182,7 @@ export async function processQueuedRedemptions(
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
-  // #992 tranche 6: one batched holder lookup for the pass so each NPP
+  // One batched holder lookup for the pass so each NPP
   // redemption below can be denominated in the NPP home currency (the
   // npp:<id>:<homeCurrency> snapshot key) without a per-entry read.
   const holders = context.holders;
@@ -206,7 +202,7 @@ export async function processQueuedRedemptions(
 
   // Wallet credits are in the fund's native currency; the ₳ → native multiplier
   // is stamped on each queue entry at request time (entry.redeemFxRate, ticket
-  // #857 grandfather) - 1 for pre-fix legacy units, the fund rate for post-fix
+  // grandfather) - 1 for pre-fix legacy units, the fund rate for post-fix
   // units. Fund `cashAnchor` and NPP investment cash stay in ₳. We still gate on
   // rate availability so a momentary outage defers rather than risks a bad payout.
   if (forexEnabled) {
@@ -227,7 +223,7 @@ export async function processQueuedRedemptions(
   let paid = recovery.recovered;
   let fundState = fund;
   let availableCash = fund.cashAnchor;
-  // #992 tranche 6: thresholds for the bond-sale ledger rows below, loaded
+  // Thresholds for the bond-sale ledger rows below, loaded
   // at most once per redemption pass and only when a bond sale actually runs.
   let bondSaleThresholds: Awaited<ReturnType<typeof loadTxThresholds>> | undefined;
 

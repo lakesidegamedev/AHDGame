@@ -16,7 +16,7 @@ export interface SovereignIssuerRepair {
 }
 
 /**
- * The eight sovereign issuers issue #2028 renumbered. Hardcoded (not derived
+ * The eight sovereign issuers renumbered. Hardcoded (not derived
  * from the seed module) so the repair stays stable forever even if the seed
  * moves on: _ids are the deterministic `00000000000000000000aXXX` sovereign
  * series, targets are the dedicated 900_019-900_026 block that is disjoint
@@ -42,20 +42,14 @@ interface RepairCorporationDoc {
 }
 
 /**
- * Repair worlds seeded while the FR/IT/ES/SE/TR/GR/AT/FI sovereign issuers
- * reused 900_009-900_016 (issue #2028): move each issuer to its dedicated id
- * by deterministic _id, then create the corporations_sequentialId unique
- * guard. Fresh/reset worlds never need this (their seed already emits the
- * fixed ids and bootstrap creates the index), but any persistent world
- * bootstrapped from the buggy seed keeps ambiguous URLs and an unprotected
- * collection until something renumbers it in place.
+ * Repair worlds seeded while several sovereign issuers reused the same
+ * sequential ids: move each issuer to its dedicated id by deterministic _id,
+ * then create the corporations_sequentialId unique guard.
  *
- * Idempotent: issuers already on their target id are skipped, worlds without
- * the issuers (other presets/eras) only get the index ensured, and
- * createIndex with the same name/key/options is a no-op on re-run. Fails
- * loudly (no marker written, retried next deploy) if an unexpected extra
- * claimant still shares an id after the repair, instead of tripping over a
- * bare E11000 during index creation.
+ * Idempotent: issuers already on target are skipped, worlds without them only
+ * get the index ensured, and re-running createIndex is a no-op. Fails loudly
+ * (no marker written, retried next deploy) if an unexpected extra claimant
+ * still shares an id after the repair.
  */
 export async function repairDuplicateCorporationSequentialIds(
   db: Db,

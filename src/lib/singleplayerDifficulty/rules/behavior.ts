@@ -1,30 +1,19 @@
 /**
  * DIFFICULTY BEHAVIOR POLICY
  *
- * Two orthogonal axes govern autonomous politicians, and conflating them is the
- * failure this module exists to prevent:
+ * Two orthogonal axes govern autonomous politicians:
  *
- *   - **Autonomy** (`NppAutonomyLevel`) says WHICH activities an NPP may perform.
- *     It is a world-wide capability tier and is identical for every player.
- *   - **Difficulty** (`SingleplayerDifficulty`, local worlds only) says HOW
- *     COMPETENTLY they perform the activities autonomy already permits. It never
- *     unlocks an activity, never removes one, and never relaxes a law, cost,
- *     cooldown, visibility rule, or authority check.
+ *   - **Autonomy** (`NppAutonomyLevel`): WHICH activities an NPP may perform.
+ *     World-wide, identical for every player.
+ *   - **Difficulty** (`SingleplayerDifficulty`, local worlds only): HOW
+ *     COMPETENTLY they perform permitted activities. Never unlocks/removes an
+ *     activity or relaxes a law, cost, cooldown, visibility rule, or check.
  *
- * The sibling `rules/index.ts` tunes NPP *resources* (action points, caps, donor
- * multiplier). That is a resource bonus and is disclosed to the player as one.
- * This file tunes *decisions* only, so the two can never be confused in review:
- * nothing here hands an NPP a single extra action point or unit of currency.
+ * `rules/index.ts` tunes NPP *resources*; this file tunes *decisions* only, so
+ * the two are never confused.
  *
- * Every field below is consumed by a named mechanism with its own test. A field
- * nothing reads is a lie about the difficulty setting, so there are none.
- *
- * `normal` is defined as the shipped v4 behavior for every lever that has a
- * pre-V5 equivalent (`candidateLimit: null`, `minBillScore: 0`,
- * `reserveActionMult: 0`, `oppositionCoordination: 1`). That is deliberate: it
- * makes "V4 Normal vs V5 Normal" isolate the V5 increment, and "V5 Easy vs V5
- * Hard" isolate difficulty, instead of confounding the two. The goal fields have
- * no pre-V5 equivalent, so `normal` there is simply the intended V5 baseline.
+ * Every field is consumed by a named mechanism. `normal` matches shipped v4
+ * behavior wherever a pre-V5 equivalent exists.
  */
 
 import type { SingleplayerDifficulty } from "@/lib/db/types";
@@ -88,7 +77,7 @@ export interface NppBehaviorPolicy {
   oppositionCoordination: number;
 }
 
-// Provisional game-calendar calibration for #2320: one/two/three years by
+// Provisional game-calendar calibration for: one/two/three years by
 // difficulty. The authored scale must be checked against a multi-term worldsim.
 const POLICIES: Record<SingleplayerDifficulty, NppBehaviorPolicy> = {
   easy: {

@@ -3,8 +3,6 @@
  * by cost representation and resolves the era-native cost forms. Flag-on only:
  * the two forms are consulted by costs.ts only when the era year is non-null;
  * flag-off keeps the legacy COST_SCALE_ANCHORS path byte-identical.
- *
- * Spec: docs/superpowers/specs/2026-07-06-era-legislation-costs-design.md
  */
 import { MECHANICAL_TYPE_IDS } from "@/lib/mechanicalLaws/legislation";
 import {
@@ -762,7 +760,7 @@ export interface EraCostContext {
    * The country's LIVE national median income (local currency — same
    * denomination as `gdp`). The perCapita charge base: costs must track the
    * game's own economic history, not the real-world era anchor (macro-v1
-   * Phase 1; see 2026-07-09-gdp-growth-realism-design.md §3).
+   * Phase 1).
    */
   nationalMedianIncome?: number;
 }
@@ -787,19 +785,12 @@ export function resolveEraSpendingCost(
 ): number | undefined {
   const cls = getCostClass(typeId);
   if (cls === "gdpFraction") {
-    // A law/option whose type is classed here but was never migrated onto the
-    // era catalog (no `gdpCostFraction` materialized on THIS document — e.g. it
-    // still carries a legacy `gdpPerCapitaMultiplier`/`annualCostPerCapita`)
-    // must fall through to that legacy field, not silently book $0. Concretely:
-    // jp_national_health_insurance, jp_article9_sdf, ie_healthcare_policy,
-    // ie_defence_spending, cn_medical_insurance, cn_pla_modernization,
-    // ng_health_insurance, ng_defense_policy (and siblings) were all generated
-    // with a real `gdpPerCapitaMultiplier` and NO era field — before this fix,
-    // `?? 0` here made the era path win with a phantom zero, so
-    // calculateEnactedLawAnnualCost's `era !== undefined` short-circuit never
-    // reached the legacy branch that actually prices them. An explicit `0`
-    // (a genuinely materialized zero-cost option) is still honoured as 0; only
-    // an unmaterialized (`undefined`/non-finite) field defers to legacy pricing.
+    // A law/option classed here but never migrated onto the era catalog (no
+    // `gdpCostFraction` on THIS document; it still carries a legacy
+    // `gdpPerCapitaMultiplier`/`annualCostPerCapita`) must fall through to that
+    // legacy field, not silently book $0. An explicit `0` (a genuinely
+    // materialized zero-cost option) is still honoured; only an unmaterialized
+    // (`undefined`/non-finite) field defers to legacy pricing.
     if (typeof fields.gdpCostFraction !== "number" || !Number.isFinite(fields.gdpCostFraction)) {
       return undefined;
     }
@@ -814,27 +805,21 @@ export function resolveEraSpendingCost(
     }
     const frac = fields.incomeCostFraction;
     const i2g = incomeToGdp(ctx.countryId);
-    // perCapita cost is pinned to the calibrated share of GDP: `incomeCostFraction`
-    // was materialized as share / i2g, so `frac × i2g × gdp` === `share × gdp` (the
-    // gdpFraction target). The live national median income is NO LONGER used to
-    // scale the charge — it is symmetrically clamped to the calibrated income-to-GDP
-    // ratio from BOTH sides, which collapses to this same expression:
+    // perCapita cost is pinned to the calibrated share of GDP:
+    // `incomeCostFraction` is share / i2g, so `frac × i2g × gdp` === `share × gdp`.
+    // The live national median income does not scale the charge; it is clamped
+    // to the calibrated income-to-GDP ratio, which collapses to this expression.
     //
-    //   CEILING (#3000): a seed economy whose income metric never grew down with GDP
-    //   (CN ¥67.6k vs GDP/capita ¥2.4k, 28×) would inflate spending to a 204%-of-GDP
-    //   phantom deficit — capped at the calibrated ratio.
+    // Upper clamp: a seed economy whose income metric never grew with GDP (CN
+    // ¥67.6k vs ¥2.4k GDP/capita) would inflate spending to a phantom deficit.
+    // Lower clamp: where the income metric sits below its calibration anchor
+    // (JP 0.36x, NG 0.097x) every perCapita law was silently scaled down to a
+    // fraction of its calibrated %GDP, suppressing all perCapita spending.
     //
-    //   FLOOR (#3149): the mirror image. Where the income metric sits BELOW its
-    //   real-world calibration anchor (JP live ¥2.09M vs the ¥5.5M anchor, 0.36×;
-    //   NG 0.097×) every perCapita law was silently scaled down to a fraction of its
-    //   calibrated %GDP, suppressing ALL perCapita spending in those countries.
-    //
-    // Pinning to the calibrated share restores the intended %GDP for JP/NG, matches
-    // the gdpFraction class, and matches how every correctly-calibrated country
-    // (live income ≈ anchor ⇒ the old clamp was already inert) already resolved.
-    // It leaves i2g / frac untouched, so enacted-law snapshots stay consistent and
-    // no reseed or migration is required. `nationalMedianIncome` is retained on the
-    // context for the callers/telemetry but intentionally does not scale the charge.
+    // Pinning restores the intended %GDP and matches how correctly calibrated
+    // countries already resolved. It leaves i2g / frac untouched, so enacted-law
+    // snapshots stay consistent and no reseed is needed. `nationalMedianIncome`
+    // stays on the context for callers and telemetry but does not scale the charge.
     return frac * i2g * ctx.gdp;
   }
   return 0;
@@ -847,8 +832,7 @@ export function resolveEraSpendingCost(
 // seed-build time by `withEraCosts`, from a real-world domain max-share × the
 // option's generosity (its position on the type's own cost ladder). The fields
 // live on the seed options (inspectable, and hand-overridable — the materializer
-// never overwrites a value already set on an option). Reference:
-// docs/superpowers/era-cost-reference-shares.md.
+// never overwrites a value already set on an option).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -888,24 +872,13 @@ export const DOMAIN_MAX_SHARE: Record<string, number> = {
 
 /** Per-type max-share overrides for big-ticket / outlier programs. */
 export const COST_SHARE_OVERRIDES: Record<string, number> = {
-  // Healthcare normalization (ticket #953 + issue #3137 follow-up): the /N
-  // domain split priced every country's flagship healthcare lever far below
-  // its real-world government-health share of GDP (game year 2012 anchors).
-  // Values are pre-CALIBRATION_SCALE (x1.5) per-type max shares chosen so the
-  // CURRENTLY ENACTED generosity lands near the anchor:
-  //   US  1.44% -> ~5.3%  (fed Medicare+Medicaid)
-  //   UK  1.63% -> ~7.5%  (NHS)
-  //   DE  3.17% -> ~8.5%  (public health insurance)
-  //   JP  1.19% -> ~7.5%  (the income-base fix has landed — #3149: the perCapita
-  //       income base is no longer suppressed to 0.36x calibration, so this
-  //       override now reaches its intended ~7.5% anchor. Retune DOWN, never up,
-  //       if a post-fix dry-run shows it overshooting.)
-  //   CN  3.60% -> ~1.7%  (2012 CN government health share; all four levers
-  //       are maxed since 1995, so shares come DOWN)
-  //   IE  3.60% -> ~5.9%
-  // After changing these, reseed legislationTypes AND run
-  // scripts/migrate-enacted-law-healthcare-fractions.ts — enacted laws
-  // snapshot fractions at enactment and never re-read the catalog.
+  // Healthcare normalization: values are pre-CALIBRATION_SCALE (x1.5)
+  // per-type max shares chosen so enacted generosity lands near the 2012
+  // government-health-share-of-GDP anchor (US ~5.3%, UK ~7.5%, DE ~8.5%,
+  // JP ~7.5%, CN ~1.7%, IE ~5.9%). Retune JP DOWN, never up, if dry-run
+  // overshoots. After changing, reseed legislationTypes AND run
+  // scripts/migrate-enacted-law-healthcare-fractions.ts: enacted laws
+  // snapshot fractions and never re-read the catalog.
   us_federal_healthcare_funding: 0.043,
   uk_nhs_funding: 0.067,
   de_health_insurance: 0.048,

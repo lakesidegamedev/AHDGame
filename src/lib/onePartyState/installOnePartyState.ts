@@ -14,17 +14,14 @@ import { ensureInitialEscalationState } from "@/lib/turn/regimeEscalationTurn";
 /**
  * Turn a country into a one-party state.
  *
- * The MIRROR of `triggerSystemConversion`, which only ever ran the other way: that
- * function flips a one-party state into a democracy, clears `opsVoteMultipliers`
- * and `hasLeaderConfidenceModel`, and wipes `regimeStatus` on every party. This
- * restores exactly what that clears, so the pair reads as one reversible operation
- * rather than two unrelated writes.
+ * The MIRROR of `triggerSystemConversion`, which only ran the other way:
+ * flipping a one-party state into a democracy and clearing
+ * `opsVoteMultipliers`, `hasLeaderConfidenceModel`, and every party's
+ * `regimeStatus`. This restores exactly what that clears, so the pair reads
+ * as one reversible operation rather than two unrelated writes.
  *
- * Does NOT dissolve the legislature or schedule elections. Those belong to the
- * caller, so that the same dissolution and the same election run whichever
- * direction the conversion went.
- *
- * Spec: docs/superpowers/specs/2026-08-27-peace-terms-design.md
+ * Does NOT dissolve the legislature or schedule elections: those belong to
+ * the caller so the same dissolution and election run in either direction.
  */
 export interface InstallOnePartyStateOptions {
   /**
@@ -55,20 +52,15 @@ export interface InstallOnePartyStateOptions {
    */
   toleratedPartyIds?: number[];
   /**
-   * Vacate every elected office held by a party this install BANS.
+   * Vacate every elected office held by a banned party.
    *
-   * Off by default so the shipped `regime_change` peace term keeps behaving
-   * exactly as it did. Reunification turns it on: without it the unified
-   * chamber seats the banned western parties at 71% of a state their own
-   * parties are outlawed in, and the ruling party governs as a 28.9% minority
-   * of a chamber that is nominally opposed to it.
+   * Off by default so existing `regime_change` peace terms behave unchanged.
+   * Reunification enables it; otherwise banned western parties would seat at
+   * 71% of a chamber where their own parties are outlawed.
    *
-   * VACATES, does not reapportion. The seats stay in the chamber's nominal size
-   * -- that is `getLiveLowerChamberSeats` summing region `houseDistricts`, and
-   * the western Laender genuinely still exist -- they simply stand empty until
-   * something fills them. That keeps the change reversible: a regime that later
-   * democratises refills them at the next election rather than having to
-   * reconstruct a chamber somebody deleted.
+   * VACATES, does not reapportion: seats stay in the chamber's nominal size
+   * and stand empty, so a later democratising regime refills them at the next
+   * election rather than reconstructing a deleted chamber.
    */
   vacateBannedSeats?: boolean;
 }
@@ -160,19 +152,19 @@ export async function installOnePartyState(
 /**
  * Empty every elected office held by one of the banned parties.
  *
- * The seats are VACATED, not reassigned: the chamber's nominal size comes from
- * region `houseDistricts` and is untouched, so the rows simply stop existing and
- * the seats stand empty until an election refills them. Reassigning them to the
- * ruling party would be inventing a result no ballot produced.
+ * Seats are VACATED, not reassigned: the chamber's nominal size comes from
+ * region `houseDistricts` and is untouched, so the rows stop existing and seats
+ * stand empty until an election refills them. Reassigning them to the ruling
+ * party would invent a result no ballot produced.
  *
- * Matches `party` the same three ways `resolveRulingParty` does -- sequentialId
- * first, then name, then abbreviation. Production writes `String(sequentialId)`,
- * but the display surfaces have written the other two, and a vacate that missed
- * those rows would leave banned members seated with no sign of why.
+ * Matches `party` the same three ways `resolveRulingParty` does: sequentialId,
+ * then name, then abbreviation. Production writes `String(sequentialId)`, but
+ * display surfaces have written the other two; a vacate that missed those rows
+ * would leave banned members seated with no sign of why.
  *
- * The holders' denormalised `currentOffice` is cleared only for holders left
- * with NO remaining seat in this country, so a member who somehow still holds an
- * office through another party keeps the pointer to it.
+ * A holder's denormalised `currentOffice` is cleared only when they have NO
+ * remaining seat in this country, so a member still holding an office through
+ * another party keeps the pointer.
  */
 async function vacateSeatsOfParties(
   db: Db,
@@ -266,20 +258,16 @@ async function vacateSeatsOfParties(
 }
 
 /**
- * Which party takes power, as a sequentialId, or null when none can be resolved.
+ * Which party takes power, as a sequentialId, or null when none resolves.
  *
- * Three sources, in order of how directly they answer "who governs here":
+ * Sources in order:
+ *   1. The formed government's governing party. `governingPartyId` can be a
+ *      non-numeric marker like "independent", so integer-check it.
+ *   2. The largest party in the chamber by seats (presidential systems have
+ *      no formation to read).
+ *   3. Nobody: a country with no parties tags none rather than banning all.
  *
- *   1. The FORMED GOVERNMENT's governing party. `governingPartyId` can be a
- *      non-numeric marker such as "independent", which `Number()` would turn into
- *      NaN, so it is integer-checked exactly as `syncRulingPartyIdFromFormedGovernment`
- *      does.
- *   2. The largest party in the chamber by seats held. A presidential system has no
- *      government formation to read, so the legislature answers instead.
- *   3. Nobody. A country with no parties tags none, rather than banning every party
- *      in a state with no ruling one.
- *
- * Deterministic throughout: a re-run picks the same party.
+ * Deterministic: a re-run picks the same party.
  */
 async function resolveRulingParty(
   db: Db,

@@ -570,7 +570,7 @@ export async function processCompletedNationalElections(
   const winningResults: WinningResult[] = [];
   /**
    * Seats to vacate because the race produced no winner AND the incumbent did
-   * not stand for re-election (ticket #1100). See the else-branch comment below.
+   * not stand for re-election. See the else-branch comment below.
    */
   const unopposedVacancies: {
     party: PoliticalParty;
@@ -625,15 +625,8 @@ export async function processCompletedNationalElections(
       // No winner. A mandate is only renewed by standing: an incumbent who did
       // NOT put their name forward loses the seat when the cycle closes, and the
       // seat opens empty for the next cycle (created automatically by
-      // createMissingNationalElections). An incumbent who DID stand keeps the
-      // seat: an uncontested or unvoted race is not a repudiation.
-      //
-      // Before this, every no-winner race left the incumbent in place
-      // unconditionally, so an officer nobody challenged (and who never re-stood)
-      // held the office forever, with the party unable to remove them through the
-      // election mechanic (ticket #1100: a UK party treasurer). The chair seat has
-      // the vice-chair acting-chair fallback for a vacancy; vice-chair and
-      // treasurer simply open up.
+      // createMissingNationalElections). An incumbent who DID stand keeps the seat:
+      // an uncontested or unvoted race is not a repudiation.
       const party = partyMap.get(`${election.countryId ?? "US"}:${partyId}`);
       const holderId = party ? (party[POSITION_FIELD[position]] ?? null) : null;
       const incumbentStood =

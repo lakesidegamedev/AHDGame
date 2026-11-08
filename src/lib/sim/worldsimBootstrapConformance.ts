@@ -1,35 +1,18 @@
 /**
- * Fresh-bootstrap seed conformance for worldsim runs (#1992).
+ * Fresh-bootstrap seed conformance for worldsim runs.
  *
- * The reset/bootstrap admin path records a pre-open conformance diagnostic
- * (`resetAndBootstrapGameWorld` step 4), but `scripts/sim/runWorld.ts` calls
- * `bootstrapGameWorld()` directly and begins advancing turns — so sandbox
- * worlds had no authoritative pre-turn `seedDiagnostics` document or captured
- * seed baseline, and the audit could not separate bad seed data from
- * mechanical drift.
+ * Call once on a fresh bootstrap, after `bootstrapGameWorld()` returns and BEFORE
+ * sim-only state mutation or the first `processTurn()`. Runs conformance against
+ * the sandbox DB, persists the report with trigger `worldsim-post-bootstrap`,
+ * and captures the drift baseline when clean and no baseline exists yet.
  *
- * `runWorldsimBootstrapConformance` closes that gap. Call it once, on a fresh
- * bootstrap, after `bootstrapGameWorld()` returns and BEFORE sim-only state
- * mutation (tier patches, autonomy, seat backfill, corp spawn) or the first
- * `processTurn()`:
+ * Findings never throw: a diagnostic throw is persisted as `diagnostic_error`
+ * and returned as `diagnostic-error`. Resumed and live-clone runs skip bootstrap
+ * entirely. A pre-existing report short-circuits to `skipped-existing` without
+ * touching the baseline.
  *
- *   1. runs seed conformance against the isolated sandbox DB;
- *   2. persists the full report (preset, run id, seed, source revision,
- *      effective feature manifest, world turn) with trigger
- *      `worldsim-post-bootstrap`;
- *   3. captures the drift baseline when conformance is clean AND no baseline
- *      exists yet;
- *   4. returns a summary the caller stamps on the sim run manifest.
- *
- * Findings never throw from this helper. The worldsim runner decides whether
- * to advance turns after inspecting the result. A diagnostic throw is
- * persisted as a `diagnostic_error` report and returned as `diagnostic-error`
- * so the failure stays visible. Resumed and live-clone runs never reach this
- * (they skip bootstrap), and a pre-existing worldsim-post-bootstrap report
- * short-circuits to `skipped-existing` without touching the baseline.
- *
- * Sandbox-only by construction: it only ever touches the passed `db`, which
- * the caller pinned to the isolated sandbox before any engine import.
+ * Sandbox-only: it only touches the passed `db`, which the caller pins to the
+ * isolated sandbox before any engine import.
  */
 
 import type { Db } from "mongodb";

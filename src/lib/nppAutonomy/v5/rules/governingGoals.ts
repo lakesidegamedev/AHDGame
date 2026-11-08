@@ -253,23 +253,21 @@ export interface GoalCommitment {
 
 /**
  * Turn reviewed records plus a freshly computed agenda into the committed goal
- * set and the agenda the government will actually govern by.
+ * set and the agenda the government will govern by.
  *
  * Slot rules, in order:
- *   1. Crisis items always get a slot. An emergency outranks any standing
- *      commitment; the country is on fire.
+ *   1. Crisis items always get a slot; an emergency outranks any standing
+ *      commitment.
  *   2. Goals still `active` (inside their hold) keep their slots.
  *   3. `revised` goals re-open in place with a fresh hold and baseline.
  *   4. Remaining slots fill from the fresh agenda, highest priority first.
- *   5. Anything left over (achieved / failed / evicted) is dropped — the verdict
- *      has already been recorded in `feedback`, and keeping it would grow
- *      unbounded.
+ *   5. Anything left over is dropped; its verdict is already in `feedback` and
+ *      keeping it would grow unbounded.
  *
- * The returned agenda leads with the committed domains so every downstream
- * consumer (ministerial orders, bill sponsorship, fiscal stance) reads the same
- * commitments without any of them needing to know goals exist. It stays capped
- * by `GOVERNING_ARCHETYPE_CLAMP.maxAgendaBreadth`, so V5 can never widen a
- * government's attention past the bound V1 already set.
+ * The returned agenda leads with committed domains so every downstream consumer
+ * (ministerial orders, bill sponsorship, fiscal stance) reads the same commitments.
+ * It stays capped by `GOVERNING_ARCHETYPE_CLAMP.maxAgendaBreadth` so V5 can never
+ * widen attention past the V1 bound.
  */
 export function commitGoverningGoals(params: {
   reviewed: readonly GoverningGoalRecord[];

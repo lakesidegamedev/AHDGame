@@ -2,18 +2,15 @@
  * One party's presidential-primary detail, assembled once for every surface
  * that shows it.
  *
- * Two screens render this material: the Blend primary screen at
- * `/elections/[id]`, which fetches it from
- * `GET /api/elections/[id]/primary/[partyId]`, and the deep dive at
- * `/president/primary/[partyId]`, which calls this module directly. They read
- * the same function rather than one calling the other's HTTP route, so their
- * figures cannot drift and the server page pays no round trip to itself.
+ * Both the Blend primary screen (via
+ * `GET /api/elections/[id]/primary/[partyId]`) and the deep dive at
+ * `/president/primary/[partyId]` read this module, so their figures cannot
+ * drift and the server page pays no round trip to itself.
  *
  * `loadPrimaryPartyData` returns the rich, server-only assembly (Mongo docs and
- * Maps) that the deep-dive page still needs for its choropleth and
- * endorsements. `buildPrimaryPartyDetail` returns the JSON-safe subset the
- * endpoint serves. Both derive `byState` from the same place, which is the
- * point: the carve-up on either screen is the same carve-up.
+ * Maps) for the choropleth and endorsements. `buildPrimaryPartyDetail` returns
+ * the JSON-safe subset the endpoint serves. Both derive `byState` from the same
+ * place, so the carve-up matches on either screen.
  */
 
 import { primaryNightForParty } from "@/lib/elections/liveResults/primaryNight";
@@ -499,16 +496,12 @@ function collectVotedStates(tally: ElectionVoteTally | null): string[] {
 
 /**
  * What each state's bar should show: the count where a contest has happened,
- * the forecast where it has not.
+ * the forecast where it has not. Showing raw projection everywhere keeps a
+ * prediction for decided contests and disagrees with the map above.
  *
- * Feeding the raw projection everywhere would keep showing a prediction for
- * contests that have already been decided, which is how the deep dive's
- * carve-up came to disagree with the map directly above it.
- *
- * Tally rows are scoped to candidates still in the race for the reason the
- * per-state page does it (#974): the tally keeps rows for withdrawn
- * candidates, which otherwise surface as an "Unknown" slice and skew every
- * other share in the state.
+ * Tally rows are scoped to candidates still in the race: the tally keeps
+ * withdrawn candidates, which otherwise surface as an "Unknown" slice and
+ * skew every other share.
  */
 function buildDisplayVotes(input: {
   projection: ProjectionResult;

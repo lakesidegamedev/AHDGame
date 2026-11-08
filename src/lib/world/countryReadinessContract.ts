@@ -1,14 +1,11 @@
 /**
- * Archetype-aware country readiness contracts (#3722).
+ * Archetype-aware country readiness contracts.
  *
  * Separates autonomous safety from player parity so a Tier-1 country can run
  * under NPP control while remaining player-blocked until every mechanical
  * capability applicable to its government/economic archetype is present.
  *
  * Flavor gaps (events, art, wiki) are reported but never become hard blockers.
- *
- * Public surface is intentionally small: resolve archetypes, evaluate a pure
- * report from evidence, collect static evidence, and gate player opening.
  */
 
 import {
@@ -86,19 +83,14 @@ export interface CapabilityEvidence {
 export type CapabilityEvidenceMap = Partial<Record<CapabilityId, CapabilityEvidence>>;
 
 /**
- * An authored override for a capability a probe cannot prove.
+ * Authored override for a capability no probe can prove.
  *
- * Absence must justify itself. A bare `present: false` with a free-text string
- * cannot distinguish "this will never apply here" from "nobody has written it
- * yet" — the same conflation the era roster exists to remove, one level down.
- *
- * `not-applicable` is permanent and needs only a reason. `deferred` is work
- * nobody has done, and carries an issue once one is filed. `issue: null` is
- * deliberate rather than lazy: issues are filed by hand on a public repository,
- * and a waiver that could not be recorded until a number existed would be
- * recorded nowhere at all. Every deferred waiver is reported as debt whether or
- * not it has a number; what must never happen is a deferred gap dressed up as
- * `not-applicable`.
+ * A bare `present: false` cannot distinguish "never applies here" from
+ * "not written yet". `not-applicable` is permanent; `deferred` carries an
+ * issue once filed. `issue: null` is deliberate: issues are filed by hand,
+ * and a waiver that required a number to be recorded would be recorded
+ * nowhere. Deferred gaps are always reported as debt and must never be
+ * dressed up as `not-applicable`.
  */
 export type CapabilityOverride =
   | { present: true; evidence: string }
@@ -518,13 +510,9 @@ export function evaluateCountryReadiness(input: {
 // ─── Static evidence collection ──────────────────────────────────────────────
 
 /**
- * Authored capability overrides for cases probes cannot yet prove (or for
- * known flavor gaps). Keyed by `${presetId}:${countryId}:${capabilityId}`.
+ * Authored capability overrides for cases probes cannot prove (or known
+ * flavor gaps). Keyed by `${presetId}:${countryId}:${capabilityId}`.
  * `undefined` means "use the probe result".
- *
- * Party seeds come from `@/lib/seeds/partySeedRegistry`, which covers every
- * registered country. The partial copy that used to live here covered 14 of
- * them, which is why the probes needed a country-keyed fallback.
  */
 export const CAPABILITY_INVENTORY: Readonly<Record<string, CapabilityOverride | undefined>> =
   Object.freeze({

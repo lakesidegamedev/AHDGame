@@ -524,21 +524,11 @@ export async function processAutonomousForeignPolicy(
     };
   }
 
-  // BALLOTS ARE NOT THE COUNTRY'S ONE ACTION, and separating them here is the
-  // whole of ticket #1257.
-  //
-  // A country plans once every six turns and executes a single top-ranked
-  // choice. Casting a ballot used to compete for that slot against embargoes,
-  // tariffs and war conduct, so a 24-turn ballot gave each member four contested
-  // chances to vote and it lost most of them — the more so after #1233 raised
-  // war conduct above the routine band precisely to stop votes crowding IT out.
-  // Under unanimity one member losing all four is a permanent veto, which is how
-  // China closed 5-of-7 and North Korea 2-of-7 in the Warsaw Pact with not one
-  // "no" cast against either.
-  //
-  // A foreign ministry can vote in its bloc AND raise a tariff in the same week;
-  // the two were never really rivals. So every eligible ballot is cast, and the
-  // ranked action is chosen from what is left.
+  // Ballots are separate from the country's one strategic action. A country
+  // plans once every six turns and executes a single top-ranked choice; letting
+  // ballots compete for that slot means each member loses votes under pressure,
+  // and under unanimity a member losing every vote is a permanent veto. So every
+  // eligible ballot is cast, and the ranked action is chosen from the rest.
   const ranked = rankChoices(context);
   const isBallot = (c: ForeignPolicyChoice) =>
     c.type === "vote_org_yes" || c.type === "vote_org_no";
@@ -562,7 +552,7 @@ export async function processAutonomousForeignPolicy(
     acted: false,
     executionStatus: context.mode === "shadow" ? "planned" : choice ? "claimed" : "no_action",
     // The audit row is the only account of why a country did what it did, and a
-    // flat "no action" on a turn that cast four ballots is how #1257 stayed
+    // flat "no action" on a turn that cast four ballots is how stayed
     // invisible for as long as it did. Say which of the two happened.
     executionNote:
       context.mode === "shadow"

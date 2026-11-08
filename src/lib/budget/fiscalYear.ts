@@ -222,7 +222,7 @@ export async function processFiscalYear(
       .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } }),
     loadFxRatesByCurrency(db),
     loadTurnTariffInflationExposure(db, currentTurn),
-    // Debt interest is charged on the coupons the stock carries (#2089): one
+    // Debt interest is charged on the coupons the stock carries: one
     // projected read for the annual pass, never one per country.
     loadSovereignCouponBooks(db),
   ]);
@@ -237,9 +237,8 @@ export async function processFiscalYear(
   // auctions for a state that no longer exists, and write snapshots for it.
   const registeredCountries = new Set<string>(await getRegisteredCountryIds(db));
 
-  // Fiscal stabilizer (#5703): AI-run countries enact a consolidation package
-  // at fiscal close. Player countries are never touched. One access read and
-  // two ideology reads for the whole pass.
+  // Fiscal stabilizer: AI-run countries enact a consolidation package at
+  // fiscal close. Player countries are never touched.
   const countryAccess = await getAllCountryAccess(db);
   const nppGovernedCountries = new Set<string>(
     Object.entries(countryAccess)
@@ -247,9 +246,8 @@ export async function processFiscalYear(
       .map(([id]) => id)
   );
   const rulingEconomicPositions = await loadRulingEconomicPositions(db, [...nppGovernedCountries]);
-  // 2027 background countries (#5702): budget derived from the macro economy,
-  // stabilizer paid for by their own politics. One read; fiscal state is
-  // written back in one batch after the loop.
+  // Background countries: budget derived from the macro economy, stabilizer
+  // paid for by their own politics. Fiscal state is written back in one batch.
   const backgroundSources = await loadBackgroundBudgetSources(db);
   const backgroundFiscalWrites: AnyBulkWriteOperation<MacroCountryState>[] = [];
 
@@ -271,19 +269,10 @@ export async function processFiscalYear(
     const nationalMetrics = nationalDocId
       ? (allStateMetrics.find((metric) => String(metric._id) === nationalDocId) ?? null)
       : null;
-    // Canonical national growth, not a flat 2.5. The 17 countries with no
-    // national metrics doc used to record +2.5% here while several of their
-    // economies were contracting 6-9% (CS -8.9%, HU -7.4%, RO -6.9% at turn
-    // 369). `states` and `allStateMetrics` are already loaded above, so the
-    // regional leg reuses them rather than querying per country.
-    //
-    // Blast radius is narrow and was verified live: `economicFactors.gdpGrowth`
-    // does NOT drive tax-base growth (fiscalBaseGrowth.ts builds its own factors
-    // from the national macroMetrics doc), and the fallbacks at :173/:313/:427
-    // below are unreachable while every country has regional GDP and every
-    // region has a growth metric. Its one live consumer is
-    // `moneySupply/nppPolicy.ts` (NPP open-market decisions), which was choosing
-    // operations against a fictitious +2.5%.
+    // Canonical national growth, not a flat 2.5: the no-metrics fallback
+    // misrecorded +2.5% for contracting economies. `states` and
+    // `allStateMetrics` are already loaded, so reuse them. The only live
+    // consumer is `moneySupply/nppPolicy.ts` (NPP open-market decisions).
     const countryRegionGdp = new Map(
       states
         .filter((s) => s.countryId === countryId && !NATIONAL_SCOPE_IDS.has(String(s._id)))
@@ -336,15 +325,10 @@ export async function processFiscalYear(
       GDP_SMOOTHING_INERTIA
     );
     if (federalBudget.taxBases) {
-      // Base growth moved to the per-turn `fiscalBaseGrowth` phase (the annual
-      // jump became a 1/TURNS_PER_YEAR slice each turn). fiscalYear keeps the
-      // annual GDP derivation, inflation snapshot, grants, debt, and revenue
-      // recompute — off the now per-turn-grown bases — but no longer grows them
-      // (that would double-count). `newTaxBases` stays the current bases.
-      // A1 SSOT (design §5.4): federalBudget.gdp DERIVES from Σ regional state.gdp
-      // (the engine grew each region's level per turn) rather than compounding
-      // independently. Fall back to annual compounding only for countries whose
-      // states carry no SSOT gdp yet (pre-reconciliation safety).
+      // Base growth happens in the per-turn fiscalBaseGrowth phase; growing here
+      // would double-count. newTaxBases stays the current bases.
+      // GDP derives from Σ regional state.gdp; fall back to annual compounding
+      // only when states carry no SSOT gdp yet.
       const countryStateGdpMillions = states
         .filter((s) => s.countryId === countryId && !NATIONAL_SCOPE_IDS.has(String(s._id)))
         .reduce((sum, s) => sum + (s.gdp || 0), 0);
@@ -603,11 +587,9 @@ export async function processFiscalYear(
       ceiling: federalBudget.debt.ceiling,
     });
 
-    // `debt.principal` is owned by the bond ledger (see bonds/sovereignPrincipal.ts)
-    // and is deliberately absent from this write: the old rollover re-derived it
-    // from the treasury balance here, clobbering same-turn issuance/maturity state
-    // every fiscal boundary (#1975). Rate/ratio/rating below are refreshed off the
-    // bond-owned stock, never the balance.
+    // `debt.principal` is owned by the bond ledger (bonds/sovereignPrincipal.ts);
+    // never re-derive it from the balance here, or same-turn issuance/maturity is
+    // clobbered. Rate/ratio/rating below refresh off the bond-owned stock.
     await db.collection<FederalBudget>("federalBudget").updateOne(
       { _id: federalBudget._id },
       {
@@ -799,13 +781,9 @@ async function processStateFiscalYear(
   const newTaxBases = stateBudget.taxBases;
   let newStateGdp = stateBudget.stateGdp || 0;
   if (stateBudget.taxBases) {
-    // Base growth moved to the per-turn `fiscalBaseGrowth` phase (grows each
-    // state's bases by that state's own factors). fiscalYear no longer grows
-    // them (double-count); it reconciles stateGdp + state revenue annually off
-    // the per-turn-grown bases (`newTaxBases` stays the current bases).
-    // A1 SSOT: stateGdp is a snapshot of `state.gdp × 1M` (the engine grew the
-    // region's level per turn). Fall back to annual compounding only when the
-    // region carries no SSOT gdp yet (pre-reconciliation safety).
+    // stateGdp is a snapshot of `state.gdp × 1M` (SSOT, grown per turn by the
+    // fiscalBaseGrowth phase). Fall back to annual compounding only when the
+    // region carries no SSOT gdp yet.
     newStateGdp =
       stateGdpMillions && stateGdpMillions > 0
         ? stateGdpMillions * 1_000_000
@@ -974,9 +952,8 @@ async function applyDebtPenalties(
   }
 
   if (trustPenalty > 0) {
-    // Debt→trust now lands on the political BOARD, via the same events channel
-    // as the sovereign-default hit. It previously $inc'd a legacy path that no
-    // country has any more, so the penalty had silently stopped applying.
+    // Debt→trust lands on the political BOARD via the same events channel as
+    // the sovereign-default hit, not a legacy path.
     await applyLegacyTrustDelta(db, countryId, -trustPenalty);
   }
 }

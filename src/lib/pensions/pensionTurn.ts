@@ -1,32 +1,19 @@
 /**
- * A8: the turn pass that moves pension money.
+ * Turn pass that moves pension money: charges employers, accrues worker claims,
+ * and tops up schemes in deficit for every active collective agreement with a
+ * contribution rate.
  *
- * Runs once per turn over every ACTIVE collective agreement carrying a
- * contribution rate. For each one it charges the employer, accrues the workers'
- * claim, and asks a scheme in deficit for a top-up.
+ * sector.laborCost is written by the corporation turn as telemetry, not read
+ * back into the economy. Reading it here makes it load-bearing: an absent or
+ * unusable figure contributes NOTHING (the labour system can be off, and
+ * inventing a wage bill would charge employers for unmodelled workers), and
+ * the same figure drives both contribution and accrual so they cannot diverge.
  *
- * ## Where the wage bill comes from
+ * It is stored DAILY (per-turn cost times TURNS_PER_DAY) while this pass runs
+ * per TURN, so it is divided back down first; using it as-is would bill 24x.
  *
- * `sector.laborCost` is written by the corporation turn and documented there as
- * display-and-analytics telemetry, not read back into the economy. This reads
- * it back, which makes it load-bearing, so two things follow and are enforced
- * below: an absent or unusable figure contributes NOTHING (the labour system
- * can be off entirely, and inventing a wage bill would charge an employer for
- * workers the economy is not modelling), and the same figure drives BOTH the
- * contribution and the accrual so the two can never be measured against
- * different populations.
- *
- * That field is stored on a DAILY basis (`sectorTurn.ts` writes the per-turn
- * cost times `TURNS_PER_DAY`, like `revenue`), and this pass runs once per TURN,
- * so it is divided back down before anything is charged against it. Reading the
- * stored figure as if it were per-turn billed every employer 24 times the
- * bargained rate and accrued 24 times the claim.
- *
- * ## Order
- *
- * Charge, then accrue, then top up. Accruing first would ask an employer to
- * top up a shortfall created by the very same turn's accrual, before that
- * turn's contribution had been counted against it.
+ * Order: charge, then accrue, then top up, so an employer is never asked to
+ * cover a shortfall created by the same turn's own accrual.
  */
 
 import { ObjectId, type Db } from "mongodb";

@@ -248,10 +248,10 @@ export async function retireCharacter(
     });
   }
 
-  // UK Commons vacancies (#860): capture this character's Commons seats BEFORE
-  // the tombstone below clears them, so each vacated seat gets a durable
-  // vacancy the by-election watcher can fill. `create` dedupes per official
-  // row, so a concurrent hook or a retried retirement never doubles the seat.
+  // UK Commons vacancies: capture seats BEFORE the tombstone below clears
+  // them, so each vacated seat gets a durable vacancy the by-election watcher
+  // can fill. `create` dedupes per official row, so concurrent hooks or retries
+  // never double the seat.
   const ukCommonsSeats =
     character.countryId === "UK"
       ? await db
@@ -337,10 +337,9 @@ export async function retireCharacter(
   await cleanupShareMarketActivityForCorporations(db, ceoCorpIds, now, forexEnabled);
 
   await releaseCharacterHeldSharesToFloat(db, [characterId], now);
-  // Bonds and index-fund positions were never released on character exit
-  // before this — orphaned characterId references piling up on issuer/fund
-  // books (coupons/NAV still accruing against a holder that no longer
-  // exists). Mirrors the share release immediately above.
+  // Bonds and index-fund positions must be released on exit; otherwise
+  // orphaned characterId refs pile up on issuer/fund books and coupons/NAV
+  // accrue against a holder that no longer exists. Mirrors share release above.
   await releaseCharacterHeldBondsToFloat(db, [characterId], now);
   await releaseCharacterHeldIndexFundPositionsToFloat(db, [characterId]);
   for (const ceoCorpId of ceoCorpIds) {
@@ -423,14 +422,9 @@ export async function retireCharacter(
   }
 
   // Clear state-party leadership/campaigner assignments tied to this character.
-  // We sweep across all parties (no `partyId` filter) because a character can
-  // hold a state-level seat in any state's row of any party they belong to —
-  // and once they retire, none of those assignments are valid. Unlike the
-  // national party leadership cleared above, these were previously never
-  // cleared (ticket #0860): a retired state chair/vice-chair/treasurer left a
-  // stale id behind, so the leadership route's vacancy check kept rejecting
-  // new appointments with "not vacant" even though the seat's holder no
-  // longer exists.
+  // No `partyId` filter: a character can hold a state-level seat in any party
+  // they belong to. Leaving stale ids makes the leadership vacancy check reject
+  // new appointments with "not vacant".
   await db
     .collection("statePartyOrg")
     .updateMany({ campaignerId: characterId }, { $set: { campaignerId: null, updatedAt: now } });

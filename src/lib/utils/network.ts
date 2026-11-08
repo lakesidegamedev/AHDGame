@@ -47,26 +47,22 @@ function cfConnectingIpTrusted(originSecretHeader: string | null): boolean {
  *
  * `cf-connecting-ip` is set by Cloudflare from the actual TCP connection to
  * its edge, making it the most accurate signal for security decisions (alt
- * detection, rate limiting) - but ONLY for requests that actually went
- * through Cloudflare. The Railway origin is directly reachable via the
- * *.railway.app hostname, which bypasses the edge entirely, and Railway
- * neither sets nor strips `cf-connecting-ip`, so on direct hits the header is
- * fully attacker-chosen. When CF_ORIGIN_SECRET is configured, the header is
- * therefore trusted only alongside a matching secret header that only
- * Cloudflare can inject; direct-origin requests fall through to
- * `x-forwarded-for`, whose first hop Railway's edge normalizes to the real
- * socket IP of the connecting client (verified against production).
+ * detection, rate limiting), but ONLY for requests that went through
+ * Cloudflare. The Railway origin is directly reachable via *.railway.app,
+ * which bypasses the edge, and Railway neither sets nor strips
+ * `cf-connecting-ip`, so on direct hits it is attacker-chosen. When
+ * CF_ORIGIN_SECRET is configured, the header is trusted only alongside a
+ * matching secret header only Cloudflare can inject; direct-origin requests
+ * fall through to `x-forwarded-for`, whose first hop Railway normalizes to the
+ * real socket IP.
  *
- * With CF_ORIGIN_SECRET unset (local dev, tests, un-migrated deploys) the old
- * unconditional precedence is kept so nothing breaks. That legacy path is
- * insecure wherever the origin is publicly reachable and should be migrated.
+ * With CF_ORIGIN_SECRET unset (local dev, tests) the legacy unconditional
+ * precedence is kept so nothing breaks; that path is insecure wherever the
+ * origin is publicly reachable and should be migrated.
  *
- * Historical note: blindly trusting `x-forwarded-for` here previously recorded
- * Cloudflare edge IPs (172.x/162.x ranges) as "the user's IP" for traffic that
- * did come through the edge, producing false alt-account matches between
- * unrelated players who shared a Cloudflare colo. That is why the XFF
- * fallback is only reached for direct-origin traffic, where Railway controls
- * the first hop.
+ * XFF fallback is only reached for direct-origin traffic: trusting it blindly
+ * previously recorded Cloudflare edge IPs as user IPs for edge traffic,
+ * producing false alt matches between unrelated players sharing a colo.
  */
 function resolveClientIp(
   cfConnectingIp: string | null,

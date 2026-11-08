@@ -180,7 +180,7 @@ export interface OrgInfluenceView {
   fundCurrencyCountryId: CountryId;
   /**
    * ₳ (≈ era USD) per one unit of the fund's currency, resolved SERVER-SIDE for
-   * the active era (refs #3778). Every money figure on this view is in the
+   * the active era. Every money figure on this view is in the
    * fund's currency; this is what lets the client show those in the viewer's
    * preferred one without re-deriving a rate from `COUNTRY_CONFIGS`, whose
    * values are modern and would misprice a 1953 world. Absent on the gate-off
@@ -337,7 +337,7 @@ export async function loadOrgInfluence(
     rows.map((r) => r.entityId as string)
   );
   // Era-aware: the base config carries 2019 rates, so a 1953 world would price
-  // every influence play with the wrong currency normaliser (refs #3778).
+  // every influence play with the wrong currency normaliser.
   const preset = await loadWorldPreset(db);
   const fundRate = getGdpAnchorRate(base.fundCurrencyCountryId, preset);
   // Handed to the client for the display-currency preference. Keep display
@@ -581,10 +581,9 @@ export async function loadOrgInfluence(
       eligible: standing.eligible,
       share: standing.share,
       wantsOut: standing.wantsOut,
-      // Every member counts down alike. Founders used to be suppressed here
-      // because the sweep skipped them; it no longer does (ticket #1285), and a
-      // hidden countdown would tell a bloc its founder was safe on the turn it
-      // was in fact most of the way out.
+      // Every member counts down alike. Founders are not suppressed: a hidden
+      // countdown would tell a bloc its founder was safe on the turn it was in
+      // fact most of the way out.
       turnsBelowGate:
         m.wantsOutSinceTurn == null ? null : Math.max(0, currentTurn - m.wantsOutSinceTurn),
       hasVote: access[m.countryId as CountryId]?.enabledForPlayers === true,

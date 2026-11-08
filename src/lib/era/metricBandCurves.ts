@@ -22,7 +22,7 @@ import type { BandAnchor, MetricBandCurve, NormalAnchor } from "./metricCatalogT
  * by each metric's fixed band spread — the same geometry as its static
  * THRESHOLDS band (hardcoded here, NOT imported from metricScoring: cycle).
  * Floors keep bands inside each metric's playable range. The global set is the
- * old PR #2661 Western curve (US-shaped), kept as the fallback for latent
+ * old Western curve (US-shaped), kept as the fallback for latent
  * countries (RU, …). Values are era-plausible authored estimates — the dry-run
  * review is the tuning gate before any flag flip.
  */
@@ -278,7 +278,7 @@ const AUTHORED_METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
     },
   },
   incomeInequality: {
-    // 1953 best lowered 22→12 (#3238): the US 1953 seeds author Gini 15-42
+    // 1953 best lowered 22→12: the US 1953 seeds author Gini 15-42
     // around a 22 normal (the most-equal modern era) — with best=22 half the
     // country pinned at score 100 at seed and equality gains carried no signal.
     global: [
@@ -347,7 +347,7 @@ const AUTHORED_METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
     ],
   },
 
-  // ── Saturation set (#3238): metrics whose era-authentic 1953/1979 seed
+  // ── Saturation set: metrics whose era-authentic 1953/1979 seed
   //    values pinned at 0/100 against the modern static band. Anchors are
   //    derived from the authored seed normals (stateMetrics1953/1979.ts and
   //    the per-country ${cc}MetricPresets1953/1979.ts files) so a freshly

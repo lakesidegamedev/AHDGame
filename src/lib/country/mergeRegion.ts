@@ -2,21 +2,16 @@
  * Fuse one region into another INSIDE the same country, then remove the source.
  *
  * NOT `transferRegion`. That moves a region ACROSS a border and assumes both
- * countries survive; this assumes the source region does not survive at all. The
- * two are different operations that happen to touch some of the same
- * collections, and expressing this as a transfer would leave a region that owns
- * nothing but is still enumerated.
+ * countries survive; this assumes the source region does not survive at all.
+ * Expressing this as a transfer would leave a region that owns nothing but is
+ * still enumerated.
  *
- * ⚠️ RUNS AFTER THE COUNTRY MERGE, NOT BEFORE. Both regions must already belong
- * to the same country. East Berlin is East German and Berlin is West German, so
- * fusing them before `mergeCountry` would be a cross-border fuse, which this
- * function does not do and its callers must not ask of it.
+ * RUNS AFTER THE COUNTRY MERGE, NOT BEFORE. Both regions must already belong
+ * to the same country; otherwise this would be a cross-border fuse, which this
+ * function does not do and callers must not ask of it.
  *
- * Written for East Berlin joining Berlin on reunification -- Germany's seed has
- * no `DE-bundestag-BEO`, because a unified Berlin is one city -- but nothing
- * here names Berlin.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
+ * Written for East Berlin joining Berlin on reunification, but nothing here
+ * names Berlin.
  */
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
@@ -69,20 +64,17 @@ async function uniqueIndexesOver(
  * Re-point one region-keyed collection onto the surviving region, for a FUSE.
  *
  * A transfer can always re-point: the region keeps its identity under a new
- * owner. A FUSE cannot, because two regions become one and any UNIQUE index over
- * the region field then has two rows competing for a single key. That is not
- * hypothetical — `stateResourceCapacity` is unique on `stateId` alone and
- * `unownedSectors` on `{stateId, sectorType}`, and both threw mid-merge on a live
- * reunification, after half a country had already moved.
+ * owner. A FUSE cannot, because two regions become one and any UNIQUE index
+ * over the region field then has two rows competing for a single key. Both
+ * `stateResourceCapacity` (unique on `stateId`) and `unownedSectors` (unique on
+ * `{stateId, sectorType}`) threw mid-merge on a live reunification.
  *
  * Only rows a unique index ACTUALLY constrains are considered: a partial index
  * binds the rows matching its filter and no others.
  *
- * WHERE THE TWO ROWS COLLIDE, THE SURVIVOR'S STANDS and the absorbed region's is
- * dropped — the same answer the `idIsState` branch above already gives, for the
- * same reason: fusing them would mean merging their CONTENTS, and the survivor
- * already has its own. Rows that do NOT collide still cross, so a sector East
- * Berlin had and Berlin lacked is carried rather than thrown away.
+ * WHERE THE TWO ROWS COLLIDE, THE SURVIVOR'S STANDS and the absorbed region's
+ * is dropped: fusing them would mean merging their CONTENTS, and the survivor
+ * already has its own. Rows that do NOT collide still cross.
  */
 async function fuseRegionKeyedCollection(
   db: Db,
@@ -95,21 +87,14 @@ async function fuseRegionKeyedCollection(
   const coll = db.collection<Record<string, unknown>>(collection);
   for (const { keys, partial } of await uniqueIndexesOver(db, collection, field)) {
     const others = keys.filter((key) => key !== field);
-    // A PARTIAL index constrains only the rows matching its filter, so only those
-    // can collide. Asking the server to evaluate the filter — rather than
-    // interpreting it here — is the only way to get the same answer the index
-    // gives for expressions like `{ status: "active", partyId: { $exists: true } }`.
-    //
-    // Without this the check deletes rows that were never in conflict:
-    // `statePartyCandidates` is unique on `{stateId, partyId, characterId}` only
-    // while `status` is "active", so a withdrawn candidacy sitting on the target
-    // key would take a LIVE one from the absorbed region with it.
-    // FILTER FIRST, REGION SECOND. A partial expression routinely constrains the
-    // region field itself (`statePartyCandidates` filters on
-    // `stateId: {$exists: true}`), and spreading it last would overwrite the one
-    // key that scopes this scan to the region being absorbed -- turning it into a
-    // sweep of every region in the world, whose rows would then be measured for
-    // collision against the survivor and deleted.
+    // A PARTIAL index only constrains rows matching its filter, so only those
+    // can collide. The server must evaluate the filter to match what the index
+    // sees for expressions like `{ status: "active", partyId: { $exists: true } }`.
+    // Otherwise the check deletes non-conflicting rows: `statePartyCandidates` is
+    // unique only while `status` is "active", so a withdrawn candidacy on the
+    // target key would take a LIVE one with it.
+    // FILTER FIRST, REGION SECOND: a partial expression can constrain the region
+    // field itself, and spreading it last would scope the scan to every region.
     const sourceRows = await coll.find({ ...(partial ?? {}), [field]: fromRegionId }).toArray();
     for (const row of sourceRows) {
       // What this row would become once re-pointed. An explicit null matches a
@@ -289,14 +274,10 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
       await partyOrgs.deleteOne({ _id: org._id });
     } else {
       // RE-KEYED, not `$set`. `statePartyOrg._id` is `${stateId}_${partyId}`, so
-      // a row that keeps its old key while its `stateId` field moves disagrees
-      // with itself — and the two readers are split, the region list going by
-      // field and the state-party page by `_id`. That renders one party's
-      // organisation on another's page (ticket #1256). A `_id` is immutable, so
-      // this is delete + insert.
-      //
-      // The target key is free by construction: this branch runs only when the
-      // surviving region has NO row for this party.
+      // a row whose `_id` disagrees with its `stateId` renders one party's
+      // organisation on another's page. `_id` is immutable, so this is delete +
+      // insert. The target key is free by construction: this branch runs only when
+      // the surviving region has no row for this party.
       const { _id: oldId, ...rest } = org;
       const newId = statePartyOrgIdFor(toRegionId, String(org.partyId));
       if (String(oldId) === newId) {
@@ -329,17 +310,11 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
     .updateMany({ homeState: fromRegionId }, { $set: { homeState: toRegionId, updatedAt: now } });
   documentsMoved += nppMoved?.modifiedCount ?? 0;
 
-  // `currentOffice.state` is a NESTED denormalisation, not a region key, so the
-  // scoped table above does not reach it: that table re-points `homeState`,
-  // `stateId` and `state`, and this field is none of them. An office holder
-  // seated in the absorbed half would be left naming a region that is about to
-  // be deleted -- read by election resolution, `deriveHighestOffice` and the
-  // relocation paths, all of which would be resolving against a region no longer
-  // on the map.
+  // `currentOffice.state` is a nested denormalisation, not a region key, so
+  // the scoped table above does not reach it. Without this fix, a holder seated
+  // in the absorbed half would name a region that is about to be deleted.
   //
-  // BOTH collections, because most of these seats are NPP-held rather than
-  // player-held. Nested-field `$set`, so a holder's office TYPE and everything
-  // else on the sub-document is untouched.
+  // BOTH collections, because most of these seats are NPP-held.
   for (const coll of ["characters", "npps"] as const) {
     const res = await db
       .collection(coll)

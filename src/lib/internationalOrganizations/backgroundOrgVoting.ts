@@ -1,20 +1,19 @@
 /**
- * Background countries' organisation ballots (#5702).
+ * Background countries' organisation ballots.
  *
  * A background country keeps its memberships but has no government that can
- * vote, so before this every ballot it sat on simply went without it. Each
- * turn, before the resolvers run, this casts the scripted vote
+ * vote. Each turn, before resolvers run, this casts the scripted vote
  * (`rules/backgroundOrgVote.ts`) for every background member that has not yet
  * voted on a pending resolution or chair election. A background member votes
- * once, on the first turn it sees the ballot, and the resolver then seats it on
- * the roll exactly like any other voter.
+ * once, on the first turn it sees the ballot; the resolver then seats it on
+ * the roll like any other voter.
  *
  * Admissions, war declarations and war entries stay player-only, as for NPP
  * governments (`ballotIsPlayerOnly`).
  *
- * Cost: one tier read, then nothing at all in a world with no background
- * countries or no pending ballot. Otherwise a fixed handful of reads and one
- * bulk write per ballot collection, whatever the number of voters.
+ * Cost: one tier read, then nothing in a world with no background countries
+ * or no pending ballot. Otherwise a fixed handful of reads and one bulk write
+ * per ballot collection regardless of voter count.
  */
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";

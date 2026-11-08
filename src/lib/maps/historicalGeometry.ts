@@ -1,29 +1,15 @@
 /**
- * Whole-territory outlines for the 1953 entities with no present-day equivalent,
+ * Whole-territory outlines for 1953 entities with no present-day equivalent,
  * built by `scripts/maps/build-historical-geo.mjs`.
  *
- * NOT a region shard, and deliberately outside `REGION_SHARDS` — for the same
- * reason the Vietnams are: every entry there is drawn by unioning regions whose
- * OWNER is read from `states`, and `states` holds only full-autonomous countries.
- * These are protectorates, trust territories and international zones, so ownership
- * could never resolve for them without promoting each to a full country. They are
- * static features instead, claimed outright by `mapFeatureIds`.
+ * NOT a region shard, deliberately outside `REGION_SHARDS`: those union
+ * regions whose OWNER is read from `states`, which holds only full countries.
+ * These are protectorates, trust territories and international zones, so
+ * ownership cannot resolve; they are static features claimed by
+ * `mapFeatureIds`.
  *
- * Whole territories only, with no internal regions: each of these is sphere-macro
- * or historical-presence, and nothing in the game asks them for provinces.
- *
- * What is NOT here, and why:
- *  - An entity with an exact modern equivalent (Congo, Somalia, the Palestinian
- *    territories, Ruanda-Urundi) takes a `mapFeatureIds` proxy instead — the
- *    modern border IS the historical one, so authoring a shape would only add a
- *    worse copy of it.
- *  - Czechoslovakia, Yugoslavia and East Germany are drawn by their REGION shards
- *    through ownership, and are correctly reported unmapped by
- *    `getWorldEntityMapSnapshot` — see worldEntityMap.test.ts.
- *  - The Somalia Trust Territories read like the Italian south, but that record is
- *    defined as BOTH Somalilands as one entity — which is modern Somalia, so it
- *    takes the 706 proxy. Building the south alone would have matched its name
- *    while contradicting its definition.
+ * Whole territories only, no internal regions: each is sphere-macro or
+ * historical-presence, and nothing asks them for provinces.
  */
 export const HISTORICAL_GEO_URL = "/historical-regions.json";
 

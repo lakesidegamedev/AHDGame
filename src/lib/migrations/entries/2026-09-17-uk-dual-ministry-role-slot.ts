@@ -22,7 +22,7 @@ interface UkCabinetRow {
 }
 
 /**
- * UK dual-ministry backfill (issue #2049).
+ * UK dual-ministry backfill.
  *
  * Live worlds predate `roleSlot` on cabinet rows and the shared per-player
  * ministerial action pool, so:

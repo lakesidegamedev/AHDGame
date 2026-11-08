@@ -1,20 +1,15 @@
 /**
- * Canonical outstanding sovereign principal (refs #1975).
+ * Canonical outstanding sovereign principal.
  *
  * End-of-turn `federalBudget.debt.principal` MUST equal the sum of authoritative
- * outstanding sovereign debt, defined here. Treasury cash (`treasuryBalance`) is a
- * separate field: a country may hold cash assets and bond debt simultaneously, so
- * nothing derives principal from the balance anymore.
+ * outstanding sovereign debt, defined here. Treasury cash (`treasuryBalance`) is
+ * separate: a country may hold cash and bond debt simultaneously.
  *
  * Outstanding contribution of one bond:
- *   - only `issuerType: "sovereign"` bonds count (corporate paper is not crown debt);
- *   - `matured` and `defaulted` bonds no longer count (repudiated paper leaves the
- *     stock; redeemed paper was paid out);
- *   - a restructured bond counts at face minus its haircut fraction
- *     (`restructureHaircutPercent`, e.g. 0.4 for RESTRUCTURE_HAIRCUT). The
- *     restructure mutation stamps the haircut without rewriting `totalIssued`
- *     (units x face identity and holder payouts stay intact), so the haircut
- *     adjustment lives here, in the one derivation every writer shares.
+ *   - only `issuerType: "sovereign"` bonds count;
+ *   - `matured` and `defaulted` bonds no longer count;
+ *   - a restructured bond counts at face minus `restructureHaircutPercent`,
+ *     since the haircut is stamped without rewriting `totalIssued`.
  *
  * Pure rules module: plain data in, plain data out. No DB, clock, or randomness.
  */

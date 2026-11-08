@@ -69,17 +69,13 @@ let politicianImageCache: PoliticianImage[] | null = null;
 /**
  * Year the photograph is from, read out of its source URL.
  *
- * Commons filenames usually carry the year ("...portrait_2019.jpg"). About a
- * third of the pool has one, and that third is overwhelmingly modern — 307 of
- * 345 are 2000 or later. So this catches almost exactly the press photos that
- * wreck a historical world, which is the whole point.
- *
- * Parsed from the URL already in the file rather than stored as a second field:
- * a duplicated year would be free to drift from the image it describes.
+ * Commons filenames sometimes carry the year ("...portrait_2019.jpg"), mostly
+ * for modern photos, so this filters out press images that would wreck a
+ * historical world. Parsed from the URL rather than stored as a second field:
+ * a duplicated year could drift from the image it describes.
  *
  * Deliberately conservative. An unparsed URL yields null, and null means
- * "unknown", NOT "old" — an undated portrait stays eligible everywhere rather
- * than being assumed archival on no evidence.
+ * "unknown", not "old": an undated portrait stays eligible everywhere.
  */
 function photoYearFromUrl(url: string): number | null {
   const m = /(1[89]\d\d|20\d\d)/.exec(url);
@@ -621,20 +617,13 @@ export async function createNPP(
 }
 
 /**
- * Many `createNPP` calls in one pass, without its per-NPP round trips.
+ * Batches createNPP calls to avoid per-NPP round trips.
  *
- * `createNPP` claims the party's territory, reads the country's regions, the
- * party's presence (three collections) and its renewal row, then releases,
- * for every NPP: about a dozen round trips before the insert. A batch claims a
- * country's listed parties together on first use and holds them until
- * `close`, reads their regions, presence and renewal rows once, and updates
- * presence in memory as its own NPPs land. The frontier answer is the one
- * `createNPP` would reach: while held, no other writer can move these parties'
- * territory, and the only presence this pass adds is its own NPPs.
- *
- * `partiesByCountry` names the parties each country may generate for, so one
- * claim and one presence read cover them all. A party outside that list is
- * claimed and read on its own when first used.
+ * Claims a country's listed parties' territory and reads their regions,
+ * presence, and renewal rows once; updates presence in memory as NPPs land.
+ * While held, no other writer can move these parties' territory, so the
+ * frontier answer matches createNPP. Parties outside partiesByCountry are
+ * claimed and read individually on first use.
  *
  * Callers must `close` in `finally`.
  */

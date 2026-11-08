@@ -2,18 +2,17 @@
  * Political score (0-100) → legacy metric REAL units.
  *
  * The margin adapter never needed this: margins normalize every signal to
- * quality(-1..1), so scale cancels. The demographic and TFP engines do NOT —
- * they consume years, per-100k rates, and a 97-99.9 grid band, and they read
- * those values through formulas calibrated to those units.
+ * quality(-1..1), so scale cancels. The demographic and TFP engines do NOT:
+ * they consume years, per-100k rates, and a 97-99.9 grid band, through formulas
+ * calibrated to those units.
  *
- * Every band is centred on the value the consumer ALREADY uses when the metric
- * is absent, so a region sitting at the political neutral (50) behaves exactly
- * as it does today. That makes substitution parity-safe by construction: this
- * can only change behavior for regions whose political score is off 50, which
- * is precisely the intent.
+ * Every band is centred on the value the consumer already uses when the metric
+ * is absent, so a region at political neutral (50) behaves exactly as today.
+ * Substitution is parity-safe by construction: only regions whose political
+ * score is off 50 change behavior, which is the intent.
  *
  * `inverted` marks lower-is-better legacy metrics (preventable mortality): a
- * HIGH political score must produce a LOW real-unit value.
+ * HIGH political score produces a LOW real-unit value.
  */
 import {
   LIFE_EXPECTANCY_MID,
@@ -32,26 +31,22 @@ export interface LegacyUnitBand {
 
 /**
  * Keyed by legacy "category.metricId". Every mid is DERIVED from the consuming
- * formula's own neutral, never copied — a divergence would silently shift
+ * formula's own neutral, never copied; a divergence would silently shift
  * behavior at the political neutral, defeating the parity property:
  *   - mortality: mortality.ts LIFE_/PREV_ constants (years, per-100k)
  *   - TFP inputs: TFP_REFERENCE_INPUTS, with half-spans equal to the divisors
  *     the basket already applies (skill /30, transport /45, broadband /25,
  *     grid /1.45)
  *
- * The TFP half-spans are therefore "one normalized basket unit", NOT the
- * metric's full realistic range — score 0 on the infrastructure board means
- * "one unit below reference", not "no broadband exists". These values are
- * engine inputs and are never surfaced to players.
+ * TFP half-spans are "one normalized basket unit", not the metric's full
+ * realistic range. These values are engine inputs and are never surfaced to
+ * players.
  *
- * KNOWN, DELIBERATE: `education.workforceSkill` reads differently here than on
- * the economy page, which shows the RAW `education.adultSkills` score via
- * workforceSkillLoader. They coincide only at score 75. Do NOT "fix" this by
- * passing the raw score into the basket: score 50 would then feed 50 where the
- * engine's reference is 60, silently changing TFP for every playable region and
- * breaking the parity property this whole table exists to preserve. The display
- * shows a political score; the basket consumes a normalized TFP input. Two
- * scales, two purposes.
+ * `education.workforceSkill` reads differently here than on the economy page,
+ * which shows the RAW `education.adultSkills` score. Do NOT pass the raw score
+ * into the basket: score 50 would feed 50 where the engine's reference is 60,
+ * changing TFP for every playable region and breaking the parity property. The
+ * display shows a political score; the basket consumes a normalized TFP input.
  */
 export const LEGACY_UNIT_BANDS: Record<string, LegacyUnitBand> = {
   "healthcare.lifeExpectancy": { mid: LIFE_EXPECTANCY_MID, halfSpan: LIFE_HALF_SPAN },

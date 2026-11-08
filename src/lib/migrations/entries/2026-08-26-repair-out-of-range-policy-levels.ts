@@ -5,31 +5,15 @@ import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { policyFieldsFromOption } from "@/lib/governorOffice/orders/revertPolicy";
 
 /**
- * Ticket #1189 - clamp policy levels that sit past the end of their ladder.
+ * Clamp policy levels that exceed their legislation type's ladder.
  *
- * Executive orders assumed every legislation type carried the seven-option
- * (0-6) ladder: a missing prior policy defaulted to index 3 and the shift
- * clamped at 6, whatever the targeted type actually offered. The
- * new-generation catalog is overwhelmingly FIVE-level (valid indices 0-4), so
- * an order stepping up from 3 or 4 settled on index 5 - a level with no option
- * behind it.
+ * Orders assumed the seven-option (0-6) ladder, but five-level types (0-4)
+ * exist, so an order can settle on index 5 with no option behind it. Readers
+ * coerce that to 4, so stored data and mechanics disagree; clamping to the
+ * ladder top is the value the game already behaves as.
  *
- * That is not inert. Readers coerce the unknown index rather than reject it:
- * `enactedLevels` and the regional budget paths clamp to 0-4, so the world
- * behaves as level 4 while the stored row and the order both claim 5. The
- * policy page, the order history and the mechanic disagree.
- *
- * The code fix bounds the ladder by the type's own option count. This repairs
- * the rows the old bounds already wrote. Clamping to the ladder's top is the
- * faithful reading of the order's intent ("as far up as this goes") AND the
- * value the game is already behaving as, so no mechanic changes - the data
- * simply stops lying.
- *
- * Only ever clamps DOWN to `maxIndex`, and only when the index is genuinely
- * out of range. In-range values are never touched, so an order's
- * `policyOptionIndexBefore` (its revert target) survives untouched whenever it
- * was valid. A type whose ladder length cannot be determined is skipped rather
- * than guessed at.
+ * Only clamps DOWN, and only when genuinely out of range, so valid revert
+ * targets survive untouched. Unknown ladder lengths are skipped, not guessed.
  */
 interface Repair {
   collection: "statePolicies" | "governorExecutiveOrders";

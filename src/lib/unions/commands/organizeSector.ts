@@ -1,27 +1,20 @@
 /**
  * Union dues v1, targeted organizing drive / raid.
  *
- * The headline new union-head action: spend treasury and action points to push
- * one sector's `unionization` up. Same industry only, a union may only ever
- * touch a `CorporateSector` in its own `countryId` + `sectorType`.
+ * Spend treasury and action points to push one sector's `unionization` up. A
+ * union may only touch a `CorporateSector` in its own `countryId` +
+ * `sectorType`.
  *
- *   - Sector unrepresented: a straight organizing push. The first drive
- *     claims `representingUnionId`, so the shop's workers start counting as
- *     members immediately. (A 50-point recognition bar with a 3-point drive
- *     was unwinnable against per-turn drift.)
- *   - Sector already represented by THIS union: reinforcement. Pushes
- *     unionization up further, no ownership change. Treasury cost scales with
- *     current unionization.
- *   - Sector represented by a RIVAL union: a raid. Winner takes all, the
- *     contest in {@link raidSucceeds} decides whether representation flips.
- *     A raid that fails still costs the treasury/action spend (charged before
- *     the contest is even resolved), so raiding is never free. Cost scales
- *     with shop size.
+ *   - Unrepresented: organizing push. The first drive claims
+ *     `representingUnionId`, so workers count as members immediately.
+ *   - Represented by THIS union: reinforcement, no ownership change. Cost
+ *     scales with current unionization.
+ *   - Represented by a RIVAL: a raid. The contest in {@link raidSucceeds}
+ *     decides whether representation flips. Spend is charged before the
+ *     contest, so a failed raid still costs. Cost scales with shop size.
  *
- * No decay is applied here on purpose: `trendUnionization`
- * (`src/lib/labour/unionization.ts`, turn engine) walks the sector back toward
- * its approval-anchored drift target every turn on its own, which is what
- * makes a drive a temporary push rather than a permanent purchase.
+ * No decay here: `trendUnionization` drifts the sector back toward its
+ * approval-anchored target each turn, making a drive a temporary push.
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -74,10 +67,9 @@ export interface OrganizeSectorContestInputs {
   attackerUnionId: string;
   attackerApproval: number;
   /**
-   * Approval of the union recorded in `currentRepresentingUnionId`, or null
-   * when the sector is unrepresented OR that union no longer exists (a
-   * dangling reference, treated the same as unrepresented so the pointer
-   * gets cleaned up rather than left dead).
+   * Approval of the union in `currentRepresentingUnionId`, or null when the
+   * sector is unrepresented OR that union no longer exists (dangling refs are
+   * treated as unrepresented so the pointer gets cleaned up).
    */
   incumbentApproval: number | null;
 }

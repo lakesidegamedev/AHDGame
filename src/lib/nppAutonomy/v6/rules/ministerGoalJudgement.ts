@@ -1,36 +1,20 @@
 /**
  * Ministers judged on their goal (v6).
  *
- * Below v6 a head of government reshuffles a minister on raw shortfall: how far
- * the minister's agenda domains sit below target, scaled by the head's
- * reshuffle propensity. That blames a minister for where a domain stands, not
- * for what the minister did with it, so one who inherits a badly failing domain
- * and is turning it around looks exactly like one who is letting it slide.
+ * Below v6 a head reshuffles on raw shortfall, blaming a minister for where a
+ * domain stands rather than what they did with it. At v6, when the government
+ * holds a standing goal on the minister's brief, the head reads the goal
+ * record instead:
  *
- * At v6, when the government holds standing goals (V5) on the minister's brief,
- * the head reads the goal record instead. Persisted goals are always open
- * attempts: a failed attempt is re-opened on the same domain with `strikes`
- * incremented and `openedTurn` set to the review that failed it, so a strike
- * plus the opening turn is the record of failure.
+ *   - progress: an attempt gained at least the V5 progress margin since it
+ *     opened; minister kept.
+ *   - failure: an attempt carries a strike recorded while the minister was in
+ *     post and the new attempt shows no progress; reshuffle candidate.
+ *   - otherwise: the ordinary shortfall rule.
  *
- *   - progress: an attempt on the brief has gained at least the V5 progress
- *     margin since it opened (live attainment against `openingAttainment`). The
- *     minister is kept, whatever the raw shortfall says, including on a domain
- *     that failed before.
- *   - failure: an attempt on the brief carries a strike, the minister was in
- *     post when that strike was recorded, and the new attempt shows no progress
- *     yet. The minister is a reshuffle candidate, whatever the raw shortfall
- *     says. A minister appointed after the failure is not blamed for it.
- *   - otherwise (no goal on the brief, or a goal held without progress and
- *     without a strike on this minister's watch): the ordinary shortfall rule.
- *
- * Failure is checked before progress across the brief: a minister who let one
- * of their goals fail is not saved by drift on another.
- *
- * The verdict only decides whether the reshuffle threshold is met. The
- * tenure, cooldown and escalation guard (`evaluateReshuffleEligibility`) and
- * every cap still decide whether the head may act on it, so this changes who
- * is judged, never how often a government may reshuffle.
+ * Failure is checked before progress across the brief. The verdict only
+ * decides whether the reshuffle threshold is met; eligibility and caps still
+ * decide whether the head may act.
  *
  * Pure, deterministic, total.
  */

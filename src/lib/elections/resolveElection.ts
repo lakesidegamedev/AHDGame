@@ -147,7 +147,7 @@ export async function resolveElection(
 
   // Fetch game state and game time in parallel with election deps.
   // Summary views only consume preset/currentYear/redistrictingEnabled, so
-  // project the read (#2168); full view keeps the whole document.
+  // project the read; full view keeps the whole document.
   const [gameState, gameTime, deps] = await Promise.all([
     isFull
       ? db.collection<GameState>("gameState").findOne({ _id: "current" })

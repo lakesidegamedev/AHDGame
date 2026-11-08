@@ -33,7 +33,7 @@ export type ShippingPreset = (typeof SHIPPING_PRESETS)[number];
  *   exchange rate, but NOT run by the full simulation: no corporations,
  *   sectors, NPP politicians or full-engine elections are seeded, and every
  *   per-country turn phase skips it. The cheap aggregate model for these
- *   countries arrives separately (#5702).
+ *   countries arrives separately.
  * - `latent` — **seeded but deliberately not registered.** The bootstrap writes
  *   its regions, parties and budgets, and it renders on the world map, but it is
  *   absent from `COUNTRY_ORDER` so nothing offers it to players. UKR/BLR/BAL in
@@ -75,21 +75,11 @@ export interface EraRosterSpec {
    */
   vacantChambers?: readonly `${CountryId}.${string}`[];
   /**
-   * Seats a seated chamber deliberately leaves unfilled, as `{ "US.house": 5 }`.
-   *
-   * `vacantChambers` says "nobody is seated here yet"; this says "this many
-   * seats inside a seated chamber are genuinely empty". The February 2020 US
-   * House had five vacancies pending special elections, so a roster seating 435
-   * would be inventing five members, while one seating 430 with nothing declared
-   * is indistinguishable from a roster somebody truncated. Declaring the gap is
-   * what lets S4 assert `seated + vacant == chamber size` and still fail when a
-   * roster is genuinely short.
-   *
-   * ⚠️ This does NOT drive gameplay. The running game derives vacancy itself as
-   * `chamber size - filled seats` (see the congress and legislature members
-   * routes), so the five empty House seats reach players without anything
-   * reading this field. It exists so a CHECK can tell a deliberate vacancy from
-   * a short roster, which is a question the runtime never has to ask.
+   * Seats in a seated chamber that are deliberately empty, e.g. `{ "US.house": 5 }`.
+   * This distinguishes a genuine vacancy from a short or truncated roster, so a
+   * CHECK can assert `seated + vacant == chamber size` and still fail on a
+   * genuinely short roster. The runtime does NOT read this: gameplay derives
+   * vacancy from `chamber size - filled seats`.
    */
   vacantSeats?: Partial<Record<`${CountryId}.${string}`, number>>;
 }
@@ -101,7 +91,7 @@ const ERA_ROSTER_LITERAL = {
     // The Warsaw Pact six are economy-preview here, NOT npp. Every spawner
     // behind them (ensureEasternBlocAssemblyElections, BLOC_CHAMBERS_1953) is
     // gated on countryGameStates.status in {beta, active}; demoting them to
-    // coming-soon makes all of it silently no-op, which is the pre-#3747
+    // coming-soon makes all of it silently no-op, which is the pre-
     // production bug. ES is absent from this list on purpose: the 1953 manifest
     // demotes Franco's Spain to a US-sphere macro entity (outside the UN until
     // 1955), so it is npp here and econ only from 1979.
@@ -243,20 +233,16 @@ const ERA_ROSTER_LITERAL = {
     vacantSeats: { "US.house": 5 },
   },
   /**
-   * The 2027 preset (#1687, tiers #5702). Three kinds of country:
+   * The 2027 preset. Three kinds of country:
    *
    * - player: the US, the only country players can join at launch.
-   * - npp: the full simulation (regions, sectors, NPP corporations, elections,
-   *   parliament, budgets) run by NPPs. Each can be opened to players later
-   *   by flipping `enabledForPlayers`, without a reseed.
-   * - background: outside the full simulation. Owner decision 2026-11-07:
-   *   the countries nobody plays held most of the production sites and cost
-   *   about half of every turn in their own elections and bill lifecycles.
+   * - npp: full simulation run by NPPs; each can be opened to players later
+   *   via `enabledForPlayers` without a reseed.
+   * - background: outside the full simulation to avoid turning them.
    *
-   * ⚠ NO `vacantSeats`. The 2019 entry carries five because February 2020
-   * really had five pending special elections; 2027 is a future world with a
-   * full authored roster, so a vacancy here would be invented rather than
-   * recorded.
+   * No `vacantSeats`: this is a future world with a full authored roster, so a
+   * vacancy would be invented rather than recorded. (2019 carries five because
+   * Feb 2020 really had five pending special elections.)
    */
   "2027-default": {
     default: "absent",

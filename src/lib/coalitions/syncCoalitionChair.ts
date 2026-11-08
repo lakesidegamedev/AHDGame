@@ -1,38 +1,19 @@
 /**
  * Coalition chair-character sync helpers.
  *
- * A coalition stores BOTH the lead party (`chairPartyId`) and the lead
- * party's chair character (`chairCharacterId`) so the UI can render the
- * chair's name + character link without a join. The two fields can
- * drift out of sync because:
- *
- *   - `applyRemoveOfficeHolderEffect` clears `Party.chairId` to null
- *   - `vacatePartyLeadershipForBannedUser` clears chair for a banned
- *     user's character
- *   - `retireCharacter` clears chair when the character retires
- *   - `emptyPartyCleanup` clears chair on a party reduced to NPPs
- *   - admin settings / appointment routes overwrite chair directly
- *   - `processMergeProposal` clears chair on a party that's merging
- *     into another
- *
- * Only `nationalPartyElections.ts`'s resolver previously synced
- * coalitions when the chair changed — every other path left the
- * coalition's `chairCharacterId` pointing at the stale character.
- * Players see this as "the coalition chair is the old chair, not the
- * new one".
+ * A coalition stores both the lead party (`chairPartyId`) and the lead party's
+ * chair character (`chairCharacterId`) so the UI can render the chair without
+ * a join. The two drift out of sync whenever a path clears or overwrites
+ * `Party.chairId` (office removal, banned-user vacate, retirement, empty-party
+ * cleanup, admin/appointment routes, merge proposals). Players see this as
+ * "the coalition chair is the old chair, not the new one".
  *
  * Two surfaces:
- *
- *   - `syncCoalitionChairsForParty(db, partyId, now)` — call right after
- *     mutating a party's `chairId`. Idempotent.
- *   - `reconcileAllCoalitionChairs(db, now)` — defensive sweep meant
- *     for the per-turn phase. Reads every coalition's lead party and
- *     re-syncs any mismatched chairs in one bulk write. Safety net
- *     for paths that forget to call the per-mutation helper.
- *
- * See the 2026-05-23 coalition-chair-sync fix (reported by the
- * walkthrough user — "Party that leads a Coalition loses/changes its
- * Chair, the Chair of the Coalition still stays as the old Chair").
+ * - `syncCoalitionChairsForParty(db, partyId, now)`: call right after mutating
+ *   a party's `chairId`. Idempotent.
+ * - `reconcileAllCoalitionChairs(db, now)`: per-turn defensive sweep that
+ *   re-syncs any mismatched chairs in one bulk write. Safety net for paths
+ *   that forget the per-mutation helper.
  */
 
 import type { Db, ObjectId } from "mongodb";

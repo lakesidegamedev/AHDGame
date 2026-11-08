@@ -1,27 +1,10 @@
 /**
- * Autonomous NPP index-fund redemptions (issue #2120).
+ * Gated autonomous NPP index-fund redemptions, using the same
+ * `enqueueRedemption` path as the player route so the cron pays out later.
  *
- * Before this module the ONLY caller of `enqueueRedemption` was the player
- * redeem route, so the NPP branch of `processQueuedRedemptions` in
- * `fundCron.ts` was unreachable in a running world and the full
- * subscribe -> rebalance -> redeem round trip had never happened.
- *
- * This adds a *gated* autonomous redemption policy: when
- * `gameConfig.nppFundRedemptionEnabled === true`, the NPP investing pass may
- * redeem a bounded fraction of an overweight position through the SAME
- * `enqueueRedemption` path the player route uses, so the cron pays it out on a
- * later turn. The policy has three hard properties:
- *
- *   1. Strictly bounded per turn — a single position can give up at most
- *      `NPP_FUND_REDEMPTION_MAX_FRACTION_PER_TURN` of its units in one pass.
- *   2. Never removes more units than held — the position debit is the atomic,
- *      balance-gated `debitFundPosition` guard; a failed debit skips the entry.
- *   3. Deterministic — the planner is pure and orders positions by value then
- *      by fund id, so identical inputs produce identical intents.
- *
- * When the flag is absent or false the pass performs a single config read and
- * returns zero with NO writes, so the NPP investing pass is byte-identical to
- * its pre-flag behavior.
+ * Properties: bounded per turn per position; never exceeds held units
+ * (balance-gated `debitFundPosition`); planner is pure and deterministically
+ * ordered. When the flag is off, returns zero with no writes.
  */
 
 import { ObjectId, type ClientSession, type Db } from "mongodb";

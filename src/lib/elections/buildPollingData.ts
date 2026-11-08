@@ -24,12 +24,9 @@ export function computeSeatEstimates(
   state?: string
 ): Record<string, number> | null {
   if (tally?.bgOrdinaryBallot || tally?.bulgarianFoundingBallot) return null;
-  // Same gate as the engine (allocateSeats + the per-turn estimate in
-  // tallyManagement): every MULTI_SEAT_TYPES race, plus a "senate" race that
-  // carries more than one seat (Nigerian zones). A private copy of the list
-  // used to live here and had drifted to ten US/UK/JP/CN types, so the detail
-  // page projected 0 seats for every Bundestag, Dail, Landtag, soviet and
-  // eastern-bloc chamber the engine had already apportioned.
+  // Same gate as the engine: every MULTI_SEAT_TYPES race, plus a "senate"
+  // race with more than one seat (Nigerian zones). Keep in sync with
+  // allocateSeats and tallyManagement's per-turn estimate.
   const multiSeat = isMultiSeatElection(electionType, totalSeats ?? 0);
   if (!totalSeats || !tally || !multiSeat) {
     return null;
@@ -102,10 +99,10 @@ export interface PollingCandidate {
  * candidates and rescaled to 100% (matches the election detail page).
  *
  * Primary phase: prefers live per-party softmax shares from enriched party
- * groups (same source as the election detail "Labour Party" bars). Hourly
- * `primarySnapshots` are for trend charts only — using them for card % left
- * late joiners stuck at 0% on party/list surfaces (ticket-1022). Snapshot is
- * retained only as a fallback when live groups are not provided.
+ * groups (same source as the election detail party bars). Hourly
+ * `primarySnapshots` are for trend charts only; using them for card % leaves
+ * late joiners stuck at 0% on party/list surfaces. Snapshot is retained only
+ * as a fallback when live groups are not provided.
  *
  * Returns null when no meaningful data exists (prevents misleading equal-split display).
  */
@@ -119,7 +116,7 @@ export function buildPollingData(
    * after the fact (see `appendHistoricalTallyCandidates`). Without them the
    * polling donut rescales to a survivors-only denominator while the results
    * panel uses the published one, and the two disagree by several points on
-   * the same race (#1276 / #1277).
+   * the same race.
    */
   activeCandidates: PollingCandidate[],
   parties: PoliticalParty[],
@@ -138,7 +135,7 @@ export function buildPollingData(
   const candidatePartyById = new Map(
     activeCandidates.map((c) => {
       // A row rebuilt from the tally has no character to look up, so it keeps
-      // its ballot-time party — which is what an ended race wants anyway (#939).
+      // its ballot-time party, which is what an ended race wants anyway.
       const charId = c.characterId ? c.characterId.toString() : null;
       const pid =
         !c.isNPP && charId && charPartyMap.has(charId)

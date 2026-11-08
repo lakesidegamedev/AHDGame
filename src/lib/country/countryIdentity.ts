@@ -2,19 +2,11 @@
  * What a country is CALLED and shown as, once runtime events are taken into
  * account.
  *
- * THE PROBLEM THIS SOLVES. A country's name, flag and government-type label are
- * compiled seed data, and `getCountryConfig` only ever layers era overrides onto
- * them — it never reads `countryState`. That is fine for a world that stays as it
- * was set up, and wrong the moment something converts a country at runtime. A
- * reunified Germany rendered as "West Germany", a "Parliamentary Republic", after
- * its government had genuinely become a one-party state and the other Germany had
- * ceased to exist. Every one of those reads was of the compiled value.
- *
- * WHY A RESOLVER RATHER THAN A RENAME. `COUNTRY_CONFIGS.name` is the identity
- * roughly ninety synchronous call sites depend on, many of them client
- * components; rewriting it is not available. This is the display layer asking one
- * question — "given what has happened, what should a reader be told?" — in one
- * place, so the answer cannot drift between surfaces.
+ * Compiled seed data (name, flag, government-type label) does not reflect
+ * runtime conversions; getCountryConfig only layers era overrides and never
+ * reads countryState. COUNTRY_CONFIGS.name is depended on by many synchronous
+ * call sites, so this resolver is the single display layer that answers
+ * "given what has happened, what should a reader be told?" without drift.
  */
 import type { Db } from "mongodb";
 import {
@@ -103,19 +95,15 @@ export interface CountryPresentationOverride {
 }
 
 /**
- * Both runtime presentation overrides for the whole world, in ONE read.
+ * Read-only presentation overrides for the whole world, in one read.
  *
- * `resolveCountryIdentities` is the richer answer, but it goes through
- * `getCountryState`, which SELF-HEALS a missing row: it writes. That is fine on
- * a page render and wrong on a hot public listing endpoint, which should not be
- * able to insert documents as a side effect of someone sorting a table. This is
- * the read-only half, and it fails soft for the same reason its sibling does:
- * a country under its compiled name is a far better outcome than a 500.
+ * `resolveCountryIdentities` is richer but goes through `getCountryState`,
+ * which SELF-HEALS a missing row by writing. Wrong on a hot public listing
+ * endpoint that must not insert documents as a side effect. Fails soft for
+ * the same reason its sibling does: compiled name beats a 500.
  *
- * Name and flag travel together on purpose. A settlement writes both when it
- * renames the survivor (`displayNameOverride` + `flagEmojiOverride`), so
- * applying one without the other is how a reunified Germany ends up labelled
- * "Germany" under the flag of the state it replaced.
+ * Name and flag travel together because a settlement writes both when it
+ * renames the survivor; applying one without the other mislabels the result.
  */
 export async function loadCountryPresentationOverrides(
   db: Db
@@ -157,31 +145,19 @@ export async function loadCountryPresentationOverrides(
 /**
  * Every runtime display-name override in the world, for hydrating the client.
  *
- * The client cannot call `resolveCountryIdentity` — it reads the database, and
- * the point of the resolver living server-side is to keep the driver out of the
- * browser bundle. But roughly a dozen CLIENT surfaces name countries: the
- * navbar, the nation switcher, the world cards, the maps. They all call
- * `getCountryDisplayName`, which reads compiled seed data and so cannot know a
- * country was renamed at runtime — a reunified Germany went on calling itself
- * East Germany everywhere a player actually looks.
+ * Client surfaces cannot call the server-only resolver, so overrides ride into
+ * the tree and useCountryDisplayName applies them. Root layout runs per request,
+ * so one read covers the world.
  *
- * So the overrides ride into the tree the same way `preset` already does, and
- * `useCountryDisplayName` applies them. One read for the whole world, because
- * the root layout runs on every request.
- *
- * Only non-empty strings are returned: a null or "" override means "no override"
- * and must fall through to the compiled name rather than blanking the country.
+ * Only non-empty strings count: a null or "" override means "no override" and
+ * must fall through to the compiled name rather than blanking the country.
  */
 export async function loadCountryNameOverrides(
   db: Db
 ): Promise<Partial<Record<CountryId, string>>> {
-  // FAILS SOFT, deliberately. Every caller is a page render, and the worst case
-  // of an empty map is a country shown under its compiled name — which is what
-  // every one of these surfaces did before this existed. A page that 500s
-  // because a cosmetic lookup threw would be the worse outcome, and the root
-  // layout already wraps its own call for the same reason. It also keeps this
-  // usable from the hand-built MockDbs several page tests supply, matching how
-  // `getCountryState` guards its own read.
+  // FAILS SOFT, deliberately. Callers are page renders; the worst case of an
+  // empty map is a country shown under its compiled name. A 500 from a cosmetic
+  // lookup would be worse, and MockDbs in page tests rely on this guard.
   try {
     const rows = await db
       .collection<{ _id: CountryId; displayNameOverride?: string | null }>("countryState")

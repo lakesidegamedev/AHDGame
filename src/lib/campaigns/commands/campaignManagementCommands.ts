@@ -249,7 +249,7 @@ export async function contributeCampaignStrength(params: {
     );
   }
 
-  // Guard on the canonical local balance — see in-game bug #0553 background.
+  // Guard on the canonical local balance.
   const csCampaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
   const targetCandidateId = campaign.candidateId?.toString?.() ?? null;
   const targetCandidate = campaign.candidateId
@@ -365,13 +365,10 @@ export async function contributeCampaignStrength(params: {
 }
 
 /**
- * Notify a character that a rival campaign has begun opposition research on
- * them. Opposition research silently drains the target's favorability
- * (-0.5%/level/turn in campaignTurn.ts) with no other signal — players saw
- * their favorability slide with no idea who or why (support ticket #946). This
- * fires once at targeting time (retarget is cooldown-gated, so no per-turn
- * spam). NPP / unowned targets have no player to notify. Names the source
- * campaign per the ticket's explicit ask to see who is attacking.
+ * Notify a character that a rival campaign began opposition research on them.
+ * Research silently drains the target's favorability each turn, so this is the
+ * only signal the player gets; it names the attacker. Fires once at targeting
+ * time. NPP / unowned targets have no player to notify.
  */
 export async function notifyOppositionResearchTarget(
   db: Db,

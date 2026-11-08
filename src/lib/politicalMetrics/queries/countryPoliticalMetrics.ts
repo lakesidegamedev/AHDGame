@@ -186,19 +186,14 @@ export async function loadCountryPoliticalMetrics(
     return weighted / totalPopulation;
   };
   /**
-   * Population-weighted mean cabinet residual, plus the share of population for
-   * which every channel is effectively maxed. Ticket #1129: players reported
-   * built estates doing nothing, because a single global cap meant a saturated
-   * order book zeroed every other channel too.
+   * Population-weighted mean cabinet residual, plus the share of population
+   * for which every channel is effectively maxed.
    *
-   * The cap is now per channel, so "at cap" is only true when EVERY channel is
-   * within 0.01 of its asymptote (issue #703: channels never touch it, so this
-   * means effectively maxed, not exactly pinned). Anything less and there is
-   * still a channel a player can build in, which is exactly the case the old
-   * warning would have called hopeless.
-   * A doc with no per-source split yet (written before the change, or a region
-   * the ministerial step has not touched since) falls back to comparing its
-   * flat total against the full ceiling, which is the same question.
+   * The cap is per channel, so "at cap" is only true when EVERY channel is
+   * within 0.01 of its asymptote (channels never touch it, so this means
+   * effectively maxed). Anything less and there is still a channel a player
+   * can build in. A doc with no per-source split yet falls back to comparing
+   * its flat total against the full ceiling, which is the same question.
    */
   const meanCabinet = (
     metricId: PoliticalMetricId
@@ -206,7 +201,7 @@ export async function loadCountryPoliticalMetrics(
     if (totalPopulation <= 0) return { mean: 0, cappedShare: 0, bySource: [] };
     let weighted = 0;
     let cappedWeight = 0;
-    // Ticket #1142: a player saw a negative "Cabinet, orders and estates" line on a
+    // A player saw a negative "Cabinet, orders and estates" line on a
     // US infrastructure metric and asked which cabinet action could possibly be
     // doing that. The honest answer was none of them: it was the energy channel
     // alone, left saturated by a units bug that is now fixed. One aggregate label

@@ -25,15 +25,11 @@ export const APPROVAL_OBJECTIVE_WEIGHT = 0.7;
 export const APPROVAL_AFFINITY_WEIGHT = 0.3;
 
 /**
- * Board score at which the approval component is zero, per country:
- * CALIBRATED to each country's day-one 1953 seed board (spec §2 intercept:
- * cutover must not lurch approval). Values are the 0.7·objective +
- * 0.3·affinity(0) blend of NATIONAL_BASELINES_1953 (regional modifiers are
- * sparse and roughly balanced, so the baseline board is the national mean to
- * within noise; measured 2026-07-20: US obj 64.78/aff 65.24, UK 63.00/63.21,
- * RU 58.73/59.31). A per-country intercept reproduces the legacy RELATIVE
- * model's day-one neutrality; RU's harder board reads worse objectively but
- * starts approval-neutral, exactly as scoring-vs-own-average did.
+ * Board score at which the approval component is zero, per country.
+ * CALIBRATED to each country's day-one 1953 seed board so cutover does not
+ * lurch approval: values are the 0.7*objective + 0.3*affinity(0) blend of
+ * NATIONAL_BASELINES_1953. A per-country intercept reproduces the legacy
+ * RELATIVE model's day-one neutrality.
  */
 export const APPROVAL_NEUTRAL_SCORE: Record<string, number> = {
   // Legacy playable calibration remains unchanged outside the explicit 1991
@@ -47,17 +43,13 @@ export const APPROVAL_NEUTRAL_SCORE: Record<string, number> = {
 /**
  * The intercept for a country, or a thrown error.
  *
- * Playables resolve from the authored table above. Non-playables resolve from
- * the DERIVED per-preset table, because their board is per-preset: each era
- * overlays its own authored metric values and is scored against that era's
- * band, so an era sits at its own level and reusing one intercept across eras
- * would lurch approval in every era but the one it was measured in.
+ * Non-playables resolve from the derived per-preset table because their board
+ * is per-preset: reusing one intercept across eras would lurch approval in
+ * every era but the one it was measured in.
  *
- * Never defaults. A missing intercept means the country was routed to the
- * political pipeline without a calibrated neutral, and any fallback (50, or the
- * board mean) would silently shift every one of its regions' approval; the
- * exact lurch the per-country intercept exists to prevent. Failing loudly at
- * the seam is the cheaper outcome.
+ * Never defaults. A missing intercept means the country was routed without a
+ * calibrated neutral; any fallback would silently shift every region's
+ * approval, which is the exact lurch this function prevents. Fail loudly.
  */
 export function approvalNeutralFor(countryId: string, presetId?: string | null): number {
   const cc = countryId as PoliticalMetricsCountryId;

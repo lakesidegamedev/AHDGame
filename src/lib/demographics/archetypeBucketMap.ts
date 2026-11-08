@@ -1,44 +1,24 @@
 /**
- * Static archetype → Layer-1 bucket mapping for the granular-electorate engine
- * (the granular vote path).
+ * Static archetype to Layer-1 bucket mapping for the granular vote path.
  *
- * WHY THIS EXISTS
- * ---------------
- * Several gameplay systems author their effects against the 12 mutually-
- * exclusive US voter ARCHETYPES (character/NPP `archetypeApprovals`,
- * legislation `demographicEffects` that land on those approvals, Address-driven
- * `partyGroupFavorability` rows, GOTV/canvassing turnout modifiers on non-US
- * worlds). When the vote engine runs over granular demographic CELLS instead of
- * archetypes, those archetype-keyed values still need to influence the result.
+ * Systems author effects against the 12 US voter ARCHETYPES (archetypeApprovals,
+ * legislation demographicEffects, partyGroupFavorability, GOTV modifiers). When
+ * voting runs over granular demographic cells, those archetype-keyed values
+ * must still land. This table projects each archetype onto 2-3 census buckets
+ * (race/age/education/wealth) with weights summing to 1.0 per archetype, so
+ * an archetype-keyed value V distributes as V*w and a cell picks up the sum of
+ * matching bucket values. Full match gets V, partial match gets a fraction,
+ * unrelated cells get 0.
  *
- * This table projects each archetype onto 2–3 constituent Layer-1 census
- * buckets (race / age / education / wealth — the cell dimensions), with weights
- * that sum to exactly 1.0 per archetype. An archetype-keyed value V is
- * distributed onto buckets as `V × w`, and a cell then picks up the SUM of the
- * bucket values matching its own bucket per dimension. Because each archetype's
- * weights sum to 1, a cell that matches ALL of an archetype's buckets receives
- * the full value V, partial matches receive a proportional fraction, and
- * unrelated cells receive 0 — fuzzy membership semantics.
+ * - Based on, but simpler than, VOTER_GROUP_COMPOSITION: that table mixes in
+ *   `ideology`, which is not a cell dimension. Ideology-dominant archetypes are
+ *   approximated by their strongest census correlates.
+ * - Weights are judgment calls; they shape diffusion of archetype effects, not
+ *   cell shares or leans (those come from IPF-raked marginals).
+ * - US vocabulary only. Non-US archetypes use `countryArchetypeBuckets.ts`.
+ *   Do not add foreign groups here.
  *
- * AUTHORING NOTES
- * ---------------
- * - Derived from (but deliberately simpler than) the seed-time
- *   `VOTER_GROUP_COMPOSITION` in `src/lib/seeds/demographicCategories.ts`:
- *   that table mixes in the `ideology` dimension, which is NOT a cell
- *   dimension (ideology scores are non-exclusive and never enter the
- *   cross-product). Ideology-dominant archetypes (evangelicals, libertarians,
- *   rural_traditionalists) are therefore approximated by their strongest
- *   census correlates.
- * - Weights are judgment calls, not census facts — they only shape how
- *   archetype-targeted effects diffuse across cells, never the cells' shares
- *   or leans (those come from the IPF-raked census marginals).
- * - This table is the US vocabulary only. Non-US archetypes project through
- *   their own country's seeded `composition` table instead — see
- *   `countryArchetypeBuckets.ts`. Do not add foreign groups here: their buckets
- *   would name dimensions the international models do not have.
- *
- * Keys use the `"dim:key"` form matching the cell `buckets` record
- * (e.g. `"age:senior"`).
+ * Keys use "dim:key" matching the cell `buckets` record.
  */
 
 import { getCountryArchetypeBuckets } from "./countryArchetypeBuckets";

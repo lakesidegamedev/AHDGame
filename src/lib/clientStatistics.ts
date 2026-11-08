@@ -8,25 +8,22 @@ import { SEED_ERA_IDS } from "@/lib/seeds/presetSelector";
 /**
  * Anonymous aggregate telemetry ingress validation.
  *
- * This module accepts ONLY the allowlisted aggregate shape the desktop
- * reporter builds (see AHDClient
- * `apps/desktop/src/simulationStatistics.ts`). It never reads auth, account
- * ids, names, or cookies, and it never retains IPs: callers must not pass
- * request metadata in here, only the parsed body.
+ * Accepts only the allowlisted aggregate shape the desktop reporter builds. Never
+ * reads auth, account ids, names, or cookies, and never retains IPs: callers must
+ * pass only the parsed body, no request metadata.
  *
  * Privacy properties enforced here:
- * - Strict objects everywhere: unknown keys (identifiers, names, free text,
- *   nested extras) fail validation instead of being copied through.
- * - Bounded numerics matching the client ranges; non-finite rejected.
+ * - Strict objects: unknown keys (identifiers, names, free text) fail validation
+ *   rather than being copied through.
+ * - Bounded numerics matching client ranges; non-finite rejected.
  * - createdAt is normalized to a coarse UTC day before storage; the client's
  *   precise timestamp is discarded. No persistent device id is stored.
- * - Stored documents expire 30 days after receipt (see `RETENTION_MS`). The
- *   TTL index itself (`{ expiresAt: 1 }`, `expireAfterSeconds: 0`) is created
- *   by the registered `2026-09-06-client-statistics-ttl-index` migration,
+ * - Stored documents expire 30 days after receipt (see `RETENTION_MS`). The TTL
+ *   index (`{ expiresAt: 1 }`, `expireAfterSeconds: 0`) is created by a migration,
  *   never per request.
  *
- * Receiving-proxy and access-log IP retention is deployment config, not
- * something this module can enforce; do not claim otherwise.
+ * Receiving-proxy and access-log IP retention is deployment config, not something
+ * this module can enforce.
  */
 
 /** Schema version stamped on every accepted report. Matches the client. */

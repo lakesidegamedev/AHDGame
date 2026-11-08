@@ -1,22 +1,13 @@
 /**
  * Shared mock database factory for integration tests.
  *
- * Usage in a test file:
+ * `db.collection(name)` returns a collection with common MongoDB methods
+ * pre-mocked via `vi.fn()`. Override per test to control return values.
  *
- *   import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
- *
+ * Usage:
  *   vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
- *
- *   let db: MockDb;
- *   beforeEach(async () => {
- *     db = createMockDb();
- *     const { getDb } = await import("@/lib/mongodb");
- *     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
- *   });
- *
- * Each collection returned by `db.collection(name)` has all common MongoDB
- * collection methods pre-mocked with `vi.fn()`. Override specific methods
- * per test to control return values.
+ *   const db = createMockDb();
+ *   vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
  */
 
 import { vi } from "vitest";
@@ -181,18 +172,15 @@ export function createAsyncIterableCursor<T>(docs: T[]) {
 
 /**
  * Flatten every `updateOne`/`replaceOne` op recorded across a mock's
- * `bulkWrite` calls into `[filter, update]` pairs — the same shape
- * `updateOne.mock.calls` has, so a batched seeder can be asserted the way a
- * sequential one was.
+ * `bulkWrite` calls into `[filter, update]` pairs matching the shape of
+ * `updateOne.mock.calls`.
  *
- * Deliberately NOT a `bulkWrite` that dispatches into the `updateOne` mock:
- * that would keep old assertions green without anyone reading them, and a
- * "was not called" assertion against `updateOne` would then pass for a seeder
- * that writes through `bulkWrite`. Assert on what the code actually calls.
+ * NOT a `bulkWrite` that dispatches into the `updateOne` mock: that would let
+ * old assertions pass silently and a "was not called" check would falsely
+ * pass for a batched seeder. Assert on what the code actually calls.
  *
  * Usage:
  *   const ops = bulkOps(db.collectionMocks.unownedSectors.bulkWrite);
- *   expect(ops[0][1].$set.revenue).toBeGreaterThan(0);
  */
 export function bulkOps(
   mockFn: AnyMockFn

@@ -271,13 +271,10 @@ export interface CloseRatificationResult {
 /**
  * Decide one open vote and apply the consequence.
  *
- * A ratified vote settles the campaign exactly as accepting used to. A rejected
- * one leaves the campaign where it stands, with the employer's offer still on
- * the table: the union must move the package or live with the clocks. That is
- * the only rejection path that obeys the rule in the `lapsed` docblock, because
- * it invents no new state to be stuck in. The deadline still runs the campaign
- * into dispute and the dispute still lapses, so a membership that rejects
- * everything ends the campaign by the existing exit rather than freezing it.
+ * A ratified vote settles the campaign as accepting would. A rejected vote
+ * leaves the campaign intact with the employer's offer still on the table;
+ * no new state is introduced, so the deadline still routes through dispute
+ * and lapse as the existing exit.
  */
 export async function closeRatificationVote(
   db: Db,

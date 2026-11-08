@@ -1,19 +1,13 @@
 /**
  * Preset-aware canonical cycle-1 anchors.
  *
- * Per-preset real-world election years drive every canonical cycle-1
- * end-turn. For the 2019-default preset that's the next post-2019
- * election in each family (US House 2022, UK GE 2024, JP Sangiin 2022,
- * etc.). For 1991-default it's the next post-1991 election (US House
- * 1992, UK GE 1992, JP Sangiin Class A 1992 / Class B 1995, …).
+ * Per-preset real-world election years drive every canonical cycle-1 end-turn
+ * (US House 2022, UK GE 2024, etc. for the 2019-default preset; post-1991
+ * elections for 1991-default).
  *
- * `getCycleAnchors(ctx)` converts those year anchors to turn anchors
- * using the preset's `startingYear` (the calendar year of turn 1).
- *
- * Callers fetch ctx from `GameState` via `cycleAnchorContextFromGameState`
- * and pass it into `canonicalTurnsForCycle` / `pickNextCanonicalCycle`.
- * Tests can use `DEFAULT_CYCLE_ANCHOR_CONTEXT` for the 2019-default
- * back-compat behavior.
+ * `getCycleAnchors(ctx)` converts year anchors to turn anchors using the
+ * preset's `startingYear`. Tests can use `DEFAULT_CYCLE_ANCHOR_CONTEXT` for
+ * 2019-default behavior.
  */
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/calendar";
@@ -127,22 +121,22 @@ export interface PresetElectionYears {
    * ES Congreso de los Diputados — 4-year cycle. `null` era-gates the cycle
    * OFF for presets where Spain holds no elections (1953-default: Franco
    * dictatorship — the Cortes Españolas were not democratically elected, so
-   * the country stays static by design; see issue #3239).
+   * the country stays static by design; see).
    */
   esCongreso: number | null;
   /** SE Riksdag — 4-year cycle (real cadence was 3y 1970-1994; modeled as 4). */
   seRiksdag: number;
   /** TR Grand National Assembly (Millet Meclisi) — 4-year cycle. */
   trMeclis: number;
-  /** GR Vouli ton Ellinon (Hellenic Parliament) — 4-year cycle (#3791). */
+  /** GR Vouli ton Ellinon (Hellenic Parliament), 4-year cycle. */
   grVouli: number;
-  /** AT Nationalrat — 4-year cycle (#3791). */
+  /** AT Nationalrat, 4-year cycle. */
   atNationalrat: number;
-  /** FI Eduskunta — 4-year cycle (#3791). */
+  /** FI Eduskunta, 4-year cycle. */
   fiEduskunta: number;
   /**
    * FR Sénat — 9-year cycle (matches `upperElectionSystem.termYears: 9`).
-   * SIMPLIFICATION (#3791): the real Sénat renews by series (thirds pre-2004,
+   * SIMPLIFICATION: the real Sénat renews by series (thirds pre-2004,
    * halves 2004+) every 3 years, not the whole chamber at once — there is no
    * seat-series/class data model for FR (unlike the US Senate's
    * `senateClass`), so this models a full-chamber re-election every 9 years,
@@ -150,15 +144,11 @@ export interface PresetElectionYears {
    */
   frSenat: number;
   /**
-   * TR Senate of the Republic (Cumhuriyet Senatosu) — `null` = no cycle this
-   * preset (#3791). The real chamber only existed 1961-1980 (one-third
-   * renewed every 2 years, abolished after the 1980 coup); this is NOT
-   * modeled — every preset except 1953-default gates the cycle off entirely
-   * (modern Turkey has been unicameral since 1980). 1953-default anchors to
-   * the real 1961 founding election on a simplified full-chamber 6-year
-   * cycle (matches `upperElectionSystem.termYears: 6`); the TR Senate's 16
-   * seats are already seeded from turn 1 in that preset regardless of the
-   * real 1961 founding date (existing seed simplification, not new here).
+   * TR Senate of the Republic. `null` = no cycle this preset. The real chamber
+   * existed only 1961-1980 and modern Turkey is unicameral, so every preset
+   * except 1953-default gates it off. 1953-default anchors to the 1961 founding
+   * election on a simplified full-chamber 6-year cycle, matching
+   * `upperElectionSystem.termYears: 6`; its 16 seats are seeded from turn 1.
    */
   trSenato: number | null;
   /**
@@ -198,39 +188,18 @@ export interface PresetElectionYears {
 }
 
 /**
- * Real-world election years per preset.
+ * Real-world election years per preset, anchored to the first post-start event
+ * for each office.
  *
- * 2019-default = era starting Jan 2019. Next post-1/1/2019 events:
- *   - US House: Nov 2022 (skipping Nov 2020 in our bootstrap-data model)
- *   - US Senate: Class 1 → 2024, Class 2 → 2026, Class 3 → 2022
- *   - US Pres / Gov / State Senate: 2024
- *   - UK Commons: Jul 2024 (Dec 2019 GE bootstrap-skipped)
- *   - JP Sangiin Class A: Jul 2022 ; Class B: Jul 2025 (skipping Jul 2019)
- *   - JP Shugiin: anchored to 2024 in the existing model
- *   - DE Bundestag: anchored to 2024 in the existing model
+ * 2019-default = era starting Jan 2019 (bootstrap-skips Nov 2020 House and
+ * Dec 2019 UK GE, and Jul 2019 Sangiin, per bootstrap-data model).
  *
- * 1991-default = era starting Jan 1991. Next post-1/1/1991 events:
- *   - US House: Nov 1992 (no 1990s skip — bootstrap-data is mid-102nd Congress)
- *   - US Senate: Class 1 → 1994, Class 2 → 1996, Class 3 → 1992
- *   - US Pres: 1992 ; Gov / State Senate: 1994 (next mid-term)
- *   - UK Commons: Apr 1992 (Major's win)
- *   - JP Sangiin Class A: Jul 1992 (24th regular election) ; Class B: Jul 1995 (skipping Jul 1989/Jul 1986 baseline)
- *   - JP Shugiin: 1993 (next post-1990 election)
- *   - DE Bundestag: 1994 (post-1990 reunification election)
+ * 1991-default = era starting Jan 1991 (bootstrap-data is mid-102nd Congress;
+ * no 1990s skip).
  *
- * 1953-default = era starting Jan 1953 (Eisenhower's first year). Next
- * post-1/1/1953 events — added for sandbox-seed-audit-t101 (before this
- * entry existed, every 1953-default election silently fell through to the
- * 2019-default years below, anchoring cycle-1 ~69 years in the future —
- * e.g. house's 2022 anchor computed to endTurn 3360, nowhere near reachable):
- *   - US House: Nov 1954 (first midterm after the 1953 start)
- *   - US Senate: Class 3 → 1954, Class 1 → 1956, Class 2 → 1958 (spread
- *     across the three biennial post-start years, same convention as 1991)
- *   - US Pres: 1956 (Eisenhower re-election) ; Gov / State Senate: 1954 (midterm)
- *   - UK Commons: May 1955 (Churchill hands off to Eden, Conservative win)
- *   - JP Sangiin Class A: Jul 1956 ; Class B: Jul 1959 (real House of Councillors elections)
- *   - JP Shugiin: Feb 1955 (real House of Representatives election)
- *   - DE Bundestag: Sep 1957 (next Bundestag election after the Sep 1953 one)
+ * 1953-default = era starting Jan 1953 (Eisenhower's first year). Anchors are
+ * required: without a 1953 entry, elections fall through to the 2019 years and
+ * cycle-1 anchors compute ~69 years in the future.
  */
 export const CANONICAL_REAL_ELECTION_YEARS_BY_PRESET: Record<string, PresetElectionYears> = {
   "2019-default": {

@@ -75,10 +75,8 @@ export async function proposeNationalBill(
   authUser: AuthUser,
   input: ProposeNationalBillInput
 ): Promise<LegislatureCommandResult> {
-  // A bill minted for a country no turn phase walks never advances, enacts,
-  // vetoes or fails — it just sits on the floor forever with nothing to close
-  // it and nothing that reports it (#806). Refuse it up front rather than
-  // creating the zombie. The same helper already gates auto-spawned bills.
+  // A country with no bill lifecycle never advances, enacts, or closes
+  // a bill, so refuse it up front to avoid a zombie bill.
   if (!hasBillLifecycle(countryId)) {
     return {
       status: 400,
@@ -105,10 +103,8 @@ export async function proposeNationalBill(
   }
   const lowerKey = config.legislature.lowerChamber.key;
   const upperKey = config.legislature.upperChamber?.key;
-  // Bill-active bicameral legislatures (JP/NG) let the upper chamber originate
-  // bills; UK Lords / DE Bundesrat are `bicameral: false` and stay lower-only
-  // (#912 — NG senators got a 403 "must be a seated member of the House").
-  // Era-aware: TR 1953 is unicameral (no Senato).
+  // Bicameral bill-active legislatures (JP/NG) allow upper-chamber origin;
+  // UK/DE are bicameral: false and stay lower-only. Era-aware: TR 1953 is unicameral.
   const memberOriginKeys: string[] =
     config.legislature.bicameral && upperKey ? [lowerKey, upperKey] : [lowerKey];
   const allowedOriginKeys = isUsCongress ? [...memberOriginKeys, "joint"] : memberOriginKeys;
@@ -205,12 +201,10 @@ export async function proposeNationalBill(
   const usingAdminOverride = isAdmin && !official;
   const usingSovereignOverride = !input.proposeViaPartyNpp && mayRuleByDecree(character, countryId);
 
-  // Origin/current chamber is stored as the *chamber key* (e.g. "npc"), which is
-  // what every read path — bills list, active-bill guard, turn lifecycle — filters
-  // on. A seated official's `officeType` is NOT always the chamber key (CN's
-  // "npcDelegate" maps to chamber "npc"), so it must be round-tripped through
-  // getChamberKeyForOfficeType. Storing the raw officeType hid CN bills from the
-  // NPC page and wedged sponsors (Bug #0734).
+  // Chamber is stored as the *chamber key* (e.g. "npc"), which every read
+  // path filters on. A seated official's `officeType` is not always the chamber
+  // key (e.g. "npcDelegate" maps to "npc"), so round-trip it through
+  // getChamberKeyForOfficeType.
   let sponsorChamberKey: string = lowerKey;
   if (usingAdminOverride || usingSovereignOverride) sponsorChamberKey = chamber;
   if (partySponsor) sponsorChamberKey = partySponsor.chamber;

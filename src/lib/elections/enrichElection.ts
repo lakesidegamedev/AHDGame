@@ -220,7 +220,7 @@ export async function _enrichElection(
   const charPartyMap = new Map(characters.map((c) => [c._id.toString(), c.party]));
 
   // Enrich candidates. Ended races keep ballot-time party on labels/colours so
-  // later party switches cannot recolour historical results (#939).
+  // later party switches cannot recolour historical results.
   const enrichedCandidates = enrichElectionCandidates({
     candidates,
     characters,
@@ -362,11 +362,10 @@ export async function _enrichElection(
     russianAssemblyPrimaryAdvanceLimit(election, enrichedWithYou.length) ??
     getPrimaryWinnersForElection(countryId as CountryId, election.electionType);
 
-  // Display candidates: post-primary dedup, keeping up to `primaryAdvanceCount`
-  // per party. Safety net for the window between primaryEndTime and the next
-  // primary-resolution turn — and for multi-advance races that intentionally
-  // leave several same-party nominees active through the general (#1043).
-  // Always include the current user's candidate even if they lost the primary.
+  // Display candidates: post-primary dedup, up to `primaryAdvanceCount`
+  // per party. Covers the window between primaryEndTime and primary
+  // resolution, and multi-advance races. Always include the current user's
+  // candidate even if they lost the primary.
   let displayCandidates: EnrichedCandidate[] = primaryCandidates;
   if (!inPrimary && !isEnded) {
     displayCandidates = selectGeneralPhaseDisplayCandidates(enrichedWithYou, primaryAdvanceCount);
@@ -450,9 +449,9 @@ export async function _enrichElection(
 
   // Polling data (always computed for both views).
   // Ended races: omit live character.party so polling colours stay on the
-  // candidacy-row (ballot) party — same historical rule as map colours (#939).
-  // Primary: pass live byParty shares so party/list cards match the detail page
-  // (ticket-1022 — snapshot shares left late joiners at 0%).
+  // candidacy-row (ballot) party, same historical rule as map colours.
+  // Primary: pass live byParty shares so party/list cards match the detail
+  // page rather than snapshot shares.
   let polling = buildPollingData(
     election.electionType,
     countryId,
@@ -466,7 +465,7 @@ export async function _enrichElection(
   );
 
   // Seat estimates (always computed for multi-seat races, needed by both views).
-  // #1277: a RESOLVED race must show the allocation it actually seated, never a
+  // A RESOLVED race must show the allocation it actually seated, never a
   // fresh recompute. Recomputing on every load meant a finished election
   // rendered a different result whenever an allocator input drifted underneath
   // it — a player held 7 seats while this page showed 16. `generalResolution`
@@ -574,7 +573,7 @@ export async function _enrichElection(
   // it can never be. Overriding caller-side keeps the shared helper's signature
   // and its other two call sites untouched.
   const blocCountry = countryId ?? election.countryId;
-  // Skipped for a resolved race (#1277): the seated allocation already IS the
+  // Skipped for a resolved race: the seated allocation already IS the
   // bloc-list result the resolver produced, and short-circuiting here also
   // spares the `getCountryState` round-trip below.
   const configuredBlocQuota =
@@ -879,11 +878,9 @@ export async function _enrichElection(
         ),
         ...resolvedTally.candidateIsNPP,
       };
-      // For an ended/finalized election, a candidate's live party can differ from
-      // the party they ran under (they may have switched since). Prefer the tally
-      // snapshot, then the candidacy-row (ballot) party — never the live
-      // character.party — so historical maps/results keep election-time colours.
-      // In-progress elections still use the live party. (#939)
+      // For ended elections, prefer the tally snapshot, then the
+      // candidacy-row party, never the live character.party, so historical
+      // maps keep election-time colours. In-progress races use live party.
       const preferElectionTimeParty = isEnded || resolvedTally.finalized === true;
       const ballotPartyById = new Map(candidates.map((c) => [c._id.toString(), c.party]));
       for (const cid of referencedCandidateIds) {
@@ -1142,11 +1139,9 @@ export async function _enrichElection(
       }
     }
 
-    // Approval-scaled incumbency for the President's OWN race. Mirrors the turn
-    // engine (presidentialElectionEngine.ts), which now threads the sitting
-    // President's party + national approval into the incumbency driver. Sourced
-    // from the sitting President, not the live tally, so the card matches the
-    // shield/drag the engine applies (VP rides the same ticket).
+    // Approval-scaled incumbency for the President's own race, matching the
+    // turn engine. Sourced from the sitting President, not the live tally, so
+    // the card matches the engine's shield/drag (VP rides the same ticket).
     if (isPresidentialRace) {
       const president = await resolvePresidentApproval(db, cid);
       if (president) {
@@ -1435,7 +1430,7 @@ export async function fetchDepsForElection(
   ].map((id) => new ObjectId(id));
 
   // Parallel fetches (core data always; endorsements/campaigns only for full view).
-  // Summary views project the candidate-batch reads (#2168): NPPs drop the
+  // Summary views project the candidate-batch reads: NPPs drop the
   // ~30KB stance map, characters keep the closed display/scoring set, and
   // full view keeps whole documents. See electionSummaryProjections.ts.
   const [

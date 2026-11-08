@@ -1,33 +1,15 @@
 /**
  * Household credit bands and the CEO's lending profile.
  *
- * The NPC household book used to be one number: a single `npcBulk` loan with
- * one rate and one blended default rate. That is why the console could only
- * ever say "NPC bulk outstanding (implied): $16.64M" — there was nothing else
- * to say, because nothing else was stored.
+ * The NPC household book is a distribution, not one blended loan: each band has
+ * its own rate and default rate. This lets the console show the book by rating,
+ * gives the CEO a band-selection decision rather than a single rate lever, and
+ * lets the stress test weigh the book's composition.
  *
- * A real loan book is a distribution. Households differ in creditworthiness,
- * the bank charges each band a different rate, and each band defaults at a
- * different rate. Splitting the book into bands makes three things true that
- * were not true before:
- *
- *  - the console can show the book the way a banker would read it, by rating;
- *  - the CEO has a decision to make (which bands to lend into) rather than a
- *    single rate lever that moves volume and risk together;
- *  - the supervisory stress test can bite an aggressive book harder than a
- *    conservative one, because it now knows what the book is made of.
- *
- * ## Why aggressive is not simply better
- *
- * Aggressive lending buys volume at a worse margin. Reading the table below at
- * an 8% base lending rate: a conservative book nets ~6.8% on 45% of household
- * demand, an aggressive book nets ~6.2% on 100% of it. Aggressive earns more in
- * absolute terms in calm conditions, and that is the point — it should be a
- * live temptation, not a trap. What it buys with that is a book whose stress
- * loss is roughly 15% against a conservative book's 3%, and
- * {@link STRESS_LOSS_MULTIPLIER} turns that straight into a failed stress test
- * and barred distributions. The choice is margin and safety against volume and
- * fragility, which is the choice an actual bank makes.
+ * Aggressive is not simply better: it buys volume at a worse margin and a far
+ * higher stress loss, which {@link STRESS_LOSS_MULTIPLIER} turns into a failed
+ * stress test and barred distributions. The choice is margin and safety against
+ * volume and fragility.
  */
 
 import { computeNpcLoanBook } from "./loans";

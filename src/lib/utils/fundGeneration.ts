@@ -115,29 +115,24 @@ function getOfficeFundBonus(currentOffice: OfficeType | null): number {
 }
 
 /**
- * Per-country-era GDP-per-capita baseline for income and cost scaling.
- * Resolved from the single authoritative table in
- * `campaigns/rules/gdpBaseline.ts` (derived from the era's `State.gdp` seed
- * bundle, so units match regional GDP). Each country's regions are evaluated
- * relative to their own national average, so a UK player in an average UK
- * region gets the same scalar as a US player in an average US state.
+ * Per-country-era GDP-per-capita baseline for income and cost scaling, from
+ * `campaigns/rules/gdpBaseline.ts` (derived from the era's `State.gdp` seed,
+ * so units match regional GDP). Each country's regions scale relative to their
+ * own national average.
  *
- * `preset` selects the era (defaults to `DEFAULT_SEED_PRESET`, preserving the
- * modern-era scale for callers with no world to ask). Runtime money paths
- * MUST pass the world's `gameState.preset`.
+ * `preset` selects the era (defaults to `DEFAULT_SEED_PRESET`). Runtime money
+ * paths MUST pass the world's `gameState.preset`.
  *
- * Throws for countries without an explicit baseline row — by design, so an
- * unknown country can never silently inherit a mismatched US denomination.
+ * Throws for countries without an explicit baseline, by design, so an unknown
+ * country cannot silently inherit a mismatched US denomination.
  */
 export function getGdpBaseline(countryId: string, preset?: string): number {
   return gdpBaselinePerCapita(countryId, preset);
 }
 
 /**
- * Era price level (#2119) is re-exported here so the income shell — the turn
- * phase that already imports `projectCharacterGeneration` from this module —
- * can resolve the flag-gated scalar from one import:
- * `resolveCampaignPriceLevel(gameConfig.campaignEraPriceLevelEnabled, preset)`.
+ * Era price level, re-exported here so the income shell can resolve the
+ * flag-gated scalar from one import.
  */
 
 /**
@@ -163,7 +158,7 @@ export function getIncomeGdpScalar(
  * Combines base rate + donor base bonus (both GDP-scaled) + flat office bonus.
  * When stateGdpMillions is omitted, defaults to country average (scalar = 1.0).
  *
- * `priceLevel` (#2119) is the between-era deflator resolved at the shell from
+ * `priceLevel` is the between-era deflator resolved at the shell from
  * the world's era; it scales the nominal income legs (base + donor bonus and
  * the flat office bonus) so a 1953 world's income deflates with its costs. It
  * defaults to 1, so an omitted/1 scalar reproduces today's arithmetic exactly.
@@ -242,15 +237,15 @@ export interface FundDistribution {
 }
 
 /**
- * Full fund distribution calculation including donor base and office bonuses.
- * Base rate and donor bonus are scaled by state GDP per capita using a per-country
- * baseline; office bonus is flat. When stateGdpMillions is omitted, defaults to
- * country average (scalar = 1.0).
+ * Full fund distribution including donor base and office bonuses. Base rate
+ * and donor bonus scale by state GDP per capita against a per-country
+ * baseline; office bonus is flat. Omitted stateGdpMillions defaults to
+ * country average (scalar 1.0).
  *
- * `priceLevel` (#2119): the between-era deflator resolved at the shell. Scaling
- * every nominal income leg by the same scalar keeps the tax split proportional
- * and preserves within-era regional variance (a uniform factor). Defaults to 1,
- * so an omitted/1 scalar is byte-identical to today.
+ * `priceLevel` is the between-era deflator resolved at the shell. Scaling
+ * every nominal income leg by one scalar keeps the tax split proportional
+ * and preserves within-era regional variance. Defaults to 1; an omitted or 1
+ * scalar is byte-identical to prior behavior.
  */
 export function calculateFullFundDistribution(
   statePopulation: number,
@@ -358,9 +353,8 @@ export function projectCharacterGeneration(args: {
   /** World reset preset selecting the baseline era; defaults to modern. */
   preset?: string;
   /**
-   * Resolved era price level (#2119) from the shell; undefined/1 = modern and
-   * byte-identical to today. The turn phase passes
-   * `resolveCampaignPriceLevel(gameConfig.campaignEraPriceLevelEnabled, preset)`.
+   * Resolved era price level from the shell; undefined/1 = modern. The turn
+   * phase passes `resolveCampaignPriceLevel(...)`.
    */
   priceLevel?: number;
 }): number {

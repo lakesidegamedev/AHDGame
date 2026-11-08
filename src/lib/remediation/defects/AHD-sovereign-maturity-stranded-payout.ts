@@ -1,23 +1,19 @@
 /**
- * Paired code fix: #4754 (sovereign maturity legs resolve to live targets at
- * preparation). Kept registered as a detector for any journal that still
- * strands, e.g. one resumed after its holder was deleted.
+ * Detector for sovereign maturity journals that still strand escrowed cash.
  *
- * A funded sovereign maturity payout applies its escrow debit first, then one
- * credit per frozen holder leg in order. Two kinds of credit leg could never
- * apply, which stranded the escrowed cash in a `partial` journal forever:
+ * A funded payout applies its escrow debit, then one credit per frozen holder
+ * leg in order. Two credit legs could never apply, leaving the journal
+ * `partial` forever:
  *
  * - a central-bank leg keyed by the raw country id of a shared bank
  *   (`centralBanks {_id: "DE"}` while the document is `{_id: "ECB"}`);
- * - a holder leg whose holder document was deleted after the quote froze
- *   (an NPP culled by a party merge). Every later leg, including the large
- *   market-pool credit, waits behind it.
+ * - a holder leg whose holder was deleted after the quote froze (e.g. an NPP
+ *   culled by a party merge). Every later leg, including the large market-pool
+ *   credit, waits behind it.
  *
- * The heal rewrites only those unapplied legs of the stored journal, to the
- * exact legs the fixed preparation now produces from the same frozen quote
- * (`resolveSovereignMaturityPayoutLegs`). It moves no money: the next bond
- * turn resumes the journal, delivers the remaining credits, applies the
- * projections, and retires the bond.
+ * The heal rewrites only those unapplied legs, to the exact legs fixed
+ * preparation now produces from the same frozen quote. It moves no money: the
+ * next bond turn resumes the journal and delivers the remaining credits.
  */
 import type { Collection, Db } from "mongodb";
 import {

@@ -1,9 +1,9 @@
 /**
- * Scripted organisation votes for background countries (#5702).
+ * Scripted organisation votes for background countries.
  *
  * A background country has no NPP government to plan its foreign policy and no
  * trade minister to cast a ballot, but it keeps its seats in the EU, NATO, the
- * UN and the rest. This script gives it a vote. Four things decide it:
+ * UN and the rest. Four things decide its vote:
  *
  * - alignment: how close the voter stands to the proposer, the sanctions or
  *   statement target, the aid recipient or the chair candidate, measured as the

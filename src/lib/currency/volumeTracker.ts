@@ -7,22 +7,14 @@
 /**
  * Compute gross buy/sell volume per currency from trade history.
  *
- * The forex turn phase calls this once per turn to get the volume data
- * that feeds into the volume pressure component of the rate formula.
+ * Both `buyVolume24` and `sellVolume24` are in internal (₳) units. Using
+ * `trade.amount` for both sides would leave volumes as mixed denominations and
+ * bias net pressure.
  *
- * Unit invariant (fixed 2026-04-15): both `buyVolume24` and `sellVolume24`
- * are accumulated in **internal (₳) units**. The prior implementation used
- * `trade.amount` (always in fromCurrency) for BOTH sides, which left
- * `buyVolume24[X]` as a meaningless mix of fromCurrency denominations
- * whenever X appeared on the `to` side — biasing net pressure (especially
- * for USD, which is the `to` side of most JPY/GBP → USD flows).
- *
- * Normalization: `internal = amount / rate_of_fromCurrency` for each trade,
- * attributed equally to both sides (sell on fromCurrency, buy on toCurrency).
- * This keeps VOLUME_PRESSURE_SENSITIVITY unit-agnostic and makes
- * `netVolume = buy - sell` a real directional demand signal.
- *
- * See docs/design/currency-exchange.md "Player Volume Pressure" section.
+ * Normalization: `internal = amount / rate_of_fromCurrency` per trade, attributed
+ * to both sides (sell on fromCurrency, buy on toCurrency). Keeps
+ * VOLUME_PRESSURE_SENSITIVITY unit-agnostic so `netVolume = buy - sell` is a real
+ * directional signal.
  */
 
 import { euroTradeCurrency, type EuroMonetaryUnion } from "./euro/rules";
