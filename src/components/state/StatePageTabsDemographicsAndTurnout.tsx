@@ -188,19 +188,17 @@ function KpiStrip({
   economicLean,
   socialLean,
   avgTurnout,
-  categoryCount,
   mediaPullLine,
 }: {
   population: number | null;
   economicLean: number | null;
   socialLean: number | null;
   avgTurnout: number | null;
-  categoryCount: number;
   mediaPullLine?: string | null;
 }) {
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <KpiCell label="Population">
           {population !== null ? fmtPopulation(population) : "—"}
         </KpiCell>
@@ -227,7 +225,6 @@ function KpiStrip({
           )}
         </KpiCell>
         <KpiCell label="Turnout">{avgTurnout !== null ? `${avgTurnout.toFixed(1)}%` : "—"}</KpiCell>
-        <KpiCell label="Demographic categories">{categoryCount}</KpiCell>
       </div>
       {mediaPullLine && <p className="text-xs text-muted">{mediaPullLine}</p>}
     </>
@@ -236,11 +233,9 @@ function KpiStrip({
 
 function computeKpiProps({
   demographics,
-  categories,
   turnoutData,
 }: {
   demographics: SerializedStateDemographics | null;
-  categories: DemographicCategory[];
   turnoutData: TurnoutResponse | null;
 }) {
   const population = demographics
@@ -255,9 +250,8 @@ function computeKpiProps({
       ? demographics.cachedSocialLean
       : null;
   const avgTurnout = computeAvgTurnout(turnoutData);
-  const categoryCount = categories.length;
   const mediaPullLine = describeMediaPull(demographics?.mediaOpinionPull);
-  return { population, economicLean, socialLean, avgTurnout, categoryCount, mediaPullLine };
+  return { population, economicLean, socialLean, avgTurnout, mediaPullLine };
 }
 
 // ─── census card with integrated turnout ─────────────────────────────────────
@@ -579,7 +573,6 @@ type ViewMode = "chart" | "table" | "combined";
 export function DemographicsAndTurnoutTab({
   stateId,
   demographics,
-  categories,
   censusData,
   turnoutData,
   countryId,
@@ -603,7 +596,7 @@ export function DemographicsAndTurnoutTab({
   regionParties?: RegionPartyPosition[];
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("combined");
-  const kpi = computeKpiProps({ demographics, categories, turnoutData });
+  const kpi = computeKpiProps({ demographics, turnoutData });
   // Archetype-based view applies to every country whose demographicProfileId
   // is `<cc>_archetypes` (UK, JP, DE, IE, CN, BR). Single config-driven gate; no
   // caller has to pass a per-country boolean.
