@@ -26,6 +26,18 @@ const dbState = vi.hoisted(() => ({
   inserted: [] as Doc[],
   healed: [] as Doc[],
   accessStatus: "active",
+  landeslisten: [] as unknown[],
+}));
+
+vi.mock("@/lib/elections/germanyLandesliste", () => ({
+  generateLandeslistenForCycle: vi.fn(async (_db: unknown, cycle: unknown) => {
+    dbState.landeslisten.push(cycle);
+  }),
+}));
+vi.mock("@/lib/countries/de/elections/germanyLandesliste", () => ({
+  generateLandeslistenForCycle: vi.fn(async (_db: unknown, cycle: unknown) => {
+    dbState.landeslisten.push(cycle);
+  }),
 }));
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -116,6 +128,8 @@ interface Spawner {
   national: boolean;
   /** The chamber has a snap election type that shifts its term clock. */
   snap?: boolean;
+  /** Staggered classes: every seeded election is written once per class. */
+  classes?: (1 | 2)[];
   run: (now: Date, turn: number) => Promise<void>;
 }
 
@@ -134,9 +148,43 @@ function spawner(
   electionType: string,
   national: boolean,
   run: Spawner["run"],
-  snap = false
+  snap = false,
+  classes?: (1 | 2)[]
 ): Spawner {
-  return { name, countryId, electionType, national, run, ...(snap ? { snap } : {}) };
+  return {
+    name,
+    countryId,
+    electionType,
+    national,
+    run,
+    ...(snap ? { snap } : {}),
+    ...(classes ? { classes } : {}),
+  };
+}
+
+async function deSpawners(): Promise<Spawner[]> {
+  const de = await import("@/lib/countries/de/elections/perpetual");
+  const landtag = await import("@/lib/countries/de/elections/germanyLandtag");
+  return [
+    spawner("de.bundestag", "DE", "bundestag", false, de.ensureDEElections, true),
+    spawner("de.landtag", "DE", "landtag", false, landtag.ensureDELandtagElections),
+  ];
+}
+
+async function jpSpawners(): Promise<Spawner[]> {
+  const jp = await import("@/lib/countries/jp/elections/perpetual");
+  return [
+    spawner("jp.shugiin", "JP", "shugiin", false, jp.ensureJPElections, true),
+    spawner(
+      "jp.sangiin",
+      "JP",
+      "sangiin",
+      false,
+      (now, turn) => jp.ensureJPCouncillorElections(now, undefined, turn),
+      false,
+      [1, 2]
+    ),
+  ];
 }
 
 async function ieNgSpawners(): Promise<Spawner[]> {
@@ -171,6 +219,16 @@ async function betaSpawners(): Promise<Spawner[]> {
     spawner("gr.vouli", "GR", "vouli", false, b.ensureGRElections, true),
     spawner("at.nationalrat", "AT", "nationalrat", false, b.ensureATElections, true),
     spawner("fi.eduskunta", "FI", "eduskunta", false, b.ensureFIElections, true),
+  ];
+}
+
+async function betaSenateSpawners(): Promise<Spawner[]> {
+  const b = await import("@/lib/turn/perpetualElections/countries/betaParliaments");
+  return [
+    spawner("fr.senat", "FR", "senat", false, b.ensureFRSenateElections),
+    spawner("it.senato", "IT", "senato", false, b.ensureITSenateElections),
+    spawner("es.senado", "ES", "senado", false, b.ensureESSenateElections),
+    spawner("tr.senato", "TR", "senato", false, b.ensureTRSenateElections),
   ];
 }
 
@@ -394,6 +452,20 @@ const SNAP_SCENARIOS: Scenario[] = [
 
 const GROUPS: Group[] = [
   {
+    id: "de.",
+    title: "DE",
+    spawners: deSpawners,
+    regionsFor: seededRegions,
+    scenarios: [...BASE_SCENARIOS, ...SNAP_SCENARIOS],
+  },
+  {
+    id: "jp.",
+    title: "JP",
+    spawners: jpSpawners,
+    regionsFor: seededRegions,
+    scenarios: [...BASE_SCENARIOS, ...SNAP_SCENARIOS],
+  },
+  {
     id: "",
     title: "IE and NG",
     spawners: ieNgSpawners,
@@ -406,6 +478,13 @@ const GROUPS: Group[] = [
     spawners: betaSpawners,
     regionsFor: seededRegions,
     scenarios: [...BASE_SCENARIOS, ...SNAP_SCENARIOS],
+  },
+  {
+    id: "senate.",
+    title: "beta senates",
+    spawners: betaSenateSpawners,
+    regionsFor: seededRegions,
+    scenarios: BASE_SCENARIOS,
   },
   {
     id: "cn.",
@@ -435,12 +514,16 @@ function describeDoc(doc: Doc): string {
     `dur=${doc.durationHours}/${doc.primaryDurationHours}`,
     `seat=${doc.seatId}`,
     `shift=${doc.shiftedScheduleEndTurn ?? "-"}`,
+    ...(doc.chamberClass ? [`class=${doc.chamberClass}`] : []),
+    ...(doc.allocationMethod ? [`alloc=${doc.allocationMethod}`] : []),
+    ...(doc.japanShugiinRules ? [`jpRules=${JSON.stringify(doc.japanShugiinRules)}`] : []),
     `t=${iso(doc.startTime)}|${iso(doc.primaryEndTime)}|${iso(doc.endTime)}`,
   ].join(" ");
 }
 
 function describeHeal(op: Doc): string {
   const update = (op.updateOne as { update: { $set: Doc } }).update.$set;
+  if ("allocationMethod" in update) return `heal method=${update.allocationMethod}`;
   return `heal seats=${update.totalSeats}`;
 }
 
@@ -462,9 +545,13 @@ describe.each(GROUPS)("$title schedule parity", (group) => {
           if (scenario.snapOnly && !sp.snap) continue;
           const regions = group.regionsFor(sp.countryId, era);
           dbState.states = regions;
-          dbState.elections = scenario.seed(sp, regions);
+          const seeded = scenario.seed(sp, regions);
+          dbState.elections = sp.classes
+            ? seeded.flatMap((d) => sp.classes!.map((c) => ({ ...d, chamberClass: c })))
+            : seeded;
           dbState.inserted = [];
           dbState.healed = [];
+          dbState.landeslisten = [];
           dbState.accessStatus = scenario.gate ?? "active";
           dbState.gameState = {
             _id: "current",
@@ -476,6 +563,9 @@ describe.each(GROUPS)("$title schedule parity", (group) => {
           const lines = [
             ...dbState.inserted.map(describeDoc).sort(),
             ...dbState.healed.map(describeHeal).sort(),
+            ...(dbState.landeslisten.length
+              ? [`landeslisten cycles=${[...new Set(dbState.landeslisten)].join(",")}`]
+              : []),
           ];
           out.push(`## ${scenario.name} ${sp.name}`, ...(lines.length ? lines : ["(none)"]));
         }

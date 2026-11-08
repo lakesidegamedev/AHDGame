@@ -127,7 +127,11 @@ export function buildDelegateSeatHealOps(
     return [
       {
         updateOne: {
-          filter: { _id: e._id },
+          filter: {
+            _id: e._id,
+            totalSeats: e.totalSeats,
+            status: { $in: ["active", "upcoming"] as ElectionStatus[] },
+          },
           update: { $set: { totalSeats: expected, updatedAt: now } },
         },
       },
@@ -375,159 +379,6 @@ export async function ruElectionsLive(db: Db, _countryId: CountryId = "RU"): Pro
   const { status, nppGoverned } = await getCountryAccessFromDb(db, "RU");
   if (status === "beta" || status === "active") return true;
   return nppGoverned;
-}
-
-/**
- * Ensure every region of a beta-tier country's SENATE has an active/upcoming
- * election. Sibling to the beta lower-chamber chamber specs, but seats come from
- * `state.stateSenateSeats`, NOT `houseDistricts` (that is the lower chamber's
- * seat map, seeded independently).
- *
- * Without this spawner lapsed senators are never refilled and upper chambers
- * trend toward empty as terms lapse.
- *
- * No snap-election handling: no snap-senate concept exists, unlike the
- * lower-chamber specs' `snap_${electionType}` family.
- */
-export async function ensureBetaSenateElections(
-  countryId: CountryId,
-  electionType: string,
-  now: Date,
-  inFlightTurn?: number
-): Promise<void> {
-  const db = await getDb();
-  if (!(await countryElectionsLive(db, countryId))) return;
-  const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-
-  const regions = await db
-    .collection<State>("states")
-    .find({ countryId }, { projection: { _id: 1, stateSenateSeats: 1 } })
-    .toArray();
-  const regionIds = regions.map((r) => r._id as string);
-  if (regionIds.length === 0) return;
-  const seatsByRegion = new Map<string, number>(
-    regions.map((r) => [r._id as string, (r as State).stateSenateSeats ?? 1])
-  );
-
-  const liveElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId,
-      electionType,
-      status: { $in: ["active", "upcoming"] },
-    })
-    .toArray();
-  const liveRegions = new Set(liveElections.map((e) => e.state));
-  const seatHealOps: AnyBulkWriteOperation<Election>[] = liveElections.flatMap((election) => {
-    const authoritative = seatsByRegion.get(election.state);
-    if (!authoritative || election.totalSeats === authoritative) return [];
-    return [
-      {
-        updateOne: {
-          filter: {
-            _id: election._id,
-            totalSeats: election.totalSeats,
-            status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-          },
-          update: { $set: { totalSeats: authoritative, updatedAt: now } },
-        },
-      },
-    ];
-  });
-  if (seatHealOps.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(seatHealOps);
-  }
-
-  const completedElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId,
-      electionType,
-      status: { $in: ["completed", "resolved"] },
-    })
-    .sort({ updatedAt: -1 })
-    .toArray();
-
-  function lastCompleted(regionId: string): Election | undefined {
-    return completedElections.find((e) => e.state === regionId);
-  }
-
-  const dur = DEFAULT_DURATIONS[electionType];
-  if (!dur) return;
-
-  const toInsert: Omit<Election, "_id">[] = [];
-
-  for (const regionId of regionIds) {
-    if (liveRegions.has(regionId)) continue;
-
-    const prev = lastCompleted(regionId);
-    if (justResolvedInSameTurn(prev, now, currentTurn)) continue;
-
-    const spawn = pickNextCanonicalCycle({
-      electionType,
-      countryId,
-      prevCycle: prev?.cycle ?? 0,
-      currentTurn,
-      ctx,
-    });
-    if (!spawn) continue; // era-gated (ES 1953, TR outside 1953-default) or gate exhausted
-
-    // Open the primary immediately (mirrors the beta lower-chamber spawner):
-    // the multi-year cycle far exceeds the 48h window, so the canonical
-    // startTurn would otherwise leave a long dead zone.
-    const startTurn = currentTurn;
-    const startTime = now;
-    const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-    const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-    toInsert.push({
-      countryId,
-      electionType,
-      state: regionId,
-      seatId: getSeatIdFromElection({ countryId, electionType, state: regionId }),
-      cycle: spawn.cycle,
-      electionYear: electionToLarpYear(electionType, spawn.cycle, undefined, undefined, ctx),
-      status: "active",
-      // Region data is authoritative. Carrying a prior cycle forward makes a
-      // corrected apportionment ineffective forever after the first bad race.
-      totalSeats: seatsByRegion.get(regionId) ?? prev?.totalSeats ?? 1,
-      startTime,
-      primaryEndTime,
-      endTime,
-      startTurn,
-      primaryEndTurn: spawn.primaryEndTurn,
-      endTurn: spawn.endTurn,
-      durationHours: dur.durationHours,
-      primaryDurationHours: dur.durationHours - dur.generalDurationHours,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (toInsert.length === 0) return;
-
-  const orFilters = toInsert.map((e) => ({
-    electionType,
-    state: e.state,
-    status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-  }));
-  const existing = await db
-    .collection<Election>("elections")
-    .find({ countryId, $or: orFilters }, { projection: { state: 1 } })
-    .toArray();
-  const existingStates = new Set(existing.map((e) => e.state));
-  const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-  if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-    console.log(
-      `[Turn] ensureBetaSenateElections(${countryId}): spawned ${toActuallyInsert.length} ${electionType} election(s)`
-    );
-    sendBatchedElectionAnnouncements(toActuallyInsert, now);
-  }
 }
 
 /**

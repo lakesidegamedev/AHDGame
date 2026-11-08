@@ -7,8 +7,11 @@ import {
   IT_LOWER_CHAMBER_SPEC,
   SE_LOWER_CHAMBER_SPEC,
   TR_LOWER_CHAMBER_SPEC,
+  ES_SENATE_SPEC,
+  FR_SENATE_SPEC,
+  IT_SENATE_SPEC,
+  TR_SENATE_SPEC,
 } from "./betaParliamentSpecs";
-import { ensureBetaSenateElections } from "../shared";
 import { ensureChamberElections } from "../chamberSpawner";
 
 /** FR Assemblée nationale spawner (5-year cycle; era-aware via preset anchors). */
@@ -60,20 +63,20 @@ export async function ensureFIElections(now: Date, inFlightTurn?: number): Promi
 
 /** FR Sénat spawner (9-year full-chamber cycle — see simplification note above). */
 export async function ensureFRSenateElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaSenateElections("FR", "senat", now, inFlightTurn);
+  await ensureChamberElections(FR_SENATE_SPEC, now, inFlightTurn);
 }
 
 /** IT Senato della Repubblica spawner (concurrent with the Camera — same real election day). */
 export async function ensureITSenateElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaSenateElections("IT", "senato", now, inFlightTurn);
+  await ensureChamberElections(IT_SENATE_SPEC, now, inFlightTurn);
 }
 
 /** ES Senado spawner (concurrent with the Congreso; NO-OP in 1953-default — Franco era). */
 export async function ensureESSenateElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaSenateElections("ES", "senado", now, inFlightTurn);
+  await ensureChamberElections(ES_SENATE_SPEC, now, inFlightTurn);
 }
 
 /** TR Senate of the Republic spawner (1953-default only — see simplification note above). */
 export async function ensureTRSenateElections(now: Date, inFlightTurn?: number): Promise<void> {
-  await ensureBetaSenateElections("TR", "senato", now, inFlightTurn);
+  await ensureChamberElections(TR_SENATE_SPEC, now, inFlightTurn);
 }

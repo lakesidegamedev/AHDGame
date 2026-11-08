@@ -288,7 +288,7 @@ describe("regional delegate seat sizing (#1262)", () => {
     expect(mock.bulkWriteCalls.flat()).toEqual([
       {
         updateOne: {
-          filter: { _id: "e1" },
+          filter: { _id: "e1", totalSeats: 24, status: { $in: ["active", "upcoming"] } },
           update: { $set: { totalSeats: 161, updatedAt: expect.any(Date) } },
         },
       },

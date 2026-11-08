@@ -1,151 +1,22 @@
-import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import { getDb } from "@/lib/mongodb";
-import type { Election, ElectionStatus, State } from "@/lib/db/types";
-import { DE_WAHLKREIS_SEATS } from "@/lib/constants/states";
-import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
-import { turnToWallClock } from "@/lib/elections/canonicalCycle";
-import { getSeatIdFromElection } from "@/lib/seats";
 import { generateLandeslistenForCycle } from "@/lib/elections/germanyLandesliste";
-import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
-import {
-  endTimeToLarpTurn,
-  getCurrentTurnAndCtx,
-  getGeneralWindow,
-  sendBatchedElectionAnnouncements,
-} from "@/lib/turn/perpetualElections/engine";
+import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { DE_BUNDESTAG_SPEC } from "./chamberSpecs";
 
 /**
- * Ensure a live Bundestag election exists for every Bundesland. Mirrors
- * `ensureUKElections` — one multi-seat Election doc per Land (totalSeats =
- * that Land's Wahlkreise count). The AMS list-tier reconciliation in
- * germanyAMS.ts runs after all 16 Land elections complete per cycle.
+ * Ensure a live Bundestag election exists for every Bundesland, one multi-seat
+ * race per Land sized by its Wahlkreise. The AMS list-tier reconciliation in
+ * germanyAMS.ts runs after all 16 Land elections complete per cycle. A live or
+ * resolved snap counts as the Land's current term (see `planNextLowerChamberCycle`).
  */
 export async function ensureDEElections(now: Date, inFlightTurn?: number): Promise<void> {
+  const spawned = await ensureChamberElections(DE_BUNDESTAG_SPEC, now, inFlightTurn);
+  if (spawned.length === 0) return;
+
+  // Seed Landeslisten for each newly spawned cycle so chairs have an edit window
+  // before the AMS list tier consumes them. Idempotent and preserves edits.
   const db = await getDb();
-  const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-
-  const deLaender = await db
-    .collection<State>("states")
-    .find({ countryId: "DE" }, { projection: { _id: 1 } })
-    .toArray();
-  const landIds = deLaender.map((r) => r._id as string);
-  if (landIds.length === 0) return;
-
-  // Include snap_bundestag so a live snap suppresses spawning a regular, and a
-  // resolved snap contributes to cycle-period / cycle-number calculations.
-  const liveElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "DE",
-      electionType: { $in: ["bundestag", "snap_bundestag"] },
-      status: { $in: ["active", "upcoming"] },
-    })
-    .toArray();
-  const liveBundestag = new Set(liveElections.map((e) => e.state));
-
-  const completedElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "DE",
-      electionType: { $in: ["bundestag", "snap_bundestag"] },
-      status: { $in: ["completed", "resolved"] },
-    })
-    .sort({ updatedAt: -1 })
-    .toArray();
-
-  function lastCompleted(landId: string): Election | undefined {
-    return completedElections.find((e) => e.state === landId);
-  }
-
-  const dur = DEFAULT_DURATIONS.bundestag.durationHours;
-  const genDur = getGeneralWindow("bundestag");
-
-  const toInsert: Omit<Election, "_id">[] = [];
-
-  for (const landId of landIds) {
-    if (liveBundestag.has(landId)) continue;
-
-    const prev = lastCompleted(landId);
-
-    // A called snap, and every regular spawned on its shifted term clock,
-    // anchors the next regular. See `planNextLowerChamberCycle`.
-    const plan = planNextLowerChamberCycle({
-      electionType: "bundestag",
-      snapType: "snap_bundestag",
-      prev,
-      currentTurn,
-      ctx,
-      endTimeToTurn: (endTime) => endTimeToLarpTurn(endTime, now, currentTurn),
-    });
-    if (!plan) continue;
-    const { spawn } = plan;
-
-    const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-    const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-    toInsert.push({
-      countryId: "DE",
-      electionType: "bundestag",
-      state: landId,
-      seatId: getSeatIdFromElection({
-        countryId: "DE",
-        electionType: "bundestag",
-        state: landId,
-      }),
-      cycle: spawn.cycle,
-      electionYear: plan.electionYear,
-      ...(plan.shiftedScheduleEndTurn != null && {
-        shiftedScheduleEndTurn: plan.shiftedScheduleEndTurn,
-      }),
-      status: "active",
-      totalSeats: prev?.totalSeats ?? DE_WAHLKREIS_SEATS[landId] ?? 1,
-      startTime: now,
-      primaryEndTime,
-      endTime,
-      startTurn: currentTurn,
-      primaryEndTurn: spawn.primaryEndTurn,
-      endTurn: spawn.endTurn,
-      durationHours: dur,
-      primaryDurationHours: dur - genDur,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (toInsert.length === 0) return;
-
-  // Guard against duplicates (same safety as ensureUKElections).
-  const orFilters = toInsert.map((e) => ({
-    electionType: "bundestag" as const,
-    state: e.state,
-    status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-  }));
-  const existing = await db
-    .collection<Election>("elections")
-    .find({ $or: orFilters }, { projection: { state: 1 } })
-    .toArray();
-  const existingStates = new Set(existing.map((e) => e.state));
-  const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-  if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-    console.log(
-      `[Turn] ensureDEElections: spawned ${toActuallyInsert.length} missing Bundestag election(s)`
-    );
-    sendBatchedElectionAnnouncements(toActuallyInsert, now);
-
-    // Seed Landeslisten for each newly-spawned cycle so chairs have an edit
-    // window before the AMS list tier consumes them. Idempotent + preserves edits.
-    const cyclesSpawned = [...new Set(toActuallyInsert.map((e) => e.cycle))];
-    for (const c of cyclesSpawned) {
-      await generateLandeslistenForCycle(db, c);
-    }
+  for (const cycle of new Set(spawned.map((e) => e.cycle))) {
+    await generateLandeslistenForCycle(db, cycle);
   }
 }
-
-// Re-export DE election spawners for countryPhases.ts barrel-import consistency.
-
-// ─── Shared regional multi-seat delegate spawner ─────────────────────────────

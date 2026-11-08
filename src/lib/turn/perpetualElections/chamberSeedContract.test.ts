@@ -4,6 +4,7 @@
  * authored data, instead of throwing inside a live turn.
  */
 import {
+  BETA_SENATE_SPECS,
   AT_LOWER_CHAMBER_SPEC,
   ES_LOWER_CHAMBER_SPEC,
   FI_LOWER_CHAMBER_SPEC,
@@ -22,6 +23,8 @@ import { IE_CHAMBER_SPECS } from "@/lib/countries/ie/elections/chamberSpecs";
 import { NG_CHAMBER_SPECS } from "@/lib/countries/ng/elections/chamberSpecs";
 import { CN_CHAMBER_SPECS } from "@/lib/countries/cn/elections/chamberSpecs";
 import { BR_CHAMBER_SPECS } from "@/lib/countries/br/elections/chamberSpecs";
+import { DE_CHAMBER_SPECS } from "@/lib/countries/de/elections/chamberSpecs";
+import { JP_CHAMBER_SPECS } from "@/lib/countries/jp/elections/chamberSpecs";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
 
 const SPECS: readonly ChamberSpec[] = [
@@ -29,6 +32,9 @@ const SPECS: readonly ChamberSpec[] = [
   ...NG_CHAMBER_SPECS,
   ...CN_CHAMBER_SPECS,
   ...BR_CHAMBER_SPECS,
+  ...DE_CHAMBER_SPECS,
+  ...JP_CHAMBER_SPECS,
+  ...BETA_SENATE_SPECS,
   FR_LOWER_CHAMBER_SPEC,
   IT_LOWER_CHAMBER_SPEC,
   ES_LOWER_CHAMBER_SPEC,
@@ -56,7 +62,12 @@ function gapsFor(spec: ChamberSpec, preset: (typeof SEED_PRESET_IDS)[number]): s
   const gaps: string[] = [];
   for (const region of regions) {
     try {
-      seatsForRegion(spec, String(region._id), region, preset);
+      for (const chamberClass of spec.classes ? ([1, 2] as const) : [undefined]) {
+        seatsForRegion(spec, String(region._id), region, preset, chamberClass);
+      }
+      if (spec.regionAnchor && spec.regionAnchor(String(region._id), preset) === undefined) {
+        throw new Error(`no cycle anchor for ${String(region._id)}`);
+      }
     } catch (error) {
       gaps.push(`${preset} ${spec.countryId}/${spec.chamberId}: ${(error as Error).message}`);
     }
