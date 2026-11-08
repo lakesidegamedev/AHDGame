@@ -193,7 +193,6 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
     settings: defaultGroupManagement(ctx.root),
     currentTurn: ctx.turn,
     canManage: ctx.parent,
-    managementEnabled: ctx.enabled,
     /** No economic activation is implied by saving a direction or participation preference. */
     supplyEngineEnabled: ctx.supplyEngineEnabled,
     directionsEnabled: ctx.directionsEnabled,
@@ -227,7 +226,7 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
         history: privateAccess ? (historyByCorp.get(c._id.toString()) ?? []) : null,
         operator: operator.operator,
         isRoot: c._id.equals(ctx.root._id),
-        canEdit: own && ctx.enabled && !operator.vacant,
+        canEdit: own && !operator.vacant,
         receiving: privateAccess ? effectiveGroupReceiving(operator, preference, ctx.turn) : null,
         requested:
           privateAccess && validPreference ? preference.enabled : privateAccess ? false : null,

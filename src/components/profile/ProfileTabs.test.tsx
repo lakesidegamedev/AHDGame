@@ -75,7 +75,7 @@ describe("profile role views", () => {
     expect(within(band as HTMLElement).getByRole("tablist")).toBeTruthy();
 
     const military = screen.getByRole("tab", { name: /Military/ });
-    expect(military.getAttribute("title")).toBe("Military is disabled in this world.");
+    expect(military.getAttribute("title")).toBe("No military service record is available.");
     const reasonId = military.getAttribute("aria-describedby");
     expect(reasonId).toBeTruthy();
     expect(document.getElementById(reasonId ?? "")?.closest(".sr-only")).toBeTruthy();
