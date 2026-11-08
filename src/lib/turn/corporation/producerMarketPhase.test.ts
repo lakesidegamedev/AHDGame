@@ -307,7 +307,7 @@ describe("live market execution deadline", () => {
   it("scales with the phase timeout and leaves a quarter of the phase for settlement", () => {
     expect(liveMarketExecutionBudgetMs(20 * 60 * 1000)).toBe(900_000);
     expect(liveMarketExecutionBudgetMs(4 * 60 * 1000)).toBe(180_000);
-    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBe(450_000);
+    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBe(270_000);
     expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBe(
       liveMarketExecutionBudgetMs(phaseTimeoutMs("corporationTurn"))
     );

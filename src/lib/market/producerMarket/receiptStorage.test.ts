@@ -23,6 +23,74 @@ describe("chunked producer receipts", () => {
     expect(restored.fills[999].supplierOfferIds).toBe(restored.eligibility.a);
   });
 
+  it("accepts existing chunks encoded at another gzip level with the same content hash", async () => {
+    const memory = createInMemoryDb();
+    const original = { rows: Array.from({ length: 300 }, (_, id) => ({ id, value: id / 7 })) };
+    const encoded = encodeReceipt(original);
+    const { gunzipSync } = await import("node:zlib");
+    for (const chunk of encoded.chunks) {
+      const json = gunzipSync(Buffer.from(chunk.payload, "base64"));
+      memory.collection("producerEconomyTurnChunks").docs.push({
+        _id: chunk._id,
+        payload: gzipSync(json, { level: 9 }).toString("base64"),
+      });
+    }
+    await stageReceiptChunks(memory as unknown as Db, encoded.chunks);
+    expect(await decodeReceipt(memory as unknown as Db, encoded)).toEqual(original);
+    expect(memory.collection("producerEconomyTurnChunks").docs).toHaveLength(encoded.chunks.length);
+  });
+
+  it("keeps canonical string-list chunks, including escaping and UTF-8", async () => {
+    const memory = createInMemoryDb();
+    const ids = Array.from(
+      { length: 1200 },
+      (_, id) => `supplier:${id}:"\\\n${String.fromCodePoint(0x65e5, 0x672c)}`
+    );
+    const encoded = encodeReceipt({ ids });
+    const digest = createHash("sha256").update(JSON.stringify(ids)).digest("hex");
+    expect(encoded.chunks.map((chunk) => chunk._id)).toEqual([digest]);
+    await stageReceiptChunks(memory as unknown as Db, encoded.chunks);
+    expect(await decodeReceipt(memory as unknown as Db, encoded)).toEqual({ ids });
+  });
+
+  it("does not trust forged or mutated chunk identities during read-back", async () => {
+    const memory = createInMemoryDb();
+    const encoded = encodeReceipt({ rows: Array.from({ length: 200 }, (_, id) => String(id)) });
+    const chunk = encoded.chunks[0];
+    chunk._id = "0".repeat(64);
+    await expect(stageReceiptChunks(memory as unknown as Db, [chunk])).rejects.toThrow("checksum");
+    const forged = { ...chunk, _id: "1".repeat(64) };
+    await expect(stageReceiptChunks(memory as unknown as Db, [forged])).rejects.toThrow("checksum");
+  });
+
+  it("keeps row boundaries when escaped string lists exceed a chunk", async () => {
+    const ids = Array.from({ length: 130 }, () => "\n".repeat(5000));
+    // Escaped rows occupy 10,003 bytes including the separator allowance:
+    // the existing 1 MiB format fits 104 rows, followed by the remaining 26.
+    const expected = [ids.slice(0, 104), ids.slice(104)].map((rows) =>
+      createHash("sha256").update(JSON.stringify(rows)).digest("hex")
+    );
+    const encoded = encodeReceipt({ ids });
+    expect(encoded.chunks.map((chunk) => chunk._id)).toEqual(expected);
+    const memory = createInMemoryDb();
+    await stageReceiptChunks(memory as unknown as Db, encoded.chunks);
+    expect(await decodeReceipt(memory as unknown as Db, encoded)).toEqual({ ids });
+  });
+
+  it("retains rejection of sparse large arrays", () => {
+    expect(() => encodeReceipt(new Array(129))).toThrow("Unserializable");
+  });
+
+  it("checks deadlines repeatedly within a large traversal", () => {
+    let checks = 0;
+    expect(() =>
+      encodeReceipt({ rows: Array.from({ length: 9000 }, (_, id) => ({ id })) }, () => {
+        if (++checks === 2) throw new Error("deadline during traversal");
+      })
+    ).toThrow("deadline during traversal");
+    expect(checks).toBe(2);
+  });
+
   it("reads the legacy flat chunk format without migration", async () => {
     const memory = createInMemoryDb();
     const rows = [{ supplierOfferIds: ["a", "b"] }];
