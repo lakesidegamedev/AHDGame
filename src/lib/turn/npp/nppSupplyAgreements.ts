@@ -1,19 +1,15 @@
 /**
  * NPP supply-agreement matching (supplyAgreementsEnabled).
  *
- * Player CEOs propose and accept bilateral contracts. NPP CEOs never did, so
- * under a 1953 all-flags plants world the contract book stayed empty while
- * every plant sat input-starved (sandbox soak: throughputFactor 0.85 on all
- * 675 sectors) and extractors sat in shortage. This pass is the missing
- * operator: NPP buyers accept honest inbound proposals, NPP suppliers lock
- * same-country NPP buyers, and a mothballed supplier serves cancel notice
- * before shortfall damages land on a cold plant.
+ * Player CEOs propose and accept bilateral contracts; NPP CEOs do too here:
+ * NPP buyers accept honest inbound proposals, NPP suppliers lock same-country
+ * NPP buyers, and a mothballed supplier serves cancel notice before
+ * shortfall damages land on a cold plant.
  *
- * Same-country only. 1953 has CoCom/Comecon embargo lanes; crossing them
- * here would ignore the trade graph the clearing book already respects.
- * Player counterparties are never proposed to (inbox spam); a player who
- * proposes TO an NPP buyer still gets an auto-accept when the terms are
- * honest.
+ * Same-country only. Embargo lanes exist; crossing them here would ignore the
+ * trade graph the clearing book already respects. Player counterparties are
+ * never proposed to (inbox spam); a player who proposes TO an NPP buyer still
+ * gets an auto-accept when the terms are honest.
  */
 
 import { substepMarker } from "@/lib/observability/phaseSubsteps";

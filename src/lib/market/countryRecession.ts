@@ -8,9 +8,7 @@ import { createSystemNewsPost } from "@/lib/news";
  * Country recession: an operator-scheduled contraction of one country's
  * productive capacity, spread evenly over a window of turns and applied as
  * extra depreciation, so capacity and its paid basis fall together exactly as
- * ordinary wear does. Used to bring a country whose seeded capacity far
- * exceeds its economy back toward its GDP share without a one-turn cliff.
- * Every corporation operating in the country is affected alike.
+ * ordinary wear does. Affects every corporation in the country alike.
  */
 export interface CountryRecession {
   countryId: CountryId;

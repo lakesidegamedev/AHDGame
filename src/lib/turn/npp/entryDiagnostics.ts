@@ -57,19 +57,12 @@ export function blankNppCandidateExclusions(): NppCandidateExclusions {
 }
 
 /**
- * One reproducible primary reason per NPP entry candidate, in the same
- * evaluation order as the founding gates (see FOUNDING_GATE_PRECEDENCE in
- * capacityDecisionTelemetry/rules, mirrored here for the entry funnel):
- * strategy, profitability, margin, candidacy, logistics, cohort, retail pause,
- * glut, per-turn cap, then the pre-pricing cash floor. Priced outcomes
- * (entered, founding cost, credit, facility size) overwrite this afterwards
- * via `resolveFoundingShortfallReason`.
- *
- * Frontier matching and corporation-type coverage are preferences with
- * country-pool fallbacks, never hard gates, so they are reported as the
- * `frontierFallback` / `openMarketTypeFallback` flags rather than reasons.
- * Planned-economy restriction arrives as the state-controlled filter on
- * nationalized buckets and reports as `state_controlled`.
+ * One reproducible primary reason per NPP entry candidate, in founding gate
+ * precedence order (mirrors FOUNDING_GATE_PRECEDENCE): strategy, profitability,
+ * margin, candidacy, logistics, cohort, retail pause, glut, per-turn cap, then
+ * the pre-pricing cash floor. Priced outcomes overwrite this later via
+ * `resolveFoundingShortfallReason`; frontier and type fallbacks are flags, not
+ * reasons.
  */
 export function initialNppMarketEntryReason(args: {
   strategyAllowsExpansion: boolean;

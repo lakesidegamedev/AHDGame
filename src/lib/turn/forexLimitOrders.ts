@@ -105,10 +105,9 @@ export async function processTriggeredLimitOrders(
     const fixedRate = euroLedgerCrossRate(union, order.fromCurrency, order.toCurrency);
     const crossRate = fixedRate ?? toRate / fromRate;
 
-    // If the rate document was malformed this turn (e.g. a NaN cascade like
-    // the turn-269 incident upstream), skip the order rather than filling
-    // it at Infinity/NaN and poisoning the destination balance via $inc.
-    // The order re-evaluates next turn once rates recover.
+    // If the rate is malformed this turn (e.g. a NaN cascade upstream), skip
+    // the order rather than filling at Infinity/NaN and poisoning the
+    // destination balance via $inc. It re-evaluates next turn.
     if (!Number.isFinite(crossRate) || crossRate <= 0) continue;
 
     // Buy: fill when cross rate >= limit (player gets at least as much toCurrency as expected)

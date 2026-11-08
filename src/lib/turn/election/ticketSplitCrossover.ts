@@ -1,42 +1,20 @@
 /**
  * Ticket-split crossover: derive Zweitstimmen (second votes) from Erststimmen.
  *
- * German voters split their ballot — the Erststimme backs a local candidate,
- * often on major-party pragmatism, while the Zweitstimme expresses a party
- * preference and decides the chamber. The classic case is the Leihstimme: a
- * CDU/CSU voter lends the FDP a second vote to keep a coalition partner over
+ * German voters split their ballot: the Erststimme backs a local candidate,
+ * while the Zweitstimme expresses a party preference and decides the chamber.
+ * The Leihstimme is a CDU/CSU voter lending the FDP a second vote to clear
  * the 5% hurdle.
  *
- * ## What this replaced, and why the model changed (#810)
+ * The model is PARTY-TO-PARTY, not by demographic archetype. Archetypes are a
+ * retired vocabulary, the vote tally stores only `totalVotes` per candidate
+ * (no per-bucket breakdown), and ticket splitting is measured as
+ * party-to-party shares, not archetype shares.
  *
- * The previous table was keyed on demographic ARCHETYPE and was placeholder
- * data throughout: two of its five archetype ids existed nowhere else in the
- * codebase, and every rule targeted `cdu`/`spd`/`greens`/`afd`/`linke`, none of
- * which are party ids in any seed — the Greens, AfD and Linke are also
- * anachronisms in a 1953 world. It was never reached in any case, because
- * `computeZweitstimmen` has no demographic breakdown to pass: the vote tally
- * stores `totalVotes` per candidate and nothing per bucket. So the layer
- * always hit its default bucket, found no rules, and returned the first-vote
- * totals unchanged in every Land.
- *
- * Archetypes are also a retired vocabulary; the engine moved to Layer-1 census
- * buckets.
- *
- * The model is therefore PARTY-TO-PARTY, which is both what the data supports
- * and how ticket splitting is actually measured — post-election studies report
- * it as "x% of CDU first-vote voters gave their second vote to the FDP", not by
- * archetype.
- *
- * ## Rates
- *
- * Era-scoped, because the behaviour genuinely changed. Ticket splitting was
- * rare in the 1950s: the two-vote ballot only began in 1953 and voters
- * overwhelmingly cast both votes for the same party. Deliberate splitting grew
- * from the 1960s, and the FDP's survival on lent CDU/CSU second votes is a
- * feature of 1961 onward, not of 1953.
- *
- * Rates are conservative on purpose. They shift seats, so they are set at the
- * low end of the surveyed range rather than the headline figures.
+ * Rates are era-scoped: the two-vote ballot only began in 1953, and
+ * deliberate splitting plus FDP lending are features of 1961 onward. Rates
+ * are deliberately conservative: they shift seats, so they sit at the low end
+ * of the surveyed range rather than the headline figures.
  */
 
 /** A single directed crossover: `rate` of `fromParty`'s first votes move. */

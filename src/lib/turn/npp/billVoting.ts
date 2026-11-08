@@ -4,37 +4,23 @@ import type { Referendum } from "@/lib/db/types/referendum";
 /**
  * NPP Bill Voting
  *
- * Handles deterministic cross-pressure voting for NPP elected officials in the
- * **federal** legislature (House/Senate chambers). As of Phase 4 of the
- * party-npp-rework, this path is RNG-free: every vote is the sum of four
- * signed forces (ideology, whip, district, donors) with verdict thresholds at
- * ±5. See `crossPressure.ts` for the full model.
+ * Deterministic cross-pressure voting for NPP elected officials in the
+ * federal legislature (House/Senate). Every vote is `verdictFromForces` over
+ * four signed forces (ideology, whip, district, donors), thresholds at ±5.
+ * The full force vector is persisted to `nppVotePredictions` for replay.
  *
- * KEY DESIGN DECISIONS:
+ * Whips: most specific applicable whip wins (state party, then national),
+ * gated by loyalty and stubbornness.
  *
- * 1. Cross-pressure verdict: each NPP's vote is `verdictFromForces(forces)` —
- *    deterministic given identical inputs. The full force vector is persisted
- *    to `nppVotePredictions` so the prediction surface (Phase 5) and bug
- *    investigations can replay the exact decision.
+ * Multi-seat NPPs contribute full seatsHeld weight to the tally.
  *
- * 2. Whip directive: party whips contribute to the `whip` force, gated by
- *    NPP loyalty + stubbornness. The whip resolution finds the most specific
- *    applicable whip (state party first, then national). Phase 3 stacks
- *    caucus whips on top via the same composer.
+ * Catch-up voting runs every turn so NPPs who gained seats after a bill
+ * opened still vote; already-voted NPPs are skipped.
  *
- * 3. Multi-seat weighting: NPPs holding multiple seats (e.g., 7 House seats
- *    from a multi-seat election) contribute full seatsHeld weight to the tally.
+ * Veto overrides disallow abstain; abstain defaults to against.
  *
- * 4. Catch-up voting: Runs every turn so NPPs who gained seats after a bill
- *    opened still vote before it closes. Already-voted NPPs are skipped.
- *
- * 5. Veto override special case: Override votes don't allow abstain — NPPs
- *    must vote for or against overriding. Defaults to "against" if cross-pressure
- *    would produce abstain.
- *
- * Note: This file only processes federal bills from the `bills` collection.
- * State/regional bills (`stateBills` collection) — including those voted on by
- * `stateSenate` and `regionalCouncil` NPPs — are not currently processed here.
+ * Only federal `bills` are processed here; `stateBills` and
+ * stateSenate/regionalCouncil NPPs are not.
  */
 
 import type { Bill, GovernorAddress, NPP, NPPVotePrediction } from "@/lib/db/types";
@@ -494,9 +480,8 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       if (npp.isTechnocrat) continue;
 
       // Country guard: an NPP may only vote on its own country's bills.
-      // Root-cause fix for bug #0699 — foreign senators leaked into the US
-      // Senate tally and were mislabeled via cross-country party sequentialId
-      // collision. npp.countryId is authoritative (always set on NPP docs).
+      // Cross-country party sequentialId collisions previously leaked foreign
+      // NPPs into tallies. npp.countryId is authoritative.
       if ((npp.countryId ?? "US") !== billCountry) continue;
 
       // One-party-state guard: banned-party NPCs do not vote. Their seat

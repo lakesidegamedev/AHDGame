@@ -139,18 +139,16 @@ export function resolveSectorLabourProductionEffects(
  * Resolve a sector's headcount for the turn: what it WANTS at its current
  * revenue, and what its state's labour market lets it actually STAFF.
  *
- * Owns the workforce-skill resolution too, because skill only exists here to
- * size headcount. SP4: playable regions resolve skill from the political board
- * (`education.adultSkills`, same 0-100 higher-better scale) when the state has
- * no metric-engine reading.
+ * Owns workforce-skill resolution because skill only exists here to size
+ * headcount. Playable regions resolve skill from the political board
+ * (`education.adultSkills`, 0-100 higher-better) when the state has no
+ * metric-engine reading.
  *
  * Records DESIRED headcount into the per-state demand accumulator, never the
- * staffed figure. Next turn's tightness sums that accumulator, so recording the
- * rationed result would drive the reading toward 1 and silently switch
- * rationing back off one turn later. Accumulation happens here rather than in
- * `resolveSectorLabourEconomics` because that function early-returns when
- * `labour.wagesEnabled` is off, and how many jobs a sector wants is a fact
- * about the sector rather than about whether the wage system is switched on.
+ * staffed figure: next turn's tightness sums that accumulator, so recording the
+ * rationed result would drive the reading toward 1 and switch rationing back
+ * off. Accumulation happens here, not in `resolveSectorLabourEconomics`, because
+ * that function early-returns when `labour.wagesEnabled` is off.
  */
 export function resolveSectorHeadcount(args: {
   revenue: number;
@@ -238,20 +236,11 @@ export interface SectorLabourEconomicsResult {
    * and services are priced against (`annualWageFromDaily` in
    * `src/lib/unions/unionServices.ts`).
    *
-   * This exists because the dues model had no producer at all: `wagePerWorker`
-   * was read by `unionDues`/`unionActions`/`processUnionsTurn` and written by
-   * nothing, so every union's `averageAnnualWage` was 0. That made the dues
-   * ceiling 0 (dues could not be set at all), the approval dues penalty 0 (so
-   * approval sat at the 55 base for every union in the world), and the service
-   * bill 0 (services ran free and never lapsed).
-   *
-   * Derivation: `sectorLaborCost` is this sector's whole labour bill for one
-   * turn, so the per-worker per-turn figure is that over the headcount, and a
-   * day is {@link TURNS_PER_DAY} turns. Read back as an annual figure this is
-   * `perTurn × TURNS_PER_YEAR`, which is the same basis the labour bill itself
-   * is charged on, so dues are a true share of pay rather than a scale
-   * mismatch. Undefined when the sector has no workers, so a headcount-less
-   * sector contributes no wage rather than an Infinity.
+   * `sectorLaborCost` is this sector's labour bill for one turn, so per-worker
+   * per-turn is that over headcount, and a day is {@link TURNS_PER_DAY} turns.
+   * Read back annually (`perTurn * TURNS_PER_YEAR`) it matches the labour bill's
+   * own basis, so dues are a true share of pay. Undefined when the sector has
+   * no workers, so it contributes no wage rather than Infinity.
    */
   wagePerWorker?: number;
   newUnionization?: number;
@@ -373,11 +362,9 @@ export function resolveSectorLabourEconomics({
   const unionLawBias = labour.fullEnabled
     ? labour.unionLawBiasByCountry?.get(sectorCountryId)
     : undefined;
-  // Union dues v1: resolve the representing union DIRECTLY off the sector's own
-  // `representingUnionId`, never by (countryId, sectorType), players can found
-  // rivals in the same industry, so the industry pair no longer identifies one
-  // union, and a sector with no `representingUnionId` must not inherit some
-  // other union's approval.
+  // Resolve the union via the sector's own `representingUnionId`, never by
+  // (countryId, sectorType): rival unions can share an industry, and a sector
+  // without an id must not inherit another union's approval.
   const representingUnion =
     labour.fullEnabled && sector.representingUnionId
       ? labour.unionsById?.get(sector.representingUnionId.toString())

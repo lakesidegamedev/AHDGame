@@ -9,25 +9,20 @@ import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 
 /**
- * By-elections — fill a seat that goes VACANT MID-TERM (resignation, retirement,
- * death, or — from Phase 3 — impeachment) with an off-calendar special election,
- * instead of leaving it empty until the next canonical cycle.
+ * By-elections: fill a seat that goes VACANT MID-TERM (resignation, retirement,
+ * death, impeachment) with an off-calendar special election, instead of
+ * leaving it empty until the next canonical cycle.
  *
- * Scope: **regional chief executives** (`officeType: "governor"`) in the
- * countries listed in `BY_ELECTION_COUNTRIES` — US Governors and RU republic
- * First Secretaries. Governor is exactly one holder per region, so a
- * single-seat special election is unambiguous. US House / stateSenate are elected
- * as a whole state delegation in one race (seatId `US-house-CA`, not per-district),
- * so a "single vacant seat" by-election there needs a per-district design decision
- * and is deferred. DE Landesliste list-seat promotion is also deferred.
+ * Scope: regional chief executives (`officeType: "governor"`) in
+ * `BY_ELECTION_COUNTRIES`. One holder per region makes a single-seat special
+ * election unambiguous. Multi-seat delegations (US House, stateSenate) and DE
+ * list-seat promotion are deferred.
  *
- * NON-INTERFERENCE with the regular election engine is achieved by giving the
- * by-election a DISTINCT electionType (`special_governor`): it therefore lands in
- * its own group in `cleanupDuplicateElections` (keyed by countryId_type_state) and
- * is invisible to `ensurePerpetualElections` (which keys off `governor`), so the
- * regular governor cycle is neither deleted nor blocked. The winner still seats as
- * a plain `governor` (see the electionType->officeType switch in generalResolution),
- * and the next regular governor election spawns on the canonical calendar as usual.
+ * Uses a DISTINCT electionType (`special_governor`) so it lands in its own
+ * group in `cleanupDuplicateElections` and is invisible to
+ * `ensurePerpetualElections`; the regular governor cycle is neither deleted nor
+ * blocked. The winner seats as a plain `governor` via the electionType->officeType
+ * switch in generalResolution.
  */
 
 export const SPECIAL_GOVERNOR_ELECTION_TYPE = "special_governor";

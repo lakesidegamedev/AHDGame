@@ -40,9 +40,8 @@ async function runNppTurn(
 }> {
   console.log("[Turn] NPP behavior processing started");
 
-  // Env-gated sub-step timing (SIM_CORP_TIMING=1), same mechanism as
-  // processCorporationTurn — zero-cost when off, used to find which of this
-  // phase's steps dominate its per-turn cost.
+  // Env-gated sub-step timing (SIM_CORP_TIMING=1), matching
+  // processCorporationTurn; zero-cost when off.
   const timingOn = process.env.SIM_CORP_TIMING === "1";
   const timings: Array<[string, number]> = [];
   let _tPrev = timingOn ? Date.now() : 0;
@@ -132,10 +131,9 @@ async function runNppTurn(
 }
 
 /**
- * NPP behavior phase. Runs under per-phase snapshots of the autonomy level and
- * country access (#2690): the per-actor autonomy gates otherwise re-read the
- * `gameState` and `countryGameStates` documents on every call. Nothing in this
- * phase writes either, which is what makes the snapshots valid.
+ * NPP behavior phase. Runs under per-phase snapshots of autonomy level and
+ * country access so gates do not re-read documents on every call. Nothing in
+ * this phase writes either, which makes the snapshots valid.
  */
 export async function processNPPTurn(
   now: Date,

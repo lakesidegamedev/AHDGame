@@ -1,19 +1,10 @@
 /**
  * Decolonization turn phase.
  *
- * `src/lib/world/transitions/` is a complete, tested sovereignty-transition
- * engine — authored rules, a deterministic pressure+calendar evaluator, an
- * applier that seeds the Tier-2 macro country, and manifest rows carrying sphere
- * relationships. Its only callers were a readiness report and a seed script:
- * **nothing in the turn registry ever ran a transition.** So in a 1953 world the
- * colonial map stayed frozen for the entire run, and Ghana 1957, Somalia and the
- * Congo 1960, Algeria 1962, Guyana 1966 and South Yemen 1967 simply never
- * happened.
- *
- * This is the missing wiring, not new mechanics. It walks the decolonization
- * roster once per in-game year, evaluates each rule against live world pressure,
- * and applies the ones that clear. Rules are idempotent by construction — an
- * applied transition is recorded and skipped thereafter.
+ * Wires the sovereignty-transition engine into the turn registry: walks the
+ * decolonization roster once per in-game year, evaluates each rule against
+ * live world pressure, and applies the ones that clear. Rules are idempotent;
+ * applied transitions are recorded and skipped thereafter.
  */
 import type { Db } from "mongodb";
 import { DECOLONIZATION_ROSTER_RULE_IDS, runTransition } from "@/lib/world/transitions";

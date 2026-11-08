@@ -1,13 +1,10 @@
 /**
- * Nigeria presidential election resolution — the NG arm of the per-country
- * presidential pipeline (the US electoral-college path stays in
- * `presidentResolution.ts`). `generalResolution` dispatches NG president
- * elections here.
+ * Nigeria presidential election resolution. `generalResolution` dispatches NG
+ * president elections here.
  *
- * Resolution rule (see `nigeriaPresidentialElectionEngine`): the candidate with
- * the most national votes wins outright iff their party also cleared 25% in at
- * least four of the six geopolitical zones; otherwise the top two parties'
- * nominees contest a run-off.
+ * Rule: the candidate with the most national votes wins outright iff their
+ * party also cleared 25% in at least four of the six geopolitical zones;
+ * otherwise the top two parties' nominees contest a run-off.
  *
  * The `decide*` core is pure (no DB) and fully unit-tested; the DB wrapper maps
  * its decision onto the shared `seatPresidentialExecutive` seating or a run-off

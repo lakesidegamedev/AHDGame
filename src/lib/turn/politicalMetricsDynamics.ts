@@ -8,16 +8,15 @@ import {
   northernIrelandRegion,
 } from "@/lib/countries/uk/northernIreland/rules";
 /**
- * SP2 political-metrics dynamics turn phase (dynamics spec §3): enacted laws
- * define per-metric equilibrium targets; every region's politicalMetrics
- * values drift toward them each turn. Writes REGIONAL values only — the
- * national display remains the SP1 read-time population-weighted aggregate.
+ * Political-metrics dynamics turn phase: enacted laws define per-metric
+ * equilibrium targets; every region's politicalMetrics drift toward them each
+ * turn. Writes REGIONAL values only; the national display remains the read-time
+ * population-weighted aggregate.
  *
- * Trend history (§5): every HISTORY_CADENCE_TURNS, the national aggregate is
- * appended to politicalMetricsHistory (capped at HISTORY_MAX_ENTRIES), and
- * each region's own post-drift board is appended to
- * politicalMetricsRegionHistory (capped at REGION_HISTORY_MAX_ENTRIES, #1322)
- * so the region registry can show the same trends the national one does.
+ * Every HISTORY_CADENCE_TURNS the national aggregate is appended to
+ * politicalMetricsHistory (capped at HISTORY_MAX_ENTRIES), and each region's
+ * own post-drift board is appended to politicalMetricsRegionHistory (capped at
+ * REGION_HISTORY_MAX_ENTRIES) so the region registry can show trends too.
  */
 
 import type { AnyBulkWriteOperation, Db } from "mongodb";
@@ -323,16 +322,11 @@ export async function processPoliticalMetricsDynamics(
         let healed = false;
         let changed = false;
 
-        // Accumulate + decay the cabinet contribution into this region's isolated
-        // cabinetResiduals (never touches the day-one `residuals`). National
-        // standing effects plus this region's sited extras (ticket #1129).
-        //
-        // Ticket #1129: the cap is applied PER CHANNEL (orders, tier settings,
-        // military, estates, energy, infrastructure). Under the old single
-        // clamp, 21% of US regional entries sat pinned and a newly built estate
-        // aimed at a pinned family contributed exactly zero, which is what two
-        // players reported. A channel can still saturate, but it can no longer
-        // silence the others.
+        // Accumulate and decay the cabinet contribution into this region's
+        // isolated cabinetResiduals (never the day-one `residuals`). The cap
+        // is applied PER CHANNEL (orders, tier settings, military, estates,
+        // energy, infrastructure), so one saturated channel cannot zero out
+        // the others.
         const regionId = String(doc._id);
         const contributionBySource: Record<string, Record<string, number>> = {};
         for (const [source, sourceContribution] of Object.entries(cabinetSnapshot.sources)) {
@@ -342,9 +336,8 @@ export async function processPoliticalMetricsDynamics(
           );
         }
         if (Object.keys(cabinetSnapshot.sources).length === 0) {
-          // Pre-#1129 snapshot (the ministerial step has not run since the
-          // deploy): treat the whole thing as one channel for this turn. The
-          // next ministerial step writes the split.
+          // Pre-split snapshot: merge into one channel for this turn;
+          // the next ministerial step writes the split.
           const merged = addContributions(
             cabinetSnapshot.contribution,
             cabinetSnapshot.regional[regionId] ?? {}
@@ -436,10 +429,9 @@ export async function processPoliticalMetricsDynamics(
           for (const [metricId, points] of Object.entries(national)) {
             const id = metricId as PoliticalMetricId;
             const value = doc.values[id] ?? 0;
-            // A map that predates a family (or any partial map) falls back to the
-            // SAME derivation the heal above uses. It used to drop the supplement
-            // here, which composed to `value + 0.5 x supplement` and walked the
-            // board up a little every turn for any region holding regional law.
+            // A map that predates a family (or any partial map) falls back to the SAME
+            // derivation the heal above uses; failing to add the supplement here
+            // would walk the board up every turn for regions holding regional law.
             const structural =
               residuals[id] ?? structuralResidual(value, points, supplement?.[id] ?? 0);
             // Bridge B: macro reality bends the equilibrium, bounded so the law
@@ -528,14 +520,13 @@ export async function processPoliticalMetricsDynamics(
           { upsert: true }
         );
 
-        // Per-region series (#1322). `doc.values` is already the POST-drift map
-        // — the loop above assigns `doc.values = nextValues` before this point,
-        // which is the same reason the national aggregate just computed is
-        // correct. Snapshotting the pre-drift read would make every region
+        // Per-region series. `doc.values` is the POST-drift map: the loop above
+        // assigned it before this point, which is why the national aggregate computed
+        // above is correct. Snapshotting the pre-drift read would make every region
         // series lag reality by a full cadence.
         //
-        // Rotation is $slice, never a read-modify-write: a concurrent turn must
-        // not be able to truncate the series.
+        // Rotation is $slice, never read-modify-write: a concurrent turn must not
+        // truncate the series.
         const regionHistoryOps: AnyBulkWriteOperation<PoliticalMetricsRegionHistoryDoc>[] =
           docs.map((doc) => ({
             updateOne: {

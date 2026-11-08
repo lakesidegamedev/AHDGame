@@ -61,33 +61,14 @@ export function getGeneralWindow(electionType: string): number {
   return DEFAULT_DURATIONS[electionType]?.generalDurationHours ?? 24;
 }
 
-/**
- * Guard against same-tick respawn: when a perpetual cycle resolves, the turn
- * processor runs `ensure*` spawners in the same tick. If canonical math
- * permits, a new cycle can spawn immediately ("active") in that same run —
- * this cascades admin-accelerated cycles (compressed timers) into back-to-back
- * races with no visible gap, which confuses players who reasonably read the
- * sequence as "primary → general of the same election."
- *
- * "Same tick" requires BOTH signals when both are available:
- *   • wall-clock: `prev.updatedAt` less than one real hour before `now`, AND
- *   • turn:       `currentTurn` has not advanced past the turn the race
- *                 completed on (`currentTurn <= prev.endTurn`).
- *
- * The turn condition is essential for headless/accelerated sims where turns
- * fire seconds apart: a wall-clock-only guard stays shut for hundreds of
- * turns after each resolution, silently suppressing every ensure-based
- * respawn (US president/senate/governor, JP, IE, CN, BR, …) and freezing
- * those cycles at 1 while only the resolution-path respawns (house/commons)
- * kept cycling (found in sandbox ahd_sim_s1991-base-a: the 1992 president
- * resolved at t96, no 1996 race existed by t301). The wall-clock condition
- * remains so a paused/late world whose `currentTurn` still equals the prior
- * `endTurn` (back-to-back canonical windows) isn't blocked when resolution
- * actually happened long ago. On prod (1 turn = 1 real hour) the combined
- * guard behaves exactly like the original wall-clock one. Callers that
- * can't supply `currentTurn` (or legacy docs without `endTurn`) fall back
- * to wall-clock only.
- */
+// Guards against same-tick respawn: the turn processor runs ensure* spawners
+// in the same tick a cycle resolves, so a new cycle can spawn immediately and
+// cascade back-to-back races. Requires BOTH wall-clock (< 1 real hour since
+// prev.updatedAt) AND turn (currentTurn <= prev.endTurn) signals; the turn
+// check is essential for headless/accelerated sims where wall-clock alone
+// suppresses every ensure-based respawn for hundreds of turns. The wall-clock
+// check keeps paused/late worlds from being blocked. Callers without
+// currentTurn or endTurn fall back to wall-clock only.
 export function justResolvedInSameTurn(
   prev: Election | undefined,
   now: Date,
@@ -121,13 +102,11 @@ declare global {
 
 /**
  * Pinned to `globalThis` because the store only works if there is exactly one
- * of it. This module used to be the single 4,000-line `perpetualElections.ts`,
- * where that was guaranteed; now the country schedulers that call
- * `getCurrentTurnAndCtx` live in sibling modules, and a Next build that emits
- * this file into more than one bundle would give the reader a different
- * AsyncLocalStorage than the writer — so every spawner would silently miss the
- * snapshot and fall back to its own findOne. Same globalThis guard the other
- * cross-bundle singletons in this codebase use.
+ * of it. Country schedulers live in sibling modules, and a Next build that
+ * emits this file into more than one bundle would give the reader a
+ * different AsyncLocalStorage than the writer, so every spawner would
+ * silently miss the snapshot and fall back to its own findOne. Same
+ * globalThis guard the other cross-bundle singletons use.
  */
 export const electionGameStateSnapshot: AsyncLocalStorage<TurnAndCtx> =
   globalThis.__ahdElectionGameStateSnapshot ??
@@ -543,29 +522,12 @@ export function buildCanonicalSpawn(params: {
   return doc;
 }
 
-/**
- * Heal `totalSeats` on live US House races after a decennial reapportionment
- * (ticket #1190).
- *
- * `runCensus` rewrites `state.houseDistricts` and regenerates the affected
- * `congressionalDistricts` maps, but nothing carried the new apportionment onto
- * the Election docs. `buildCanonicalSpawn` inherits `prev?.totalSeats`, so a
- * stale count propagates forward indefinitely, and a race already in flight when
- * the census fires is never corrected at all. The two then disagree about the
- * size of the same delegation: `districtedHouseResolution` allocates over the
- * NEW district map while every display surface reads the OLD `totalSeats`. On
- * the live 1953 world the 1960 census moved 21 states — Alabama 9 → 8 — and its
- * in-flight race rendered "You are projected 7 of 9 seats" with an unfillable
- * ninth block, while the delegation resolved to 8 members and the House to 434.
- *
- * Same pattern, and the same reason, as the Commons heal in
- * {@link ensureUKElections}: without it projections keep reading the wrong
- * `totalSeats` until the next cycle even though allocation is already
- * apportionment-aware.
- *
- * `houseSeats` must be the LIVE apportionment (`loadApportionment`), not the
- * frozen preset map — the census is exactly what moves them apart.
- */
+// Heal totalSeats on live US House races after reapportionment.
+// runCensus updates district maps but not Election docs; buildCanonicalSpawn
+// inherits prev?.totalSeats, so stale counts propagate and in-flight races
+// disagree with districtedHouseResolution's new-map allocation. Same pattern as
+// ensureUKElections. houseSeats must be the LIVE apportionment (loadApportionment),
+// not the frozen preset map.
 export function buildHouseSeatHealOps(
   liveElections: Pick<Election, "_id" | "electionType" | "countryId" | "state" | "totalSeats">[],
   houseSeats: Record<string, number>,
@@ -590,22 +552,20 @@ export function buildHouseSeatHealOps(
   });
 }
 
-/**
+/*
  * Safety net: ensure every US state has an active/upcoming election for each
  * perpetual race type (house, senate class slots, governor, stateSenate) and
  * that the national president race exists in the canonical window.
  *
- * All spawns anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. Admin-accelerated prior cycles do NOT drag
- * the calendar — the next cycle stays on the real-world election year. A
- * 24h+24h primary/general gate skips any canonical cycle that would produce
- * a stub race (admin fast-forwarded prev deep enough that the next canonical
- * window has already eroded).
+ * All spawns anchor to the canonical LARP schedule via
+ * {@link pickNextCanonicalCycle}: admin-accelerated cycles do not drag the
+ * calendar. A 24h+24h primary/general gate skips any canonical cycle that would
+ * produce a stub race.
  *
  * Status is "active" when the canonical startTurn has passed, else "upcoming";
- * `advanceElectionTimers` flips upcoming → active at startTime.
+ * `advanceElectionTimers` flips upcoming -> active at startTime.
  *
- * Runs after resolveGeneralElections every turn — fills gaps, never duplicates.
+ * Runs after resolveGeneralElections every turn; fills gaps, never duplicates.
  */
 export async function ensurePerpetualElections(now: Date, currentTurn?: number): Promise<void> {
   const db = await getDb();
@@ -633,24 +593,19 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
   // races, and only those the ACTIVE preset apportions.
   //
   // Two exclusions, both required:
-  //  1. `isUsElectoralState` — federal districts like DC live in `states` for
+  //  1. `isUsElectoralState`, federal districts like DC live in `states` for
   //     economy/presidential electoral votes but elect none of these seats.
-  //  2. Absence from the preset's House apportionment map — a pre-statehood
-  //     territory in this era (Alaska/Hawaii under 1953-default, which uses the
-  //     1950 census; they were territories until 1959). `isUsElectoralState` is
-  //     preset-INDEPENDENT (the modern 50-state set), so on its own it spawns
+  //  2. Absence from the preset's House apportionment map, a pre-statehood
+  //     territory in this era (e.g. Alaska/Hawaii under 1953-default). The
+  //     `isUsElectoralState` set is preset-INDEPENDENT, so on its own it spawns
   //     perpetual races for regions `seedSeats` correctly gives no seat, and
   //     those orphan elections regenerate after every reset. `seedSeats.ts`
-  //     applies exactly this gate and, per its comment, a state absent from the
-  //     era map "elects no House member, Senators, Governor or State Senate" —
-  //     so the gate covers all four families here, not just house.
+  //     applies exactly this gate, covering all four families, not just house.
   //
   // The preset map is frozen, so exclusion (2) is permanent on its own. A
   // territory admitted mid-game carries `admittedYear` and joins the roster
-  // here — which is the whole mechanism by which a new state gets elections:
-  // this pass already spawns any missing House/Senate/Governor/stateSenate race
-  // on the canonical schedule, so no separate election-bootstrapping path is
-  // needed for it.
+  // here; this pass already spawns any missing race on the canonical schedule,
+  // so no separate bootstrapping path is needed.
   const presetHouseSeats = getHouseSeats(ctx.preset);
   const admittedIds = new Set(admittedStateIdsAsOf(states, currentYear));
   const stateIds = states

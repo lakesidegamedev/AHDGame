@@ -1,29 +1,16 @@
 // src/lib/turn/npp/electionEntry.ts
-/**
- * NPP Election Entry
+/*
+ * NPP election entry.
  *
- * Handles deterministic, priority-based election entry for NPPs.
- *
- * KEY DESIGN DECISIONS:
- *
- * 1. Incumbent defense first: Seat-holding NPPs re-enter their defending
- *    primary before generic party-pool fill runs. They bypass that seat's
- *    cooldown and are not blocked by same-party challengers because the
- *    incumbent should still appear in the defense primary.
- *
- * 2. Slate can still create primaries: Accepted slate rows file after the
- *    incumbent-defense pass, so a chair-assigned NPP can still join the same
- *    same-party primary as the defending incumbent and create a live contest.
- *
- * 3. One generic NPP per party per primary: Outside of incumbent defense and
- *    explicit slate filings, fallback party-pool fill contributes at most one
- *    active same-party candidate to each primary.
- *
- * 4. Deterministic selection: Uses RACE_PRIORITY ordering and sorted NPP lists
- *    so the same NPP always wins a slot given the same state. No randomness.
- *
- * 5. Country isolation: NPPs can only enter elections in their own country
- *    (npp.countryId === election.countryId). US NPPs can't enter UK races.
+ * Deterministic, priority-based entry:
+ * 1. Incumbent defense runs first: seat-holding NPPs re-enter their defending
+ *    primary, bypassing cooldown and party-challenger blocks.
+ * 2. Slate filings run after, so a chair-assigned NPP can contest the same
+ *    primary as the incumbent.
+ * 3. Outside those, fallback party-pool fill adds at most one NPP per party
+ *    per primary.
+ * 4. Selection uses RACE_PRIORITY and sorted lists; no randomness.
+ * 5. NPPs only enter races in their own country.
  */
 
 import { isHu1991AssemblyCampaign } from "@/lib/countries/hu/rules/assemblyCampaign1991";
@@ -155,10 +142,9 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     return true;
   });
 
-  // Slate precedence (#904/#906): let a chair's slate override a COMPLIANT
-  // NPP's own race choice. Build the (party,race)/per-NPP maps once, then free
-  // any compliant NPP the chair has moved to a different race BEFORE we clone
-  // candidacy state below, so the freed slot is visible to the entry phases.
+  // Slate precedence: a chair's slate can override a compliant NPP's own
+  // race choice. Build the maps once, then free moved compliant NPPs BEFORE
+  // cloning candidacy state below, so the freed slot is visible to entry phases.
   const nppById = new Map(allNPPs.map((n) => [n._id.toString(), n]));
   const slateMaps = await buildSlateOverrideMaps(ctx, openPrimaries);
   await reconcileSlateMoves(ctx, slateMaps, nppById);
@@ -230,11 +216,10 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
   // regular counterpart - normalize the election type so a sitting "commons"
   // MP is recognized as incumbent for a snap_commons primary.
   const isIncumbentFor = (npp: NPP, primary: Election): boolean => {
-    // Commons by-elections (#860) fill only vacated seats: no sitting MP is
-    // the incumbent of a race their own seat is not on the ballot for. Without
-    // this, every same-state MP auto-defends the vacant seat and a sitting
-    // winner double-seats (additive resolution never sweeps). Seatless
-    // challengers still file through the generic fill below.
+    // Commons by-elections fill only vacated seats: a sitting MP is not
+    // the incumbent of a race their own seat is not on the ballot for.
+    // Otherwise every same-state MP auto-defends the vacancy and a sitting
+    // winner double-seats (additive resolution never sweeps).
     if (isSpecialCommonsElection(primary.electionType)) return false;
     const offices = ctx.officialsByNPP.get(npp._id.toString());
     if (!offices) return false;
@@ -557,15 +542,9 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     primariesByState.get(state)!.push(e);
   }
 
-  // Index every NPP by `${country}:${party}:${state}` ONCE (O(N)). Both the
-  // Phase 2 generic-fill and the Phase 2.5 challenger pass want NPPs matching a
-  // specific (country, party, homeState) — previously each re-scanned the full
-  // ~N-element allNPPs array inside nested loops (O(parties×states×N) and
-  // O(primaries×parties×N) respectively), which is quadratic-ish and a real
-  // cost at the 30-50-country target. The index makes those lookups O(1) + a
-  // small residual filter. Insertion order is preserved (we iterate allNPPs
-  // once), so the deterministic "first eligible NPP" pick downstream is
-  // byte-identical.
+  // Index every NPP by `${country}:${party}:${state}` ONCE (O(N)) so Phase 2
+  // and Phase 2.5 lookups are O(1) instead of nested re-scans of allNPPs.
+  // Iteration order preserved, so "first eligible NPP" picks stay deterministic.
   const nppsByCountryPartyState = new Map<string, NPP[]>();
   for (const npp of allNPPs) {
     const k = `${npp.countryId ?? "US"}:${npp.party}:${npp.homeState ?? ""}`;
@@ -607,9 +586,8 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
 
         return (
           !isIncumbent &&
-          // #906: a compliant NPP with a chair slate assignment only enters where
-          // the chair slated them (via Phase 1a) — never auto-picked back into
-          // their own preferred (higher-priority) race.
+          // A compliant NPP with a chair slate assignment only enters where
+          // the chair slated them, never auto-picked into their own preferred race.
           !slateSuppressesAutoPick(npp, slateMaps) &&
           (!ctx.nppElectionEligiblePartyKeys ||
             ctx.nppElectionEligiblePartyKeys.has(`${nppCountry}:${npp.party}`)) &&

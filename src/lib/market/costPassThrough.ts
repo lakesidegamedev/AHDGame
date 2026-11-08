@@ -1,37 +1,25 @@
 /**
  * Producer cost pass-through for commodity price formation.
  *
- * Why this exists: commodity prices come from supply/demand pressure alone, so
- * a commodity could trade far below what it costs to make while the inputs to
- * make it trade far above base. Observed on prod (2026-08-15, ops-knowledge
- * ahd-corp-sector-npv-divergence): fertilizers at 2.26x base, plastics 1.60x,
- * freight 1.61x — while food, whose recipe spends 57% of nameplate revenue on
- * those inputs, sold at 0.58x into a glut. Result: 92 of 149 agriculture
- * sectors worldwide ran negative engine margins with no way to price their way
- * out, because nothing connected what a farm pays to what food sells for.
+ * Supply/demand alone lets a commodity trade below its inputs' cost. Each
+ * producing sector's rate-weighted average of damped LAGGED input price
+ * factors is its input-cost index. When that index exceeds 1, the commodity's
+ * base price is lifted before supply/demand applies:
  *
- * The mechanism: each commodity's producing sector(s) have an input recipe
- * (SECTOR_DEMAND). The recipe's rate-weighted average of damped LAGGED price factors is
- * the producer's input-cost index. When that index is above 1 (inputs dearer
- * than base), the commodity's effective base price is lifted by a damped share
- * of the excess before supply/demand pressure applies:
- *
- *     multiplier = min(CAP, 1 + BETA x (index - 1)),  floored at 1
+ *     multiplier = min(CAP, 1 + BETA x (index - 1)), floored at 1
  *
  * Deliberate properties:
- *  - FLOOR AT 1: cheap inputs never discount the price below what the
- *    supply/demand engine says — gluts still clear, only cost SQUEEZES are
- *    transmitted. Pass-through is a floor-lifter, not a price-setter.
- *  - Realized price factors, using the physical input bill's exponent and clamp.
- *    A raw quote beyond the billed price ceiling cannot keep lifting cost pressure.
- *    Existing commodity price adjustment eases the new target in over turns.
- *  - LAGGED ratios (prior turn's prices) — the same one-turn lag the input
- *    bill itself uses, so there is no same-turn circularity.
+ *  - FLOOR AT 1: cheap inputs never discount below supply/demand's price;
+ *    only cost squeezes are transmitted. It is a floor-lifter, not a price-setter.
+ *  - Uses realized price factors with the input bill's exponent and clamp, so
+ *    a quote beyond the billed ceiling cannot keep lifting cost pressure.
+ *    Existing price adjustment eases the new target in over turns.
+ *  - LAGGED ratios (prior turn's prices), matching the input bill's lag, so
+ *    there is no same-turn circularity.
  *  - BETA 0.5: producers eat half the squeeze, pass half. Chained recipes
- *    (chemicals -> plastics -> food) therefore converge geometrically instead
- *    of compounding, and the CAP bounds the worst case outright.
- *  - This also gives shortages a real remediation path: expensive inputs raise
- *    output prices, which raises producer margins, which attracts supply.
+ *    converge geometrically instead of compounding; CAP bounds the worst case.
+ *  - Gives shortages a remediation path: expensive inputs raise output prices,
+ *    raising margins, attracting supply.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import { SECTOR_DEMAND, SECTOR_SUPPLY } from "@/lib/constants/commodities";

@@ -320,11 +320,7 @@ async function verifyPhysicalTargets(
     owners.add(currentOwner);
     ownersByFrozenOwner.set(target.corporationId, owners);
     if (currentOwner !== target.corporationId) {
-      // Ownership drift is not a settlement error. The plan froze this turn's
-      // cash with the corporation that owned the sector then, and the physical
-      // receipt belongs to the sector document, which is keyed by id. The new
-      // owner takes over from the next turn, so spin-offs, sales and takeovers
-      // never block the turn.
+      // Ownership drift is not a settlement error. The plan froze this turn's cash with the then-owner, and the physical receipt belongs to the sector document keyed by id. The new owner takes over next turn, so spin-offs, sales and takeovers never block the turn.
       turnWarnings.push(
         `producer settlement booked sector ${target.sectorId} for frozen owner ${target.corporationId}, now owned by ${currentOwner}`
       );
@@ -361,12 +357,10 @@ async function verifyPhysicalTargets(
   const cashRedirect = new Map<string, string>();
   for (const [frozenOwner, currentOwners] of ownersByFrozenOwner) {
     if (existingCorporations.has(frozenOwner)) continue;
-    // The frozen owner is gone, so its credit has no account to land in. The
-    // producer market has no treasury or write-off fallback for a dissolved
-    // owner, so book the turn's cash to the corporation that holds the sectors
-    // now. That only works when every one of its sectors moved to one
-    // corporation that is already settling this turn; otherwise the cash has
-    // nowhere to go and the turn must still stop.
+    // A dissolved owner's credit has no account to land in and the producer market
+    // has no treasury or write-off fallback, so book it to the corporation that
+    // took over its sectors. Only valid when every sector moved to one corporation
+    // already settling this turn; otherwise the cash has nowhere to go.
     if (currentOwners.size !== 1)
       throw new Error(`Dissolved producer owner ${frozenOwner} has no single cash target`);
     const currentOwner = [...currentOwners][0];

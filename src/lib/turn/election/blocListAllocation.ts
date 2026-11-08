@@ -1,30 +1,10 @@
 /**
- * Bloc-list seat allocation — the National Front model.
- *
- * In a bloc-list chamber the party split is NOT an outcome of the vote. Each
- * party carries a negotiated quota (see `@/lib/constants/blocList`), and the
- * election only decides how that party's own slate divides its slots. This is
- * the DDR Volkskammer and, structurally, every single-list Eastern-bloc
- * assembly: one list, agreed shares, a vote that ratifies rather than chooses.
- *
- * Two properties the ordinary proportional path cannot give us:
- *
- *  1. The party split is unbreakable by candidate positioning. Under PR plus a
- *     ruling-party vote multiplier, a well-fitted bloc-party candidate out-polls
- *     the ruling party and takes the chamber with it, which is exactly what the
- *     live 1953 world was about to do (LDPD 35.9% against SED 19.1%). Quota
- *     allocation has no such failure mode because the vote never touches the
- *     split.
- *  2. The intra-party contest still decides everything inside a party's block,
- *     which is the contest DDR politics actually had.
- *
- * SEAT REPRESENTATION. Following `allocateSeats`, a candidate holds a BLOCK of
- * seats rather than a single seat: a race with `totalSeats: 90` and four
- * candidates returns four counts summing to 90. Both stages here are therefore
- * largest-remainder splits (quota across parties, then a party's block across
- * its own candidates), and both conserve their total exactly.
- *
- * Pure and deterministic; ties break on the caller's stable ranking.
+ * Bloc-list seat allocation (National Front model). The party split is a
+ * negotiated quota from `@/lib/constants/blocList`, not an election outcome;
+ * the vote only divides each party's own slate. This keeps the split immune
+ * to candidate positioning while leaving the intra-party contest meaningful.
+ * A candidate holds a block of seats, so both stages are largest-remainder
+ * splits that conserve their total exactly. Pure and deterministic.
  */
 
 import type { RankedCandidate } from "./seatAllocation";
@@ -70,14 +50,12 @@ function largestRemainder(total: number, weights: ReadonlyArray<{ key: string; w
  * @param ranked      candidates, highest votes first
  * @returns candidateId to seat count, covering every candidate in `ranked`
  *
- * Parties absent from the quota receive nothing: an unsanctioned party cannot
- * appear on the National Front list at all, which is the point of the list.
- * Their candidates are returned with 0 rather than omitted, so callers can
- * present a complete result.
+ * Parties absent from the quota receive 0 seats: an unsanctioned party cannot
+ * appear on the National Front list. Their candidates are returned with 0
+ * rather than omitted so callers can present a complete result.
  *
  * A quota party that fielded nobody has its share redistributed across the
- * parties that did, in proportion to their own quotas, rather than leaving the
- * chamber short.
+ * parties that did, in proportion to their quotas.
  */
 export function allocateBlocListSeats(
   totalSeats: number,

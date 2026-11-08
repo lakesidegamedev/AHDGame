@@ -1,24 +1,18 @@
 /**
  * Collapse the corporation turn's per-document cash writes into one op each.
  *
- * The turn builds its corporation book from many independent collectors: the
- * sector pass, NPP decisions, brand loyalty, quality, group forecasts and
- * holding maturation each push an op for the same document. A bulkWrite applies
- * them one at a time, and every one of those rewrites the whole 20 KB
- * corporation document, so the write cost is op count, not payload. Merging the
- * unguarded ops for one corporation into a single update drops about half of
- * them without changing the final document.
+ * Each turn many collectors push ops for the same corporation doc, and each
+ * bulkWrite update rewrites the whole document, so write cost scales with op
+ * count. Merging unguarded ops (`filter` exactly `{ _id }`) into one update
+ * halves the count without changing the final doc.
  *
- * Only ops whose filter is exactly `{ _id }` are merged. A guarded op (for
- * example the sector write's `advertisingMarketSettledTurnV1: { $ne: turn }`
- * stamp) keeps its own update, because merging it would apply its writes when
- * the guard fails, or drop the unguarded writes when it passes.
+ * Guarded ops keep their own update: merging them would apply their writes
+ * when the guard fails, or drop unguarded writes when it passes.
  *
- * Values are applied in the original order, so a field written twice keeps the
- * later value, `$inc` accumulates, `$push` keeps its order and `$unset` removes
- * the field. Where a merged op and a guarded op touch the same field, the doc is
- * left unmerged unless the two writes are provably interchangeable (both `$inc`,
- * or both `$set` to the same value).
+ * Values apply in original order: a field written twice keeps the later value,
+ * `$inc` accumulates, `$push` keeps order, `$unset` removes. A field touched
+ * by both a merged and a guarded op stays unmerged unless the two writes are
+ * interchangeable (both `$inc`, or both `$set` to the same value).
  */
 
 import type { AnyBulkWriteOperation, Document } from "mongodb";

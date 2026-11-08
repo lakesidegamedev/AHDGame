@@ -6,19 +6,16 @@ import { processSuspiciousDetection } from "@/lib/turn/suspiciousDetection";
 import { resolveAnomalyScanCadence } from "@/simulation/phases/anomalyScanCadence";
 
 /**
- * Anti-abuse scans, run after the turn commits instead of inside it (#2694).
+ * Anti-abuse scans run after the turn commits, not inside it.
  *
- * The three scans only stamp flags (financial transactions, audit rows,
- * suspicious-account records) that admin tooling reads. Nothing later in the
- * turn consumes them, and each looks back over a rolling window of at least
- * six turns, so running them just after the turn loses nothing while taking
- * about 10 s off every third turn. Order is preserved: the audit anomaly scan
- * stamps the flags suspicious detection reads.
+ * The scans only stamp admin-read flags; nothing later in the turn consumes
+ * them, and each looks back over a six-plus-turn window, so running them
+ * afterwards loses nothing. Order matters: audit anomaly scan stamps flags
+ * suspicious detection reads.
  *
- * Results and freshness land on the turn's log under `postTurnScans`, so a
- * failed or still-running scan is visible rather than silent. One run at a
- * time per process: if the previous turn's scans are still going, this turn's
- * are skipped and recorded as such; the rolling windows cover the gap.
+ * Results land on the turn's log under `postTurnScans` so failures are
+ * visible. One run at a time per process; skipped runs are recorded, and the
+ * rolling windows cover the gap.
  */
 export type PostTurnScanName = "financialSuspectScan" | "auditAnomalyScan" | "suspiciousDetection";
 

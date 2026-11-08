@@ -80,22 +80,18 @@ type OperatingLossMember = {
 };
 
 /**
- * The book that replaces one loss receipt and one tax-arrears receipt per
- * corporation with a single move.
+ * The book that replaces a loss receipt plus a tax-arrears receipt per
+ * corporation with a single move. A corp whose cash cannot fund its net never
+ * reaches the net batch, so the withholding guard can only fail there: once
+ * the loss takes its cash it cannot hold the tax either. Balances are the same
+ * either way, so each loss is paid and each payable stated as a projection on
+ * the same receipt.
  *
- * A corporation whose cash cannot fund its net never reaches the net batch.
- * For it the withholding guard can only fail: once the loss takes the cash it
- * has, it cannot also hold the tax, so the per-corporation protocol wrote a
- * refused withholding and then a payable. The balances are the same whether
- * the loss and the payable are one receipt or three, so the wave pays each
- * loss and states each payable as a projection on the same receipt.
- *
- * Each corporation appears in exactly one leg, which is what lets the journal
- * write the whole book's cash in one pass: `batchIndependentDebits` refuses a
- * repeated target. A corporation whose cash covers only part of its loss pays
- * what it has, and the remainder is the projection the serial path recorded.
- * The book carries no Treasury leg: every member's withholding is unfunded by
- * construction, so nothing reaches the Treasury from this move.
+ * Each corporation appears in exactly one leg, so `batchIndependentDebits`
+ * (which refuses repeated targets) writes the whole book's cash in one pass.
+ * A corp whose cash covers only part of its loss pays what it has; the rest is
+ * the recorded projection. No Treasury leg: every withholding here is
+ * unfunded by construction.
  */
 function operatingLossBatchTransition(args: {
   members: readonly OperatingLossMember[];

@@ -73,9 +73,7 @@ function eligibilityGroupKey(c: RankedCandidate): string {
   return c.party && c.party !== "independent" ? `party:${c.party}` : `cand:${c.id}`;
 }
 
-// ---------------------------------------------------------------------------
-// Shared apportionment core (#585)
-// ---------------------------------------------------------------------------
+// Shared apportionment core
 
 /** A candidate entering apportionment: an id, its votes, and its party (if any). */
 export interface ApportionmentCandidate {
@@ -111,14 +109,9 @@ export interface LargestRemainderResult {
  * minimum-share eligibility, the degenerate ranked-order fallback, and
  * Hamilton / Largest-Remainder assignment.
  *
- * This existed twice — once in `allocateSeats` (what resolves a race) and once
- * in `computeSeatEstimates` (what players are shown before one). They must
- * agree exactly or the projected seats differ from the seats the race resolves
- * to, and they had already drifted twice (ticket #1032): the projection gated
- * per candidate where resolution pooled by party, and its fallback re-admitted
- * every candidate in ~11 of 12 Commons regions, so no threshold applied at all.
- * Both were repaired by re-coding the copy rather than sharing it, which left
- * the same drift available on the next eligibility or LR change.
+ * Resolution and projection must agree exactly or projected seats differ
+ * from the seats the race resolves to. Keep this shared rather than
+ * re-coding a copy, which is how the two drifted before.
  *
  * Callers keep their own surrounding concerns: the resolver's bloc-list path,
  * 2-seat House rule, over-allocation cap and single-seat path stay in
@@ -250,18 +243,16 @@ export function allocateSeats(
   /**
    * Preset-aware Commons seat map. Defaults to the modern 650-seat
    * `UK_COMMONS_SEATS`; pass `getUkCommonsSeats(preset)` so a 1953 world
-   * allocates the 625-seat redistribution (ticket #1058).
+   * allocates the 625-seat redistribution.
    */
   commonsSeats: Record<string, number> = UK_COMMONS_SEATS,
   /** Country scope for rules shared by election types in multiple countries. */
   countryId?: string,
   allocationMethod?: ElectionMethod
 ): SeatAllocationResult {
-  // "senate" is single-seat for the US (one seat per class per state, always
-  // totalSeats=1). Nigeria's Senate is a multi-seat-per-zone body (18-21 seats),
-  // so a "senate" race carrying more than one seat is allocated proportionally
-  // like any other multi-seat chamber (#912/NG — without this NG senate zones
-  // only ever seated 1 winner). US senate is unaffected (totalSeats stays 1).
+  // US senate is single-seat (totalSeats=1) so it is unaffected. Nigeria's
+  // Senate is multi-seat per zone (18-21), so a "senate" race with more than
+  // one seat allocates proportionally like any multi-seat chamber.
   const isMultiSeat = isMultiSeatElection(electionType, totalSeats);
 
   // Use authoritative seat count for House/Commons to prevent over-allocation.
@@ -324,9 +315,8 @@ export function allocateSeats(
         seatsEstimate[ranked[0].id] = 2;
       }
     } else {
-      // Eligibility, the degenerate ranked-order fallback and Largest Remainder
-      // all live in `largestRemainderSeats` so the
-      // projection engine runs the identical rule (#585).
+      // Eligibility, ranked-order fallback and Largest Remainder live in
+      // `largestRemainderSeats` so the projection engine runs the identical rule.
       const { seats, poolIds, poolVotes } = largestRemainderSeats(ranked, authoritativeSeats, {
         minShare,
         totalVotesForShare: totalVotesCast,

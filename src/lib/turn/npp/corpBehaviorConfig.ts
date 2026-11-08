@@ -75,11 +75,10 @@ export interface NppTechCorpUpdate {
 }
 
 /**
- * Sector tech tree: auto-unlock one node per turn when affordable. A separate
- * op from the budget decision (same _id); bulkWrite applies both. The
- * $addToSet plus not-already-owned filter mirror the player unlock's atomic
- * guard: a concurrent write can no longer resurrect a stale
- * unlockedTechNodeIds array or double-add the node.
+ * Sector tech tree: auto-unlock one node per turn when affordable. Runs as a
+ * separate op from the budget decision (same _id); bulkWrite applies both.
+ * The $addToSet plus not-already-owned filter mirror the player unlock's atomic
+ * guard against concurrent double-adds or stale arrays.
  */
 export function maybePushNppTechUnlock(args: {
   corp: Corporation;
@@ -96,10 +95,10 @@ export function maybePushNppTechUnlock(args: {
   liquidCapitalDelta?: number;
   cashReserve?: number;
   /**
-   * Ledger intents for `flushNppTechUnlockLedger` (ticket #1998). The cash
-   * op above still owns the debit; this records what to verify and log
-   * after the corporation bulkWrite applies, so autonomous unlocks get the
-   * same finance-history debit as manual ones.
+   * Ledger intents for `flushNppTechUnlockLedger`. The cash op above still
+   * owns the debit; this records what to verify and log after the corporation
+   * bulkWrite applies, so autonomous unlocks get the same finance-history
+   * debit as manual ones.
    */
   techLedger?: TechUnlockLedgerInput[];
 }): void {

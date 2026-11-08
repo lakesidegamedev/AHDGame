@@ -337,10 +337,7 @@ async function runBankingTurn(
 
   steps.mark("loanBookOnly");
 
-  // Loans owed to banks that have already been wound up. They are not part of
-  // any live bank's pass, and before this they were serviced by nobody: the
-  // borrower simply stopped paying and the value never reached the people who
-  // lost out when the bank failed.
+  // Loans owed to wound-up banks. No live bank's pass covers them; without this pass, borrowers stopped paying and the value never reached the people who lost out.
   const deadBankStarted = Date.now();
   const deadBankResult = await processDeadBankLoans(
     db,
@@ -626,21 +623,13 @@ async function processOneBank(
     -Math.floor(cashReserves * 100) / 100
   );
   if (delta !== 0) {
-    // The money MOVES. It leaves the central bank's household pool and lands in
-    // the bank's cash, which is what a deposit is.
+    // A deposit moves money: debit the central bank's household pool and credit
+    // the bank's cash. Without the credit, cash is destroyed while the charter
+    // counts it, so reserve tests demand cash the bank never received.
     //
-    // Before this, the pool was debited and nothing was credited: the cash was
-    // destroyed and the charter kept a number. Every rule measured against that
-    // number then demanded cash the bank had never received, which is why a new
-    // bank failed on turn 8 no matter what its CEO did. Crediting the cash here
-    // closes a money-supply conservation hole and makes the reserve test
-    // satisfiable by the same stroke.
-    //
-    // Both legs go through the shared money-movement primitive, which claims an
-    // idempotency key BEFORE either lands and refuses a pair that does not net
-    // to zero. The hand-rolled version wrote the two legs in sequence with
-    // nothing tying them together, so a crash between them left the money
-    // supply and the vault disagreeing by the size of the flow.
+    // Both legs go through the shared money-movement primitive: the idempotency
+    // key is claimed before either leg lands, and a pair that does not net to
+    // zero is refused.
     const inflow = delta > 0;
     const flowKey = turnMoveKey(inflow ? "npc-deposit-in" : "npc-deposit-out", bankIdHex, turn);
     const flow = await settleTransition(db, {
@@ -1252,24 +1241,18 @@ type NpcBulkResult = {
 /**
  * Service the household book, one tranche per credit band.
  *
- * The book used to be a single `npcBulk` loan carrying one rate and one blended
- * default rate — which is why the console could only report it as one implied
- * number. It is now one loan document per band, so the same servicing loop
- * produces a book that can be read by rating and shocked by composition.
- *
  * Two rules govern what the CEO's lending profile may touch:
  *
- *  - It selects which bands are ORIGINATED into from here on. Bands outside the
- *    profile get a target of zero and wind down at the ordinary flow cap; they
- *    are not called in, repriced, or written off early.
+ *  - It selects which bands are ORIGINATED into from here on. Bands outside
+ *    the profile get a target of zero and wind down at the ordinary flow cap;
+ *    they are not called in, repriced, or written off early.
  *  - A tranche already on the book keeps the rate it was originated at. Rate
- *    changes reach the book only through new origination, which is what "does
- *    not change existing loans" has to mean if it is to mean anything.
+ *    changes reach the book only through new origination.
  *
- * A pre-split book has no `creditBand`. It is serviced as its own tranche with
- * a target of zero, at its own stored rate, so it runs off gradually while the
- * banded tranches build. Total book size lands in the same place; only its
- * composition changes, and only at the flow cap.
+ * A pre-split book has no `creditBand`; it is serviced as its own tranche with
+ * a target of zero at its stored rate, so it runs off gradually while banded
+ * tranches build. Total size is unchanged; only composition shifts, at the
+ * flow cap.
  */
 async function serviceNpcBulkBook(
   db: Db,

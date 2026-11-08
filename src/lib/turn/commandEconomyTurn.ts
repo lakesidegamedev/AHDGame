@@ -61,32 +61,13 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveGosbankPosture } from "@/lib/economy/commandEconomyPosture";
 
 /**
- * Command-economy macro turn phase.
- *
- * P1/P3 (existing): advances the shortage-economy state on
- * `FederalBudget.economicFactors` — two-circuit wage-fund cap, monetary
- * overhang, shortage index, black-market premium, second economy.
- *
- * v2 P0: (1) refreshes each SOE's plan-fulfillment from its sectors' realized
- * output, and (2) makes marketization ENDOGENOUS — it hydrates the stored
- * per-country level (seeding from the era schedule the first time), then drifts
- * it each turn on black-market pressure + SOE performance + policy stance and
- * persists it, so every later phase this turn (and the next turn) reads the
- * drifted level through the unchanged `marketizationLevel` accessor.
- *
- * v2 P1 (active Gosbank): (a) DIRECTED CREDIT — each turn Gosbank lends a credit
- * budget (from its posture) across the country's SOEs, weighted toward
- * under-performing strategic sectors; the credit builds SOE capacity and lifts
- * output (growth over subsequent turns). (b) ISSUANCE → OVERHANG — the slice of
- * that credit not covered by real savings is monetized and injected into the
- * SAME overhang accumulator, so funding growth worsens shortages (the core
- * tradeoff). (c) BUDGET SOFTNESS is persisted per country for
- * `nppInsolvencyDissolution`. (d) the marketization `policyStance` term now
- * reads a REAL reform-vs-orthodox signal (government reformism + Gosbank
- * posture) instead of the P0 tolerance placeholder.
- *
- * Self-gates on `commandEconomyEnabled`; a no-op (byte-identical) for market
- * worlds / flag off. Runs after `inflationRecalc` so gdp/wage growth are fresh.
+ * Command-economy macro turn phase. Advances shortage-economy state on
+ * `FederalBudget.economicFactors`, refreshes SOE plan-fulfillment, and
+ * drifts/persists per-country marketization. Active Gosbank directs credit
+ * toward under-performing strategic SOEs (building capacity), monetizes the
+ * unsaved slice into the overhang accumulator, and persists budget softness.
+ * Self-gates on `commandEconomyEnabled`; no-op when off. Runs after
+ * `inflationRecalc` so gdp/wage growth are fresh.
  */
 export async function processCommandEconomyTurn(
   db: Db,
@@ -215,19 +196,13 @@ export async function processCommandEconomyTurn(
 
   // ── Hydrate the stored marketization registry for this turn ───────────────
   //
-  // Gated on the PERSISTED level (schedule as fallback), never on
-  // `isPlannedEconomy`: that accessor reads the registry this loop is about to
-  // rebuild — empty after a restart — and falls back to the compiled schedule,
-  // which would silently drop (a) a country the schedule never listed whose
-  // regime was carried onto it by a merge (post-reunification DE), and (b) a
-  // command country whose stored level outlived its schedule's `throughYear`.
-  // The band check itself uses the same ceiling `isPlannedEconomy` does.
-  // A dissolved country keeps its budget doc for history, and the compiled
-  // schedule keeps calling it planned — without this it would be hydrated and
-  // planned for ever after a merge carried its regime to its successor. The
-  // registry read is skipped entirely with the feature off: the hydration is a
-  // guaranteed no-op then, and the processing loop's own `isPlannedEconomy`
-  // already carries the flag.
+  // Gate on the PERSISTED level (schedule as fallback), never on
+  // `isPlannedEconomy`: that accessor reads the registry this loop rebuilds
+  // (empty after restart) and falls back to the compiled schedule, dropping
+  // countries whose regime was merged in or whose stored level outlived the
+  // schedule. A dissolved country keeps its budget doc for history, and the
+  // schedule still calls it planned, so without the registry check it would be
+  // hydrated and planned forever. Skipped entirely when the feature is off.
   const registeredForPlanning = enabled
     ? new Set<string>(await getRegisteredCountryIds(db))
     : new Set<string>();
@@ -316,40 +291,26 @@ export async function processCommandEconomyTurn(
       directive?.sectorCredit
     );
     const directedCreditReadout: Record<string, number> = {};
-    // ── The replacement floor (the SOE capex channel) ────────────────────────
+    // ── The replacement floor (the SOE capex channel) ──────────────────────
     //
-    // Under plants an SOE's capacity is a PHYSICAL stock that depreciates every
-    // turn, and the enterprise has no legitimate way to buy it back: the
-    // treasury backstop deliberately covers only the operating loss (see
-    // `coverableSoeShortfallAnchor` — that is what closed the P3b build-order
-    // exploit), and the cash-rationed NPP reinvestment path is private-sector
-    // machinery an SOE is excluded from. So the plan capacity ran one-way down.
+    // An SOE's capacity is a physical stock that depreciates every turn and
+    // the enterprise has no legitimate way to buy it back: the treasury
+    // backstop covers only operating loss, and cash-rationed NPP reinvestment
+    // excludes SOEs. In a command economy the intended channel is directed
+    // credit from Gosbank, but the tranche is a posture-scaled allocation that
+    // can fund well under one turn of wear. Floor each SOE's tranche at one
+    // turn of depreciation replacement.
     //
-    // A state enterprise funds capacity from STATE channels. In a command
-    // economy that channel already exists and is the intended one — directed
-    // credit. All that was missing is a size guarantee: the Gosbank tranche is
-    // an allocation of a posture-scaled budget, so a restrained posture (or a
-    // large SOE in a small allocation) funded well under one turn of wear.
-    // Floor each SOE's tranche at exactly one turn of depreciation replacement.
+    // BOUNDED AND PAID FOR. The floor holds capacity flat, never grows it (it
+    // is priced off existing plant via `soeCapacityReplacementCostAnchor`),
+    // and its monetized share feeds the monetary overhang via `creditTotal`
+    // like any other printed rouble.
     //
-    // BOUNDED, AND PAID FOR. The floor can only hold capacity flat — it is
-    // priced off the plant that already exists (see
-    // `soeCapacityReplacementCostAnchor`), so it can never fund growth, and it
-    // is added to `creditTotal` BELOW so its monetized share feeds the monetary
-    // overhang exactly like every other rouble the Gosbank prints. The state
-    // pays, visibly.
-    //
-    // WHY THE FLOOR IGNORES THE CHAIR'S LEVER. `creditAggressiveness` sizes
-    // INVESTMENT. Upkeep is not investment: an SOE has no other channel to buy
-    // back the units that wore out, so a chair who could switch the floor off
-    // would not be choosing restraint, they would be choosing to scrap the
-    // plan capacity a few percent a turn with no way to notice. The lever
-    // therefore reaches zero on the part it governs and the upkeep bill
-    // continues, which is exactly how a command economy behaves.
-    //
-    // It is reported SEPARATELY (`directedCreditUpkeep`) for that reason: at
-    // aggressiveness 0 the Gosbank still prints, and a chair staring at a zero
-    // investment budget and a rising overhang has to be able to see why.
+    // THE FLOOR IGNORES `creditAggressiveness`. That lever sizes investment;
+    // upkeep is not investment. With no other channel to buy back worn units,
+    // switching the floor off would silently scrap plan capacity. Reporting it
+    // separately as `directedCreditUpkeep` lets a chair at aggressiveness 0 see
+    // why the overhang still rises.
     let creditTotalFunded = creditTotal;
     let upkeepTotal = 0;
     for (const { corpId, state } of soes) {
@@ -723,34 +684,19 @@ async function loadSoeStates(
 }
 
 /**
- * P3b — turn directed credit into REAL capacity (plants tier only).
+ * Turn directed credit into real capacity (plants tier only): split each SOE
+ * tranche pro-rata by `capitalStock` (evenly if none), buy units at
+ * `capacityPricePerUnit`, and `$inc` them onto `capitalStock`. Same era-priced
+ * ₳/unit a private CEO pays, so credit is a funding channel, not a discount.
  *
- * For each credited SOE:
- *   1. split the tranche across its sectors pro-rata by existing `capitalStock`
- *      (the overlay has no sector-level plan, and capital stock is the closest
- *      thing to "where this enterprise actually operates"; an SOE with no
- *      capital anywhere splits it evenly so a from-scratch enterprise can still
- *      be built up),
- *   2. buy units at `capacityPricePerUnit(sectorType, year)` — the SAME
- *      era-priced ₳/unit a private CEO pays via the build path, so directed
- *      credit is a FUNDING channel, not a discount,
- *   3. `$inc` the units onto `capitalStock`.
+ * Capacity lands immediately rather than through the build queue: the tranche is
+ * a per-turn flow across every SOE sector, and the overlay is a plan reading, not
+ * a balance sheet. `directedCreditIssuance` is untouched either way.
  *
- * DEVIATION, documented: the purchase lands as capacity IMMEDIATELY rather than
- * through the P3a build queue's construction lag. The Gosbank tranche is a
- * per-turn flow spread across every SOE sector in the country, so queueing it
- * would mint one build order per sector per turn forever; and the overlay it
- * feeds is a plan-fulfillment reading, not a balance sheet. The monetary
- * overhang accounting (`directedCreditIssuance`) is untouched either way — the
- * credit still prints its unbacked share.
+ * FX: `credit` is corp-local; price is ₳, so normalize by the corp's own rate.
  *
- * FX: `credit` is in corp-local currency (it is derived from `planTarget`,
- * which is a sum of sector revenue), while `capacityPricePerUnit` is ₳. Each
- * corp's own rate normalizes the tranche before pricing.
- *
- * Returns corpId → capacity value added, in the SAME corp-local units as the
- * overlay's `capacity` (unitsAdded × mixPrice), so the caller can fold it into
- * `SoeState` without re-deriving prices.
+ * Returns corpId → capacity value added in corp-local units (unitsAdded ×
+ * mixPrice).
  */
 async function buildCapacityFromDirectedCredit(
   db: Db,

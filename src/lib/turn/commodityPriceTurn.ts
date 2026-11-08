@@ -1,20 +1,14 @@
 import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand";
 /**
- * How commodity prices move each turn. processCommodityPriceTurn sums supply and
- * demand from owned sectors, prices each commodity as 50% global + 25% national +
- * 25% state, scales retail demand by GDP growth, and books extraction depletion
- * from realized output (realizedOutputFraction). A naval blockade closes a
- * country's seaborne trade lanes for the turn (loadBlockadeClosure, built on
- * blockadeClosureByCountry).
+ * How commodity prices move each turn. processCommodityPriceTurn sums supply
+ * and demand from owned sectors, prices each commodity as 50% global + 25%
+ * national + 25% state, scales retail demand by GDP growth, and books
+ * extraction depletion from realized output (realizedOutputFraction). A naval
+ * blockade closes a country's seaborne trade lanes for the turn.
  *
  * Orchestration only: every DB read/write stays here, in the original order,
- * so the turn's query count and positional fetch sequence are unchanged. The
- * phase logic lives beside it in ./commodity/ — sectorLedger (supply-ledger
- * inputs), demandLegs (advertising, demographics, household, financial, rate,
- * government, calibration), pricing (national/reachable/state blend +
- * persistence payloads), tradeContext, sourcingSettlement (freight),
- * persistence (history, flows, trade snapshot), blockadeClosure, and
- * extractionDepletion.
+ * so the turn's query count and positional fetch sequence are unchanged. Phase
+ * logic lives in ./commodity/.
  */
 import { getDb } from "@/lib/mongodb";
 import type {
@@ -379,12 +373,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       .toArray(),
     db
       .collection<FederalBudget>("federalBudget")
-      // The WHOLE category map, not named paths. This projection pinned
-      // `healthcare` only, so when #3880 added the defense -> ordnance leg the
-      // amount it needed was stripped before the loop ever saw it and the
-      // feature has been inert ever since. It also hid the `health` spelling
-      // that UK/CN/IE use. Projecting the map means adding a leg to
-      // GOVT_SPEND_DEMAND cannot silently read zero again.
+      // Project the WHOLE category map, not named paths. A pinned projection
+      // silently strips legs added later (and alternate spellings like
+      // `health`), so a new GOVT_SPEND_DEMAND leg would read zero.
       .find(
         {},
         {
@@ -732,18 +723,15 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     ? accumulatePlantsUnits(sectorData, turn, LEDGER_BASE_PRICES)
     : new Map<CommodityType, { produced: number; sold: number }>();
 
-  // Tier-2 sphere-macro countries: held contribution from the last six-turn
-  // kernel tick participates in every normal-turn global market calculation,
-  // routed through primary-sphere rules so secondary ties cannot duplicate
-  // the full benefit package (#3717).
+  // Tier-2 sphere-macro countries: last kernel tick's held contribution feeds every normal-turn global market, routed via primary-sphere rules so secondary ties cannot duplicate benefits.
   const macroApplied = await applySphereRoutedMacroContributions(db, global, turn);
 
-  // Background countries (#5702): their regions hold no sectors or modelled
+  // Background countries: their regions hold no sectors or modelled
   // households, so their book is their macro economy. The world total already
   // carries it; here the same units land in the country's own regions so the
   // national book, freight sourcing and trade clearing treat it as a buyer and
-  // seller. The state-built demand legs below run over market states only, so
-  // a background country's regions and budgets are not counted twice.
+  // seller. State-built demand legs run over market states only, so these
+  // regions and budgets are not counted twice.
   const marketStates =
     backgroundCountryIds.size === 0
       ? allStates
@@ -923,11 +911,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
 
   // ── Era-aware demand calibration ──────────────────────────────────────
   // Applied once, after the last demand generator and BEFORE freight sourcing,
-  // trade clearing and the reachable books, so every downstream book (the one
-  // the clearing engine settles on, the one read surfaces quote as buyers'
-  // room, and the commodityFlows record) carries the same corrected figure.
-  // It used to run after the books were built, so the books quoted demand
-  // 1/m too high for every calibrated commodity (ticket 1370).
+  // trade clearing and the reachable books, so every downstream book carries
+  // the same corrected figure. Calibration must precede book construction or
+  // the books quote demand 1/m too high for every calibrated commodity.
   applyDemandCalibration({ activePreset }, global, byCountry, byState);
 
   // ── Inter-country trade clearing + whole-market dampened convergence ──
@@ -1083,8 +1069,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // line, so this cannot move below it: post-convergence an importer's demand
   // has already been relieved by k x imports and every deficit reads short by
   // that factor. Persisted with the flow snapshot so read surfaces quote the
-  // book the engine actually clears on rather than the global aggregate
-  // (ticket #1077).
+  // book the engine actually clears on.
   const reachableBooks = buildReachableBooks({
     countries,
     balances: byCountry,

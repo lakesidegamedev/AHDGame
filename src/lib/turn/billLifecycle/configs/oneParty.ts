@@ -65,19 +65,16 @@ function makeOnePartyNotifier(lowerLabel: string): SponsorNotifier {
 /**
  * Build the bill-resolution config for a one-party state.
  *
- * - **Unicameral** (CN): single lower-chamber vote → immediate enactment on pass,
- *   failed on reject.
+ * - **Unicameral** (CN): single lower-chamber vote, enacted on pass, failed on reject.
  * - **Bicameral** (RU: `legislature.bicameral` + `upperElectionSystem`): a bill
- *   must clear BOTH Supreme Soviet chambers (D8/D9 crossover). It starts in its
- *   origin chamber (`active`), crosses to the sibling chamber (`active_other`),
- *   and enacts only if the second chamber also approves; a second-chamber
- *   rejection kills it (no override chamber in a one-party state).
+ *   must clear both Supreme Soviet chambers. It starts in its origin chamber
+ *   (`active`), crosses to the sibling (`active_other`), and enacts only if the
+ *   second also approves; a second-chamber rejection kills it, since a
+ *   one-party state has no override chamber.
  *
- * One-party pass rule is always simple majority (nat/priv never escalates to
- * two-thirds in a one-party state), applied by the engine evaluator. Regime
- * mechanics live in the one-party orchestrator that calls the engine; the engine
- * resolves the bills (scoped + snapshotted, #0836/#0982) and returns the enacted
- * categories the drifts consume.
+ * Pass rule is always simple majority, applied by the engine evaluator. The
+ * one-party orchestrator owns regime mechanics; the engine resolves bills and
+ * returns the enacted categories the drifts consume.
  */
 export function buildOnePartyBillConfig(
   config: CountryConfig,

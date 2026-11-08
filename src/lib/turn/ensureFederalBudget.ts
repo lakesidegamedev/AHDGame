@@ -1,19 +1,10 @@
 /**
  * Self-heal for a missing `federalBudget` document.
  *
- * A world normally gets its federalBudget docs from `seedBudgets()` during
- * full bootstrap. Worlds created via a partial seed path (e.g.
- * `scripts/seed-sandbox.ts`, which creates `centralBanks` directly via
- * `ensureCentralBank()` without ever calling `seedBudgets`) can end up with a
- * country that has a live central bank but no federal budget at all.
- * Every downstream consumer (`treasuryTurn`, `inflationRecalc`) previously
- * just skipped such a country silently (`if (!budget) continue`), so the gap
- * never surfaced as an error — `gameHealthSnapshots` showed the phase
- * "completed" every turn while the country was simply never processed.
- *
- * `ensureFederalBudget` closes the gap the moment it's noticed: create the
- * preset's default budget document on first encounter so the country starts
- * accruing fiscal history immediately, instead of forever.
+ * Worlds created via a partial seed path can have a live central bank but no
+ * federal budget, and downstream consumers silently skip such a country. This
+ * creates the preset's default budget on first encounter so the country
+ * starts accruing fiscal history immediately.
  */
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";

@@ -30,22 +30,11 @@ import {
   type WageShareReceipt,
 } from "@/lib/market/producerMarket/wageShareRules";
 
-/**
- * Per-turn fiscal base growth (the dynamic wage/trade application). The metric
- * engine recomputes `economic.wageGrowth`/`tradeGrowth`/`gdpGrowth` every turn as
- * ANNUAL display rates; this phase applies a single `1/TURNS_PER_YEAR` slice of
- * them to the tax bases each turn (mirroring how the engine already compounds
- * `state.gdp`), so the income- and trade-tax bases — and the federal revenue the
- * per-turn `treasuryTurn` accrues against — track the live economy instead of
- * jumping once a year. `fiscalYear` no longer grows the bases (it would
- * double-count); it keeps the annual inflation snapshot, GDP derivation, grants,
- * debt, and the state-revenue reconciliation (off these grown bases).
- *
- * Runs AFTER `computeNationalMetrics` (reads the fresh national rates) and BEFORE
- * `tradeGrowthMirror` (which reads the `economicFactors.tradeGrowth` this phase
- * writes). Federal bases grow on the NATIONAL rates; each state's bases grow on
- * THAT state's own rates (the engine writes per-state factors).
- */
+/* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
+ * each turn, so bases and accrued revenue track the live economy instead of
+ * jumping yearly. fiscalYear keeps annual work but no longer grows bases.
+ * Runs after computeNationalMetrics and before tradeGrowthMirror. Federal
+ * bases use national rates; state bases use that state's own rates. */
 function resolveBudgetCountryId(budget: Pick<FederalBudget, "_id" | "countryId">): CountryId {
   return (budget.countryId ||
     (String(budget._id) === "federal" ? "US" : String(budget._id))) as CountryId;
@@ -289,11 +278,9 @@ export async function processFiscalBaseGrowth(
         const normalized = normalizeFederalTaxRates(budget.taxRates);
         if (normalized) {
           const revenue = await calculateFederalRevenue(db, normalized, String(budget._id));
-          // `surplus` is a cache of revenue.total - spending.total (see
-          // federalSurplus): a revenue-only write leaves it stale by exactly
-          // the grown amount every turn, which the end-of-turn invariant check
-          // reports as source drift (#1975). Persist the canonical value in
-          // the same guarded write; spending is untouched by this phase.
+          // `surplus` caches revenue.total - spending.total (see federalSurplus).
+          // A revenue-only write leaves it stale by the grown amount each turn, which
+          // the end-of-turn invariant check flags as drift. Persist both in the same write.
           const surplus = federalSurplus({ revenue, spending: budget.spending });
           await db
             .collection<FederalBudget>("federalBudget")

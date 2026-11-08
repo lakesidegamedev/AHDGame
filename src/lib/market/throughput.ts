@@ -1,20 +1,14 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 
 /**
- * Throughput coupling — Tier 3 phase D1 of the structural market rework
- * (audit t806, Fix 3; see docs/plans/2026-07-03-market-structural-plan.md).
- *
- * A sector's realized output is limited by the availability of its scarcest
- * input (Leontief-style): if the market only supplies 60% of the steel car
- * plants demand, car plants realize at most ~60% of their output — exactly as
- * an iron miner is throttled by geological capacity today. Generalizes the
- * extraction capacity haircut to every sector; the same 240-turn ramp
- * machinery (`capacityHaircutFactor`) fades it in per sector.
+ * Throughput coupling: a sector's realized output is limited by its scarcest
+ * input (Leontief-style), generalizing the extraction haircut to every sector
+ * via the `capacityHaircutFactor` ramp.
  *
  * Guards:
- *  - `THROUGHPUT_MIN` floors the factor so an input shortage can throttle but
- *    never zero a sector — and, with the one-turn-lagged balances, prevents
- *    the death-spiral where less output deepens the shortage that caused it.
+ *  - `THROUGHPUT_MIN` floors the factor so a shortage throttles but never
+ *    zeroes a sector, preventing the death-spiral where less output deepens
+ *    the shortage.
  *  - Inputs with no market data are treated as fully available.
  */
 export const THROUGHPUT_MIN = 0.5;

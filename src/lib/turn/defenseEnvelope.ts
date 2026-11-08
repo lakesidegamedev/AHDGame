@@ -10,20 +10,15 @@ export type DefenseLineSource = Pick<
 
 /**
  * A country's defence appropriation for the year, in absolute local currency:
- * enacted → baseline category → a fraction of GDP.
+ * enacted, else baseline category, else a fraction of GDP.
  *
- * UNSLICED and UNCAPPED — this is the whole enacted line, and the appropriation accrues it
- * whole. It was once also sliced and floored into a synthetic "discretionary envelope" for
- * the Defense metrics; that gauge is retired, because its floor was country-independent and
- * 26 of 27 live nations sat exactly on it. The metrics now read the upkeep burden instead.
+ * UNSLICED and UNCAPPED: the appropriation accrues the whole enacted line.
+ * The Defense metrics do not vary with this line (see `upkeepBurden`, where
+ * the accrual cancels); it still bounds what procurement can afford.
  *
- * ⚠️ The burden does NOT vary with this line — see `upkeepBurden`, where the accrual cancels.
- * The line still matters for what the appropriation ACCRUES and therefore what procurement
- * can afford; it just does not move the Defense metrics.
- *
- * Shared by the appropriation and the metrics on purpose: a line that one of them read and
- * the other did not would be a silent divergence between what a player is charged and what
- * the force metrics measure them against.
+ * Shared by the appropriation and the metrics on purpose: a line one read
+ * and the other did not would silently diverge the charge from the measured
+ * burden.
  */
 export function resolveDefenseLineFrom(budget: DefenseLineSource | null): number {
   if (!budget) return 0;

@@ -1,38 +1,21 @@
 /**
- * Closing the German Question without deciding it.
+ * Closing the German Question without deciding it. Cancelling a crisis changes
+ * nothing in the world: no winner, no absorption, no history entry, and nothing
+ * for the actuation sweep to enact.
  *
- * The counterpart to `openSettlementCrisis`: an admin started the question, and
- * an admin can call it off. "As if it never started" means the WORLD is not
- * changed by it — no winner, no absorption, no country-history entry, no
- * cooldown, nothing for the actuation sweep to enact. The next tick simply
- * finds nothing live.
+ * WHY A STATUS AND NOT A DELETE: deleting would strand `settlementPlay` rows
+ * that record real money and actions spent. `cancelled` is terminal and inert;
+ * every sweep and read filters positively on `open`/`frozen`/`resolved`, and the
+ * unique partial index is on `open`, so a cancelled crisis does not block
+ * reopening.
  *
- * WHY A STATUS AND NOT A DELETE. Deleting would strand every `settlementPlay`
- * row pointing at a crisis that no longer exists, and those rows are the record
- * of money and actions players really spent. `cancelled` is terminal and inert
- * instead: every sweep and read in the feature filters positively on `open`,
- * `frozen` or `resolved`, so nothing picks a cancelled document up. The unique
- * partial index is on `status: "open"` too, so a cancelled crisis does not block
- * the next one — the question can be reopened on the same turn it was closed.
+ * NO REFUND: resolved plays spent real funds at the day's rates; unwinding that
+ * is a separate, larger operation.
  *
- * WHAT THIS DOES NOT DO: refund. Plays that already resolved spent real treasury
- * and real character funds, turn by turn, at the rates of the day. Unwinding
- * that is a different and much larger operation than closing a crisis, and
- * doing it silently here would be worse than not doing it. Money spent stays
- * spent; the crisis simply stops.
- *
- * A FROZEN crisis can be closed too, but the war it declared is a real conflict
- * on the Conflicts board and is NOT cancelled by this. That is deliberate — a
- * war with its own combatants, occupations and history is not this feature's to
- * silently erase. Cancelling here does stop the conflict's result from ever
- * settling the question, because `settleFrozenCrisisFromConflict` only sweeps
- * `status: "frozen"`.
- *
- * An ATTACHED war is different, and IS put back. A crisis that froze itself onto
- * somebody else's war renamed that war and added both Germanies to its hosts;
- * closing the question has to undo those, or a US-East Germany war is left
- * permanently called "The War for Germany" with no question pointing at it. The
- * war itself still runs. Only the settlement's marks on it come off.
+ * A frozen crisis's declared war is a real conflict on the Conflicts board and
+ * is NOT cancelled here, though this does stop its result from settling the
+ * question. An ATTACHED war IS undone (war's name/hosts restored) since the
+ * settlement renamed it; the war itself still runs.
  */
 import type { Db, Filter } from "mongodb";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";

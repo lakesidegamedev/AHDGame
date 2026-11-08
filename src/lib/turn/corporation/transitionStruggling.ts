@@ -1,15 +1,11 @@
 /**
- * Funded-market transition relief for sectors that struggle after the switch
- * (owner decision 2026-10-21): during the transition window, any non-state
- * sector that lost money or sold nothing on a funded turn is marked, which
- * gives it the same relief as a sector classed over-built at opening (free
- * conversion at book value, no idle upkeep while mothballed). A human owner is
- * told when sectors of theirs are newly marked, at most once every
- * TRANSITION_RENOTICE_TURNS turns, with a link to the company page where every
- * marked sector can be mothballed or converted in one click. Nothing changes a
- * sector without the player.
- *
- * One bulkWrite for the marks and one notification batch.
+ * Funded-market transition relief for struggling sectors: during the
+ * transition window, any non-state sector that lost money or sold nothing on
+ * a funded turn is marked, giving it the same relief as an over-built sector
+ * (free conversion at book value, no idle upkeep while mothballed). Owners
+ * are notified at most once every TRANSITION_RENOTICE_TURNS turns, linking
+ * to the company page where marked sectors can be mothballed or converted.
+ * Nothing changes a sector without the player.
  */
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type { CorporateSector, Corporation } from "@/lib/db/types";

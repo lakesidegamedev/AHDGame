@@ -1,22 +1,17 @@
 /**
- * Funded restart (funded-market cutover). An AI owner mothballs a plant after
- * two turns without sales, and the only way back is the glut restart, which
- * reads the legacy price ratio. Under the funded market that ratio does not
- * see the shortage the funded book measures, so a plant mothballed early
- * stays cold while buyers in its lane are asking for twice what is delivered.
+ * Funded restart. Under the funded market the glut restart's legacy price
+ * ratio cannot see the shortage the funded book measures, so an early
+ * mothballed plant stays cold while its buyers are starved.
  *
- * Here the funded market publishes, per sector type and strategy, the
- * shortage its running plants of that recipe face (units asked over delivered
- * on their main product, weighted by what they delivered). An AI owner then
- * reopens one mothballed plant a turn whose recipe reads at least
- * FUNDED_RESTART_PRESSURE. A reopened plant starts from its probe run and must
- * sell to stay open, so a wrong reading costs a turn, not a glut.
+ * The funded market publishes, per sector type and strategy, the shortage
+ * running plants of that recipe face. An AI owner reopens one mothballed plant
+ * a turn whose recipe reads at least FUNDED_RESTART_PRESSURE. A reopened plant
+ * must sell to stay open, so a wrong reading costs a turn, not a glut.
  *
- * A recipe with every plant mothballed has no running plant to publish a
- * reading, so it reads its own output lanes in the funded book instead; without
- * that a fully cold recipe could never reopen however short its buyers were.
+ * A fully mothballed recipe has no running plant to publish a reading, so it
+ * reads its own output lanes in the funded book.
  *
- * Pure: plant readings in, pressure per recipe out; sectors in, the one to reopen out.
+ * Pure: readings in, pressure and reopen decision out.
  */
 import { laneKeyOf } from "./laneKey";
 

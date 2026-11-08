@@ -24,17 +24,13 @@ export const POLE_HOLD_TURNS = 3;
 /**
  * Resolve every proxy war that has been pinned at a pole for three turns.
  *
- * ⚠️ A TURN STEP, deliberately, not a check inside `applyOccupation`.
+ * ⚠️ A TURN STEP, not a check inside `applyOccupation`: that only runs when
+ * a battle moves the front and early-returns when `control` is unchanged, so
+ * a pinned front would never re-enter it. This sweeps by `poleSinceTurn`
+ * alone, on every turn.
  *
- * That function runs only when a battle MOVES the front, and early-returns when
- * `control` does not change. Once a side is pinned at 100 the front cannot move any
- * further, so nothing would ever re-enter it and the timer would never fire — a
- * feature whose entry condition can never be met, with every test still green. This
- * sweeps by `poleSinceTurn` alone, on every turn, whether or not anyone fought.
- *
- * Reads `conflictsEnabled` itself. Every other conflict step is reached from a
- * declaration and inherits that gate upstream; this one is reached from a stamp on a
- * document, so it is the first that has to ask.
+ * Reads `conflictsEnabled` itself: it is reached from a stamp on a document,
+ * not from a declaration, so it does not inherit the upstream gate.
  */
 export async function resolveColdWarHolds(
   db: Db,

@@ -53,10 +53,10 @@ function convertMapToLocalRecord(
 
 /**
  * Fold a corp's dividend-received-deduction tax (anchor, per home country) into
- * copies of its combined + domestic per-country tax maps, and return the total
- * folded amount. Pure and non-mutating (the input maps are shared with the tax
- * ledger emitter, which must not see the tax twice). Non-positive per-country
- * amounts are skipped. See #3115.
+ * copies of its combined and domestic per-country tax maps, returning the total
+ * folded amount. Pure and non-mutating: the input maps are shared with the tax
+ * ledger emitter, which must not see the tax twice. Non-positive per-country
+ * amounts are skipped.
  */
 export function foldDividendTaxIntoTaxMaps(
   taxByCountry: ReadonlyMap<string, number>,
@@ -138,15 +138,9 @@ export async function snapshotMarketCap(
   // (see turnPhaseRegistry.ts / turn/corporation/index.ts) per the "never
   // Math.random() in turn paths" doctrine (src/lib/events/substrate/rng.ts).
   rng: () => number = Math.random,
-  // Net dividend income (local ccy, per-turn) each corp received from holdings
-  // this turn — reporting only (cash already credited in Phase 3c). Persisted so
-  // the Financials can surface a "Dividend income (holdings)" P&L line (#3109).
+  // Net dividend income (local ccy, per-turn) received from holdings. Reporting only; cash already credited in Phase 3c. Persisted for the Financials P&L line.
   dividendIncomeReceivedByCorpId?: Map<string, number>,
-  // 50% dividend-received-deduction federal tax each corp owes this turn, keyed
-  // corpId → countryId → ₳ (anchor). Folded into this row's tax fields here
-  // because the row is INSERTED in Phase 8; the Phase-3c writer that produced it
-  // ran before the row existed, so its updateOne no-op'd (#3115). Home-country
-  // domestic federal tax, so it lands in federal/combined + the domestic split.
+  // 50% dividend-received-deduction federal tax each corp owes this turn, keyed corpId -> countryId -> anchor. Folded into this row's tax fields because the Phase-3c writer ran before the row was inserted, so its update no-op'd. Home-country domestic federal tax, so it lands in federal/combined plus the domestic split.
   dividendTaxPaidByCountry?: Map<string, Map<string, number>>
 ): Promise<void> {
   let globalCap = 0;
@@ -162,10 +156,9 @@ export async function snapshotMarketCap(
 
   const snapshotByCorpId = new Map(corpSnapshots.map((s) => [s.corpId.toString(), s]));
 
-  // Resolve each corp's home currency + rate once. Used to (a) normalize the
-  // per-corp sharePrice to ₳ for cross-corp market-cap aggregation, and
-  // (b) re-denominate the ₳-valued corp turn outputs into the corp's local
-  // currency when writing per-corp history rows.
+  // Resolve each corp's home currency and rate once: normalize per-corp
+  // sharePrice to ₳ for cross-corp aggregation, and re-denominate ₳ turn
+  // outputs to local currency for history rows.
   const currencyByCorpId = new Map<string, { code: CurrencyCode | undefined; rate: number }>();
   for (const corp of corporations) {
     currencyByCorpId.set(corp._id.toString(), resolveSnapshotDenomination(corp, fxByCurrency));
@@ -248,9 +241,7 @@ export async function snapshotMarketCap(
                 turn: { $lt: turn },
               },
             },
-            // Sort on the group key first so the {corporationId, turn} index serves
-            // match, sort and $first as a DISTINCT_SCAN (one entry per corporation)
-            // instead of walking the whole history by turn (#2693).
+            // Sort on the group key first so the {corporationId, turn} index serves as a DISTINCT_SCAN (one entry per corporation) instead of walking history by turn.
             { $sort: { corporationId: 1, turn: -1 } },
             {
               $group: {
@@ -431,22 +422,13 @@ export async function snapshotMarketCap(
     const corpHistoryDocs: Omit<CorporationHistory, "_id">[] = corpSnapshots.map((s) => {
       const id = s.corpId.toString();
       const fx = currencyByCorpId.get(id);
-      // resolveSnapshotDenomination already omits `code` when the rate isn't
-      // genuinely known/usable (#2973), so this is safe to stamp directly —
-      // and since it's a real rate whenever code is set, it doubles as the
-      // write-time rate readers need to reconvert this row correctly later
-      // instead of drifting with whatever the FX rate is at read time (#2958).
+      // resolveSnapshotDenomination omits `code` when the rate isn't usable, so stamping directly is safe. When code is set the rate is real, and it doubles as the write-time rate readers need to reconvert this row correctly instead of drifting with the FX rate at read time.
       const code = fx?.code;
       const rate = fx?.rate ?? 1;
       const localPrice = s.actualSharePrice;
       const sourceCorp = corpById.get(id);
 
-      // Fold in this turn's dividend-received-deduction tax (#3115). It's a
-      // home-country DOMESTIC federal tax, so it augments federalTaxPaid, the
-      // combined corporateTaxPaid, and both the combined + domestic per-country
-      // maps — keeping combined = domestic + foreign consistent. The helper
-      // builds fresh maps so the shared snapshot (also read by the tax-ledger
-      // emitter) is never mutated, which would double-count the tax there.
+      // Fold in this turn's dividend-received-deduction tax. It's a home-country DOMESTIC federal tax, so it augments federalTaxPaid, the combined corporateTaxPaid, and both the combined + domestic per-country maps, keeping combined = domestic + foreign consistent. The helper builds fresh maps so the shared snapshot (also read by the tax-ledger emitter) is never mutated, which would double-count the tax there.
       const { mergedTaxByCountry, mergedTaxByCountryDomestic, divTaxTotalAnchor } =
         foldDividendTaxIntoTaxMaps(
           s.taxPaidByCountry,
@@ -476,9 +458,7 @@ export async function snapshotMarketCap(
           : {}),
         marketCap: Math.round(localPrice * s.totalShares),
         liquidCapital: Math.round(s.liquidCapital),
-        // SOE backing reconciliation (#2043): ₳-anchor snapshot fields to the
-        // row's local denomination, same as income/costs above. Absent unless
-        // the backing fold set it (SOE with a shortfall this turn).
+        // SOE backing fields converted from ₳-anchor to the row's local denomination. Absent unless the backing fold set it (SOE with a shortfall this turn).
         ...(s.soeBacking
           ? {
               soeBacking: {

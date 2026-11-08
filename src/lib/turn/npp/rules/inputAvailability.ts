@@ -3,17 +3,10 @@
  *
  * Plain data in, plain data out: no clock, rng or ambient state.
  *
- * A plant runs at the fill rate of its scarcest input (market/throughput, and
- * the funded producer market's run cut). Founding and growth used to read only
- * prices, so a short output pulled capacity in even when the plant could not
- * buy what it needs to run: a farm founded into a fertilizer shortage makes a
- * fraction of nameplate, pays for idle plant, and deepens the fertilizer
- * shortage it is starved by. The price of a starved input caps out near the
- * scarcity ceiling, so the price score cannot see the difference between an
- * input that is dear and one that is barely on the market at all.
- *
- * These rules read the same lagged per-state delivery fill the corporation
- * turn throttles against (`commodityPrices.stateInputAvailability`).
+ * A plant runs at the fill rate of its scarcest input. Founding and growth
+ * check this so they do not pull capacity toward a plant that cannot buy what
+ * it needs to run. Reads the same lagged per-state delivery fill the
+ * corporation turn throttles against (`commodityPrices.stateInputAvailability`).
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";

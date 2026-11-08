@@ -5,14 +5,10 @@
  * same two offices carry a nation's voice abroad, and the two features should
  * not disagree about who holds them.
  *
- * A seat is exercisable by its country's head of government, its foreign
- * minister, and its defence minister. They share one budget — the SEAT is
- * rate-limited, not the person — so which of the three acted matters only for
- * the audit trail.
- *
- * One-party states resolve correctly through `findCountryHeadedBy`: DD and RU
- * seat their General Secretary / Premier through `governmentFormations`, the
- * same row a parliamentary PM uses, so the non-presidential branch covers them.
+ * A seat is exercisable by its country's head of government, foreign minister,
+ * and defence minister. They share one budget; which of the three acted matters
+ * only for the audit trail. One-party states resolve through
+ * `findCountryHeadedBy` via `governmentFormations`.
  */
 import type { Db, ObjectId } from "mongodb";
 import { SETTLEMENT_SEATS, type SettlementSeatKey } from "@/lib/constants/settlementCrisis";

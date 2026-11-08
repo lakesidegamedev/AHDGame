@@ -1,18 +1,13 @@
 /**
- * Live money flows around a funded producer turn (funded-market cutover,
- * phase B slice S3b). Each flow is one idempotent money move with a stable key
- * per world, turn and party, so a retried turn never pays twice.
+ * Live money flows around a funded producer turn. Each flow is one idempotent
+ * money move with a stable key per world, turn and party, so a retried turn
+ * never pays twice.
  *
- * - Public funding: the commodity outlay the treasury already spends each
- *   turn (each budget line times its commodity demand rate). That outlay is deducted from the
- *   treasury today and goes nowhere; here the same amount is minted into the
- *   country's public-buyer wallet as its destination. Unspent funding is
- *   burned at close, so public buyers never accumulate cash.
- * - Construction funding: this turn's work on outstanding build orders, whose
- *   cost was paid into a sink when each order was placed. Minted into the
+ * - Public funding: the treasury's commodity outlay is minted into the
+ *   country's public-buyer wallet. Unspent funding is burned at close.
+ * - Construction funding: this turn's work on build orders is minted into the
  *   country's construction-buyer wallet and burned at close if unspent.
- * - Household opening: the one-time owner-approved seed (about 3 turns of
- *   wages), minted once per world.
+ * - Household opening: the one-time seed, minted once per world.
  * - Close: AI profit distribution and operating-payee income move to
  *   households; state-company remittances move to their treasury.
  *
@@ -324,10 +319,10 @@ export function investmentReturnMoves(
 }
 
 /**
- * Mints each background country's trading budget for this turn (#5702): what
- * its macro demand would spend at reference prices. The country's own money
- * is not modelled, so the budget comes from outside the world economy, like a
- * public buyer's, and whatever is in the wallet at close goes back there.
+ * Mints each background country's trading budget for this turn: what its macro
+ * demand would spend at reference prices. Its money is not modelled in the
+ * world economy, so the budget comes from outside, like a public buyer's, and
+ * whatever remains in the wallet at close goes back there.
  */
 export function backgroundFundingMoves(
   worldEpoch: string,

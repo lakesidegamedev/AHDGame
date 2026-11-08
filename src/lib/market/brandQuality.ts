@@ -2,27 +2,23 @@ import { clamp01 } from "@/lib/numeric/rules";
 import { EXTRACTABLE_RESOURCES, type CommodityType } from "@/lib/constants/commodities";
 
 /**
- * Output quality — the four production pillars (design: /reports/brand-loyalty-plan).
+ * Output quality from four production pillars: /reports/brand-loyalty-plan.
  *
  *   quality = 100 · (tech^a · inputs^b · wages^c · operations^d)
  *
- * A weighted geometric mean of four sub-scores, each in [floor, 1]. The pillars
- * SUBSTITUTE rather than gate: a weak input drags quality down but enough tech,
- * wages, or operations pull it back up (a master shop makes good goods from
- * ordinary materials) — the small floor on each sub-score keeps one bad pillar
- * from collapsing quality to zero. Tech carries the largest weight.
+ * Weighted geometric mean of four sub-scores in [floor, 1]. Pillars SUBSTITUTE rather than
+ * gate: a weak input drags quality down but enough tech, wages or operations pull it back
+ * up (a master shop makes good goods from ordinary materials). The small per-sub-score
+ * floor keeps one bad pillar from collapsing quality to zero. Tech is weighted highest.
  *
- * The four pillars map to the real pillars of manufacturing quality:
- *   - tech       — design & engineering (corp R&D / tech-node depth)
- *   - inputs     — material quality (lagged avg quality of the commodities consumed)
- *   - wages      — workforce skill/morale (wage level vs baseline)
- *   - operations — process control / QC (logistics-&-operations strength)
+ * Pillars: tech = design & engineering (R&D / tech-node depth); inputs = material quality
+ * (lagged avg quality of consumed commodities); wages = workforce skill/morale (vs baseline);
+ * operations = process control / QC (logistics-&-operations strength).
  *
- * Raw extraction has no quality — ore is ore — so extractable-only sectors are
- * quality-neutral (reliability, measured by loyalty, is their "quality").
+ * Raw extraction has no quality, so extractable-only sectors are quality-neutral; their
+ * reliability, measured by loyalty, is their quality.
  *
- * Pure: no DB, no clock. The turn layer feeds it lagged inputs and persists the
- * per-sector result + the corp/commodity rollups.
+ * Pure: no DB, no clock. The turn layer feeds lagged inputs and persists results.
  */
 
 // ── Weights (sum to 1; tech-led) and bounds ──────────────────────────────────
@@ -35,10 +31,10 @@ const QUALITY_WEIGHT_OPERATIONS = 0.2;
 const QUALITY_SUBSCORE_FLOOR = 0.1;
 
 /**
- * rdScore that reads as "par" tech. Calibrated to the live distribution
- * (2026-07-06: rdScore p50≈7.7, p90≈51): at 25 the median corp lands ~0.55 and
- * a p90 R&D corp saturates ~1.0, so tech meaningfully differentiates without
- * crushing the median. (Tech-tree corps push rdScore higher; the ref still holds.)
+ * rdScore that reads as "par" tech. Calibrated to the live rdScore
+ * distribution (p50 below, p90 above): 25 puts the median corp around 0.55
+ * and a p90 R&D corp near 1.0, so tech differentiates without crushing the
+ * median.
  */
 export const QUALITY_TECH_REF = 25;
 /**

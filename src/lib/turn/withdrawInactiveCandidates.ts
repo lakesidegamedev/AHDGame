@@ -63,10 +63,9 @@ export async function withdrawInactiveCandidates(
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
 
-  // Archive their campaigns so an inactive player's campaign stops appearing on
-  // Campaign Operations next to the candidates still running (#1313). A row
-  // missing `electionId` is a data anomaly — skip it rather than throw, since
-  // this runs inside turn processing and a throw would abort the phase.
+  // Archive withdrawn campaigns so they stop appearing in Campaign Operations.
+  // Skip rows missing electionId rather than throw: a throw would abort the
+  // phase.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw

@@ -1,19 +1,16 @@
 /**
- * Writes the annualized sector-subsidy cost line into the budget spending.byCategory
- * every turn. This keeps the figure current between fiscal-year resets.
+ * Writes the annualized sector-subsidy cost line into budget
+ * spending.byCategory every turn, keeping the figure current between
+ * fiscal-year resets.
  *
- * Cost formula: sum of (qualifying sector.revenue × TURNS_PER_YEAR) for each active subsidy,
- * grouped by the budget that owns the subsidy (national → federalBudget, state → stateBudgets).
+ * Cost: sum of (qualifying sector.revenue × TURNS_PER_YEAR) per active subsidy,
+ * grouped by owning budget (national to federalBudget, state to stateBudgets).
  *
- * Currency semantics (v0.2.6):
- *   - Per-sector revenue is normalized to ₳ via the owning corp's FX before
- *     summation so corps in different home currencies weight consistently.
- *   - Budget money fields (`spending.*`, `revenue.*`, `surplus`) are stored in
- *     the owning country's currency, so `loadAnnualSubsidyCostMaps` re-denominates
- *     each subsidy's ₳ total to its country's currency before returning (#2825).
- *     The costs written here are therefore same-unit with the budget doc — no
- *     conversion happens in this file, and none may be added without removing
- *     the one in the loader (that WOULD double-convert).
+ * Currency: per-sector revenue is normalized to ₳ via the owning corp's FX
+ * before summation. Budget money fields are stored in the owning country's
+ * currency, so the loader re-denominates to that currency. Costs here are
+ * therefore same-unit with the budget doc; no conversion here, and none may be
+ * added without removing the loader's.
  */
 
 import type { Db } from "mongodb";

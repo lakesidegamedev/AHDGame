@@ -109,9 +109,9 @@ export async function runFreightSettlementPhase(
   // configured window instead of a hard balance step. R scales the cap here and
   // the persisted billing money below; unset window → 1 (instant, unchanged).
   const freightRampFraction = freightSettlementRampFraction(freightSettlementConfig, turn);
-  // Canonical freight billing v1 (issue #897): while on, the sourcing pass's
-  // per-state shipping money aggregates are persisted on the network doc for
-  // the next corporation turn to apportion. Off (the default) writes nothing.
+  // While on, the sourcing pass's per-state shipping money aggregates are
+  // persisted on the network doc for the next corporation turn to apportion.
+  // Off (the default) writes nothing.
   const canonicalFreightBillingEnabled =
     freightSettlementConfig?.canonicalFreightBillingEnabled === true;
   let freightSettlement: FreightSettlement | null = null;

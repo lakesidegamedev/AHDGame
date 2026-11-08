@@ -171,17 +171,10 @@ export async function processCorporationTurn(
   const timer = createCorporationTurnTimer();
   const mark = timer.mark;
 
-  // The preamble reads are independent of each other, so they run as one
-  // parallel round-trip instead of ~7 serial ones.
-  //
-  // marketGovernorConfig: structural market rework (audit t806), Fix 1 scales
-  // realized sector revenue by the lagged market price of its outputs. Inert
-  // when marketSystemMode is "off" (the default), no economic change. Read
-  // HERE, before the lookup build, because the market-share basis below needs
-  // the mode and the mode lives in this same document: two separate resolutions
-  // per turn used to disagree in principle, so there is now exactly one read
-  // and exactly one resolved mode for the whole turn. The commandEconomyEnabled
-  // gate lives in the same document, so it rides the same projection.
+  // Preamble reads are independent, so they run as one parallel round-trip
+  // instead of ~7 serial ones. marketGovernorConfig must be read here, before
+  // the lookup build: the market-share basis below needs the mode and the mode
+  // lives in this same document, so we resolve it exactly once per turn.
   const [
     forexEnabled,
     techTreesEnabled,
@@ -238,10 +231,9 @@ export async function processCorporationTurn(
   const freightSettlementActive =
     (marketGovernorConfig as { freightSettlementMode?: string } | null)?.freightSettlementMode ===
       "active" && marketAtLeast(marketSystemMode, "clearing");
-  // Canonical freight billing v1 (issue #897, default OFF): while on, last
-  // turn's per-state shipping money is loaded from the sourcingNetworkLoad doc
-  // and apportioned across sectors below. Off keeps both lookup maps empty and
-  // the whole billing path inert.
+  // Canonical freight billing (default OFF): when on, last turn's per-state
+  // shipping money is loaded from sourcingNetworkLoad and apportioned across
+  // sectors below. Off leaves lookup maps empty and billing inert.
   const canonicalFreightBillingEnabled =
     (marketGovernorConfig as { canonicalFreightBillingEnabled?: boolean } | null)
       ?.canonicalFreightBillingEnabled === true;
@@ -485,11 +477,7 @@ export async function processCorporationTurn(
       market.mediaRegulationPolicyOptionIndex
     );
   }
-  // Canonical freight billing (issue #897): apportion last turn's state-scoped
-  // shipping money onto sectors once, before the per-corp loop, and thread the
-  // result through the market context like the delivery-limited telemetry.
-  // Strictly flag-gated: with the flag off the lookup maps are empty, this
-  // block is skipped, and processSector neither computes nor persists billing.
+  // Canonical freight billing: apportion last turn's state-scoped shipping money onto sectors once, before the per-corp loop, and thread it through the market context. Flag-gated: with the flag off, lookup maps are empty and no billing is computed or persisted.
   if (canonicalFreightBillingEnabled) {
     const billing = buildFreightBillingBySector({
       lookups,
@@ -1430,21 +1418,9 @@ export async function processCorporationTurn(
     }
   }
 
-  // Phase 3c-fund: Constituent corp dividends to index funds (75% reinvest / 25% pass-through).
-  //
-  // This was the single dominant cost of the whole corporationTurn phase (~4.5s
-  // of ~5s at 8 countries, measured via SIM_CORP_TIMING), ~500 (fund,corp)
-  // accruals per turn, each `processIndexFundDividend` doing ~10 sequential DB
-  // round-trips, run one-after-another = ~5,000 serial round-trips. It scales
-  // with corp count, so at the 30-50-country target it would balloon.
-  //
-  // Fixed two ways without changing behavior: (1) pass the turn we already hold
-  // so each call skips a redundant getCurrentTurn findOne; (2) group accruals by
-  // fund and run the fund groups CONCURRENTLY (bounded by the driver pool) while
-  // keeping each fund's own accruals sequential, same-fund accruals touch the
-  // same fund cash/positions, so serializing within a fund preserves exact
-  // ordering + per-corporation tx-log granularity, while the ~32 independent
-  // funds overlap. Per-corp dividend attribution is unchanged.
+  // Constituent corp dividends to index funds (75% reinvest / 25% pass-through).
+  // Grouped by fund and run concurrently; within a fund accruals stay sequential
+  // because they touch the same fund cash/positions and ordering must be exact.
   mark("rdInnovations");
   await settleFundDividendAccruals(db, fundDividendAccruals, turn);
   mark("fundDividends");

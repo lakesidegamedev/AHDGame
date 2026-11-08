@@ -1,31 +1,23 @@
 /**
- * Shared snap-election trigger used by both the player-facing PM route and
- * the turn-phase auto-snap watcher.
+ * Shared snap-election trigger used by the player-facing PM route and the
+ * turn-phase auto-snap watcher.
  *
  * A snap election:
- *   1. Cancels active/upcoming regular lower-chamber elections for the country,
- *      plus live by-elections for that chamber (dissolution lapses them).
- *   2. Fails in-progress bills whose `currentChamber` is the country's lower
- *      chamber (via `failInProgressBills`). Upper-chamber bills, JP cabinet
- *      review, and enrolled bills are preserved — those chambers are not
- *      dissolved.
- *   3. Spawns fresh `snap_${lowerChamberKey}` elections per region, starting
- *      immediately with a 48h window (24h primary + 24h general).
+ *   1. Cancels active/upcoming regular lower-chamber elections and live
+ *      by-elections for that chamber.
+ *   2. Fails in-progress bills in the lower chamber. Upper-chamber bills, JP
+ *      cabinet review, and enrolled bills are preserved (chambers not
+ *      dissolved).
+ *   3. Spawns fresh `snap_${lowerChamberKey}` elections per region (48h window).
  *   4. Vacates every member of the dissolved lower chamber.
  *   5. Increments `snapElectionsUsed` and stamps `lastSnapElectionTurn`.
- *   6. Vacates the sitting PM and unforms the government via
- *      `unformGovernmentAndVacatePM` — status → "pending", cabinet and PM
- *      `currentOffice` cleared, 96-turn vacancy clock re-armed.
- *   7. Updates government cycle/seat counters via
- *      `resetParliamentaryGovernmentAfterElection` (now takes the
- *      no-sitting-PM branch).
+ *   6. Vacates the PM and unforms the government (96-turn vacancy clock).
+ *   7. Updates government cycle/seat counters.
  *
- * Gates are enforced unless `bypassLimits: true`. Auto-snap and admin tools
- * bypass; PM-triggered snaps do not. PM-triggered snaps additionally fail if
- * an active `noConfidenceVotes` doc exists for the country — a PM cannot
- * preempt a pending VONC by calling snap.
- * UK PM-triggered snaps also wait for any active post-Commons confidence
- * motion to resolve, even if the limit/cooldown bypass is supplied.
+ * Gates are enforced unless `bypassLimits: true` (auto-snap and admin tools
+ * bypass; PM-triggered snaps do not). PM snaps also fail if an active
+ * `noConfidenceVotes` doc exists, and UK PM snaps wait for an active
+ * post-Commons confidence motion.
  */
 
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";

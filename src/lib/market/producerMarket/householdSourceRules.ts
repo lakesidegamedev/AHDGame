@@ -1,19 +1,18 @@
 /**
- * Steady household income for the funded market (gameConfig.producerHouseholdIncomeFloor).
+ * Steady household income for the funded market
+ * (gameConfig.producerHouseholdIncomeFloor).
  *
- * Household transfers (pensions, welfare, benefits) are scaled by the plant
- * economy's share of GDP. That share is measured from funded value added, so it
- * shrinks with the plant economy and transfers collapse with it (45.9M a turn at
- * the opening to 0.6M after 24 turns on c21). Two rules end that feedback while
- * staying inside the government's own transfer lines:
+ * Household transfers are scaled by the plant economy's share of GDP, measured
+ * from funded value added, so transfers collapse as the plant economy shrinks.
+ * Two rules end that feedback while staying inside the government's transfer
+ * lines:
  *
- * 1. Held share: a country's share never falls below the share it had at its
- *    first funded turn.
- * 2. Income floor: when planned household income (wages and operating payments
- *    the plants will pay, plus transfers) is under the floor, every country's
- *    share rises by the same increment of its full transfer line, capped at the
- *    whole line, until the floor is met. The part above the held share is the
- *    explicit top-up reported by the econ report.
+ * 1. Held share: a country's share never falls below its share at its first
+ *    funded turn.
+ * 2. Income floor: when planned household income (plant wages plus transfers)
+ *    is under the floor, every country's share rises by the same increment of
+ *    its full transfer line, capped at the whole line, until the floor is met.
+ *    The part above the held share is the top-up the econ report shows.
  *
  * Pure: shares, full transfer lines and planned income in, shares and top-up out.
  */

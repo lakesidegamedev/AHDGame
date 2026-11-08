@@ -1,26 +1,8 @@
 /**
- * Per-turn spend-stock rollover sweep for the swing-flow engine's money
- * driver.
- *
- * Each campaign accumulates `spendThisTurn` via $inc as upgrades fire
- * (`campaignCommands.ts`) and maintenance ticks (`campaignTurn.ts`). After
- * every general-election tally in a turn-tick has read its campaigns'
- * spend (via `fundsByParty.ts`, which sums carried stock plus the live
- * accumulator), this sweep folds the accumulator into the decaying
- * `spendStock` and clears it so the NEXT turn's interval starts fresh.
- *
- * Ticket #1261: the sweep used to simply wipe the accumulator, so the
- * driver forgot everything every turn. Now the stock carries recent spend
- * forward with `SPEND_STOCK_RETENTION` fade — idle turns decay gradually
- * instead of cliffing to zero, while hoarded treasuries still score zero
- * (the stock only grows through actual spend). Stock below
- * `SPEND_STOCK_DUST_CUTOFF` is dropped so idle rows go quiet instead of
- * dribbling fractions forever.
- *
- * Runs as a turn-phase scheduled after `voteAccumulation` in
- * `turnPhaseRegistry.ts`. Phase and function names are kept (they are
- * referenced by turn logs and the phase registry) even though the sweep
- * now rolls over rather than purely resetting.
+ * Per-turn rollover of campaign spend: after the tally reads `spendThisTurn`,
+ * fold it into decaying `spendStock` (retention fade, dust cutoff) and clear it
+ * so next turn starts fresh. Stock only grows through actual spend, so hoarded
+ * treasuries still score zero. Must run after `voteAccumulation`.
  */
 
 import type { Db } from "mongodb";

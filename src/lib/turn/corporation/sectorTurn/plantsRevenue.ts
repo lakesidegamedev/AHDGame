@@ -1,14 +1,14 @@
 /**
- * Extraction capacity and realized revenue: the P3b hard min, the production
- * chain, and the launch-safety governor (#588).
+ * Extraction capacity and realized revenue: the hard min, the production
+ * chain, and the launch-safety governor.
  *
  * Pure computation split out of processSector. Below plants an extraction
- * sector is gated by its capital stock and a soft geological revenue haircut
- * (floor + 240-turn grace); under plants the deposit is a HARD ceiling on
- * produced units and the plants ramp is the only fade-in. The governor binds
- * derived plants revenue to within ±cap of the pre-flip baseline counterfactual
- * so the flip turn is a no-op. Returns the capacity-binding notification as
- * data; the caller pushes it. No reads or writes here, only the turn inputs.
+ * sector is gated by capital stock and a soft geological revenue haircut
+ * (floor + grace); under plants the deposit is a HARD ceiling on produced
+ * units and the plants ramp is the only fade-in. The governor binds derived
+ * plants revenue within ±cap of the pre-flip baseline counterfactual so the
+ * flip turn is a no-op. Returns the capacity-binding notification as data;
+ * the caller pushes it. No reads or writes here, only the turn inputs.
  */
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
@@ -135,7 +135,7 @@ export interface PlantsRevenueInput {
   /**
    * Lagged supply and demand of the book one output clears in, the same book
    * `throttleLegPriceRatio` prices. Lets a plant that sold out into a short
-   * market ramp to the unmet demand (ticket 1393). Absent means no headroom.
+   * market ramp to unmet demand. Absent means no headroom.
    */
   throttleLegBalance?: (
     commodity: CommodityType
@@ -273,26 +273,20 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
   const embargoRevenueFactor = embargoLegacyMothball
     ? 0
     : 1 - embargoExportExposure * TRADE_EMBARGO_EXPORT_LOSS_SHARE;
-  // ─── P3b scoped touch: ONE capacity system for extraction ────────────────
-  //
-  // Below plants an extraction sector is gated by TWO capacity systems at once:
-  // its own capital stock (the capital tier) and the state's geology, and the
-  // geological leg arrives as a soft REVENUE haircut - floored at
-  // EXTRACTION_CAPACITY_HAIRCUT_FLOOR (0.5) and faded in over a 240-turn
-  // per-sector grace window.
+  // Extraction under plants is gated by TWO capacity systems: the sector's
+  // capital stock and the state's geology. The geological leg arrives as a soft
+  // REVENUE haircut floored at EXTRACTION_CAPACITY_HAIRCUT_FLOOR (0.5) and
+  // faded in over a 240-turn per-sector grace window.
   //
   // Under plants, capacity IS the production base, so the deposit is a HARD
   // ceiling on the same quantity:
   //
   //     producedUnits = min(plant-driven produced, state resource remaining)
   //
-  // No 0.5 floor, no 240-turn per-sector grace - the plants ramp below is the
-  // only fade-in, and it is the same one every other plants leg uses.
-  //
-  // FLIP IDENTITY: `plantsRampLambda` is 0 on the sector's first plants turn, so
-  // the factor is exactly 1 there. Non-extraction sectors have utilization 1 and
-  // are unaffected; non-plants worlds keep `capacityHaircut` (floor + 240-turn
-  // ramp) byte-identically.
+  // No floor and no grace: the plants ramp below is the only fade-in.
+  // `plantsRampLambda` is 0 on the sector's first plants turn, so the factor is
+  // exactly 1 there. Non-extraction sectors and non-plants worlds are
+  // unaffected.
   const extractionRampLambda = Math.max(
     plantsRampLambda,
     Math.max(0, Math.min(1, input.noBuyerPhaseOut ?? 0))
@@ -305,25 +299,14 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     plantsExtractionHardMin,
     activeFraction
   );
-  // P3a scoped touch #1 — tech output rate reaches the PLANTS units chain.
+  // techEffects.outputRateMult scales the supply rates sector reports to the
+  // commodity ledger, but producedUnits (and derived revenue) come from
+  // capitalStock, so under plants the effect was half-wired. techOutputUnitsMultiplier
+  // is the same scaling expressed in capacity units, so produced == offered == ledger.
   //
-  // `techEffects.outputRateMult` is applied to the supply rates the sector
-  // reports to the commodity ledger (`effectiveSupply`, below). Under plants
-  // that left the effect half-wired: the world received the extra steel, but the
-  // sector's own `producedUnits` — hence its derived revenue — never moved,
-  // because units come from `capitalStock` rather than from the supply rates.
-  // `techOutputUnitsMultiplier` is the same scaling expressed in capacity units
-  // (a unit-contribution-weighted mean of the per-commodity multipliers), so the
-  // two statements agree.
-  //
-  // FLIP IDENTITY: the multiplier is exactly 1 for an empty `outputRateMult` —
-  // every corp without the tech, and every world with the tech tree off — so the
-  // flip turn is unchanged. Plants-gated so non-plants behaviour is byte-identical.
-  //
-  // The 1991 energy productivity ramp rides the same factor: a smooth,
-  // turn-keyed gain on output per unit of energy capacity (exactly 1 on any
-  // other sector, preset, or before the ramp starts). It is folded into this
-  // multiplier, not a new leg, so produced == offered == ledger stays intact.
+  // The multiplier is exactly 1 for an empty outputRateMult and for non-plants
+  // sectors, so the flip turn is unchanged. The 1991 energy productivity ramp is
+  // folded into this multiplier, not a new leg, keeping produced == offered == ledger.
   const plantsTechOutputMultiplier = plantsEnabled
     ? productionProductivityMultiplier({
         sectorType: sector.sectorType,
@@ -359,40 +342,18 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     throughputFactor *
     capitalFactor *
     labourOutputFactor *
-    // Ticket 1498: output-per-capacity gains (tech output rate, the 1991 energy
-    // productivity ramp) raise `producedUnits`, so the anchor must carry them
-    // too. Without this the governor read the extra output as excess revenue
-    // and clamped it away during the ramp, so every unit sold below the price
-    // the clearing leg promised. Exactly 1 without tech or the ramp, so the
-    // flip identity and every other sector are unchanged.
+    // Output-per-capacity gains (tech output rate, energy productivity ramp) raise `producedUnits`, so the anchor must carry them too. Without this, extra output reads as excess revenue and gets clamped, selling units below the clearing-leg price. Exactly 1 without tech or ramp, so the flip identity and other sectors are unchanged.
     plantsTechOutputMultiplier *
     // Embargo: legacy total mothball earns nothing (factor 0); the trade-exposure
     // model keeps the domestic remainder (1 − exported share). 1 when unembargoed.
     embargoRevenueFactor;
-  // Ticket #1072: which production-policy curve throttles TONNAGE.
-  //
-  // The policy slider publishes two curves: an OUTPUT curve (−10%…+15%, what
-  // the UI labels as the units effect) and a REVENUE curve (−5%…+10%). Under
-  // plants, revenue is DERIVED from tonnage, so exactly one of them may gate
-  // `productionFactor` or the slider gets counted twice on the top line.
-  //
-  // It used to be the revenue curve, and the output curve was applied only
-  // where output LEFT the sector — the world-supply ledger and the clearing
-  // offer, both via `plantsSupplyScaledUnits`. Two things broke from that. The
-  // units on screen moved on the wrong curve (−4.4% at policy −22, against the
-  // −8.8% the panel promised), and, worse, the offer was the produced tonnage
-  // scaled AGAIN by the output curve, so ~9% of every throttled run was
-  // physically unsellable: built, paid for, never offered, piling up as unsold
-  // inventory the owner is charged to hold. With 100% market share no price
-  // move could clear it, because it was never on the book.
-  //
-  // So under plants the OUTPUT curve gates tonnage, the revenue curve steps
-  // aside, and `plantsSupplyScaledUnits` no longer re-applies output. The chain
-  // is applied exactly once and produced == offered.
-  //
-  // FLIP IDENTITY: at policy 0 both curves are 1.0, so nothing moves. Non-plants
-  // worlds are untouched — there `producedUnits` is the revenue nameplate and
-  // the ledger still owns the output curve on that path.
+  // The policy slider publishes two curves: an OUTPUT curve (−10%…+15%) and a
+  // REVENUE curve (−5%…+10%). Under plants, revenue is DERIVED from tonnage, so
+  // exactly one may gate `productionFactor` or the slider is counted twice.
+  // The OUTPUT curve gates tonnage and the revenue curve steps aside, and
+  // `plantsSupplyScaledUnits` no longer re-applies output, so produced ==
+  // offered. Applies the chain exactly once. At policy 0 both curves are 1.0,
+  // so nothing moves; non-plants worlds are untouched.
   const policyTonnageMultiplier = plantsEnabled
     ? getOutputMultiplier(newPolicyLevel) * (input.policyHeadroomFactor ?? 1)
     : revenueMultiplier;
@@ -495,8 +456,8 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
       plantsTechOutputMultiplier *
       labourOutputFactor,
     // Sales restated by what buyers paid for each output leg, so a mixed plant
-    // that sells out its valuable product is not cut for its glutted co-product
-    // (ticket 1370). Single-output sectors read `soldUnits` unchanged.
+    // that sells out its valuable product is not cut for its glutted co-product.
+    // Single-output sectors read `soldUnits` unchanged.
     priorSoldUnits: priorThrottleSoldUnits,
     priorProducedUnits: priorThrottleProducedUnits,
     guaranteedDemandUnits: marketPlantsEnabled
@@ -534,29 +495,13 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
   const plantsDerivedHourlyRevenue = plantsEnabled
     ? ((producedUnits * plantsMixPrice) / TURNS_PER_DAY) * clearingRevenueLeg * embargoRevenueFactor
     : 0;
-  // Launch-safety governor, same shape as the clearing leg: bound the derived
-  // revenue to within ±capEffective(λ) of the pre-flip baseline and fade that
-  // divergence in from zero over the ramp, anchored at the sector's first plants
-  // turn. λ = 0 on the flip turn ⇒ returns the baseline exactly, so a sector
-  // arriving with capital-mode headroom (capacity 1.1× implied units) does not
-  // jump 10% on day one — it drifts there over the ramp.
-  //
-  // C5: this is an AMOUNT, so it uses the AMOUNT variant. The factor variant
-  // substitutes the baseline whenever its market input is <= 0, which is right
-  // for a factor and catastrophic for an amount: a sector that produced nothing
-  // (halted, unstaffed, output-less) was handed its FULL baseline revenue with
-  // none of the costs — roughly a 6x profit pump — and the boundary was
-  // discontinuous, since an epsilon of production earned 85% of nameplate while
-  // exactly zero earned 100%. `softenedMarketRealizationAmount` takes zero
-  // literally, so the halt is continuous and, at full ramp, lands on 0.
-  //
-  // A zero BASELINE (legacy embargo mothball, dead sector) has no anchor to
-  // govern against, and the amount variant passes the derived value through.
-  //
-  // D12: a mothballed sector earns exactly 0. This stays an explicit bypass
-  // rather than relying on the general rule: it documents the intent, and it
-  // holds even mid-ramp, where the general rule would still blend a cold plant
-  // part-way toward its running baseline.
+  // Launch-safety governor: bound derived revenue to within ±capEffective(λ) of
+  // the pre-flip baseline, fading in over the ramp. λ=0 on the flip turn returns
+  // the baseline exactly. This is an AMOUNT, so it uses the amount variant: the
+  // factor variant substitutes the baseline when market input <= 0, which would
+  // pay a halt its full nameplate revenue and make the boundary discontinuous.
+  // A zero baseline passes through (no anchor to govern). Mothballed sectors earn
+  // exactly 0, bypassing the governor even mid-ramp.
   const marketHourlyRevenue = mothballed
     ? 0
     : plantsEnabled
@@ -626,10 +571,10 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
 
 /**
  * A player-built sector born under plants is exempt from the launch governor
- * so it is never held BELOW its market revenue (ticket 1498). The exemption
- * may only lift revenue: where the governed value is higher (a sector whose
- * pre-flip anchor sits above what its local market now pays, such as media
- * stations in small states), it keeps the governed value (ticket 1502).
+ * so it is never held BELOW its market revenue. The exemption may only lift
+ * revenue: where the governed value is higher (a sector whose pre-flip anchor
+ * sits above what its local market now pays, such as media stations in small
+ * states), it keeps the governed value.
  */
 export function governedOrExemptRevenue(
   exempt: boolean,

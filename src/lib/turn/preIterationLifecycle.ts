@@ -2,31 +2,21 @@ import type { Db } from "mongodb";
 import type { Election, GameState } from "@/lib/db/types";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 
-/**
- * Detect when the live pre-iteration "founding" phase is complete and end it.
+/*
+ * Detect completion of the pre-iteration founding phase and end it.
  *
- * The founding election spawns one cycle-0 race per in-scope seat at bootstrap
- * (see the founding branch in `pickNextCanonicalCycle`). Every political nation
- * therefore has cycle-0 races; economy-only / coming-soon nations spawn none.
- * The phase is complete once every founding race has resolved — i.e. there are
- * NO active/upcoming cycle-0 races left AND at least one has resolved (the
- * latter guards against firing on turn 1 before the races exist).
+ * The founding phase spawns one cycle-0 race per in-scope seat. It is complete
+ * once every founding race has resolved: no active/upcoming cycle-0 races
+ * remain, and at least one has resolved (guards the first turn).
  *
- * On completion we:
- *   - flip `preIteration.active` off and stamp `completedTurn`;
- *   - stamp `preIterationTurns = newTurn − 1` so the calendar resumes at the era
- *     start (turn 1) next turn and every canonical anchor shifts forward by the
- *     same amount (see `getCycleAnchors`), preserving the historical mapping;
- *   - invalidate the game-time cache so the pin lifts immediately.
+ * On completion: clear preIteration.active, stamp completedTurn, stamp
+ * preIterationTurns = newTurn - 1 so the calendar resumes at turn 1 next turn
+ * and canonical anchors shift to preserve the historical mapping, then
+ * invalidate the game-time cache.
  *
- * The `preIteration.active` flip is written to the DB here, but the current
- * turn's in-memory `gameState` snapshot still reads `active: true` — so the
- * canonical spawners guarded on it stay suppressed for the rest of THIS turn and
- * only resume (with the offset applied) next turn. That one-turn lag avoids a
- * half-applied tick where cycle-1 spawns before the offset lands.
- *
- * Runs AFTER election resolution + government formation each turn, and is a
- * no-op unless a pre-iteration is active.
+ * The DB flip happens here but the current in-memory gameState still reads
+ * active: true, so cycle-1 spawns wait one turn until the offset lands. Runs
+ * after election resolution and government formation; no-op when inactive.
  */
 export async function detectPreIterationComplete(
   db: Db,

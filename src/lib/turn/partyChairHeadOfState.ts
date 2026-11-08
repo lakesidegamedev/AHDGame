@@ -1,19 +1,16 @@
-/**
- * Ceremonial head-of-state sync for every country whose head of state is held, by
- * political convention, by the ruling party's chair.
+/*
+ * Ceremonial head-of-state sync for countries whose head of state is held by
+ * the ruling party's chair by political convention.
  *
- * The People's Republic had this from the start (`syncCNPresident`, hardcoded to CN);
- * the Warsaw Pact one-party states did not, and so rendered a permanent "Head of
- * State: Vacant" on their country page while their ruling party plainly had a chair —
- * which is exactly what a player asked about. Selection is driven by
- * `headOfStateSelection === "partyChairSync"` and the office by whichever office type
- * carries `isHeadOfState`, so wiring a country is a config change, not a code change.
+ * Selection is driven by `headOfStateSelection === "partyChairSync"`; the
+ * office is whichever type carries `isHeadOfState`. Wiring a country is a
+ * config change, not a code change.
  *
- * Does NOT touch `character.currentOffice`. The role is ceremonial and stacks on top
- * of whatever primary office the chair already holds (General Secretary, Premier, an
- * NPC delegate seat); the character page surfaces it through `electedOfficials`.
+ * Does NOT touch `character.currentOffice`: the role is ceremonial and stacks
+ * on the chair's primary office; the character page surfaces it via
+ * `electedOfficials`.
  *
- * Idempotent: on a no-op turn it performs reads and zero writes.
+ * Idempotent: a no-op turn performs reads and zero writes.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";

@@ -1,32 +1,24 @@
-/**
- * SCOTUS Surprise Case Turn (#3607, spec #3581/#3598).
+/*
+ * SCOTUS Surprise Case Turn.
  *
  * Each turn, `rollSurpriseCaseSpawn` (pure, unit-tested in isolation) checks
- * whether a procedurally-spawned, non-historical Docket case fires this turn
- * — flavor content on top of the curated real-historical Docket
- * (#3599-3602). Unlike a curated Docket case, a surprise case has no real
- * historical ruling to affirm or diverge from, so there is no "affirms
- * history" no-op state: every spawn produces a ruling, decided purely by the
- * sitting Court's current majority headcount on the picked template's tagged
- * axis (`decideCaseOutcome`, reused unmodified — see the doc comment on
- * `HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION` below for why a placeholder
- * direction is passed in).
+ * whether a procedurally spawned, non-historical Docket case fires. Unlike a
+ * curated Docket case, a surprise case has no real historical ruling to affirm
+ * or diverge from, so there is no "affirms history" no-op state: every spawn
+ * produces a ruling, decided purely by the sitting Court's majority headcount on
+ * the picked template's tagged axis (`decideCaseOutcome`; see the doc comment on
+ * `HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION` for the placeholder direction).
  *
- * A fired case is synthesized AND resolved in the same turn — inserted into
- * the shared `docketCases` collection directly as `status: "decided"`
- * (never `"pending"`), tagged `isSurprise: true` so it never enters
- * `scotusDocketTurn.ts`'s pending-case query and so the case-history read
- * layer (`queries.ts` `getScotusCaseHistory`) can tell it apart from real
- * historical content. The resulting ruling (when the majority isn't tied)
- * flows through the exact same `onBillEnacted` pipeline a diverged Docket
- * case uses, tagged `source: "scotus_surprise_ruling"` — a value distinct
- * from `"scotus_ruling"` so financial/audit trails and #3605's UI can
- * separate curated historical rulings from background-probability flavor
- * content.
+ * A fired case is synthesized AND resolved in the same turn, inserted into
+ * `docketCases` directly as `status: "decided"` (never `"pending"`) and tagged
+ * `isSurprise: true`, so it never enters `scotusDocketTurn.ts`'s pending-case
+ * query and the history read layer can tell it apart from real historical
+ * content. The ruling (when the majority isn't tied) flows through the same
+ * `onBillEnacted` pipeline a diverged Docket case uses, tagged
+ * `source: "scotus_surprise_ruling"` so audit trails and UI can separate it.
  *
- * Runs AFTER `scotusDocketTurn.ts` in `scotusTurn.ts` — same ordering
- * rationale as the rest of that file (a same-turn Court composition change
- * should be reflected before a case, historical or surprise, is decided).
+ * Runs AFTER `scotusDocketTurn.ts`: a same-turn Court composition change should
+ * be reflected before any case is decided.
  */
 import { getEraContext } from "@/lib/era/context";
 import type { Db } from "mongodb";
@@ -51,16 +43,12 @@ export interface ScotusSurpriseCaseTurnResult {
 }
 
 /**
- * `decideCaseOutcome` requires a `historicalMajorityDirection` to compare
- * against, because its `.outcome` field (affirmed/diverged) was designed for
- * curated Docket cases that DO have one. A surprise case doesn't — per
- * #3607 there is no affirm state, every spawn is a ruling — so this constant
- * is a fixed placeholder passed in purely to reuse the function's majority
- * HEADCOUNT tally (`.majoritySide`/`.positiveCount`/`.negativeCount`); its
- * value is arbitrary and its `.outcome` field is deliberately never read
- * below. This is the "reuse the majority-headcount function directly, don't
- * duplicate that logic" approach #3607 asks for, without inventing a second
- * headcount-only helper in `divergence.ts` for one caller.
+ * `decideCaseOutcome` requires a `historicalMajorityDirection`, because its
+ * `.outcome` field (affirmed/diverged) was designed for curated Docket cases
+ * that have one. A surprise case doesn't, so this fixed placeholder is passed
+ * purely to reuse the function's majority HEADCOUNT tally
+ * (`.majoritySide`/`.positiveCount`/`.negativeCount`). Its value is arbitrary
+ * and its `.outcome` field is deliberately never read below.
  */
 const HEADCOUNT_ONLY_PLACEHOLDER_DIRECTION = 1 as const;
 
@@ -79,12 +67,10 @@ export async function processScotusSurpriseCaseTurn(
   const gameState = await getGameState();
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const startingYear = gameState?.startingYear ?? getStartingYearForPreset(preset);
-  // Inverse of turnConversion.ts's yearToTurn — surprise cases have no
-  // authored decisionYear (they aren't scripted in advance), so this is
-  // simply "what calendar year is it right now." Routed through the calendar
-  // clock: on a world with a founding phase the raw turn is a full game year
-  // ahead of the year the player sees, which stamped 1962 rulings on a 1961
-  // Court and fed the era filter the wrong year (#1208).
+  // Surprise cases have no authored decisionYear, so this is the current
+  // calendar year. Use the calendar clock: with a founding phase the raw
+  // turn runs a full game year ahead of the year players see, which would
+  // stamp the wrong era on rulings.
   const decisionYear = yearOfTurn(currentTurn, startingYear, {
     preIterationActive: gameState?.preIteration?.active,
     preIterationTurns: gameState?.preIterationTurns,

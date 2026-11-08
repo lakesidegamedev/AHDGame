@@ -1,20 +1,17 @@
 /**
  * Declare the war the ladder has been arming.
  *
- * The second of the two presses. Arming puts the bloc at the brink and starts
- * the levy; this is the one that ends the influence contest and opens a real
- * NATO–Warsaw Pact conflict on the Conflicts board.
+ * The second press: it ends the influence contest and opens a real
+ * NATO-Warsaw Pact conflict on the Conflicts board.
  *
  * The crisis FREEZES rather than resolving: no plays, no drift, the meter held
  * exactly where it stood. Whoever wins the war takes the settlement outright,
  * regardless of where the index was when the shooting started.
  *
- * ORDER: claim the freeze FIRST, then build the war. Two authority seats
- * pressing at once must not produce two wars, and the guarded claim is what
- * makes the loser match nothing. The cost of that ordering is that a failure
- * inside `createConflict` leaves the crisis frozen with a null `conflictId` —
- * recoverable by an admin, and strictly better than an orphan war on the board
- * that no crisis points at.
+ * ORDER: claim the freeze FIRST, then build the war, so two authority seats
+ * pressing at once cannot produce two wars. A failure inside `createConflict`
+ * then leaves the crisis frozen with a null `conflictId`, recoverable by an
+ * admin and better than an orphan war no crisis points at.
  */
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";

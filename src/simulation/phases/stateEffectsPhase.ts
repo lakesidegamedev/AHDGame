@@ -93,29 +93,17 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         .toArray();
       return legislationTypesPromise;
     };
-    // S4 (2026-07-16 core-sim audit): crisisTurn, ministerialOrders, and
-    // policyEffects all write the SAME stateMetrics "<category>.<metric>.value"
-    // field paths — crisisTurn and ministerialOrders via $inc, policyEffects
-    // via a read-modify-write that ends in $set. When these ran concurrently
-    // inside the Promise.all below, a $inc landing between policyEffects'
-    // read and its $set was silently overwritten (lost update), making turn
-    // outcomes nondeterministic: crisis shocks or cabinet-order effects could
-    // vanish, or clobber bill effects, depending on scheduling.
-    //
-    // Serialize ONLY these writers; everything else stays parallel.
-    // Chosen order: crisisTurn → ministerialOrders → policyEffects.
-    //  - crisisTurn and ministerialOrders are pure $inc writers (commutative
-    //    with each other), kept in their previous registry order.
-    //  - policyEffects runs LAST because it is the read-modify-write: running
-    //    it after the $inc shocks means its read observes the crisis- and
-    //    order-adjusted values, so bill effects and baseline decay apply ON
-    //    TOP of the shocked state — the intended semantics ($inc deltas were
-    //    always meant to compose with, not race, the policy recompute).
-    // Write mechanics ($set vs $inc) are deliberately unchanged in this fix.
+    // These three write the same stateMetrics "<category>.<metric>.value" paths:
+    // crisisTurn and ministerialOrders via $inc, policyEffects via read-modify-write
+    // ending in $set. Concurrent, an $inc between policyEffects' read and $set is
+    // silently overwritten (lost update). Serialize ONLY these writers.
+    // Order: crisisTurn -> ministerialOrders -> policyEffects. The $inc writers are
+    // commutative; policyEffects runs LAST so its read observes the shocked values
+    // and bill effects apply on top, the intended semantics.
     const serializedStateMetricsPrerequisites = (async () => {
-      // Pass the authoritative turn-context year: the persisted
-      // gameState.currentYear is only stamped at turn end, so reloading it
-      // inside would gate year-boundary openings one turn late (#2059).
+      // Pass the authoritative turn-context year: gameState.currentYear is only
+      // stamped at turn end, so reading it here would gate year-boundary openings
+      // one turn late.
       const crisisResult = await runtime.runPhase("crisisTurn", () =>
         processCrisisTurn(db, newTurn, currentYear)
       );
@@ -260,10 +248,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       ukRegionalBudgetPromise,
       jpRegionalBudgetPromise,
       // Covers every country on the Laender revenue-sharing model, not just DE.
-      // DD joined when the unified Germany was left with no processor at all:
-      // this step was scoped to DE, which has held zero states since the shell
-      // dissolved on turn 550 (#1323). The phase key keeps its original name for
-      // the same reason `cnPresidentSync` below does.
+      // DD joined after the unified Germany had no processor at all. The phase
+      // key keeps its original name for backward compatibility.
       runRegionalBudgetPhase("deRegionalBudgetProcessing", async () => {
         const tiers = await countryTiers();
         const results = await Promise.all(
@@ -319,13 +305,12 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       runtime.runPhase("vicePresidentActionReset", () => resetVicePresidentActions(db, newTurn)),
       // Appended (result intentionally not destructured): refill each active
       // presidential ticket's shared running-mate surrogate action pool once per
-      // Eastern-time day (the VP pool now accrues per turn; this one is unchanged).
+      // Eastern-time day. The VP pool accrues per turn instead.
       runtime.runPhase("runningMateSurrogateActionReset", () =>
         resetRunningMateSurrogateActions(db)
       ),
-      // Appended (result intentionally not destructured): accrue seated
-      // Justices' self-serve action pool, +1 every JUSTICE_ACTION_ACCRUAL_TURNS
-      // (#3598, mirrors vicePresidentActionReset above).
+      // Appended (result intentionally not destructured): accrue seated Justices'
+      // self-serve action pool, +1 every JUSTICE_ACTION_ACCRUAL_TURNS.
       runtime.runPhase("justiceActionReset", () => resetJusticeActions(db, newTurn)),
     ]);
     phaseResults.policyEffects = { statesProcessed: policyResult ?? 0 };
@@ -711,17 +696,9 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       );
     }
 
-    // Durable long-horizon provenance (#2099/#2100), resolved once per turn
-    // and shared by the macro and approval telemetry writers, then the metric,
-    // approval and interest-rate history snapshots. Three round trips for the
-    // context; a null result (phase failure) skips telemetry while the
-    // operational snapshots still run.
-    //
-    // These stay inside the lock because game logic reads what they write.
-    // Pure reporting (party history, research telemetry, the health snapshot)
-    // runs after the lock is released: see postLockReportingPhases.ts.
-    // auditAnomalyScan and suspiciousDetection likewise run after the turn
-    // commits (#2694, src/lib/turn/postTurnScans.ts), in that order.
+    // Durable long-horizon provenance, resolved once per turn and shared by
+    // telemetry writers and history snapshots. Stays inside the lock because
+    // game logic reads what it writes; pure reporting runs after lock release.
     const longHorizonCtx = await runtime.runPhase("longHorizonContext", () =>
       resolveLongHorizonContext(db, newTurn)
     );

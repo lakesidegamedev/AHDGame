@@ -45,9 +45,7 @@ export function householdPurchaseOrders(input: {
     eligibleOfferIds?: readonly string[];
   }[];
   /**
-   * Demand curves (issue #5448). Absent: one order per good, as before. Present:
-   * basket weights shift with `incomeIndex` and each good becomes a price
-   * ladder; see market/rules/demandCurve.
+   * Absent: one order per good. Present: basket weights shift with `incomeIndex` and each good becomes a price ladder; see market/rules/demandCurve.
    */
   demandCurve?: { incomeIndex?: number };
 }): PurchaseOrder[] {

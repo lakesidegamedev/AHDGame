@@ -14,17 +14,12 @@ import {
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 
 /**
- * Party-tier turn phase (D5, 2026-06-18). Recomputes each party's Major/Minor
- * tier, earned-region set, demotion-warning countdown, and PS cap from its
- * current per-region Org, then clamps stored PS down to the resolved cap.
+ * Recomputes each party's Major/Minor tier, earned-region set, demotion-warning
+ * countdown, and PS cap from per-region Org, then clamps stored PS to the cap.
  *
- * Ordering: must run AFTER `partyOrgTurn` (Org settled) and BEFORE
- * `partyActionGeneration` (which generates PS up to the tier-derived cap). Pure
- * per-party computation lives in `@/lib/parties/partyTier`; this phase only does
- * the DB read → compute → bulk-write.
- *
- * Clamp behavior is intentionally destructive on a cap DECREASE (region lost or
- * demotion) per the locked design — a party over its new cap is reduced to it.
+ * Must run AFTER `partyOrgTurn` (Org settled) and BEFORE
+ * `partyActionGeneration` (which generates PS up to the tier-derived cap).
+ * On a cap DECREASE the clamp is intentionally destructive per locked design.
  */
 export interface PartyTierTurnResult {
   partiesScanned: number;

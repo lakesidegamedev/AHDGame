@@ -1,11 +1,9 @@
 /**
- * NPP corporate treasury (ticket 1060).
+ * NPP corporate treasury.
  *
- * Player CEOs park idle liquid capital in high-coupon bonds. NPP caretakers
- * never did, so a corp like Meyer Logistics sat on ~$1.4M against ~$25k/day
- * of revenue while the CEO "ran" the place. Same primitives as the player
- * corp buy path: home-currency paper only, skip own issues, atomic debit
- * then reserve, refund on a missed float.
+ * Player CEOs park idle liquid capital in high-coupon bonds; NPP caretakers
+ * should too. Same primitives as the player corp buy path: home-currency paper
+ * only, skip own issues, atomic debit then reserve, refund on a missed float.
  *
  * Loss-making corps keep the cash as runway. Surplus is cash above one
  * financial day of revenue; a quarter of that surplus is committed per turn
