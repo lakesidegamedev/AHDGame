@@ -1,14 +1,15 @@
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Db, ObjectId } from "mongodb";
 import type { ActiveCrisisStage, CrisisRole, LeverCost } from "@/lib/crises/v2/types";
-import type { Corporation } from "@/lib/db/types";
 import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
-import type { State } from "@/lib/db/types/state";
 import { getGameState } from "@/lib/gameState";
 import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
 import { leverActionCost } from "@/lib/crises/v2/leverActions";
 import { leverBlock } from "./availability";
 import { governsAffectedState } from "./jurisdiction";
-import { resolveLeverRoles, type LeverActor } from "./roles";
+import { resolveLeverRoles } from "./roles";
 
 export interface AvailableLever {
   id: string;
@@ -42,8 +43,9 @@ async function countriesOf(db: Db, crises: LiveCrisis[]): Promise<Map<string, st
   );
   const countryByState = new Map<string, string>();
   if (regionOnly.length > 0) {
-    const states = await db
-      .collection<State>("states")
+    const states = await (
+      await getStatesCollection(db)
+    )
       .find(
         { _id: { $in: [...new Set(regionOnly.flatMap((c) => c.regionIds))] } },
         { projection: { countryId: 1 } }
@@ -72,9 +74,9 @@ export async function getAvailableLevers(
   db: Db,
   characterId: ObjectId
 ): Promise<AvailableCrisisLevers[]> {
-  const actor = await db
-    .collection<LeverActor>("characters")
-    .findOne({ _id: characterId }, { projection: { countryId: 1, currentOffice: 1 } });
+  const actor = await (
+    await getCharactersCollection(db)
+  ).findOne({ _id: characterId }, { projection: { countryId: 1, currentOffice: 1 } });
   if (!actor) return [];
 
   const crises = (await db
@@ -90,8 +92,7 @@ export async function getAvailableLevers(
     getGameState(db).then((state) => state?.currentTurn ?? 0),
     resolveLeverRoles(db, actor, null),
     countriesOf(db, crises),
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find(
         { ceoId: actor._id, ceoType: { $nin: ["npp", "imperial"] } },
         { projection: { countryId: 1 } }

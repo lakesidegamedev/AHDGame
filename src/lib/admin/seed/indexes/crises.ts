@@ -9,11 +9,7 @@ import { ensureIndex } from "./helpers";
  *   - `crises_v2_active` — the Crisis v2 turn phase loads active crises that carry
  *     a v2 instance. Partial on the instance, so it stays empty until content uses
  *     v2 and the phase's read touches nothing.
- *   - `crisisLeverUses` — pending lever uses per crisis, read each turn, and the unique
- *     claim that makes a double pull impossible.
- *   - `bills_crisis_emergency` — emergency bills awaiting their outcome.
- *   - `crises_scars_healing` — the scar pass reads crises whose scars are still healing.
- *   - `crisisDetectorStreaks` — each detector reads its own streaks every turn.
+ *   - `crisisLeverUses` — pending lever uses per crisis, read each turn.
  */
 export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
   log("Crisis indexes:");
@@ -45,6 +41,7 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The scar pass reads crises whose scars have not finished healing.
   await ensureIndex(
     db,
     "crises",
@@ -56,6 +53,7 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // Each detector reads its own streaks every turn.
   await ensureIndex(
     db,
     "crisisDetectorStreaks",

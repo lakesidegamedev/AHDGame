@@ -265,6 +265,8 @@ export interface CrisisInstance {
   emergency?: boolean;
   /** Turn the scars were last advanced, so a repeat run cannot heal twice. */
   lastScarTurn?: number;
+  /** Which scar pass holds the claim on `lastScarTurn`. */
+  scarClaim?: string;
   /** Set once the accountability ledger has been turned into approval and votes. */
   consequencesSettled?: boolean;
 }

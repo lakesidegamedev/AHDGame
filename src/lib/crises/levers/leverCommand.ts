@@ -1,3 +1,5 @@
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { ObjectId, type Db } from "mongodb";
 import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
 import type { CountryId } from "@/lib/constants/countries";
@@ -9,7 +11,6 @@ import {
   type CrisisLeverDef,
   type LeverCost,
 } from "@/lib/crises/v2/types";
-import type { Character, Corporation } from "@/lib/db/types";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
 import {
@@ -149,7 +150,7 @@ async function chargeCost(
   };
 
   if (actions && actions.count > 0) {
-    const characters = db.collection<Character>("characters");
+    const characters = await getCharactersCollection(db);
     const spent = await characters.updateOne(
       { _id: actions.characterId, actions: { $gte: actions.count } },
       { $inc: { actions: -actions.count } }
@@ -346,9 +347,9 @@ export async function checkLeverEligibility(
   const lever = def?.levers.find((candidate) => candidate.id === input.leverId);
   if (!crisis || !def || !lever) return fail("not_found", "No such response on this crisis");
 
-  const actor = await db
-    .collection<LeverActor>("characters")
-    .findOne({ _id: input.characterId }, { projection: { countryId: 1, currentOffice: 1 } });
+  const actor = await (
+    await getCharactersCollection(db)
+  ).findOne({ _id: input.characterId }, { projection: { countryId: 1, currentOffice: 1 } });
   if (!actor) return fail("not_found", "No such character");
 
   const turn = (await getGameState(db))?.currentTurn ?? 0;
@@ -404,12 +405,12 @@ export async function pullLever(
   if (lever.role === "corpCeo" || (lever.cost.corpCash ?? 0) > 0) {
     if (!input.corporationId)
       return fail("needs_corporation", "Pick the corporation that responds");
-    const corporation = await db
-      .collection<Corporation>("corporations")
-      .findOne(
-        { _id: input.corporationId, ceoId: actor._id, ceoType: { $nin: ["npp", "imperial"] } },
-        { projection: { countryId: 1 } }
-      );
+    const corporation = await (
+      await getCorporationsCollection(db)
+    ).findOne(
+      { _id: input.corporationId, ceoId: actor._id, ceoType: { $nin: ["npp", "imperial"] } },
+      { projection: { countryId: 1 } }
+    );
     if (!corporation) return fail("wrong_role", "You do not run that corporation");
     if (countryIds && !countryIds.includes(corporation.countryId)) {
       return fail("out_of_jurisdiction", "That corporation is outside this crisis");

@@ -1,9 +1,9 @@
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import { isResolvedBillStatus } from "@/lib/crises/aidFinalize";
 import { LEDGER_LIMIT } from "@/lib/crises/v2/accountability";
 import type { AccountabilityEntry } from "@/lib/crises/v2/types";
 import type { Bill } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { proposeCrisisEmergencyBill } from "@/lib/legislature/commands/proposeCrisisEmergencyBill";
 import { logger } from "@/lib/observability/logger";
@@ -56,9 +56,9 @@ export async function proposeEmergencyBill(
       "An emergency bill for this response is already before the legislature"
     );
 
-  const sponsor = await db
-    .collection<Pick<Character, "name" | "party">>("characters")
-    .findOne({ _id: actor._id }, { projection: { name: 1, party: 1 } });
+  const sponsor = await (
+    await getCharactersCollection(db)
+  ).findOne({ _id: actor._id }, { projection: { name: 1, party: 1 } });
   const billId = await proposeCrisisEmergencyBill(db, {
     countryId: actor.countryId as never,
     crisisId: crisis._id,

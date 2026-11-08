@@ -1,8 +1,8 @@
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import type { Db, ObjectId } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { resolveCharacterRoles } from "@/lib/crises/interactionEngine";
 import type { CrisisRole } from "@/lib/crises/v2/types";
-import type { Corporation } from "@/lib/db/types";
 import type { CongressLeader } from "@/lib/db/types/leadership";
 import { LEGISLATURE_LEADER_ROLES } from "@/lib/turn/crisisV2/holderProviders";
 
@@ -56,7 +56,7 @@ export async function resolveLeverRoles(
             { projection: { _id: 1 } }
           )
           .then(Boolean),
-    db.collection<Corporation>("corporations").findOne(
+    (await getCorporationsCollection(db)).findOne(
       {
         ceoId: actor._id,
         ceoType: { $nin: ["npp", "imperial"] },

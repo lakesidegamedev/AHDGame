@@ -1,8 +1,9 @@
-import type { Db } from "mongodb";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { randomUUID } from "node:crypto";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { stepScars, type ScarStep } from "@/lib/crises/v2/scars";
 import type { Crisis } from "@/lib/db/types/crisis";
-import type { State } from "@/lib/db/types/state";
 import { logger } from "@/lib/observability/logger";
 import { routeEffectIntents } from "./intents";
 
@@ -19,8 +20,9 @@ interface ScarWorld {
 }
 
 async function loadScarWorld(db: Db): Promise<ScarWorld> {
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const stateIdsByCountry = new Map<string, string[]>();
@@ -74,22 +76,27 @@ export interface ScarPassResult {
 export async function processCrisisScars(db: Db, turn: number): Promise<ScarPassResult> {
   const result: ScarPassResult = { advanced: 0, failed: 0 };
   const crises = db.collection<Crisis>("crises");
-  const due = await crises
+  const unclaimed = { scarsHealUntil: { $gte: turn }, "v2.lastScarTurn": { $not: { $gte: turn } } };
+  const candidates = await crises.find(unclaimed, { projection: { _id: 1 } }).toArray();
+  if (candidates.length === 0) return result;
+
+  // One write claims every due crisis; the token says which of them this pass won.
+  const token = randomUUID();
+  await crises.updateMany(
+    { ...unclaimed, _id: { $in: candidates.map((crisis) => crisis._id) } },
+    { $set: { "v2.lastScarTurn": turn, "v2.scarClaim": token } }
+  );
+  const claimed = await crises
     .find(
-      { scarsHealUntil: { $gte: turn }, "v2.lastScarTurn": { $not: { $gte: turn } } },
+      { _id: { $in: candidates.map((crisis) => crisis._id) }, "v2.scarClaim": token },
       { projection: { "v2.scars": 1 } }
     )
     .toArray();
-  if (due.length === 0) return result;
 
   let world: ScarWorld | undefined;
-  for (const crisis of due) {
+  const saves: AnyBulkWriteOperation<Crisis>[] = [];
+  for (const crisis of claimed) {
     try {
-      const claim = await crises.updateOne(
-        { _id: crisis._id, "v2.lastScarTurn": { $not: { $gte: turn } } },
-        { $set: { "v2.lastScarTurn": turn } }
-      );
-      if (claim.matchedCount === 0) continue;
       const { scars, steps } = stepScars(crisis.v2?.scars ?? [], turn);
       if (steps.length > 0) {
         world ??= await loadScarWorld(db);
@@ -103,15 +110,18 @@ export async function processCrisisScars(db: Db, turn: number): Promise<ScarPass
             turn,
           });
         }
-        await crises.updateOne({ _id: crisis._id }, { $set: { "v2.scars": scars } });
+        saves.push({
+          updateOne: { filter: { _id: crisis._id }, update: { $set: { "v2.scars": scars } } },
+        });
       }
       result.advanced += 1;
     } catch (error) {
       result.failed += 1;
-      logger.error(COMPONENT, "scar step failed; retried next turn", error, {
+      logger.error(COMPONENT, "scar step failed; the next pass writes the difference", error, {
         crisisId: crisis._id.toString(),
       });
     }
   }
+  if (saves.length > 0) await crises.bulkWrite(saves, { ordered: false });
   return result;
 }

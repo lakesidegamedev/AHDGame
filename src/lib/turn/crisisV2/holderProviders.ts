@@ -1,11 +1,13 @@
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { OfficeHolders } from "@/lib/crises/v2/accountability";
 import type { HolderFootprint } from "@/lib/crises/v2/exposure";
 import type { CrisisRole } from "@/lib/crises/v2/types";
-import type { Character, Corporation } from "@/lib/db/types";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { CorporateSector } from "@/lib/db/types/corporationSector";
 import type { CongressLeader } from "@/lib/db/types/leadership";
 import {
   listCrisisHolderProviders,
@@ -52,8 +54,9 @@ function finish(draft: Draft): Map<string, OfficeHolders> {
 }
 
 async function loadOfficeCharacters(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(
       {
         countryId: { $in: countryIds as CountryId[] },
@@ -131,8 +134,9 @@ async function loadLegislatureLeaders(db: Db, countryIds: string[], draft: Draft
     .toArray();
   const ids = leaders.flatMap((leader) => (leader.characterId ? [leader.characterId] : []));
   if (ids.length === 0) return;
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: ids }, countryId: { $in: countryIds as CountryId[] } },
       { projection: { countryId: 1 } }
@@ -144,10 +148,11 @@ async function loadLegislatureLeaders(db: Db, countryIds: string[], draft: Draft
 }
 
 async function loadPartyLeaders(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const parties = await db
-    .collection<{ countryId: string; chairId: unknown }>("politicalParties")
+  const parties = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find(
-      { countryId: { $in: countryIds }, chairId: { $ne: null } },
+      { countryId: { $in: countryIds as CountryId[] }, chairId: { $ne: null } },
       { projection: { countryId: 1, chairId: 1 } }
     )
     .toArray();
@@ -155,8 +160,9 @@ async function loadPartyLeaders(db: Db, countryIds: string[], draft: Draft): Pro
 }
 
 async function loadCorporateCeos(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       {
         countryId: { $in: countryIds as CountryId[] },
@@ -184,15 +190,13 @@ export async function loadHolderFootprints(
   if (ids.length === 0) return footprints;
 
   const [governors, corporations] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    (await getCharactersCollection(db))
       .find(
         { _id: { $in: ids }, "currentOffice.type": { $in: [...GOVERNOR_OFFICES] } },
         { projection: { currentOffice: 1 } }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find(
         { ceoId: { $in: ids }, ceoType: { $nin: ["npp", "imperial"] } },
         { projection: { ceoId: 1 } }
@@ -210,8 +214,9 @@ export async function loadHolderFootprints(
       ceoByCorporation.set(corporation._id.toString(), corporation.ceoId.toString());
   }
   if (ceoByCorporation.size === 0) return footprints;
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await (
+    await getCorporateSectorsCollection(db)
+  )
     .find(
       { corporationId: { $in: corporations.map((corporation) => corporation._id) } },
       { projection: { corporationId: 1, stateId: 1, sectorType: 1 } }

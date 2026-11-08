@@ -1,4 +1,7 @@
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import type { CountryId } from "@/lib/constants/countries";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
@@ -232,12 +235,11 @@ async function applyMigration(
 export async function applyBankStress(db: Db, delta: number, countryIds: string[]): Promise<void> {
   const panicTurns = Math.min(MAX_PANIC_TURNS, Math.ceil(delta));
   if (panicTurns <= 0 || countryIds.length === 0) return;
-  await db
-    .collection("corporations")
-    .updateMany(
-      { "bankCharter.status": "active", countryId: { $in: countryIds } },
-      { $max: { "bankCharter.panicTurns": panicTurns } }
-    );
+  const corporations = await getCorporationsCollection(db);
+  await corporations.updateMany(
+    { "bankCharter.status": "active", countryId: { $in: countryIds as CountryId[] } },
+    { $max: { "bankCharter.panicTurns": panicTurns } }
+  );
 }
 
 /** Lowers investor confidence, which is what prices the sovereign borrowing premium. */
@@ -262,7 +264,8 @@ async function applyBondPressure(
       },
     ],
   };
-  await db.collection("federalBudget").updateMany({ countryId: { $in: countryIds } }, [
+  const budgets = await getFederalBudgetCollection(db);
+  await budgets.updateMany({ countryId: { $in: countryIds as CountryId[] } }, [
     {
       $set: {
         investorConfidence: next,

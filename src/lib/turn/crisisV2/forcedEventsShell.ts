@@ -1,3 +1,5 @@
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { Db } from "mongodb";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
@@ -6,8 +8,6 @@ import type {
   ForcedEventKind,
   ForcedEventThreshold,
 } from "@/lib/crises/v2/types";
-import type { CorporateSector } from "@/lib/db/types/corporationSector";
-import type { FederalBudget } from "@/lib/db/types";
 import { logger } from "@/lib/observability/logger";
 import { FAILED_AUCTION_COUNT_FOR_CRISIS } from "@/lib/sovereignDefault/constants";
 import { logWireEvent } from "@/lib/wireEvent";
@@ -35,7 +35,9 @@ const WORLD_EVENTS: ReadonlySet<ForcedEventKind> = new Set([
 async function startStrikes(db: Db, scope: ForcedEventScope): Promise<void> {
   if (scope.stateIds.length === 0) return;
   const sectors = scope.def.affectedSectors;
-  await db.collection<CorporateSector>("corporateSectors").updateMany(
+  await (
+    await getCorporateSectorsCollection(db)
+  ).updateMany(
     {
       stateId: { $in: [...scope.stateIds] },
       ...(sectors ? { sectorType: { $in: [...sectors] as never[] } } : {}),
@@ -59,7 +61,9 @@ async function startStrikes(db: Db, scope: ForcedEventScope): Promise<void> {
 /** Pushes each country one failed auction short of the sovereign default crisis. */
 async function openSovereignDefaultPath(db: Db, scope: ForcedEventScope): Promise<void> {
   if (scope.countryIds.length === 0) return;
-  await db.collection<FederalBudget>("federalBudget").updateMany(
+  await (
+    await getFederalBudgetCollection(db)
+  ).updateMany(
     {
       _id: { $in: scope.countryIds.map((id) => getNationalBudgetId(id as CountryId)) },
       sovereignCrisisState: { $nin: ["crisisPending", "crisisResolving", "recovering"] },

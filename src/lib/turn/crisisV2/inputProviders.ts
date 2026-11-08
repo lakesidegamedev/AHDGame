@@ -1,7 +1,9 @@
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import type { CentralBank } from "@/lib/db/types/centralBank";
+import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { getSovereignConfidencePremium } from "@/lib/budget/debt";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import {
@@ -168,10 +170,10 @@ function loadBudgets(ctx: CrisisInputContext): Promise<Map<string, BudgetReading
   return once(ctx, "federalBudget", async () => {
     const readings = new Map<string, BudgetReading>();
     if (ctx.countryIds.size === 0) return readings;
-    const docs = await ctx.db
-      .collection("federalBudget")
+    const budgets = await getFederalBudgetCollection(ctx.db);
+    const docs = await budgets
       .find(
-        { countryId: { $in: [...ctx.countryIds] } },
+        { countryId: { $in: [...ctx.countryIds] as CountryId[] } },
         {
           projection: {
             countryId: 1,
@@ -255,9 +257,9 @@ export const policyRateGapProvider: CrisisInputProvider = {
     const result = new Map<string, number>();
     if (ctx.countryIds.size === 0) return result;
     const banks = await ctx.db
-      .collection("centralBanks")
+      .collection<CentralBank>("centralBanks")
       .find(
-        { countryId: { $in: [...ctx.countryIds] } },
+        { countryId: { $in: [...ctx.countryIds] as CountryId[] } },
         { projection: { countryId: 1, primeRate: 1 } }
       )
       .toArray();
@@ -277,8 +279,11 @@ export const unrestGapProvider: CrisisInputProvider = {
     const result = new Map<string, number>();
     if (ctx.countryIds.size === 0) return result;
     const docs = await ctx.db
-      .collection("governmentApprovals")
-      .find({ _id: { $in: [...ctx.countryIds] } } as never, { projection: { approvalRating: 1 } })
+      .collection<GovernmentApproval>("governmentApprovals")
+      .find(
+        { _id: { $in: [...ctx.countryIds] as CountryId[] } },
+        { projection: { approvalRating: 1 } }
+      )
       .toArray();
     for (const doc of docs) {
       if (typeof doc.approvalRating === "number") {

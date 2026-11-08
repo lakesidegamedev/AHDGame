@@ -1,3 +1,4 @@
+import { getStatesCollection } from "@/lib/db/collections/states";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import {
   reopenCooldownActive,
@@ -9,7 +10,6 @@ import {
 import { DEFAULT_REOPEN_COOLDOWN_TURNS } from "@/lib/crises/v2/types";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { StreakRecord } from "@/lib/crises/v2/streak";
-import type { State } from "@/lib/db/types/state";
 import {
   bankStressProvider,
   energyPriceGapProvider,
@@ -46,8 +46,9 @@ function loadDetectorWorld(db: Db, turn: number): Promise<DetectorWorld> {
   const cached = worldCache.get(db);
   if (cached?.turn === turn) return cached.world;
   const world = (async (): Promise<DetectorWorld> => {
-    const states = await db
-      .collection<State>("states")
+    const states = await (
+      await getStatesCollection(db)
+    )
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray();
     const stateIdsByCountry = new Map<string, string[]>();

@@ -1,3 +1,4 @@
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import {
@@ -9,7 +10,6 @@ import {
 } from "@/lib/crises/v2/blame";
 import type { CrisisInstance, CrisisRole } from "@/lib/crises/v2/types";
 import { getCountryModifiersCollection } from "@/lib/db/collections/countryModifiers";
-import type { Character } from "@/lib/db/types";
 import type { CountryModifier } from "@/lib/db/types/events";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
@@ -72,8 +72,9 @@ export async function settleCrisisConsequences(
   const holderIds = verdicts
     .filter((v) => ObjectId.isValid(v.holderId))
     .map((v) => new ObjectId(v.holderId));
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: holderIds } }, { projection: { party: 1, countryId: 1, currentOffice: 1 } })
     .toArray();
   const byId = new Map(characters.map((character) => [character._id.toString(), character]));
@@ -110,21 +111,37 @@ export async function settleCrisisConsequences(
     }
   }
 
-  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+  const nationalOps: AnyBulkWriteOperation<GovernmentApproval>[] = [];
   for (const [countryId, delta] of nationalApproval) {
     if (Math.abs(delta) < 0.01) continue;
-    await approvals.updateOne(
-      { _id: countryId as GovernmentApproval["_id"] },
-      clampedApproval(delta)
-    );
-    result.approvalWrites += 1;
+    nationalOps.push({
+      updateOne: {
+        filter: { _id: countryId as GovernmentApproval["_id"] },
+        update: clampedApproval(delta),
+      },
+    });
   }
-  const states = db.collection<StateApprovalHistory>("stateApprovalHistory");
+  if (nationalOps.length > 0) {
+    await db
+      .collection<GovernmentApproval>("governmentApprovals")
+      .bulkWrite(nationalOps, { ordered: false });
+  }
+  const stateOps: AnyBulkWriteOperation<StateApprovalHistory>[] = [];
   for (const [stateId, { countryId, delta }] of stateApproval) {
     if (Math.abs(delta) < 0.01) continue;
-    await states.updateOne({ _id: stateId, countryId: countryId as never }, clampedApproval(delta));
-    result.approvalWrites += 1;
+    stateOps.push({
+      updateOne: {
+        filter: { _id: stateId, countryId: countryId as StateApprovalHistory["countryId"] },
+        update: clampedApproval(delta),
+      },
+    });
   }
+  if (stateOps.length > 0) {
+    await db
+      .collection<StateApprovalHistory>("stateApprovalHistory")
+      .bulkWrite(stateOps, { ordered: false });
+  }
+  result.approvalWrites = nationalOps.length + stateOps.length;
 
   const regionIds =
     targets.scope === "local" || targets.scope === "state" ? [...targets.regionIds] : [];

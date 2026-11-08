@@ -39,16 +39,11 @@ function makeDb(characters: Record<string, unknown>[]) {
   const db = {
     collection(name: string) {
       if (name === "characters") return { find: () => ({ toArray: async () => characters }) };
-      if (name === "governmentApprovals") {
+      if (name === "governmentApprovals" || name === "stateApprovalHistory") {
+        const sink = name === "governmentApprovals" ? approvalUpdates : stateUpdates;
         return {
-          updateOne: async (filter: unknown, update: unknown) =>
-            void approvalUpdates.push({ filter, update }),
-        };
-      }
-      if (name === "stateApprovalHistory") {
-        return {
-          updateOne: async (filter: unknown, update: unknown) =>
-            void stateUpdates.push({ filter, update }),
+          bulkWrite: async (ops: { updateOne: { filter: unknown; update: unknown } }[]) =>
+            void ops.forEach((op) => sink.push(op.updateOne)),
         };
       }
       if (name === "countryModifiers") return { bulkWrite: modifierWrites };

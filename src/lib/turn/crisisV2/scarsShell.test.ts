@@ -20,9 +20,11 @@ const scar = (over: Partial<CrisisScar>): CrisisScar => ({
   ...over,
 });
 
-function makeDb(scars: CrisisScar[], claimMatches = 1) {
+function makeDb(scars: CrisisScar[], claimMatches = true) {
   const id = new ObjectId();
-  const updates: { filter: unknown; update: unknown }[] = [];
+  const writes: { op: string; filter: unknown; update?: unknown }[] = [];
+  const saved: { update: unknown }[] = [];
+  let token = "";
   const db = {
     collection(name: string) {
       if (name === "states") {
@@ -36,24 +38,33 @@ function makeDb(scars: CrisisScar[], claimMatches = 1) {
         };
       }
       return {
-        find: () => ({ toArray: async () => [{ _id: id, v2: { scars } }] }),
-        updateOne: async (filter: unknown, update: unknown) => {
-          updates.push({ filter, update });
-          return { matchedCount: updates.length === 1 ? claimMatches : 1 };
+        find: (filter: Record<string, unknown>) => ({
+          toArray: async () => {
+            if ("v2.scarClaim" in filter)
+              return claimMatches && token ? [{ _id: id, v2: { scars } }] : [];
+            return [{ _id: id }];
+          },
+        }),
+        updateMany: async (filter: unknown, update: { $set: Record<string, string> }) => {
+          token = update.$set["v2.scarClaim"];
+          writes.push({ op: "claim", filter, update });
+        },
+        bulkWrite: async (ops: { updateOne: { update: unknown } }[]) => {
+          for (const op of ops) saved.push(op.updateOne);
         },
       };
     },
   };
-  return { db: db as never, updates };
+  return { db: db as never, writes, saved };
 }
 
 describe("processCrisisScars", () => {
   it("claims the turn, then writes the loss as a difference to the owning system", async () => {
     routeEffectIntents.mockClear();
-    const { db, updates } = makeDb([scar({})]);
+    const { db, writes, saved } = makeDb([scar({})]);
     const result = await processCrisisScars(db, 10);
     expect(result).toEqual({ advanced: 1, failed: 0 });
-    expect(updates[0].update).toEqual({ $set: { "v2.lastScarTurn": 10 } });
+    expect(writes[0].update).toMatchObject({ $set: { "v2.lastScarTurn": 10 } });
     const [, intents, targets] = routeEffectIntents.mock.calls[0] as unknown as [
       unknown,
       { kind: string; deltaBps: number }[],
@@ -62,8 +73,8 @@ describe("processCrisisScars", () => {
     expect(intents[0]).toMatchObject({ kind: "bondYield" });
     expect(intents[0].deltaBps).toBeCloseTo(200);
     expect(targets.countryIds).toEqual(["US"]);
-    const saved = updates[1].update as { $set: { "v2.scars": CrisisScar[] } };
-    expect(saved.$set["v2.scars"][0].applied).toBeCloseTo(0.02);
+    const update = saved[0].update as { $set: { "v2.scars": CrisisScar[] } };
+    expect(update.$set["v2.scars"][0].applied).toBeCloseTo(0.02);
   });
 
   it("heals by writing the opposite sign as the scar recovers", async () => {
@@ -78,7 +89,7 @@ describe("processCrisisScars", () => {
 
   it("does nothing when another run already claimed the turn", async () => {
     routeEffectIntents.mockClear();
-    const { db } = makeDb([scar({})], 0);
+    const { db } = makeDb([scar({})], false);
     expect(await processCrisisScars(db, 10)).toEqual({ advanced: 0, failed: 0 });
     expect(routeEffectIntents).not.toHaveBeenCalled();
   });
