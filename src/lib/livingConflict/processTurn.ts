@@ -33,6 +33,7 @@ import {
 } from "./driver";
 import { GLOBAL_FINANCIAL_CRISIS_KEY, loadFinancialCrisisSignal } from "./financialCrisisPressure";
 import { isFutureConflictFamily, planFutureConflictTurn } from "./futureConflicts";
+import type { WaveSignalCache } from "./waveSignalLoader";
 import { severeConflictLoad, type SevereMembership } from "./rules/futureConflicts";
 import { loadActiveSevereCrisisRows } from "@/lib/crises/severeCrisisLoad";
 import { syncCampaignCrises, type CampaignTurnState } from "./campaignCrisis";
@@ -225,6 +226,7 @@ export async function processLivingConflictsTurn(
   // two severe crises is not hit by a new conflict wave either. Read once, only
   // when a wave family is reached.
   let crisisLoad: Map<string, number> | null = null;
+  const waveSignalCache: WaveSignalCache = {};
   const campaigns: CampaignTurnState[] = [];
   for (const def of defs) {
     if (def.key === "northern_ireland") {
@@ -287,6 +289,7 @@ export async function processLivingConflictsTurn(
         regionCountryIds,
         tension: tension?.value ?? 0,
         load: mergeSevereLoads(severeConflictLoad(severe, def.key), crisisLoad),
+        signalCache: waveSignalCache,
       });
       participants = plan.participants;
       externalPressure = plan.externalPressure;

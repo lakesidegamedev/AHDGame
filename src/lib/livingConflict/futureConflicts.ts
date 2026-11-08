@@ -10,6 +10,9 @@ import { loadCyberResilience } from "@/lib/cyber/resilience";
 import { loadConflictState, type ConflictParticipants } from "./driver";
 import { normalizeConflictState, phaseFor } from "./engine";
 import { calendarWindowOpen } from "./rules/openingWindow";
+import { waveAnnualChances, yearFractionOfTurn } from "./rules/waveFamilies";
+import { waveFamilyKeys } from "./rules/waveFamilyTables";
+import { loadWaveSignals, type WaveSignalCache } from "./waveSignalLoader";
 import { resolveConflictParticipants } from "./rules/participants";
 import {
   AI_LABOUR_SHOCK_KEY,
@@ -32,6 +35,7 @@ export const FUTURE_CONFLICT_RESTING_PHASES: Record<string, readonly string[]> =
   [AI_LABOUR_SHOCK_KEY]: ["absorbed", "reformed", "entrenched"],
   [PACIFIC_STRAIT_KEY]: ["managed_peace"],
   [INFRASTRUCTURE_CYBERATTACK_KEY]: ["restored"],
+  ...Object.fromEntries(waveFamilyKeys().map((key) => [key, ["rested"]])),
 };
 
 export function isFutureConflictFamily(defKey: string): boolean {
@@ -100,6 +104,8 @@ export interface FutureConflictTurnContext {
   tension: number;
   /** Severe living conflicts already holding each country this turn. */
   load: ReadonlyMap<string, number>;
+  /** Shared by every family in a turn so country readings load once. */
+  signalCache?: WaveSignalCache;
 }
 
 export interface FutureConflictTurnPlan {
@@ -141,6 +147,21 @@ export async function planFutureConflictTurn(
       const signal = byCountry.get(countryId);
       return signal ? cyberAnnualProbability(context.tension, signal) : 0;
     };
+  } else if (canHit && waveFamilyKeys().includes(def.key)) {
+    const signals = await loadWaveSignals(db, regionCountries, context.signalCache ?? {});
+    const shared = new Map(
+      [...signals].map(([countryId, reading]) => [
+        countryId,
+        {
+          ...reading,
+          tension: context.tension,
+          yearFraction: yearFractionOfTurn(context.turn),
+        },
+      ])
+    );
+    const chances = waveAnnualChances(def.key, shared);
+    candidates = [...chances.keys()];
+    annualProbability = (countryId) => chances.get(countryId) ?? 0;
   } else if (
     canHit &&
     def.key === PACIFIC_STRAIT_KEY &&

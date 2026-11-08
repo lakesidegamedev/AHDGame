@@ -17,6 +17,10 @@ import {
 import { AI_LABOUR_SHOCK_DEF } from "./defs/aiLabourShock";
 import { PACIFIC_STRAIT_DEF } from "./defs/pacificStrait";
 import { INFRASTRUCTURE_CYBERATTACK_DEF } from "./defs/infrastructureCyberattack";
+import { SECOND_PANDEMIC_DEF } from "./defs/waveFamilies/secondPandemic";
+import { SOVEREIGN_DEBT_WAVE_DEF } from "./defs/waveFamilies/sovereignDebtWave";
+import { GRID_CASCADE_DEF } from "./defs/waveFamilies/gridCascade";
+import { CRITICAL_MINERALS_DEF } from "./defs/waveFamilies/criticalMinerals";
 
 /** Every living-conflict definition, keyed by its stable def key. */
 export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
@@ -38,6 +42,10 @@ export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
   [AI_LABOUR_SHOCK_DEF.key]: AI_LABOUR_SHOCK_DEF,
   [PACIFIC_STRAIT_DEF.key]: PACIFIC_STRAIT_DEF,
   [INFRASTRUCTURE_CYBERATTACK_DEF.key]: INFRASTRUCTURE_CYBERATTACK_DEF,
+  [SECOND_PANDEMIC_DEF.key]: SECOND_PANDEMIC_DEF,
+  [SOVEREIGN_DEBT_WAVE_DEF.key]: SOVEREIGN_DEBT_WAVE_DEF,
+  [GRID_CASCADE_DEF.key]: GRID_CASCADE_DEF,
+  [CRITICAL_MINERALS_DEF.key]: CRITICAL_MINERALS_DEF,
 };
 
 export function livingConflictDef(key: string): LivingConflictDef | null {
