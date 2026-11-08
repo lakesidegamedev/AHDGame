@@ -170,3 +170,73 @@ describe("POST /api/mail", () => {
     expect(data.error).toBe("Cannot send mail to yourself");
   });
 });
+
+describe("PATCH /api/mail", () => {
+  const authAs = async (userId: ObjectId) => {
+    const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: {
+        userId: userId.toString(),
+        character: { _id: new ObjectId(), name: "T", sequentialId: 1 },
+      },
+    } as never);
+    const { checkRateLimit } = await import("@/lib/api/rateLimit");
+    vi.mocked(checkRateLimit).mockReturnValue({
+      ok: true,
+      limit: 30,
+      remaining: 29,
+      resetAt: Date.now() + 60_000,
+    });
+  };
+
+  const patch = async (body: unknown) => {
+    const { PATCH } = await import("./route");
+    return PATCH(
+      new Request("http://localhost/api/mail", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+    );
+  };
+
+  it("marks the listed received mails read in one write scoped to the recipient", async () => {
+    const userId = new ObjectId();
+    await authAs(userId);
+    const a = new ObjectId();
+    const b = new ObjectId();
+
+    const res = await patch({ ids: [a.toString(), b.toString()] });
+
+    expect(res.status).toBe(200);
+    expect(db.collectionMocks.playerMail.updateMany).toHaveBeenCalledOnce();
+    expect(db.collectionMocks.playerMail.updateMany).toHaveBeenCalledWith(
+      { _id: { $in: [a, b] }, toUserId: userId, deletedByRecipient: false },
+      { $set: { read: true } }
+    );
+  });
+
+  it("returns 400 for an empty or oversized list and writes nothing", async () => {
+    await authAs(new ObjectId());
+    expect((await patch({ ids: [] })).status).toBe(400);
+    const tooMany = Array.from({ length: 101 }, () => new ObjectId().toString());
+    expect((await patch({ ids: tooMany })).status).toBe(400);
+    expect(db.collectionMocks.playerMail.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 when rate limited", async () => {
+    await authAs(new ObjectId());
+    const { checkRateLimit } = await import("@/lib/api/rateLimit");
+    vi.mocked(checkRateLimit).mockReturnValue({
+      ok: false,
+      limit: 30,
+      remaining: 0,
+      resetAt: Date.now() + 5000,
+      retryAfter: 5,
+    });
+    const res = await patch({ ids: [new ObjectId().toString()] });
+    expect(res.status).toBe(429);
+    expect(db.collectionMocks.playerMail.updateMany).not.toHaveBeenCalled();
+  });
+});

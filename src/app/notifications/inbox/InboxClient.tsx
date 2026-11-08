@@ -17,7 +17,7 @@ import { InboxEmpty } from "./InboxEmpty";
 import { PriorityLane } from "./PriorityLane";
 import type { InboxItem } from "@/lib/inbox";
 import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
-import { fetchJson } from "@/lib/observability/fetchJson";
+import { bulkMarkRead } from "./bulkMarkRead";
 import { Skeleton, ListRowSkeleton } from "@/components/ui";
 
 // ---------------------------------------------------------------------------
@@ -261,8 +261,8 @@ export function InboxClient() {
     }
   }, []);
 
-  // Mark all read — optimistic update, then await the batch. Any item the
-  // server rejects is rolled back so the client never silently diverges,
+  // Mark all read — optimistic update, then one bulk request per kind (notifications,
+  // mail). Any item the server rejects is rolled back so the client never silently diverges,
   // the player sees an error, and refetch() reconciles with server state.
   const handleMarkAllRead = useCallback(async () => {
     const unreadItems = visibleItems.filter((item) => item.unread && !state.readIds.has(item.id));
@@ -273,35 +273,28 @@ export function InboxClient() {
       type: "MARK_ALL_READ",
       ids: unreadItems.map((item) => item.id),
     });
-    const outcomes = await Promise.allSettled(
-      unreadItems.map(async (item) => {
-        if (item.kind === "mail") {
-          const responses = await Promise.all(
-            receivedMailIds(item).map((id) => fetch(`/api/mail/${id}`, { method: "PATCH" }))
-          );
-          if (responses.some((res) => !res.ok)) {
-            throw new Error(`mark read failed for mail thread ${item.id}`);
-          }
-        } else {
-          await fetchJson("/api/notifications", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: item.id, action: "read" }),
-            feature: "inbox-mark-all-read",
-          });
-        }
-      })
-    );
+    const notifIds = unreadItems.filter((item) => item.kind !== "mail").map((item) => item.id);
+    const mailIds = unreadItems.filter((item) => item.kind === "mail").flatMap(receivedMailIds);
+    const [notifResult, mailResult] = await Promise.all([
+      bulkMarkRead("/api/notifications", notifIds),
+      bulkMarkRead("/api/mail", mailIds),
+    ]);
     const failedIds = unreadItems
-      .filter((_, index) => outcomes[index].status === "rejected")
+      .filter((item) =>
+        item.kind === "mail"
+          ? receivedMailIds(item).some((id) => mailResult.failedIds.has(id))
+          : notifResult.failedIds.has(item.id)
+      )
       .map((item) => item.id);
     if (failedIds.length > 0) {
       dispatch({ type: "UNMARK_READ", ids: failedIds });
       console.error("[inbox] Failed to mark all read", { failed: failedIds.length });
       setMarkAllError(
-        failedIds.length === unreadItems.length
-          ? "Couldn't mark everything as read. Please try again."
-          : "Some items couldn't be marked as read. Please try again."
+        notifResult.rateLimited || mailResult.rateLimited
+          ? "Too many requests right now. Wait a few seconds and try again."
+          : failedIds.length === unreadItems.length
+            ? "Couldn't mark everything as read. Please try again."
+            : "Some items couldn't be marked as read. Please try again."
       );
       refetch();
     }

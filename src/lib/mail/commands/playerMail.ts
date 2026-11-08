@@ -74,6 +74,27 @@ export async function markReceivedMailRead(db: Db, userId: string, mailId: strin
     .updateOne({ _id: mailOid, toUserId: userOid }, { $set: { read: true } });
 }
 
+/**
+ * Marks many received mails read in one write. Unknown, foreign or deleted ids
+ * are ignored rather than failing the batch, since the caller is clearing a
+ * list that may have changed since it was loaded.
+ */
+export async function markReceivedMailReadMany(
+  db: Db,
+  userId: string,
+  mailIds: string[]
+): Promise<void> {
+  const mailOids = mailIds.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
+  if (mailOids.length === 0) return;
+
+  await db
+    .collection<PlayerMail>("playerMail")
+    .updateMany(
+      { _id: { $in: mailOids }, toUserId: new ObjectId(userId), deletedByRecipient: false },
+      { $set: { read: true } }
+    );
+}
+
 export async function deleteReceivedMail(db: Db, userId: string, mailId: string): Promise<void> {
   if (!ObjectId.isValid(mailId)) {
     throw notFound("Mail not found");
