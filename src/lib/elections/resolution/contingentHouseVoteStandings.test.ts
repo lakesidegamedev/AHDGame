@@ -3,7 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 const loadData = vi.fn();
-vi.mock("@/lib/turn/election/loadContingentElectionData", () => ({
+vi.mock("@/lib/elections/resolution/loadContingentElectionData", () => ({
   loadContingentElectionData: (...args: unknown[]) => loadData(...args),
 }));
 

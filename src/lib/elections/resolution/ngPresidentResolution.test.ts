@@ -8,11 +8,11 @@ import {
   resolveNGPresidentElection,
   type NGPresidentCandidate,
 } from "./ngPresidentResolution";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import { NG_ZONES } from "@/lib/nigeriaPresidentialElectionEngine";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 
-vi.mock("@/lib/turn/election/presidentExecutiveSeating", () => ({
+vi.mock("@/lib/elections/resolution/presidentExecutiveSeating", () => ({
   seatPresidentialExecutive: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/elections/liveResults/captureResultSnapshot", () => ({

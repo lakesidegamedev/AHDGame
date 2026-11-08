@@ -482,7 +482,7 @@ function isCountryFolderShim(raw: string): boolean {
   // detector that only accepted `export *` then called every one of them a data
   // file holding UK facts.
   return statements.every((s) =>
-    /^(?:export\s+\*\s+from|export\s*\{[^}]*\}\s*from|import)\s+["']@\/lib\/(?:countries|elections\/scheduling\/countries)\/[^"']+["']$/.test(
+    /^(?:export\s+\*\s+from|export\s*\{[^}]*\}\s*from|import)\s+["']@\/lib\/(?:countries|elections\/scheduling\/countries|elections\/resolution)\/[^"']+["']$/.test(
       s
     )
   );

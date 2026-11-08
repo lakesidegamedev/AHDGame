@@ -5,7 +5,7 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import {
   CONTINGENT_HOUSE_STATE_IDS,
   HOUSE_CONTINGENT_THRESHOLD,
-} from "@/lib/turn/election/contingentElection";
+} from "@/lib/elections/resolution/contingentElection";
 
 function makeCursor(docs: unknown[]) {
   return {

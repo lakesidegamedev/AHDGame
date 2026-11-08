@@ -1,0 +1,482 @@
+import { ObjectId } from "mongodb";
+import type { Db } from "@/lib/mongodb";
+import type {
+  Election,
+  ElectionCandidate,
+  ElectedOfficial,
+  NPP,
+  Character,
+  CareerEvent,
+  OfficeType,
+} from "@/lib/db/types";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
+import { clearCabinetOnTransition } from "@/lib/cabinetTransition";
+import {
+  COUNTRY_CONFIGS,
+  getCountryConfig,
+  isPresidentialGovernmentType,
+  type CountryId,
+} from "@/lib/constants/countries";
+import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
+import { vacateNonExecutiveOfficesForExecutive } from "@/lib/elections/vacateOfficesForExecutive";
+import { incrementExecutiveTermsServedUpdate } from "@/lib/elections/executiveTermLimits";
+import { initialVpActionFields } from "@/lib/constants/vicePresidentActions";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import {
+  pinnedSingleplayerHeadOfState,
+  seatSingleplayerHeadOfState,
+} from "@/lib/singleplayerHeadOfState";
+import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+
+export interface SeatPresidentialExecutiveParams {
+  election: Election;
+  winnerCandidate: ElectionCandidate;
+  vpCharId?: ObjectId;
+  vpNppId?: ObjectId;
+  now: Date;
+  turn?: number;
+  /**
+   * Seat as acting president (House contingent deadlock): no term counts
+   * toward term limits and the career entry reads as an appointment.
+   */
+  acting?: boolean;
+}
+
+export async function seatPresidentialExecutive(
+  db: Db,
+  params: SeatPresidentialExecutiveParams
+): Promise<void> {
+  const { election, winnerCandidate, vpCharId, vpNppId, now } = params;
+  const acting = params.acting === true;
+  const electionCountry = (election.countryId ??
+    COUNTRY_CONFIGS.US.id) as typeof COUNTRY_CONFIGS.US.id;
+  const resolutionCountryId = election.countryId ?? "US";
+
+  const pinned = await pinnedSingleplayerHeadOfState(db, electionCountry);
+  if (pinned) {
+    const preset = await getGameStatePresetOrDefault(db);
+    // The pinned head of state can already hold a legislative seat won in the
+    // same founding wave. Vacate it through the shared vacancy path in
+    // presidential systems, where the executive keeps no other office.
+    // Parliamentary heads of government keep their seats, so this never runs
+    // for the direct-government path inside seatSingleplayerHeadOfState.
+    if (
+      isPresidentialGovernmentType(
+        COUNTRY_CONFIGS[election.countryId as CountryId]?.governmentType ?? "presidential"
+      )
+    ) {
+      await vacateNonExecutiveOfficesForExecutive(db, { characterId: pinned._id }, now);
+    }
+    await seatSingleplayerHeadOfState(db, {
+      characterId: pinned._id,
+      countryId: electionCountry,
+      now,
+      preset,
+    });
+    return;
+  }
+
+  const [currentPresident, currentVicePresident] = await Promise.all([
+    db
+      .collection<ElectedOfficial>("electedOfficials")
+      .findOne(getExecutiveOfficialFilter(electionCountry, "president")),
+    db
+      .collection<ElectedOfficial>("electedOfficials")
+      .findOne(getExecutiveOfficialFilter(electionCountry, "vicePresident"))
+      .catch(() => null),
+  ]);
+
+  const sameIncumbentReelected =
+    (!winnerCandidate.isNPP &&
+      winnerCandidate.characterId != null &&
+      currentPresident?.characterId?.equals(winnerCandidate.characterId)) ||
+    (winnerCandidate.isNPP &&
+      winnerCandidate.nppId != null &&
+      currentPresident?.nppId?.equals(winnerCandidate.nppId));
+  const sameVicePresidentReelected =
+    !!vpCharId && currentVicePresident?.characterId?.equals(vpCharId);
+
+  if (!sameIncumbentReelected) {
+    await clearCabinetOnTransition(db, electionCountry);
+  }
+
+  const excludeCharIds: ObjectId[] = [];
+  if (!winnerCandidate.isNPP && winnerCandidate.characterId) {
+    excludeCharIds.push(winnerCandidate.characterId);
+  }
+  if (vpCharId) excludeCharIds.push(vpCharId);
+
+  await db.collection<Character>("characters").updateMany(
+    {
+      countryId: resolutionCountryId,
+      "currentOffice.type": "president",
+      ...(excludeCharIds.length > 0 ? { _id: { $nin: excludeCharIds } } : {}),
+    },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+
+  await db.collection<Character>("characters").updateMany(
+    {
+      countryId: resolutionCountryId,
+      "currentOffice.type": "vicePresident",
+      ...(excludeCharIds.length > 0 ? { _id: { $nin: excludeCharIds } } : {}),
+    },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+
+  await db.collection<NPP>("npps").updateMany(
+    {
+      countryId: resolutionCountryId,
+      "currentOffice.type": { $in: ["president", "vicePresident"] },
+    },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+
+  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+    { countryId: resolutionCountryId, officeType: { $in: ["president", "vicePresident"] } },
+    {
+      $set: {
+        characterId: null,
+        characterName: null,
+        party: null,
+        isNPP: false,
+        nppId: null,
+        updatedAt: now,
+      } as Record<string, unknown>,
+    }
+  );
+
+  // A newly-seated executive holds no other office (#2038). The shared vacancy
+  // helper reduces each incompatible row to an unheld vacancy record and runs
+  // the succession side effects (governor notify, leadership re-trigger,
+  // presence recount). It matches on non-executive office keys only, so the
+  // executive rows written below are never touched, and it is a no-op when
+  // the holder keeps no other office (including seating retries).
+  // Character currentOffice is cleared here and restamped with the executive
+  // office below; NPP currentOffice is stamped with the executive office below.
+  if (!winnerCandidate.isNPP && winnerCandidate.characterId) {
+    await vacateNonExecutiveOfficesForExecutive(
+      db,
+      { characterId: winnerCandidate.characterId },
+      now
+    );
+    await db
+      .collection<Character>("characters")
+      .updateOne(
+        { _id: winnerCandidate.characterId },
+        { $set: { currentOffice: null, updatedAt: now } }
+      );
+  }
+  if (winnerCandidate.isNPP && winnerCandidate.nppId) {
+    await vacateNonExecutiveOfficesForExecutive(db, { nppId: winnerCandidate.nppId }, now);
+  }
+
+  if (vpCharId) {
+    await vacateNonExecutiveOfficesForExecutive(db, { characterId: vpCharId }, now);
+    await db
+      .collection<Character>("characters")
+      .updateOne({ _id: vpCharId }, { $set: { currentOffice: null, updatedAt: now } });
+  }
+  if (vpNppId) {
+    await vacateNonExecutiveOfficesForExecutive(db, { nppId: vpNppId }, now);
+  }
+
+  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+    getExecutiveOfficialFilter(electionCountry, "president"),
+    {
+      $set: {
+        countryId: electionCountry,
+        characterId: winnerCandidate.isNPP ? null : winnerCandidate.characterId,
+        characterName: winnerCandidate.characterName,
+        party: winnerCandidate.party,
+        isNPP: winnerCandidate.isNPP ?? false,
+        nppId: winnerCandidate.nppId ?? undefined,
+        isActing: acting,
+        electedAt: now,
+        updatedAt: now,
+      },
+    },
+    { upsert: true }
+  );
+
+  if (winnerCandidate.isNPP && winnerCandidate.nppId) {
+    await db.collection<NPP>("npps").updateOne(
+      { _id: winnerCandidate.nppId },
+      {
+        $set: {
+          currentOffice: { type: "president" },
+          party: winnerCandidate.party,
+          updatedAt: now,
+        },
+      }
+    );
+    // Same counting as players: an elected term counts toward the limit, a
+    // founding or acting term does not. The election id guard keeps a replayed
+    // seating from counting the same win twice.
+    if (!acting && election.cycle !== 0) {
+      const electionId = election._id.toString();
+      await db.collection<NPP>("npps").updateOne(
+        { _id: winnerCandidate.nppId, lastExecutiveTermElectionId: { $ne: electionId } },
+        {
+          $inc: { [`executiveTermsServed.${electionCountry}`]: 1 },
+          $set: { lastExecutiveTermElectionId: electionId },
+        }
+      );
+    }
+  } else if (winnerCandidate.characterId) {
+    const winnerCharacter = await db
+      .collection<Character>("characters")
+      .findOne(
+        { _id: winnerCandidate.characterId },
+        { projection: { careerHistory: 1, executiveTermsServed: 1 } }
+      );
+    const presidentOffice: OfficeType = { type: "president" };
+    const presidentCareer: CareerEvent = {
+      type: acting ? "appointed" : "elected",
+      office: presidentOffice,
+      officeLabel: acting
+        ? `Acting ${getOfficeLabel(presidentOffice, election.countryId)}`
+        : getOfficeLabel(presidentOffice, election.countryId),
+      party: winnerCandidate.party,
+      partyCountryId: election.countryId,
+      electionId: election._id.toString(),
+      ...(!acting && election.cycle === 0 ? { foundingTerm: true } : {}),
+      date: now,
+    };
+    const recorded = await db.collection<Character>("characters").updateOne(
+      {
+        _id: winnerCandidate.characterId,
+        careerHistory: {
+          $not: {
+            $elemMatch: {
+              type: presidentCareer.type,
+              electionId: election._id.toString(),
+              "office.type": "president",
+            },
+          },
+        },
+      },
+      {
+        $set: {
+          currentOffice: presidentOffice,
+          updatedAt: now,
+          // An acting presidency is not an elected term (term limits).
+          ...(acting
+            ? {}
+            : incrementExecutiveTermsServedUpdate(
+                winnerCharacter ?? { executiveTermsServed: undefined },
+                electionCountry
+              )),
+        },
+        $push: { careerHistory: presidentCareer },
+      }
+    );
+    // A partially completed seating can return here after the executive rows
+    // were cleared. Restore the office without recording a second term.
+    if (recorded.matchedCount === 0)
+      await db
+        .collection<Character>("characters")
+        .updateOne(
+          { _id: winnerCandidate.characterId },
+          { $set: { currentOffice: presidentOffice, updatedAt: now } }
+        );
+  }
+
+  if (vpCharId) {
+    const vpChar = await db.collection<Character>("characters").findOne({ _id: vpCharId });
+    if (vpChar) {
+      await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+        getExecutiveOfficialFilter(electionCountry, "vicePresident"),
+        {
+          $set: {
+            countryId: electionCountry,
+            characterId: vpCharId,
+            characterName: vpChar.name,
+            party: vpChar.party,
+            isNPP: false,
+            nppId: undefined,
+            electedAt: now,
+            updatedAt: now,
+            // Seed the VP self-serve action pool on seating (#67), mirroring
+            // initialMinisterialActionFields on cabinet appointment.
+            ...initialVpActionFields(now),
+          },
+        },
+        { upsert: true }
+      );
+      const vpOffice: OfficeType = { type: "vicePresident" };
+      const vpCareer: CareerEvent = {
+        type: "elected",
+        office: vpOffice,
+        officeLabel: getOfficeLabel(vpOffice, election.countryId),
+        party: vpChar.party,
+        partyCountryId: election.countryId,
+        electionId: election._id.toString(),
+        date: now,
+      };
+      const recorded = await db.collection<Character>("characters").updateOne(
+        {
+          _id: vpCharId,
+          careerHistory: {
+            $not: {
+              $elemMatch: {
+                type: "elected",
+                electionId: election._id.toString(),
+                "office.type": "vicePresident",
+              },
+            },
+          },
+        },
+        {
+          $set: { currentOffice: vpOffice, updatedAt: now },
+          $push: { careerHistory: vpCareer },
+        }
+      );
+      if (recorded.matchedCount === 0)
+        await db
+          .collection<Character>("characters")
+          .updateOne({ _id: vpCharId }, { $set: { currentOffice: vpOffice, updatedAt: now } });
+    }
+  }
+
+  if (vpNppId) {
+    const vpNpp = await db
+      .collection<NPP>("npps")
+      .findOne({ _id: vpNppId }, { projection: { name: 1, party: 1 } });
+    if (vpNpp) {
+      await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+        getExecutiveOfficialFilter(electionCountry, "vicePresident"),
+        {
+          $set: {
+            countryId: electionCountry,
+            characterId: null,
+            characterName: vpNpp.name,
+            party: vpNpp.party,
+            isNPP: true,
+            nppId: vpNppId,
+            electedAt: now,
+            updatedAt: now,
+            // Keep the office doc uniform; an NPP VP never spends these.
+            ...initialVpActionFields(now),
+          },
+        },
+        { upsert: true }
+      );
+      await db
+        .collection<NPP>("npps")
+        .updateOne(
+          { _id: vpNppId },
+          { $set: { currentOffice: { type: "vicePresident" }, updatedAt: now } }
+        );
+    }
+  }
+
+  // A newly-seated President/VP must not stay an active candidate in any
+  // other race, or a later resolution seats them in a second office.
+  const execIdentityOr: Record<string, unknown>[] = [];
+  if (!winnerCandidate.isNPP && winnerCandidate.characterId)
+    execIdentityOr.push({ characterId: winnerCandidate.characterId });
+  if (winnerCandidate.isNPP && winnerCandidate.nppId)
+    execIdentityOr.push({ nppId: winnerCandidate.nppId });
+  if (vpCharId) execIdentityOr.push({ characterId: vpCharId });
+  if (vpNppId) execIdentityOr.push({ nppId: vpNppId });
+  if (execIdentityOr.length > 0) {
+    await db
+      .collection<ElectionCandidate>("electionCandidates")
+      .updateMany(
+        { status: "active", $or: execIdentityOr },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
+  }
+
+  const activePreset = await getGameStatePresetOrDefault(db);
+  const separatePrimeMinister =
+    getCountryConfig(electionCountry, activePreset).electionSystems.headOfGovernment ===
+    "parliamentary";
+  // Keep the government record aligned with elected presidential handovers.
+  // This includes background NPP governments created by the vacancy fallback.
+  await db
+    .collection<import("@/lib/db/types").GovernmentFormation>("governmentFormations")
+    .updateOne(
+      { _id: electionCountry },
+      {
+        $set: {
+          status: "formed",
+          presidentCharacterId: winnerCandidate.isNPP ? null : winnerCandidate.characterId,
+          presidentNppId: winnerCandidate.isNPP ? winnerCandidate.nppId : null,
+          presidentName: winnerCandidate.characterName,
+          ...(!separatePrimeMinister
+            ? {
+                formationType: null,
+                pmName: winnerCandidate.characterName,
+                pmCharacterId: winnerCandidate.isNPP ? null : winnerCandidate.characterId,
+                pmNppId: winnerCandidate.isNPP ? winnerCandidate.nppId : null,
+                governingPartyId: winnerCandidate.party,
+              }
+            : {}),
+          formedTurn: params.turn ?? election.endTurn ?? 0,
+          formedAt: now,
+          updatedAt: now,
+        },
+      }
+    );
+  const turn = params.turn ?? election.endTurn ?? 0;
+  const transitions: Array<{
+    officeType: string;
+    transitionType: "gained" | "lost";
+    partyId?: string;
+  }> = [];
+  if (
+    currentPresident?.characterId &&
+    !currentPresident.characterId.equals(winnerCandidate.characterId ?? new ObjectId())
+  ) {
+    transitions.push({
+      officeType: "president",
+      transitionType: "lost",
+      partyId: currentPresident.party,
+    });
+  }
+  if (!winnerCandidate.isNPP && winnerCandidate.characterId && !sameIncumbentReelected) {
+    transitions.push({
+      officeType: "president",
+      transitionType: "gained",
+      partyId: winnerCandidate.party,
+    });
+  }
+  if (
+    currentVicePresident?.characterId &&
+    !currentVicePresident.characterId.equals(vpCharId ?? new ObjectId())
+  ) {
+    transitions.push({
+      officeType: "vicePresident",
+      transitionType: "lost",
+      partyId: currentVicePresident.party,
+    });
+  }
+  if (vpCharId && !sameVicePresidentReelected) {
+    const vicePresident = await db
+      .collection<Character>("characters")
+      .findOne({ _id: vpCharId }, { projection: { party: 1 } })
+      .catch(() => null);
+    transitions.push({
+      officeType: "vicePresident",
+      transitionType: "gained",
+      partyId: vicePresident?.party,
+    });
+  }
+  await Promise.all(
+    transitions.map((transition) =>
+      captureOfficeTransition({
+        db,
+        officeType: transition.officeType,
+        transitionType: transition.transitionType,
+        partyId: transition.partyId,
+        selectionMethod: "election",
+        tenureTurns: 0,
+        careerStage: 0,
+        nationId: electionCountry,
+        turn,
+      })
+    )
+  );
+}

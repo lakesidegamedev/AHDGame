@@ -7,7 +7,7 @@ const noticeOpened = vi.fn();
 vi.mock("./contingentHouseVoteNotices", () => ({
   notifyHouseVoteOpened: (...args: unknown[]) => noticeOpened(...args),
 }));
-vi.mock("@/lib/turn/election/presidentExecutiveSeating", () => ({
+vi.mock("@/lib/elections/resolution/presidentExecutiveSeating", () => ({
   seatPresidentialExecutive: (...args: unknown[]) => seat(...args),
 }));
 

@@ -86,7 +86,7 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     requires: "player characters standing for a party presidential nomination",
     seams: [
       seam(
-        "src/lib/turn/election/conventionResolution.ts",
+        "src/lib/elections/resolution/conventionResolution.ts",
         "Resolve a single party's presidential nomination"
       ),
     ],
