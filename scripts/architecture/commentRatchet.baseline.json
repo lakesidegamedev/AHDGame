@@ -9777,7 +9777,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/nigeriaPresidentialElectionEngine.ts": {
+    "src/lib/elections/presidential/nigeriaPresidentialElectionEngine.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10549,19 +10549,19 @@
       "longBlocks": 2,
       "narrativeLines": 5
     },
-    "src/lib/presidentialElectionEngine.leanMultiplier.test.ts": {
+    "src/lib/elections/presidential/presidentialElectionEngine.leanMultiplier.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/presidentialElectionEngine.registration.test.ts": {
+    "src/lib/elections/presidential/presidentialElectionEngine.registration.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/presidentialElectionEngine.test.ts": {
+    "src/lib/elections/presidential/presidentialElectionEngine.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/presidentialElectionEngine.ts": {
+    "src/lib/elections/presidential/presidentialElectionEngine.ts": {
       "longBlocks": 1,
       "narrativeLines": 3
     },
