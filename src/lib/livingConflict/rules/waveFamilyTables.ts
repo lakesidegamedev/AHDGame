@@ -139,6 +139,8 @@ export const CLIMATE_MIGRATION_KEY = "climate_migration_surge";
 export const ARCTIC_OPENING_KEY = "arctic_opening";
 export const ANTIMICROBIAL_RESISTANCE_KEY = "antimicrobial_resistance";
 export const ORBITAL_DEBRIS_KEY = "orbital_debris";
+export const FUSION_BREAKTHROUGH_KEY = "fusion_breakthrough";
+export const ELECTION_INTEGRITY_KEY = "election_integrity_crisis";
 
 export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
   [SECOND_PANDEMIC_KEY]: {
@@ -273,6 +275,37 @@ export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
       ],
     },
     dynamics: { ...SLOW, startPressure: 30, peakAt: 55, windowTurns: 24, onsetEveryTurns: 3 },
+    scale: HARM_SCALE,
+  },
+  [FUSION_BREAKTHROUGH_KEY]: {
+    fromYear: 2042,
+    opening: {
+      baseAnnual: 0.01,
+      capAnnual: 0.2,
+      gates: [
+        { signal: "rdIntensity", min: 2.8 },
+        { signal: "energySecurity", min: 35 },
+      ],
+      stressors: [
+        { signal: "rdIntensity", from: 2.8, to: 5, weight: 0.1 },
+        { signal: "utilities", from: 40, to: 80, weight: 0.04 },
+      ],
+    },
+    dynamics: { ...SLOW, startPressure: 30, peakAt: 55, windowTurns: 24, onsetEveryTurns: 4 },
+    scale: { contained: 1.5, softened: 1, adapted: 0.7, unchecked: 0.2 },
+  },
+  [ELECTION_INTEGRITY_KEY]: {
+    fromYear: 2028,
+    opening: {
+      baseAnnual: 0.02,
+      capAnnual: 0.3,
+      gates: [{ signal: "integrity", max: 55 }],
+      stressors: [
+        { signal: "integrity", from: 55, to: 20, weight: 0.12 },
+        { signal: "openness", from: 60, to: 25, weight: 0.08 },
+      ],
+    },
+    dynamics: { ...SLOW, startPressure: 30, peakAt: 60, windowTurns: 24, onsetEveryTurns: 3 },
     scale: HARM_SCALE,
   },
 };

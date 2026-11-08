@@ -25,6 +25,8 @@ import { CLIMATE_MIGRATION_DEF } from "./defs/waveFamilies/climateMigration";
 import { ARCTIC_OPENING_DEF } from "./defs/waveFamilies/arcticOpening";
 import { ANTIMICROBIAL_RESISTANCE_DEF } from "./defs/waveFamilies/antimicrobialResistance";
 import { ORBITAL_DEBRIS_DEF } from "./defs/waveFamilies/orbitalDebris";
+import { FUSION_BREAKTHROUGH_DEF } from "./defs/waveFamilies/fusionBreakthrough";
+import { ELECTION_INTEGRITY_DEF } from "./defs/waveFamilies/electionIntegrity";
 
 /** Every living-conflict definition, keyed by its stable def key. */
 export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
@@ -54,6 +56,8 @@ export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
   [ARCTIC_OPENING_DEF.key]: ARCTIC_OPENING_DEF,
   [ANTIMICROBIAL_RESISTANCE_DEF.key]: ANTIMICROBIAL_RESISTANCE_DEF,
   [ORBITAL_DEBRIS_DEF.key]: ORBITAL_DEBRIS_DEF,
+  [FUSION_BREAKTHROUGH_DEF.key]: FUSION_BREAKTHROUGH_DEF,
+  [ELECTION_INTEGRITY_DEF.key]: ELECTION_INTEGRITY_DEF,
 };
 
 export function livingConflictDef(key: string): LivingConflictDef | null {

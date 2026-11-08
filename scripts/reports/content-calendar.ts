@@ -1,7 +1,7 @@
 /**
- * Year-by-year content calendar for the 2027 world, 2027 to 2055.
+ * Year-by-year content calendar for the 2027 world, 2027 to 2059.
  *
- * Run: npx tsx scripts/reports/content-calendar.ts [--json] [--from 2027] [--to 2055]
+ * Run: npx tsx scripts/reports/content-calendar.ts [--json] [--from 2027] [--to 2059]
  *
  * Lists, per year and per full-simulation country, the eligible living-conflict
  * families, crisis templates, player events, opportunities, law types and
