@@ -28,8 +28,8 @@ function snap(overrides: Partial<CrashRecoverySnapshot>): CrashRecoverySnapshot 
 }
 
 describe("phase timeout limits", () => {
-  it("gives corporation processing six minutes and preserves other phase limits", () => {
-    expect(phaseTimeoutMs("corporationTurn")).toBe(360_000);
+  it("gives corporation processing ten minutes and preserves other phase limits", () => {
+    expect(phaseTimeoutMs("corporationTurn")).toBe(600_000);
     expect(phaseTimeoutMs("fundGeneration")).toBe(PHASE_TIMEOUT_MS);
     expect(phaseTimeoutMs("lineOfCreditTurn")).toBe(PHASE_TIMEOUT_MS);
   });
