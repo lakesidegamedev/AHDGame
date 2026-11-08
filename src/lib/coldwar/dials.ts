@@ -1,10 +1,5 @@
 import type { Db } from "mongodb";
-import {
-  deriveVietnamDials,
-  getVietnamEscalation,
-  type VietnamDials,
-} from "@/lib/crises/vietnamEscalation";
-import { getGameState } from "@/lib/gameState";
+import { deriveVietnamDials, type VietnamDials } from "@/lib/crises/vietnamEscalation";
 import { livingVietnamAsLegacyState } from "@/lib/livingConflict/vietnamCompat";
 import {
   getColdWarTension,
@@ -119,14 +114,13 @@ function tightest(war: ColdWarDials, tension: ColdWarDials): ColdWarDials {
 /**
  * Read the console's dials off server state.
  *
- * Two drivers feed them: the war ladder (legacy or living-conflict Vietnam)
+ * Two drivers feed them: the war ladder (the living-conflict Vietnam)
  * and the global tension reading. They compose by taking the tightest reading
  * across drivers, dial by dial, rather than the last one to write.
  */
 export async function getColdWarDials(db: Db): Promise<ColdWarDials> {
-  const gameState = await getGameState(db);
   const [vietnam, tension] = await Promise.all([
-    gameState?.livingConflictsEnabled ? livingVietnamAsLegacyState(db) : getVietnamEscalation(db),
+    livingVietnamAsLegacyState(db),
     getColdWarTension(db),
   ]);
   const reading = dialTensionReading(tension.value, tension.blocDyads);

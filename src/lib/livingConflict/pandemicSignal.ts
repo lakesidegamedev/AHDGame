@@ -3,11 +3,7 @@ import type { Db } from "mongodb";
 import type { LivingConflictState } from "./types";
 import { PANDEMIC_KEY } from "./rules/pandemic";
 
-export async function loadPandemicSignal(
-  db: Db,
-  enabled: boolean
-): Promise<LivingConflictState | null> {
-  if (!enabled) return null;
+export async function loadPandemicSignal(db: Db): Promise<LivingConflictState | null> {
   return db.collection<LivingConflictState>("livingConflicts").findOne(
     { defKey: PANDEMIC_KEY, hasOpened: true, status: { $ne: "closed" } },
     {

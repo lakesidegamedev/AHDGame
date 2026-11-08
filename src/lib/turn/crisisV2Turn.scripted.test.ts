@@ -14,7 +14,7 @@ vi.mock("@/lib/observability/logger", () => ({ logger }));
 vi.mock("@/lib/crises/applyEffects", () => ({ applyCrisisEffects }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({
-  getGameState: async () => ({ currentYear: 2030, livingConflictsEnabled: false }),
+  getGameState: async () => ({ currentYear: 2030 }),
 }));
 vi.mock("./crisisTurn", () => ({ applyCrisisTurnEffects, finalizeResolvedCrises }));
 

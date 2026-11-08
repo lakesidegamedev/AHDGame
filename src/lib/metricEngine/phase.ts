@@ -282,7 +282,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         currentTurn: 1,
         startingYear: 1,
         preset: 1,
-        livingConflictsEnabled: 1,
         resetWorldId: 1,
         resetVersionSeeds: 1,
         metricsSystemVersion: 1,
@@ -292,27 +291,25 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     }
   );
   const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
-  const armedConflicts = eraGameState?.livingConflictsEnabled
-    ? await db
-        .collection<LivingConflictState>("livingConflicts")
-        .find(
-          {
-            defKey: { $in: ["yugoslav_dissolution", "russia_ukraine_security", "arab_uprisings"] },
-          },
-          {
-            projection: {
-              defKey: 1,
-              hasOpened: 1,
-              status: 1,
-              tracks: 1,
-              representedActors: 1,
-              arabRegional: 1,
-              realizedInfrastructureDamage: 1,
-            },
-          }
-        )
-        .toArray()
-    : [];
+  const armedConflicts = await db
+    .collection<LivingConflictState>("livingConflicts")
+    .find(
+      {
+        defKey: { $in: ["yugoslav_dissolution", "russia_ukraine_security", "arab_uprisings"] },
+      },
+      {
+        projection: {
+          defKey: 1,
+          hasOpened: 1,
+          status: 1,
+          tracks: 1,
+          representedActors: 1,
+          arabRegional: 1,
+          realizedInfrastructureDamage: 1,
+        },
+      }
+    )
+    .toArray();
 
   // SP5: prev values live in TWO stores post-split — macroMetrics carries
   // economic/population (+ economicModel) for every country; stateMetrics

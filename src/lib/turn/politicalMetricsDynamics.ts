@@ -163,25 +163,15 @@ export async function processPoliticalMetricsDynamics(
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          livingConflictsEnabled: 1,
         },
       }
     ),
     loadLabourRelationsPoliticalNudgesByCountry(db, turnNumber),
   ]);
-  const northernIrelandSignal = await loadNorthernIrelandSignal(
-    db,
-    eraGameState?.livingConflictsEnabled === true
-  );
+  const northernIrelandSignal = await loadNorthernIrelandSignal(db);
   const northernIrelandEffects = northernIrelandPoliticalEffects(northernIrelandSignal);
-  const terrorismSignal = await loadTerrorismSignal(
-    db,
-    eraGameState?.livingConflictsEnabled === true
-  );
-  const pandemicSignal = await loadPandemicSignal(
-    db,
-    eraGameState?.livingConflictsEnabled === true
-  );
+  const terrorismSignal = await loadTerrorismSignal(db);
+  const pandemicSignal = await loadPandemicSignal(db);
   // A metric's realistic span moves with the era, so scoring a 1953 outcome
   // against modern thresholds would read it as bottom-of-scale.
   const eraYear = eraGameState ? (resolveGameYear(eraGameState) ?? undefined) : undefined;

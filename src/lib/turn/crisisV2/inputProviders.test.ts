@@ -58,6 +58,20 @@ describe("crisis input providers", () => {
     expect(generousGap).toBeGreaterThan(leanGap);
   });
 
+  it("sizes the safety-net share against the smoothed GDP the budget uses", async () => {
+    const ctx = makeCtx({
+      federalBudget: [
+        {
+          countryId: "US",
+          gdp: 500,
+          gdpSmoothed: 1000,
+          spending: { byCategory: { welfare: 30, socialSecurity: 30 } },
+        },
+      ],
+    });
+    expect((await safetyNetGapProvider.load(ctx)).get("US")).toBeCloseTo(0);
+  });
+
   it("converts investor confidence into a borrowing premium in basis points", async () => {
     const ctx = makeCtx({
       federalBudget: [{ countryId: "US", gdp: 1000, investorConfidence: 35 }],

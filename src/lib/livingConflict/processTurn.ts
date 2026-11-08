@@ -188,10 +188,8 @@ export interface LivingConflictTurnResult {
 export async function processLivingConflictsTurn(
   db: Db,
   currentTurn: number,
-  currentYear: number | null | undefined,
-  enabled: boolean
+  currentYear: number | null | undefined
 ): Promise<LivingConflictTurnResult> {
-  if (!enabled) return { conflictsProcessed: 0, eventsOpened: 0 };
   await migrateLegacyVietnamState(db);
   const [tension, activeWars] = await Promise.all([
     db.collection<{ _id: string; value?: number }>("coldWarTension").findOne({ _id: "current" }),

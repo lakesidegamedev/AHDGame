@@ -3,6 +3,7 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { getSovereignConfidencePremium } from "@/lib/budget/debt";
+import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
@@ -178,6 +179,7 @@ function loadBudgets(ctx: CrisisInputContext): Promise<Map<string, BudgetReading
           projection: {
             countryId: 1,
             gdp: 1,
+            gdpSmoothed: 1,
             debtToGdpRatio: 1,
             investorConfidence: 1,
             "economicFactors.inflationRate": 1,
@@ -190,7 +192,7 @@ function loadBudgets(ctx: CrisisInputContext): Promise<Map<string, BudgetReading
     for (const doc of docs) {
       const byCategory = doc.spending?.byCategory ?? {};
       readings.set(String(doc.countryId), {
-        gdp: Number(doc.gdp) || 0,
+        gdp: resolveRatioGdp(doc),
         debtToGdpRatio: Number(doc.debtToGdpRatio) || 0,
         investorConfidence:
           typeof doc.investorConfidence === "number" ? doc.investorConfidence : undefined,

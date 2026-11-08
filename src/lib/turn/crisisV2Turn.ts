@@ -402,7 +402,6 @@ async function finalizeScripted(
     const gameState = await getGameState(db);
     await finalizeResolvedCrises(db, docs, turn, {
       year: gameState?.currentYear,
-      livingEnabled: gameState?.livingConflictsEnabled === true,
       allStateIds: world.allStateIds,
       statesByCountry: world.stateIdsByCountry,
     });

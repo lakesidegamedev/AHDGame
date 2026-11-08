@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
+import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { commitLeverUse } from "@/lib/crises/levers/leverCommand";
 import { leverBlock } from "@/lib/crises/levers/availability";
 import {
@@ -76,7 +77,7 @@ async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<st
     (await getFederalBudgetCollection(db))
       .find(
         { countryId: { $in: [...countryIds] as CountryId[] } },
-        { projection: { countryId: 1, treasuryBalance: 1, gdp: 1 } }
+        { projection: { countryId: 1, treasuryBalance: 1, gdp: 1, gdpSmoothed: 1 } }
       )
       .toArray(),
     db
@@ -89,7 +90,7 @@ async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<st
   for (const budget of budgets) {
     result.set(budget.countryId, {
       treasuryBalance: budget.treasuryBalance ?? 0,
-      output: budget.gdp,
+      output: resolveRatioGdp(budget) || undefined,
       approval: approvalOf.get(budget.countryId) ?? 50,
     });
   }

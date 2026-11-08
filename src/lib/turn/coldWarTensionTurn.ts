@@ -29,10 +29,10 @@ import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 export async function processColdWarTensionTurn(
   db: Db,
   turn: number,
-  gameState: { livingConflictsEnabled?: boolean; currentYear?: number }
+  gameState: { currentYear?: number }
 ): Promise<ColdWarTensionState | null> {
   await syncLimitedWarPressureClocks(db, turn);
-  const snapshot = await readStandingPressureSnapshot(db, gameState, turn);
+  const snapshot = await readStandingPressureSnapshot(db, turn);
   if ((gameState.currentYear ?? 0) < BLOC_TENSION_FIRST_YEAR) {
     return runTensionTurn(db, turn, snapshot.pressures);
   }

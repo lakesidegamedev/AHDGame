@@ -116,7 +116,6 @@ export async function prepareRefugeeReceptionOrder(
           currentTurn: 1,
           isProcessing: 1,
           processingTargetTurn: 1,
-          livingConflictsEnabled: 1,
         },
       }
     ),
@@ -141,8 +140,7 @@ export async function prepareRefugeeReceptionOrder(
       ),
     loadRefugeeAdmissionAuthorization(db, countryId),
   ]);
-  if (gameState?.livingConflictsEnabled !== true) return undefined;
-  if (!Number.isSafeInteger(gameState.currentTurn) || gameState.currentTurn < 1)
+  if (!gameState || !Number.isSafeInteger(gameState.currentTurn) || gameState.currentTurn < 1)
     throw new Error("Refugee reception requires a valid game clock");
   const population = states
     .filter((state) => !NATIONAL_SCOPE_IDS.has(state._id))
@@ -192,10 +190,8 @@ export async function prepareRefugeeReceptionOrder(
 export async function loadPendingRefugeeReceptions(
   db: Db,
   worldEpochId: string,
-  turn: number,
-  enabled: boolean
+  turn: number
 ): Promise<RefugeeReceptionOrder[]> {
-  if (!enabled) return [];
   await ensureRefugeeReceptionIndexes(db);
   const interactions = await db
     .collection<CrisisInteraction>("crisisInteractions")

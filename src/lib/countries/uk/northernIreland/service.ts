@@ -15,17 +15,7 @@ import {
   type NorthernIrelandSignal,
 } from "./rules";
 
-export async function loadNorthernIrelandSignal(
-  db: Db,
-  enabled?: boolean
-): Promise<NorthernIrelandSignal | null> {
-  const game =
-    enabled === undefined
-      ? await db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { livingConflictsEnabled: 1 } })
-      : null;
-  if (!(enabled ?? game?.livingConflictsEnabled)) return null;
+export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
   return db
     .collection<LivingConflictState>("livingConflicts")
     .findOne(

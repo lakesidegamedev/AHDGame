@@ -46,12 +46,12 @@ describe("processColdWarTensionTurn", () => {
 
   it("runs the turn from the shared live standing-pressure snapshot", async () => {
     const db = createMockDb();
-    const gameState = { livingConflictsEnabled: false };
+    const gameState = {};
 
     await processColdWarTensionTurn(db as unknown as Db, 436, gameState);
 
     expect(syncLimitedWarPressureClocks).toHaveBeenCalledWith(db, 436);
-    expect(readStandingPressureSnapshot).toHaveBeenCalledWith(db, gameState, 436);
+    expect(readStandingPressureSnapshot).toHaveBeenCalledWith(db, 436);
     expect(runTensionTurn).toHaveBeenCalledWith(db, 436, {
       escalationLevel: 1,
       activeCrises: 6,

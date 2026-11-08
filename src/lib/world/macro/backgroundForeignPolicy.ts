@@ -110,8 +110,7 @@ export interface BackgroundForeignContext {
 export async function loadBackgroundForeignContext(
   db: Db,
   nations: readonly Pick<MacroCountryState, "entityId">[],
-  turn: number,
-  options: { livingConflictsEnabled: boolean }
+  turn: number
 ): Promise<BackgroundForeignContext | null> {
   if (nations.length === 0) return null;
   const ids = nations.map((n) => n.entityId as string);
@@ -167,14 +166,12 @@ export async function loadBackgroundForeignContext(
           projection: { sourceCountry: 1, targetCountry: 1, commodity: 1, expiresTurn: 1 },
         })
         .toArray(),
-      options.livingConflictsEnabled
-        ? db
-            .collection<Crisis>("crises")
-            .find({ status: "active", globalResponse: { $exists: true } } as never, {
-              projection: { name: 1, globalResponse: 1 },
-            })
-            .toArray()
-        : Promise.resolve([] as Crisis[]),
+      db
+        .collection<Crisis>("crises")
+        .find({ status: "active", globalResponse: { $exists: true } } as never, {
+          projection: { name: 1, globalResponse: 1 },
+        })
+        .toArray(),
     ]);
 
   const orgsByCountry = new Map<string, Set<string>>();
