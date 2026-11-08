@@ -6,7 +6,7 @@ import type { GameState } from "@/lib/db/types";
  *
  * When false (or absent), the corporation Tech tab is hidden, the unlock API
  * rejects, and the turn engine applies no tech effects — the feature is fully
- * inert. Mirrors isCrisisInteractionEnabled (src/lib/crises/featureFlag.ts).
+ * inert.
  */
 export async function isSectorTechTreesEnabled(preloadedGameState?: {
   sectorTechTreesEnabled?: boolean;

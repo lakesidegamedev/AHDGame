@@ -406,8 +406,8 @@ describe("resetGameWorld", () => {
       currentYear: 1995,
       iteration: 1,
       nppAutonomyLevel: "v5",
-      autoSectorSeedEnabled: false,
-      settlementCrisisEnabled: false,
+      rpgStatsEnabled: false,
+      intOrgAlignmentEnabled: false,
     });
     await resetGameWorld(db as never, {
       deleteProfiles: true,
@@ -417,8 +417,8 @@ describe("resetGameWorld", () => {
     assertSetFields(db.collectionMocks.gameState.updateOne, { ...DEFAULT_GAME_STATE_FLAGS });
     assertSetFields(db.collectionMocks.gameState.updateOne, {
       nppAutonomyLevel: "v4",
-      autoSectorSeedEnabled: true,
-      settlementCrisisEnabled: true,
+      rpgStatsEnabled: true,
+      intOrgAlignmentEnabled: true,
     });
     assertSetFields(db.collectionMocks.gameConfig.updateOne, {
       treasuryCashLedgerEnabled: true,

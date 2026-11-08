@@ -46,18 +46,13 @@ export { stampInitialGameClock } from "@/lib/admin/bootstrapGameWorld";
  *   not a new risk.
  * - `isActive: true`, `pausedAt: null` so the turn engine's auto-pause-drift
  *   guard (turnSystem.ts) and election-cycle-anchor code see a live game.
- * - `autoDisastersEnabled: true`, `crisisAidBillsEnabled: true`: the master
- *   crisis-spawn gate defaults to false and nothing in bootstrap ever set it
- *   — found via a 100-turn sim run that spawned zero crises despite
- *   processAutoCrisisTurn being correctly wired into every turn
- *   (turnPhaseRegistry.ts). NPPs are actually ready to respond once crises
- *   exist: crisisIntake.ts already feeds active crises into the governing
- *   agenda, which cascades into ministerial orders and emergency bill
- *   sponsorship — both NPP-autonomous — so aid-via-bill-flow
- *   (crisisAidBillsEnabled) is enabled alongside spawning. Deliberately NOT
- *   enabling crisisInteractionEnabled (decision trees / collective
- *   contributions / input nodes) — that reads as a player-input-shaped
- *   system with no confirmed NPP hook; leave off until verified.
+ * - `autoDisastersEnabled: true`: the master crisis-spawn gate defaults to
+ *   false and nothing in bootstrap ever set it — found via a 100-turn sim run
+ *   that spawned zero crises despite processAutoCrisisTurn being correctly
+ *   wired into every turn (turnPhaseRegistry.ts). NPPs are actually ready to
+ *   respond once crises exist: crisisIntake.ts already feeds active crises
+ *   into the governing agenda, which cascades into ministerial orders and
+ *   emergency bill sponsorship, both NPP-autonomous.
  * - `conflictsEnabled: true`, `coldWarEnabled: true`: user-requested for the
  *   500-turn audit. NOTE: confirmed via grep that both are PURE UI-visibility
  *   gates (src/app/world/conflicts/_coldwar/gate.ts's page redirect,
@@ -65,9 +60,6 @@ export { stampInitialGameClock } from "@/lib/admin/bootstrapGameWorld";
  *   src/simulation phase reading them. Harmless to enable, but adds no
  *   testable mechanic to a headless sim; flagging so this isn't mistaken for
  *   real new coverage.
- * - `autoSectorSeedEnabled: true`: user-requested; this one IS a real,
- *   self-contained turn mechanic (src/lib/turn/autoSectorSeed.ts, fires every
- *   48 turns) — no NPP-side wiring needed.
  * - `sectorTechTreesEnabled: true`: user-requested; gates the tech-tree
  *   unlock/abandon routes, which are CEO-decision-driven and currently
  *   player-only (src/app/api/corporation/[id]/tech/{unlock,abandon}/route.ts)
@@ -120,30 +112,15 @@ export async function forceFullAutonomy(
         // makes crises a materially active force without spamming (per-crisis
         // cooldowns still apply). Production is unaffected (flag absent → ×1).
         crisisSpawnChanceMultiplier: 5,
-        crisisAidBillsEnabled: true,
-        crisisAidBillsEnabledBy: "sim-harness",
-        crisisAidBillsEnabledAt: new Date().toISOString(),
         conflictsEnabled: true,
         conflictsEnabledBy: "sim-harness",
         conflictsEnabledAt: new Date().toISOString(),
         coldWarEnabled: true,
         coldWarEnabledBy: "sim-harness",
         coldWarEnabledAt: new Date().toISOString(),
-        autoSectorSeedEnabled: true,
-        autoSectorSeedEnabledBy: "sim-harness",
-        autoSectorSeedEnabledAt: new Date().toISOString(),
         sectorTechTreesEnabled: true,
         sectorTechTreesEnabledBy: "sim-harness",
         sectorTechTreesEnabledAt: new Date().toISOString(),
-        // The Cold War world-event catalog (sputnik 1955-62, Berlin crisis
-        // 1958-62, space race 1957-75, detente 1969-79, the 1973 oil-embargo
-        // shock) is authored and era-gated in
-        // events/worldEvents/handlers/coldWarWorldEvents.ts but never fired,
-        // because nothing ever set this flag — so a 20-year Cold War world ran
-        // with no Cold War events at all.
-        worldEventsEnabled: true,
-        worldEventsEnabledBy: "sim-harness",
-        worldEventsEnabledAt: new Date().toISOString(),
         updatedAt: new Date(),
       },
     }

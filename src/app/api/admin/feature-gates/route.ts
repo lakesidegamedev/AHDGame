@@ -40,23 +40,15 @@ import {
 export const FEATURE_GATE_BOOLEAN_KEYS = [
   "forexEnabled",
   "playerRandomEventsEnabled",
-  "crisisInteractionEnabled",
   "livingConflictsEnabled",
   "autoDisastersEnabled",
-  "crisisAidBillsEnabled",
   "demographicsLayer1PositionsEnabled",
   "rpgStatsEnabled",
-  "autoSectorSeedEnabled",
   "redistrictingEnabled",
   "sectorTechTreesEnabled",
   "eraSystemEnabled",
-  "legislationDemographicEffectsV2Enabled",
-  "onboardingChecklistEnabled",
-  "macroGrowthV1",
-  "seasonRecapEnabled",
   "intOrgAlignmentEnabled",
   "nppCorpStrategyEnabled",
-  "settlementCrisisEnabled",
 ] as const;
 
 type FeatureGateBooleanKey = (typeof FEATURE_GATE_BOOLEAN_KEYS)[number];
