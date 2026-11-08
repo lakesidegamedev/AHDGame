@@ -27,6 +27,9 @@ interface CaucusTaxResult {
   totalTaxed: number;
 }
 
+/** A rejected write counts as not landed, so it cannot discard the credit owed for other debits. */
+const landedOrNull = <T>(write: Promise<T>): Promise<T | null> => write.catch(() => null);
+
 /**
  * Apply the per-turn caucus tax. Reads forexEnabled to decide which currency
  * field each player member's funds live in — same semantics as the existing
@@ -143,21 +146,19 @@ export async function processCaucusTax(
       // Apply debits individually (not bulkWrite) so each guarded $gte debit
       // reports whether it landed. The caucus treasury is credited ONLY for
       // debits that actually modified the payer — a raced/failed debit must
-      // not mint money into the caucus. A rejected write counts as not landed, so
-      // it cannot discard the credit owed for the debits that did.
+      // not mint money into the caucus.
       if (pendingDebits.length > 0) {
         const results = await Promise.all(
           pendingDebits.map((d) =>
-            db
-              .collection<Character>("characters")
-              .updateOne(
+            landedOrNull(
+              db.collection<Character>("characters").updateOne(
                 { _id: d.character._id, [d.field]: { $gte: d.tax } },
                 {
                   $inc: { [d.field]: -d.tax },
                   $set: { updatedAt: now },
                 }
               )
-              .catch(() => null)
+            )
           )
         );
         for (let i = 0; i < pendingDebits.length; i++) {
@@ -212,16 +213,15 @@ export async function processCaucusTax(
       if (nppDebits.length > 0) {
         const results = await Promise.all(
           nppDebits.map((d) =>
-            db
-              .collection<NPP>("npps")
-              .updateOne(
+            landedOrNull(
+              db.collection<NPP>("npps").updateOne(
                 { _id: d.npp._id, funds: { $gte: d.tax } },
                 {
                   $inc: { funds: -d.tax },
                   $set: { updatedAt: now },
                 }
               )
-              .catch(() => null)
+            )
           )
         );
         for (let i = 0; i < nppDebits.length; i++) {

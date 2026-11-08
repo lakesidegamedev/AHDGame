@@ -249,7 +249,7 @@ describe("resolvePrivatizationVote — atomic claim", () => {
     });
     const updateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
     const corpUpdateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
-    const nppUpdateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+    const nppBulkWrite = vi.fn().mockResolvedValue({ matchedCount: 1 });
     const corp = {
       _id: corpId,
       ceoId,
@@ -267,7 +267,7 @@ describe("resolvePrivatizationVote — atomic claim", () => {
         if (name === "corporationPrivatizationVotes") return { updateOne };
         if (name === "corporations")
           return { findOne: vi.fn().mockResolvedValue(corp), updateOne: corpUpdateOne };
-        if (name === "npps") return { updateOne: nppUpdateOne };
+        if (name === "npps") return { bulkWrite: nppBulkWrite };
         return {
           findOne: vi.fn(),
           updateOne: vi.fn(),
@@ -284,10 +284,10 @@ describe("resolvePrivatizationVote — atomic claim", () => {
     });
 
     expect(result.resolved).toBe(true);
-    expect(nppUpdateOne).toHaveBeenCalledTimes(1);
-    const [filter, update] = nppUpdateOne.mock.calls[0];
-    expect(filter._id).toBe(nppId);
-    expect(update.$inc["currencyBalances.personal.USD"]).toBe(1_100_000);
+    expect(nppBulkWrite).toHaveBeenCalledTimes(1);
+    const [op] = nppBulkWrite.mock.calls[0][0];
+    expect(op.updateOne.filter._id).toBe(nppId);
+    expect(op.updateOne.update.$inc["currencyBalances.personal.USD"]).toBe(1_100_000);
   });
 
   it("#2114: on pass, clears a stale pendingShareIssuance going private", async () => {

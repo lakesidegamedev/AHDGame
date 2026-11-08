@@ -215,6 +215,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   let totalCharCorpPaid = 0;
   let totalPaidLocal = 0;
   const personalPayoutOps: AnyBulkWriteOperation<Character>[] = [];
+  const nppPayoutOps: AnyBulkWriteOperation[] = [];
   let totalFundPaidAnchor = 0;
   for (const holder of nonCeoHolders) {
     const payout = Math.round(holder.shares * vote.lockedBuyoutPrice * reserveScale);
@@ -284,18 +285,21 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       } as unknown as UpdateFilter<IndexFund>);
       totalFundPaidAnchor += payoutAnchor;
     } else if (holder.nppId) {
-      await db.collection("npps").updateOne(
-        { _id: holder.nppId },
-        {
-          $inc: { [`currencyBalances.personal.${vote.lockedBuyoutCurrency}`]: payout },
-          $set: { updatedAt: now },
-        }
-      );
+      nppPayoutOps.push({
+        updateOne: {
+          filter: { _id: holder.nppId },
+          update: {
+            $inc: { [`currencyBalances.personal.${vote.lockedBuyoutCurrency}`]: payout },
+            $set: { updatedAt: now },
+          },
+        },
+      });
     }
   }
 
   if (personalPayoutOps.length)
     await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
+  if (nppPayoutOps.length) await db.collection("npps").bulkWrite(nppPayoutOps);
 
   // The float belongs to the equity market pool, not the issuer being taken private.
   const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice * reserveScale);
