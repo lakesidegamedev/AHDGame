@@ -201,12 +201,8 @@ export async function processCrisisTurn(
     if (turn === crisis.startTurn) {
       await announceCrisisStart(db, crisis, targetStateIds);
 
-      // Create interaction document for interactive crises (only if enabled)
       if (crisis.interactionDefinition) {
-        const { isCrisisInteractionEnabled } = await import("@/lib/crises/featureFlag");
-        if (await isCrisisInteractionEnabled()) {
-          await createCrisisInteraction(db, crisis);
-        }
+        await createCrisisInteraction(db, crisis);
       }
     }
 
@@ -268,13 +264,9 @@ export async function processCrisisTurn(
     );
   }
 
-  // Auto-resolve expired interactions (only if enabled)
-  const { isCrisisInteractionEnabled } = await import("@/lib/crises/featureFlag");
-  if (await isCrisisInteractionEnabled()) {
-    const expiredInteractions = await getExpiredInteractions(db);
-    for (const interaction of expiredInteractions) {
-      await autoResolveCrisisInteraction(db, interaction._id);
-    }
+  const expiredInteractions = await getExpiredInteractions(db);
+  for (const interaction of expiredInteractions) {
+    await autoResolveCrisisInteraction(db, interaction._id);
   }
 
   return crises.length;

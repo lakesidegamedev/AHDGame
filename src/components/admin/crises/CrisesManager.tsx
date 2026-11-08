@@ -30,9 +30,6 @@ export function CrisesManager() {
   const [templateSubmitting, setTemplateSubmitting] = useState(false);
   // `null` until the first fetch resolves, so the toggle doesn't flash a
   // misleading "Off" before the real flag state loads.
-  const [interactionEnabled, setInteractionEnabled] = useState<boolean | null>(null);
-  const [togglingFlag, setTogglingFlag] = useState(false);
-  // `null` until the first fetch resolves (same flash-avoidance as above).
   const [autoDisastersEnabled, setAutoDisastersEnabled] = useState<boolean | null>(null);
   const [togglingDisasters, setTogglingDisasters] = useState(false);
   const [autoCrisisPaused, setAutoCrisisPaused] = useState<boolean | null>(null);
@@ -54,7 +51,6 @@ export function CrisesManager() {
           preIterationTurns: data.preIterationTurns,
           preIterationActive: data.preIterationActive,
         });
-        setInteractionEnabled(data.interactionEnabled === true);
         setAutoDisastersEnabled(data.autoDisastersEnabled === true);
         setAutoCrisisPaused(data.autoCrisisPaused === true);
         setAutoTemplates(data.autoTemplates ?? []);
@@ -222,34 +218,6 @@ export function CrisesManager() {
     }
   };
 
-  const handleToggleInteraction = async () => {
-    const next = !interactionEnabled;
-    if (!confirm(`${next ? "Enable" : "Disable"} the crisis interaction system?`)) return;
-    setTogglingFlag(true);
-    try {
-      const res = await fetch("/api/admin/crises/toggle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setInteractionEnabled(data.crisisInteractionEnabled === true);
-        setMessage(
-          data.crisisInteractionEnabled
-            ? "Crisis interaction system enabled"
-            : "Crisis interaction system disabled"
-        );
-      } else {
-        setMessage(apiErrorText(data, "Failed to toggle crisis interaction system"));
-      }
-    } catch {
-      setMessage("Failed to toggle crisis interaction system");
-    } finally {
-      setTogglingFlag(false);
-    }
-  };
-
   const handleTemplateSubmit = async () => {
     if (!selectedTemplate) return;
     setTemplateSubmitting(true);
@@ -291,14 +259,11 @@ export function CrisesManager() {
   return (
     <div className="space-y-4">
       <CrisesHeaderBar
-        interactionEnabled={interactionEnabled}
-        togglingFlag={togglingFlag}
         autoDisastersEnabled={autoDisastersEnabled}
         togglingDisasters={togglingDisasters}
         autoCrisisPaused={autoCrisisPaused}
         togglingPause={togglingPause}
         reseeding={reseeding}
-        onToggleInteraction={handleToggleInteraction}
         onToggleAutoDisasters={handleToggleAutoDisasters}
         onTogglePause={handleTogglePause}
         onReseedImages={handleReseedImages}

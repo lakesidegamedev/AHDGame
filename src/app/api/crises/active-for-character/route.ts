@@ -15,7 +15,6 @@ import {
   compareActionsPageCrises,
 } from "@/lib/crises/actionsPageCrises";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
-import { isCrisisAidBillsEnabled, isCrisisInteractionEnabled } from "@/lib/crises/featureFlag";
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import {
   globalResponseRoleFor,
@@ -49,12 +48,6 @@ export async function GET(request: Request) {
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    // Feature gate: return empty if crisis interaction system is disabled
-    const enabled = await isCrisisInteractionEnabled();
-    if (!enabled) {
-      return NextResponse.json({ crises: [] });
-    }
-
     const db = await getDb();
 
     const character = user.character;
@@ -62,14 +55,6 @@ export async function GET(request: Request) {
     const stateId = crisisDecisionRegion(character);
 
     const characterRoles = await resolveCharacterRoles(db, character);
-
-    // An interaction keeps the `aid` node type it was promoted to even after
-    // crisisAidBillsEnabled is turned off, but the command path then refuses it
-    // and the crisis page renders no controls. Do not advertise it as actionable.
-    // Read at most once, and only if an aid node actually turns up: this feed is
-    // polled by every player once a minute.
-    let aidFlagOnce: Promise<boolean> | null = null;
-    const aidBillsEnabled = (): Promise<boolean> => (aidFlagOnce ??= isCrisisAidBillsEnabled());
 
     // Find active crises that affect this character, plus any crisis with a
     // collective-fund node — those are contributable by national leaders
@@ -145,7 +130,6 @@ export async function GET(request: Request) {
               ) &&
               canRespondToCrisis(crisis, currentNode, countryId, crisisDecisionRegion(character)) &&
               !alreadyResponded &&
-              (currentNode.type !== "aid" || (await aidBillsEnabled())) &&
               (!crisis.globalResponse || !!globalResponseRoleFor(crisis, countryId))
             : false;
 

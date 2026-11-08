@@ -1598,10 +1598,8 @@ export async function processCorporationTurn(
 
   // O1c (design §5): persist paid growth investment per operating state, turn-
   // tagged so the metric engine only counts THIS turn's flow (fresh-or-zero).
-  // Stored in ₳; the metric engine converts + caps. Gated on macroGrowthV1 so a
-  // flag-off world pays no extra per-turn state write (the feature is off by
-  // default).
-  if (gameState?.macroGrowthV1 === true && growthInvestmentByOperatingState.size > 0) {
+  // Stored in ₳; the metric engine converts + caps.
+  if (growthInvestmentByOperatingState.size > 0) {
     const investTurn = turn ?? 0;
     const stateInvestOps = Array.from(growthInvestmentByOperatingState, ([stateId, anchor]) => ({
       updateOne: {

@@ -29,7 +29,6 @@ const fail = (status: number, error: string): ArmLadderResult => ({ ok: false, s
 
 export async function armSettlementLadder(db: Db, characterId: ObjectId): Promise<ArmLadderResult> {
   const ctx = await loadSettlementActorContext(db, characterId);
-  if (!ctx) return fail(404, "The German Question is not running.");
   if (!ctx.crisisId) return fail(404, "No settlement crisis is open.");
 
   const seat = ctx.seat;

@@ -43,23 +43,10 @@ describe("loadSettlementActorContext", () => {
     db = createMockDb();
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
-    prime(db, "gameState").findOne.mockResolvedValue({
-      _id: "current",
-      settlementCrisisEnabled: true,
-    });
     prime(db, "settlementCrises").findOne.mockResolvedValue(crisisDoc());
     prime(db, "characters").findOne.mockResolvedValue({ _id: characterId, actions: 4 });
     const { resolveSettlementSeat } = await import("./seatResolution");
     vi.mocked(resolveSettlementSeat).mockResolvedValue(null);
-  });
-
-  it("returns null when the feature gate is off", async () => {
-    prime(db, "gameState").findOne.mockResolvedValue({
-      _id: "current",
-      settlementCrisisEnabled: false,
-    });
-    const { loadSettlementActorContext } = await import("./actorContext");
-    await expect(loadSettlementActorContext(db as unknown as Db, characterId)).resolves.toBeNull();
   });
 
   it("gives an ordinary character personal actions and no seat", async () => {

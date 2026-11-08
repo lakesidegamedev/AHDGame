@@ -239,7 +239,6 @@ describe("resetGameWorld", () => {
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      seasonRecapEnabled: true,
       iteration: 4,
       currentTurn: 100,
       startingYear: 1991,
@@ -294,7 +293,6 @@ describe("resetGameWorld", () => {
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      seasonRecapEnabled: true,
       iteration: { type: "Iteration", number: 4 },
       currentTurn: 100,
       startingYear: 1991,
