@@ -1,25 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  SEVERE_CRISIS_LIMIT,
-  countsAsSevereCrisis,
-  mergeSevereLoads,
-  occupySevereSlot,
-  severeLoadByCountry,
-  severeSlotFree,
-} from "./severeLoad";
+import { countsAsSevereCrisis, mergeSevereLoads, severeLoadByCountry } from "./severeLoad";
 
 describe("severe crisis stacking rules", () => {
-  it("allows two severe crises per country, the same limit living conflicts use", () => {
-    expect(SEVERE_CRISIS_LIMIT).toBe(2);
-    const load = new Map<string, number>();
-    expect(severeSlotFree("US", load)).toBe(true);
-    occupySevereSlot("US", load);
-    expect(severeSlotFree("US", load)).toBe(true);
-    occupySevereSlot("US", load);
-    expect(severeSlotFree("US", load)).toBe(false);
-    expect(severeSlotFree("UK", load)).toBe(true);
-  });
-
   it("does not count opportunities, world-scoped crises or conflict response windows", () => {
     expect(countsAsSevereCrisis({ scope: "country", countryIds: ["US"] })).toBe(true);
     expect(countsAsSevereCrisis({ scope: "region", countryIds: ["US"] })).toBe(true);
@@ -43,7 +25,6 @@ describe("severe crisis stacking rules", () => {
     expect(load.get("US")).toBe(2);
     expect(load.get("CN")).toBe(2);
     expect(load.has("UK")).toBe(false);
-    expect(severeSlotFree("US", load)).toBe(false);
   });
 
   it("merges two load maps without mutating either", () => {

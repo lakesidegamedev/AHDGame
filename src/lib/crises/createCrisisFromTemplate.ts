@@ -5,6 +5,15 @@ import { getTemplateDuration } from "./templates";
 import { createCrisisInteraction } from "./interactionEngine";
 import { floorCrisisDuration } from "./crisisDuration";
 import { resolveCrisisLocationName, interpolateLocation } from "./crisisLocation";
+import { createCrisisInstance } from "./v2/instance";
+import { legacyDefinitionForTemplate } from "@/lib/turn/crisisV2/legacyContent";
+import type { CrisisScope } from "./v2/types";
+
+const V2_SCOPE_BY_CRISIS_SCOPE: Record<Crisis["scope"], CrisisScope> = {
+  region: "state",
+  country: "national",
+  global: "global",
+};
 
 export interface CreateCrisisParams {
   template: CrisisTemplate;
@@ -96,6 +105,17 @@ export async function createCrisisFromTemplate(
     autoSource: params.autoSource,
     interactionDefinition: template.interactionDefinition,
     globalResponse: params.globalResponse ?? template.globalResponse,
+    // Every crisis created here runs on Crisis v2. The first step lands on the
+    // start turn so start-turn effects fire when the crisis is spawned ahead of
+    // the crisis phase.
+    v2: createCrisisInstance(
+      legacyDefinitionForTemplate(template, params.templateKey),
+      currentTurn,
+      {
+        scope: V2_SCOPE_BY_CRISIS_SCOPE[scope],
+        evaluateOnStart: true,
+      }
+    ),
     ...(template.opportunity === true ? { opportunity: true } : {}),
     ...(livingConflictEventId !== undefined ? { livingConflictEventId } : {}),
   };

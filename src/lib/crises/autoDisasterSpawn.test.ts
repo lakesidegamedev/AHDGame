@@ -89,6 +89,9 @@ describe("processAutoDisasterSpawn", () => {
     expect(inserted.countryIds).toEqual(["BR"]);
     expect((inserted.regionIds as string[]).length).toBe(1);
     expect(inserted.status).toBe("active");
+    const v2 = inserted.v2 as { definitionId: string; scope: string };
+    expect(v2.definitionId).toBe(`legacy:${inserted.templateKey as string}`);
+    expect(v2.scope).toBe("state");
 
     const effects = inserted.effects as Array<{
       effectType: string;

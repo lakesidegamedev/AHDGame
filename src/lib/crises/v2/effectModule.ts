@@ -16,7 +16,13 @@ export type EffectIntent =
   | { kind: "commoditySupply"; commodity: CommodityType; factor: number }
   | { kind: "commodityDemand"; commodity: CommodityType; factor: number }
   /** Share of population moving; `toRegionId` absent = out of the affected area. */
-  | { kind: "migration"; fraction: number; fromRegionId?: string; toRegionId?: string }
+  | {
+      kind: "migration";
+      fraction: number;
+      fromRegionId?: string;
+      fromCountryId?: string;
+      toRegionId?: string;
+    }
   | { kind: "bankStress"; delta: number }
   | { kind: "bondYield"; deltaBps: number }
   /** Points of approval, narrowed to a demographic group when named. */
@@ -29,7 +35,18 @@ export type EffectIntent =
   | { kind: "inflation"; delta: number }
   /** Fraction of regional GDP destroyed. */
   | { kind: "gdpLoss"; fraction: number }
-  | { kind: "stat"; statKey: string; delta: number };
+  | { kind: "stat"; statKey: string; delta: number }
+  /** Share of the resident population lost outright (deaths, not migration). */
+  | { kind: "populationLoss"; fraction: number; countryId?: string }
+  /** Share of the regional capital stock destroyed. */
+  | { kind: "capitalStock"; fraction: number; regionId?: string }
+  /** Participating governments restrict trade in a commodity with the target role. */
+  | {
+      kind: "tradeRestriction";
+      commodity: CommodityType;
+      targetRole: string;
+      durationTurns: number;
+    };
 
 export interface EffectContext {
   instance: Pick<CrisisInstance, "startTurn" | "stage" | "stageStartTurn">;
@@ -39,6 +56,10 @@ export interface EffectContext {
   turn: number;
   countryIds: readonly string[];
   regionIds: readonly string[];
+  /** Effects stored on the crisis itself, for content that carries its own. */
+  storedEffects?: readonly CrisisEffect[];
+  /** Length the crisis is currently scheduled to run, after any extension or cut. */
+  durationTurns?: number | null;
 }
 
 export type EffectParams = NonNullable<EffectModuleRef["params"]>;
@@ -131,15 +152,78 @@ function effectToIntent(effect: CrisisEffect, value: number): EffectIntent | nul
   }
 }
 
+export interface LegacyTurnInput {
+  turn: number;
+  startTurn: number;
+  durationTurns: number | null;
+  /** Multiplier on every emitted value, e.g. severity relative to its reference. */
+  factor?: number;
+}
+
 /**
- * Expresses old-style flat/tick/decay effects as a module so existing template
- * content can run on v2 unchanged.
- *
- * - `flat`: once, on the crisis's start turn.
- * - `tick`: every turn, ramped down linearly over the crisis duration.
- * - `decay`: every turn, halving each turn after the start. The old engine
- *   skipped these; here they fade instead of being dropped.
+ * The old engine's per-turn selection, as data: `flat` once on the start turn,
+ * `tick` every turn ramped down over the crisis length. `decay` effects are
+ * never applied per turn; other systems read them straight off the crisis (the
+ * blended sector margin), so they emit nothing here.
  */
+export function legacyEffectsForTurn(
+  effects: readonly CrisisEffect[],
+  input: LegacyTurnInput
+): CrisisEffect[] {
+  const elapsed = input.turn - input.startTurn;
+  if (elapsed < 0) return [];
+  const factor = input.factor ?? 1;
+  const selected: CrisisEffect[] = [];
+  for (const effect of effects) {
+    let ramp: number;
+    if (effect.effectType === "flat") {
+      if (elapsed !== 0) continue;
+      ramp = 1;
+    } else if (effect.effectType === "tick") {
+      ramp = legacyTickRamp(input.turn, input.startTurn, input.durationTurns);
+    } else {
+      continue;
+    }
+    const value = effect.value * ramp * factor;
+    if (value !== 0) selected.push({ ...effect, value });
+  }
+  return selected;
+}
+
+/** Intents for a set of legacy effects, for definitions that list them as a module. */
+export function legacyEffectsToIntents(effects: readonly CrisisEffect[]): EffectIntent[] {
+  const intents: EffectIntent[] = [];
+  for (const effect of effects) {
+    const intent = effectToIntent(effect, effect.value);
+    if (intent) intents.push(intent);
+  }
+  return intents;
+}
+
+/** Module id for effects carried on the crisis document itself. */
+export const LEGACY_STORED_EFFECTS_MODULE_ID = "legacy.storedEffects";
+
+/**
+ * Applies the effects stored on the crisis. Scaled by severity against
+ * `referenceSeverity` (never above 1), so a crisis that levers have eased bites
+ * less and an unmitigated one bites exactly as authored.
+ */
+export const legacyStoredEffectsModule: EffectModule = {
+  id: LEGACY_STORED_EFFECTS_MODULE_ID,
+  evaluate(ctx, params) {
+    const reference = typeof params.referenceSeverity === "number" ? params.referenceSeverity : 100;
+    return legacyEffectsToIntents(
+      legacyEffectsForTurn(ctx.storedEffects ?? [], {
+        turn: ctx.turn,
+        startTurn: ctx.instance.startTurn,
+        durationTurns: ctx.durationTurns ?? null,
+        factor: clamp(ctx.severity / reference, 0, 1),
+      })
+    );
+  },
+};
+
+/** Expresses a fixed list of old-style effects as a module, for content that predates v2. */
 export function createLegacyEffectModule(
   id: string,
   effects: readonly CrisisEffect[],
@@ -150,26 +234,14 @@ export function createLegacyEffectModule(
   return {
     id,
     evaluate(ctx) {
-      const elapsed = ctx.turn - ctx.instance.startTurn;
-      if (elapsed < 0) return [];
-      const severityFactor = scaling === "severity" ? clamp(ctx.severity / reference, 0, 2) : 1;
-      const intents: EffectIntent[] = [];
-      for (const effect of effects) {
-        let factor: number;
-        if (effect.effectType === "flat") {
-          if (elapsed !== 0) continue;
-          factor = 1;
-        } else if (effect.effectType === "tick") {
-          factor = legacyTickRamp(ctx.turn, ctx.instance.startTurn, options.durationTurns);
-        } else {
-          factor = 0.5 ** elapsed;
-        }
-        const value = effect.value * factor * severityFactor;
-        if (value === 0) continue;
-        const intent = effectToIntent(effect, value);
-        if (intent) intents.push(intent);
-      }
-      return intents;
+      return legacyEffectsToIntents(
+        legacyEffectsForTurn(effects, {
+          turn: ctx.turn,
+          startTurn: ctx.instance.startTurn,
+          durationTurns: options.durationTurns,
+          factor: scaling === "severity" ? clamp(ctx.severity / reference, 0, 2) : 1,
+        })
+      );
     },
   };
 }

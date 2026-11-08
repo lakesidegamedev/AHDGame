@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import type { CrisisAutoCooldown } from "@/lib/db/types/crisis";
 
 const mocks = vi.hoisted(() => ({
-  severeLoad: new Map<string, number>(),
+  allow: true,
   conditionHolds: false,
 }));
 
@@ -60,8 +59,9 @@ vi.mock("./autoCrisisConditions", () => ({
   conditionCleared: () => false,
 }));
 vi.mock("./createCrisisFromTemplate", () => ({ createCrisisFromTemplate: vi.fn(async () => {}) }));
-vi.mock("./severeCrisisLoad", () => ({
-  loadCountrySevereLoad: async () => new Map(mocks.severeLoad),
+vi.mock("./spawnDirector", () => ({
+  createSpawnDirector: async () => ({ allow: () => mocks.allow }),
+  directorScopeFor: () => "national",
 }));
 
 import { processAutoCrisisSpawn } from "./autoCrisisSpawn";
@@ -81,107 +81,34 @@ function cooldownWrites(db: MockDb): Array<[unknown, Record<string, Record<strin
 
 let db: MockDb;
 
-function withCooldowns(rows: CrisisAutoCooldown[]): void {
-  db.collection("crisisAutoCooldowns").find.mockReturnValue({
-    toArray: vi.fn().mockResolvedValue(rows),
-  });
-}
-
 beforeEach(() => {
   created.mockClear();
-  mocks.severeLoad = new Map();
+  mocks.allow = true;
   mocks.conditionHolds = false;
   db = createMockDb();
   db.collection("gameState").findOne.mockResolvedValue({ _id: "current", currentYear: 2030 });
 });
 
-describe("cross-system stacking guard in the auto-crisis spawner", () => {
-  it("spawns a severe crisis while the country has a free slot", async () => {
-    mocks.severeLoad = new Map([["US", 1]]);
+describe("director budget in the auto-crisis spawner", () => {
+  it("spawns crises the budget admits and passes the template key along", async () => {
     await processAutoCrisisSpawn(db as unknown as Db, 500);
-    expect(spawnedNames()).toEqual(["Sure crisis"]);
+    expect(spawnedNames()).toContain("Sure crisis");
+    const params = created.mock.calls.find(([, p]) => p.template.name === "Sure crisis")?.[1];
+    expect(params?.templateKey).toBe("sure_crisis");
   });
 
-  it("defers a third severe crisis instead of spawning or dropping it", async () => {
-    mocks.severeLoad = new Map([["US", 2]]);
+  it("holds back a crisis the budget refuses without starting its cooldown", async () => {
+    mocks.allow = false;
     await processAutoCrisisSpawn(db as unknown as Db, 500);
     expect(spawnedNames()).toEqual(["Sure opportunity"]);
-    const deferral = cooldownWrites(db).find(([filter]) => {
-      return (filter as { _id: string })._id === "sure_crisis:US";
-    });
-    expect(deferral?.[1].$set?.deferredTurn).toBe(500);
-    // Not stamped: the deferral is not a spawn, so no cooldown starts.
-    expect(deferral?.[1].$set?.lastSpawnTurn).toBeUndefined();
-    expect(deferral?.[1].$setOnInsert?.lastSpawnTurn).toBe(400);
-  });
-
-  it("lands a deferred crisis without re-rolling once a slot frees", async () => {
-    mocks.severeLoad = new Map([["US", 1]]);
-    withCooldowns([
-      {
-        _id: "never_crisis:US",
-        templateKey: "never_crisis",
-        scopeKey: "US",
-        lastSpawnTurn: 0,
-        armed: true,
-        deferredTurn: 480,
-        updatedAt: new Date(0),
-      },
-      {
-        _id: "sure_crisis:US",
-        templateKey: "sure_crisis",
-        scopeKey: "US",
-        lastSpawnTurn: 450,
-        updatedAt: new Date(0),
-      },
-    ]);
-    await processAutoCrisisSpawn(db as unknown as Db, 500);
-    // never_crisis has a zero chance; only its stored deferral can spawn it.
-    expect(spawnedNames()).toEqual(["Never crisis"]);
-    const stamp = cooldownWrites(db).find(
-      ([filter]) => (filter as { _id: string })._id === "never_crisis:US"
-    );
-    expect(stamp?.[1].$set?.lastSpawnTurn).toBe(500);
-    expect(stamp?.[1].$unset).toEqual({ deferredTurn: "" });
-  });
-
-  it("keeps a deferred crisis waiting while the country is still full", async () => {
-    mocks.severeLoad = new Map([["US", 2]]);
-    withCooldowns([
-      {
-        _id: "never_crisis:US",
-        templateKey: "never_crisis",
-        scopeKey: "US",
-        lastSpawnTurn: 0,
-        deferredTurn: 480,
-        updatedAt: new Date(0),
-      },
-      {
-        _id: "sure_crisis:US",
-        templateKey: "sure_crisis",
-        scopeKey: "US",
-        lastSpawnTurn: 450,
-        updatedAt: new Date(0),
-      },
-      {
-        _id: "sure_opportunity:US",
-        templateKey: "sure_opportunity",
-        scopeKey: "US",
-        lastSpawnTurn: 450,
-        updatedAt: new Date(0),
-      },
-    ]);
-    await processAutoCrisisSpawn(db as unknown as Db, 500);
-    expect(spawnedNames()).toEqual([]);
-    // The original deferral turn is kept; nothing is rewritten.
     expect(
-      cooldownWrites(db).filter(([filter]) => (filter as { _id: string })._id === "never_crisis:US")
+      cooldownWrites(db).filter(([filter]) => (filter as { _id: string })._id === "sure_crisis:US")
     ).toEqual([]);
   });
 
-  it("holds a condition crisis armed and off cooldown until a slot frees", async () => {
+  it("holds a condition crisis armed and off cooldown until the budget fits", async () => {
     mocks.conditionHolds = true;
-    mocks.severeLoad = new Map([["US", 2]]);
+    mocks.allow = false;
     await processAutoCrisisSpawn(db as unknown as Db, 500);
     expect(spawnedNames()).not.toContain("Metric crisis");
     expect(
@@ -191,22 +118,13 @@ describe("cross-system stacking guard in the auto-crisis spawner", () => {
     ).toEqual([]);
 
     created.mockClear();
-    mocks.severeLoad = new Map([["US", 1]]);
+    mocks.allow = true;
     await processAutoCrisisSpawn(db as unknown as Db, 501);
-    expect(spawnedNames()).toEqual(["Metric crisis"]);
+    expect(spawnedNames()).toContain("Metric crisis");
   });
 
   it("never holds back an opportunity", async () => {
-    mocks.severeLoad = new Map([["US", 5]]);
-    withCooldowns([
-      {
-        _id: "sure_crisis:US",
-        templateKey: "sure_crisis",
-        scopeKey: "US",
-        lastSpawnTurn: 450,
-        updatedAt: new Date(0),
-      },
-    ]);
+    mocks.allow = false;
     await processAutoCrisisSpawn(db as unknown as Db, 500);
     expect(spawnedNames()).toEqual(["Sure opportunity"]);
   });
