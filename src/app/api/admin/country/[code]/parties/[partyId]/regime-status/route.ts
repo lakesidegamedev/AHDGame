@@ -5,7 +5,7 @@
  * Body: { newStatus: "ruling" | "approved" | "banned" | null, reason: string }
  *
  * - banned   -> processBanPartyEffects
- * - approved -> processUnbanPartyEffects if previously banned, else status update
+ * - approved -> processUnbanPartyEffects if the party was banned, else status update
  * - ruling   -> atomic demote current ruling party to "approved", promote target
  * - null     -> only when country is not a one-party state
  *
