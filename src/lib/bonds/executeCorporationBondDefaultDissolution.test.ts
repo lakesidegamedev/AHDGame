@@ -55,11 +55,15 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
 vi.mock("@/lib/financialTxLog/stampDeleted", () => ({
   stampSubjectDeleted: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/turn/nppBondCash", () => ({
+  payNppBondReturns: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/turn/currentTurn", () => ({
   getCurrentTurn: vi.fn().mockResolvedValue(251),
 }));
 
 import { emitTxBulk } from "@/lib/financialTxLog/emit";
+import { payNppBondReturns } from "@/lib/turn/nppBondCash";
 import { executeCorporationBondDefaultDissolution } from "./executeCorporationBondDefaultDissolution";
 import type { Corporation, Bond } from "@/lib/db/types";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
@@ -112,8 +116,9 @@ function makeDb(opts: { corp: Record<string, unknown>; issuerBonds: Record<strin
       findOne: vi.fn().mockResolvedValue(null),
     },
     indexFunds: {
-      find: () => mkCursor([]),
+      find: () => mkCursor([{ _id: FUND_ID_FOR_BONDS, name: "Index", anchorCurrencyCode: "USD" }]),
       updateOne: vi.fn().mockResolvedValue({}),
+      bulkWrite: vi.fn().mockResolvedValue({}),
     },
     corporationHistory: { find: () => mkCursor([{ revenue: 1_234 }]) },
     corporationExits: { updateOne: vi.fn().mockResolvedValue({}) },
@@ -132,6 +137,7 @@ function exitWrites(db: Db) {
 }
 
 const CHAR_ID = new ObjectId();
+const FUND_ID_FOR_BONDS = new ObjectId();
 
 function baseCorp(overrides: Record<string, unknown> = {}) {
   return {
@@ -333,5 +339,48 @@ describe("executeCorporationBondDefaultDissolution ledger rows (#3237)", () => {
       $inc: { cashAnchor: 500_000 },
       $pull: { holdings: { corporationId: corp._id } },
     });
+  });
+
+  it("pays fund and NPP bondholders their recovery share and nets out the issuer's own units", async () => {
+    const NPP_ID = new ObjectId();
+    const corp = baseCorp(); // 500k assets
+    const bond = {
+      _id: new ObjectId(),
+      corporationId: corp._id,
+      issuerType: "corporation",
+      matured: false,
+      defaulted: true,
+      totalIssued: 1_000_000,
+      couponRate: 5,
+      holders: [
+        { characterId: CHAR_ID, units: 200 },
+        { fundId: FUND_ID_FOR_BONDS, units: 300 },
+        { nppId: NPP_ID, units: 100 },
+        { corporationId: corp._id, units: 400 }, // own units: cancelled, not a claim
+      ],
+      publicFloat: 0,
+    } as unknown as Bond;
+    const db = makeDb({
+      corp: corp as unknown as Record<string, unknown>,
+      issuerBonds: [bond as unknown as Record<string, unknown>],
+    });
+
+    await executeCorporationBondDefaultDissolution(db, corp, { requireDefaultedBonds: true });
+
+    // Claims net of own units are 600k against 500k of assets: ratio 5/6.
+    const fundOps = vi.mocked(db.collection("indexFunds").bulkWrite).mock
+      .calls[0]![0] as unknown as {
+      updateOne: { update: { $inc: { cashAnchor: number } } };
+    }[];
+    expect(fundOps[0]!.updateOne.update.$inc.cashAnchor).toBeCloseTo(250_000, 0);
+    const nppReturns = vi.mocked(payNppBondReturns).mock.calls[0]![1];
+    expect(nppReturns.get(NPP_ID.toString())?.total).toBeCloseTo(83_333.33, 1);
+
+    const entries = emittedEntries();
+    const paid = entries
+      .filter((e) => e.type === "bond_dissolution_payout")
+      .reduce((s, e) => s + (e.amount ?? 0), 0);
+    // Character 166,666.67 + fund 250,000 on the ledger; NPP credit books its own witness.
+    expect(paid).toBeCloseTo(416_666.67, 1);
   });
 });

@@ -40,7 +40,6 @@ export function accrueBondCoupons({
   couponsPaid,
   addPoolCredit,
   corpCouponCosts,
-  natcorpIds,
   govCouponByCountry,
 }: {
   activeBonds: WithId<Bond>[];
@@ -86,7 +85,6 @@ export function accrueBondCoupons({
     local: number
   ) => void;
   corpCouponCosts: Map<string, number>;
-  natcorpIds: Set<string>;
   govCouponByCountry: Map<string, { total: number; currency: CurrencyCode }>;
 }) {
   for (const bond of activeBonds) {
@@ -284,10 +282,9 @@ export function accrueBondCoupons({
       corpCouponCosts.set(corpIdStr, (corpCouponCosts.get(corpIdStr) ?? 0) + totalCostAnchor);
       // Issuer-side ledger row mirrors the holder-side bond_coupon rows above
       // so each bond's coupon flow nets to zero in the ledger (modulo public
-      // float). Natcorps are excluded because their coupons are government-
-      // covered (no liquidCapital change in Phase 2). Zero-unit bonds (no
-      // holders + no public float) skip the row — there's no actual cost.
-      if (!natcorpIds.has(corpIdStr) && totalUnits > 0) {
+      // float). Zero-unit bonds (no holders + no public float) skip the row,
+      // there's no actual cost.
+      if (totalUnits > 0) {
         const issuer = corpMap.get(corpIdStr);
         const issuerCcy = resolveCorpLiquidCurrencyCode(issuer);
         const issuerRate = fxRateForCorpFromMap(issuer, fxByCurrency);

@@ -24,6 +24,13 @@ import { logWireEvent, wireHeadlineCorpRestructured } from "@/lib/wireEvent";
 import { badRequest } from "@/lib/api/errors";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
+import {
+  addInstitutionalBondPayout,
+  emptyInstitutionalBondPayouts,
+  payInstitutionalBondHolders,
+  selfHeldBondUnits,
+} from "@/lib/bonds/payInstitutionalBondHolders";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -146,10 +153,36 @@ export async function executeCorporationBondRestructure(
     couponRate: number;
   }> = [];
 
+  const institutionalPayouts = emptyInstitutionalBondPayouts();
+  const floatCreditsByPool = new Map<CurrencyCode, number>();
+  let selfHeldAnchor = 0;
+
   for (const bond of defaultedBonds) {
     const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+    // The pool and the issuer's own units are creditors too: the pool is paid
+    // at face, and the issuer owes itself nothing so that slice is not debited.
+    if ((bond.publicFloat ?? 0) > 0) {
+      const poolCcy = bondPoolCurrency(bond);
+      floatCreditsByPool.set(
+        poolCcy,
+        (floatCreditsByPool.get(poolCcy) ?? 0) + bond.publicFloat * BOND_UNIT_FACE_VALUE
+      );
+    }
+    selfHeldAnchor += corpCapitalToAnchor(
+      selfHeldBondUnits(bond) * BOND_UNIT_FACE_VALUE,
+      bondCcy,
+      bondRate
+    );
     for (const h of bond.holders) {
+      if (h.fundId || h.nppId) {
+        addInstitutionalBondPayout(
+          institutionalPayouts,
+          h,
+          corpCapitalToAnchor(h.units * BOND_UNIT_FACE_VALUE, bondCcy, bondRate)
+        );
+        continue;
+      }
       const faceAnchor = corpCapitalToAnchor(h.units * BOND_UNIT_FACE_VALUE, bondCcy, bondRate);
       if (h.characterId) {
         const k = h.characterId.toString();
@@ -208,7 +241,11 @@ export async function executeCorporationBondRestructure(
   // 1. Apply the net cash movement: + salvage proceeds − defaulted principal.
   //    By construction (preview.feasible) the result is non-negative.
   const proceedsLocal = anchorToCorpLiquidCapital(preview.proceeds, refreshed, corpFxRate);
-  const costLocal = anchorToCorpLiquidCapital(defaultedPrincipalAnchor, refreshed, corpFxRate);
+  const costLocal = anchorToCorpLiquidCapital(
+    Math.max(0, defaultedPrincipalAnchor - selfHeldAnchor),
+    refreshed,
+    corpFxRate
+  );
   await db
     .collection<Corporation>("corporations")
     .updateOne(
@@ -328,7 +365,23 @@ export async function executeCorporationBondRestructure(
     if (corpOps.length > 0) await db.collection<Corporation>("corporations").bulkWrite(corpOps);
   }
 
+  // 4b. Pool, fund and NPP holders are paid in full like everyone else.
+  for (const [poolCcy, local] of floatCreditsByPool) {
+    await creditBondPool(db, poolCcy, local, "maturitiesIn", now);
+  }
+  const fundTxEntries = await payInstitutionalBondHolders(db, institutionalPayouts, {
+    turn: cureTurn,
+    now,
+    source: "default_restructure_payoff",
+    issuerId: refreshed._id,
+    issuerName: refreshed.name,
+    txType: "bond_maturity",
+  });
+
   // 5. Ledger: one bond_maturity row per (holder, bond), tagged as a restructure payoff.
+  if (fundTxEntries.length > 0) {
+    void emitTxBulk(db, fundTxEntries, await loadTxThresholds(db));
+  }
   if (pendingMaturityTxs.length > 0) {
     const txEntries = pendingMaturityTxs.map((t) => {
       const bondRate = t.bondCcy ? (fxByCurrency.get(t.bondCcy) ?? 1) : 1;

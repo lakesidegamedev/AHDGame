@@ -445,7 +445,6 @@ export async function processBondTurn(
     couponsPaid,
     addPoolCredit,
     corpCouponCosts,
-    natcorpIds,
     govCouponByCountry,
   }));
 
@@ -511,10 +510,9 @@ export async function processBondTurn(
 
   // ── Phase 2: Apply unified per-corp delta ─────────────────────────────────
   // Net (income − cost) is computed in ₳ then converted to each corp's
-  // liquidCapital currency. Natcorps still skip the *coupon* cost portion
-  // (government covers bond interest), but they do incur maturity face-value
-  // cost — pre-fix Phase 5 had no natcorp gate on the issuer maturity debit
-  // and we preserve that. Income is always credited regardless of natcorp.
+  // liquidCapital currency. State-owned corporations pay their coupons and
+  // maturities like any other issuer; a shortfall leaves their balance
+  // negative (they are exempt from default detection below).
   const allCorpDeltaIds = new Set<string>([
     ...corpCouponCosts.keys(),
     ...corpPayments.keys(),
@@ -523,14 +521,13 @@ export async function processBondTurn(
   ]);
   const corpDeltaOps = [];
   for (const corpIdStr of allCorpDeltaIds) {
-    const isNatcorp = natcorpIds.has(corpIdStr);
     // `corp` may be either an issuer (in corpCouponCosts/corpMaturityCost) or
     // a pure holder (only in corpPayments/corpMaturityIncome) — the FX path
     // is the same: convert the net ₳ delta into the corp's liquidCapital
     // currency before $inc.
     const corp = corpMap.get(corpIdStr);
 
-    const couponCostAnchor = isNatcorp ? 0 : (corpCouponCosts.get(corpIdStr) ?? 0);
+    const couponCostAnchor = corpCouponCosts.get(corpIdStr) ?? 0;
     const maturityCostAnchor = corpMaturityCost.get(corpIdStr) ?? 0;
     const incomeAnchor =
       (corpPayments.get(corpIdStr) ?? 0) + (corpMaturityIncome.get(corpIdStr) ?? 0);
