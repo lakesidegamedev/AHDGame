@@ -82,6 +82,8 @@ import {
 import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
 import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import type { WithId } from "mongodb";
+import type { StateMetrics } from "@/lib/db/types";
 
 /** Builds extraction capacity utilisation, corporate portfolio values and the remaining per-corporation lookups. */
 export async function buildExtractionAndPortfolioLookups({

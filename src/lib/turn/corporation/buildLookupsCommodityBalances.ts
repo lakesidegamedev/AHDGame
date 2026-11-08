@@ -6,6 +6,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { capInputPriceRatioAtWorld } from "@/lib/corporations/physicalPnl";
+import type { WithId } from "mongodb";
 
 /** Builds national and per-state commodity balances, price ratios and placement signals. */
 export function buildCommodityBalanceLookups({

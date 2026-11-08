@@ -38,6 +38,8 @@ import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAd
 import type { MacroEconomicValues } from "@/lib/constants/corporations";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import type { SiblingCorpProjection } from "./sectorDetailTypes";
+import type { AuthUser } from "@/lib/auth";
+import type { Db, WithId } from "mongodb";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({

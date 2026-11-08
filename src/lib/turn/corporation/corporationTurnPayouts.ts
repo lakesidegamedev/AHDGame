@@ -35,6 +35,15 @@ import { processNationalizationAuctions } from "@/lib/nationalization/privatizat
 import { trackFinancialDistress } from "./financialDistressTracking";
 import { logger } from "../../observability/logger";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
+import type { ExtractableResource } from "@/lib/constants/commodities";
+import type {
+  CorpSnapshot,
+  CorporationLookups,
+  FundDividendAccrual,
+} from "@/lib/turn/corporation/types";
+import type { CorporateSector, TxThresholds } from "@/lib/db/types";
+import type { Db } from "mongodb";
+import type { MarketContext } from "@/lib/market/marketContext";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";

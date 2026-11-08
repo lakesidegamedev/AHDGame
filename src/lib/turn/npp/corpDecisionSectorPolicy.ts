@@ -28,6 +28,10 @@ import { pushFundedZeroSalesMothballs } from "@/lib/turn/npp/fundedZeroSalesMoth
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import { pushNppWageUpdates } from "@/lib/turn/npp/nppWagePolicy";
+import type { CeoArchetypeModifiers } from "@/lib/npp/ceoArchetype";
+import type { StrategyLevers } from "@/lib/turn/npp/corpStrategy";
+import type { Corporation } from "@/lib/db/types";
+import type { OperatorPermissions } from "@/lib/turn/npp/rules/operatorPolicy";
 
 /** Sets growth, production, mothballing and wage levers for each held sector. */
 export function applyNppSectorPolicies({

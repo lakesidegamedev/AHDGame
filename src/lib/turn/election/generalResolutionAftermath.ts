@@ -24,6 +24,9 @@ import { sweepStaleOffice, getChamberClass } from "./generalResolutionHelpers";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecycle";
+import type { WithId } from "mongodb";
+import type { PrStvResult } from "@/lib/turn/election/rules/prStv";
+import type { BlocListQuota } from "@/lib/constants/blocList";
 
 export async function recordJapanShugiinRegionalCapacity(
   db: Db,

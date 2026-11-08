@@ -52,6 +52,19 @@ import {
   fireStrikeStartedPulse,
   fireStrikeResolvedPulse,
 } from "@/lib/corporations/sentimentEvents";
+import type { Db, WithId } from "mongodb";
+import type {
+  CorpSnapshot,
+  CorporationLookups,
+  SectorUpdateOp,
+} from "@/lib/turn/corporation/types";
+import type { SectorTurnEnv } from "@/lib/turn/corporation/sectorTurn";
+import type { GroupMembership } from "@/lib/corporations/groups/groupMembership";
+import type { Corporation } from "@/lib/db/types";
+import type { MarketContext } from "@/lib/market/marketContext";
+import type { CorpLoyaltyUpdate } from "@/lib/turn/corporation/brandLoyaltyTurn";
+import type { VentureDomain } from "@/lib/products/venture/types";
+import type { PoliticalMediaSettlementPlan } from "@/lib/politicalMedia/journal";
 
 /** Runs the side effects that follow sector processing and the bulk writes; returns the NPP sectors founded this turn. */
 export async function runCorporationTurnSideEffects({

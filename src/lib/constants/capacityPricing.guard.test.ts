@@ -76,7 +76,7 @@ const REGISTRY: Record<string, { count: number; expect: Expectation; why: string
     expect: "null-greenfield",
     why: "The founding quote shared by expandSector and expand-suggestions; a founded sector never has a strategyId, so it runs the sector-type default.",
   },
-  "src/lib/corporations/queries/sectorDetailSections.ts": {
+  "src/lib/corporations/queries/sectorDetailPlants.ts": {
     count: 2,
     expect: "sector",
     why: "The build quote a player is shown. Must equal what buildCapacity charges.",
@@ -111,18 +111,20 @@ const REGISTRY: Record<string, { count: number; expect: Expectation; why: string
     expect: "sector",
     why: "Prices the flip-turn growth credit for an existing sector.",
   },
-  "src/lib/turn/npp/makeCorpDecision.ts": {
-    count: 3,
+  "src/lib/turn/npp/corpDecisionFounding.ts": {
+    count: 1,
+    expect: "null-greenfield",
+    why: "The NPP greenfield founding quote: the sector does not exist yet.",
+  },
+  "src/lib/turn/npp/corpDecisionReinvestment.ts": {
+    count: 2,
     expect: "sector",
-    why: "One greenfield founding quote (null) and two growth quotes on existing sectors; see the per-call assertions below.",
+    why: "Two growth quotes on existing NPP sectors.",
   },
 };
 
 /** Call sites that legitimately pass `null` even though their file is 'sector'. */
-const PER_CALL_NULL_EXCEPTIONS: Record<string, number> = {
-  // NPP greenfield founding quote + its starter order.
-  "src/lib/turn/npp/makeCorpDecision.ts": 1,
-};
+const PER_CALL_NULL_EXCEPTIONS: Record<string, number> = {};
 
 const ROOT = join(__dirname, "..", "..", "..");
 const SRC = join(ROOT, "src");

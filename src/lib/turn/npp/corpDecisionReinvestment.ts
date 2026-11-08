@@ -75,6 +75,11 @@ import { sizeShortageGrowthFinance } from "@/lib/turn/npp/rules/shortageGrowthFi
 import { growthEvidenceGate } from "./rules/growthEvidenceGate";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import type { Corporation } from "@/lib/db/types";
+import type { GroupDirection } from "@/lib/corporations/groups/managementTypes";
+import type { CorporationManagementCohort } from "@/lib/corporations/balanceAudit/rules";
+import type { StrategyLevers } from "@/lib/turn/npp/corpStrategy";
+import type { OperatorPermissions } from "@/lib/turn/npp/rules/operatorPolicy";
 
 /** Chooses capacity reinvestments for held plants; returns the remaining cash. */
 export function decideNppCapacityReinvestment({

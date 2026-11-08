@@ -34,6 +34,9 @@ import {
   settleBankSovereignClaims,
 } from "@/lib/banking/bankSovereignClaims";
 import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
+import type { Db, WithId } from "mongodb";
+import type { BondPoolLedgerContext } from "@/lib/bonds/marketPoolLedger";
+import type { GameState } from "@/lib/db/types";
 
 /** Marks matured and defaulted bonds and queues their status writes; returns the updated counters. */
 export function resolveBondMaturitiesAndDefaults({

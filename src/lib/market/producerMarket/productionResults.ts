@@ -18,6 +18,7 @@ import {
   idleUpkeep,
   type RunCutReason,
 } from "./productionPlan";
+import type { ProducerMarketResult } from "@/lib/market/producerMarket/rules";
 
 /** Fills the operating results for each producer and returns the closing accounts. */
 export function buildProducerOperatingResults({

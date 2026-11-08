@@ -84,6 +84,13 @@ import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 import { withRunReport } from "@/lib/corporations/queries/sectorRunReport";
 import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondReference";
+import type { Db, Document, WithId } from "mongodb";
+import type { CommodityPriceAttribution } from "@/lib/market/priceAttribution";
+import type { CurrencyCode } from "@/lib/constants/currencies";
+import type { StrategyAvailabilityWorld, TechCorpView } from "@/lib/constants/techTree";
+import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
+import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
+import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
 
 /** Builds the plants-tier view: capacity, own supply and freight. Null below plants. */
 export async function buildSectorDetailPlantsTier({
@@ -143,7 +150,7 @@ export async function buildSectorDetailPlantsTier({
   db: Db;
   isCeo: boolean;
   corporation: Corporation;
-  sector: WithId<CorporateSector> | null;
+  sector: WithId<CorporateSector>;
   allCorpSectors: WithId<CorporateSector>[];
   governorConfig: WithId<GameConfig> | null;
   currentTurn: number;

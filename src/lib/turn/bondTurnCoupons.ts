@@ -14,6 +14,8 @@ import {
 import { isCorporateBond, getBondCountryId } from "@/lib/bonds/sovereign";
 import { purchaseSpreadRate } from "@/lib/currency/rules/purchaseConversion";
 import { bondPoolCurrency } from "@/lib/bonds/marketPool";
+import type { WithId } from "mongodb";
+import type { GameState } from "@/lib/db/types";
 
 /** Accrues this turn's coupons into the payment maps and ledger entries; returns the updated coupon totals. */
 export function accrueBondCoupons({

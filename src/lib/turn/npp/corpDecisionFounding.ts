@@ -31,6 +31,9 @@ import {
   setNppMarketEntryReason,
   resolveFoundingShortfallReason,
 } from "@/lib/turn/npp/entryDiagnostics";
+import type { FoundingCapacityOutcome } from "@/lib/turn/npp/capacityDecisionTelemetry";
+import type { Corporation } from "@/lib/db/types";
+import type { MediaDiscriminator } from "@/lib/constants/corporations";
 
 /** Prices and, when affordable, founds a new sector; returns the updated cash and entry state. */
 export function decideNppFounding({
@@ -46,7 +49,7 @@ export function decideNppFounding({
   effectiveCashFloor,
   placementSignals,
   foundingStrategyId,
-  entryDiagnostic,
+  entryDiagnostic: initialEntryDiagnostic,
   foundingOutcome,
   corp,
   cashToAnchor,
@@ -56,7 +59,7 @@ export function decideNppFounding({
 }: {
   foundingBlockEntered: boolean;
   plants: NppPlantsContext | undefined;
-  foundingTarget: UnownedSector;
+  foundingTarget: UnownedSector | null;
   nationalShare: (
     countryId: string,
     sectorType: CorporationType,
@@ -71,7 +74,7 @@ export function decideNppFounding({
   effectiveCashFloor: number;
   placementSignals: PlacementSignals | undefined;
   foundingStrategyId: string | undefined;
-  entryDiagnostic: NppCorpDecision["entryDiagnostic"];
+  entryDiagnostic: NonNullable<NppCorpDecision["entryDiagnostic"]>;
   foundingOutcome: FoundingCapacityOutcome;
   corp: Corporation;
   cashToAnchor: (amountLocal: number) => number;
@@ -89,9 +92,11 @@ export function decideNppFounding({
   unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]>;
   cashLocal: number;
 }) {
+  let entryDiagnostic: NppCorpDecision["entryDiagnostic"] = initialEntryDiagnostic;
   let foundingCashLocal: number | undefined;
   let shortageCreditRequest: NppCorpDecision["shortageCreditRequest"];
-  if (foundingBlockEntered) {
+  // foundingBlockEntered already requires a target; the check narrows the type.
+  if (foundingBlockEntered && foundingTarget !== null) {
     if (plants?.enabled) {
       // NPPs and players found sectors on the same priced-capacity terms.
       const headroomUnits = unownedHeadroomUnitsOf(

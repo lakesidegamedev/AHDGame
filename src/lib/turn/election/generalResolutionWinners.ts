@@ -30,6 +30,8 @@ import {
 } from "@/lib/countries/jp/rules/mixedShugiinCount";
 import { applyLegacySeatFloor } from "./conversionTerms";
 import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import type { WithId } from "mongodb";
+import type { SurvivingPartyResolver } from "@/lib/parties/survivingParty";
 
 /** Allocates seats and splits the candidates into winners and losers. */
 export async function selectGeneralElectionWinners({

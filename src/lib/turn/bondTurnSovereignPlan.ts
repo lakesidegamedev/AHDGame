@@ -19,6 +19,8 @@ import {
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import { bondPoolCurrency } from "@/lib/bonds/marketPool";
 import { sovereignMaturityCentralBankId } from "@/lib/bonds/sovereign";
+import type { GameState } from "@/lib/db/types";
+import type { SovereignMaturityWave } from "@/lib/bonds/sovereignMaturityWave";
 
 /** Returns the planner that prices one sovereign maturity against this turn's rates and pool cash. */
 export function createSovereignMaturityPlanner({
