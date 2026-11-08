@@ -1,21 +1,13 @@
 /**
- * Prove that every mutation handler exported by an App Router route reaches a
- * recognised authentication or authorisation guard.
+ * Prove every exported POST/PUT/PATCH/DELETE route handler reaches an auth guard.
  *
- * Resolution rule, applied per exported POST/PUT/PATCH/DELETE handler:
- * 1. inline: the handler, or a function declared in the route file that the
- *    handler calls (followed transitively), calls a recognised guard.
- * 2. handler: the handler calls an imported function whose declaration in the
- *    imported module reaches a guard by rule 1. Imports are followed for up to
- *    MAX_IMPORT_DEPTH hops; re-exports do not spend a hop.
- * 3. inert: the handler only returns an error response (a retired endpoint).
- * 4. allowlisted: a reviewed public endpoint in mutationRouteAuth.allowlist.ts.
- * Anything else is unguarded and fails the contract.
- *
- * A session lookup that may return null (SOFT_GUARD_CALLEES) only counts when
- * its result gates an early return or throw, so optional attribution does not
- * pass for authentication. Guards are matched by callee name; a guard imported
- * under an alias is not recognised.
+ * - inline: the handler, or a route-local function it calls, calls a guard.
+ * - handler: an imported function it calls reaches a guard, up to
+ *   MAX_IMPORT_DEPTH import hops; re-exports do not spend a hop.
+ * - inert: the handler only returns an error response.
+ * - allowlisted: a reviewed public endpoint in mutationRouteAuth.allowlist.ts.
+ * Anything else is unguarded. Nullable session lookups count only when an
+ * anonymous result exits early. Guards are matched by callee name.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -307,7 +299,7 @@ function isPassedByReference(node: ts.Identifier): boolean {
   const parent = node.parent;
   return (
     (ts.isCallExpression(parent) || ts.isNewExpression(parent)) &&
-    (parent.arguments ?? []).includes(node)
+    (parent.arguments ?? []).some((arg) => arg === node)
   );
 }
 
