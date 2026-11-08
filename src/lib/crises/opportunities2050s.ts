@@ -69,7 +69,7 @@ const ORBITAL_SOLAR = opportunity({
 
 const OCEAN_ACCORD = opportunity({
   name: "Living Ocean Accord",
-  heroImage: HERO.water,
+  heroImage: HERO.climate,
   description:
     "Fishing and coastal nations invite the country to join a binding accord on catch limits, reef restoration and shared monitoring. Membership costs the fishing fleet some catch now and pays back in healthier waters.",
   durationTurns: 6,
@@ -181,7 +181,7 @@ const LONGEVITY_COMPACT = opportunity({
 
 const SPACE_SUPPLY_CONSORTIUM = opportunity({
   name: "Interplanetary Supply Consortium",
-  heroImage: HERO.tech,
+  heroImage: HERO.science,
   description:
     "A consortium building supply lines to off-world settlements offers the country a seat. Members get launch contracts for their firms, but must underwrite shared insurance and standards.",
   durationTurns: 6,

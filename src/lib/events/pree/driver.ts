@@ -293,7 +293,7 @@ export async function processPlayerRandomEventsTurn(
   await processChunk();
 
   if (exhaustedOffers > 0) {
-    logger.warn("Player random events pool exhausted", {
+    logger.warn("pree", "player random events pool exhausted", {
       turn: currentTurn,
       year: preloaded?.currentYear,
       exhaustedOffers,
