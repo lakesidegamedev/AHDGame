@@ -25,7 +25,7 @@ import {
 interface FakeData {
   crises: Record<string, unknown>[];
   states: { _id: string; countryId: string }[];
-  stateMetrics: Record<string, unknown>[];
+  macroMetrics: Record<string, unknown>[];
   leverUses: Record<string, unknown>[];
 }
 
@@ -34,23 +34,31 @@ function makeDb(data: FakeData) {
     bulkWrite: vi.fn(async () => ({})),
     insertMany: vi.fn(async () => ({})),
     leverUpdateMany: vi.fn(async () => ({})),
+    claim: vi.fn(async () => ({ matchedCount: 1 })),
     collectionsRead: [] as string[],
+    leverFilter: undefined as unknown,
   };
   const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
   const db = {
     collection(name: string) {
       return {
-        find() {
+        find(filter?: unknown) {
           calls.collectionsRead.push(name);
-          if (name === "crises") return cursor(data.crises);
+          if (name === "crisisLeverUses") calls.leverFilter = filter;
+          if (name === "crises") {
+            const asked = (filter ?? {}) as { status?: string; scarsHealUntil?: unknown };
+            return cursor(asked.status === "resolved" || asked.scarsHealUntil ? [] : data.crises);
+          }
           if (name === "states") return cursor(data.states);
-          if (name === "stateMetrics") return cursor(data.stateMetrics);
+          if (name === "macroMetrics") return cursor(data.macroMetrics);
           if (name === "crisisLeverUses") return cursor(data.leverUses);
           return cursor([]);
         },
         bulkWrite: calls.bulkWrite,
         insertMany: calls.insertMany,
         updateMany: name === "crisisLeverUses" ? calls.leverUpdateMany : vi.fn(),
+        updateOne: calls.claim,
+        findOne: vi.fn(async () => null),
       };
     },
   };
@@ -83,7 +91,7 @@ const baseData = (): FakeData => ({
     { _id: "s1", countryId: "US" },
     { _id: "s2", countryId: "US" },
   ],
-  stateMetrics: [],
+  macroMetrics: [],
   leverUses: [],
 });
 
@@ -101,11 +109,12 @@ beforeEach(() => {
 });
 
 describe("processCrisisV2Turn", () => {
-  it("is a no-op beyond one indexed read when no crisis carries a v2 instance", async () => {
+  it("does no per-crisis work when no crisis carries a v2 instance", async () => {
     const { db, calls } = makeDb(baseData());
     const result = await processCrisisV2Turn(db, 10);
     expect(result).toEqual({ processed: 0, failed: 0, resolved: 0, opened: 0 });
-    expect(calls.collectionsRead).toEqual(["crises"]);
+    expect(calls.collectionsRead[0]).toBe("crises");
+    expect(calls.collectionsRead).not.toContain("crisisLeverUses");
     expect(calls.bulkWrite).not.toHaveBeenCalled();
   });
 
@@ -121,7 +130,7 @@ describe("processCrisisV2Turn", () => {
     );
     const data = baseData();
     data.crises = [liveCrisis()];
-    data.stateMetrics = [
+    data.macroMetrics = [
       { _id: "s1", economic: { unemploymentRate: { value: 4 } } },
       { _id: "s2", economic: { unemploymentRate: { value: 6 } } },
     ];
@@ -171,6 +180,14 @@ describe("processCrisisV2Turn", () => {
     );
   });
 
+  it("leaves lever uses whose cost has not landed yet for a later turn", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    expect(calls.leverFilter).toMatchObject({ appliedTurn: null, chargeState: { $ne: "pending" } });
+  });
+
   it("skips a crisis already stepped this turn", async () => {
     const data = baseData();
     data.crises = [liveCrisis({ severityHistory: [{ turn: 10, severity: 40 }] })];
@@ -208,6 +225,47 @@ describe("processCrisisV2Turn", () => {
   });
 });
 
+describe("turn claim", () => {
+  it("claims the turn before routing effects and records it on the instance", async () => {
+    const order: string[] = [];
+    applyCrisisEffects.mockImplementation(async () => void order.push("effects"));
+    registerCrisisEffectModule({ id: "legacy", evaluate: () => [{ kind: "approval", delta: -1 }] });
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    calls.claim.mockImplementation(async () => {
+      order.push("claim");
+      return { matchedCount: 1 };
+    });
+    await processCrisisV2Turn(db, 10);
+    expect(order).toEqual(["claim", "effects"]);
+    expect(calls.claim).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }), {
+      $set: { "v2.lastEvaluatedTurn": 10 },
+    });
+    expect(writtenInstances(calls)[0].lastEvaluatedTurn).toBe(10);
+  });
+
+  it("does not re-apply effects when the claim was already taken", async () => {
+    registerCrisisEffectModule({ id: "legacy", evaluate: () => [{ kind: "approval", delta: -1 }] });
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    calls.claim.mockResolvedValue({ matchedCount: 0 });
+    await processCrisisV2Turn(db, 10);
+    expect(applyCrisisEffects).not.toHaveBeenCalled();
+    expect(calls.bulkWrite).not.toHaveBeenCalled();
+  });
+
+  it("skips a crisis whose instance already records this turn as evaluated", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis({ lastEvaluatedTurn: 10 })];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    expect(calls.claim).not.toHaveBeenCalled();
+    expect(calls.bulkWrite).not.toHaveBeenCalled();
+  });
+});
+
 describe("effect routing", () => {
   const moduleOf = (intents: ReturnType<EffectModule["evaluate"]>): EffectModule => ({
     id: "legacy",
@@ -228,7 +286,7 @@ describe("effect routing", () => {
   });
 
   it("logs unsupported intent kinds instead of dropping them silently", async () => {
-    registerCrisisEffectModule(moduleOf([{ kind: "bankStress", delta: 5 }]));
+    registerCrisisEffectModule(moduleOf([{ kind: "stat", statKey: "charisma", delta: 1 }]));
     const data = baseData();
     data.crises = [liveCrisis()];
     const { db } = makeDb(data);
@@ -236,7 +294,7 @@ describe("effect routing", () => {
     expect(result.processed).toBe(1);
     expect(applyCrisisEffects).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith("crisisV2Turn", "unsupported intent kinds dropped", {
-      bankStress: 1,
+      stat: 1,
     });
   });
 });

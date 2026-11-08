@@ -973,6 +973,12 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "crisisAidCommitments", category: "runtime" },
   { name: "crisisInteractions", category: "runtime" },
   { name: "crisisLeverUses", category: "runtime" },
+  {
+    name: "crisisDetectorStreaks",
+    category: "runtime",
+    notes:
+      "Consecutive turns each Crisis v2 detector condition has held. Turn-based, so it resets with the world.",
+  },
   { name: "refugeeReceptionHistory", category: "runtime" },
   { name: "conflictCivilianLossHistory", category: "runtime" },
   { name: "conflictCapacityObligations", category: "runtime" },

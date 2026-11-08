@@ -50,6 +50,8 @@ export interface CrisisLeverDef {
   cooldownTurns?: number;
   /** Stages the lever is offered in. Absent = every active stage. */
   stages?: readonly ActiveCrisisStage[];
+  /** Offered only once a state of emergency has been declared on the crisis. */
+  requiresEmergency?: boolean;
 }
 
 /** One sim input feeding severity. `input` is a key the shell fills each turn. */
@@ -135,8 +137,13 @@ export interface ScarRule {
   onStage: ActiveCrisisStage | "resolved";
   /** Peak severity the crisis must have reached for the scar to form. */
   minPeakSeverity: number;
-  /** Scar size per severity point above `minPeakSeverity`. */
+  /**
+   * Scar size per severity point above `minPeakSeverity`, as a fraction of the
+   * target: output lost, share of people gone, confidence lost.
+   */
   magnitudePerPoint: number;
+  /** Plant capacity scars hit this sector only; absent = every sector. */
+  sectorType?: string;
   /** Turns for the scar to heal fully. */
   recoveryTurns: number;
 }
@@ -168,7 +175,17 @@ export interface CrisisDefinition {
   spillover: readonly SpilloverLink[];
   scarRules: readonly ScarRule[];
   forcedEvents: readonly ForcedEventThreshold[];
+  /** Sectors whose corporations the crisis reaches. Absent = every sector in the affected regions. */
+  affectedSectors?: readonly string[];
+  /**
+   * Turns an emergent detector must wait after one of these resolves in a
+   * jurisdiction before it can open another there. Absent = `DEFAULT_REOPEN_COOLDOWN_TURNS`.
+   */
+  reopenCooldownTurns?: number;
 }
+
+/** Cooldown applied to a definition that does not set `reopenCooldownTurns`. */
+export const DEFAULT_REOPEN_COOLDOWN_TURNS = 24;
 
 export interface SeveritySample {
   turn: number;
@@ -193,10 +210,22 @@ export interface AccountabilityEntry {
 export interface CrisisScar {
   ruleId: string;
   kind: ScarKind;
+  /** A state id for regional crises, a country id otherwise. */
   targetId: string;
   magnitude: number;
   createdTurn: number;
   recoveryTurns: number;
+  sectorType?: string;
+  /** Loss already written into the world, for scars that heal by writing the difference. */
+  applied?: number;
+}
+
+/** Progress of the forced-event thresholds on one instance. */
+export interface ForcedEventProgress {
+  /** Consecutive qualifying turns per threshold id. */
+  streaks: Record<string, number>;
+  /** Threshold ids that have fired; each fires once per crisis. */
+  fired: string[];
 }
 
 export interface SpilloverRef {
@@ -229,6 +258,17 @@ export interface CrisisInstance {
   scars: CrisisScar[];
   parents: SpilloverRef[];
   children: SpilloverRef[];
+  /** Turn whose step has been claimed; a claimed turn is never stepped twice. */
+  lastEvaluatedTurn?: number;
+  forced?: ForcedEventProgress;
+  /** Set once a state of emergency is declared; unlocks emergency levers. */
+  emergency?: boolean;
+  /** Turn the scars were last advanced, so a repeat run cannot heal twice. */
+  lastScarTurn?: number;
+  /** Which scar pass holds the claim on `lastScarTurn`. */
+  scarClaim?: string;
+  /** Set once the accountability ledger has been turned into approval and votes. */
+  consequencesSettled?: boolean;
 }
 
 /** Optional v2 state carried on a stored crisis. */

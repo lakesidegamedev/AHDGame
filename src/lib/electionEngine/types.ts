@@ -243,6 +243,11 @@ export interface DistributeVotesOptions {
    */
   midtermOppositionModifierByParty?: Map<string, number>;
   /**
+   * Per-party nominal-share multiplier earned by how a party's office holders
+   * handled recent crises. Absent or empty = neutral.
+   */
+  crisisBlameModifierByParty?: Map<string, number>;
+  /**
    * Per-party campaign funds available in this race, in the country's
    * native local currency. Higher delta between P_j and P_i implies P_j
    * has more persuasion budget — feeds the money driver. Undefined or

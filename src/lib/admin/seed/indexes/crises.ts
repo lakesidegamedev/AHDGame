@@ -41,6 +41,48 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The scar pass reads crises whose scars have not finished healing.
+  await ensureIndex(
+    db,
+    "crises",
+    { scarsHealUntil: 1 },
+    {
+      name: "crises_scars_healing",
+      partialFilterExpression: { scarsHealUntil: { $exists: true } },
+    },
+    log
+  );
+
+  // Each detector reads its own streaks every turn.
+  await ensureIndex(
+    db,
+    "crisisDetectorStreaks",
+    { detectorId: 1 },
+    { name: "crisis_detector_streaks_detector" },
+    log
+  );
+
+  // The claim behind a lever pull: one use per holder, lever and turn.
+  await ensureIndex(
+    db,
+    "crisisLeverUses",
+    { crisisId: 1, leverId: 1, holderId: 1, submittedTurn: 1 },
+    { name: "crisis_lever_uses_claim", unique: true },
+    log
+  );
+
+  // Emergency bills awaiting their outcome; empty for ordinary bills.
+  await ensureIndex(
+    db,
+    "bills",
+    { "crisisEmergency.crisisId": 1 },
+    {
+      name: "bills_crisis_emergency",
+      partialFilterExpression: { "crisisEmergency.crisisId": { $exists: true } },
+    },
+    log
+  );
+
   // crises_living_event dedupes replayed living-conflict events. PARTIAL on
   // string type, not sparse: a sparse unique index skips documents where the
   // field is ABSENT but still indexes { livingConflictEventId: null }, and the

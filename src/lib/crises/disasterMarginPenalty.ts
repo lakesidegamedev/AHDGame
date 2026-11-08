@@ -15,7 +15,8 @@ export interface DisasterEffectEntry {
   persistent?: boolean;
 }
 
-type DecayCrisis = Pick<Crisis, "effects" | "startTurn" | "durationTurns" | "regionIds">;
+type DecayCrisis = Pick<Crisis, "effects" | "startTurn" | "durationTurns" | "regionIds"> &
+  Partial<Pick<Crisis, "v2Output">>;
 
 /**
  * Index every active crisis's decaying `profitMargin` effects by the stateId they
@@ -33,14 +34,31 @@ export function buildDisasterEffectsByState<T extends DecayCrisis>(
     const decayEffects = crisis.effects.filter(
       (e) => e.effectType === "decay" && e.targetType === "profitMargin"
     );
-    if (decayEffects.length === 0 || crisis.durationTurns == null) continue;
+    const cuts = crisis.v2Output?.productionCuts ?? [];
+    const hasDecay = decayEffects.length > 0 && crisis.durationTurns != null;
+    if (!hasDecay && cuts.length === 0) continue;
     for (const stateId of resolveStateIds(crisis)) {
       const list = result.get(stateId) ?? [];
+      for (const cut of cuts) {
+        list.push({
+          value: cut.points,
+          startTurn: crisis.startTurn,
+          durationTurns: 0,
+          sectorType: cut.sectorType,
+          strategyId: null,
+          physicality: "physical",
+          persistent: true,
+        });
+      }
+      if (!hasDecay) {
+        result.set(stateId, list);
+        continue;
+      }
       for (const eff of decayEffects) {
         list.push({
           value: eff.value,
           startTurn: crisis.startTurn,
-          durationTurns: crisis.durationTurns,
+          durationTurns: crisis.durationTurns as number,
           sectorType: eff.sectorType,
           strategyId: eff.strategyId,
           physicality: eff.physicality,

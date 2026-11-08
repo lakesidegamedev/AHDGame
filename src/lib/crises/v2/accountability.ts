@@ -96,7 +96,7 @@ export function recordInaction(
   return { ...instance, ledger: trim([...instance.ledger, ...rows]) };
 }
 
-function scaleCost(cost: LeverCost, intensity: number): LeverCost {
+export function scaleCost(cost: LeverCost, intensity: number): LeverCost {
   const scaled: LeverCost = {};
   if (cost.treasuryCash !== undefined) scaled.treasuryCash = cost.treasuryCash * intensity;
   if (cost.politicalCapital !== undefined)

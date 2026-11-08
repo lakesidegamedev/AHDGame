@@ -69,7 +69,7 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   politicalMetricsDynamics: 600,
   demographicEffects: 600,
   crisisTurn: 600,
-  // Gated to a single indexed read while no crisis carries a v2 instance.
+  // Detectors read their inputs and streaks each turn; per-crisis work is batched.
   crisisV2Turn: 200,
   autoCrisisTurn: 600,
   nppCorporateAttacks: 600,

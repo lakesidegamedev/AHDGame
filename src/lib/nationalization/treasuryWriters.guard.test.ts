@@ -116,6 +116,10 @@ const SPEND_REGISTRY: Record<string, Registered> = {
     writers: ["spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["crisis_response"] }],
   },
+  "src/lib/crises/levers/leverCommand.ts": {
+    writers: ["creditTreasury", "spendFromTreasury"],
+    witness: [{ kind: "flow", flows: ["crisis_response"] }],
+  },
   "src/lib/crises/optionActions.ts": {
     writers: ["spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["crisis_response"] }],

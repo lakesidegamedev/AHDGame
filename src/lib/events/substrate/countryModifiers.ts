@@ -1,3 +1,4 @@
+import type { CrisisBlameShift } from "@/lib/electionEngine/crisisBlame";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { getCountryModifiersCollection } from "@/lib/db/collections/countryModifiers";
@@ -240,4 +241,19 @@ export async function sweepExpiredCountryModifiers(db: Db, currentTurn: number):
     expiresAtTurn: { $lte: currentTurn },
   });
   return result.deletedCount ?? 0;
+}
+
+/** Active crisis credit and blame shifts for a country's parties, one read. */
+export async function loadActiveCrisisBlameShifts(
+  db: Db,
+  countryId: string,
+  currentTurn: number
+): Promise<CrisisBlameShift[]> {
+  const rows = await getCountryModifiersCollection(db)
+    .find(
+      { countryId, kind: "crisisBlame", expiresAtTurn: { $gt: currentTurn } },
+      { projection: { partyId: 1, regionIds: 1, pct: 1, expiresAtTurn: 1 } }
+    )
+    .toArray();
+  return rows as unknown as CrisisBlameShift[];
 }

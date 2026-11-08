@@ -494,6 +494,47 @@ export interface Crisis {
   livingConflictEventId?: string;
   /** Crisis v2 stage, severity and accountability state. Absent on crises that predate v2. */
   v2?: CrisisInstance;
+  /** Last turn any scar of this crisis is still in force; the scar passes read crises by it. */
+  scarsHealUntil?: number;
+  /**
+   * What a v2 crisis currently does to plant output, rewritten each turn the
+   * crisis runs. `routedTurn` is the turn the cuts were computed for.
+   */
+  v2Output?: CrisisV2Output;
+}
+
+export interface CrisisV2Output {
+  routedTurn: number;
+  /** Physical output cuts in margin points (<= 0); `null` sector = every sector. */
+  productionCuts: { sectorType: string | null; points: number }[];
+}
+
+/**
+ * A lever use waiting to be counted by the Crisis v2 turn phase. The phase
+ * consumes a row by stamping `appliedTurn`; rows with a null stamp are pending.
+ */
+export interface CrisisLeverUse {
+  _id: ObjectId;
+  crisisId: ObjectId;
+  leverId: string;
+  holderId: string;
+  /** Share of full effect, 0..1. Absent = 1. */
+  intensity?: number;
+  submittedTurn: number;
+  appliedTurn: number | null;
+  /**
+   * `pending` from the moment the pull claims its unique slot until its cost has
+   * landed; the turn phase skips pending rows. Absent on rows written before
+   * costs existed, which count as charged.
+   */
+  chargeState?: "pending" | "charged";
+  /** Cost actually debited, after scaling by intensity. */
+  cost?: import("@/lib/crises/v2/types").LeverCost;
+  /** Corporation whose cash paid, for corporate levers. */
+  corporationId?: ObjectId;
+  /** Emergency bill that authorised the use, for legislature levers. */
+  billId?: ObjectId;
+  createdAt: Date;
 }
 
 /**
