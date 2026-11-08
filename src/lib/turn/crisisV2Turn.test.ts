@@ -36,13 +36,15 @@ function makeDb(data: FakeData) {
     leverUpdateMany: vi.fn(async () => ({})),
     claim: vi.fn(async () => ({ matchedCount: 1 })),
     collectionsRead: [] as string[],
+    leverFilter: undefined as unknown,
   };
   const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
   const db = {
     collection(name: string) {
       return {
-        find() {
+        find(filter?: unknown) {
           calls.collectionsRead.push(name);
+          if (name === "crisisLeverUses") calls.leverFilter = filter;
           if (name === "crises") return cursor(data.crises);
           if (name === "states") return cursor(data.states);
           if (name === "stateMetrics") return cursor(data.stateMetrics);
@@ -171,6 +173,14 @@ describe("processCrisisV2Turn", () => {
       { _id: { $in: [useId] } },
       { $set: { appliedTurn: 10 } }
     );
+  });
+
+  it("leaves lever uses whose cost has not landed yet for a later turn", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    expect(calls.leverFilter).toMatchObject({ appliedTurn: null, chargeState: { $ne: "pending" } });
   });
 
   it("skips a crisis already stepped this turn", async () => {
