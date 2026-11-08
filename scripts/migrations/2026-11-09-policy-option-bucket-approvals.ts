@@ -1,17 +1,7 @@
 /**
- * Migration: rename policy-option approvals to `bucketApprovals`.
- *
- * `legislationTypes.policyOptions[].archetypeApprovals` already holds
- * "dim:bucket" keys after the 2026-08-19 projection; this renames the field so
- * the stored shape matches the code. The deprecated `groupApprovals` field has
- * no readers and is dropped.
- *
- * Fresh worlds seed `bucketApprovals` directly; this only matters for existing
- * documents.
- *
- * Usage:
- *   npx tsx scripts/migrations/2026-11-09-policy-option-bucket-approvals.ts [--apply]
- * Defaults to a dry run that reports counts.
+ * Renames `legislationTypes.policyOptions[].archetypeApprovals` to
+ * `bucketApprovals` (keys are already "dim:bucket") and drops `groupApprovals`.
+ * Dry run unless `--apply` is passed.
  */
 import { connectDb, closeDb } from "../utils/db";
 
