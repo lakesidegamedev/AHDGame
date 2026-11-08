@@ -110,13 +110,6 @@ interface UKRegionClientProps {
   approvalModifiersForOverview?: ActiveModifier[];
 }
 
-const NATION_COLORS: Record<string, string> = {
-  ENG: "#4f7ac7",
-  SCO: "#1a5fa8",
-  WAL: "#2a7c3e",
-  NIR: "#7a4ba8",
-};
-
 export default function UKRegionClient({
   region,
   nation,
@@ -146,8 +139,6 @@ export default function UKRegionClient({
   regionalConditionsOverviewEnabled = false,
   approvalModifiersForOverview = [],
 }: UKRegionClientProps) {
-  const _nationColor = NATION_COLORS[region.nationId] ?? "#4f7ac7";
-
   const population = state?.population ?? nation?.population ?? 0;
   const gdp = state?.gdp ?? 0;
   const constituencies = region.constituencies;
