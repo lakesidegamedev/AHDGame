@@ -1,8 +1,8 @@
 /**
- * US political-legislation catalog — TRANSCRIBED from the reviewed catalog document
- * docs/superpowers/specs/2026-07-17-legislation-catalog-us.md (the content SSOT;
- * local-only). Do not hand-edit content here: fix the document, then re-transcribe.
- * Derived display figures (absolute currency amounts) are intentionally not carried.
+ * US political-legislation catalog, TRANSCRIBED from a reviewed catalog document
+ * that is the content SSOT. Do not hand-edit content here: fix the document, then
+ * re-transcribe. Derived display figures (absolute currency amounts) are
+ * intentionally not carried.
  */
 
 import type { PoliticalLaw } from "@/lib/politicalLegislation/types";

@@ -1,28 +1,19 @@
 /**
  * Japan Region Census Profiles - 2027 era.
  *
- * 2027-default companion to {@link jpRegionCensusData2023}. Every value is
- * independently authored for 2027 as a literal, using the 2023 bundle as the
- * visible base plus the documented projection assumptions below. This file
- * does not import or scale any other era file.
+ * 2027 companion to {@link jpRegionCensusData2023}. Values are authored
+ * as literals; this file does not import or scale another era file.
  *
  * Base: 2023 bundle (2020 census read forward, super-aged society).
  * Projection assumptions 2023 to 2027:
- * - Senior share rises 1 to 2 points in every region (national 2025 census
- *   preliminary: record aging, only Tokyo and Okinawa growing).
- *   Young and mid shares fall to compensate.
- * - Foreign-resident share rises about 1 point nearly everywhere
- *   (nationwide foreign population up by roughly 0.3 million per year
- *   through 2025; Vietnamese and other Southeast Asian technical-intern
- *   workers spread further into Chubu, Kyushu, and rural regions).
- * - University share rises 1 point as higher-ed massification continues;
- *   high school or vocational falls to compensate.
- * - Urban share rises 1 point (Tokyo concentration plus Fukuoka growth);
- *   rural falls to compensate.
+ * - Senior share rises 1 to 2 points per region; young and mid fall.
+ * - Foreign-resident share rises about 1 point nearly everywhere.
+ * - University share rises 1 point; high school and vocational fall.
+ * - Urban share rises 1 point; rural falls.
  *
  * Sources:
- * https://www.stat.go.jp/english/data/jinsui/ (population estimates)
- * https://www.stat.go.jp/data/kokusei/2025/index.html (2025 census portal)
+ * https://www.stat.go.jp/english/data/jinsui/
+ * https://www.stat.go.jp/data/kokusei/2025/index.html
  */
 import type { JPRegionLayer1 } from "./jpRegionCensusData";
 

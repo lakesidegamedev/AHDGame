@@ -4,15 +4,6 @@ import { PARTY_ROSTERS_2027 } from "@/lib/seeds/partyRosters2027";
 /**
  * Greece default political parties.
  *
- *  - 1953: Ellinikos Synagermos (Papagos, governing since Nov 1952) + EPEK
- *    (centrist) + EDA (the legal front of the banned communist left).
- *  - 1979: ND (Karamanlis, governing) + PASOK (Papandreou, surging) + KKE
- *    (legalised 1974).
- *  - 1991: same three-party core still governing the April 1990-formed
- *    Mitsotakis (ND) parliament. KKE ran the Nov 1989/Apr 1990 elections in
- *    the broader Synaspismos left coalition, but its own registration
- *    persisted throughout, so it is kept as the seeded entity.
- *
  * Positions -5..+5. Each entry is gated via `validForPresets`.
  */
 export const grParties: PartySeed[] = [

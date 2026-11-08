@@ -4,14 +4,8 @@ import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 /**
  * Calculate NG state party organization levels from estimated zonal vote shares.
  *
- * Preset rosters:
- *   - `1953-default` — NCNC / AG / NPC (late-colonial regional triad)
- *   - `2019-default` — APC / PDP / LP / NNPP / APGA
- *   - `1991-default` — SDP / NRC (aborted Third Republic two-party system)
- *
- * Organizations scale from vote share:
- * - 0% vote → 5 org (minimal presence)
- * - 50% vote → 70 org (dominant party)
+ * Organizations scale from vote share: 0% → 5 org (minimal presence),
+ * 50% → 70 org (dominant party).
  *
  * Slug → sequentialId is resolved at runtime against the live
  * `politicalParties` collection so preset-filtered seeds are picked up

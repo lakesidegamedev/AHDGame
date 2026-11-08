@@ -128,16 +128,13 @@ export async function seedUkBudgets(
     log(`Seeded ${ukCorpData.length} UK country-owned public corporation setup(s)`);
   }
 
-  // Seed/update UK regional state policies (spending + tax) with policyOptionId
-  // so the regional budget processor can look up annualCostPerCapita.
+  // Seed UK regional state policies with policyOptionId so the regional
+  // budget processor can look up annualCostPerCapita.
   //
-  // Gated on the preset for the same reason `seedStatePolicies` gates the
-  // national ones (political-legislation spec §6): on a v2 preset
-  // `seedLegislationTypes` unseeds AND prunes every `countryScope: "uk"` type,
-  // so seeding these anyway wrote 18 policies × 12 regions pointing at
-  // legislation that no longer exists. Those dangling rows are invisible until
-  // something reads through them — which is how UK regional revenue silently
-  // resolved to £0 while the cost half kept pricing through the v2 catalog.
+  // Gate on the preset: on a v2 preset seedLegislationTypes unseeds and prunes
+  // every countryScope "uk" type, so seeding anyway leaves dangling policies
+  // that silently resolve regional revenue to £0 while costs still price via
+  // the v2 catalog.
   const { legislationTypes } = await import("@/lib/seeds/reference/legislationTypes");
   const { isPoliticalLegislationPreset } =
     await import("@/lib/admin/seed/seedPoliticalLegislation");

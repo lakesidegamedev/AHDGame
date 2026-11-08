@@ -1,20 +1,13 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * China Voter Archetypes — 7 mutually-exclusive attitudinal/demographic
- * groups covering the contemporary Chinese political landscape.
+ * China Voter Archetypes: 7 mutually exclusive attitudinal/demographic
+ * groups. Defined by socioeconomic position and attitudes within the
+ * one-party system, not party affiliation.
  *
- * Design principle: each archetype is defined by socioeconomic position
- * and attitudes within the one-party system, not by party affiliation.
- * Every group can exist in every region; regional character is expressed
- * through population percentages in cnRegionDemographics.ts.
- *
- * Each group has:
- *   defaultEconomicLean: -5 (far left / redistribution) to +5 (far right / markets)
- *   defaultSocialLean:   -5 (progressive / liberal) to +5 (traditional / authoritarian)
- *   defaultTurnout:      baseline participation rate (NPC delegate elections)
- *
- * demographicProfileId: "cn_archetypes"
+ * defaultEconomicLean: -5 (redistribution) to +5 (markets)
+ * defaultSocialLean: -5 (progressive) to +5 (traditional/authoritarian)
+ * defaultTurnout: baseline participation rate (NPC delegate elections)
  */
 export const cnDemographicCategories: DemographicCategory[] = [
   {

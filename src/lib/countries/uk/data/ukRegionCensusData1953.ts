@@ -1,27 +1,13 @@
 /**
- * United Kingdom Region Census Profiles — 1953 era.
+ * United Kingdom Region Census Profiles, 1953.
  *
- * 1953-default companion to {@link ukRegionCensusData} (the 2019 profiles).
- * Anchored on 1951 Census of Great Britain and Northern Ireland.
+ * SEED INDEPENDENCE: anchored on the 1951 Census, authored independently of the
+ * 2019 profiles.
  *
- * Era anchors (post-war austerity / early Elizabeth II): rationing for most
- * food still in force until 1954; the Windrush had sailed in 1948 but only
- * ~50,000 Commonwealth migrants had arrived by 1953 — almost entirely in
- * London and the West Midlands; housing stock severely damaged by bombing
- * and unrepaired; coal, steel and textiles still the backbone of the North;
- * university attainment below 4% everywhere; council housing being built at
- * record pace. Income tiers are era-neutral relative tiers.
- *
- * Age bands are voting-age shares (young 18–29 / mid 30–44 / mature 45–64 /
- * senior 65+). 1951 England & Wales 65+ was ~11% of total population ≈ ~15–16%
- * of adults; Depression-era births keep the young-adult band modest, so mature
- * (45–64) is the largest adult cohort. Education buckets reuse the shared
- * schema labels (`gcse_equivalent` ≈ School Certificate / O-level; GCSEs did
- * not yet exist) — `no_qualifications` is high because most adults left school
- * at 14 with no certificate.
- *
- * All values independently authored from 1953 historical knowledge —
- * NOT scaled from any other era's file.
+ * Age bands are voting-age shares (young 18-29 / mid 30-44 / mature 45-64 /
+ * senior 65+). Education buckets reuse shared labels (`gcse_equivalent` is
+ * School Certificate / O-level; GCSEs did not exist). Income tiers are era-neutral
+ * relative tiers.
  */
 
 import type { UKRegionLayer1 } from "@/lib/countries/uk/data/ukRegionCensusData";

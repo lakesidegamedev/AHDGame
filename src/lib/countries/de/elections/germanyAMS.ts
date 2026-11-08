@@ -1,24 +1,11 @@
 /**
- * German AMS (Mixed-Member Proportional) election orchestrator — aggregate-native.
- *
- * The whole game persists chamber seats as AGGREGATE `electedOfficials` docs:
- * one doc per (party, region) with a `seatsHeld` count and a single
- * representative `characterId`. The Bundestag direct tier (Wahlkreis mandates)
- * uses this same model. This orchestrator therefore reads/writes seats as
- * aggregate counts, not one-official-per-seat.
- *
- * Phases:
- * 1. Read direct mandates (aggregate seatsHeld per party / per Land)
- * 2. Derive Zweitstimmen from Erststimmen via ticket-split crossover
- * 3. Federal Sainte-Laguë allocation (era-sized chamber — 630 seats for a
- *    modern-default world, 487 for 1953 — via getLiveLowerChamberSeats;
- *    5% / 3-direct threshold)
- * 4. Per-Land list distribution; list = max(0, Land quota − direct seats)
- *    (overhang clamps to 0 — no per-Wahlkreis individual dropping)
- * 5. Persist aggregate list officials (one per party+Land, seatSource="list")
- *
- * Entry point: allocateBundestag(db, cycle) / maybeReconcileBundestag(db, cycle)
- * Runs once per cycle AFTER all 16 Land Bundestag elections are resolved.
+ * German AMS (Mixed-Member Proportional) election orchestrator, aggregate-native.
+ * Chamber seats persist as aggregate `electedOfficials` docs: one per (party, region)
+ * with `seatsHeld` and one representative `characterId`. Read/write seats as counts.
+ * Phases: read direct mandates; derive Zweitstimmen via ticket-split crossover;
+ * federal Sainte-Laguë allocation (era-sized chamber, 5%/3-direct threshold);
+ * per-Land list distribution, list = max(0, quota - direct seats); persist list officials.
+ * Runs once per cycle after all Land elections resolve.
  */
 
 import type { Db, ObjectId as MongoObjectId } from "mongodb";
@@ -133,10 +120,8 @@ export async function allocateBundestag(db: Db, cycle: number): Promise<Bundesta
   // ─── Phase 3: Federal Sainte-Laguë allocation (5% / 3-direct threshold) ───
   // Chamber size is era-aware: `getLiveLowerChamberSeats` reads the world's
   // `gameState.preset` and returns that era's configured Bundestag size (487
-  // for 1953-default, 630 for a modern-default world / no preset). A prior
-  // version hardcoded 630 here regardless of era, which over-seated a 1953
-  // Bundestag by 51% — 630 held against a 251-seat direct-mandate founding
-  // cycle instead of the era's true 487 (issue #3896).
+  // for 1953-default, 630 for a modern-default world / no preset).
+
   const bundestagSeats = await getLiveLowerChamberSeats(db, "DE");
   const federalAllocation = allocateViaSainteLague(
     Object.entries(zweitstimmen.national).map(([partyId, votes]) => ({ partyId, votes })),
@@ -270,9 +255,9 @@ export async function computeZweitstimmen(db: Db, cycle: number): Promise<Zweits
   // Derive per-Land Zweitstimmen via ticket-split crossover.
   //
   // The rate table is slug-keyed and era-scoped, so it is resolved against the
-  // live party roster once per cycle (#810). `buildDEPartySlugToSeqId` only
-  // returns parties that exist under the active preset, so a rule naming a
-  // party this world does not have is dropped rather than inventing votes.
+  // live party roster once per cycle. `buildDEPartySlugToSeqId` only returns
+  // parties that exist under the active preset, so a rule naming a party this
+  // world does not have is dropped rather than inventing votes.
   const [slugToPartyId, gameState] = await Promise.all([
     buildDEPartySlugToSeqId(db),
     db
@@ -467,14 +452,14 @@ export function assignListSeats(
  * list officials before inserting fresh ones, so re-running a cycle replaces
  * cleanly. Direct-tier officials are untouched.
  *
- * Concurrency safety: `deleteMany` + `insertMany` is not atomic, so two overlapping
- * reconciliation runs (e.g. a non-atomic turn retry — see #2815) could both delete,
- * then both insert, doubling every (party, Land) list bloc and inflating the chamber
- * (observed in prod: 963/630, ticket #929 / issue #2957). The partial unique index
- * on `{countryId, officeType, state, party}` for `seatSource:"list"` (created by
- * scripts/heal-de-bundestag-dup-list.ts) makes the second insert of a duplicate key
- * fail; we insert unordered and swallow the E11000 so the losing racer converges to
- * the same single set instead of crashing the turn or doubling seats.
+ * Concurrency safety: `deleteMany` + `insertMany` is not atomic, so two
+ * overlapping reconciliation runs could both delete, then both insert, doubling
+ * every (party, Land) list bloc and inflating the chamber. The partial unique
+ * index on `{countryId, officeType, state, party}` for `seatSource:"list"`
+ * (created by scripts/heal-de-bundestag-dup-list.ts) makes the second insert of
+ * a duplicate key fail; we insert unordered and swallow the E11000 so the losing
+ * racer converges to the same single set instead of crashing the turn or
+ * doubling seats.
  */
 export async function persistBundestagResult(
   db: Db,

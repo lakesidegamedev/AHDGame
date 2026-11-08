@@ -40,10 +40,9 @@ async function notifyDESponsor(db: Db, bill: Bill, status: Bill["status"]): Prom
 }
 
 /**
- * Germany national lifecycle: single Bundestag vote → immediate enactment on
- * pass, failed on reject. No override, no gov-pending freeze. Reproduces the
- * phase previously in deBillLifecycle.ts; the engine additionally scopes votes to
- * current seat holders (#0836/#0982).
+ * Germany national lifecycle: single Bundestag vote, immediate enactment on
+ * pass, failed on reject. No override, no gov-pending freeze. The engine
+ * additionally scopes votes to current seat holders.
  */
 export const DE_NATIONAL_CONFIG: BillLifecycleConfig = {
   country: "DE",

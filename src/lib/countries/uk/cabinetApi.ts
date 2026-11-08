@@ -91,10 +91,9 @@ const TERRITORIAL_POSITIONS_BY_COUNTRY: Partial<Record<CountryId, string[]>> = {
 };
 
 /**
- * Player-facing message for a cabinetMembers duplicate-key insert. A clash on
- * the seat index is a lost race for the position; a clash on a holder index
- * means the appointee already holds a seat that cannot pair with this one
- * (player ticket 1368: this used to read as a race and misled the PM).
+ * Player-facing message for a cabinetMembers duplicate-key insert. A holder
+ * index clash means the appointee already holds an incompatible seat; it must
+ * not read as a lost race for the position.
  */
 export function duplicateAppointmentMessage(error: unknown): string {
   const keyPattern = (error as { keyPattern?: Record<string, unknown> } | null)?.keyPattern;
@@ -105,11 +104,9 @@ export function duplicateAppointmentMessage(error: unknown): string {
 }
 
 /**
- * Restore a departing minister's character office after they leave cabinet
- * (fire, resignation, reshuffle): back to their legislative seat so they keep
- * receiving MP action bonuses and NPI, or to private-citizen status when they
- * hold no seat (One Party State appointees). Shared by every vacate path so a
- * departure never strands a character in a cabinet office they no longer hold.
+ * Restore a departing minister's office after cabinet exit: their legislative
+ * seat, or private-citizen status if they hold no seat. Shared by every vacate
+ * path so a character is never stranded in a cabinet office they no longer hold.
  */
 export async function restoreCharacterOfficeAfterCabinet(
   db: Db,
@@ -166,9 +163,7 @@ export async function getCabinetCharactersHandler(request: Request, countryId: C
       "Only the Prime Minister can view eligible cabinet candidates"
     );
 
-    // Position-aware candidacy (issue #2049): when the caller names the vacant
-    // seat, complementary single-slot UK holders stay eligible. Unknown seats
-    // fall back to the legacy exclude-all-holders list.
+    // When the caller names the vacant seat, complementary single-slot UK holders stay eligible. Unknown seats fall back to excluding all holders.
     let vacancyPositionId: string | null = null;
     try {
       const requested = new URL(request.url).searchParams.get("positionId");
@@ -278,9 +273,7 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
       officeType: { $in: eligibleOfficeTypes },
       countryId,
     });
-    // Non-OPS governments require a legislative seat. One Party States may
-    // appoint any (non-banned-party) player citizen, so the seat check is
-    // skipped. See docs/superpowers/specs/2026-06-05-ops-cabinet-any-player-design.md.
+    // Non-OPS governments require a legislative seat. One Party States may appoint any non-banned-party player citizen, so the seat check is skipped.
     if (!isOps && !lowerOfficial) {
       throw forbidden(
         `Cabinet ministers must hold a seat in the ${getCabinetEligibleChamberLabel(countryId)}`
@@ -303,9 +296,7 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
       }
     }
 
-    // Party suspension teeth (issue #859): an MP serving a whip withdrawal
-    // sits as an independent and cannot serve in the party's government until
-    // the whip is restored.
+    // A whip-withdrawn MP sits as an independent and cannot serve in the party's government until the whip is restored.
     if (lowerOfficial?.whipWithdrawn) {
       throw forbidden(
         "This MP is suspended from the parliamentary party (whip withdrawn) and cannot be appointed to cabinet."
@@ -352,10 +343,9 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
       );
     }
 
-    // Dual-ministry slot check (issue #2049): a UK player may add the
-    // complementary slot (one department plus one central title) but never two
-    // departments, both central titles, or a third seat. Other countries keep
-    // one seat per character. Stored `roleSlot` wins; legacy rows derive it.
+    // UK dual-ministry slots: one department plus one central title is allowed,
+    // but not two departments, two central titles, or a third seat. Other
+    // countries get one seat per character. Stored roleSlot wins; legacy rows derive it.
     const targetSlot = roleSlotForPosition(countryId, positionId);
     const heldRows = await getCabinetMembersCollection(db)
       .find({ countryId, characterId: targetChar._id })
@@ -364,9 +354,8 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     const heldSlots = heldRows
       .map((row) => row.roleSlot ?? roleSlotForPosition(countryId, row.positionId))
       .filter((slot): slot is NonNullable<typeof slot> => slot != null);
-    // Outside the UK rows carry no slot, so the slot check below is vacuous
-    // there: any held row blocks a second seat (the pre-#2049 one-seat rule,
-    // previously an explicit findOne guard with this same message).
+    // Outside the UK rows carry no slot, so the slot check is vacuous here:
+    // any held row blocks a second seat.
     if (targetSlot == null && heldRows.length > 0) {
       throw forbidden("This character already holds a cabinet position");
     }
@@ -561,11 +550,10 @@ export async function fireCabinetMemberHandler(request: Request, countryId: Coun
       throw notFound("No cabinet member found for this position");
     }
 
-    // A surviving second row keeps the holder in cabinet (issue #2049): the
-    // helper repoints currentOffice at it and reports true. Only a fully
-    // departed holder falls through to the legislative-seat restore. An
-    // NPP-held seat has a null characterId — there is no player office to
-    // restore, so this is skipped.
+    // A surviving second row keeps the holder in cabinet: the helper repoints
+    // currentOffice at it and reports true. Only a fully departed holder falls
+    // through to the legislative-seat restore. NPP-held seats have a null
+    // characterId, so there is no player office to restore.
     const survivorKept =
       member.characterId != null &&
       (await preserveSurvivingCabinetRow(db, countryId, member.characterId, now));
@@ -592,9 +580,8 @@ export async function fireCabinetMemberHandler(request: Request, countryId: Coun
     // intentionally left in place so the seat stays locked for the remainder of
     // its 24-turn window.
 
-    // Confidence gauge (epic #856): firing a minister dents government
-    // confidence — heavier for a Great Office of State. Persists only; no
-    // consequence until UK_CONFIDENCE_GAUGE_DISSOLUTION is enabled.
+    // Firing a minister dents government confidence, heavier for a Great Office
+    // of State. Persists only; no consequence until UK_CONFIDENCE_GAUGE_DISSOLUTION.
     // eslint-disable-next-line local/no-country-literals -- the confidence gauge and Great Offices are UK-specific structures (ukGovernment singleton)
     if (countryId === "UK") {
       const greatOffice = GREAT_OFFICE_POSITION_IDS.has(positionId);
@@ -611,16 +598,15 @@ export async function fireCabinetMemberHandler(request: Request, countryId: Coun
 }
 
 /**
- * A minister resigns their own seat (epic #856, ticket #859).
+ * A minister resigns their own seat.
  *
  * Authority is the holder, not the PM: the caller must own the character that
  * holds `positionId`. The seat is vacated (office restored via the shared
- * helper) and the confidence gauge takes the flat `ministerResigned` hit —
+ * helper) and the confidence gauge takes the flat `ministerResigned` hit,
  * heavier for a Great Office of State, matching the fire flow's weighting.
  * The head-of-government seat cannot be resigned here; the PM leaves through
- * the Appoint-Premier / no-confidence flow. NPP-held seats have no player to
- * resign them; NPP resignations are decided by the turn runner
- * (`resignNppCaretakerMinister`).
+ * the Appoint-Premier / no-confidence flow. NPP resignations go through the
+ * turn runner (`resignNppCaretakerMinister`).
  */
 export async function resignCabinetMemberHandler(request: Request, countryId: CountryId) {
   try {
@@ -694,9 +680,8 @@ export async function resignCabinetMemberHandler(request: Request, countryId: Co
       flush: true,
     });
 
-    // Confidence gauge (epic #856): a resignation is a flat hit each — waves
-    // sum to destabilise — heavier for a Great Office of State. Same UK-only
-    // persistence as the fire flow; no consequence until
+    // A resignation is a flat confidence hit; waves sum to destabilise and
+    // Great Offices of State hit heavier. No consequence until
     // UK_CONFIDENCE_GAUGE_DISSOLUTION is enabled.
     // eslint-disable-next-line local/no-country-literals -- the confidence gauge and Great Offices are UK-specific structures (ukGovernment singleton)
     if (countryId === "UK") {
@@ -714,33 +699,31 @@ export async function resignCabinetMemberHandler(request: Request, countryId: Co
 }
 
 /**
- * Reshuffle the entire cabinet in one action (epic #856, ticket #859).
+ * Reshuffle the entire cabinet in one action.
  *
  * The PM submits the complete new roster. Every player-held seat is vacated
  * and the listed appointments are seated atomically. Enforces the
  * once-per-parliament-per-government limit from `reshuffleLimit.ts`, persisted
  * as an additive `reshuffleLog` on the `governmentFormations` document (a
- * runtime collection, so it is wiped on world reset like the rest of cabinet
- * state — no seed-manifest change needed).
+ * runtime collection, wiped on world reset, so no seed-manifest change).
  *
  * Deliberate divergences from the single-seat appoint flow:
  * - Per-seat appointment cooldowns are NOT checked: the spent reshuffle token
  *   is the throttle for bulk churn. Fresh cooldowns ARE set on the incoming
  *   ministers so later individual churn stays gated.
  * - NPP-held seats (null characterId) are preserved untouched: they are not
- *   the PM's to re-decide and the reshuffle body cannot name them (it only
- *   accepts player characters).
- * - No confidence-gauge event is emitted. Individual firings each dent the
- *   gauge via `ministerFired`; applying that per seat here would bottom the
- *   gauge out on every reshuffle. The token limit is the reshuffle's cost.
+ *   the PM's to re-decide and the reshuffle body cannot name them.
+ * - No confidence-gauge event is emitted. Individual firings already dent the
+ *   gauge via `ministerFired`; doing so per seat would bottom it out every
+ *   reshuffle. The token limit is the reshuffle's cost.
  *
  * Concurrency: the `canReshuffle` read above is a fast-path repeat check, not
- * the lock. The lock is the conditional `$push` below — a single atomic
+ * the lock. The lock is the conditional `$push` below, a single atomic
  * `updateOne` on the authoritative `governmentFormations` document whose
  * filter only matches while no entry for this (governmentId, parliamentId)
  * pair exists. Exactly one of two concurrent requests claims the token; the
- * loser re-reads the formation and returns the same 409 repeat contract
- * before touching any cabinet row. A claim whose roster write then fails is
+ * loser re-reads the formation and returns the same 409 repeat contract before
+ * touching any cabinet row. A claim whose roster write then fails is
  * compensated with a `$pull` so a retry reconciles instead of wedging.
  */
 export async function reshuffleCabinetHandler(request: Request, countryId: CountryId) {

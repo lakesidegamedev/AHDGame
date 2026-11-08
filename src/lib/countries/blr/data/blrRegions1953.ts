@@ -1,24 +1,15 @@
 import type { State } from "@/lib/db/types";
 
-/** Byelorussian SSR 1953 — six oblasts. Pop 7.7M; gdp in millions of Soviet
- *  rubles (the same unit as src/lib/seeds/ru/ruRegions1953.ts, so the republic
- *  reads on the same scale as the RSFSR regions beside it).
- *
- *  The republic is a reconstruction site, not yet the machine-building republic
- *  it becomes. Roughly a quarter of the prewar population died in the war and
- *  the prewar level is not regained until about 1970, so 7.7M in 1953 is BELOW
- *  the 1939 figure and climbing toward the 8.05M of the 1959 census. Minsk was
- *  about 80% destroyed and is being rebuilt from the foundations up; the MAZ
- *  truck works has only just been stood up there, and the Soligorsk potash
- *  discovered around 1949 is barely into mining. Everything else is timber,
- *  flax, peat, light industry and the transit corridor west to Poland.
+/** Byelorussian SSR 1953, six oblasts. Pop 7.7M; gdp in millions of Soviet
+ *  rubles, the same unit as src/lib/seeds/ru/ruRegions1953.ts, so the republic
+ *  reads at the same scale as the RSFSR regions beside it.
  *
  *  Region codes are the `BLR_` set from public/blr-regions.json (see
- *  src/lib/maps/blrGeometry.ts) — the map shard and the seed must agree or the
+ *  src/lib/maps/blrGeometry.ts); the map shard and seed must agree or the
  *  republic renders as empty geography.
  *
  *  houseDistricts = seats in the Supreme Soviet of the Byelorussian SSR,
- *  apportioned by population, summing to the 360 in the country config. */
+ *  apportioned by population, summing to the 360 in country config. */
 export const blrRegions1953: State[] = [
   {
     _id: "BLR_MIN",

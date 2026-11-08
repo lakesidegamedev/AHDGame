@@ -4,19 +4,12 @@
  * another era's region data. All values are authored for 2027 directly.
  * Type-only imports are allowed.
  *
- * China macro-regions for the 2027-default preset (post-20th Party Congress
- * continuity; 14th NPC term 2023 to 2028).
+ * China macro-regions for the 2027-default preset.
  *
- * Base: the 2023 bundle values, projected forward 2023 to 2027.
- * Projection assumptions (documented, not computed):
- * - National population peaked in 2022 and falls about 2 million per year
- *   through 2026 (NBS annual communiques). Game total falls 0.3 pct.
- *   Dongbei falls fastest (2.0 pct) continuing the 2020 census pattern
- *   where Liaoning, Heilongjiang, and Jilin lost 11 million over the
- *   decade; Huanan edges up on Greater Bay Area in-migration.
- *   Source: https://www.stats.gov.cn/english/ (NBS communiques, census data)
- * - Regional GDP is nominal CNY millions, roughly 12 pct above the 2023
- *   bundle (national nominal growth 2023 to 2026). Rounded.
+ * Projection assumptions from the 2023 bundle (documented, not computed):
+ * - Population falls ~0.3 pct nationally on the post-2022 decline; Dongbei
+ *   falls fastest, Huanan edges up on Greater Bay Area in-migration.
+ * - Regional GDP is nominal CNY millions, roughly 12 pct above 2023.
  * - `houseDistricts` (NPC, 2980 total) and `stateSenateSeats` (CPPCC, 2169
  *   total) are structural and held constant across eras.
  */

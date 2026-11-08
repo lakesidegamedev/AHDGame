@@ -1,7 +1,6 @@
 /**
- * Russia replaces Congress only with both certified, viable Assembly chambers.
- * materializeRussianAssemblySeating archives Congress and commits offices,
- * owner mirrors, chamber totals and its handover receipt in one transaction.
+ * Congress is replaced only by both certified viable Assembly chambers.
+ * Archives Congress and commits seating atomically.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { Character, NPP, CountryGameState, ElectedOfficial, State } from "@/lib/db/types";

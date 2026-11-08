@@ -1,26 +1,18 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Baltic republics 1979 (late Brezhnev) — the same three union republics as the
+ * Baltic republics 1979 (late Brezhnev); the same three union republics as the
  * 1953 preset, so the map shard `public/bal-regions.json` serves both eras.
  *
  * Population 7,400,000 combined, matching the "BAL" entry in
- * `makeEasternBlocBudget` (src/lib/seeds/reference/budgets.ts). The split
- * follows the 1979 Soviet census: Lithuania 3.40M, Latvia 2.50M, Estonia
- * 1.46M. Twenty-six years of Russian in-migration into the two northern
- * republics is the single biggest change from 1953 and it is carried in
- * balRegionCensusData.ts, not here.
+ * `makeEasternBlocBudget`. Split per the 1979 Soviet census: Lithuania 3.40M,
+ * Latvia 2.50M, Estonia 1.46M.
  *
- * GDP in millions of Soviet rubles; the three sum to 420,000 (₽420bn), the
- * figure the 1979 budget seed uses. Per head that is roughly ₽62,000 in
- * Estonia, ₽60,000 in Latvia and ₽52,000 in Lithuania — the northern two stay
- * ahead on industry and on the consumer allocations that came with being the
- * Union's showcase republics, while Lithuania has closed part but not all of
- * the gap through the Mazeikiai refinery, Jonava chemicals and the Ignalina
- * construction programme.
+ * GDP in millions of Soviet rubles, summing to 420,000 to match the 1979
+ * budget seed.
  *
- * houseDistricts = Supreme Soviet seats, apportioned by population by largest
- * remainder; sum = 300 (coalitionThreshold 151 in the BAL country config).
+ * houseDistricts = Supreme Soviet seats by population via largest remainder;
+ * sum = 300 (coalitionThreshold 151 in the BAL country config).
  */
 export const balRegions: State[] = [
   {

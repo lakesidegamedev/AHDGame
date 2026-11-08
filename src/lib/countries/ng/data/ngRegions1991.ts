@@ -5,18 +5,10 @@ import { allocatePopulationTotal } from "@/lib/seeds/rules/populationAllocation"
 import { POPULATION_TOTALS_1991 } from "@/lib/seeds/reference/populationTotals1991";
 
 /**
- * Nigeria's 6 geopolitical zones, 1991 population model.
- *
- * Population: 1991 National Population Census (88,992,220 national total).
- *   Zone shares are existing model estimates, not verified census aggregates.
- *   Counts are normalized to the NPC total reproduced in NBS Annual Abstract
- *   2011 Table 12; see populationTotals1991.ts.
- * GDP: NGN millions, scaled to WDI's observed 1991 national nominal total.
- *   Relative output shares remain existing oil/agriculture model estimates,
- *   not independently observed regional GDP. See ngGdp1991.ts for the source.
- * House/Senate seats: constitutional allocation unchanged 1991→2019
- *   (360 House, 109 Senate). Zone-level abstraction is a game construct;
- *   zones were created later (Abacha era) but used here for playable regions.
+ * Zone shares and relative GDP are model estimates, not observed regional data;
+ * zone counts are normalized to the 1991 census total (populationTotals1991.ts)
+ * and GDP is scaled to the WDI national total (ngGdp1991.ts). Zones postdate
+ * 1991 and are a game construct. Seat allocation (360/109) is unchanged.
  */
 const ngRegionPopulationWeights1991: State[] = [
   // ── North-West ───────────────────────────────────────────────────────────────

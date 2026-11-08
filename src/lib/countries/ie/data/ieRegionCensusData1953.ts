@@ -1,21 +1,16 @@
 /**
- * Ireland Region Census Profiles — 1953 era.
+ * Ireland Region Census Profiles, 1953 era.
  *
- * 1953-default companion to {@link ieRegionCensusData} (the 2019 profiles).
- * Anchored on CSO Census of Population 1951 (the nearest comprehensive Irish
- * census).
+ * 1953-default companion to {@link ieRegionCensusData} (2019 profiles),
+ * anchored on CSO Census of Population 1951.
  *
- * Era anchors (de Valera third term / post-war austerity): Ireland was one of
- * the poorest countries in Western Europe; population was still declining from
- * the Famine-era emigration wave — total population around 2.96 million, the
- * lowest since the 1840s; net emigration running at ~40,000 per year draining
- * young people; agriculture employed 40% of the workforce; free secondary
- * education did not exist until 1967 so nearly all adults of 1953 had only
- * primary schooling; third-level was a tiny elite; the country was overwhelm-
- * ingly Catholic (99%), ethnically homogeneous, and virtually without inward
- * migration. Income was very low; rural areas lived close to subsistence.
- * Age distribution: heavy emigration of 20-35-year-olds made the rural
- * regions skew older; Dublin was younger due to internal migration.
+ * Context: post-war austerity, one of Western Europe's poorest countries,
+ * population still declining from Famine-era emigration (~2.96M, lowest
+ * since the 1840s). Agriculture employed 40% of the workforce; no free
+ * secondary education until 1967, so nearly all adults had only primary
+ * schooling. 99% Catholic, ethnically homogeneous, almost no inward
+ * migration. Heavy emigration of 20-35-year-olds skewed rural regions
+ * older; Dublin younger via internal migration.
  */
 
 import type { IERegionLayer1 } from "@/lib/seeds/ie/ieRegionCensusData";

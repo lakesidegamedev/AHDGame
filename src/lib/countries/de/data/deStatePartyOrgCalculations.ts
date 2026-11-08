@@ -7,30 +7,24 @@ import { DE_LAND_VOTE_SHARES_2025 } from "@/lib/seeds/de/deLandVoteShares2025";
 /**
  * Calculate DE state party organization levels from Bundestag Zweitstimmen
  * shares per Bundesland. Picks the per-preset polling table:
- *   - `2019-default` (default) — 2021 Bundestag results (CDU/CSU/SPD/Greens/
+ *   - `2019-default` (default): 2021 Bundestag results (CDU/CSU/SPD/Greens/
  *     FDP/AfD/Linke).
- *   - `1991-default` — 1990 Bundestag results (CDU/CSU/SPD/Greens/FDP/PDS;
+ *   - `1991-default`: 1990 Bundestag results (CDU/CSU/SPD/Greens/FDP/PDS;
  *     no AfD or Linke).
- *   - `1953-default` — 1953 Bundestag results (CDU/CSU/SPD/FDP/DP/GB-BHE),
+ *   - `1953-default`: 1953 Bundestag results (CDU/CSU/SPD/FDP/DP/GB-BHE),
  *     over the 11 FRG Länder only.
  *
- * Before the 1953 table existed, `1953-default` fell through to the 2021 table.
- * SPD/CDU/CSU/FDP still resolved by name, so DE looked contested — but `dp` and
- * `gbbhe` had no slug at all, so the Deutsche Partei and the GB/BHE got ZERO
- * statePartyOrg rows in every region. A region WITH org data and no row for a
- * party is a hard block in `canPartyFieldInState`, so two of the six seeded
- * 1953 parties could not field a candidate anywhere (#3780). The stale table
- * also emitted BB/MV/SN/ST/TH rows, whose ids collide with the DDR's (#3780).
+ * Every seeded party in a preset must resolve to a sequentialId and emit a
+ * row in each region: a region WITH org data but no row for a party is a hard
+ * block in `canPartyFieldInState`. The 1953 table also must not emit
+ * BB/MV/SN/ST/TH rows, whose ids collide with the DDR's.
  *
- * Organisations scale from vote share:
- * - 0% vote → 5 org (minimal presence)
- * - 40% vote → 70 org (dominant party)
+ * Organisations scale from vote share: 0% → 5 org (minimal presence),
+ * 40% → 70 org (dominant party).
  *
- * CSU only contests in Bayern (its sister-party CDU stays out of BY). CDU
- * likewise has no presence in BY. Slug → sequentialId is resolved at runtime
- * against the live `politicalParties` collection so preset-filtered seeds
- * (e.g. PDS only under 1991, AfD/Linke only under 2019) are picked up
- * correctly without hardcoded ordering assumptions.
+ * CSU only contests Bayern; CDU has no presence in BY. Slug → sequentialId is
+ * resolved at runtime against the live `politicalParties` collection so
+ * preset-filtered seeds are picked up without hardcoded ordering.
  */
 
 const MIN_ORG = 5;

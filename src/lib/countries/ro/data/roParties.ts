@@ -2,22 +2,15 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { roParties2027 } from "./roParties2027";
 
 /**
- * Romania ruling party (Cold-War presets) — era-specific identity.
+ * Romania ruling party, era-specific identity per preset.
  *
- *  - 1953: Partidul Muncitoresc Român (PMR), the "Romanian Workers' Party"
- *    (1948–1965) — Gheorghiu-Dej's Stalinist ruling party, the ACTUAL party in
- *    power in 1953.
- *  - 1979: Partidul Comunist Român (PCR) — the party renamed itself back to
- *    "Communist" only in 1965, under Ceaușescu's hardline national communism.
+ * 1953: Partidul Muncitoresc Român (PMR), the party actually in power.
+ * 1979: Partidul Comunist Român (PCR). The party adopted "PCR" only in
+ * 1965, so it cannot be seeded into a 1953 world.
  *
- * "PCR" did not exist as the party's name until 1965, so it cannot be seeded into
- * a 1953 world. Each entry is gated to its own preset via `validForPresets`;
- * `seedEasternBloc` filters with `isPartyValidForPreset` so only the entry
- * matching the active preset is upserted, and the shared `seedOrder` never
- * collides. Positions on the -5..+5 scale.
- *
- * The 2027 democratic roster (December 2024 ROAEP/BEC result) seeds first and
- * is gated to `2027-default`, so Cold-War worlds never see a modern party.
+ * Each entry is gated to its preset via validForPresets; seedEasternBloc
+ * filters with isPartyValidForPreset so only the matching entry upserts.
+ * Positions are on the -5..+5 scale.
  */
 export const roParties: PartySeed[] = [
   ...roParties2027,

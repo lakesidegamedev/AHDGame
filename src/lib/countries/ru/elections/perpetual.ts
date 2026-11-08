@@ -90,11 +90,10 @@ export async function ensureRUNationalitiesElections(
 }
 
 /**
- * Republic Supreme Soviets — each region's own authored chamber size
- * (`stateSenateSeats` on the seeded State doc, the realistic per-republic
- * Supreme Soviet sizes from the map seed). Reading the live doc keeps the
+ * Republic Supreme Soviets: each region's own authored chamber size
+ * (`stateSenateSeats` on the seeded State doc). Reading the live doc keeps the
  * election totals, the admin seat panel, and state-bill passage thresholds
- * on one source of truth (amended D11 — user decision 2026-07-20).
+ * on one source of truth.
  */
 export async function ensureRURepublicSovietElections(
   now: Date,

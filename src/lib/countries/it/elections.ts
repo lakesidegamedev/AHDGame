@@ -3,21 +3,9 @@ import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import { ensureITElections, ensureITSenateElections } from "@/lib/turn/perpetualElections";
 
 /**
- * Italy's elections.
- *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
- *
- * ⚠️ NO `spawn`, AND NOTHING RELOCATED. Italy has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The spawner functions stay where they are because their
- * files are shared between countries -- moving one into this folder would take
- * the others' elections with it.
- *
- * ⚠️ NO `seats`. There is no seat table for Italy anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * Italy's elections. SERVER ONLY (spawners reach getDb).
+ * No `spawn`: Italy has no SPAWN_ELECTIONS_REGISTRY row; phases run through COUNTRY_ELECTION_PHASES in this order, and adding a spawn would run them twice per turn.
+ * No `seats`: apportionment is read from live regions (as East Germany's Volkskammer and Brazil's Senate); an empty byChamber would mean a chamber with no seats.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "itElections", fn: ensureITElections },

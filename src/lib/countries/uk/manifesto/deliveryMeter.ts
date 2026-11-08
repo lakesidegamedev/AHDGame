@@ -37,11 +37,8 @@ function pledgeEntries(pledges: Pledge[]) {
  * How much of the sitting UK government's manifesto is still being delivered,
  * as kept / pledged (0..1), or undefined when there is nothing to judge.
  *
- * The confidence gauge has always documented a bleed for broken pledges, but
- * the turn tick never supplied a meter, so a government that tore up its
- * manifesto lost confidence only through approval (#4354). This reads the
- * governing party's most recent locked manifesto and judges it against the
- * national laws in force, which is the same delivery model the manifesto
+ * Reads the governing party's most recent locked manifesto and judges it
+ * against national laws in force, the same delivery model the manifesto
  * scorer uses.
  *
  * Undefined (not 0) when there is no formed government, no locked manifesto,

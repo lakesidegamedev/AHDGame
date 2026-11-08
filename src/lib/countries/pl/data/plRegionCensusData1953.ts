@@ -1,27 +1,8 @@
 /**
- * Poland Layer-1 census (1953, the Bierut Stalinist years), one entry per
- * macro-region. Each dim sums 100.
+ * Poland Layer-1 census (1953), one entry per macro-region, same codes as the
+ * 1979 bundle. Each dimension sums to 100.
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1953 directly, keyed to the same macro-region codes as the 1979
- * bundle (matching plRegions1953.ts).
- *
- * Key 1953 anchors (vs 1979):
- * - Urbanization is MUCH lower. The 1950 census put Poland at ~39% urban against
- *   ~58% in 1979; the Six-Year Plan's industrial towns (Nowa Huta, Nowe Tychy)
- *   are still building. Only Silesia is already majority-urban.
- * - Education is far thinner: the 1950 census found roughly two thirds of adults
- *   with primary schooling or less and barely 2% with higher education. The
- *   vocational (zawodowe) stream is only just being built out under the plan.
- * - Age skews YOUNG: the postwar baby boom is at its peak and the war removed a
- *   large part of the pre-war mature/senior cohorts.
- * - Income is compressed almost flat — the 1950 currency reform wiped private
- *   savings and wages were administratively levelled.
- * - Ethnicity: postwar Poland is the most homogeneous it has ever been, but the
- *   Recovered Territories (Lower Silesia, Pomerania) are still absorbing
- *   resettled populations, Upper Silesia retains its autochthonous German
- *   remainder, and the east keeps Belarusian/Ukrainian villages — the 1947
- *   Akcja Wisła deportations having only just dispersed the Lemkos westward.
+ * SEED INDEPENDENCE: authored for ~1953 directly, do not derive from another era.
  */
 export const plRegionCensusData1953 = {
   PL_MAZ: {

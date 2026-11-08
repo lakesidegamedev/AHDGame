@@ -9,26 +9,17 @@ import {
 /**
  * Calculate IE state party organization levels from estimated regional vote
  * shares. Picks the per-preset polling table:
- *   - `2019-default` (default) — 2024 General Election regional estimates
- *     (FF/FG/SF/Lab/Green).
- *   - `1991-default` — 1989 General Election regional estimates
- *     (FF/FG/Lab/WP/PD; SF abstentionist + no Dáil seats, Greens not yet
- *     significant).
- *   - `1953-default` — 1954 General Election regional estimates (FF/FG/Lab —
- *     the entire seeded 1953 IE roster).
- *
- * Before the 1953 table existed, `1953-default` fell through to the 2024
- * dataset (#3780). All three 1953 parties resolve by name there, so IE was
- * never presence-blocked the way DE was — but a 1954 world was calibrated to a
- * fragmented 2024 field (FF 19-26, FG 18-23) instead of FF ~43 / FG ~32.
+ *   - `2019-default` , 2024 General Election regional estimates.
+ *   - `1991-default` , 1989 General Election regional estimates.
+ *   - `1953-default` , 1954 General Election regional estimates, matching the
+ *     seeded 1953 IE roster.
  *
  * Organizations scale from vote share, matching the JP / DE / CN pattern:
  * - 0% vote → 5 org (minimal presence)
  * - 50% vote → 70 org (dominant party)
  *
  * Slug → sequentialId is resolved at runtime against the live
- * `politicalParties` collection so preset-filtered seeds (SF / Greens under
- * 2019-only; WP / PD under 1991-only) are picked up correctly without
+ * `politicalParties` collection so preset-filtered seeds are picked up without
  * hardcoded ordering assumptions.
  */
 

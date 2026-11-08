@@ -2,11 +2,11 @@
  * Greece 1991 metric overlay.
  *
  * The base `grStateMetrics` bundle is authored on ~1979 values, so a 1991
- * world otherwise opens Greece on its 1979 growth and unemployment (#3034).
- * Only the two headline cyclical series are overlaid; the structural metrics
- * keep their base values rather than inventing regional detail. Unemployment
- * shifts every region by the national change so regional gaps survive.
- * Greece in 1991: real GDP grew roughly 3 percent and standardized unemployment was about 7 percent (OECD Economic Outlook).
+ * world otherwise opens Greece on its 1979 growth and unemployment. Only
+ * the two headline cyclical series are overlaid; the structural metrics keep
+ * their base values. Unemployment shifts every region by the national change
+ * so regional gaps survive. Greece in 1991: real GDP grew roughly 3 percent
+ * and standardized unemployment was about 7 percent (OECD Economic Outlook).
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 import { grStateMetrics } from "./grStateMetrics";

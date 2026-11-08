@@ -1,20 +1,15 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * Brazil Voter Archetypes — 8 mutually-exclusive attitudinal/demographic
- * groups covering the post-2018 Brazilian political landscape.
+ * Brazil voter archetypes: 8 mutually-exclusive attitudinal/demographic groups
+ * for the post-2018 landscape.
  *
- * Design principle: each archetype is defined by attitudes and demographics,
- * not geography or party affiliation. Every group can exist in every
- * macro-region; regional character is expressed through population percentages
- * in brRegionDemographics.ts.
+ * Each group is defined by attitudes and demographics, not geography or party;
+ * regional character lives in brRegionDemographics.ts population percentages.
  *
- * Each group has:
- *   defaultEconomicLean: -5 (far left / redistribution) to +5 (far right / markets)
- *   defaultSocialLean:   -5 (progressive / liberal) to +5 (traditional / authoritarian)
- *   defaultTurnout:      baseline participation rate (Brazilian TSE avg ~79% in 2022)
- *
- * demographicProfileId: "br_archetypes"
+ * defaultEconomicLean: -5 (far left) to +5 (far right)
+ * defaultSocialLean: -5 (progressive) to +5 (traditional/authoritarian)
+ * defaultTurnout: baseline participation rate (TSE avg ~79% in 2022)
  */
 export const brDemographicCategories: DemographicCategory[] = [
   {

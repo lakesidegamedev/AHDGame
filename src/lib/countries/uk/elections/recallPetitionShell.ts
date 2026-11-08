@@ -1,5 +1,5 @@
 /**
- * Persistence shell for UK Commons recall petitions (epic #856, #860).
+ * Persistence shell for UK Commons recall petitions.
  *
  * Pipeline: `watch` (sustained-low-approval streak) -> `open` (collecting
  * signatures) -> `check` (constituency support window) -> terminal

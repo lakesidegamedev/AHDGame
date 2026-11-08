@@ -1,22 +1,13 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Ireland NUTS III planning regions, 1991 Census + 1991 nominal regional
- * GDP (EUR-equivalent, scaled from the 1991 IEP series).
+ * Ireland NUTS III planning regions, 1991 Census + 1991 nominal regional GDP
+ * (EUR-equivalent, scaled from the 1991 IEP series).
  *
- * Population: 1991 CSO Census.
- * GDP: 1991 nominal regional GVA, calibrated to a realistic ~$12k/capita
- *   national average (≈88% of real 1991 Irish GDP/cap, ~$13.4k), consistent
- *   with how the other countries are seeded (DE/US land ≈85-90% of real
- *   per-capita). An earlier pass under-seeded IE at ~$8k/cap (~$28.8B total),
- *   leaving Ireland anomalously poor — and, at that scale, generating
- *   effectively zero commodity supply/demand so it never appeared in trade.
- *   Distribution preserved (Dublin-weighted); total lifted to ~$41.7B.
- * Dáil seat allocation: per-region magnitudes matching the IE_DAIL_1991
- *   historical seats (160 total — DUB 64 / KIL 13 / MID 10 / WEX 14 / LIM 11 /
- *   COR 18 / GAL 14 / DON 16). Must agree with the seated Dáil (IE_DAIL_1991)
- *   and the 160-seat config so per-region general elections refill exactly the
- *   seats held.
+ * GDP is calibrated to ~88% of real 1991 Irish GDP per capita so commodity
+ * supply and demand are non-trivial. houseDistricts must agree with the
+ * IE_DAIL_1991 historical seats and the 160-seat config so per-region general
+ * elections refill exactly the seats held.
  */
 export const ieRegions1991: State[] = [
   {

@@ -1,19 +1,19 @@
 /**
- * Brazil Region Census Profiles — Layer 1 demographic breakdown per
+ * Brazil Region Census Profiles: Layer 1 demographic breakdown per
  * macro-region (Grande Região). Mirrors the UK/JP/DE census files.
  *
  * This module owns the {@link BRRegionLayer1} shape. The `2019-default`
- * profiles below are authored in a later task; the `1991-default` companion
- * lives in `brRegionCensusData1991.ts`. The preset registry selects between
- * them at render time.
+ * profiles live here; the `1991-default` companion is in
+ * `brRegionCensusData1991.ts`. The preset registry selects between them at
+ * render time.
  *
  * Fields (% of adult population):
- *   ethnicity    — IBGE cor/raça self-classification
- *                  (Branco / Pardo / Preto / Amarelo / Indígena)
- *   age          — Adult (18+) distribution
- *   education    — Highest level of schooling completed
- *   income       — Relative household-income tiers (era-neutral)
- *   urbanization — Urban / peri-urban / rural split
+ *   ethnicity    IBGE cor/raça self-classification
+ *                (Branco / Pardo / Preto / Amarelo / Indígena)
+ *   age          Adult (18+) distribution
+ *   education    Highest level of schooling completed
+ *   income       Relative household-income tiers (era-neutral)
+ *   urbanization Urban / peri-urban / rural split
  */
 
 export interface BRRegionLayer1 {

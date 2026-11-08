@@ -11,7 +11,7 @@ export interface UkLeadershipChallengeTurnResult {
 const EMPTY: UkLeadershipChallengeTurnResult = { expired: 0, resolved: 0, removed: 0 };
 
 /**
- * UK party-leadership challenge turn driver (ticket #861).
+ * UK party-leadership challenge turn driver.
  *
  * Expires gathering challenges that never reached their trigger threshold
  * and resolves ballots past their closing turn. UK-gated: a cheap no-op on

@@ -1,28 +1,16 @@
 /**
- * Rosstat 2020 census, conducted in October 2021. These are the 18+ urban and
- * rural counts aggregated from federal subjects to the game's ten economic
- * macroregions. The 18-34 cell is 18-19 (15-19 minus ages 15-17) plus the
- * published 20-24, 25-29 and 30-34 cells. All eight cells sum to the national
- * 18+ count of 119,466,511. Urban/rural is the census classification.
+ * Rosstat 2020 census, conducted in October 2021: 18+ urban and rural counts
+ * aggregated from federal subjects to the game's ten economic macroregions.
+ * The 18-34 cell is 18-19 (15-19 minus ages 15-17) plus 20-24, 25-29, 30-34.
+ * All eight cells sum to the national 18+ count of 119,466,511. Urban/rural
+ * is the census classification. Nested autonomous okrugs are counted in
+ * their parent oblast once; the two federal cities have no rural rows.
+ * Crimea/Sevastopol are in NCA as in the source; the four territories claimed
+ * in 2022 have no rows here and are not imputed.
  *
- * Source: Rosstat census volume 2, table 2, "Population by age groups and sex
- * by subjects of the Russian Federation" (XLSX):
+ * Source: Rosstat census volume 2, table 2 (XLSX):
  * https://rosstat.gov.ru/storage/mediabank/Tom2_tab2_VPN-2020.xlsx
- * Subject-to-region assignment follows the economic-region classification in
- * ruPopulation1991.ts. For audit, these are the selected row numbers in
- * Rosstat volume 1 table 4, in the same subject order as volume 2 table 2:
- * https://rosstat.gov.ru/storage/mediabank/Tom1_tab-4_VPN-2020.xlsx
- * CEN 9-10,12-14,17-20,22-25; NWR 34-35,37-39; NOR 27-29,33,36;
- * CBE 8,11,15-16,21; VOL 42,45-46,59-61,63,65-66,68-71;
- * NCA 41,43-44,47-48,50-56; URA 58,62,64,67,73-74,80;
- * WSB 75,82,85,88-91; ESB 83-84,86-87,93,95; FEA 94,96-103.
- * Nested autonomous okrugs are included in their parent oblast once.
- * The two federal cities have no rural rows. Crimea/Sevastopol
- * are included in NCA as in the source. The four territories claimed in 2022
- * have no rows in this census and are not imputed here.
- *
- * This is a 2021 structural snapshot for the 2027 game, not a claim that
- * regional adult composition was measured in 2027.
+ * Subject-to-region assignment follows ruPopulation1991.ts economic regions.
  */
 export const RU_ADULT_CENSUS_2021 = {
   CEN: [6168373, 7161420, 5708852, 4905546, 912016, 1146739, 1118212, 862964],

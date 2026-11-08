@@ -38,18 +38,14 @@ export async function ensureCSNationsElections(now: Date, inFlightTurn?: number)
 /**
  * Czechoslovakia's elections.
  *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
+ * SERVER ONLY. The spawners reach `getDb`.
  *
- * ⚠️ NO `spawn`. Czechoslovakia has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The CS spawners live here and use the shared election
- * helpers without moving the other countries' phases.
+ * NO `spawn`: CS has no `SPAWN_ELECTIONS_REGISTRY` row; phases run via
+ * `COUNTRY_ELECTION_PHASES`. Adding `spawn` would double-run them each turn.
+ * CS spawners live here and use shared helpers.
  *
- * ⚠️ NO `seats`. There is no seat table for Czechoslovakia anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * NO `seats`: no seat table exists for CS; apportionment reads live regions.
+ * An empty `byChamber` would describe a chamber with no seats.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "csChamberOfThePeopleElections", fn: ensureCSElections },

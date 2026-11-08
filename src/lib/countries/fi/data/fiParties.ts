@@ -4,15 +4,6 @@ import { PARTY_ROSTERS_2027 } from "@/lib/seeds/partyRosters2027";
 /**
  * Finland default political parties.
  *
- *  - 1953: SDP + Agrarian League (Maalaisliitto, Kekkonen's party) + SKDL
- *    (the communist front, polling ~22%) + National Coalition — the fractious
- *    multiparty field of the postwar red-earth coalitions.
- *  - 1979: SDP (Koivisto/Sorsa) + Centre Party (renamed 1965) + National
- *    Coalition (rising but kept from office by Moscow's shadow) + SKDL.
- *  - 1991: SDP + Kesk (Holkeri/Aho era, continuous) + Kok, plus
- *    Vasemmistoliitto — SKDL's 1990 dissolution-and-refounding as a broader
- *    left alliance ahead of the March 1991 election.
- *
  * Positions -5..+5. Each entry is gated via `validForPresets`.
  */
 export const fiParties: PartySeed[] = [

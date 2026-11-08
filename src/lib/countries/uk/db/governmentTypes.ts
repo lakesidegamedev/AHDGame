@@ -18,10 +18,10 @@ export interface UKGovernment {
   /** Last no-confidence vote timestamp (for cooldown) */
   lastNoConfidenceVoteAt?: Date;
   /**
-   * Government confidence gauge, 0..100 (epic #856, ticket #858). Running
-   * stability value fed by lost votes / budget defeat / broken promises /
-   * cabinet churn; dissolution fires only when it bottoms out. A new government
-   * inherits the prior value with a modest formation bonus. Undefined means full.
+   * Government confidence gauge, 0..100 (undefined means full). Running stability
+   * value fed by lost votes, budget defeat, broken promises and cabinet churn;
+   * dissolution fires only when it bottoms out. A new government inherits the
+   * prior value plus a modest formation bonus.
    */
   confidenceGauge?: number;
   confidenceGaugeUpdatedAt?: Date;

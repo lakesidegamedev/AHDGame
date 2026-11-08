@@ -1,25 +1,10 @@
 /**
- * Ireland Layer-1 demographic model — census-consuming rebuild.
+ * Ireland Layer-1 demographic model over real CSO census data.
  *
- * Architecture:
- *   - dims: ["ethnicity","age","education","income","urbanization"]
- *   - census: real per-region CSO data from ieRegionCensusData*.ts
- *   - composition: maps each of the 8 IE archetypes to census dim/key weights
- *   - positions: per-era, reflecting documented Irish political history
- *     (1979: Catholic consensus, civil-war cleavage;
- *      1991: pre-Tiger, emigration decade;
- *      1999: early Celtic Tiger boom;
- *      2007: Tiger peak, EU worker inflow;
- *      2019: post-crash liberalisation — marriage equality (2015), abortion (2018), SF surge;
- *      2023: SF consolidation, housing crisis, rural backlash on migration)
- *   - region/archetype leans EMERGE from census × positions — never hand-calibrated
- *
- * Era-fact anchors validated in ie.test.ts:
- *   1979: all regions socially conservative (high Catholic observance, traditional)
- *         Dublin marginally more progressive than rural west
- *   2019: Dublin strongly socially liberal (marriage eq referendum: DUB ~80% Yes);
- *         GAL/DON more traditional; overall social axis liberalised dramatically
- *         1979→2019
+ * dims: ["ethnicity","age","education","income","urbanization"]
+ * Region/archetype leans EMERGE from census x per-era positions; never
+ * hand-calibrated. Era anchors (1979 civil-war Catholic consensus, 2019
+ * Dublin liberal, GAL/DON traditional) are validated in ie.test.ts.
  */
 
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
@@ -213,36 +198,12 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
 // Scale: economicLean -5 (redistribution) to +5 (free market)
 //        socialLean   -5 (progressive) to +5 (traditional/conservative)
 //
-// Historical basis:
-//   1979: Civil-war politics dominant (FF vs FG, both centre-right).
-//         Social Ireland: near-universal Catholic Church attendance (~90%),
-//         contraception banned, divorce banned, abortion banned.
-//         Social lean = uniformly traditional (positive). Economic lean
-//         determined primarily by income/class (working class = Labour-left;
-//         farmers/business = FF/FG moderate-right).
-//
-//   1991: Recession decade aftermath. Emigration era (1980s). FF tribunals
-//         beginning to erode Church authority. Very slowly liberalising
-//         (divorce referendum defeated 1986 but debated; condom legalisation
-//         1985). Still strongly traditional socially. Economic: recession anger.
-//
-//   1999: Celtic Tiger early. Employment boom. Gay rights legislation (1993).
-//         Divorce legalised (1996 referendum, narrow 50.3%). Church scandals
-//         beginning (Ryan/Murphy reports later but abuse awareness growing).
-//         Social lean: easing from its 1979 peak but still conservative.
-//
-//   2007: Celtic Tiger peak. EU migrants present. Boom confidence. Urban/young
-//         more liberal (civil partnership debate). Third-level expansion = more
-//         cosmopolitan graduates. Church authority in decline.
-//
-//   2019: Post-crash liberalisation crystallised. Marriage equality referendum
-//         May 2015 (62% Yes; Dublin over 80% Yes). Abortion referendum May 2018
-//         (66% Yes). SF surge post-2011. Degree-plus socially very progressive.
-//         Rural west still more traditional but shifted significantly from 1979.
-//
-//   2023: SF consolidation. Housing crisis driving economic left. Migration
-//         backlash in rural areas (social lean partially reverting in some
-//         demographics). Urban professionals remain socially liberal.
+// 1979: socially traditional (Church-dominated); economic lean tracks class.
+// 1991: recession era; Church authority eroding but still conservative.
+// 1999: Celtic Tiger onset; divorce and gay rights in law; easing socially.
+// 2007: boom peak; urban young more liberal; Church in decline.
+// 2019: post-crash liberalisation; marriage equality and abortion referenda.
+// 2023: housing crisis pulls economic left; some rural social backlash.
 
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;

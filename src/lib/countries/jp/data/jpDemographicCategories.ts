@@ -1,18 +1,15 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * Japan Voter Archetypes — 10 mutually exclusive attitudinal/demographic groups
- * reflecting the Japanese political landscape.
+ * Japan Voter Archetypes , 10 mutually exclusive attitudinal/demographic groups.
  *
- * Design principle: each archetype is defined by attitudes and demographics,
- * not geography or party affiliation. Every group can exist in every region;
- * regional character is expressed through population percentages in
- * jpRegionDemographics.ts.
+ * Each archetype is defined by attitudes and demographics, not geography or party
+ * affiliation; every group can exist in every region. Regional character lives in
+ * jpRegionDemographics.ts population percentages.
  *
- * Each group has:
- *   defaultEconomicLean: -5 (far left) to +5 (far right) on redistribution/market axis
- *   defaultSocialLean:   -5 (progressive/liberal) to +5 (conservative/traditional)
- *   defaultTurnout:      baseline participation rate (Japan avg ~53% in 2021 lower house)
+ * defaultEconomicLean: -5 (far left) to +5 (far right) on redistribution/market axis
+ * defaultSocialLean:   -5 (progressive/liberal) to +5 (conservative/traditional)
+ * defaultTurnout:      baseline participation rate (Japan avg ~53% in 2021 lower house)
  *
  * demographicProfileId: "jp_archetypes"
  */

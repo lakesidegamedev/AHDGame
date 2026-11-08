@@ -40,11 +40,9 @@ async function notifyIESponsor(db: Db, bill: Bill, status: Bill["status"]): Prom
 }
 
 /**
- * Ireland national lifecycle: single Dáil vote → immediate enactment on pass,
- * failed on reject. The Seanad is excluded from the player loop (design §3.3), so
- * there is no second chamber. Reproduces the phase previously in
- * ieBillLifecycle.ts; the engine additionally scopes votes to current seat
- * holders (#0836/#0982).
+ * Ireland national lifecycle: single Dáil vote, enacted on pass, failed on
+ * reject. The Seanad is excluded from the player loop, so there is no second
+ * chamber.
  */
 export const IE_NATIONAL_CONFIG: BillLifecycleConfig = {
   country: "IE",

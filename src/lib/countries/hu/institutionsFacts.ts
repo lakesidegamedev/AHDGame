@@ -7,17 +7,13 @@ import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 /**
  * HU's institutions, as pure data.
  *
- * ⚠ GENERATED FROM `__snapshots__/hu.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * GENERATED from `__snapshots__/hu.pre-move.json`. Regenerate with
+ * `npx tsx scripts/countries/gen-country-institutions.ts HU --force`.
  *
- *     npx tsx scripts/countries/gen-country-institutions.ts HU --force
- *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
- * registries that want one seat id or the legislative process import from HERE,
- * while `institutions.ts` composes these with the cabinet and is heavy. A
- * registry that reads a single string through the heavy module ships the whole
- * cabinet to the browser, which is a regression this work has already shipped
- * once. `clientSafeLeafModules.test.ts` enforces it.
+ * KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
+ * `institutions.ts` composes these with the cabinet and is heavy. Importing a
+ * single string through the heavy module ships the whole cabinet to the
+ * browser. `clientSafeLeafModules.test.ts` enforces this.
  */
 
 export const HU_CONFIG: CountryConfig = {

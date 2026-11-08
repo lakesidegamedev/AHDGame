@@ -9,18 +9,13 @@ import {
 } from "@/lib/countries/uk/manifesto/manifestoPopularity";
 
 /**
- * Election-time bridge from locked manifestos → the vote engine's
- * `manifestoMultipliers` option (epic #856, ticket #857).
- *
- * GATED OFF BY DEFAULT. The feature only produces multipliers when the env flag
- * `UK_MANIFESTO_VOTE_EFFECT=1` is set — until then this returns `undefined` and
- * the vote engine falls back to 1.0 (no behaviour change). The flag exists
- * specifically so the balance-sensitive coefficient stays off in prod until it
- * is calibrated in worldsim (the A/B harness is dead). See ops-knowledge
- * `uk-rework-design-2026-08-25`.
- *
- * When off, the env check short-circuits BEFORE any DB read, so this is a no-op
- * on the hot vote-tally path.
+ * Election-time bridge from locked manifestos to the vote engine's
+ * `manifestoMultipliers` option.
+ * Gated off by default: only produces multipliers when env
+ * `UK_MANIFESTO_VOTE_EFFECT=1`; otherwise returns undefined and the engine uses 1.0.
+ * The flag keeps the balance-sensitive coefficient off in prod until calibrated.
+ * When off, the env check short-circuits BEFORE any DB read, so it is a no-op on
+ * the hot vote-tally path.
  */
 export function isManifestoVoteEffectEnabled(): boolean {
   return process.env.UK_MANIFESTO_VOTE_EFFECT === "1";

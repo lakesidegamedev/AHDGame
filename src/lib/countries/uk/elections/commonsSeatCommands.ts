@@ -1,5 +1,5 @@
 /**
- * Player-facing Commons seat commands (epic #856, #860).
+ * Player-facing Commons seat commands.
  *
  * Strategic resignation (quit the seat so your party can contest it) and
  * defection (cross the floor, vacating the seat behind you) both tombstone

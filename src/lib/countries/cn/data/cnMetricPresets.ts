@@ -1,17 +1,11 @@
 /**
- * Per-region, per-era HAND-AUTHORED values for China's new overhaul ROOT metrics.
- * Consumed via `getRegionMetricPresets` and overlaid by `seedCNStateMetrics` /
- * `seedCNBaselines` AFTER `applyEra1991Adjustments`. The preset is the SINGLE SOURCE OF
- * TRUTH for these metrics in both eras; `uniformMetricDefault` is a fallback only. (The
- * CN-specific era fields — socialCreditCoverage, hukouMobility, partyDiscipline, … — are
- * handled by applyEra1991Adjustments and are not in this set, so the two compose cleanly.)
+ * Hand-authored per-region, per-era values for China's overhaul ROOT metrics.
+ * Consumed via `getRegionMetricPresets`, applied after `applyEra1991Adjustments`.
+ * SINGLE SOURCE OF TRUTH for these metrics; `uniformMetricDefault` is fallback only.
+ * CN-specific era fields live in `applyEra1991Adjustments`, so the two compose.
  *
- * BOTH eras are authored, per the 2026-06-15 decision. 2019 = the developed coastal-vs-
- * interior China of the seed era; 1991 = early Deng-era reform, post-Tiananmen retrenchment
- * (the 1992 Southern Tour had not yet re-accelerated reform), pre-WTO/pre-Belt-and-Road/
- * pre-social-credit: overwhelmingly rural and poor, state-allocated (danwei) housing with no
- * private property market, near-zero R&D/robotics, coal-only energy, very low public debt,
- * but a strong Mao-era female-workforce legacy and near-total state media control.
+ * Both eras authored: 2019 is developed coastal-vs-interior China; 1991 is early
+ * Deng-era reform, pre-WTO, mostly rural and poor, danwei housing, near-zero R&D.
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics CN authors). */

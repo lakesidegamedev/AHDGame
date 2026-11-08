@@ -1,27 +1,15 @@
 /**
- * China (CN) Layer-1 demographic model — census-consuming rebuild.
+ * China (CN) Layer-1 demographic model.
  *
- * Architecture:
- *   - dims: ["ethnicity","age","education","income","urbanization"]
- *   - census: real per-region NBS data from cnRegionCensusData*.ts
- *   - composition: maps each of the 7 CN archetypes to census dim/key weights
- *   - positions: per-era, reflecting documented Chinese political-economy history
- *     (Deng reform start 1979, early reform 1991, SOE reform 1999,
- *      WTO boom 2007, Xi consolidation 2019, post-COVID 2023)
- *   - region/archetype leans EMERGE from census × positions — never hand-calibrated
+ * dims: ["ethnicity","age","education","income","urbanization"]
+ * census: real per-region NBS data from cnRegionCensusData*.ts
+ * composition: maps each of the 7 CN archetypes to census dim/key weights
+ * positions: per-era, reflecting documented Chinese political-economy history
+ * region/archetype leans EMERGE from census x positions, never hand-calibrated
  *
  * Axes:
  *   economicLean: -5 (state-control/socialist) to +5 (market-reform)
  *   socialLean:   -5 (liberal/cosmopolitan) to +5 (traditional/nationalist)
- *
- * Era arc:
- *   1979 — command economy still dominant; state-control is the norm everywhere
- *   1991 — Deng's "southern tour" coming; coastal SEZs diverge from interior
- *   1999 — SOE reform hollows Northeast; coastal private sector ascendant
- *   2007 — WTO boom peak; coastal entrepreneurs most market-positive
- *   2019 — Xi re-centralisation; coastal still more market-positive than interior
- *          but gap narrows under renewed state emphasis
- *   2023 — property bust, graduate unemployment; youth disillusionment rises
  *
  * Era-fact anchors validated in cn.test.ts:
  *   1979: all regions near-zero or left econ (state control era)
@@ -205,45 +193,16 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
   youth: { economicLean: 1, socialLean: -1 },
 };
 
-// ── Per-era positions: how each census key leaned in that political era ────────
+// Per-era positions: how each census key leaned in that political era.
 //
 // Scale: economicLean -5 (state-control/socialist) to +5 (market-reform)
 //        socialLean   -5 (cosmopolitan/liberal) to +5 (traditional/nationalist)
 //
-// Historical basis:
-//   1979: Command economy era. Deng reforms just announced but not yet felt.
-//     All income groups under wage compression; university non-existent (Cultural
-//     Revolution devastated gaokao); rural population ~80%+; urban = danwei work-unit
-//     collectives. Market reform = minimal. Social: deeply nationalist/collective post-
-//     Cultural Revolution; little cosmopolitanism. The Northeast (danwei heavy industry)
-//     is the most "modern" region — meaning the most organised around state structures.
-//
-//   1991: After Tiananmen (1989), conservative CCP backlash, but Deng's southern tour
-//     (1992) is imminent. Coastal SEZs (Shenzhen, Zhuhai) are visible exceptions to
-//     the command economy. University attainment tiny but growing. SOEs still dominant.
-//     Social: post-Tiananmen nationalist consolidation.
-//
-//   1999: Zhu Rongji's SOE reform tears apart Northeast danwei system. Coastal private
-//     sector (Zhejiang TVEs, Guangdong factories) powerfully pro-market. University
-//     massification just launched (1999 enrollment expansion). WTO accession imminent.
-//     Interior still heavily rural/state-dependent. Social: market optimism but also
-//     rising nationalism (NATO Belgrade embassy bombing 1999).
-//
-//   2007: WTO boom peak. Coastal entrepreneurs most market-positive of any era.
-//     Migrant workers give the coastal economy cheap labor; interior labor-export.
-//     Graduate expansion producing an educated urban class with aspirations.
-//     Social: peak "harmonious society" nationalism; Hu era controlled openness.
-//
-//   2019: Xi era re-centralisation. State sector reassertion; private sector
-//     "red line" constraints beginning. Internet economy under regulation.
-//     But the coastal/interior divide persists — HD/HN still more market-positive
-//     than interior. Social: Xi nationalism is strong everywhere; HK protests;
-//     surveillance technology normalised. Cosmopolitan tolerance reduced vs 2007.
-//
-//   2023: Property bust, graduate unemployment, COVID hangover. Youth disillusionment
-//     with market economy ("lying flat", "let it rot"). Party consolidation
-//     continues. Entrepreneur confidence shaken (Didi, Ant Group crackdowns).
-//     Social: nationalism at peak; US decoupling framing; Taiwan tension.
+// Each era is authored in its own historical context: party alignment and state
+// control compress economic lean toward the negative in early eras, while market
+// reform and coastal development pull it positive later. Social lean tracks
+// nationalist consolidation, which rises across eras. Do not blend expectations
+// from one era into another; leanings are era-specific.
 
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;

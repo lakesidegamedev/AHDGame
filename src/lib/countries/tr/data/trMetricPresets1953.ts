@@ -1,35 +1,14 @@
 /**
- * Turkey 1953 metric overlays — Democrat Party agrarian modernisation.
+ * Turkey 1953 metric overlays for Democrat Party agrarian modernisation.
  *
- * Base `trStateMetrics` is authored on ~1979 (pre-coup crisis) values. Without
- * this overlay a 1953-default world keeps 1979 life expectancy (~58), literacy
- * 65, and urbanization (~45) — still far too modern for 1953 Turkey, which was
- * ~75% agricultural, literacy ≈34% nationally (TÜİK 1955 census), and life
- * expectancy near 44 (UN Demographic Yearbook 1950-55). Region ids match
- * `trRegionCensusData1953`.
+ * Base trStateMetrics is authored on ~1979 values, so this overlay supplies
+ * 1953-era life expectancy (~44), literacy (~34%), and urbanization, plus
+ * region ids matching trRegionCensusData1953.
  *
- * `medianIncome` is annual household income in 1953 NOMINAL lira, the unit the
- * 1953 GDP seed is denominated in (budgets.ts TR FY1953: ₺24B, ~2.8 TRL/USD).
- *
- * The original authoring took `1979 nominal ₺120,000 × 0.40` (the Maddison
- * Project REAL GDP/cap ratio 1953≈1,600 vs 1979≈4,000 1990 Int$) and called
- * the result a 1953 nominal lira figure. Applying a real-volume ratio to a
- * nominal value skips the price level, and the lira lost roughly an order of
- * magnitude of purchasing power between the Menderes boom and the pre-coup
- * inflation of 1979 (TÜİK consumer price series, 1953→1979 ≈ 10×). The
- * nominal chain is
- *
- *   ₺_1953 = ₺_1979 × 0.40 (real income ratio) ÷ ~10 (TÜİK price level)
- *
- * i.e. roughly ₺_1979 / 25 — the figures below are the previous ones ÷ 25.
- *
- * Cross-check against the seed's own national accounts: GDP/capita = ₺24B /
- * 22.5M = ₺1,067, so the ~₺2,035 population-weighted median household (3.2
- * persons) is ~1.9× GDP/capita, i.e. aggregate household income ≈ 60% of GDP.
- * At the 2.8 TRL/USD Bretton Woods rate that is a $727/year household against
- * $381 GDP/capita — consistent with the contemporary IBRD estimate of Turkish
- * per-capita income in the high-$300s. Broadband/internet did not exist;
- * electrification was largely confined to big cities (TEK predecessor coverage).
+ * medianIncome is annual household income in 1953 nominal lira, the unit the
+ * 1953 GDP seed is denominated in (budgets.ts TR FY1953: 24B, ~2.8 TRL/USD).
+ * Values convert 1979 nominal lira by the real income ratio divided by the
+ * 1953-1979 price level, not by the real ratio alone.
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 

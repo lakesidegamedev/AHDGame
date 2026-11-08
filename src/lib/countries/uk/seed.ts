@@ -291,16 +291,13 @@ export async function seedUKStatePartyOrg(
 }
 
 /**
- * Reconcile UK statePartyOrg rows with the calculated seed set, used during
- * world reset: inserts polling-derived rows for (region, party) pairs that
- * don't already exist (e.g. UUP's NIR row when a 1991 reset coming from a
- * 2019 game). Player-modified org values on existing rows are preserved —
- * never overwrites a row that's there.
+ * Reconcile UK statePartyOrg rows with the calculated seed set during world
+ * reset: insert polling-derived rows for (region, party) pairs that don't
+ * already exist. Player-modified org values on existing rows are preserved;
+ * this never overwrites a row that's there.
  *
- * This used to also sweep away rows for the regional parties (SNP/Plaid/DUP/
- * SF/UUP) outside their home nations. Those parties now stand UK-wide, so the
- * rows are legitimate and the sweep is gone — deleting them here would have
- * silently undone the org a party built up outside its historic home.
+ * Regional parties (SNP/Plaid/DUP/SF/UUP) now stand UK-wide, so their
+ * out-of-nation rows are legitimate and must not be swept.
  */
 export async function ensureMissingUKStatePartyOrgRows(
   db: Db,
@@ -923,20 +920,10 @@ export async function removeLegacyUKCeremonialIdentity(
 
 /**
  * Admin-only destructive re-seed of UK devolved-executive NPP officials
- * for the 2020 preset:
- *   - First Ministers of Scotland (SNP), Wales (Labour), Northern Ireland (DUP)
- *   - Mayor of London (Labour)
- *
- * Uses the recycled `governor` officeType — see
- * `docs/design/uk-jp-devolved-executives.md`. English non-London regions
- * (SEE/SWE/EAE/EMI/WMI/YHU/NWE/NEE) have no devolved executive and are
- * skipped. Mirrors `seedDEMinisterPresidents2020`.
- *
- * NOT called from `bootstrapGameWorld` — the bootstrap path seeds these
- * officials via the `UK_FIRST_MINISTERS_2020` historical-seat array
- * embedded in `getPresetSeats("2019-default")`. This function exists
- * only as the `/api/admin/seed` target `"ukGovernors2020"` for
- * destructive re-seed operations.
+ * for the 2020 preset. Uses the recycled `governor` officeType;
+ * English non-London regions have no devolved executive and are skipped.
+ * Not called from bootstrapGameWorld, which seeds via UK_FIRST_MINISTERS_2020.
+ * Exists only as the `/api/admin/seed` target "ukGovernors2020".
  */
 export async function seedUKGovernors2020(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {

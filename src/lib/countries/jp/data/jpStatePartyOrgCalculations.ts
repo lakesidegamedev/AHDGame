@@ -4,31 +4,21 @@ import { JP_REGION_VOTE_SHARES_1990 } from "./jpRegionVoteShares1990";
 
 /**
  * Calculate JP state party organization levels from estimated vote shares.
- * Picks the per-preset polling table:
- *   - `2019-default` (default) - 2021 Shugiin PR-bloc results
- *     (LDP/CDP/Komeito/JCP/Ishin/DPFP).
- *   - `2027-default` - Oct 2024 Shugiin PR national shares regionalised
- *     (LDP/CDP/Komeito/JCP/Ishin/DPFP), directionally confirmed by the
- *     July 2025 Sangiin result (ruling coalition short of a majority;
- *     DPFP and Sanseito gains).
- *   - `1991-default` - 1990 Shugiin estimates by region
- *     (LDP/JSP/Komeito/JCP/DSP; no Ishin/CDP/DPFP).
- *   - `1953-default` - 1953 Shugiin estimates by region
- *     (Liberal Party / Japan Democratic Party / JSP / JCP).
  *
- * Before the 1953 table existed, `1953-default` fell through to the 2021 table,
- * of whose slugs only `jcp` resolves under the 1953 roster - so every JP region
- * seeded Communist-only party presence (the JCP polled 1.9% in 1953) and the
- * 1955 Shugiin race would have had a one-party field.
+ * Preset tables:
+ *   - 2019-default: 2021 Shugiin PR-bloc results (LDP/CDP/Komeito/JCP/Ishin/DPFP).
+ *   - 2027-default: Oct 2024 Shugiin PR national shares regionalised, confirmed
+ *     by July 2025 Sangiin result (DPFP and Sanseito gains).
+ *   - 1991-default: 1990 Shugiin estimates by region (LDP/JSP/Komeito/JCP/DSP).
+ *   - 1953-default: 1953 Shugiin estimates (Liberal / Japan Democratic / JSP / JCP).
  *
- * Organizations scale from vote share:
- * - 0% vote → 5 org (minimal presence)
- * - 50% vote → 70 org (dominant party)
+ * Each preset needs its own table: falling through to 2021 leaves only `jcp`
+ * resolving under older rosters, so regions seed Communist-only presence.
  *
- * Slug → sequentialId is resolved at runtime against the live
- * `politicalParties` collection so preset-filtered seeds (JSP/DSP under
- * 1991-only; CDP/Ishin/DPFP under 2019-only) are picked up correctly
- * without hardcoded ordering assumptions.
+ * Org scale: 0% vote -> 5 (minimal presence), 50% -> 70 (dominant).
+ *
+ * Slug -> sequentialId resolves at runtime against live `politicalParties`,
+ * so preset-filtered seeds resolve correctly without hardcoded ordering.
  */
 
 const MIN_ORG = 5;
@@ -69,29 +59,15 @@ const JP_REGION_VOTE_SHARES_2021: Record<string, Record<string, number>> = {
 
 /**
  * Estimated vote share by region and party (%) for the 2027-default preset,
- * anchored to the Oct 27 2024 Shugiin proportional-representation national
- * result and regionalised on known strongholds.
+ * anchored to the Oct 27 2024 Shugiin PR national result and regionalised
+ * on known strongholds.
  *
  * National PR anchor (MIC): LDP 26.73, CDP 21.20, DPFP 11.32, Komeito 10.93,
- * Ishin 9.36, Reiwa 6.98, JCP 6.16, Sanseito 3.43, CPJ 2.10; turnout 53.8.
- * Seats: LDP 191, CDP 148, Ishin 38, DPFP 28, Komeito 24 (of 465).
- * Results portal: https://www.soumu.go.jp/senkyo/
+ * Ishin 9.36, Reiwa 6.98, JCP 6.16, Sanseito 3.43, CPJ 2.10.
  *
- * Only the six seeded continuing parties carry shares here; Reiwa, Sanseito,
- * and CPJ (about 12 points combined) are unseeded and left out of the org
- * denominator rather than smeared across seeded parties. Rows sum near 90,
- * matching the 2021 table convention.
- *
- * Directional check: the July 20 2025 Sangiin election left the LDP-Komeito
- * bloc at 122 of 248 (47 of 125 contested, short of a majority) while the
- * DPFP rose to 22 seats and Sanseito to 15. That confirms the table shape:
- * LDP down everywhere from 2021, CDP up, DPFP roughly doubled, JCP flat to
- * soft, Ishin flat outside a softer Kansai.
- *
- * Movement from the 2021 table: LDP minus 4 to 7 everywhere; CDP plus 2 to
- * 4 with Hokkaido and Kanto strongest; DPFP 11 to 13 (from 5 to 8) on its
- * 2024 PR breakthrough; Komeito flat; Ishin flat except Kansai 28 to 25;
- * JCP minus 1 in most regions.
+ * Only the six seeded continuing parties carry shares here; unseeded parties
+ * are left out of the org denominator rather than smeared across seeded
+ * parties. Rows sum near 90, matching the 2021 table convention.
  */
 export const JP_REGION_VOTE_SHARES_2027: Record<string, Record<string, number>> = {
   HOK: { ldp: 30, cdp: 28, komeito: 10, jcp: 7, ishin: 5, dpfp: 11 },
@@ -105,23 +81,20 @@ export const JP_REGION_VOTE_SHARES_2027: Record<string, Record<string, number>> 
 };
 
 /**
- * Estimated vote share by region and party (%) for the April 1953 Shugiin
- * general election, simplified to game regions. National result: Yoshida's
- * Liberals ~39% plus the Hatoyama Liberal splinter ~9% (modeled together as
- * `jiyuto` since the preset seeds one Liberal Party), Kaishintō/Progressives
- * ~18% (modeled as the preset's Japan Democratic Party), the Right + Left
- * Socialists ~26% combined (modeled as the single seeded JSP), and the JCP
- * ~1.9%. Regionalised on the era pattern: Liberals dominant in the rural
- * west (Chugoku/Shikoku/Kyushu) and Tohoku, Socialists strongest in the
- * industrial Kanto/Kansai belt and Hokkaido, JCP marginal everywhere.
+ * Estimated vote share by region and party (%) for the April 1953 Shugiin general
+ * election, simplified to game regions. National result: Yoshida's Liberals ~39%
+ * plus the Hatoyama Liberal splinter ~9% (modeled together as `jiyuto` since the
+ * preset seeds one Liberal Party), Kaishinto/Progressives ~18% (modeled as the
+ * preset's Japan Democratic Party), Right + Left Socialists ~26% combined
+ * (modeled as the single seeded JSP), and the JCP ~1.9%. Regionalised on the era
+ * pattern: Liberals dominant in the rural west and Tohoku, Socialists strongest in
+ * the industrial Kanto/Kansai belt and Hokkaido, JCP marginal everywhere.
  *
- * Hokkaido (#3873): the Left Socialists' single strongest regional base in
- * this era was Hokkaido's tenant-farmer cooperatives and coal-mining unions -
- * the prefecture returned more JSP-aligned Diet members per seat than any
- * other region in the early-to-mid 1950s. HOK is seeded as the one region
- * where the Socialists' combined organisation actually leads the Liberals,
- * rather than merely narrowing the gap - every other region keeps `jiyuto`
- * on top, so the national aggregate stays Liberal-led as it was historically.
+ * Hokkaido: the Left Socialists' strongest regional base in this era was
+ * Hokkaido's tenant-farmer cooperatives and coal-mining unions, so HOK is the one
+ * region where the Socialists lead the Liberals rather than merely narrowing the
+ * gap. Every other region keeps `jiyuto` on top so the national aggregate stays
+ * Liberal-led as it was historically.
  */
 export const JP_REGION_VOTE_SHARES_1953: Record<string, Record<string, number>> = {
   HOK: { jiyuto: 28, jdp: 15, jsp: 45, jcp: 3 },
