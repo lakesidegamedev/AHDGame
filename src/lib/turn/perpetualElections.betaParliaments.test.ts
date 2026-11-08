@@ -142,8 +142,8 @@ const SE_REGIONS_1953: MockRegion[] = [
   { id: "SE_SKA", houseDistricts: 30 },
 ];
 const ES_REGIONS: MockRegion[] = [
-  { id: "ES_MAD", houseDistricts: 50 },
-  { id: "ES_CAT", houseDistricts: 47 },
+  { id: "ES_MAD", houseDistricts: 50, stateSenateSeats: 4 },
+  { id: "ES_CAT", houseDistricts: 47, stateSenateSeats: 4 },
 ];
 const IT_REGIONS_1953: MockRegion[] = [
   { id: "IT_NW", houseDistricts: 90 },

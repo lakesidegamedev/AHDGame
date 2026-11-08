@@ -19,6 +19,8 @@ import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { DE_LANDTAG_SPEC } from "./chamberSpecs";
 import { pickNextCanonicalCycle, turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { getSeatIdFromElection } from "@/lib/seats";
@@ -68,114 +70,7 @@ async function getCurrentTurnAndCtx(db: Db): Promise<{
  * rounded to year boundaries). Cycle period is 240 turns (5 game-years).
  */
 export async function ensureDELandtagElections(now: Date, inFlightTurn?: number): Promise<void> {
-  const db = await getDb();
-  const { currentTurn: persistedTurn, ctx, preset } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-
-  const deLaender = await db
-    .collection<State>("states")
-    .find({ countryId: "DE" }, { projection: { _id: 1, stateSenateSeats: 1 } })
-    .toArray();
-  if (deLaender.length === 0) return;
-
-  const liveElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "DE",
-      electionType: "landtag",
-      status: { $in: ["active", "upcoming"] },
-    })
-    .toArray();
-  const liveLandtag = new Set(liveElections.map((e) => e.state));
-
-  const completedElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "DE",
-      electionType: "landtag",
-      status: { $in: ["completed", "resolved"] },
-    })
-    .sort({ updatedAt: -1 })
-    .toArray();
-
-  function lastCompleted(landId: string): Election | undefined {
-    return completedElections.find((e) => e.state === landId);
-  }
-
-  const dur = DEFAULT_DURATIONS.landtag.durationHours;
-  const genDur = DEFAULT_DURATIONS.landtag.generalDurationHours;
-
-  const toInsert: Omit<Election, "_id">[] = [];
-
-  for (const land of deLaender) {
-    const landId = land._id as string;
-    if (liveLandtag.has(landId)) continue;
-
-    const customAnchor = getLandtagAnchor(landId, preset);
-    if (customAnchor === undefined) continue; // unknown Land — skip silently
-
-    const prev = lastCompleted(landId);
-    const spawn = pickNextCanonicalCycle({
-      electionType: "landtag",
-      prevCycle: prev?.cycle ?? 0,
-      currentTurn,
-      customCycle1EndTurn: customAnchor,
-      ctx,
-    });
-    if (!spawn) continue;
-
-    const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-    const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-    toInsert.push({
-      countryId: "DE",
-      electionType: "landtag",
-      state: landId,
-      seatId: getSeatIdFromElection({
-        countryId: "DE",
-        electionType: "landtag",
-        state: landId,
-      }),
-      cycle: spawn.cycle,
-      electionYear: electionToLarpYear("landtag", spawn.cycle, undefined, undefined, ctx),
-      status: "active",
-      totalSeats: prev?.totalSeats ?? land.stateSenateSeats ?? 1,
-      startTime: now,
-      primaryEndTime,
-      endTime,
-      startTurn: currentTurn,
-      primaryEndTurn: spawn.primaryEndTurn,
-      endTurn: spawn.endTurn,
-      durationHours: dur,
-      primaryDurationHours: dur - genDur,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (toInsert.length === 0) return;
-
-  // Guard against duplicates (mirror ensureDEElections)
-  const orFilters = toInsert.map((e) => ({
-    electionType: "landtag" as const,
-    state: e.state,
-    status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-  }));
-  const existing = await db
-    .collection<Election>("elections")
-    .find({ $or: orFilters }, { projection: { state: 1 } })
-    .toArray();
-  const existingStates = new Set(existing.map((e) => e.state));
-  const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-  if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-    console.log(
-      `[Turn] ensureDELandtagElections: spawned ${toActuallyInsert.length} missing Landtag election(s)`
-    );
-  }
+  await ensureChamberElections(DE_LANDTAG_SPEC, now, inFlightTurn);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

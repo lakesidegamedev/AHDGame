@@ -27,8 +27,9 @@ function enforcedSeats(spec: ChamberSpec, seats: number): number | undefined {
 }
 
 /**
- * Next regular race for a chamber whose term clock a snap can move. The primary
- * opens at once; the general stays on the date the planner picks.
+ * Next regular race for a chamber whose term clock a snap can move. The general
+ * stays on the date the planner picks; the primary opens at once, or on the
+ * planner's start turn when the spec does not open it immediately.
  */
 function buildSnapShiftedSpawn(
   spec: ChamberSpec,
@@ -57,6 +58,7 @@ function buildSnapShiftedSpawn(
   });
   if (!plan) return null;
   const { spawn } = plan;
+  const startTurn = spec.openPrimaryImmediately ? currentTurn : spawn.startTurn;
   return {
     countryId,
     electionType,
@@ -67,12 +69,12 @@ function buildSnapShiftedSpawn(
     ...(plan.shiftedScheduleEndTurn != null && {
       shiftedScheduleEndTurn: plan.shiftedScheduleEndTurn,
     }),
-    status: "active",
+    status: startTurn <= currentTurn ? "active" : "upcoming",
     totalSeats: prev?.totalSeats ?? seats,
-    startTime: now,
+    startTime: spec.openPrimaryImmediately ? now : turnToWallClock(startTurn, now, currentTurn),
     primaryEndTime: turnToWallClock(spawn.primaryEndTurn, now, currentTurn),
     endTime: turnToWallClock(spawn.endTurn, now, currentTurn),
-    startTurn: currentTurn,
+    startTurn,
     primaryEndTurn: spawn.primaryEndTurn,
     endTurn: spawn.endTurn,
     durationHours: dur.durationHours,
@@ -82,24 +84,34 @@ function buildSnapShiftedSpawn(
   };
 }
 
+/** Per-call inputs a country shell supplies. */
+export interface ChamberRunOptions {
+  /** Run one staggered class only. */
+  chamberClass?: 1 | 2;
+  /** Passed to `hooks.decorate`; anything the shell had to read from the database. */
+  extra?: unknown;
+}
+
 /**
  * Keep a chamber's elections spawned from its spec: one election per region, or
- * one nationwide election. The shared shell for every chamber spec, so a fix to
- * scheduling lands for all of them at once.
+ * one nationwide election, per staggered class if the chamber has them. The
+ * shared shell for every chamber spec, so a fix to scheduling lands for all of
+ * them at once. Returns the races it inserted.
  */
 export async function ensureChamberElections(
   spec: ChamberSpec,
   now: Date,
-  inFlightTurn?: number
-): Promise<void> {
+  inFlightTurn?: number,
+  options: ChamberRunOptions = {}
+): Promise<Omit<Election, "_id">[]> {
   const db = await getDb();
-  if (spec.gate === "countryLive" && !(await countryElectionsLive(db, spec.countryId))) return;
+  if (spec.gate === "countryLive" && !(await countryElectionsLive(db, spec.countryId))) return [];
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
-  const { countryId, electionType } = spec;
-  const elections = await getElectionsCollection(db);
+  const { countryId } = spec;
 
-  const regions: { id: string; seats: number }[] = [];
+  const regionIds: string[] = [];
+  const stateDocs = new Map<string, StateSeatFields>();
   if (spec.constituencies === "regions") {
     const projection: Record<string, 1> = { _id: 1 };
     if (spec.seats.kind === "stateField") projection[spec.seats.field] = 1;
@@ -109,36 +121,87 @@ export async function ensureChamberElections(
       .find({ countryId }, { projection })
       .toArray();
     for (const state of states) {
-      const id = state._id as string;
-      regions.push({ id, seats: seatsForRegion(spec, id, state as StateSeatFields, ctx.preset) });
+      regionIds.push(state._id as string);
+      stateDocs.set(state._id as string, state as StateSeatFields);
     }
-    if (regions.length === 0) return;
+    if (regionIds.length === 0) return [];
   } else {
-    regions.push({ id: countryId, seats: 1 });
+    regionIds.push(countryId);
   }
+
+  const classes: (1 | 2 | undefined)[] = spec.classes
+    ? options.chamberClass
+      ? [options.chamberClass]
+      : [1, 2]
+    : [undefined];
+  const inserted: Omit<Election, "_id">[] = [];
+  for (const chamberClass of classes) {
+    const regions = regionIds.map((id) => ({
+      id,
+      seats:
+        spec.constituencies === "regions"
+          ? seatsForRegion(spec, id, stateDocs.get(id), ctx.preset, chamberClass)
+          : 1,
+    }));
+    inserted.push(
+      ...(await ensureClass(spec, regions, chamberClass, now, currentTurn, ctx, options.extra))
+    );
+  }
+  return inserted;
+}
+
+async function ensureClass(
+  spec: ChamberSpec,
+  regions: { id: string; seats: number }[],
+  chamberClass: 1 | 2 | undefined,
+  now: Date,
+  currentTurn: number,
+  ctx: Awaited<ReturnType<typeof getCurrentTurnAndCtx>>["ctx"],
+  extra: unknown
+): Promise<Omit<Election, "_id">[]> {
+  const db = await getDb();
+  const { countryId, electionType } = spec;
+  const elections = await getElectionsCollection(db);
+  const classFilter = chamberClass ? { chamberClass } : {};
 
   const snapType = `snap_${electionType}`;
   const typeFilter = spec.snap === "shiftsCycle" ? { $in: [electionType, snapType] } : electionType;
 
   const liveElections = await elections
-    .find({ countryId, electionType: typeFilter, status: { $in: ["active", "upcoming"] } })
+    .find({
+      countryId,
+      electionType: typeFilter,
+      ...classFilter,
+      status: { $in: ["active", "upcoming"] },
+    })
     .toArray();
-  if (spec.constituencies === "nation" && liveElections.length > 0) return;
+  if (spec.constituencies === "nation" && liveElections.length > 0) return [];
   const liveRegions = new Set(liveElections.map((e) => e.state));
 
-  if (spec.healLiveSeats) {
-    const seatMap = Object.fromEntries(regions.map((r) => [r.id, r.seats]));
-    const healOps = buildDelegateSeatHealOps(liveElections, seatMap, now);
-    if (healOps.length > 0) {
-      await elections.bulkWrite(healOps);
-      console.log(
-        `[Turn] ensureChamberElections(${countryId} ${spec.chamberId}): healed ${healOps.length} in-flight seat count(s)`
-      );
-    }
+  const healOps = [
+    ...(spec.healLiveSeats
+      ? buildDelegateSeatHealOps(
+          liveElections,
+          Object.fromEntries(regions.map((r) => [r.id, r.seats])),
+          now
+        )
+      : []),
+    ...(spec.hooks?.healLive?.(liveElections, { preset: ctx.preset, now }) ?? []),
+  ];
+  if (healOps.length > 0) {
+    await elections.bulkWrite(healOps);
+    console.log(
+      `[Turn] ensureChamberElections(${countryId} ${spec.chamberId}): healed ${healOps.length} in-flight race(s)`
+    );
   }
 
   const completedElections = await elections
-    .find({ countryId, electionType: typeFilter, status: { $in: ["completed", "resolved"] } })
+    .find({
+      countryId,
+      electionType: typeFilter,
+      ...classFilter,
+      status: { $in: ["completed", "resolved"] },
+    })
     .sort({ updatedAt: -1 })
     .toArray();
   const lastCompleted = (regionId: string): Election | undefined =>
@@ -151,8 +214,15 @@ export async function ensureChamberElections(
     const prev = lastCompleted(region.id);
     if (justResolvedInSameTurn(prev, now, currentTurn)) continue;
 
+    const customCycle1EndTurn = spec.regionAnchor?.(region.id, ctx.preset);
+    if (spec.regionAnchor && customCycle1EndTurn === undefined) {
+      throw new Error(
+        `Chamber ${countryId}/${spec.chamberId} has no cycle anchor for ${region.id}`
+      );
+    }
+
     const peer = spec.lateJoiners === "mirrorLivePeer" && !prev ? liveElections[0] : undefined;
-    const doc = peer
+    let doc = peer
       ? mirrorPeerRaceTiming(countryId, peer, region.id, electionType, region.seats, now)
       : spec.snap === "shiftsCycle"
         ? buildSnapShiftedSpawn(spec, {
@@ -168,21 +238,31 @@ export async function ensureChamberElections(
             electionType,
             countryId,
             state: region.id,
+            chamberClass,
             prev,
             currentTurn,
             now,
             fallbackTotalSeats: region.seats,
             ctx,
             openPrimaryImmediately: spec.openPrimaryImmediately,
+            customCycle1EndTurn,
           });
     if (!doc) continue;
 
     const forced = enforcedSeats(spec, region.seats);
     if (forced !== undefined && !peer) doc.totalSeats = forced;
+    if (spec.hooks?.decorate && !peer) {
+      doc = spec.hooks.decorate(doc, { regionId: region.id, preset: ctx.preset, extra });
+    }
 
     toInsert.push(doc);
   }
-  if (toInsert.length === 0) return;
+  if (toInsert.length === 0) return [];
+
+  const label = chamberClass ? ` class ${chamberClass}` : "";
+  const announce = (docs: Omit<Election, "_id">[]) => {
+    if (!spec.silent) sendBatchedElectionAnnouncements(docs, now);
+  };
 
   if (spec.constituencies === "nation") {
     const [doc] = toInsert;
@@ -192,13 +272,13 @@ export async function ensureChamberElections(
       state: doc!.state,
       status: { $in: ["active", "upcoming"] },
     });
-    if (concurrent) return;
+    if (concurrent) return [];
     await elections.insertOne(withCampaignRules(doc!) as Election);
     console.log(
       `[Turn] ensureChamberElections(${countryId} ${spec.chamberId}): spawned 1 election`
     );
-    sendBatchedElectionAnnouncements([doc!], now);
-    return;
+    announce([doc!]);
+    return [doc!];
   }
 
   const existing = await elections
@@ -207,6 +287,7 @@ export async function ensureChamberElections(
         countryId,
         $or: toInsert.map((e) => ({
           electionType,
+          ...classFilter,
           state: e.state,
           status: { $in: ["active", "upcoming"] as ElectionStatus[] },
         })),
@@ -216,11 +297,12 @@ export async function ensureChamberElections(
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-  if (toActuallyInsert.length === 0) return;
+  if (toActuallyInsert.length === 0) return [];
 
   await elections.insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
   console.log(
-    `[Turn] ensureChamberElections(${countryId} ${spec.chamberId}): spawned ${toActuallyInsert.length} ${electionType} election(s)`
+    `[Turn] ensureChamberElections(${countryId} ${spec.chamberId}): spawned ${toActuallyInsert.length} ${electionType} election(s)${label}`
   );
-  sendBatchedElectionAnnouncements(toActuallyInsert, now);
+  announce(toActuallyInsert);
+  return toActuallyInsert;
 }

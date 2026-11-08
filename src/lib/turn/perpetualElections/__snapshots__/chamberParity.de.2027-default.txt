@@ -153,40 +153,9 @@ landeslisten cycles=3
 ## late-joiner-with-history de.landtag
 DE/landtag/TH c2 y2033 active seats=3 turns=450/648/672 dur=48/24 seat=DE-landtag-TH shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
 ## resolved-this-turn de.bundestag
-DE/bundestag/BB c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-BB shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/BE c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-BE shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/BRE c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-BRE shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/BW c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-BW shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/BY c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-BY shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/HE c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-HE shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/HH c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-HH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/MV c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-MV shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/NI c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-NI shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/NW c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-NW shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/RP c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-RP shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/SH c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-SH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/SL c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-SL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/SN c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-SN shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/ST c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-ST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-DE/bundestag/TH c2 y2033 active seats=3 turns=200/312/336 dur=48/24 seat=DE-bundestag-TH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T04:00:00.000Z|2026-11-14T04:00:00.000Z
-landeslisten cycles=2
+(none)
 ## resolved-this-turn de.landtag
-DE/landtag/BB c2 y2033 active seats=3 turns=200/648/672 dur=48/24 seat=DE-landtag-BB shift=- t=2026-11-08T12:00:00.000Z|2026-11-27T04:00:00.000Z|2026-11-28T04:00:00.000Z
-DE/landtag/BE c2 y2033 active seats=3 turns=200/504/528 dur=48/24 seat=DE-landtag-BE shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T04:00:00.000Z|2026-11-22T04:00:00.000Z
-DE/landtag/BRE c2 y2033 active seats=3 turns=200/552/576 dur=48/24 seat=DE-landtag-BRE shift=- t=2026-11-08T12:00:00.000Z|2026-11-23T04:00:00.000Z|2026-11-24T04:00:00.000Z
-DE/landtag/BW c2 y2033 active seats=3 turns=200/504/528 dur=48/24 seat=DE-landtag-BW shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T04:00:00.000Z|2026-11-22T04:00:00.000Z
-DE/landtag/BY c2 y2033 active seats=3 turns=200/600/624 dur=48/24 seat=DE-landtag-BY shift=- t=2026-11-08T12:00:00.000Z|2026-11-25T04:00:00.000Z|2026-11-26T04:00:00.000Z
-DE/landtag/HE c2 y2033 active seats=3 turns=200/600/624 dur=48/24 seat=DE-landtag-HE shift=- t=2026-11-08T12:00:00.000Z|2026-11-25T04:00:00.000Z|2026-11-26T04:00:00.000Z
-DE/landtag/HH c2 y2033 active seats=3 turns=200/696/720 dur=48/24 seat=DE-landtag-HH shift=- t=2026-11-08T12:00:00.000Z|2026-11-29T04:00:00.000Z|2026-11-30T04:00:00.000Z
-DE/landtag/MV c2 y2033 active seats=3 turns=200/504/528 dur=48/24 seat=DE-landtag-MV shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T04:00:00.000Z|2026-11-22T04:00:00.000Z
-DE/landtag/NI c2 y2033 active seats=3 turns=200/552/576 dur=48/24 seat=DE-landtag-NI shift=- t=2026-11-08T12:00:00.000Z|2026-11-23T04:00:00.000Z|2026-11-24T04:00:00.000Z
-DE/landtag/NW c2 y2033 active seats=3 turns=200/552/576 dur=48/24 seat=DE-landtag-NW shift=- t=2026-11-08T12:00:00.000Z|2026-11-23T04:00:00.000Z|2026-11-24T04:00:00.000Z
-DE/landtag/RP c2 y2033 active seats=3 turns=200/504/528 dur=48/24 seat=DE-landtag-RP shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T04:00:00.000Z|2026-11-22T04:00:00.000Z
-DE/landtag/SH c2 y2033 active seats=3 turns=200/552/576 dur=48/24 seat=DE-landtag-SH shift=- t=2026-11-08T12:00:00.000Z|2026-11-23T04:00:00.000Z|2026-11-24T04:00:00.000Z
-DE/landtag/SL c2 y2033 active seats=3 turns=200/552/576 dur=48/24 seat=DE-landtag-SL shift=- t=2026-11-08T12:00:00.000Z|2026-11-23T04:00:00.000Z|2026-11-24T04:00:00.000Z
-DE/landtag/SN c2 y2033 active seats=3 turns=200/648/672 dur=48/24 seat=DE-landtag-SN shift=- t=2026-11-08T12:00:00.000Z|2026-11-27T04:00:00.000Z|2026-11-28T04:00:00.000Z
-DE/landtag/ST c2 y2033 active seats=3 turns=200/504/528 dur=48/24 seat=DE-landtag-ST shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T04:00:00.000Z|2026-11-22T04:00:00.000Z
-DE/landtag/TH c2 y2033 active seats=3 turns=200/648/672 dur=48/24 seat=DE-landtag-TH shift=- t=2026-11-08T12:00:00.000Z|2026-11-27T04:00:00.000Z|2026-11-28T04:00:00.000Z
+(none)
 ## gate-closed de.bundestag
 DE/bundestag/BB c3 y2037 active seats=10 turns=300/504/528 dur=48/24 seat=DE-bundestag-BB shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
 DE/bundestag/BE c3 y2037 active seats=12 turns=300/504/528 dur=48/24 seat=DE-bundestag-BE shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z

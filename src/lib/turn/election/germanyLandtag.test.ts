@@ -129,14 +129,12 @@ describe("ensureDELandtagElections — spawn", () => {
     }
   });
 
-  it("skips Länder without a configured anchor", async () => {
+  it("throws for a Land without a configured anchor", async () => {
     // ZZZ is not in LANDTAG_CYCLE1_END_TURN_BY_LAND
     setupSpawnerMocks(db, [{ _id: "ZZZ", stateSenateSeats: 100 }]);
 
-    await ensureDELandtagElections(new Date());
-
-    const insertCalls = db.collectionMocks.elections!.insertMany.mock.calls;
-    expect(insertCalls.length).toBe(0);
+    await expect(ensureDELandtagElections(new Date())).rejects.toThrow(/no cycle anchor for ZZZ/);
+    expect(db.collectionMocks.elections!.insertMany).not.toHaveBeenCalled();
   });
 });
 

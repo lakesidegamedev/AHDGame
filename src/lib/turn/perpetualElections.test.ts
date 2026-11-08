@@ -1457,7 +1457,7 @@ describe("perpetualElections", () => {
         updatedAt: now,
       } as Election;
 
-      const mock = makeJPMockDb(["tokyo"], [liveSnap], [], currentTurn);
+      const mock = makeJPMockDb(["KAN"], [liveSnap], [], currentTurn);
       await mountJPDb(mock);
 
       const { ensureJPElections } = await import("./perpetualElections");
@@ -1482,18 +1482,17 @@ describe("perpetualElections", () => {
       const { ensureJPElections } = await import("./perpetualElections");
       await ensureJPElections(now);
 
-      expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
-        {
-          updateOne: {
-            filter: {
-              _id: live._id,
-              totalSeats: 12,
-              status: { $in: ["active", "upcoming"] },
-            },
-            update: { $set: { totalSeats: 21, updatedAt: now } },
+      const written = vi.mocked(mock.electionsCollection.bulkWrite).mock.calls.flat(2);
+      expect(written).toContainEqual({
+        updateOne: {
+          filter: {
+            _id: live._id,
+            totalSeats: 12,
+            status: { $in: ["active", "upcoming"] },
           },
+          update: { $set: { totalSeats: 21, updatedAt: now } },
         },
-      ]);
+      });
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
 

@@ -135,3 +135,78 @@ export const FI_LOWER_CHAMBER_SPEC = defineChamberSpec({
   snap: "shiftsCycle",
   healLiveSeats: false,
 });
+
+/** Sénat: whole chamber renewed on a nine-year cycle, sized by each region's `stateSenateSeats`. */
+export const FR_SENATE_SPEC = defineChamberSpec({
+  chamberId: "senat",
+  countryId: "FR",
+  electionType: "senat",
+  constituencies: "regions",
+  seats: { kind: "stateField", field: "stateSenateSeats", enforce: "positive", missing: "throw" },
+  electoralSystem: "plurality",
+  cycle: { anchor: "frSenat", periodHours: 432 },
+  gate: "countryLive",
+  lateJoiners: "ownCycle",
+  openPrimaryImmediately: true,
+  byElections: "none",
+  snap: "none",
+  healLiveSeats: true,
+});
+
+/** Senato della Repubblica: elected the same day as the Camera, sized by `stateSenateSeats`. */
+export const IT_SENATE_SPEC = defineChamberSpec({
+  chamberId: "senato",
+  countryId: "IT",
+  electionType: "senato",
+  constituencies: "regions",
+  seats: { kind: "stateField", field: "stateSenateSeats", enforce: "positive", missing: "throw" },
+  electoralSystem: "list",
+  cycle: { anchor: "itCamera", periodHours: 240 },
+  gate: "countryLive",
+  lateJoiners: "ownCycle",
+  openPrimaryImmediately: true,
+  byElections: "none",
+  snap: "none",
+  healLiveSeats: true,
+});
+
+/** Senado: elected with the Congreso; no cycle in eras without free elections. */
+export const ES_SENATE_SPEC = defineChamberSpec({
+  chamberId: "senado",
+  countryId: "ES",
+  electionType: "senado",
+  constituencies: "regions",
+  seats: { kind: "stateField", field: "stateSenateSeats", enforce: "positive", missing: "throw" },
+  electoralSystem: "plurality",
+  cycle: { anchor: "esCongreso", periodHours: 192 },
+  gate: "countryLive",
+  lateJoiners: "ownCycle",
+  openPrimaryImmediately: true,
+  byElections: "none",
+  snap: "none",
+  healLiveSeats: true,
+});
+
+/** Senate of the Republic: runs only in the era that anchors it. */
+export const TR_SENATE_SPEC = defineChamberSpec({
+  chamberId: "senato",
+  countryId: "TR",
+  electionType: "senato",
+  constituencies: "regions",
+  seats: { kind: "stateField", field: "stateSenateSeats", enforce: "positive", missing: "throw" },
+  electoralSystem: "plurality",
+  cycle: { anchor: "trSenato", periodHours: 288 },
+  gate: "countryLive",
+  lateJoiners: "ownCycle",
+  openPrimaryImmediately: true,
+  byElections: "none",
+  snap: "none",
+  healLiveSeats: true,
+});
+
+export const BETA_SENATE_SPECS = [
+  FR_SENATE_SPEC,
+  IT_SENATE_SPEC,
+  ES_SENATE_SPEC,
+  TR_SENATE_SPEC,
+] as const;
