@@ -64,195 +64,228 @@ export async function processCaucusTax(
   const debitTxEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
 
   for (const caucus of taxedCaucuses) {
-    const memberships = await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .find({ caucusId: caucus._id, status: "active" })
-      .toArray();
-    if (memberships.length === 0) continue;
+    const txStart = debitTxEntries.length;
+    const membersStart = membersTaxed;
+    let credited = false;
+    const landedDebits: {
+      collection: "characters" | "npps";
+      id: ObjectId;
+      field: string;
+      tax: number;
+    }[] = [];
+    try {
+      const memberships = await db
+        .collection<CaucusMembership>("caucusMemberships")
+        .find({ caucusId: caucus._id, status: "active" })
+        .toArray();
+      if (memberships.length === 0) continue;
 
-    const characterIds: ObjectId[] = [];
-    const nppIds: ObjectId[] = [];
-    for (const m of memberships) {
-      if (m.memberType === "character") characterIds.push(m.memberId);
-      else if (m.memberType === "npp") nppIds.push(m.memberId);
-    }
-
-    const [characters, npps] = await Promise.all([
-      characterIds.length
-        ? db
-            .collection<Character>("characters")
-            .find({ _id: { $in: characterIds } })
-            .toArray()
-        : Promise.resolve([] as Character[]),
-      nppIds.length
-        ? db
-            .collection<NPP>("npps")
-            // `policies` is ~94% of an NPP document and is not read here.
-            .find({ _id: { $in: nppIds } }, { projection: { policies: 0 } })
-            .toArray()
-        : Promise.resolve([] as NPP[]),
-    ]);
-    const homeStateIds = [
-      ...new Set([...characters.map((c) => c.homeState), ...npps.map((n) => n.homeState)]),
-    ];
-    const stateDocs = homeStateIds.length
-      ? await db
-          .collection<State>("states")
-          .find({ _id: { $in: homeStateIds } })
-          .toArray()
-      : [];
-    const stateMap = new Map(stateDocs.map((s) => [s._id, s]));
-
-    let caucusInflow = 0;
-
-    // Player members — tax a percentage of per-turn income, not total balance.
-    if (characters.length > 0) {
-      const pendingDebits: { character: Character; tax: number; field: string }[] = [];
-      for (const c of characters) {
-        const state = stateMap.get(c.homeState);
-        const incomeAnchor = state
-          ? projectCharacterGeneration({
-              population: state.population,
-              donorBaseLevel: c.donorBaseLevel,
-              currentOffice: c.currentOffice,
-              stateGdpMillions: state.gdp,
-              countryId: c.countryId,
-              politicalInfluence: c.politicalInfluence ?? 0,
-              preset,
-              priceLevel,
-            })
-          : 0;
-        // Generation constants are anchor (₳); campaign funds are stored LOCAL
-        // and decoupled from live forex. Denominate income to local at the
-        // frozen world-seeded currency basis (US ×1.0), then tax it ; the tax and
-        // the debit are both LOCAL home-currency amounts.
-        const income = campaignAnchorToLocal(incomeAnchor, c.countryId ?? "US", campaignRates);
-        if (income <= 0) continue;
-        const tax = Math.floor((income * caucus.taxRate) / 100);
-        if (tax <= 0) continue;
-        // Skip members who can't afford the tax. The previous unguarded
-        // deduction could push a broke caucus member into negative campaign
-        // funds. We deliberately don't credit the caucus treasury for skipped
-        // members, so accounting stays consistent. The pre-check must read the
-        // SAME field the debit targets (forex-gated), otherwise a stale mirror
-        // can pass the check while the guarded debit no-ops.
-        const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
-        const campaignFundsLocal = forexEnabled
-          ? (c.currencyBalances?.campaign ?? 0)
-          : (c.funds ?? 0);
-        if (campaignFundsLocal < tax) continue;
-        pendingDebits.push({ character: c, tax, field: campaignFundsField });
+      const characterIds: ObjectId[] = [];
+      const nppIds: ObjectId[] = [];
+      for (const m of memberships) {
+        if (m.memberType === "character") characterIds.push(m.memberId);
+        else if (m.memberType === "npp") nppIds.push(m.memberId);
       }
-      // Apply debits individually (not bulkWrite) so each guarded $gte debit
-      // reports whether it landed. The caucus treasury is credited ONLY for
-      // debits that actually modified the payer — a raced/failed debit must
-      // not mint money into the caucus.
-      if (pendingDebits.length > 0) {
-        const results = await Promise.all(
-          pendingDebits.map((d) =>
-            landedOrNull(
-              db.collection<Character>("characters").updateOne(
-                { _id: d.character._id, [d.field]: { $gte: d.tax } },
-                {
-                  $inc: { [d.field]: -d.tax },
-                  $set: { updatedAt: now },
-                }
+
+      const [characters, npps] = await Promise.all([
+        characterIds.length
+          ? db
+              .collection<Character>("characters")
+              .find({ _id: { $in: characterIds } })
+              .toArray()
+          : Promise.resolve([] as Character[]),
+        nppIds.length
+          ? db
+              .collection<NPP>("npps")
+              // `policies` is ~94% of an NPP document and is not read here.
+              .find({ _id: { $in: nppIds } }, { projection: { policies: 0 } })
+              .toArray()
+          : Promise.resolve([] as NPP[]),
+      ]);
+      const homeStateIds = [
+        ...new Set([...characters.map((c) => c.homeState), ...npps.map((n) => n.homeState)]),
+      ];
+      const stateDocs = homeStateIds.length
+        ? await db
+            .collection<State>("states")
+            .find({ _id: { $in: homeStateIds } })
+            .toArray()
+        : [];
+      const stateMap = new Map(stateDocs.map((s) => [s._id, s]));
+
+      let caucusInflow = 0;
+
+      // Player members — tax a percentage of per-turn income, not total balance.
+      if (characters.length > 0) {
+        const pendingDebits: { character: Character; tax: number; field: string }[] = [];
+        for (const c of characters) {
+          const state = stateMap.get(c.homeState);
+          const incomeAnchor = state
+            ? projectCharacterGeneration({
+                population: state.population,
+                donorBaseLevel: c.donorBaseLevel,
+                currentOffice: c.currentOffice,
+                stateGdpMillions: state.gdp,
+                countryId: c.countryId,
+                politicalInfluence: c.politicalInfluence ?? 0,
+                preset,
+                priceLevel,
+              })
+            : 0;
+          // Generation constants are anchor (₳); campaign funds are stored LOCAL
+          // and decoupled from live forex. Denominate income to local at the
+          // frozen world-seeded currency basis (US ×1.0), then tax it ; the tax and
+          // the debit are both LOCAL home-currency amounts.
+          const income = campaignAnchorToLocal(incomeAnchor, c.countryId ?? "US", campaignRates);
+          if (income <= 0) continue;
+          const tax = Math.floor((income * caucus.taxRate) / 100);
+          if (tax <= 0) continue;
+          // Skip members who can't afford the tax. The previous unguarded
+          // deduction could push a broke caucus member into negative campaign
+          // funds. We deliberately don't credit the caucus treasury for skipped
+          // members, so accounting stays consistent. The pre-check must read the
+          // SAME field the debit targets (forex-gated), otherwise a stale mirror
+          // can pass the check while the guarded debit no-ops.
+          const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
+          const campaignFundsLocal = forexEnabled
+            ? (c.currencyBalances?.campaign ?? 0)
+            : (c.funds ?? 0);
+          if (campaignFundsLocal < tax) continue;
+          pendingDebits.push({ character: c, tax, field: campaignFundsField });
+        }
+        // Apply debits individually (not bulkWrite) so each guarded $gte debit
+        // reports whether it landed. The caucus treasury is credited ONLY for
+        // debits that actually modified the payer — a raced/failed debit must
+        // not mint money into the caucus.
+        if (pendingDebits.length > 0) {
+          const results = await Promise.all(
+            pendingDebits.map((d) =>
+              landedOrNull(
+                db.collection<Character>("characters").updateOne(
+                  { _id: d.character._id, [d.field]: { $gte: d.tax } },
+                  {
+                    $inc: { [d.field]: -d.tax },
+                    $set: { updatedAt: now },
+                  }
+                )
               )
             )
-          )
-        );
-        for (let i = 0; i < pendingDebits.length; i++) {
-          if ((results[i]?.modifiedCount ?? 0) !== 1) continue;
-          const d = pendingDebits[i];
-          const c = d.character;
-          debitTxEntries.push({
-            type: "caucus_tax_debit",
-            turn: turnNumber,
-            createdAt: now,
-            subjectType: "character",
-            subjectId: c._id,
-            subjectName: typeof c.name === "string" ? c.name : String(c._id),
-            amount: -d.tax,
-            currencyCode: getHomeCurrency(c),
-            counterpartyType: "party",
-            counterpartyName: caucus.name,
-            meta: { caucusId: String(caucus._id), taxRate: caucus.taxRate },
+          );
+          for (let i = 0; i < pendingDebits.length; i++) {
+            if ((results[i]?.modifiedCount ?? 0) !== 1) continue;
+            const d = pendingDebits[i];
+            const c = d.character;
+            debitTxEntries.push({
+              type: "caucus_tax_debit",
+              turn: turnNumber,
+              createdAt: now,
+              subjectType: "character",
+              subjectId: c._id,
+              subjectName: typeof c.name === "string" ? c.name : String(c._id),
+              amount: -d.tax,
+              currencyCode: getHomeCurrency(c),
+              counterpartyType: "party",
+              counterpartyName: caucus.name,
+              meta: { caucusId: String(caucus._id), taxRate: caucus.taxRate },
+            });
+            caucusInflow += d.tax;
+            membersTaxed++;
+            landedDebits.push({ collection: "characters", id: c._id, field: d.field, tax: d.tax });
+          }
+        }
+      }
+
+      // NPP members use the same income-tax basis as player members. Taxing the
+      // accumulated funds balance each turn compounds into a rapid wealth drain.
+      if (npps.length > 0) {
+        const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+        const nppDebits: { npp: NPP; tax: number }[] = [];
+        for (const n of npps) {
+          const funds = n.funds ?? 0;
+          const state = stateMap.get(n.homeState);
+          if (!state || funds <= 0) continue;
+          const localRate = campaignLocalRate(n.countryId ?? "US", campaignRates);
+          const currentFundsAnchor = funds / (localRate * priceLevel);
+          const incomeAnchor = projectNppGeneration({
+            population: state.population,
+            donorBaseLevel: n.donorBaseLevel ?? 0,
+            currentFundsLocal: currentFundsAnchor,
+            nppEconomyEnabled: config?.nppEconomyEnabled !== false,
           });
-          caucusInflow += d.tax;
-          membersTaxed++;
+          const incomeLocal = campaignAnchorToLocal(
+            incomeAnchor * priceLevel,
+            n.countryId ?? "US",
+            campaignRates
+          );
+          const tax = Math.floor((incomeLocal * caucus.taxRate) / 100);
+          if (tax <= 0) continue;
+          nppDebits.push({ npp: n, tax });
+        }
+        if (nppDebits.length > 0) {
+          const results = await Promise.all(
+            nppDebits.map((d) =>
+              landedOrNull(
+                db.collection<NPP>("npps").updateOne(
+                  { _id: d.npp._id, funds: { $gte: d.tax } },
+                  {
+                    $inc: { funds: -d.tax },
+                    $set: { updatedAt: now },
+                  }
+                )
+              )
+            )
+          );
+          for (let i = 0; i < nppDebits.length; i++) {
+            if ((results[i]?.modifiedCount ?? 0) !== 1) continue;
+            caucusInflow += nppDebits[i].tax;
+            membersTaxed++;
+            landedDebits.push({
+              collection: "npps",
+              id: nppDebits[i].npp._id,
+              field: "funds",
+              tax: nppDebits[i].tax,
+            });
+          }
         }
       }
-    }
 
-    // NPP members use the same income-tax basis as player members. Taxing the
-    // accumulated funds balance each turn compounds into a rapid wealth drain.
-    if (npps.length > 0) {
-      const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
-      const nppDebits: { npp: NPP; tax: number }[] = [];
-      for (const n of npps) {
-        const funds = n.funds ?? 0;
-        const state = stateMap.get(n.homeState);
-        if (!state || funds <= 0) continue;
-        const localRate = campaignLocalRate(n.countryId ?? "US", campaignRates);
-        const currentFundsAnchor = funds / (localRate * priceLevel);
-        const incomeAnchor = projectNppGeneration({
-          population: state.population,
-          donorBaseLevel: n.donorBaseLevel ?? 0,
-          currentFundsLocal: currentFundsAnchor,
-          nppEconomyEnabled: config?.nppEconomyEnabled !== false,
-        });
-        const incomeLocal = campaignAnchorToLocal(
-          incomeAnchor * priceLevel,
-          n.countryId ?? "US",
-          campaignRates
+      if (caucusInflow > 0) {
+        await db.collection<Caucus>("caucuses").updateOne(
+          { _id: caucus._id },
+          {
+            $inc: { treasury: caucusInflow },
+            $set: { updatedAt: now },
+          }
         );
-        const tax = Math.floor((incomeLocal * caucus.taxRate) / 100);
-        if (tax <= 0) continue;
-        nppDebits.push({ npp: n, tax });
+        credited = true;
+        totalTaxed += caucusInflow;
+        await emitTreasuryTransaction({
+          db,
+          countryId: caucus.countryId,
+          partyId: caucus.partyId,
+          holderType: "caucus",
+          holderId: caucus._id.toString(),
+          category: "caucus_tax",
+          direction: "credit",
+          amount: caucusInflow,
+          memo: `Caucus tax (${caucus.taxRate}%)`,
+          now,
+        });
       }
-      if (nppDebits.length > 0) {
-        const results = await Promise.all(
-          nppDebits.map((d) =>
+    } catch {
+      // Isolate the caucus. Before the credit lands, give back what was debited
+      // so a failed credit cannot destroy the tax; later caucuses still run.
+      if (!credited) {
+        await Promise.all(
+          landedDebits.map((d) =>
             landedOrNull(
-              db.collection<NPP>("npps").updateOne(
-                { _id: d.npp._id, funds: { $gte: d.tax } },
-                {
-                  $inc: { funds: -d.tax },
-                  $set: { updatedAt: now },
-                }
-              )
+              db.collection(d.collection).updateOne({ _id: d.id }, { $inc: { [d.field]: d.tax } })
             )
           )
         );
-        for (let i = 0; i < nppDebits.length; i++) {
-          if ((results[i]?.modifiedCount ?? 0) !== 1) continue;
-          caucusInflow += nppDebits[i].tax;
-          membersTaxed++;
-        }
+        debitTxEntries.length = txStart;
+        membersTaxed = membersStart;
       }
-    }
-
-    if (caucusInflow > 0) {
-      await db.collection<Caucus>("caucuses").updateOne(
-        { _id: caucus._id },
-        {
-          $inc: { treasury: caucusInflow },
-          $set: { updatedAt: now },
-        }
-      );
-      totalTaxed += caucusInflow;
-      await emitTreasuryTransaction({
-        db,
-        countryId: caucus.countryId,
-        partyId: caucus.partyId,
-        holderType: "caucus",
-        holderId: caucus._id.toString(),
-        category: "caucus_tax",
-        direction: "credit",
-        amount: caucusInflow,
-        memo: `Caucus tax (${caucus.taxRate}%)`,
-        now,
-      });
     }
   }
 

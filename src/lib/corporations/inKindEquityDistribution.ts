@@ -1,4 +1,4 @@
-export type InKindHolderKind = "character" | "imperial" | "corporation" | "fund";
+export type InKindHolderKind = "character" | "imperial" | "corporation" | "fund" | "npp";
 
 export interface InKindShareholder {
   id: string;
