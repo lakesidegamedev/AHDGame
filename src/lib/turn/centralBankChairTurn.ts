@@ -15,13 +15,10 @@ import { syncEuroMonetaryPolicy } from "@/lib/currency/euro/service";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { State } from "@/lib/db/types/state";
 import { nationalOutputGap } from "@/lib/metricEngine/outputTrend";
-import type { Character } from "@/lib/db/types";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -39,6 +36,10 @@ import {
   stanceIsCorrect,
 } from "@/lib/centralBank/credibility";
 import { INFAMY_PENALTY_THRESHOLD, scrutinyReliefDampener } from "@/lib/centralBank/scrutinyRules";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 /** Fallback target inflation rate — deviations drive infamy */
 const TARGET_INFLATION = 2.0;
@@ -175,8 +176,9 @@ export async function processCentralBankChairTurn(
   // Batch-fetch budgets and metrics
   const budgets =
     budgetIdSet.size > 0
-      ? await db
-          .collection<FederalBudget>("federalBudget")
+      ? await (
+          await getFederalBudgetCollection(db)
+        )
           .find(
             { _id: { $in: Array.from(budgetIdSet) } },
             { projection: { "economicFactors.inflationRate": 1, gdp: 1 } }
@@ -205,8 +207,9 @@ export async function processCentralBankChairTurn(
     .map((b) => b.countryId as CountryId);
   const gapRegions =
     nppCountries.length > 0
-      ? ((await db
-          .collection<State>("states")
+      ? ((await (
+          await getStatesCollection(db)
+        )
           .find(
             { countryId: { $in: nppCountries } },
             {
@@ -232,12 +235,12 @@ export async function processCentralBankChairTurn(
   // against the era-authored target, not the modern/1979 constants. Keyed on
   // the CURRENT in-game year so the target graduates as the world advances;
   // absent → modern anchors (fail-safe).
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
+  );
   const currentYear = gameState?.currentYear;
   // Era START year, resolved once for the whole sweep rather than per bank:
   // `isBankGovernmentControlledLive` would cost one uncached gameState read per
@@ -450,7 +453,7 @@ export async function processCentralBankChairTurn(
     bankWritesModified = bankWriteResult.modifiedCount ?? 0;
   }
   if (charBulkOps.length > 0) {
-    await db.collection<Character>("characters").bulkWrite(charBulkOps as never);
+    await (await getCharactersCollection(db)).bulkWrite(charBulkOps as never);
   }
 
   if (union) await syncEuroMonetaryPolicy(db, union);

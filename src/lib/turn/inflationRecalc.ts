@@ -23,7 +23,6 @@ import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
-import type { GameState } from "@/lib/db/types/gameState";
 import { calculateCountryInflation, PEGGED_MONEY_GROWTH_COEFF } from "@/lib/budget/inflation";
 import { moneyGrowthCoefficient, resolveMonetaryRegime } from "@/lib/monetary/brettonWoods";
 import { savingsFlowPressureRatio } from "@/lib/budget/savingsFlowPressure";
@@ -55,6 +54,8 @@ import {
   loadTurnTariffInflationExposure,
   measuredTariffInflationRate,
 } from "@/lib/tariffs/tariffInflationExposure";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface InflationRecalcOptions {
   /**
@@ -195,7 +196,9 @@ export async function runInflationRecalc(
       "economicFactors.householdPriceIndex": householdPriceIndex,
       "economicFactors.lastUpdated": new Date(),
     };
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await (
+      await getFederalBudgetCollection(db)
+    ).updateOne(
       { _id: budget._id },
       stamped
         ? { $set: set, $unset: { "subhourBase.inflation": "" } }
@@ -212,14 +215,14 @@ export async function runInflationRecalc(
   // missing one (the turn does, through ensureFederalBudget).
   const halfStepBudgets = halfStep
     ? new Map(
-        (await db.collection<FederalBudget>("federalBudget").find({}).toArray()).map((b) => [
+        (await (await getFederalBudgetCollection(db)).find({}).toArray()).map((b) => [
           String(b._id),
           b,
         ])
       )
     : null;
 
-  const gameStateDoc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameStateDoc = await (await getGameStateCollection(db)).findOne({ _id: "current" });
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
 
   // Pre-fetch exchange rates and 12-turn savings flows once.
@@ -439,8 +442,9 @@ export async function runInflationRecalc(
   // unbounded. These countries have no monetary policy, so they take the plain
   // recompute: administered target for planned economies, else the ordinary
   // market model.
-  const unbanked = await db
-    .collection<FederalBudget>("federalBudget")
+  const unbanked = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({ countryId: { $nin: [...bankedCountries] } })
     .toArray();
   await Promise.all(
@@ -471,7 +475,7 @@ export async function runInflationRecalc(
   );
 
   if (halfStepOps.length > 0) {
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(halfStepOps, { ordered: false });
+    await (await getFederalBudgetCollection(db)).bulkWrite(halfStepOps, { ordered: false });
   }
   return stats;
 }

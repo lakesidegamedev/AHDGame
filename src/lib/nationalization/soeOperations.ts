@@ -79,6 +79,7 @@ import {
   NATCORP_RD_RAMP_UP_PER_TURN,
 } from "./constants";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 
 interface MetricOpInput {
   countryId: CountryId;
@@ -376,10 +377,7 @@ export async function processSoeOperations(
   const corpIds = soeCorps.map((c) => c._id);
   const sectors = await db
     .collection<CorporateSector>("corporateSectors")
-    .find(
-      { corporationId: { $in: corpIds } },
-      { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
-    )
+    .find({ corporationId: { $in: corpIds } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
     .toArray();
 
   const stateIds = Array.from(new Set(sectors.map((s) => s.stateId)));

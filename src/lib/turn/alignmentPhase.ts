@@ -72,6 +72,7 @@ import {
 } from "@/lib/world/spheres/membershipStore";
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
 import { loadBackgroundStancePulls } from "@/lib/alignment/backgroundStancePulls";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 // Membership pull lives in `drift.ts` as `membershipPullForTurn`, alongside the
 // ceiling it is bounded by.
@@ -125,7 +126,9 @@ export async function processAlignmentTurn(
   db: Db,
   currentTurn: number
 ): Promise<AlignmentPhaseResult> {
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: {

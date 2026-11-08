@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import {
@@ -11,6 +10,7 @@ import { isSeatActive, resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { createSystemNewsPost } from "@/lib/news";
 import { sendNewsEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface CabinetYearCrossingResult {
   ran: boolean;
@@ -48,12 +48,12 @@ export async function runCabinetYearCrossing(
     removed: [],
     posted: [],
   };
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, lastCabinetYearProcessed: 1, eraSystemEnabled: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, lastCabinetYearProcessed: 1, eraSystemEnabled: 1 } }
+  );
 
   if (!gameState) return result;
   // Prefer the turn context's authoritative year: the persisted
@@ -190,12 +190,12 @@ async function reconcileRetirements(
 }
 
 async function stampGuard(db: Db, currentYear: number): Promise<void> {
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { lastCabinetYearProcessed: currentYear, updatedAt: new Date() } }
-    );
+  await (
+    await getGameStateCollection(db)
+  ).updateOne(
+    { _id: "current" },
+    { $set: { lastCabinetYearProcessed: currentYear, updatedAt: new Date() } }
+  );
 }
 
 async function postCrossingNews(

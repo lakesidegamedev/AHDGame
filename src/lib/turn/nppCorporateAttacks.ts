@@ -21,7 +21,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import {
   ATTACK_OWNED_CONTESTED_FRACTION,
@@ -57,7 +57,7 @@ import {
   countRecentNppNotifications,
   NPP_NOTIFICATION_WINDOW_TURNS,
 } from "@/lib/nppAutonomy/playerImpactBudget";
-import type { NPP, NPPPersonality } from "@/lib/db/types/npp";
+import type { NPPPersonality } from "@/lib/db/types/npp";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { randomInt } from "node:crypto";
@@ -65,6 +65,10 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import type { CountryId } from "@/lib/constants/countries";
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { attemptPlantSectorSplit } from "@/lib/corporations/commands/plantSectorSplitAttempt";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /** Turns between autonomous attacks by the same corp (telegraphed, not a barrage). */
 export const ATTACK_COOLDOWN_TURNS = 24;
@@ -248,20 +252,20 @@ export async function executeNppSectorAttack(
   );
 
   // Reduce the defender's revenue.
-  await db
-    .collection<CorporateSector>("corporateSectors")
-    .updateOne(
-      { _id: targetSector._id },
-      { $inc: { revenue: -captureInDefenderLocal }, $set: { updatedAt: now } }
-    );
+  await (
+    await getCorporateSectorsCollection(db)
+  ).updateOne(
+    { _id: targetSector._id },
+    { $inc: { revenue: -captureInDefenderLocal }, $set: { updatedAt: now } }
+  );
 
   if (existing) {
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne(
-        { _id: existing._id },
-        { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
-      );
+    await (
+      await getCorporateSectorsCollection(db)
+    ).updateOne(
+      { _id: existing._id },
+      { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
+    );
   } else {
     const newSector: Omit<CorporateSector, "_id"> = {
       corporationId: attacker._id,
@@ -282,12 +286,12 @@ export async function executeNppSectorAttack(
       updatedAt: now,
     };
     try {
-      await db
-        .collection<CorporateSector>("corporateSectors")
-        .insertOne(newSector as CorporateSector);
+      await (await getCorporateSectorsCollection(db)).insertOne(newSector as CorporateSector);
     } catch (error) {
       if (isCorporateSectorDuplicateKey(error)) {
-        await db.collection<CorporateSector>("corporateSectors").updateOne(
+        await (
+          await getCorporateSectorsCollection(db)
+        ).updateOne(
           {
             corporationId: attacker._id,
             stateId,
@@ -305,7 +309,9 @@ export async function executeNppSectorAttack(
 
   // Deduct cost + MS, escalate, and stamp the attack cooldown on the attacker.
   const attackCostLocal = anchorToCorpLiquidCapital(attackCostAnchor, attacker, attackerFxRate);
-  await db.collection<Corporation>("corporations").updateOne(
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne(
     { _id: attacker._id },
     {
       $inc: { liquidCapital: -attackCostLocal, marketingStrength: -msCost, splitEscalation: 1 },
@@ -317,18 +323,18 @@ export async function executeNppSectorAttack(
   // often one NPP corp attacks; it says nothing about how often a given corp is
   // attacked, so any number of NPP corps could converge on one player in the same
   // turn. This is the field that makes the shared defender cooldown possible.
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
 
   const sectorLabel =
     OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
     targetSector.sectorType;
 
   // Wire headline (same surface as a player attack) so the action is visible.
-  const stateName = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId }, { projection: { name: 1 } });
+  const stateName = await (
+    await getStatesCollection(db)
+  ).findOne({ _id: stateId }, { projection: { name: 1 } });
   logWireEvent(
     "sector_attack",
     wireHeadlineSectorAttack(
@@ -442,24 +448,21 @@ export async function executeNppPlantSplit(
     },
   }).catch(() => {});
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: attacker._id },
-      { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } }
-    );
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne({ _id: attacker._id }, { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } });
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
 
   const sectorLabel =
     OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
     targetSector.sectorType;
   const stateName =
     (
-      await db
-        .collection<State>("states")
-        .findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
+      await (
+        await getStatesCollection(db)
+      ).findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
     )?.name ?? targetSector.stateId;
   const plantsWord = result.plantsTransferred === 1 ? "plant" : "plants";
   const outcomeText = result.succeeded
@@ -544,8 +547,9 @@ export async function runNppCorporateAttacks(
   // phase carries its own per-attacker nppAutonomyAtLeast(v2) gate, so raising
   // political autonomy (e.g. to v3 for government formation) does not by itself
   // make NPP corps attack owned sectors.
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {
@@ -572,8 +576,9 @@ export async function runNppCorporateAttacks(
   // Hydrate CEO NPP personalities (archetype → aggression).
   const ceoIds = nppCorps.map((c) => c.ceoId).filter(Boolean);
   const npps = ceoIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await (
+        await getNppsCollection(db)
+      )
         .find({ _id: { $in: ceoIds } }, { projection: { personality: 1 } })
         .toArray()
     : [];
@@ -620,8 +625,9 @@ export async function runNppCorporateAttacks(
   // lookup) and by (stateId, sectorType) bucket (rival lookup). Only the
   // Pick<CorporateSector, ...> fields are projected to avoid decoding plant
   // and labor telemetry.
-  const allSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const allSectors = await (
+    await getCorporateSectorsCollection(db)
+  )
     .find(
       {},
       {
@@ -657,8 +663,9 @@ export async function runNppCorporateAttacks(
   // Projected to the target/defender contract: the attack itself re-reads the
   // defender inside its transaction, so the full balance sheet here would only
   // be decoded to look up a name and a marketing strength.
-  const allCorps = await db
-    .collection<Corporation>("corporations")
+  const allCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       {},
       {

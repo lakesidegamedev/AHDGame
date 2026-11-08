@@ -22,6 +22,8 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 /**
  * Process fund generation for all characters each turn.
@@ -65,7 +67,7 @@ export async function processFundGeneration(
 
       const stateMap =
         preloadedStateMap ??
-        new Map((await db.collection<State>("states").find({}).toArray()).map((s) => [s._id, s]));
+        new Map((await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s]));
 
       // Use composite keys to avoid cross-country sequential ID collisions
       const parties = await db
@@ -198,7 +200,7 @@ export async function processFundGeneration(
       }
 
       if (characterOps.length > 0) {
-        await db.collection<Character>("characters").bulkWrite(characterOps);
+        await (await getCharactersCollection(db)).bulkWrite(characterOps);
       }
 
       if (nationalTreasuryUpdates.size > 0) {

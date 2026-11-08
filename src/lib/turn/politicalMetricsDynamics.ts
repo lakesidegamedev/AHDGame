@@ -52,7 +52,6 @@ import {
 } from "@/lib/politicalMetrics/cabinetResidual";
 import { macroResidualFor } from "@/lib/politicalLegislation/macroResidual";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
-import type { GameState } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
 import { spendingProvider } from "@/lib/metricEngine/spendingProvider";
 import { governmentApprovalProvider, sectorRevenueTaxProvider } from "@/lib/metricEngine/providers";
@@ -66,6 +65,7 @@ import {
   loadDepartmentDeliveryMultipliersByCountry,
   loadRegionalDeliveryMultipliersByRegion,
 } from "@/lib/governmentFinance/deliveryMultipliers";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 // Defined in politicalMetrics/historyCadence so a client component can read the
 // cadence without importing this module (and with it the whole turn engine).
@@ -156,7 +156,7 @@ export async function processPoliticalMetricsDynamics(
     spendingProvider(db),
     governmentApprovalProvider(db),
     sectorRevenueTaxProvider(db),
-    db.collection<GameState>("gameState").findOne(
+    (await getGameStateCollection(db)).findOne(
       { _id: "current" },
       {
         projection: {

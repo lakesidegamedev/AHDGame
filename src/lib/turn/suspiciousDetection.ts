@@ -5,7 +5,6 @@
 // Wrapped in runPhase — errors log to Sentry but do not halt turn processing.
 
 import { ObjectId, type Db } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import { classifyDevice } from "@/lib/utils/userAgent";
 import type { StoredFingerprintComponents } from "@/lib/utils/fingerprint";
 import { isCloudflareEdgeIp } from "@/lib/utils/cloudflareIpRanges";
@@ -21,6 +20,7 @@ import type {
   ActivityLogAuth,
 } from "@/lib/db/types/activityLog";
 import { detectAutomationTiming } from "./automationDetection";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 export interface SuspiciousDetectionResult {
   flagged: number;
@@ -639,8 +639,9 @@ async function detectIpSharing(
   }
 
   // For each active character, check if their userId shares an IP with another userId
-  const charDocs = await db
-    .collection<Character>("characters")
+  const charDocs = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const charToUser = new Map(charDocs.map((c) => [c._id.toString(), c.userId.toString()]));
@@ -745,8 +746,9 @@ async function detectCoordinatedFunding(
   const since = new Date(now.getTime() - FOURTEEN_DAYS_MS);
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   if (chars.length === 0) return results;
@@ -1028,8 +1030,9 @@ async function detectLoginTimeCluster(
   const MIN_SPAN_DAYS = 7;
   const since = new Date(now.getTime() - THIRTY_DAYS_MS);
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   if (chars.length === 0) return results;
@@ -1163,8 +1166,9 @@ async function detectLoginIpScatter(
   const since = new Date(now.getTime() - SEVEN_DAYS_MS);
 
   // Map character → userId
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const charToUser = new Map(chars.map((c) => [c._id.toString(), c.userId.toString()]));
@@ -1252,8 +1256,9 @@ export async function processSuspiciousDetection(
     (userId) => new ObjectId(userId)
   );
   if (authActiveUserIds.length > 0) {
-    const authActiveCharacters = await db
-      .collection<Character>("characters")
+    const authActiveCharacters = await (
+      await getCharactersCollection(db)
+    )
       .find({ userId: { $in: authActiveUserIds } }, { projection: { _id: 1 } })
       .toArray();
     for (const character of authActiveCharacters) {
@@ -1267,8 +1272,9 @@ export async function processSuspiciousDetection(
     createdAt: { $gte: new Date(now.getTime() - FOURTEEN_DAYS_MS) },
   })) as ObjectId[];
   if (actionActiveUserIds.length > 0) {
-    const actionActiveCharacters = await db
-      .collection<Character>("characters")
+    const actionActiveCharacters = await (
+      await getCharactersCollection(db)
+    )
       .find({ userId: { $in: actionActiveUserIds } }, { projection: { _id: 1 } })
       .toArray();
     for (const character of actionActiveCharacters) {
@@ -1320,8 +1326,9 @@ export async function processSuspiciousDetection(
   ]);
 
   // Fetch character info for any new flagged chars not yet in suspiciousCharacters
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: characterIds } },
       { projection: { _id: 1, name: 1, userId: 1, countryId: 1 } }

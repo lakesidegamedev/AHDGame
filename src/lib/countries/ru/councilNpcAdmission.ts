@@ -24,6 +24,7 @@ import {
 import { loadRussianCouncilOpeningBinding } from "./councilOpeningBinding";
 import { materializeRussianCouncilRepeatOpening } from "./councilRepeatOpening";
 import { planRussianCouncilNpcSlates } from "./rules/councilNpcSlates";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -43,10 +44,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     throw new Error("Council admission needs an active transaction, turn and time");
   const game = await db
     .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default") return null;
   const countries = db.collection<CountryGameState>("countryGameStates");
   const country = await countries.findOne(

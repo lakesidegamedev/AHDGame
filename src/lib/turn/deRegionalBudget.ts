@@ -17,13 +17,14 @@
 
 import type { Db } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { State, StateMetrics } from "@/lib/db/types";
+import type { StateMetrics } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -260,7 +261,7 @@ export async function processLaenderRegionalBudgets(
   turnNumber: number,
   preset?: string
 ): Promise<{ regionsProcessed: number }> {
-  const deRegions = await db.collection<State>("states").find({ countryId }).toArray();
+  const deRegions = await (await getStatesCollection(db)).find({ countryId }).toArray();
   if (deRegions.length === 0) return { regionsProcessed: 0 };
 
   // `preset` threaded through so era-specific knobs (the 1953-scaled

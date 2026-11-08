@@ -39,6 +39,7 @@ import {
   depositTakerFails,
   propBankFails,
 } from "@/lib/banking/rules/solvency";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 // Defined in the rules zone; re-exported for the turn's tests and dashboards.
 export { CONTAGION_PANIC_TURNS, FLIGHT_RATE_BY_BAND, RUN_FAILURE_COVER_FRACTION };
@@ -108,8 +109,9 @@ export async function processBankSolvencyTurn(
 
   const propEnabled = policy.propTrading;
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       {
         "bankCharter.status": "active",
@@ -163,8 +165,9 @@ export async function processBankSolvencyTurn(
       }
 
       if (failedByCurrency.size > 0) {
-        const peers = await db
-          .collection<Corporation>("corporations")
+        const peers = await (
+          await getCorporationsCollection(db)
+        )
           .find({
             "bankCharter.status": "active",
             "bankCharter.type": { $in: ["retail", "universal"] },
@@ -241,8 +244,9 @@ export async function processBankSolvencyTurn(
 
   await processFinancialCrisisGuarantees(db, turn, policy);
 
-  const unresolved = await db
-    .collection<Corporation>("corporations")
+  const unresolved = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       "bankCharter.status": "failed",
       "bankCharter.depositorsResolvedTurn": { $exists: false },
@@ -273,7 +277,9 @@ async function evaluateOneBank(
   policy: BankingPolicySnapshot
 ): Promise<{ row: EvalResult; forcedLiquidation: boolean } | null> {
   const propEnabled = policy.propTrading;
-  const live = await db.collection<Corporation>("corporations").findOne(
+  const live = await (
+    await getCorporationsCollection(db)
+  ).findOne(
     { _id: corp._id },
     {
       projection: {
@@ -333,7 +339,9 @@ async function evaluateOneBank(
     charter = liq.charter;
     forcedLiquidation = liq.forced;
     if (!liq.forced) {
-      const markedUpdate = await db.collection<Corporation>("corporations").updateOne(
+      const markedUpdate = await (
+        await getCorporationsCollection(db)
+      ).updateOne(
         {
           _id: corp._id,
           bankCharter: beforeMarkCharter,
@@ -463,9 +471,9 @@ async function evaluateOneBank(
       });
       if (flightMove.status === "partial" || flightMove.status === "rejected" || flightMove.error)
         return null;
-      const afterFlight = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
+      const afterFlight = await (
+        await getCorporationsCollection(db)
+      ).findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
       if (!afterFlight?.bankCharter) return null;
       const settledCharter = afterFlight.bankCharter;
       // Replays may have loaded the already-reduced balances at the start of
@@ -524,7 +532,9 @@ async function evaluateOneBank(
       totalDeposits,
       lastSolvencyTurn: turn,
     };
-    const failed = await db.collection<Corporation>("corporations").updateOne(
+    const failed = await (
+      await getCorporationsCollection(db)
+    ).updateOne(
       {
         _id: corp._id,
         bankUnderwritingFunding: { $exists: false },

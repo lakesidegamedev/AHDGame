@@ -1,6 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { ElectedOfficial } from "@/lib/db/types/officials";
-import type { Bill, NPP } from "@/lib/db/types";
+import type { Bill } from "@/lib/db/types";
 import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
@@ -16,6 +15,8 @@ import {
   FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
   type FederationSettlementApplicationRecord,
 } from "@/lib/world/succession/runtimeEntities";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 const SOURCES = ["CS", "YU", "RU"] as const;
 
@@ -65,8 +66,7 @@ export async function processFederationNpcMandates(
         { projection: { sourceEntityId: 1 } }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    (await getElectedOfficialsCollection(db))
       .find(
         { countryId: { $in: eligible } },
         { projection: { countryId: 1, officeType: 1, characterId: 1, nppId: 1 } }
@@ -97,8 +97,7 @@ export async function processFederationNpcMandates(
           )
           .toArray()
       : [],
-    db
-      .collection<NPP>("npps")
+    (await getNppsCollection(db))
       .find(
         {
           _id: {

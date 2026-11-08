@@ -17,8 +17,6 @@ import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budge
 import type { Bond } from "@/lib/db/types/bond";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -67,6 +65,9 @@ import {
   fiscalScaleClaimLoadBound,
   normalizeFiscalScaleStage,
 } from "@/lib/budget/rules/fiscalScale";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -141,7 +142,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       .collection<CentralBank>("centralBanks")
       .find({}, { projection: { countryId: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    (await getGameStateCollection(db)).findOne(
       { _id: "current" },
       {
         projection: {
@@ -198,8 +199,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
 
   // Projected read: see `treasuryBudgetProjection`. The rows are a narrower
   // shape than `FederalBudget`; every field the settle path reads is included.
-  const allBudgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const allBudgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({}, { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled, fiscalScaleStage) })
     .toArray();
   // Dissolved countries keep their budget doc but must not be simulated against
@@ -239,8 +241,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   ];
   const corporationQuotes = new Map<string, SovereignCouponCorporationQuote>();
   if (treasuryCashLedgerEnabled && corporationIds.length > 0) {
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await (
+      await getCorporationsCollection(db)
+    )
       .find(
         { _id: { $in: corporationIds } },
         { projection: { _id: 1, countryId: 1, liquidCurrencyCode: 1 } }
@@ -763,5 +766,5 @@ async function claimTreasuryAccrual(
   filter: Filter<FederalBudget>,
   update: UpdateFilter<FederalBudget>
 ) {
-  return db.collection<FederalBudget>("federalBudget").updateOne(filter, update);
+  return (await getFederalBudgetCollection(db)).updateOne(filter, update);
 }

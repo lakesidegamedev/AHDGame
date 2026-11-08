@@ -12,7 +12,7 @@ import type {
   ElectedOfficial,
   Seat,
 } from "@/lib/db/types";
-import type { StateMetrics, CentralBank, SystemSettings, FederalBudget } from "@/lib/db/types";
+import type { StateMetrics, CentralBank, SystemSettings } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_ORDER, COUNTRY_CONFIGS, getOfficeTypeConfig } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -25,6 +25,7 @@ import {
   findFederalBudgetCountryMismatches,
 } from "@/lib/turn/ensureFederalBudget";
 import { summarizeGameHealth } from "@/lib/turn/rules/gameHealth";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -663,8 +664,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
       .collection<{ _id: string; rate?: number; currencyCode?: string }>("exchangeRates")
       .find({}, { projection: { rate: 1, currencyCode: 1 } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    (await getFederalBudgetCollection(db))
       .find({}, { projection: { countryId: 1, "economicFactors.inflationRate": 1 } })
       .toArray(),
   ]);

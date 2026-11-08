@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   INFRA_ENVELOPE_FALLBACK_GDP_FRACTION,
   INFRA_DISCRETIONARY_FRACTION,
@@ -7,6 +6,7 @@ import {
   INFRA_DISCRETIONARY_CAP,
   INFRA_UPKEEP_UNIT,
 } from "@/lib/constants/cabinetInfra";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 /**
  * Read-only transportation discretionary budget (absolute currency): the LARGER of the
@@ -14,7 +14,7 @@ import {
  * fallback) × INFRA_DISCRETIONARY_FRACTION, or the baseline allowance. Never mutates the budget.
  */
 export async function resolveInfraEnvelope(db: Db, countryId: string): Promise<number> {
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ countryId });
+  const budget = await (await getFederalBudgetCollection(db)).findOne({ countryId });
   if (!budget) return 0;
   const enacted = budget.spending?.byCategory;
   const base = budget.baselineSpendingByCategory;

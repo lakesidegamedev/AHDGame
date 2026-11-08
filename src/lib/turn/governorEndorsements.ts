@@ -1,9 +1,10 @@
 import type { Db, ObjectId } from "mongodb";
-import type { GovernorEndorsement, ElectedOfficial } from "@/lib/db/types";
+import type { GovernorEndorsement } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import { withdrawEndorsement } from "@/lib/governorOffice/endorsements/withdrawEndorsement";
 import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTargets";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 /**
  * Turn phase: auto-withdraw governor endorsements whose conditions no longer hold.
@@ -90,8 +91,9 @@ async function loadSittingRegionalExecutives(
     state: { $in: [...states] },
   }));
 
-  const holders = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const holders = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find({ $or: clauses }, { projection: { countryId: 1, state: 1, characterId: 1 } })
     .toArray();
 

@@ -18,6 +18,7 @@ import {
   RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
   type RussianPresidentialResultRecord,
 } from "./presidentialElectionResult";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 
 export async function materializeRussianPresidentialFollowup(input: {
   db: Db;
@@ -64,10 +65,7 @@ export async function materializeRussianPresidentialFollowup(input: {
       preIterationTurns?: number;
       preIteration?: { active?: boolean };
     }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+    .findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default")
     throw new Error("Russian followup belongs to a different world");
   const kind = result.decision.outcome === "runoff" ? "runoff" : "repeat";

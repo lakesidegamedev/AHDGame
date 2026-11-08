@@ -8,7 +8,6 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { IntelligenceAgency, IntelligenceNetwork } from "@/lib/db/types/intelligence";
 import { OP_SLOTS_PER_TURN, TRADECRAFT_DEFAULT } from "@/lib/intelligence/config";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   applyIntelligenceSettlement,
   getIntelligenceAppropriation,
@@ -20,6 +19,7 @@ import {
 import { networkUpkeep } from "@/lib/intelligence/cost";
 import { deriveCounterIntel } from "@/lib/intelligence/counterIntel";
 import { stepNetwork } from "@/lib/intelligence/network";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export interface IntelligenceTurnResult {
   networksStepped: number;
@@ -70,8 +70,9 @@ export async function processIntelligenceTurn(
   // countries with a line either: a service whose line has since lapsed to zero still
   // owns networks, and their upkeep must still be charged against what it has left.
   const networkOwners = new Set(networks.map((n) => String(n.ownerCountryId)));
-  const budgetDocs = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgetDocs = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({
       $or: [
         { "spending.byCategory.intelligence": { $gt: 0 } },

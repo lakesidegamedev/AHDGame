@@ -11,9 +11,12 @@
  */
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type { LegislationType, NPP, PoliticalParty, State } from "@/lib/db/types";
+import type { LegislationType, NPP } from "@/lib/db/types";
 import { deriveDomainPositions } from "@/lib/npp/domainPositions";
 import { nppStanceTarget } from "@/lib/npp/stanceTarget";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 
 /**
  * Max updates per bulkWrite. Sized well under MongoDB's 16MB per-command BSON
@@ -54,8 +57,9 @@ export async function processNppStanceDrift(
 ): Promise<{ drifted: number }> {
   if (currentTurn % NPP_STANCE_DRIFT_INTERVAL !== 0) return { drifted: 0 };
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await (
+    await getNppsCollection(db)
+  )
     .find(
       { retiredAt: null },
       {
@@ -76,8 +80,9 @@ export async function processNppStanceDrift(
   if (npps.length === 0) return { drifted: 0 };
 
   const stateIds = [...new Set(npps.map((n) => n.homeState).filter(Boolean))];
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find(
       { _id: { $in: stateIds } },
       { projection: { _id: 1, cachedEconomicLean: 1, cachedSocialLean: 1 } }
@@ -87,8 +92,9 @@ export async function processNppStanceDrift(
 
   // Party positions anchor each NPP's target so both parties don't converge on
   // the same state lean. Keyed by countryId + sequentialId to match npp.party.
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find(
       {},
       { projection: { sequentialId: 1, countryId: 1, economicPosition: 1, socialPosition: 1 } }
