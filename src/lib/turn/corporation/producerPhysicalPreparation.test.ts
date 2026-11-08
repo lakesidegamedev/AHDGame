@@ -64,7 +64,7 @@ describe("physical producer preparation", () => {
       input.corporation.countryId = countryId;
       input.sector.countryId = countryId;
       env.lookups.eraUnitScale = 3;
-      env.lookups.priceRatioByCommodity.set("electricity", 1.8);
+      env.lookups.priceRatioByCommodity.set("energy", 1.8);
       const baseline = prepareProducerPhysicalSector(input).prepared.plan;
       const basePrices = Object.freeze(eraScaledBasePrices(env.lookups.eraUnitScale));
       expect(prepareProducerPhysicalSector({ ...input, basePrices }).prepared.plan).toEqual(

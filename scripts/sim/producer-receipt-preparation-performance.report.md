@@ -110,3 +110,13 @@ The isolated 36-test reset contract also passes. The first sandboxed contract re
 unexpectedly; the complete retry with local-test permissions and a bounded 3 GiB heap passes.
 Full repository type/build gates remain for CI under the local resource constraint. No new
 full-turn timing or aged-world gate verdict is claimed for this integrated revision.
+
+## PR 5835 CI corrections
+
+The first static run found an invalid `electricity` commodity identifier in the new preparation
+test; the internal identifier is `energy`. Shard 1 found health-warning fixtures still sized for
+the prior ten-minute timeout. The fixtures now derive their elapsed durations from each phase's
+configured timeout, retaining the percentage/severity assertions. These are test-only corrections.
+All 101 focused preparation, health-warning and timeout/runtime tests pass, as do changed-test
+TypeScript checking and ESLint. The original CI production build passed; the correction commit
+will run the PR checks again.
