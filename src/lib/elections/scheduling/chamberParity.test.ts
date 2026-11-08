@@ -209,7 +209,7 @@ async function ieNgSpawners(): Promise<Spawner[]> {
 }
 
 async function betaSpawners(): Promise<Spawner[]> {
-  const b = await import("@/lib/turn/perpetualElections/countries/betaParliaments");
+  const b = await import("@/lib/elections/scheduling/countries/betaParliaments");
   return [
     spawner("fr.assembleeNationale", "FR", "assembleeNationale", false, b.ensureFRElections, true),
     spawner("it.cameraDeputati", "IT", "cameraDeputati", false, b.ensureITElections, true),
@@ -223,7 +223,7 @@ async function betaSpawners(): Promise<Spawner[]> {
 }
 
 async function betaSenateSpawners(): Promise<Spawner[]> {
-  const b = await import("@/lib/turn/perpetualElections/countries/betaParliaments");
+  const b = await import("@/lib/elections/scheduling/countries/betaParliaments");
   return [
     spawner("fr.senat", "FR", "senat", false, b.ensureFRSenateElections),
     spawner("it.senato", "IT", "senato", false, b.ensureITSenateElections),

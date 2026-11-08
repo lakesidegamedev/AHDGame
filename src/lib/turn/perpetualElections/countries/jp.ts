@@ -1,11 +1,7 @@
 /**
- * Forwarder. Japan's perpetual election spawners moved to Japan's country folder in D3.
+ * Forwarder. Moved into the elections home.
  *
- * ⚠️ A FORWARDER HOLDS NO COPY. It re-exports, so there is exactly one
- * definition. Leaving the values here as well would give Japan two homes, which
- * is the "forwarder became a second source" failure the plan warns about.
- *
- * Existing importers keep working unchanged; new code should import from the
- * country folder directly.
+ * A forwarder holds no copy, so existing importers are untouched and there is
+ * still exactly one declaration.
  */
-export * from "@/lib/countries/jp/elections/perpetual";
+export * from "@/lib/elections/scheduling/countries/jp";

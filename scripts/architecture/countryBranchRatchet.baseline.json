@@ -295,7 +295,7 @@
     "src/lib/turn/onePartyBillLifecycle.ts": 3,
     "src/lib/turn/partyOrg/ensureStatePartyOrgRow.ts": 1,
     "src/lib/turn/partyTierTurn.ts": 1,
-    "src/lib/turn/perpetualElections/engine.ts": 3,
+    "src/lib/elections/scheduling/engine.ts": 3,
     "src/lib/turn/primaryResolution.ts": 4,
     "src/lib/turn/statehood.ts": 1,
     "src/lib/utils/formatters.ts": 6,

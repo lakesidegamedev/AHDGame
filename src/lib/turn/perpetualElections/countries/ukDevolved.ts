@@ -1,6 +1,7 @@
 /**
- * Forwarder. Moved into the United Kingdom's country folder.
+ * Forwarder. Moved into the elections home.
  *
- * ⚠️ A FORWARDER HOLDS NO COPY; existing importers are untouched.
+ * A forwarder holds no copy, so existing importers are untouched and there is
+ * still exactly one declaration.
  */
-export * from "@/lib/countries/uk/elections/devolved";
+export * from "@/lib/elections/scheduling/countries/ukDevolved";
