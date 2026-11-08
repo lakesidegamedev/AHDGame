@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import { getVietnamEscalation } from "@/lib/crises/vietnamEscalation";
 import { livingVietnamAsLegacyState } from "@/lib/livingConflict/vietnamCompat";
 import { listNuclearPrograms } from "@/lib/db/collections/nuclearPrograms";
 import { getConflictsCollection, listActiveConflicts } from "@/lib/db/collections/conflicts";
@@ -101,11 +100,10 @@ export function buildStandingPressureSnapshot(
 /** Read current standing pressure, including all active crises and conflicts. */
 export async function readStandingPressureSnapshot(
   db: Db,
-  gameState: { livingConflictsEnabled?: boolean },
   currentTurn?: number
 ): Promise<StandingPressureSnapshot> {
   const [vietnam, activeCrises, programs, conflicts] = await Promise.all([
-    gameState.livingConflictsEnabled ? livingVietnamAsLegacyState(db) : getVietnamEscalation(db),
+    livingVietnamAsLegacyState(db),
     db.collection("crises").countDocuments({ status: "active" }),
     listNuclearPrograms(db),
     listActiveConflicts(db),

@@ -62,7 +62,6 @@ export async function prepareConflictCivilianLossOrder(
           currentTurn: 1,
           isProcessing: 1,
           processingTargetTurn: 1,
-          livingConflictsEnabled: 1,
         },
       }
     ),
@@ -74,8 +73,7 @@ export async function prepareConflictCivilianLossOrder(
       )
       .toArray(),
   ]);
-  if (world?.livingConflictsEnabled !== true) return undefined;
-  if (!Number.isSafeInteger(world.currentTurn) || world.currentTurn < 1)
+  if (!world || !Number.isSafeInteger(world.currentTurn) || world.currentTurn < 1)
     throw new Error("Civilian loss requires a valid game clock");
   const real = states.filter((state) => !NATIONAL_SCOPE_IDS.has(state._id));
   if (real.some((state) => !Number.isFinite(state.population) || state.population < 0))
@@ -104,10 +102,8 @@ export async function prepareConflictCivilianLossOrder(
 export async function loadPendingConflictCivilianLosses(
   db: Db,
   worldEpochId: string,
-  turn: number,
-  enabled: boolean
+  turn: number
 ): Promise<ConflictCivilianLossOrder[]> {
-  if (!enabled) return [];
   await ensureCivilianLossIndexes(db);
   const interactions = await db
     .collection<CrisisInteraction>("crisisInteractions")

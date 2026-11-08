@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import { isAutoDisastersEnabled } from "@/lib/crises/featureFlag";
 import { processAutoDisasterSpawn } from "@/lib/crises/autoDisasterSpawn";
 import { processClimateFeedbackTurn } from "@/lib/crises/climateTurn";
 import { getSimulatedCountryIds } from "@/lib/countryAccess";
@@ -9,13 +8,10 @@ export async function processAutoDisasterTurn(
   db: Db,
   turn: number,
   preloadedGameState?: {
-    autoDisastersEnabled?: boolean;
     autoCrisisPaused?: boolean;
     startingYear?: number;
   }
 ): Promise<void> {
-  const enabled = await isAutoDisastersEnabled(preloadedGameState);
-  if (!enabled) return;
   const climatePressure = await processClimateFeedbackTurn(db, turn, {
     startingYear: preloadedGameState?.startingYear,
   });

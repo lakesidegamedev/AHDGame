@@ -527,13 +527,7 @@ async function applyOutcomeTension(
   const minimumValue =
     outcome.tensionDelta < 0
       ? tensionFloor(
-          (
-            await readStandingPressureSnapshot(
-              db,
-              world ?? {},
-              world?.currentTurn ?? crisis.startTurn
-            )
-          ).pressures
+          (await readStandingPressureSnapshot(db, world?.currentTurn ?? crisis.startTurn)).pressures
         )
       : undefined;
   await applyTensionEvent(

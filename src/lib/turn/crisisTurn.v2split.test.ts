@@ -9,6 +9,17 @@ import { legacyDefinitionFor } from "./crisisV2/legacyContent";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
 
+vi.mock("@/lib/livingConflict/processTurn", () => ({
+  processLivingConflictsTurn: vi.fn().mockResolvedValue({ conflictsProcessed: 0, eventsOpened: 0 }),
+}));
+vi.mock("@/lib/livingConflict/vietnamCompat", async () => {
+  const { emptyVietnamState } = await import("@/lib/crises/vietnamEscalation");
+  return {
+    retireLegacyVietnamCrises: vi.fn().mockResolvedValue(0),
+    livingVietnamAsLegacyState: vi.fn().mockResolvedValue(emptyVietnamState()),
+  };
+});
+
 let db: MockDb;
 
 beforeEach(() => {

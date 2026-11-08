@@ -1,12 +1,12 @@
 import type { Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockDb } from "@/lib/test-utils/mockDb";
-import { getVietnamEscalation } from "@/lib/crises/vietnamEscalation";
+import { livingVietnamAsLegacyState } from "@/lib/livingConflict/vietnamCompat";
 import { listNuclearPrograms } from "@/lib/db/collections/nuclearPrograms";
 import { getConflictsCollection, listActiveConflicts } from "@/lib/db/collections/conflicts";
 import { readStandingPressureSnapshot, syncLimitedWarPressureClocks } from "./standingPressure";
 
-vi.mock("@/lib/crises/vietnamEscalation", () => ({ getVietnamEscalation: vi.fn() }));
+vi.mock("@/lib/livingConflict/vietnamCompat", () => ({ livingVietnamAsLegacyState: vi.fn() }));
 vi.mock("@/lib/livingConflict/vietnamCompat", () => ({ livingVietnamAsLegacyState: vi.fn() }));
 vi.mock("@/lib/db/collections/nuclearPrograms", () => ({ listNuclearPrograms: vi.fn() }));
 vi.mock("@/lib/db/collections/conflicts", () => ({
@@ -17,7 +17,7 @@ vi.mock("@/lib/db/collections/conflicts", () => ({
 describe("readStandingPressureSnapshot", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getVietnamEscalation).mockResolvedValue({ level: 1 } as never);
+    vi.mocked(livingVietnamAsLegacyState).mockResolvedValue({ level: 1 } as never);
     vi.mocked(listNuclearPrograms).mockResolvedValue([
       { _id: "US", warheads: 522 },
       { _id: "RU", warheads: 114 },
@@ -64,9 +64,7 @@ describe("readStandingPressureSnapshot", () => {
     db.collection("crises");
     db.collectionMocks.crises!.countDocuments.mockResolvedValue(6);
 
-    const snapshot = await readStandingPressureSnapshot(db as unknown as Db, {
-      livingConflictsEnabled: false,
-    });
+    const snapshot = await readStandingPressureSnapshot(db as unknown as Db);
 
     expect(db.collectionMocks.crises!.countDocuments).toHaveBeenCalledWith({ status: "active" });
     expect(snapshot.wars).toHaveLength(1);

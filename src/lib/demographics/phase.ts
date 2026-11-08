@@ -270,7 +270,6 @@ export async function runDemographicFlows(
           currentTurn?: number;
           startingYear?: number;
           conscription?: Record<string, Partial<ConscriptionPolicy>>;
-          livingConflictsEnabled?: boolean;
           preset?: string;
         } & ResetVersionState
       >({}),
@@ -290,20 +289,10 @@ export async function runDemographicFlows(
         .toArray(),
     ]);
 
-  const pandemic = await loadPandemicSignal(db, gameState?.livingConflictsEnabled === true);
+  const pandemic = await loadPandemicSignal(db);
   const [conflictReceptions, conflictLosses, crisisOrders] = await Promise.all([
-    loadPendingRefugeeReceptions(
-      db,
-      worldEpochId,
-      turn,
-      gameState?.livingConflictsEnabled === true
-    ),
-    loadPendingConflictCivilianLosses(
-      db,
-      worldEpochId,
-      turn,
-      gameState?.livingConflictsEnabled === true
-    ),
+    loadPendingRefugeeReceptions(db, worldEpochId, turn),
+    loadPendingConflictCivilianLosses(db, worldEpochId, turn),
     loadPendingCrisisPopulationOrders(db, worldEpochId, turn),
   ]);
   const receptionOrders = [...conflictReceptions, ...crisisOrders.reception];

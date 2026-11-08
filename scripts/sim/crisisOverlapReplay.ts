@@ -225,12 +225,12 @@ async function main() {
               );
             }
           await measure("sevenFamilyDriver", () =>
-            processLivingConflictsTurn(db, turn, 2027 + offset / 48, true)
+            processLivingConflictsTurn(db, turn, 2027 + offset / 48)
           );
           const before = digest(
             await db.collection("livingConflicts").find({}).sort({ defKey: 1 }).toArray()
           );
-          await processLivingConflictsTurn(db, turn, 2027 + offset / 48, true);
+          await processLivingConflictsTurn(db, turn, 2027 + offset / 48);
           assert.equal(
             digest(await db.collection("livingConflicts").find({}).sort({ defKey: 1 }).toArray()),
             before,

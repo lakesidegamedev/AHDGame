@@ -1,24 +1,28 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import { dialTensionReading, getColdWarDials, PEACETIME_DIALS } from "./dials";
 import { stepBlocDyads } from "./rules/blocTension";
 import {
   deriveVietnamDials,
   emptyVietnamState,
-  VIETNAM_ESCALATION_COLLECTION,
-  VIETNAM_ESCALATION_ID,
   VIETNAM_MAX_LEVEL,
   type VietnamEscalationState,
 } from "@/lib/crises/vietnamEscalation";
 
+const ladder = vi.hoisted(() => ({ state: null as VietnamEscalationState | null }));
+
+vi.mock("@/lib/livingConflict/vietnamCompat", async () => {
+  const { emptyVietnamState } = await import("@/lib/crises/vietnamEscalation");
+  return { livingVietnamAsLegacyState: async () => ladder.state ?? emptyVietnamState() };
+});
+
 function dbWithLadder(state: VietnamEscalationState | null) {
+  ladder.state = state;
   return {
-    collection(name: string) {
+    collection() {
       return {
-        async findOne(filter: { _id: string }) {
-          if (name !== VIETNAM_ESCALATION_COLLECTION) return null;
-          if (filter._id !== VIETNAM_ESCALATION_ID) return null;
-          return state ? { _id: VIETNAM_ESCALATION_ID, ...state } : null;
+        async findOne() {
+          return null;
         },
       };
     },
@@ -94,6 +98,7 @@ describe("dialTensionReading (2027 bloc pairs)", () => {
 
 describe("Cold War console dials in a multipolar world", () => {
   it("answer the hottest bloc pair when the global value is calm", async () => {
+    ladder.state = null;
     const db = {
       collection(name: string) {
         return {

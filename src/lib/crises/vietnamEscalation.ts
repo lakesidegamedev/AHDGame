@@ -492,12 +492,9 @@ export interface VietnamEscalationSummary {
 
 /** Everything the conflicts hub needs to render the ladder, in one read. */
 export async function getVietnamEscalationSummary(db: Db): Promise<VietnamEscalationSummary> {
-  const gameState = await db
-    .collection<{ _id: string; livingConflictsEnabled?: boolean }>("gameState")
-    .findOne({ _id: "current" }, { projection: { livingConflictsEnabled: 1 } });
-  const state = gameState?.livingConflictsEnabled
-    ? await (await import("@/lib/livingConflict/vietnamCompat")).livingVietnamAsLegacyState(db)
-    : await getVietnamEscalation(db);
+  const state = await (
+    await import("@/lib/livingConflict/vietnamCompat")
+  ).livingVietnamAsLegacyState(db);
   const rung = rungForLevel(state.level);
   return {
     level: state.level,

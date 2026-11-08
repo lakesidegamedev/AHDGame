@@ -5638,9 +5638,6 @@
     "src/lib/crises/crisisLocation.ts": {
       "states": 1
     },
-    "src/lib/crises/featureFlag.ts": {
-      "gameState": 1
-    },
     "src/lib/crises/financialCrisisBankResponse.ts": {
       "corporations": 3,
       "federalBudget": 3

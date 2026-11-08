@@ -20,12 +20,10 @@ import {
   calculateDecisionDurationReduction,
 } from "@/lib/crises/interactionEngine";
 import { processCrisisAidResolutions, reverseCrisisAidPenalties } from "@/lib/crises/aidFinalize";
-import { processCrisisChain, processVietnamChainOpening } from "@/lib/crises/crisisChain";
-import { tickVietnamEscalation } from "@/lib/crises/vietnamEscalation";
+import { processCrisisChain } from "@/lib/crises/crisisChain";
 import { syncVietnamFront, VIETNAM_FRONT_NAME } from "@/lib/crises/vietnamFront";
 import {
   normalizeVietnamLevel,
-  refreshVietnamEscalationLevel,
   setVietnamEscalationLevel,
 } from "@/lib/crises/vietnamEscalationInterface";
 import { getGameState } from "@/lib/gameState";
@@ -76,26 +74,13 @@ export async function processCrisisTurn(
   // only stamped at turn end, so on the first turn of a new year it still holds
   // the prior year. Non-turn callers omit it and use the persisted value.
   const effectiveYear = currentYear ?? gameState?.currentYear;
-  await processLivingConflictsTurn(
-    db,
-    turn,
-    effectiveYear,
-    gameState?.livingConflictsEnabled === true
-  );
-  const livingEnabled = gameState?.livingConflictsEnabled === true;
-  if (livingEnabled) await retireLegacyVietnamCrises(db);
+  await processLivingConflictsTurn(db, turn, effectiveYear);
+  await retireLegacyVietnamCrises(db);
   // Fetch after living-conflict materialization so new response events receive
   // their start-turn effects, interaction, wire item, and notifications now.
   const crises = await db.collection<Crisis>("crises").find({ status: "active" }).toArray();
-  let vietnam;
-  if (livingEnabled) {
-    vietnam = await livingVietnamAsLegacyState(db);
-    setVietnamEscalationLevel(normalizeVietnamLevel(vietnam.level));
-  } else {
-    await processVietnamChainOpening(db, turn, effectiveYear);
-    vietnam = await tickVietnamEscalation(db);
-    await refreshVietnamEscalationLevel(db);
-  }
+  const vietnam = await livingVietnamAsLegacyState(db);
+  setVietnamEscalationLevel(normalizeVietnamLevel(vietnam.level));
   // The ladder decides how deep the superpowers are in; the front is what that
   // adds up to on the ground.
   await announceVietnamFront(await syncVietnamFront(db, vietnam, turn));
@@ -186,7 +171,6 @@ export async function processCrisisTurn(
 
   await finalizeResolvedCrises(db, toResolve, turn, {
     year: effectiveYear,
-    livingEnabled,
     allStateIds,
     statesByCountry,
   });
@@ -205,7 +189,6 @@ export async function processCrisisTurn(
 
 export interface FinalizeOptions {
   year?: number | null;
-  livingEnabled: boolean;
   allStateIds: string[];
   statesByCountry: Map<string, string[]>;
 }
@@ -280,9 +263,7 @@ export async function finalizeResolvedCrises(
   // own state decides what comes next, including nothing at all.
   await processCrisisChain(
     db,
-    options.livingEnabled
-      ? toResolve.filter((crisis) => crisis.chain?.family !== "vietnam")
-      : toResolve,
+    toResolve.filter((crisis) => crisis.chain?.family !== "vietnam"),
     turn,
     options.year ?? undefined
   );
