@@ -4677,6 +4677,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/constants/commandEconomyTables.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 2
+    },
     "src/lib/constants/commodities.ledgerUnitScale.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 2
@@ -4696,6 +4700,10 @@
     "src/lib/constants/commodityDemandCalibration.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/lib/constants/corporationsTables.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 2
     },
     "src/lib/constants/countries.ts": {
       "longBlocks": 3,
@@ -4914,6 +4922,10 @@
       "narrativeLines": 1
     },
     "src/lib/constants/techTree/selectors.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/constants/techTree/selectorsTables.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7687,6 +7699,10 @@
     },
     "src/lib/economy/repricer/baseMargins.ts": {
       "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/economy/rules/commandEconomy.ts": {
+      "longBlocks": 6,
       "narrativeLines": 0
     },
     "src/lib/economy/rules/householdPriceIndex.ts": {
