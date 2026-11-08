@@ -74,25 +74,61 @@ export async function submitCrisisAidPledge(
   );
   if (amountLocal <= 0) throw badRequest("Aid amount rounds to zero");
   const commitmentId = new ObjectId();
+  const billId = new ObjectId();
 
-  // 1. Spend (surplus first, remainder = debt; derived fields resynced now).
-  const impact = await spendFromTreasury(db, input.senderCountryId, amountLocal, {
-    resyncDerived: true,
-    witness: {
-      flow: "crisis_aid",
-      key: `crisis-aid:${interaction.crisisId.toString()}:${input.senderCountryId}`,
-      site: "crises/aidPledge",
-    },
-  });
+  // 1. Claim the pledge slot. The unique (crisis, sender) index makes this the
+  // single arbiter between concurrent requests, so nothing below can run twice.
+  const now = new Date();
+  const commitments = db.collection<CrisisAidCommitment>("crisisAidCommitments");
+  try {
+    await commitments.insertOne({
+      _id: commitmentId,
+      crisisId: interaction.crisisId,
+      billId,
+      senderCountryId: input.senderCountryId,
+      proposerCharacterId: input.characterId,
+      proposerName: input.characterName,
+      amountLocal,
+      amountPctGdp: input.pctGdp,
+      recoveryEffects,
+      senderEffects,
+      treasuryDebited: amountLocal,
+      status: "pending",
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (err) {
+    if ((err as { code?: number }).code === 11000) {
+      throw conflict("Your country has already pledged aid to this crisis");
+    }
+    throw err;
+  }
 
-  // 2. Provisionally apply benefits.
+  // 2. Spend (surplus first, remainder = debt; derived fields resynced now).
+  let impact: FiscalImpact;
+  try {
+    impact = await spendFromTreasury(db, input.senderCountryId, amountLocal, {
+      resyncDerived: true,
+      witness: {
+        flow: "crisis_aid",
+        key: `crisis-aid:${interaction.crisisId.toString()}:${input.senderCountryId}`,
+        site: "crises/aidPledge",
+      },
+    });
+  } catch (err) {
+    await commitments.deleteOne({ _id: commitmentId });
+    throw err;
+  }
+
+  // 3. Provisionally apply benefits.
   await applyEffectsForCrisis(db, interaction.crisisId, recoveryEffects);
   await applyCrisisEffects(db, senderEffects, [], [input.senderCountryId]);
 
-  // 3. File the appropriation bill.
+  // 4. File the appropriation bill under the id the commitment already names.
   const crisis = await db.collection("crises").findOne({ _id: interaction.crisisId });
   const crisisName = (crisis as { name?: string } | null)?.name ?? "a foreign crisis";
-  const billId = await proposeCrisisAidBill(db, {
+  await proposeCrisisAidBill(db, {
+    billId,
     countryId: input.senderCountryId,
     crisisAidId: commitmentId,
     sponsorId: input.characterId,
@@ -100,25 +136,6 @@ export async function submitCrisisAidPledge(
     sponsorParty: input.characterParty,
     title: `Emergency Aid: ${crisisName}`,
     summary: `Appropriate ${amountLocal.toLocaleString()} in reconstruction aid for ${crisisName} (${(input.pctGdp * 100).toFixed(2)}% of GDP).`,
-  });
-
-  // 4. Record the commitment (exact effects for reversal).
-  const now = new Date();
-  await db.collection<CrisisAidCommitment>("crisisAidCommitments").insertOne({
-    _id: commitmentId,
-    crisisId: interaction.crisisId,
-    billId,
-    senderCountryId: input.senderCountryId,
-    proposerCharacterId: input.characterId,
-    proposerName: input.characterName,
-    amountLocal,
-    amountPctGdp: input.pctGdp,
-    recoveryEffects,
-    senderEffects,
-    treasuryDebited: amountLocal,
-    status: "pending",
-    createdAt: now,
-    updatedAt: now,
   });
 
   // 5. Advance the crisis to its terminal node (resolves the interaction).
