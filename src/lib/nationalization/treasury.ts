@@ -29,6 +29,8 @@ import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/mo
 export interface TreasuryWitness {
   flow: TreasuryCashFlow;
   key?: string;
+  /** Applies the credit at most once: a replay under the same key matches no treasury and moves nothing. */
+  onceKey?: string;
   site?: string;
   /** Internal marker set after the funded cash receipt has landed. */
   fundedTransitionLanded?: boolean;
@@ -162,9 +164,13 @@ async function incTreasuryBalance(
     }
     return result.status === "applied" || result.status === "replayed";
   }
+  const receipt = witness?.onceKey ? `appliedRecoveryCredits.${witness.onceKey}` : null;
   const result = await db
     .collection<FederalBudget>("federalBudget")
-    .updateOne({ countryId }, { $inc: { treasuryBalance: delta }, $set: { updatedAt: now } });
+    .updateOne(receipt ? { countryId, [receipt]: { $exists: false } } : { countryId }, {
+      $inc: { treasuryBalance: delta },
+      $set: { updatedAt: now, ...(receipt ? { [receipt]: now } : {}) },
+    });
   return (result?.matchedCount ?? 0) > 0;
 }
 

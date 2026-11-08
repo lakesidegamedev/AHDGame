@@ -562,6 +562,8 @@ export interface BankSovereignClaim {
 }
 
 export interface FederalBudget {
+  /** Receipts of court-ordered compensation recoveries already credited, so a resumed recovery never credits twice. */
+  appliedRecoveryCredits?: Record<string, Date>;
   /** Optional all-household control with explicit settled/model basis; never relabel forecasts or player-only receipts. Wiped with the world budget. */
   householdResourceControl?: HouseholdFiscalControls;
   /** Monotonic tax-collection proof, reset with the owning world balance. */

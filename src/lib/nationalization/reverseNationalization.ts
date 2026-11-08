@@ -11,6 +11,7 @@ import {
   completeCompensationRecovery,
   discardCompensationRecovery,
   recordCompensationRecovery,
+  rehomeSpinOutRecovery,
 } from "./clawbackCompensation";
 
 export interface ReverseNationalizationParams {
@@ -204,12 +205,24 @@ async function reverseNextTaking(
 
       // Fallback: no surviving prior owner. Spin the sector out to a fresh private
       // corp via the normal privatization path. Clear the absorb stamp first so the
-      // re-privatization cooldown does not reject a court-ordered return.
+      // re-privatization cooldown does not reject a court-ordered return. The
+      // recovery marker goes on the state corporation first, because the owner that
+      // will owe it does not exist until the spin-out lands.
+      if (prov && compensation > 0) {
+        owingCorpId = holder._id;
+        markerKey = await recordCompensationRecovery(db, {
+          countryId: compensationCountryId,
+          corporationId: holder._id,
+          sectorId: sector._id,
+          takenAtTurn: prov.takenAtTurn,
+          compensationAnchor: compensation,
+          spinOut: true,
+        });
+      }
       await sectorsCol.updateOne(
         { _id: sector._id },
-        { $unset: { absorbedAtTurn: "", nationalizationProvenance: "" }, $set: { updatedAt: now } }
+        { $unset: { absorbedAtTurn: "" }, $set: { updatedAt: now } }
       );
-      moved = true;
       const carveName = `${params.label} Returned ${sector._id.toString().slice(-6)}`.slice(0, 60);
       const spun = await privatizeAsset(db, {
         countryId: params.countryId as CountryId,
@@ -220,11 +233,19 @@ async function reverseNextTaking(
         method: "ipo",
         turn: params.turn,
       });
+      moved = true;
+      await sectorsCol.updateOne(
+        { _id: sector._id },
+        { $unset: { nationalizationProvenance: "" }, $set: { updatedAt: now } }
+      );
       result.spunOut++;
       // The corporation that now holds the asset owes the compensation back.
-      if (spun?.newCorporationId) {
-        await recordRecovery(spun.newCorporationId);
+      if (markerKey && spun?.newCorporationId) {
+        await rehomeSpinOutRecovery(db, holder._id, markerKey, spun.newCorporationId);
+        owingCorpId = spun.newCorporationId;
         await finishRecovery();
+      } else if (markerKey) {
+        await discardCompensationRecovery(db, holder._id, markerKey);
       }
       progress.reversedAny = true;
       return false;
@@ -253,8 +274,23 @@ export async function resumePendingCompensationRecoveries(
     .limit(200)
     .toArray();
   let resumed = 0;
+  // Spin-out markers are handed to the asset's new owner first, so a later
+  // completion on that owner can never be followed by a second hand-over.
+  const unresolved = new Set<string>();
   for (const corp of owing) {
     for (const [key, marker] of Object.entries(corp.pendingCompensationRecoveries ?? {})) {
+      if (!marker.spinOut) continue;
+      try {
+        await resolveSpinOutMarker(db, corp._id, key, marker.sectorId);
+      } catch (err) {
+        unresolved.add(key);
+        console.error(`[reverseNationalization] could not resume spin-out ${key}:`, err);
+      }
+    }
+  }
+  for (const corp of owing) {
+    for (const [key, marker] of Object.entries(corp.pendingCompensationRecoveries ?? {})) {
+      if (marker.spinOut || unresolved.has(key)) continue;
       try {
         if (
           marker.stage === "pending" &&
@@ -271,6 +307,27 @@ export async function resumePendingCompensationRecoveries(
     }
   }
   return resumed;
+}
+
+/**
+ * A spin-out marker still on the state corporation: if the asset left it, the new
+ * owner takes the marker over and the stale provenance is cleared; if not, the
+ * spin-out never happened and the marker is dropped.
+ */
+async function resolveSpinOutMarker(
+  db: Db,
+  holderId: ObjectId,
+  key: string,
+  sectorId: ObjectId
+): Promise<void> {
+  const sectorsCol = await getCorporateSectorsCollection(db);
+  const sector = await sectorsCol.findOne({ _id: sectorId });
+  if (!sector || sector.corporationId.equals(holderId)) {
+    await discardCompensationRecovery(db, holderId, key);
+    return;
+  }
+  await rehomeSpinOutRecovery(db, holderId, key, sector.corporationId);
+  await sectorsCol.updateOne({ _id: sectorId }, { $unset: { nationalizationProvenance: "" } });
 }
 
 async function takingStillInPlace(
