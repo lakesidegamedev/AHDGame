@@ -1,45 +1,26 @@
 import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 
 /**
- * January 2027 US Congress from the November 3, 2026 election results.
+ * January 2027 US Congress from the November 3, 2026 elections: party
+ * allocations only; every office holder is a generated fictional person.
+ * Replaces the frozen pre-election projection as the 2027 seed.
  *
- * This replaces the frozen pre-election projection
- * (`usCongressProjection2027.ts`, kept unchanged for the record) as the seed
- * for the 2027 world. Party allocations only: every office holder is a
- * generated fictional person.
- *
- * Status: called results, not yet certified. Snapshot of Associated Press race
- * calls as of 11:15 PM EST, November 6, 2026 (House 254 D, 162 R, 19 uncalled;
- * Senate Alaska and Mississippi uncalled). States certify through December;
- * replace this file deliberately if a call is reversed or once certified.
- *
- * Uncalled seats keep the frozen projection's value. The projection is a
- * per-state count, so an uncalled House seat goes to whichever party the
+ * Called results, not certified (see `basis`, `snapshotDate`). Uncalled seats
+ * keep the projection's party: an uncalled House seat goes to the party the
  * called seats leave short of its projected state total.
  *
- * Uncalled House seats (party used): AK-AL (R), AZ-2 (R), CA-4 (D), CA-7 (D),
- * CA-23 (R), CA-40 (R), CO-4 (R), FL-7 (R), FL-26 (R), FL-27 (R), LA-5 (R),
- * LA-6 (R), MN-1 (R), NC-3 (R), NC-5 (R), NC-7 (R), NC-10 (R), SC-2 (R),
- * WA-5 (R).
- * Uncalled Senate seats (party used): Alaska Class 2 (R), Mississippi
- * Class 2 (R).
- *
- * Sources:
- * - AP News, 2026 US House election results and 2026 US Senate election
- *   results pages, race calls as of November 6, 2026.
- * - Wikipedia, "2026 United States House of Representatives elections" and
- *   "2026 United States Senate elections", district and race tables
- *   compiled from AP calls, revision of November 6, 2026.
- * - NBC News, 2026 House election live results page, November 2026.
- *
- * Do not silently refresh these numbers. A later count or the certified
- * result must update the status line, the uncalled lists and the rosters
- * together.
+ * Do not silently refresh: a later count or certification must update the
+ * basis, the uncalled lists and the rosters together.
  */
 export const US_CONGRESS_RESULT_2027 = {
   electionDate: "2026-11-03",
   snapshotDate: "2026-11-06",
   basis: "called results before certification",
+  sources: [
+    "AP News, 2026 US House and Senate election results, race calls as of 2026-11-06 23:15 EST",
+    "Wikipedia, 2026 United States House of Representatives elections and 2026 United States Senate elections, revision of 2026-11-06 (AP calls)",
+    "NBC News, 2026 House election live results, November 2026",
+  ],
   house: {
     democrat: 256,
     republican: 179,
