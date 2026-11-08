@@ -226,6 +226,7 @@ export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
   "crisisAidCommitments",
   "crisisAutoCooldowns",
   "crisisInteractions",
+  "crisisLeverUses",
   "customInternationalOrganizations",
   "debateSessions",
   "demographicFlowProjections",
