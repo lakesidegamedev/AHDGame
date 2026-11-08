@@ -4553,6 +4553,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/commodities/rules/commodityMarket.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 3
+    },
     "src/lib/commodity-map/commodityMapColorScale.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -4693,9 +4697,9 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/constants/commodities.ts": {
-      "longBlocks": 11,
-      "narrativeLines": 7
+    "src/lib/constants/commoditiesTables.ts": {
+      "longBlocks": 7,
+      "narrativeLines": 4
     },
     "src/lib/constants/commodityDemandCalibration.test.ts": {
       "longBlocks": 0,
@@ -4737,7 +4741,7 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/constants/currencies.ts": {
+    "src/lib/constants/currenciesTables.ts": {
       "longBlocks": 5,
       "narrativeLines": 1
     },
