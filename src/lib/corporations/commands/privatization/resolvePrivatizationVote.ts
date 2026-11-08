@@ -283,6 +283,14 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
         $set: { updatedAt: now },
       } as unknown as UpdateFilter<IndexFund>);
       totalFundPaidAnchor += payoutAnchor;
+    } else if (holder.nppId) {
+      await db.collection("npps").updateOne(
+        { _id: holder.nppId },
+        {
+          $inc: { [`currencyBalances.personal.${vote.lockedBuyoutCurrency}`]: payout },
+          $set: { updatedAt: now },
+        }
+      );
     }
   }
 

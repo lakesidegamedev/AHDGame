@@ -20,12 +20,11 @@ areas: [engine]
   company, in the treasury's own currency, so a refused payment no longer
   leaves the company paid anyway.
 - Double clicks or two people acting at once can no longer apply an event
-  choice, a crisis decision or contribution, a coalition invite or join
+  choice, a coalition invite or join
   acceptance, a CEO offer acceptance or a growth change twice.
 - Treasury spending no longer loses a concurrent change to the balance.
-- An expiring global-response crisis that failed to resolve no longer holds
-  every other crisis open; expired share listings return every seller's
-  shares even if one return fails; finished prospect surveys can no longer
+- Expired share listings return every seller's shares even if one return
+  fails; finished prospect surveys can no longer
   grant capacity twice; and one bad international organisation item no
   longer skips dues and expiries for the turn.
 - Event outcomes that add or remove campaign funds now reach the campaign's
@@ -37,3 +36,7 @@ areas: [engine]
 - Committee ballots stay closed during the new-member waiting period, union
   president ballots stay closed when your vote would be refused, and new
   members can run and vote in founding caucus chair races.
+- Shares held by non-player politicians are
+  paid out in hostile takeovers and privatization buyouts instead of
+  disappearing, and a failed write while collecting caucus tax no longer
+  discards the tax already taken from other members.
