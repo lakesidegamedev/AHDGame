@@ -8,8 +8,8 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type { CountryId } from "@/lib/constants/countries";
+import { MS_PER_TURN, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { NPP } from "@/lib/db/types/npp";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ElectionCandidate } from "@/lib/db/types/election";
@@ -22,14 +22,18 @@ import { closeCeoTenure, openCeoTenure } from "@/lib/corporations/ceoHistory";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { generateNPP } from "@/lib/npp/generator";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
+import { getElectedOfficialsCollection } from "@/lib/db/collections";
+import { createSystemNewsPost } from "@/lib/news";
 import {
   backfillBirthYear,
   isEligibleNppForMortality,
+  leaderRetirementChancePerTurn,
   nppAgeAtYear,
   nppDiesThisTurn,
   nppRetiresThisTurn,
   randomReplacementBirthYear,
 } from "./rules/mortality";
+import { NPP_TURNOVER_CONFIG as CONFIG } from "./turnoverData";
 
 export {
   annualDeathProbability,
@@ -37,6 +41,7 @@ export {
   backfillBirthYear,
   isEligibleNppForMortality,
   nppAgeAtYear,
+  leaderRetirementChancePerTurn,
   nppDiesThisTurn,
   nppRetiresThisTurn,
   randomReplacementBirthYear,
@@ -48,6 +53,54 @@ export interface NppMortalityResult {
   replacements: number;
   /** Office-holders without a birth year that were given one this pass. */
   birthYearsAssigned: number;
+  /** Heads of government and national leaders among those who left. */
+  leadersDeparted: number;
+}
+
+/**
+ * Ids of sitting heads of government and national leaders, mapped to the turns
+ * left in their term (null when no term end is on record). One read per source,
+ * not one per NPP.
+ */
+async function loadLeaderTerms(db: Db, now: Date): Promise<Map<string, number | null>> {
+  const [formations, leaderStates] = await Promise.all([
+    db
+      .collection<GovernmentFormation>("governmentFormations")
+      .find({ status: "formed" }, { projection: { pmNppId: 1, presidentNppId: 1, hosNppId: 1 } })
+      .toArray(),
+    db
+      .collection<CountryLeaderState>("countryLeaderStates")
+      .find({ leaderNppId: { $ne: null } }, { projection: { leaderNppId: 1 } })
+      .toArray(),
+  ]);
+  const leaderIds = new Map<string, ObjectId>();
+  for (const f of formations) {
+    for (const id of [f.pmNppId, f.presidentNppId, f.hosNppId]) {
+      if (id) leaderIds.set(id.toHexString(), id);
+    }
+  }
+  for (const state of leaderStates) {
+    if (state.leaderNppId) leaderIds.set(state.leaderNppId.toHexString(), state.leaderNppId);
+  }
+  const result = new Map<string, number | null>();
+  if (leaderIds.size === 0) return result;
+  for (const key of leaderIds.keys()) result.set(key, null);
+  const seats = await (
+    await getElectedOfficialsCollection(db)
+  )
+    .find(
+      { nppId: { $in: [...leaderIds.values()] }, termEnds: { $exists: true } },
+      { projection: { nppId: 1, termEnds: 1 } }
+    )
+    .toArray();
+  for (const seat of seats) {
+    if (!seat.nppId || !seat.termEnds) continue;
+    const key = seat.nppId.toHexString();
+    const turnsLeft = (seat.termEnds.getTime() - now.getTime()) / MS_PER_TURN;
+    const known = result.get(key);
+    if (known == null || turnsLeft < known) result.set(key, turnsLeft);
+  }
+  return result;
 }
 
 /** Most birth-year-less office-holders backfilled in one pass. */
@@ -76,7 +129,12 @@ async function backfillMissingBirthYears(db: Db, year: number, now: Date): Promi
     missing.map(({ _id }) => ({
       updateOne: {
         filter: { _id, birthYear: null },
-        update: { $set: { birthYear: backfillBirthYear(_id.toHexString(), year), updatedAt: now } },
+        update: {
+          $set: {
+            birthYear: backfillBirthYear(_id.toHexString(), year, CONFIG.backfill),
+            updatedAt: now,
+          },
+        },
       },
     })),
     { ordered: false }
@@ -103,7 +161,7 @@ async function mintRandomSuccessor(
     year,
   });
   replacement.sequentialId = await getNextSequentialId(db, "npp");
-  replacement.birthYear = randomReplacementBirthYear(year, rng);
+  replacement.birthYear = randomReplacementBirthYear(year, rng, CONFIG.replacement);
   return replacement;
 }
 
@@ -135,7 +193,13 @@ export async function processNppMortality(
     .findOne({ _id: "current" }, { projection: { nppTurnoverEnabled: 1 } });
   const turnover = flags?.nppTurnoverEnabled;
   if (turnover === false)
-    return { deaths: 0, retirements: 0, replacements: 0, birthYearsAssigned: 0 };
+    return {
+      deaths: 0,
+      retirements: 0,
+      replacements: 0,
+      birthYearsAssigned: 0,
+      leadersDeparted: 0,
+    };
   const birthYearsAssigned = turnover === true ? await backfillMissingBirthYears(db, year, now) : 0;
 
   const candidates = await db
@@ -148,6 +212,7 @@ export async function processNppMortality(
     })
     .project({
       _id: 1,
+      name: 1,
       countryId: 1,
       homeState: 1,
       party: 1,
@@ -190,6 +255,9 @@ export async function processNppMortality(
     return v;
   };
 
+  const leaderTerms = turnover === true ? await loadLeaderTerms(db, now) : new Map();
+  let leadersDeparted = 0;
+  const departedLeaders: Array<{ name: string; countryId: CountryId; died: boolean }> = [];
   let deaths = 0;
   let retirements = 0;
   let replacements = 0;
@@ -210,10 +278,29 @@ export async function processNppMortality(
     if (!(await isV5(countryId))) continue;
     const age = nppAgeAtYear(npp, year);
     if (age == null) continue;
-    // Leaders retire at any point; the succession below carries their posts to
-    // the successor, and party leadership contests run as usual afterwards.
-    const dies = nppDiesThisTurn(age, rng, TURNS_PER_YEAR);
-    if (!dies && !(turnover === true && nppRetiresThisTurn(age, rng, TURNS_PER_YEAR))) continue;
+    const dies = nppDiesThisTurn(age, rng, TURNS_PER_YEAR, CONFIG.death);
+    const leaderKey = npp._id.toHexString();
+    const isLeader = leaderTerms.has(leaderKey);
+    // Leaders retire between terms; death can come at any time and the
+    // succession below carries their posts to the successor.
+    const retires =
+      !dies &&
+      turnover === true &&
+      (isLeader
+        ? rng() <
+          leaderRetirementChancePerTurn(
+            age,
+            leaderTerms.get(leaderKey) ?? null,
+            TURNS_PER_YEAR,
+            CONFIG.retirement,
+            CONFIG.leaders
+          )
+        : nppRetiresThisTurn(age, rng, TURNS_PER_YEAR, CONFIG.retirement));
+    if (!dies && !retires) continue;
+    if (isLeader) {
+      leadersDeparted += 1;
+      departedLeaders.push({ name: npp.name, countryId, died: dies });
+    }
 
     const replacement = await mint(npp as NPP, year);
     replacement.createdAt = now;
@@ -287,7 +374,23 @@ export async function processNppMortality(
       );
   }
 
-  return { deaths, retirements, replacements, birthYearsAssigned };
+  // A failed post never undoes the departures it reports.
+  for (const leader of departedLeaders) {
+    const countryName = COUNTRY_CONFIGS[leader.countryId]?.name ?? leader.countryId;
+    try {
+      await createSystemNewsPost(
+        leader.died
+          ? `${leader.name}, a leading figure in ${countryName}, has died. Their party has named a successor.`
+          : `${leader.name} is stepping down from national leadership in ${countryName}. Their party has named a successor.`,
+        "election",
+        { title: leader.died ? `${leader.name} dies` : `${leader.name} retires`, db }
+      );
+    } catch (error) {
+      console.warn(`[Turn] NPP turnover: news post skipped`, error);
+    }
+  }
+
+  return { deaths, retirements, replacements, birthYearsAssigned, leadersDeparted };
 }
 
 /**
