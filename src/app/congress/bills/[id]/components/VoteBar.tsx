@@ -1,4 +1,4 @@
-import { useCountdown } from "@/hooks/useCountdown";
+import { useDeadlineLabel } from "./useDeadlineLabel";
 import { VoteShiftPreview } from "@/components/bills/VoteShiftPreview";
 import type { VoteShiftPreview as VoteShiftPreviewData } from "@/lib/legislature/voteShiftPreview";
 
@@ -8,6 +8,7 @@ export function VoteBar({
   votesAbstain,
   label,
   deadline,
+  deadlineTurn,
   myVote,
   canVote,
   onVote,
@@ -21,6 +22,8 @@ export function VoteBar({
   votesAbstain: number;
   label: string;
   deadline: string | null;
+  /** Stored closing turn; the engine closes the vote on this, not on the date. */
+  deadlineTurn?: number | null;
   myVote: "for" | "against" | "abstain" | null;
   canVote: boolean;
   onVote?: (v: "for" | "against" | "abstain") => void;
@@ -37,7 +40,7 @@ export function VoteBar({
   const pctFor = (votesFor / total) * 100;
   const pctAgn = (votesAgainst / total) * 100;
   const pctAbs = (votesAbstain / total) * 100;
-  const countdown = useCountdown(deadline);
+  const countdown = useDeadlineLabel(deadline, deadlineTurn);
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
@@ -45,9 +48,10 @@ export function VoteBar({
         <h3 className="text-sm font-semibold">{label}</h3>
         {deadline && (
           <span
-            className={`text-xs tabular-nums font-mono ${countdown === "Expired" ? "text-red-400" : "text-yellow-400"}`}
+            className={`text-xs tabular-nums font-mono ${countdown.expired ? "text-red-400" : countdown.pending ? "text-muted" : "text-yellow-400"}`}
+            title={deadlineTurn != null ? `Voting closes turn ${deadlineTurn}` : undefined}
           >
-            ⏱ {countdown}
+            ⏱ {countdown.text}
           </span>
         )}
       </div>
