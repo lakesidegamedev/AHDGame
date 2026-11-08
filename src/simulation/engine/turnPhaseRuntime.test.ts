@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
 import { recordRoundTrip, resetRoundTripProfiler } from "@/lib/observability/mongoRoundTrips";
-import { PHASE_TIMEOUT_MS, TURN_LOCK_HEARTBEAT_MS } from "@/lib/turn/processingLock";
+import {
+  PHASE_TIMEOUT_MS,
+  TURN_LOCK_HEARTBEAT_MS,
+  phaseTimeoutMs,
+} from "@/lib/turn/processingLock";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { getAnomalyScanCadencePredicate } from "@/simulation/phases/anomalyScanCadence";
@@ -40,6 +44,54 @@ async function flushAsyncStatusWrites() {
 }
 
 describe("createTurnPhaseRuntime", () => {
+  it("defers dependent work without marking it applied, so a retry can run it", async () => {
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const execute = vi.fn(async () => 42);
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+      blockedByFailure: (name) => name === "billLifecycle",
+    });
+    await expect(runtime.runPhase("billLifecycle", execute)).resolves.toBeNull();
+    expect(execute).not.toHaveBeenCalled();
+    expect(phaseStatuses.billLifecycle).toMatchObject({
+      status: "notReached",
+      reason: "upstreamAbort",
+    });
+    const { readCrashedTurnPhaseState } = await import("./turnPhaseResumeResults");
+    const resumed = readCrashedTurnPhaseState(phaseStatuses, {});
+    expect(resumed.completed.size).toBe(0);
+    expect(resumed.interrupted.size).toBe(0);
+    const retry = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+      resumed,
+    });
+    await expect(retry.runPhase("billLifecycle", execute)).resolves.toBe(42);
+    expect(execute).toHaveBeenCalledOnce();
+  });
+  it("retains completed independent work during another failed-market retry", async () => {
+    const execute = vi.fn();
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+      blockedByFailure: () => true,
+      resumed: { completed: new Set(["campaignTurn"]), interrupted: new Set(), results: {} },
+    });
+    await runtime.runPhase("campaignTurn", execute);
+    expect(execute).not.toHaveBeenCalled();
+    expect(phaseStatuses.campaignTurn).toMatchObject({
+      status: "skipped",
+      resumeCarried: "completed",
+    });
+  });
   it.each(["playerIncomeTax", "incomeTaxBases"])(
     "replays the idempotent %s phase on resume",
     async (name) => {
@@ -436,6 +488,8 @@ describe("phase timeout drain (#3385)", () => {
     const gate = deferred<typeof CORP_RESULT>();
     const result = runtime.runPhase("corporationTurn", () => gate.promise);
     await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    expect(phaseStatuses.corporationTurn.status).toBe("running");
+    await vi.advanceTimersByTimeAsync(phaseTimeoutMs("corporationTurn") - PHASE_TIMEOUT_MS);
     gate.resolve(CORP_RESULT);
     await expect(result).resolves.toEqual(CORP_RESULT);
     expect(phaseStatuses.corporationTurn.status).toBe("completed");
@@ -475,7 +529,7 @@ describe("phase timeout drain (#3385)", () => {
       throw new TurnMustStopError("corporationTurn", new Error("execution deadline"));
     });
     const rejected = expect(result).rejects.toBeInstanceOf(TurnMustStopError);
-    await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(phaseTimeoutMs("corporationTurn"));
     gate.resolve();
     await rejected;
     expect(phaseStatuses.corporationTurn).toMatchObject({ status: "failed", reason: "mustStop" });
@@ -641,7 +695,7 @@ describe("phase timeout drain (#3385)", () => {
       });
     await settle();
 
-    await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(phaseTimeoutMs("corporationTurn"));
     await settle();
     expect(failedWrites).toBe(1);
 

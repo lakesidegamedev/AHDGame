@@ -3,7 +3,10 @@ import type {
   GameHealthSeverity,
   GameHealthSummary,
   IntegrityIssue,
+  TurnPhaseTelemetryMap,
 } from "@/lib/db/types";
+import { gameHealthPhaseCounts } from "@/lib/observability/rules/gameHealthPhaseCounts";
+export { gameHealthPhaseCounts } from "@/lib/observability/rules/gameHealthPhaseCounts";
 
 export interface GameHealthRunSummary extends GameHealthSummary {
   completed: boolean;
@@ -22,6 +25,7 @@ interface GameHealthSnapshotParts {
     success?: boolean;
     warningCount?: number;
     errorCount?: number;
+    phaseStatuses?: TurnPhaseTelemetryMap;
   };
   dataIntegrity?: {
     issues?: Pick<IntegrityIssue, "severity">[];
@@ -69,14 +73,15 @@ export function summarizeGameHealth(input: {
 export function gameHealthRunSummary(snapshot: GameHealthSnapshotParts): GameHealthRunSummary {
   const turnSuccess = snapshot.turnProcessing?.success ?? true;
   const summary =
-    snapshot.health ??
-    summarizeGameHealth({
-      turnSuccess,
-      processingWarningCount: snapshot.turnProcessing?.warningCount ?? 0,
-      processingErrorCount: snapshot.turnProcessing?.errorCount ?? 0,
-      integrityChecked: snapshot.dataIntegrity != null,
-      integrityIssues: snapshot.dataIntegrity?.issues ?? [],
-    });
+    snapshot.health && !snapshot.turnProcessing?.phaseStatuses
+      ? snapshot.health
+      : summarizeGameHealth({
+          turnSuccess,
+          processingWarningCount: snapshot.turnProcessing?.warningCount ?? 0,
+          processingErrorCount: gameHealthPhaseCounts(snapshot).errors,
+          integrityChecked: snapshot.dataIntegrity != null,
+          integrityIssues: snapshot.dataIntegrity?.issues ?? [],
+        });
   return {
     ...summary,
     completed: true,

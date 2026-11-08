@@ -266,7 +266,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("flags a phase past 75% of the timeout as an error", async () => {
-      seedTurnLog({ corporationTurn: ranFor(200_000) }); // 83% of 240s
+      seedTurnLog({ corporationTurn: ranFor(250_000) }); // 83% of 300s
 
       const { GET } = await import("./route");
       const res = await GET(
@@ -285,7 +285,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("flags a phase between 50% and 75% as a warning", async () => {
-      seedTurnLog({ corporationTurn: ranFor(132_000) }); // 55% of 240s
+      seedTurnLog({ corporationTurn: ranFor(165_000) }); // 55% of 300s
 
       const { GET } = await import("./route");
       const res = await GET(

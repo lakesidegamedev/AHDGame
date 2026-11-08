@@ -469,7 +469,7 @@ export function settleProducerMarket(input: {
   // moves the goods, so the book reports executed cross-border units rather
   // than inferring them from a national balance.
   const deliveredAcross = new Map<string, number>();
-  const recordDelivery = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
+  const recordInternalValue = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
     if (
       order.internalAccountingSiteId &&
       offer.accountId === order.accountId &&
@@ -483,20 +483,34 @@ export function settleProducerMarket(input: {
       seller.internalValue = (seller.internalValue ?? 0) + amount;
       buyer.internalCost = (buyer.internalCost ?? 0) + amount;
     }
+  };
+  const recordCrossCountry = (
+    seller: string | undefined,
+    order: PurchaseOrder,
+    units: number
+  ): void => {
     if (!tracked || !(units > 0)) return;
-    const seller = offer.countryId;
     const buyer = order.countryId;
     if (!seller || !buyer || seller === buyer) return;
     const key = JSON.stringify([seller, buyer, order.commodity]);
     deliveredAcross.set(key, (deliveredAcross.get(key) ?? 0) + units);
   };
+  const recordDelivery = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
+    recordInternalValue(offer, order, units);
+    recordCrossCountry(offer.countryId, order, units);
+  };
+  const sellerCountries = new WeakMap<readonly ProducerOffer[], string | null>();
   const sellerCountryOf = (rows: readonly ProducerOffer[]): string | undefined => {
+    if (sellerCountries.has(rows)) return sellerCountries.get(rows) ?? undefined;
     let country: string | undefined;
     for (const offer of rows) {
-      if (!offer.countryId) return undefined;
+      if (!offer.countryId || (country !== undefined && country !== offer.countryId)) {
+        sellerCountries.set(rows, null);
+        return undefined;
+      }
       if (country === undefined) country = offer.countryId;
-      else if (country !== offer.countryId) return undefined;
     }
+    sellerCountries.set(rows, country ?? null);
     return country;
   };
   const fillsWithCountries = (
@@ -925,12 +939,20 @@ export function settleProducerMarket(input: {
    * returns the amount; the caller tracks its own target and order budget.
    * Routed allocations name an exact supplier subset instead of the whole pool.
    */
+  type RoutedPool = {
+    stock: ProducerSupplyPool;
+    total: number;
+    countries: { offer: ProducerOffer; units: number }[];
+    internal: Map<string, { offer: ProducerOffer; units: number }[]>;
+  };
   const buyFromPool = (
     order: PurchaseOrder,
     price: number,
     pool: ProducerSupplyPool,
     take: number,
-    suppliers?: readonly ProducerOffer[]
+    suppliers?: readonly ProducerOffer[],
+    supplierTotal?: number,
+    routedPool?: RoutedPool
   ): number => {
     input.checkBudget?.();
     const key = bookKey(order.commodity, order.book);
@@ -938,12 +960,19 @@ export function settleProducerMarket(input: {
     if (!Number.isFinite(amount)) throw new Error("Non-finite trade value");
     const poolOffers = suppliers ?? offersByPool.get(pool) ?? [];
     const poolTotal = suppliers
-      ? suppliers.reduce((n, offer) => n + remaining.get(offer.id), 0)
+      ? (supplierTotal ?? suppliers.reduce((n, offer) => n + remaining.get(offer.id), 0))
       : pool.total;
-    tradeCount += suppliers
-      ? suppliers.filter((offer) => remaining.get(offer.id) > 0).length
-      : pool.activeCount;
-    if (tracked) {
+    if (routedPool) {
+      tradeCount += routedPool.stock.activeCount;
+      if (tracked) {
+        for (const row of routedPool.countries)
+          recordCrossCountry(row.offer.countryId, order, take * (row.units / routedPool.total));
+        for (const row of routedPool.internal.get(order.accountId) ?? [])
+          recordInternalValue(row.offer, order, take * (row.units / routedPool.total));
+      }
+      routedPool.stock.take(take);
+    } else if (!suppliers) tradeCount += pool.activeCount;
+    if (tracked && !suppliers && !routedPool) {
       // `take` draws pro rata on remaining units, so each offer's share of
       // this order is its remaining units over the pool total.
       for (const offer of poolOffers) {
@@ -951,9 +980,12 @@ export function settleProducerMarket(input: {
         if (available > 0) recordDelivery(offer, order, take * (available / poolTotal));
       }
     }
-    if (suppliers) {
+    if (suppliers && !routedPool) {
       for (const supplier of suppliers) {
         const available = remaining.get(supplier.id);
+        if (available > 0) tradeCount++;
+        if (tracked && available > 0)
+          recordDelivery(supplier, order, take * (available / poolTotal));
         const units = Math.min(available, take * (available / poolTotal));
         if (!(units > 0)) continue;
         remaining.set(supplier.id, Math.max(0, available - units));
@@ -963,7 +995,7 @@ export function settleProducerMarket(input: {
         seller.revenue += units * price;
         cash.set(supplier.accountId, credited(supplier.accountId, units * price));
       }
-    } else pool.take(take);
+    } else if (!routedPool) pool.take(take);
     fills.push(
       fillsWithCountries(
         order,
@@ -1104,8 +1136,41 @@ export function settleProducerMarket(input: {
         }
       }
       const levels = routed ? [...cohorts.values()] : [{ suppliers: undefined, live: members }];
+      // Within one price/reachability cohort every purchase draws the same
+      // pro-rata seller mix. Use the existing lazy stock primitive instead of
+      // walking every seller for every buyer. Flush once before another price
+      // or group can observe this stock. Country totals share the same mix;
+      // same-owner management values retain their individual site legs.
+      const routedPools = new Map<readonly ProducerOffer[] | undefined, RoutedPool>();
+      for (const { suppliers } of levels) {
+        if (!suppliers && !tracked) continue;
+        const sellers = suppliers ?? offersByPool.get(pool) ?? [];
+        const stock = suppliers ? new ProducerSupplyPool() : pool;
+        const countries = new Map<string | undefined, { offer: ProducerOffer; units: number }>();
+        const internal = new Map<string, { offer: ProducerOffer; units: number }[]>();
+        for (const offer of sellers) {
+          const units = remaining.get(offer.id);
+          if (suppliers) stock.add(offer.id, units);
+          if (tracked) {
+            const row = countries.get(offer.countryId) ?? { offer, units: 0 };
+            row.units += units;
+            countries.set(offer.countryId, row);
+          }
+          if (tracked && units > 0 && (offer.internalUnitPrice ?? 0) > 0) {
+            const owned = internal.get(offer.accountId) ?? [];
+            owned.push({ offer, units });
+            internal.set(offer.accountId, owned);
+          }
+        }
+        routedPools.set(suppliers, {
+          stock,
+          total: stock.total,
+          countries: [...countries.values()],
+          internal,
+        });
+      }
       const supplyOf = (suppliers: readonly ProducerOffer[] | undefined) =>
-        suppliers ? suppliers.reduce((n, o) => n + remaining.get(o.id), 0) : pool.total;
+        suppliers ? routedPools.get(suppliers)!.stock.total : pool.total;
       for (let round = 0; round <= members.length + cohorts.size; round++) {
         const proposals = levels.flatMap(({ suppliers, live: candidates }) => {
           const supply = supplyOf(suppliers);
@@ -1146,7 +1211,15 @@ export function settleProducerMarket(input: {
           const take = Math.min(shares[i], capOf(m), supply);
           if (take < units - 1e-9 * Math.max(1, units)) short = true;
           if (!(take > 0)) return;
-          const amount = buyFromPool(m.order, price, pool, take, suppliers);
+          const amount = buyFromPool(
+            m.order,
+            price,
+            pool,
+            take,
+            suppliers,
+            supply,
+            routedPools.get(suppliers)
+          );
           moved += take;
           m.wanted = Math.max(0, m.wanted - take);
           if (m.quantityGroup)
@@ -1154,6 +1227,23 @@ export function settleProducerMarket(input: {
           m.orderBudget = Math.max(0, m.orderBudget - amount);
         });
         if (!short || !(moved > 0)) break;
+      }
+      for (const [suppliers, lazy] of routedPools) {
+        if (!suppliers) continue; // The ordinary pool is flushed once at market close.
+        for (const offer of suppliers) {
+          const units = lazy.stock.pooledSold(offer.id);
+          if (!(units > 0)) continue;
+          remaining.set(
+            offer.id,
+            Math.min(remaining.get(offer.id), lazy.stock.remaining(offer.id))
+          );
+          const seller = offerResults.get(offer.id)!;
+          const amount = units * price;
+          seller.soldUnits += units;
+          seller.deliveredUnits += units;
+          seller.revenue += amount;
+          cash.set(offer.accountId, credited(offer.accountId, amount));
+        }
       }
     }
   };

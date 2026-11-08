@@ -12,6 +12,7 @@ import {
   ReferenceDot,
 } from "recharts";
 import type { GameHealthSnapshot } from "@/lib/db/types";
+import { gameHealthPhaseCounts } from "@/lib/observability/rules/gameHealthPhaseCounts";
 
 interface Props {
   snapshots: GameHealthSnapshot[];
@@ -28,7 +29,7 @@ export const GameHealthTrendChart = memo(function GameHealthTrendChart({ snapsho
     turn: s.turn,
     duration: s.turnProcessing.durationMs,
     warnings: s.turnProcessing.warningCount,
-    errors: s.turnProcessing.errorCount,
+    errors: gameHealthPhaseCounts(s).errors,
   }));
 
   const warningDots = data.filter((d) => d.warnings > 0);

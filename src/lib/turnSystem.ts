@@ -1,4 +1,8 @@
 import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
+import {
+  executeTurnAdapters,
+  isIndependentPoliticalPhase,
+} from "@/simulation/engine/independentTurnRecovery";
 import { rewindHalfTick } from "@/lib/turn/subhour/rewindHalfTick";
 import {
   withServerTurnAnalytics,
@@ -67,7 +71,10 @@ import {
 import { buildTurnExecutionContext } from "@/simulation/engine/turnExecutionContext";
 import { selectEngineForAttempt, type TurnEngine } from "@/simulation/engine/turnEngine";
 import { recoverDemographicFlowsBeforeContext } from "@/lib/demographics/recoverFlows";
-import { getTurnPhaseRegistry } from "@/simulation/phases/turnPhaseRegistry";
+import {
+  getTurnPhaseRegistry,
+  independentCountryElectionPhases,
+} from "@/simulation/phases/turnPhaseRegistry";
 import { runWithLedgerTurn } from "@/lib/ledger/ledgerTurn";
 import { getSimTurnPhasePredicate } from "@/simulation/phases/simTurnProfiles";
 import { getEconomyPausePredicate } from "@/lib/turn/economyPause";
@@ -644,33 +651,42 @@ async function processTurnImpl(
       getSingleplayerPhasePredicate(localSingleplayer),
       getAnomalyScanCadencePredicate(gameState.currentTurn)
     );
-    const runtime = createTurnPhaseRuntime({
-      db,
-      phaseStatuses,
-      warnings,
-      currentPhaseRef,
-      // Empty on every normal turn. On a resume, the phases the dead holder already
-      // applied, which `runPhase` skips rather than repeating.
-      alreadyApplied: resumedFromCrash?.appliedPhases,
-      resumed: resumedFromCrash?.phaseState,
-      // SIM-ONLY: sandbox worldsim can set gameConfig.simTurnPhaseMode to skip
-      // the economy phases. Undefined in prod (config?.simTurnPhaseMode absent) →
-      // full turn, unchanged.
-      // A live world can schedule the same econ/political boundary for a timed
-      // window with gameConfig.economyPauseUntilTurn (economyPause.ts): economy
-      // phases are skipped strictly below that turn and the turn itself resumes
-      // them. Absent or finished → undefined, no filtering.
-      // Singleplayer skips the anti-abuse scans: one account with cheat
-      // commands available by design has no one to defraud, and the scans were
-      // ~18% of every document a turn deserializes. Composed with the sim
-      // profile predicate so a headless sim run keeps its own filtering.
-      // In a shared world the same scans run on a cadence instead of every
-      // turn; their rolling windows make that lossless.
-      shouldRunPhase: phasePredicate,
-      // Audit traceId convention "turn:<n>:<phase>" (forensics plan §3.1, T2.7).
-      turn: nextTurnNumber,
-      onPhaseCompleted: options.onPhaseCompleted,
-    });
+    const independentElectionPhases = independentCountryElectionPhases();
+    const createRuntime = (independent = false) =>
+      createTurnPhaseRuntime({
+        db,
+        phaseStatuses,
+        warnings,
+        currentPhaseRef,
+        // Empty on every normal turn. On a resume, the phases the dead holder already
+        // applied, which `runPhase` skips rather than repeating.
+        alreadyApplied: resumedFromCrash?.appliedPhases,
+        resumed: resumedFromCrash?.phaseState,
+        // SIM-ONLY: sandbox worldsim can set gameConfig.simTurnPhaseMode to skip
+        // the economy phases. Undefined in prod (config?.simTurnPhaseMode absent) →
+        // full turn, unchanged.
+        // A live world can schedule the same econ/political boundary for a timed
+        // window with gameConfig.economyPauseUntilTurn (economyPause.ts): economy
+        // phases are skipped strictly below that turn and the turn itself resumes
+        // them. Absent or finished → undefined, no filtering.
+        // Singleplayer skips the anti-abuse scans: one account with cheat
+        // commands available by design has no one to defraud, and the scans were
+        // ~18% of every document a turn deserializes. Composed with the sim
+        // profile predicate so a headless sim run keeps its own filtering.
+        // In a shared world the same scans run on a cadence instead of every
+        // turn; their rolling windows make that lossless.
+        shouldRunPhase: phasePredicate,
+        ...(independent
+          ? {
+              blockedByFailure: (name: string) =>
+                !isIndependentPoliticalPhase(name) && !independentElectionPhases.has(name),
+            }
+          : {}),
+        // Audit traceId convention "turn:<n>:<phase>" (forensics plan §3.1, T2.7).
+        turn: nextTurnNumber,
+        onPhaseCompleted: options.onPhaseCompleted,
+      });
+    const runtime = createRuntime();
     phaseRuntimeForFailure = runtime;
 
     activeTurn = context.newTurn;
@@ -686,9 +702,13 @@ async function processTurnImpl(
 
     // Ledger entries emitted by the phases land in this turn without a clock read.
     await runWithLedgerTurn(context.newTurn, async () => {
-      for (const adapter of getTurnPhaseRegistry()) {
-        await adapter.execute(context, runtime);
-      }
+      await executeTurnAdapters({
+        adapters: getTurnPhaseRegistry(),
+        context,
+        runtime,
+        createIndependentRuntime: () => createRuntime(true),
+        currentPhaseRef,
+      });
     });
     // A timed-out phase can still be writing (#3385). Nothing after this line
     // may run, and the lock may not be released, until it has stopped.
