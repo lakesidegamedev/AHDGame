@@ -55,8 +55,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       .findOne({ _id: req.userId }, { projection: { username: 1 } });
 
     const now = new Date();
-    await requestsCol.updateOne(
-      { _id: req._id },
+    const claim = await requestsCol.updateOne(
+      { _id: req._id, status: "pending" },
       {
         $set: {
           status: "rejected",
@@ -66,6 +66,9 @@ export async function POST(request: Request, { params }: RouteContext) {
         },
       }
     );
+    if (claim.modifiedCount === 0) {
+      return errorResponse(409, "Request has already been decided.");
+    }
 
     const summary =
       req.kind === "wall-name"

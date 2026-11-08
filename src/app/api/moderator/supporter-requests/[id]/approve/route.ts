@@ -47,22 +47,18 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     const now = new Date();
     const moderatorId = new ObjectId(moderator.userId);
-    let summary: string;
 
+    let renameTarget: NPP | null = null;
     if (req.kind === "wall-name") {
       if (!req.proposedName) {
         return errorResponse(400, "Request is missing a proposed name.");
       }
-      await db
-        .collection<User>("users")
-        .updateOne({ _id: req.userId }, { $set: { supporterWallName: req.proposedName } });
-      summary = `"${req.proposedName}"`;
     } else {
       if (!req.nppId || !req.proposedNppName) {
         return errorResponse(400, "Request is missing rename details.");
       }
-      const npp = await db.collection<NPP>("npps").findOne({ _id: req.nppId });
-      if (!npp || npp.retiredAt) {
+      renameTarget = await db.collection<NPP>("npps").findOne({ _id: req.nppId });
+      if (!renameTarget || renameTarget.retiredAt) {
         return errorResponse(409, "The target politician no longer exists or is retired.");
       }
       // Re-check uniqueness at decision time to close the submit/approve race.
@@ -70,7 +66,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       const taken = await db
         .collection<NPP>("npps")
         .findOne(
-          { _id: { $ne: npp._id }, countryId: npp.countryId, name: exact },
+          { _id: { $ne: renameTarget._id }, countryId: renameTarget.countryId, name: exact },
           { projection: { _id: 1 } }
         );
       if (taken || (await nameCollidesWithUser(db, req.proposedNppName, req.userId))) {
@@ -79,13 +75,32 @@ export async function POST(_request: Request, { params }: RouteContext) {
           "The proposed name is no longer unique. Reject the request instead."
         );
       }
+    }
 
+    // The decision is claimed before any effect writes: two moderators on the
+    // same queue must not both apply a rename or consume the rename credit.
+    const claim = await requestsCol.updateOne(
+      { _id: req._id, status: "pending" },
+      { $set: { status: "approved", decidedAt: now, decidedBy: moderatorId } }
+    );
+    if (claim.modifiedCount === 0) {
+      return errorResponse(409, "Request has already been decided.");
+    }
+
+    let summary: string;
+    if (req.kind === "wall-name") {
+      await db
+        .collection<User>("users")
+        .updateOne({ _id: req.userId }, { $set: { supporterWallName: req.proposedName } });
+      summary = `"${req.proposedName}"`;
+    } else {
+      const npp = renameTarget!;
       await db
         .collection<NPP>("npps")
         .updateOne({ _id: npp._id }, { $set: { name: req.proposedNppName, updatedAt: now } });
       // Keep denormalized ballot / office labels in lockstep with npps.name
       // (ticket #1037: polls kept the pre-rename name after supporter rename).
-      await syncDenormalizedNppName(db, npp._id, req.proposedNppName);
+      await syncDenormalizedNppName(db, npp._id, req.proposedNppName!);
       await db
         .collection<User>("users")
         .updateOne({ _id: req.userId }, { $set: { nppRenameUsedAt: now } });
@@ -96,11 +111,6 @@ export async function POST(_request: Request, { params }: RouteContext) {
       );
       summary = `"${npp.name}" is now "${req.proposedNppName}"`;
     }
-
-    await requestsCol.updateOne(
-      { _id: req._id },
-      { $set: { status: "approved", decidedAt: now, decidedBy: moderatorId } }
-    );
 
     await createModAuditLog({
       moderatorId: moderator.userId,

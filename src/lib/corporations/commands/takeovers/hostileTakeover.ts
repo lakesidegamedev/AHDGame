@@ -415,6 +415,15 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     // read-then-write cannot clobber a balance write and lose money.
     return await withCorpLock(parent._id, async () => {
       const now = new Date();
+      // The target was loaded before the lock; a retried request reaches this
+      // point after the first takeover already deleted it, and every payout
+      // below would run a second time off the stale snapshot.
+      const freshTarget = await db
+        .collection<Corporation>("corporations")
+        .findOne({ _id: target._id });
+      if (!freshTarget) {
+        return errorResponse(409, "The target corporation no longer exists.");
+      }
       const targetSectors = await db
         .collection<CorporateSector>("corporateSectors")
         .find({ corporationId: target._id })
