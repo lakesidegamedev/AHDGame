@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createDetectorProvider, DETECTOR_SOURCES, DETECTOR_STREAK_COLLECTION } from "./detectors";
 
 interface Fake {
-  enabled: boolean;
+  resolved?: { endTurn: number; countryIds: string[]; regionIds: string[] }[];
   streaks: { _id: string; detectorId: string; key: string; count: number; lastTurn: number }[];
   unemployment: Record<string, number>;
 }
@@ -13,8 +13,6 @@ function makeDb(fake: Fake) {
   const db = {
     collection(name: string) {
       return {
-        findOne: async () =>
-          name === "gameConfig" ? { crisisV2EmergentEnabled: fake.enabled } : null,
         find() {
           if (name === "states") {
             return cursor([
@@ -31,6 +29,7 @@ function makeDb(fake: Fake) {
             );
           }
           if (name === DETECTOR_STREAK_COLLECTION) return cursor(fake.streaks);
+          if (name === "crises") return cursor(fake.resolved ?? []);
           return cursor([]);
         },
         bulkWrite: name === DETECTOR_STREAK_COLLECTION ? bulkWrite : vi.fn(),
@@ -44,19 +43,8 @@ const regionalJobs = DETECTOR_SOURCES.find((s) => s.spec.id === "detector-region
 const provider = createDetectorProvider(regionalJobs);
 
 describe("regional jobs detector", () => {
-  it("proposes nothing while emergent crises are switched off", async () => {
-    const { db, bulkWrite } = makeDb({
-      enabled: false,
-      streaks: [],
-      unemployment: { tx: 15 },
-    });
-    expect(await provider.load({ db, turn: 20 })).toEqual([]);
-    expect(bulkWrite).not.toHaveBeenCalled();
-  });
-
   it("does not open on the first turn over the threshold, but starts the streak", async () => {
     const { db, bulkWrite } = makeDb({
-      enabled: true,
       streaks: [],
       unemployment: { tx: 15, oh: 5 },
     });
@@ -67,7 +55,6 @@ describe("regional jobs detector", () => {
 
   it("opens once the run is long enough and names the region and its country", async () => {
     const { db } = makeDb({
-      enabled: true,
       streaks: [
         {
           _id: "detector-regional-jobs|tx",
@@ -89,9 +76,33 @@ describe("regional jobs detector", () => {
     });
   });
 
+  it("does not reopen in a region where one of the same kind just ended", async () => {
+    const streaks = [
+      {
+        _id: "detector-regional-jobs|tx",
+        detectorId: "detector-regional-jobs",
+        key: "tx",
+        count: 3,
+        lastTurn: 19,
+      },
+    ];
+    const cooling = makeDb({
+      streaks,
+      unemployment: { tx: 15 },
+      resolved: [{ endTurn: 10, countryIds: ["US"], regionIds: ["tx"] }],
+    });
+    expect(await provider.load({ db: cooling.db, turn: 20 })).toEqual([]);
+
+    const elsewhere = makeDb({
+      streaks,
+      unemployment: { tx: 15 },
+      resolved: [{ endTurn: 10, countryIds: ["US"], regionIds: ["oh"] }],
+    });
+    expect(await provider.load({ db: elsewhere.db, turn: 20 })).toHaveLength(1);
+  });
+
   it("drops a streak when the region recovers", async () => {
     const { db, bulkWrite } = makeDb({
-      enabled: true,
       streaks: [
         {
           _id: "detector-regional-jobs|tx",

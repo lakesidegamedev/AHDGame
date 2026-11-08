@@ -10,8 +10,6 @@ export interface GameConfig {
    * warning on the turn log. See `src/simulation/engine/turnEngine.ts`.
    */
   turnEngineVersion?: "v1" | "v2";
-  /** Lets Crisis v2 detectors open crises from sim state; absent remains off. */
-  crisisV2EmergentEnabled?: boolean;
   /** Enables product-project reads and output adapters; absent remains off. */
   productLinesV2Enabled?: boolean;
   /** Enables media product project reads and bounded quality/brand overlays; absent remains off. */

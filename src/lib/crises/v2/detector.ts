@@ -71,3 +71,31 @@ export function stepDetector(
   const cleared = [...previous.keys()].filter((key) => !streaks.has(key));
   return { streaks, cleared, proposals };
 }
+
+/** A crisis of some definition that has already ended, as far as cooldown cares. */
+export interface ResolvedCrisisRecord {
+  endTurn: number;
+  countryIds: readonly string[];
+  regionIds: readonly string[];
+}
+
+/**
+ * True while a detector must not reopen a crisis because one of the same
+ * definition ended in the same place within the cooldown. Place is the regions
+ * when the proposal names any, the countries otherwise.
+ */
+export function reopenCooldownActive(
+  proposal: Pick<DetectorReading, "countryIds" | "regionIds">,
+  resolved: readonly ResolvedCrisisRecord[],
+  cooldownTurns: number,
+  turn: number
+): boolean {
+  if (cooldownTurns <= 0) return false;
+  const byRegion = proposal.regionIds.length > 0;
+  const place = new Set(byRegion ? proposal.regionIds : proposal.countryIds);
+  return resolved.some((record) => {
+    if (turn - record.endTurn >= cooldownTurns) return false;
+    const where = byRegion ? record.regionIds : record.countryIds;
+    return where.some((id) => place.has(id));
+  });
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { stepDetector, type DetectorReading, type DetectorSpec } from "./detector";
+import {
+  reopenCooldownActive,
+  stepDetector,
+  type DetectorReading,
+  type DetectorSpec,
+} from "./detector";
 import { advanceStreak, type StreakRecord } from "./streak";
 
 const spec: DetectorSpec = {
@@ -66,5 +71,31 @@ describe("stepDetector", () => {
   it("tracks each region on its own", () => {
     const step = stepDetector(spec, [reading(12, "a"), reading(5, "b")], new Map(), 1);
     expect([...step.streaks.keys()]).toEqual(["a"]);
+  });
+});
+
+describe("reopenCooldownActive", () => {
+  const resolved = [{ endTurn: 100, countryIds: ["US"], regionIds: ["TX"] }];
+
+  it("blocks a reopening in the same region inside the cooldown", () => {
+    const proposal = { countryIds: ["US"], regionIds: ["TX"] };
+    expect(reopenCooldownActive(proposal, resolved, 24, 110)).toBe(true);
+    expect(reopenCooldownActive(proposal, resolved, 24, 124)).toBe(false);
+  });
+
+  it("lets the same detector open in a different region", () => {
+    expect(reopenCooldownActive({ countryIds: ["US"], regionIds: ["OH"] }, resolved, 24, 110)).toBe(
+      false
+    );
+  });
+
+  it("matches national crises by country and honours a zero cooldown", () => {
+    const national = [{ endTurn: 100, countryIds: ["US"], regionIds: [] }];
+    const proposal = { countryIds: ["US"], regionIds: [] };
+    expect(reopenCooldownActive(proposal, national, 24, 101)).toBe(true);
+    expect(reopenCooldownActive({ countryIds: ["UK"], regionIds: [] }, national, 24, 101)).toBe(
+      false
+    );
+    expect(reopenCooldownActive(proposal, national, 0, 101)).toBe(false);
   });
 });

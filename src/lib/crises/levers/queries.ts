@@ -5,7 +5,9 @@ import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
 import { getGameState } from "@/lib/gameState";
 import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
+import { leverActionCost } from "@/lib/crises/v2/leverActions";
 import { leverBlock } from "./availability";
+import { governsAffectedState } from "./jurisdiction";
 import { resolveLeverRoles, type LeverActor } from "./roles";
 
 export interface AvailableLever {
@@ -15,6 +17,8 @@ export interface AvailableLever {
   mitigation: number;
   cost: LeverCost;
   cooldownTurns: number;
+  /** Action points the holder spends from their per-turn budget. */
+  actionCost: number;
   /** True when pulling it raises an emergency bill rather than acting directly. */
   viaBill: boolean;
 }
@@ -127,6 +131,7 @@ export async function getAvailableLevers(
           ? crisisCountries === null || crisisCountries.some((id) => corpCountries.has(id))
           : inCountry(actor.countryId);
       if (!inScope) continue;
+      if (lever.role === "stateGovernor" && !governsAffectedState(actor, crisis)) continue;
       const block = leverBlock(
         crisis.v2,
         lever,
@@ -142,6 +147,7 @@ export async function getAvailableLevers(
         mitigation: lever.mitigation,
         cost: lever.cost,
         cooldownTurns: lever.cooldownTurns ?? 0,
+        actionCost: leverActionCost(lever.cost.politicalCapital),
         viaBill: lever.role === "legislature",
       });
     }

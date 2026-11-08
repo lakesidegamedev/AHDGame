@@ -45,7 +45,10 @@ function makeDb(data: FakeData) {
         find(filter?: unknown) {
           calls.collectionsRead.push(name);
           if (name === "crisisLeverUses") calls.leverFilter = filter;
-          if (name === "crises") return cursor(data.crises);
+          if (name === "crises") {
+            const asked = (filter ?? {}) as { status?: string; scarsHealUntil?: unknown };
+            return cursor(asked.status === "resolved" || asked.scarsHealUntil ? [] : data.crises);
+          }
           if (name === "states") return cursor(data.states);
           if (name === "macroMetrics") return cursor(data.macroMetrics);
           if (name === "crisisLeverUses") return cursor(data.leverUses);
@@ -106,11 +109,12 @@ beforeEach(() => {
 });
 
 describe("processCrisisV2Turn", () => {
-  it("is a no-op beyond one indexed read when no crisis carries a v2 instance", async () => {
+  it("does no per-crisis work when no crisis carries a v2 instance", async () => {
     const { db, calls } = makeDb(baseData());
     const result = await processCrisisV2Turn(db, 10);
     expect(result).toEqual({ processed: 0, failed: 0, resolved: 0, opened: 0 });
-    expect(calls.collectionsRead).toEqual(["crises"]);
+    expect(calls.collectionsRead[0]).toBe("crises");
+    expect(calls.collectionsRead).not.toContain("crisisLeverUses");
     expect(calls.bulkWrite).not.toHaveBeenCalled();
   });
 
@@ -235,10 +239,9 @@ describe("turn claim", () => {
     });
     await processCrisisV2Turn(db, 10);
     expect(order).toEqual(["claim", "effects"]);
-    expect(calls.claim).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "active" }),
-      { $set: { "v2.lastEvaluatedTurn": 10 } }
-    );
+    expect(calls.claim).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }), {
+      $set: { "v2.lastEvaluatedTurn": 10 },
+    });
     expect(writtenInstances(calls)[0].lastEvaluatedTurn).toBe(10);
   });
 

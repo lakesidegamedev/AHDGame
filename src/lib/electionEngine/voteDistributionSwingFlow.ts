@@ -184,6 +184,7 @@ function appealWeight(
   // Off-cycle opposition counterweight. Eligible parties receive a fixed,
   // modest nominal-share bump; governing and coalition parties stay neutral.
   const midtermOppositionMod = options?.midtermOppositionModifierByParty?.get(ec.party) ?? 1;
+  const crisisBlameMod = options?.crisisBlameModifierByParty?.get(ec.party) ?? 1;
 
   // Reg as a baseline nominal-share tilt (1.0–1.3×) — entrenched registration
   // helps a party hold its vote even without active persuasion pressure, on top
@@ -251,6 +252,7 @@ function appealWeight(
       presMod *
       democraticHealthMult *
       midtermOppositionMod *
+      crisisBlameMod *
       regResist *
       regBaseline *
       stateOrgMult *
@@ -273,6 +275,7 @@ function appealWeight(
       presMod *
       democraticHealthMult *
       midtermOppositionMod *
+      crisisBlameMod *
       regResist *
       regBaseline *
       stateOrgMult *

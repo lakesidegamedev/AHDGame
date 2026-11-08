@@ -1,9 +1,11 @@
-import type { Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { OfficeHolders } from "@/lib/crises/v2/accountability";
+import type { HolderFootprint } from "@/lib/crises/v2/exposure";
 import type { CrisisRole } from "@/lib/crises/v2/types";
 import type { Character, Corporation } from "@/lib/db/types";
 import type { CentralBank } from "@/lib/db/types/centralBank";
+import type { CorporateSector } from "@/lib/db/types/corporationSector";
 import type { CongressLeader } from "@/lib/db/types/leadership";
 import {
   listCrisisHolderProviders,
@@ -79,7 +81,8 @@ async function loadFormedGovernments(db: Db, countryIds: string[], draft: Draft)
       { projection: { pmCharacterId: 1 } }
     )
     .toArray();
-  for (const formation of formations) add(draft, formation._id, "headOfState", formation.pmCharacterId);
+  for (const formation of formations)
+    add(draft, formation._id, "headOfState", formation.pmCharacterId);
 }
 
 async function loadCentralBankChairs(db: Db, countryIds: string[], draft: Draft): Promise<void> {
@@ -167,6 +170,68 @@ async function loadCorporateCeos(db: Db, countryIds: string[], draft: Draft): Pr
   }
 }
 
+function toObjectIds(ids: readonly string[]): ObjectId[] {
+  return ids.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
+}
+
+/** The state each governor runs and the states and sectors each CEO operates in. */
+export async function loadHolderFootprints(
+  db: Db,
+  holderIds: readonly string[]
+): Promise<Map<string, HolderFootprint>> {
+  const footprints = new Map<string, HolderFootprint>();
+  const ids = toObjectIds(holderIds);
+  if (ids.length === 0) return footprints;
+
+  const [governors, corporations] = await Promise.all([
+    db
+      .collection<Character>("characters")
+      .find(
+        { _id: { $in: ids }, "currentOffice.type": { $in: [...GOVERNOR_OFFICES] } },
+        { projection: { currentOffice: 1 } }
+      )
+      .toArray(),
+    db
+      .collection<Corporation>("corporations")
+      .find(
+        { ceoId: { $in: ids }, ceoType: { $nin: ["npp", "imperial"] } },
+        { projection: { ceoId: 1 } }
+      )
+      .toArray(),
+  ]);
+  for (const governor of governors) {
+    const office = governor.currentOffice as { state?: string } | null;
+    if (office?.state) footprints.set(governor._id.toString(), { stateId: office.state });
+  }
+
+  const ceoByCorporation = new Map<string, string>();
+  for (const corporation of corporations) {
+    if (corporation.ceoId)
+      ceoByCorporation.set(corporation._id.toString(), corporation.ceoId.toString());
+  }
+  if (ceoByCorporation.size === 0) return footprints;
+  const sectors = await db
+    .collection<CorporateSector>("corporateSectors")
+    .find(
+      { corporationId: { $in: corporations.map((corporation) => corporation._id) } },
+      { projection: { corporationId: 1, stateId: 1, sectorType: 1 } }
+    )
+    .toArray();
+  for (const sector of sectors) {
+    const ceo = ceoByCorporation.get(sector.corporationId.toString());
+    if (!ceo) continue;
+    const footprint = footprints.get(ceo) ?? {};
+    footprints.set(ceo, {
+      ...footprint,
+      holdings: [
+        ...(footprint.holdings ?? []),
+        { stateId: sector.stateId, sectorType: sector.sectorType },
+      ],
+    });
+  }
+  return footprints;
+}
+
 /**
  * Office holders for every crisis role, per country, in a handful of batched
  * reads. A role with no sitting player holder is simply absent.
@@ -188,6 +253,7 @@ export const officeHolderProvider: CrisisHolderProvider = {
     ]);
     return finish(draft);
   },
+  loadFootprints: ({ db, holderIds }) => loadHolderFootprints(db, holderIds),
 };
 
 /** Registers the built-in holder provider if missing. Safe to call every turn. */

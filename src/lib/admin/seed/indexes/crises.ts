@@ -12,6 +12,7 @@ import { ensureIndex } from "./helpers";
  *   - `crisisLeverUses` — pending lever uses per crisis, read each turn, and the unique
  *     claim that makes a double pull impossible.
  *   - `bills_crisis_emergency` — emergency bills awaiting their outcome.
+ *   - `crises_scars_healing` — the scar pass reads crises whose scars are still healing.
  *   - `crisisDetectorStreaks` — each detector reads its own streaks every turn.
  */
 export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
@@ -41,6 +42,17 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     "crisisLeverUses",
     { crisisId: 1, appliedTurn: 1 },
     { name: "crisis_lever_uses_pending" },
+    log
+  );
+
+  await ensureIndex(
+    db,
+    "crises",
+    { scarsHealUntil: 1 },
+    {
+      name: "crises_scars_healing",
+      partialFilterExpression: { scarsHealUntil: { $exists: true } },
+    },
     log
   );
 

@@ -36,6 +36,15 @@ export const unrestWaveDefinition: CrisisDefinition = {
       cooldownTurns: 5,
     },
     {
+      id: "deploy-security-forces",
+      role: "headOfState",
+      label: "Deploy security forces under emergency powers",
+      mitigation: 4,
+      cost: { politicalCapital: 6, approval: { group: "civilLiberties", points: 2 } },
+      cooldownTurns: 6,
+      requiresEmergency: true,
+    },
+    {
       id: "state-dialogue",
       role: "stateGovernor",
       label: "Hold regional talks",

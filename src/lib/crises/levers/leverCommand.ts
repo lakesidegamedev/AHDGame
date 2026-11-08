@@ -2,13 +2,15 @@ import { ObjectId, type Db } from "mongodb";
 import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
 import type { CountryId } from "@/lib/constants/countries";
 import { scaleCost } from "@/lib/crises/v2/accountability";
+import { leverActionCost } from "@/lib/crises/v2/leverActions";
 import {
   clamp,
   type CrisisDefinition,
   type CrisisLeverDef,
   type LeverCost,
 } from "@/lib/crises/v2/types";
-import type { Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
+import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
 import {
   atomicallyDebitCorpLiquidCapital,
@@ -18,7 +20,7 @@ import { getGameState } from "@/lib/gameState";
 import { logger } from "@/lib/observability/logger";
 import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
 import { leverBlock } from "./availability";
-import { crisisCountryIds } from "./jurisdiction";
+import { crisisCountryIds, governsAffectedState } from "./jurisdiction";
 import { resolveLeverRoles, type LeverActor } from "./roles";
 
 const COMPONENT = "crisisLeverCommand";
@@ -34,6 +36,8 @@ export type LeverErrorCode =
   | "needs_bill"
   | "needs_corporation"
   | "insufficient_funds"
+  | "insufficient_actions"
+  | "needs_emergency"
   | "charge_failed";
 
 const STATUS: Record<LeverErrorCode, number> = {
@@ -47,6 +51,8 @@ const STATUS: Record<LeverErrorCode, number> = {
   needs_bill: 400,
   needs_corporation: 400,
   insufficient_funds: 409,
+  insufficient_actions: 409,
+  needs_emergency: 409,
   charge_failed: 500,
 };
 
@@ -73,8 +79,8 @@ export interface PullLeverInput {
 export interface LeverUseSummary {
   useId: ObjectId;
   cost: LeverCost;
-  /** Cost components the game has no currency for yet, recorded but not charged. */
-  uncharged: LeverCost;
+  /** Action points taken from the holder's per-turn budget. */
+  actionsSpent: number;
 }
 
 type LiveCrisis = Pick<Crisis, "_id" | "scope" | "countryIds" | "regionIds"> &
@@ -126,10 +132,12 @@ async function chargeCost(
     countryId: string | undefined;
     corporationId: ObjectId | undefined;
     receiptKey: string;
+    /** The holder's own action budget pays for the political weight of the move. */
+    actions?: { characterId: ObjectId; count: number };
   }
 ): Promise<LeverResult<{ applied: Charge[] }>> {
   const applied: Charge[] = [];
-  const { cost, countryId, corporationId, receiptKey } = args;
+  const { cost, countryId, corporationId, receiptKey, actions } = args;
   const unwind = async () => {
     for (const charge of applied.reverse()) {
       try {
@@ -140,8 +148,33 @@ async function chargeCost(
     }
   };
 
+  if (actions && actions.count > 0) {
+    const characters = db.collection<Character>("characters");
+    const spent = await characters.updateOne(
+      { _id: actions.characterId, actions: { $gte: actions.count } },
+      { $inc: { actions: -actions.count } }
+    );
+    if (spent.modifiedCount === 0) {
+      return fail(
+        "insufficient_actions",
+        `This response takes ${actions.count} of your actions this turn`
+      );
+    }
+    applied.push({
+      undo: async () => {
+        await characters.updateOne(
+          { _id: actions.characterId },
+          { $inc: { actions: actions.count } }
+        );
+      },
+    });
+  }
+
   if (cost.treasuryCash && cost.treasuryCash > 0) {
-    if (!countryId) return fail("charge_failed", "No treasury to charge");
+    if (!countryId) {
+      await unwind();
+      return fail("charge_failed", "No treasury to charge");
+    }
     try {
       await spendFromTreasury(db, countryId as CountryId, cost.treasuryCash, {
         resyncDerived: true,
@@ -189,17 +222,17 @@ async function chargeCost(
       return fail("charge_failed", "No government to charge approval to");
     }
     const points = cost.approval.points;
-    await db
-      .collection("governmentApprovals")
-      .updateOne({ _id: countryId as unknown as ObjectId }, { $inc: { approvalRating: -points } });
+    const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+    await approvals.updateOne(
+      { _id: countryId as CountryId },
+      { $inc: { approvalRating: -points } }
+    );
     applied.push({
       undo: async () => {
-        await db
-          .collection("governmentApprovals")
-          .updateOne(
-            { _id: countryId as unknown as ObjectId },
-            { $inc: { approvalRating: points } }
-          );
+        await approvals.updateOne(
+          { _id: countryId as CountryId },
+          { $inc: { approvalRating: points } }
+        );
       },
     });
   }
@@ -236,6 +269,7 @@ export async function commitLeverUse(
   const { crisis, lever, holderId, turn } = args;
   const cost = scaleCost(lever.cost, args.intensity);
   const { politicalCapital, ...chargeable } = cost;
+  const actionsSpent = leverActionCost(politicalCapital);
   const holder = holderId.toString();
   const row: CrisisLeverUse = {
     _id: new ObjectId(),
@@ -267,6 +301,7 @@ export async function commitLeverUse(
       countryId: args.countryId,
       corporationId: args.corporationId,
       receiptKey: `crisis-lever:${crisis._id.toString()}:${lever.id}:${holder}:${turn}`,
+      actions: { characterId: holderId, count: actionsSpent },
     });
     if (!charged.ok) {
       await uses.deleteOne({ _id: row._id });
@@ -288,7 +323,7 @@ export async function commitLeverUse(
     ok: true,
     useId: row._id,
     cost,
-    uncharged: politicalCapital ? { politicalCapital } : {},
+    actionsSpent,
   };
 }
 
@@ -329,6 +364,8 @@ export async function checkLeverEligibility(
   if (block === "wrongStage")
     return fail("wrong_stage", "This response is not available at this stage");
   if (block === "cooldown") return fail("cooldown", "You pulled this lever too recently");
+  if (block === "needsEmergency")
+    return fail("needs_emergency", "This response needs a declared state of emergency");
 
   const countryIds = await crisisCountryIds(db, crisis);
   const roles = await resolveLeverRoles(db, actor, countryIds);
@@ -340,6 +377,9 @@ export async function checkLeverEligibility(
     (!actor.countryId || !countryIds.includes(actor.countryId))
   ) {
     return fail("out_of_jurisdiction", "This crisis is outside your jurisdiction");
+  }
+  if (lever.role === "stateGovernor" && !governsAffectedState(actor, crisis)) {
+    return fail("out_of_jurisdiction", "Your state is not affected by this crisis");
   }
   return { ok: true, context: { crisis, def, lever, actor, turn, countryIds } };
 }

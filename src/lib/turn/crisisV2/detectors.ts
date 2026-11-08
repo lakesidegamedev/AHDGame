@@ -1,7 +1,14 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import { stepDetector, type DetectorReading, type DetectorSpec } from "@/lib/crises/v2/detector";
+import {
+  reopenCooldownActive,
+  stepDetector,
+  type DetectorReading,
+  type DetectorSpec,
+  type ResolvedCrisisRecord,
+} from "@/lib/crises/v2/detector";
+import { DEFAULT_REOPEN_COOLDOWN_TURNS } from "@/lib/crises/v2/types";
+import type { Crisis } from "@/lib/db/types/crisis";
 import type { StreakRecord } from "@/lib/crises/v2/streak";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { State } from "@/lib/db/types/state";
 import {
   bankStressProvider,
@@ -11,11 +18,12 @@ import {
   loadStateMetricValues,
   unrestGapProvider,
 } from "./inputProviders";
-import type {
-  CrisisInputContext,
-  CrisisInputProvider,
-  CrisisOpenCandidate,
-  CrisisOpenCandidateProvider,
+import {
+  getCrisisDefinition,
+  type CrisisInputContext,
+  type CrisisInputProvider,
+  type CrisisOpenCandidate,
+  type CrisisOpenCandidateProvider,
 } from "./registry";
 
 export const DETECTOR_STREAK_COLLECTION = "crisisDetectorStreaks";
@@ -32,20 +40,6 @@ interface DetectorWorld {
 }
 
 const worldCache = new WeakMap<Db, { turn: number; world: Promise<DetectorWorld> }>();
-
-const enabledCache = new WeakMap<Db, { turn: number; enabled: Promise<boolean> }>();
-
-/** Emergent crises stay off until the config flag is set; one read per turn. */
-function emergentEnabled(db: Db, turn: number): Promise<boolean> {
-  const cached = enabledCache.get(db);
-  if (cached?.turn === turn) return cached.enabled;
-  const enabled = db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { crisisV2EmergentEnabled: 1 } })
-    .then((config) => config?.crisisV2EmergentEnabled === true);
-  enabledCache.set(db, { turn, enabled });
-  return enabled;
-}
 
 /** Every country and region, read once per turn and shared by all detectors. */
 function loadDetectorWorld(db: Db, turn: number): Promise<DetectorWorld> {
@@ -224,13 +218,40 @@ async function saveStreaks(
   }
 }
 
+/** Crises of the detector's definition that ended inside the longest cooldown window. */
+async function loadRecentlyResolved(
+  db: Db,
+  spec: DetectorSpec,
+  turn: number,
+  needed: boolean
+): Promise<ResolvedCrisisRecord[]> {
+  if (!needed) return [];
+  const cooldown =
+    getCrisisDefinition(spec.definitionId)?.reopenCooldownTurns ?? DEFAULT_REOPEN_COOLDOWN_TURNS;
+  const rows = await db
+    .collection<Crisis>("crises")
+    .find(
+      {
+        status: "resolved",
+        "v2.definitionId": spec.definitionId,
+        endTurn: { $gt: turn - cooldown },
+      },
+      { projection: { endTurn: 1, countryIds: 1, regionIds: 1 } }
+    )
+    .toArray();
+  return rows.map((row) => ({
+    endTurn: row.endTurn ?? turn,
+    countryIds: row.countryIds ?? [],
+    regionIds: row.regionIds ?? [],
+  }));
+}
+
 /** Turns one source into an open-candidate provider that keeps its own streaks. */
 export function createDetectorProvider(source: DetectorSource): CrisisOpenCandidateProvider {
   const { spec } = source;
   return {
     id: spec.id,
     async load({ db, turn }) {
-      if (!(await emergentEnabled(db, turn))) return [];
       const world = await loadDetectorWorld(db, turn);
       const [readings, stored] = await Promise.all([
         source.read(world),
@@ -244,7 +265,14 @@ export function createDetectorProvider(source: DetectorSource): CrisisOpenCandid
       );
       const step = stepDetector(spec, readings, previous, turn);
       await saveStreaks(db, spec, step.streaks, previous, step.cleared);
-      return step.proposals.map(({ reading, excess }): CrisisOpenCandidate => ({
+      const cooling = await loadRecentlyResolved(db, spec, turn, step.proposals.length > 0);
+      const cooldown =
+        getCrisisDefinition(spec.definitionId)?.reopenCooldownTurns ??
+        DEFAULT_REOPEN_COOLDOWN_TURNS;
+      const open = step.proposals.filter(
+        ({ reading }) => !reopenCooldownActive(reading, cooling, cooldown, turn)
+      );
+      return open.map(({ reading, excess }): CrisisOpenCandidate => ({
         key: `${spec.id}|${reading.key}`,
         definitionId: spec.definitionId,
         scope: spec.scope,

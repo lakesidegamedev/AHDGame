@@ -39,6 +39,8 @@ interface Store {
   character: Record<string, unknown> | null;
   corporation: Record<string, unknown> | null;
   congressLeader: boolean;
+  actions: number;
+  regionIds?: string[];
 }
 
 function makeDb(store: Store) {
@@ -54,12 +56,25 @@ function makeDb(store: Store) {
             _id: crisisId,
             scope: "country",
             countryIds: ["US"],
-            regionIds: [],
+            regionIds: store.regionIds ?? [],
             v2: store.instance,
           }),
         };
       }
-      if (name === "characters") return { findOne: async () => store.character };
+      if (name === "characters") {
+        return {
+          findOne: async () => store.character,
+          updateOne: async (
+            filter: { actions?: { $gte: number } },
+            update: { $inc: { actions: number } }
+          ) => {
+            const needed = filter.actions?.$gte ?? 0;
+            if (store.actions < needed) return { modifiedCount: 0 };
+            store.actions += update.$inc.actions;
+            return { modifiedCount: 1 };
+          },
+        };
+      }
       if (name === "corporations") return { findOne: async () => store.corporation };
       if (name === "congressLeaders") {
         return { findOne: async () => (store.congressLeader ? { _id: new ObjectId() } : null) };
@@ -123,6 +138,7 @@ function freshStore(overrides: Partial<Store> = {}): Store {
     character: { _id: characterId, countryId: "US", currentOffice: { type: "president" } },
     corporation: null,
     congressLeader: false,
+    actions: 10,
     ...overrides,
   };
 }
@@ -308,13 +324,94 @@ describe("pullLever", () => {
     expect(store.uses).toHaveLength(0);
   });
 
-  it("records political capital without charging a currency that does not exist", async () => {
+  it("charges the political weight of a lever from the holder's actions", async () => {
     roles.derived = ["any", "centralBankChair"];
     const store = freshStore();
     const result = await pull(store, "rate-cut");
-    expect(result).toMatchObject({ ok: true, uncharged: { politicalCapital: 5 } });
+    expect(result).toMatchObject({ ok: true, actionsSpent: 2 });
+    expect(store.actions).toBe(8);
     expect(spendFromTreasury).not.toHaveBeenCalled();
     expect(store.uses[0]).toMatchObject({ cost: { politicalCapital: 5 } });
+  });
+
+  it("refuses a pull the holder cannot afford in actions and charges nothing", async () => {
+    roles.derived = ["any", "centralBankChair"];
+    const store = freshStore({ actions: 1 });
+    expect(await pull(store, "rate-cut")).toMatchObject({
+      ok: false,
+      code: "insufficient_actions",
+    });
+    expect(store.actions).toBe(1);
+    expect(store.uses).toHaveLength(0);
+  });
+
+  it("gives the actions back when a later charge fails", async () => {
+    debitCorp.mockResolvedValueOnce({ ok: false, error: "Insufficient" });
+    registerCrisisDefinition(
+      makeDefinition({
+        levers: [
+          {
+            id: "bailout",
+            role: "corpCeo",
+            label: "Bailout",
+            mitigation: 5,
+            cost: { politicalCapital: 6, corpCash: 200 },
+          },
+        ],
+      })
+    );
+    roles.derived = ["any"];
+    const store = freshStore({ corporation: { _id: new ObjectId(), countryId: "US" } });
+    const result = await pull(store, "bailout", { corporationId: new ObjectId() });
+    expect(result).toMatchObject({ ok: false, code: "insufficient_funds" });
+    expect(store.actions).toBe(10);
+  });
+
+  it("keeps a governor out of a regional crisis that does not reach their state", async () => {
+    registerCrisisDefinition(
+      makeDefinition({
+        scope: "state",
+        levers: [{ id: "hire", role: "stateGovernor", label: "Hire", mitigation: 1, cost: {} }],
+      })
+    );
+    roles.derived = ["any", "stateGovernor"];
+    const store = freshStore({
+      character: {
+        _id: characterId,
+        countryId: "US",
+        currentOffice: { type: "governor", state: "OH" },
+      },
+    });
+    store.instance.scope = "state";
+    store.regionIds = ["TX"];
+    expect(await pull(store, "hire")).toMatchObject({ ok: false, code: "out_of_jurisdiction" });
+
+    store.regionIds = ["OH"];
+    expect(await pull(store, "hire")).toMatchObject({ ok: true });
+  });
+
+  it("holds emergency levers back until a state of emergency is declared", async () => {
+    registerCrisisDefinition(
+      makeDefinition({
+        forcedEvents: [
+          { id: "soe", event: "stateOfEmergency", minSeverity: 70, sustainedTurns: 1 },
+        ],
+        levers: [
+          {
+            id: "powers",
+            role: "headOfState",
+            label: "Emergency powers",
+            mitigation: 4,
+            cost: {},
+            requiresEmergency: true,
+          },
+        ],
+      })
+    );
+    const store = freshStore();
+    expect(await pull(store, "powers")).toMatchObject({ ok: false, code: "needs_emergency" });
+    store.instance.emergency = true;
+    expect(await pull(store, "powers")).toMatchObject({ ok: true });
   });
 
   it("scales the cost by intensity", async () => {

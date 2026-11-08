@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { describe, expect, it } from "vitest";
-import { officeHolderProvider } from "./holderProviders";
+import { loadHolderFootprints, officeHolderProvider } from "./holderProviders";
 
 const id = () => new ObjectId();
 
@@ -71,5 +71,34 @@ describe("officeHolderProvider", () => {
     expect(filters.characters?.[0]).toMatchObject({ countryId: { $in: ["US"] } });
     expect(filters.centralBanks?.[0]).toMatchObject({ countryId: { $in: ["US"] } });
     expect(filters.corporations?.[0]).toMatchObject({ countryId: { $in: ["US"] } });
+  });
+});
+
+describe("loadHolderFootprints", () => {
+  it("places a governor in their state and a CEO in every state and sector they operate in", async () => {
+    const gov = id();
+    const ceo = id();
+    const corp = id();
+    const { db } = makeDb({
+      characters: [{ _id: gov, currentOffice: { type: "governor", state: "TX" } }],
+      corporations: [{ _id: corp, ceoId: ceo }],
+      corporateSectors: [
+        { corporationId: corp, stateId: "TX", sectorType: "energy" },
+        { corporationId: corp, stateId: "OH", sectorType: "retail" },
+        { corporationId: id(), stateId: "CA", sectorType: "energy" },
+      ],
+    });
+    const footprints = await loadHolderFootprints(db, [gov.toString(), ceo.toString()]);
+    expect(footprints.get(gov.toString())).toEqual({ stateId: "TX" });
+    expect(footprints.get(ceo.toString())?.holdings).toEqual([
+      { stateId: "TX", sectorType: "energy" },
+      { stateId: "OH", sectorType: "retail" },
+    ]);
+  });
+
+  it("reads nothing when there are no holders to place", async () => {
+    const { db, filters } = makeDb({});
+    expect((await loadHolderFootprints(db, [])).size).toBe(0);
+    expect(filters).toEqual({});
   });
 });

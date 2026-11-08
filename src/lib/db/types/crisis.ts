@@ -494,6 +494,8 @@ export interface Crisis {
   livingConflictEventId?: string;
   /** Crisis v2 stage, severity and accountability state. Absent on crises that predate v2. */
   v2?: CrisisInstance;
+  /** Last turn any scar of this crisis is still in force; the scar passes read crises by it. */
+  scarsHealUntil?: number;
   /**
    * What a v2 crisis currently does to plant output, rewritten each turn the
    * crisis runs. `routedTurn` is the turn the cuts were computed for.

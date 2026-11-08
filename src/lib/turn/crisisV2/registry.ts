@@ -5,6 +5,7 @@ import {
   type EffectModuleRegistry,
 } from "@/lib/crises/v2/effectModule";
 import type { OfficeHolders } from "@/lib/crises/v2/accountability";
+import type { HolderFootprint } from "@/lib/crises/v2/exposure";
 import type { DirectorCandidate } from "@/lib/crises/v2/director";
 import type { CrisisDefinition } from "@/lib/crises/v2/types";
 
@@ -36,6 +37,10 @@ export interface CrisisHolderContext {
 export interface CrisisHolderProvider {
   id: string;
   load(ctx: CrisisHolderContext): Promise<Map<string, OfficeHolders>>;
+  /** Where the given holders' responsibilities sit, for exposure-based blame. */
+  loadFootprints?(
+    ctx: Omit<CrisisHolderContext, "countryIds"> & { holderIds: readonly string[] }
+  ): Promise<Map<string, HolderFootprint>>;
 }
 
 /** An opening a detector or scheduler asks the director to approve. */

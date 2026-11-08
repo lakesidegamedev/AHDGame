@@ -60,5 +60,15 @@ export function validateCrisisDefinition(def: CrisisDefinition): string[] {
       problems.push(`forced event ${forced.id} sustainedTurns must be at least 1`);
   }
 
+  if (
+    def.levers.some((lever) => lever.requiresEmergency) &&
+    !def.forcedEvents.some((forced) => forced.event === "stateOfEmergency")
+  ) {
+    problems.push("emergency levers need a stateOfEmergency forced event to unlock them");
+  }
+  if (def.reopenCooldownTurns !== undefined && def.reopenCooldownTurns < 0) {
+    problems.push("reopenCooldownTurns must not be negative");
+  }
+
   return problems;
 }

@@ -17,5 +17,5 @@ areas: [engine, backend]
 - A new action lets a holder pull a response on a crisis. It checks the office, the crisis stage and a cooldown, then charges the cost: treasury cash, corporation cash, and approval. A double click charges once, and a failed charge is refunded.
 - A legislature response raises an emergency bill with a short voting window. If it passes, the cost is paid and the response counts. If it fails, the sponsor is recorded as having failed to act.
 - A lookup lists the crises where the viewer has a response available right now, ready for the crises page and a nav badge.
-- Political capital costs are recorded but not charged, because the game has no spendable political capital yet.
+- Political capital costs are paid in the holder's own actions for the turn (one to three, by the size of the response).
 - The turn phase now claims each crisis's turn before applying its effects, so a failed save can no longer apply the same effects twice.

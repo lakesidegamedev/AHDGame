@@ -35,6 +35,15 @@ export const energyShortageDefinition: CrisisDefinition = {
       cooldownTurns: 6,
     },
     {
+      id: "requisition-supply",
+      role: "headOfState",
+      label: "Requisition fuel under emergency powers",
+      mitigation: 4,
+      cost: { politicalCapital: 6, approval: { group: "households", points: 1 } },
+      cooldownTurns: 6,
+      requiresEmergency: true,
+    },
+    {
       id: "energy-subsidy",
       role: "legislature",
       label: "Energy price relief bill",

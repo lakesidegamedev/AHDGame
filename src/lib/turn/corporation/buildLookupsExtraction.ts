@@ -46,6 +46,7 @@ import { buildFtaCoverageLookup } from "@/lib/tariffs/ftaOverrides";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildDisasterEffectsByState } from "@/lib/crises/disasterMarginPenalty";
+import { loadScarOutputEntries } from "@/lib/crises/scarOutput";
 import { resolveGameYear } from "@/lib/era/era";
 import { climateProfileForStartingYear } from "@/lib/crises/rules/climateFeedback";
 import type { CorporationLookups } from "./types";
@@ -348,6 +349,17 @@ export async function buildExtractionAndPortfolioLookups({
     disasterCrises,
     resolveCrisisStateIds
   );
+  const scarEntries = await loadScarOutputEntries(
+    db,
+    options?.productionTurn ?? (await getCurrentTurn(db)),
+    stateIdsByCountry
+  );
+  for (const [stateId, entries] of scarEntries) {
+    activeDisasterEffectsByState.set(stateId, [
+      ...(activeDisasterEffectsByState.get(stateId) ?? []),
+      ...entries,
+    ]);
+  }
 
   const gameState = await db.collection<GameState>("gameState").findOne(
     { _id: "current" },

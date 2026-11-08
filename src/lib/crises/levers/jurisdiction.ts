@@ -16,3 +16,14 @@ export async function crisisCountryIds(
     .toArray();
   return [...new Set(states.map((state) => state.countryId))];
 }
+
+/** A governor answers only for a regional crisis that reaches their own state. */
+export function governsAffectedState(
+  actor: { currentOffice?: { state?: string } | null },
+  crisis: Pick<Crisis, "regionIds"> & { v2: { scope: string } }
+): boolean {
+  const regional = crisis.v2.scope === "local" || crisis.v2.scope === "state";
+  if (!regional || crisis.regionIds.length === 0) return true;
+  const state = actor.currentOffice?.state?.toUpperCase();
+  return state !== undefined && crisis.regionIds.some((id) => id.toUpperCase() === state);
+}

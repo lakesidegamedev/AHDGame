@@ -9,7 +9,7 @@ import { LEGISLATURE_LEADER_ROLES } from "@/lib/turn/crisisV2/holderProviders";
 export interface LeverActor {
   _id: ObjectId;
   countryId?: string;
-  currentOffice?: { type?: string; positionId?: string } | null;
+  currentOffice?: { type?: string; positionId?: string; state?: string } | null;
 }
 
 function isLegislativeOffice(actor: LeverActor): boolean {

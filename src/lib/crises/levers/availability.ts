@@ -6,7 +6,7 @@ import type {
   ActiveCrisisStage,
 } from "@/lib/crises/v2/types";
 
-export type LeverBlock = "resolved" | "wrongStage" | "cooldown";
+export type LeverBlock = "resolved" | "wrongStage" | "cooldown" | "needsEmergency";
 
 /**
  * Why a lever cannot be pulled right now, or null when it can. `lastPulled` is
@@ -14,7 +14,7 @@ export type LeverBlock = "resolved" | "wrongStage" | "cooldown";
  * has counted it yet.
  */
 export function leverBlock(
-  instance: Pick<CrisisInstance, "stage" | "leverLastUsed">,
+  instance: Pick<CrisisInstance, "stage" | "leverLastUsed" | "emergency">,
   lever: CrisisLeverDef,
   holderId: string,
   turn: number,
@@ -23,6 +23,7 @@ export function leverBlock(
   const stage: CrisisStage = instance.stage;
   if (stage === "resolved") return "resolved";
   if (lever.stages && !lever.stages.includes(stage as ActiveCrisisStage)) return "wrongStage";
+  if (lever.requiresEmergency && !instance.emergency) return "needsEmergency";
   const counted = instance.leverLastUsed[leverKey(lever.id, holderId)];
   const last = Math.max(counted ?? -Infinity, lastPulled ?? -Infinity);
   if (Number.isFinite(last) && turn - last <= (lever.cooldownTurns ?? 0)) return "cooldown";

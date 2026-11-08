@@ -25,8 +25,19 @@ import type {
   LeverUse,
 } from "@/lib/crises/v2/types";
 import { processCrisisEmergencyBills } from "@/lib/crises/levers/emergencyBill";
+import {
+  filterExposedHolders,
+  type CrisisReach,
+  type HolderFootprint,
+} from "@/lib/crises/v2/exposure";
+import { EMERGENCY_APPROVAL_DRIFT, stepForcedEvents } from "@/lib/crises/v2/forcedEvents";
+import { layScars, scarHorizon, scarTargets } from "@/lib/crises/v2/scars";
+import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { ensureBuiltinCrisisV2Content } from "./crisisV2/builtins";
+import { settleCrisisConsequences } from "./crisisV2/consequences";
+import { runForcedEvents } from "./crisisV2/forcedEventsShell";
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
+import { processCrisisScars } from "./crisisV2/scarsShell";
 import { routeEffectIntents } from "./crisisV2/intents";
 import {
   getCrisisDefinition,
@@ -270,6 +281,35 @@ async function openNewCrises(
   }
 }
 
+async function loadFootprints(
+  db: Db,
+  turn: number,
+  perCountry: Map<string, OfficeHolders>[]
+): Promise<Map<string, HolderFootprint>> {
+  const ids = new Set<string>();
+  for (const byCountry of perCountry) {
+    for (const holders of byCountry.values()) {
+      for (const role of ["stateGovernor", "corpCeo"] as const) {
+        for (const id of holders[role] ?? []) ids.add(id);
+      }
+    }
+  }
+  const footprints = new Map<string, HolderFootprint>();
+  if (ids.size === 0) return footprints;
+  for (const provider of listCrisisHolderProviders()) {
+    if (!provider.loadFootprints) continue;
+    try {
+      const loaded = await provider.loadFootprints({ db, turn, holderIds: [...ids] });
+      for (const [id, footprint] of loaded) footprints.set(id, footprint);
+    } catch (error) {
+      logger.error(COMPONENT, "footprint provider failed; local roles go unblamed", error, {
+        provider: provider.id,
+      });
+    }
+  }
+  return footprints;
+}
+
 /**
  * Runs every active Crisis v2 instance one turn: fills driver inputs from the
  * sim, applies the lever uses recorded for it, steps severity and stage, routes
@@ -349,6 +389,9 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         .toArray(),
       needsHolders ? loadHolders(db, turn, countryIds) : Promise.resolve([]),
     ]);
+    const footprints = needsHolders
+      ? await loadFootprints(db, turn, holderMaps)
+      : new Map<string, HolderFootprint>();
     const usesByCrisis = new Map<string, CrisisLeverUse[]>();
     for (const row of leverRows) {
       const key = row.crisisId.toString();
@@ -361,6 +404,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
     const unsupportedTotals: Record<string, number> = {};
     const missingModules = new Set<string>();
     const resolvedCrises: LiveCrisis[] = [];
+    const afterWrite: (() => Promise<void>)[] = [];
 
     for (const { crisis, def } of runnable) {
       try {
@@ -387,10 +431,35 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         const before = crisis.v2;
         const step = computeSeverityStep(before, def, { turn, driverInputs, leverUses });
         let next = recordLeverUses(before, step.accepted, turn);
-        next = recordInaction(next, def, mergeHolders(holderMaps, crisisCountries), turn);
+        const stateIds = crisisStateIds(crisis, world);
+        const reach: CrisisReach = {
+          scope: before.scope,
+          stateIds: new Set(stateIds),
+          sectors: def.affectedSectors,
+        };
+        const exposed = filterExposedHolders(
+          mergeHolders(holderMaps, crisisCountries),
+          footprints,
+          reach
+        );
+        next = recordInaction(next, def, exposed, turn);
         next = applySeverityStep(next, step, turn);
         next = applyTransition(next, nextStage(next, def, step.after, turn), turn);
-        next = { ...next, lastEvaluatedTurn: turn };
+        const laid = layScars(
+          def,
+          next,
+          scarTargets(next.scope, crisisCountries, crisis.regionIds),
+          turn
+        );
+        if (laid.length > 0) next = { ...next, scars: [...next.scars, ...laid] };
+        const forced = stepForcedEvents(def, next);
+        next = { ...next, forced: forced.progress, lastEvaluatedTurn: turn };
+        if (forced.fired.some((threshold) => threshold.event === "stateOfEmergency")) {
+          next = { ...next, emergency: true };
+        }
+        const settling =
+          !next.consequencesSettled && (next.stage === "aftermath" || next.stage === "resolved");
+        if (settling) next = { ...next, consequencesSettled: true };
 
         const evaluation = evaluateEffectModules(def.effectModules, effectRegistry, {
           instance: next,
@@ -401,10 +470,14 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
           regionIds: crisis.scope === "region" ? crisis.regionIds : [],
         });
         for (const id of evaluation.missing) missingModules.add(id);
+        const intents: EffectIntent[] =
+          next.emergency && next.stage !== "resolved"
+            ? [...evaluation.intents, { kind: "approval", delta: EMERGENCY_APPROVAL_DRIFT }]
+            : evaluation.intents;
         let v2Output: CrisisV2Output | undefined;
-        if (evaluation.intents.length > 0) {
-          const routing = await routeEffectIntents(db, evaluation.intents, {
-            stateIds: crisisStateIds(crisis, world),
+        if (intents.length > 0) {
+          const routing = await routeEffectIntents(db, intents, {
+            stateIds,
             countryIds: crisisCountries,
             crisisId: crisis._id,
             turn,
@@ -423,12 +496,35 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
               $set: {
                 v2: next,
                 ...(v2Output ? { v2Output } : {}),
+                ...(laid.length > 0 ? { scarsHealUntil: scarHorizon(next.scars) } : {}),
                 ...(resolving ? { status: "resolved", endTurn: turn, resolvedAt: new Date() } : {}),
               },
             },
           },
         });
         for (const row of rows) consumedUseIds.push(row._id);
+        if (settling) {
+          afterWrite.push(async () => {
+            await settleCrisisConsequences(
+              db,
+              next,
+              { crisisId: crisis._id, scope: next.scope, regionIds: crisis.regionIds },
+              turn
+            );
+          });
+        }
+        if (forced.fired.length > 0) {
+          afterWrite.push(async () => {
+            await runForcedEvents(db, forced.fired, {
+              crisisId: crisis._id.toString(),
+              label: def.label,
+              stateIds,
+              countryIds: crisisCountries,
+              turn,
+              def,
+            });
+          });
+        }
         if (resolving) {
           resolvedCrises.push(crisis);
           result.resolved += 1;
@@ -465,6 +561,13 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
             .collection<CrisisLeverUse>("crisisLeverUses")
             .updateMany({ _id: { $in: consumedUseIds } }, { $set: { appliedTurn: turn } });
         }
+        for (const run of afterWrite) {
+          try {
+            await run();
+          } catch (error) {
+            logger.error(COMPONENT, "consequence step failed after the crisis was saved", error);
+          }
+        }
       } catch (error) {
         logger.error(COMPONENT, "writing crisis state failed", error);
         result.failed += writes.length;
@@ -485,6 +588,11 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
     }
   }
 
+  try {
+    await processCrisisScars(db, turn);
+  } catch (error) {
+    logger.error(COMPONENT, "scar pass failed", error);
+  }
   result.opened = await openNewCrises(db, turn, stillActive);
   return result;
 }

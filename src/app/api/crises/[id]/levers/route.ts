@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         success: true,
         useId: pulled.useId.toString(),
         cost: pulled.cost,
-        uncharged: pulled.uncharged,
+        actionsSpent: pulled.actionsSpent,
       });
     }
     if (pulled.code === "needs_bill") {

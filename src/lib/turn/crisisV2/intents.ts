@@ -5,7 +5,6 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { getCountryModifiersCollection } from "@/lib/db/collections/countryModifiers";
 import type { CrisisEffect, CrisisV2Output } from "@/lib/db/types/crisis";
 import type { CountryModifier } from "@/lib/db/types/events";
-import type { Crisis } from "@/lib/db/types/crisis";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import {
   INVESTOR_CONFIDENCE_BASELINE,
@@ -62,7 +61,7 @@ const DEMAND_MODIFIER_LIMIT_PCT = 20;
 const DEMAND_MODIFIER_TURNS = 2;
 /** Vote-share points a point of approval is worth, from the regional-condition margin rule. */
 const MARGIN_PER_APPROVAL_POINT = defaultMarginEffectForApproval(100) / 100;
-const MAX_PANIC_TURNS = 4;
+export const MAX_PANIC_TURNS = 4;
 /** Confidence points that equal one basis point of sovereign premium. */
 const CONFIDENCE_POINTS_PER_BPS =
   INVESTOR_CONFIDENCE_BASELINE / (SOVEREIGN_CONFIDENCE_PREMIUM_MAX * 10_000);
@@ -228,7 +227,7 @@ async function applyMigration(
 }
 
 /** Starts a panic of the given length in every active bank in the countries. */
-async function applyBankStress(db: Db, delta: number, countryIds: string[]): Promise<void> {
+export async function applyBankStress(db: Db, delta: number, countryIds: string[]): Promise<void> {
   const panicTurns = Math.min(MAX_PANIC_TURNS, Math.ceil(delta));
   if (panicTurns <= 0 || countryIds.length === 0) return;
   await db
