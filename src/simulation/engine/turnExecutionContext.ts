@@ -144,7 +144,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     fiscalYear: null,
     policyEffects: null,
     demographicEffects: null,
-    archetypeApprovalDecay: null,
+    bucketApprovalDecay: null,
     nationalMetrics: null,
     metricHistory: null,
     approvalSnapshot: null,

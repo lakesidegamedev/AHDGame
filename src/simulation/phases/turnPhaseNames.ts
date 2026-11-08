@@ -98,7 +98,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "fiscalYear",
   "policyEffects",
   "demographicEffects",
-  "archetypeApprovalDecay",
+  "bucketApprovalDecay",
   "unownedSectorGrowth",
   "metricDecay",
   "investorConfidenceDecay",

@@ -3,7 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 import { getDb } from "@/lib/mongodb";
-import { processArchetypeApprovalDecay } from "./archetypeApprovalDecay";
+import { processBucketApprovalDecay } from "./bucketApprovalDecay";
 
 describe("approval decay turn persistence", () => {
   let db: MockDb;
@@ -22,7 +22,7 @@ describe("approval decay turn persistence", () => {
       db.collection(name).find.mockReturnValue({ toArray: vi.fn().mockResolvedValue(rows) });
       db.collection(name).bulkWrite.mockResolvedValue({ modifiedCount: rows.length });
     }
-    expect(await processArchetypeApprovalDecay()).toEqual({
+    expect(await processBucketApprovalDecay()).toEqual({
       charactersProcessed: 6,
       nppsProcessed: 6,
     });
@@ -65,7 +65,7 @@ describe("approval decay turn persistence", () => {
         return { modifiedCount: 1 };
       }
     );
-    expect(await processArchetypeApprovalDecay()).toEqual({
+    expect(await processBucketApprovalDecay()).toEqual({
       charactersProcessed: 0,
       nppsProcessed: 0,
     });
@@ -76,7 +76,7 @@ describe("approval decay turn persistence", () => {
     const rows = [{ _id: new ObjectId(), archetypeApprovals: { zero: 0 } }];
     for (const name of ["characters", "npps"])
       db.collection(name).find.mockReturnValue({ toArray: vi.fn().mockResolvedValue(rows) });
-    expect(await processArchetypeApprovalDecay()).toEqual({
+    expect(await processBucketApprovalDecay()).toEqual({
       charactersProcessed: 0,
       nppsProcessed: 0,
     });

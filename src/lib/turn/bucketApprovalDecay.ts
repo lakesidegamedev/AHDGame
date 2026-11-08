@@ -1,11 +1,9 @@
 /**
- * Archetype Approval Decay
+ * Bucket Approval Decay
  *
- * Decays all character and NPP archetype approvals by 0.5% per turn toward 0.
- * This creates a natural half-life where approval effects fade over time,
- * requiring ongoing action to maintain relationships with voter archetypes.
- *
- * Decay rate: 0.5% per turn = ~21% decay per game year (48 turns)
+ * Decays every character and NPP per-bucket approval modifier ("dim:bucket"
+ * keys) by 0.5% per turn toward 0, so approval effects fade over time and need
+ * ongoing action to maintain. About 21% decay per game year (48 turns).
  */
 
 import { decayApprovals } from "@/lib/legislature/rules/approvalDecay";
@@ -14,18 +12,18 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /**
- * Process archetype approval decay for all characters and NPPs.
+ * Process bucket approval decay for all characters and NPPs.
  * Called once per turn during turn processing.
  *
  * @returns Summary of characters and NPPs processed
  */
-export async function processArchetypeApprovalDecay(): Promise<{
+export async function processBucketApprovalDecay(): Promise<{
   charactersProcessed: number;
   nppsProcessed: number;
 }> {
   const db = await getDb();
 
-  // Process characters with archetype approvals
+  // Process characters with bucket approvals
   const characters = await (
     await getCharactersCollection(db)
   )
@@ -61,7 +59,7 @@ export async function processArchetypeApprovalDecay(): Promise<{
       ? (await (await getCharactersCollection(db)).bulkWrite(charOps)).modifiedCount
       : 0;
 
-  // Process NPPs with archetype approvals
+  // Process NPPs with bucket approvals
   const npps = await (
     await getNppsCollection(db)
   )
