@@ -1,17 +1,52 @@
 import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 
 /**
- * January 2027 US governors and state senates after the November 2026
- * elections (called results, not certified, as of November 6, 2026). Party
- * allocations only: every office holder is a generated fictional person.
+ * January 2027 US governors and state senates after the November 3, 2026
+ * elections: party allocations only; every office holder is fictional.
+ * Called results, not certified (see US_STATE_OFFICES_2027_PROVENANCE).
  *
- * Governors: the 36 states that voted in 2026 use the called winner's party;
- * uncalled Alaska and Kansas and the other 14 states keep the sitting party.
+ * Governors: called winner's party; uncalled AK and KS keep the sitting party.
+ * State senates: one row per party summing to the modeled chamber size;
+ * Nebraska (nonpartisan) omitted; independents count with their caucus or the
+ * majority. Each state carries a basis tag (result, pre-election, no 2026 election).
  *
- * State senates: one row per party summing to the modeled chamber size, tagged
- * "result", "pre-election" or "no 2026 election". Independents count with their
- * caucus, else the majority. Wyoming's 31 seats scale to 30; Nebraska omitted.
+ * Do not silently refresh: update the basis tags and rows together.
  */
+export const US_STATE_OFFICES_2027_PROVENANCE = {
+  snapshotDate: "2026-11-06",
+  preElectionStates: [
+    "AK",
+    "CA",
+    "CT",
+    "FL",
+    "IA",
+    "IL",
+    "IN",
+    "MD",
+    "ME",
+    "MN",
+    "MO",
+    "NC",
+    "NH",
+    "NY",
+    "OH",
+    "OR",
+    "SD",
+    "UT",
+    "WA",
+  ],
+  notes: [
+    "Louisiana uses its 2023 state senate election result.",
+    "Wyoming's 31 state senate seats are scaled to the modeled 30.",
+  ],
+  sources: [
+    "Wikipedia, 2026 United States gubernatorial elections, revision of 2026-11-06 (AP calls)",
+    "Wikipedia, 2026 United States state legislative elections, revision of 2026-11-06, citing NCSL State Partisan Composition",
+    "Wikipedia chamber articles: Kansas Senate, New Mexico Senate, South Carolina Senate, Mississippi State Senate, New Jersey Senate, Senate of Virginia (November 2026), 2023 Louisiana State Senate election",
+    "KJZZ, Arizona Democrats claim a trifecta with leads in House and Senate races, 2026-11-04",
+  ],
+} as const;
+
 export const US_GOVERNORS_2027: HistoricalSeat[] = [
   { state: "AK", officeType: "governor", party: "republican" },
   { state: "AL", officeType: "governor", party: "republican" },

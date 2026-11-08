@@ -1,14 +1,14 @@
 /**
  * Import tariffs in the funded producer market (gameConfig.producerTariffStage).
  *
- * With the stage on, each route's importer tariff is read once into a table
- * keyed by commodity, exporter and importer. A buyer sees the landed price
- * (posted times one plus the tariff) and an import above what the order will pay
- * is not eligible. Each cross-border sale pays the tariff on its value, buyer to
- * the importing country's tariff account, never more than the buyer holds.
- * Clearing still takes sellers in posted-price order, not landed-price order.
+ * Each route's tariff (country-wide, sector or targeted, the same rate the
+ * trade system uses) is read once into a table. Buyers judge imports at the
+ * landed price (posted x (1 + tariff)), so higher tariffs push them to home
+ * sellers. Each cross-border sale pays the tariff from the buyer to the
+ * importing country's treasury, capped at what the buyer holds.
  *
- * Pure: plain data in, eligibility lists, rates and transfers out.
+ * Clearing within one price level stays in posted-price order, so a buyer can
+ * still take a dearer-landed import first and pay the tariff.
  */
 import type { ProducerOffer, ProducerTrade, PurchaseOrder } from "./rules";
 import { tariffTransfers, type TariffTransfer } from "./routeRules";

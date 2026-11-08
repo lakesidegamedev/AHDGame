@@ -1,20 +1,26 @@
 import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 
 /**
- * January 2027 US Congress from the November 2026 election results, replacing
- * the frozen pre-election projection (`usCongressProjection2027.ts`) as the
- * seed for the 2027 world. Party allocations only: every office holder is a
- * generated fictional person.
+ * January 2027 US Congress from the November 3, 2026 elections: party
+ * allocations only; every office holder is a generated fictional person.
+ * Replaces the frozen pre-election projection as the 2027 seed.
  *
- * Called results, not yet certified (AP calls as of November 6, 2026). Uncalled
- * seats are listed below and keep the projection's value: an uncalled House
- * seat goes to whichever party the called seats leave short of the projected
- * state total. A later count must update the status, lists and rosters together.
+ * Called results, not certified (see `basis`, `snapshotDate`). Uncalled seats
+ * keep the projection's party: an uncalled House seat goes to the party the
+ * called seats leave short of its projected state total.
+ *
+ * Do not silently refresh: a later count or certification must update the
+ * basis, the uncalled lists and the rosters together.
  */
 export const US_CONGRESS_RESULT_2027 = {
   electionDate: "2026-11-03",
   snapshotDate: "2026-11-06",
   basis: "called results before certification",
+  sources: [
+    "AP News, 2026 US House and Senate election results, race calls as of 2026-11-06 23:15 EST",
+    "Wikipedia, 2026 United States House of Representatives elections and 2026 United States Senate elections, revision of 2026-11-06 (AP calls)",
+    "NBC News, 2026 House election live results, November 2026",
+  ],
   house: {
     democrat: 256,
     republican: 179,
