@@ -1083,6 +1083,20 @@ async function markResolved(
  * in `passed` or `rejected` regardless of whether the threshold is
  * mathematically locked yet.
  */
+async function markProposalTerminal(
+  db: Db,
+  proposal: CommitteeProposal,
+  status: "expired" | "rejected",
+  currentTurn: number
+): Promise<void> {
+  await db
+    .collection<CommitteeProposal>("committeeProposals")
+    .updateOne(
+      { _id: proposal._id, status: "open" },
+      { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+    );
+}
+
 export async function attemptResolution(
   db: Db,
   proposal: CommitteeProposal,
@@ -1097,7 +1111,12 @@ export async function attemptResolution(
       { _id: proposal.partyId },
       { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
     );
-  if (!proposingParty) return;
+  if (!proposingParty) {
+    // A deleted party can never come back, so an unresolvable row must not sit
+    // open forever blocking the duplicate-proposal guard.
+    await markProposalTerminal(db, proposal, "expired", currentTurn);
+    return;
+  }
 
   // removeOfficeHolder excludes the target from both the voter set AND
   // the denominator (procedural fairness — you don't get to vote on
@@ -1120,7 +1139,10 @@ export async function attemptResolution(
   // Decide the outcome on reads alone; nothing below writes until the claim.
   let outcome: "passed" | "rejected" | "open" = proposingOutcome;
   if (proposal.type === "merge" && proposingOutcome !== "rejected") {
-    if (!proposal.merge) return;
+    if (!proposal.merge) {
+      await markProposalTerminal(db, proposal, "expired", currentTurn);
+      return;
+    }
 
     const targetParty = await db
       .collection<PoliticalParty>("politicalParties")
@@ -1128,7 +1150,12 @@ export async function attemptResolution(
         { _id: proposal.merge.targetPartyId },
         { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
       );
-    if (!targetParty) return;
+    if (!targetParty) {
+      // The merge target is gone; the merge can never execute and the open row
+      // would otherwise lock the proposing party's merge lane forever.
+      await markProposalTerminal(db, proposal, "expired", currentTurn);
+      return;
+    }
 
     const targetSize = getEligibleVoterSet(targetParty).size;
     const tYes = (proposal.targetVotes ?? []).filter((v) => v.vote === "yes").length;

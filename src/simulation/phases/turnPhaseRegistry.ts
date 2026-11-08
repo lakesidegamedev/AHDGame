@@ -612,6 +612,12 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             (phaseResults as Record<string, unknown>).federationFacilityCompensation = {
               applicationsServiced: compensated,
             };
+        } else {
+          await runtime.markPhaseSkipped(
+            "federationFacilityCompensation",
+            "upstreamAbort",
+            "Skipped because bondTurn did not produce a result."
+          );
         }
 
         // Collect a staged procurement-windfall assessment after bond coupons

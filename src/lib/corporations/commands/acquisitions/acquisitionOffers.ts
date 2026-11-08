@@ -455,6 +455,33 @@ export async function listDealsForCorp(
     .toArray();
   if (offers.length === 0) return { incoming: [], outgoing: [] };
 
+  // Expire stale offers lazily: the accept route refuses them but nothing else
+  // ever stamps "expired", so without this they read as pending forever.
+  const gameState = await db
+    .collection<{ currentTurn?: number }>("gameState")
+    .findOne({ _id: "current" as unknown as ObjectId }, { projection: { currentTurn: 1 } });
+  const currentTurn = gameState?.currentTurn ?? 0;
+  const staleIds = offers.filter((o) => o.expiresAtTurn < currentTurn).map((o) => o._id);
+  if (staleIds.length > 0) {
+    await db
+      .collection<AcquisitionOffer>(OFFERS)
+      .updateMany(
+        { _id: { $in: staleIds }, status: "pending" },
+        { $set: { status: "expired", updatedAt: new Date() } }
+      );
+    const live = offers.filter((o) => !staleIds.includes(o._id));
+    if (live.length === 0) return { incoming: [], outgoing: [] };
+    return listDealsFromOffers(live, db, corpId);
+  }
+
+  return listDealsFromOffers(offers, db, corpId);
+}
+
+async function listDealsFromOffers(
+  offers: AcquisitionOffer[],
+  db: Db,
+  corpId: ObjectId
+): Promise<{ incoming: DealSummary[]; outgoing: DealSummary[] }> {
   const corpIds = new Set<string>();
   for (const o of offers) {
     corpIds.add(o.acquirerCorporationId.toString());
