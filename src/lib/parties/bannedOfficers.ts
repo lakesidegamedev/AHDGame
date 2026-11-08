@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, User } from "@/lib/db/types";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getUsersCollection } from "@/lib/db/collections/users";
 import {
   OFFICER_SEAT_FIELDS,
   seatedOfficerIds,
@@ -15,13 +16,15 @@ export async function loadBannedCharacterIds(
     ...new Map(characterIds.filter((id): id is ObjectId => !!id).map((id) => [id.toString(), id])),
   ].map(([, id]) => id);
   if (ids.length === 0) return new Set();
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: ids } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   if (characters.length === 0) return new Set();
-  const banned = await db
-    .collection<User>("users")
+  const banned = await (
+    await getUsersCollection(db)
+  )
     .find(
       { _id: { $in: characters.map((c) => c.userId) }, isBanned: true },
       { projection: { _id: 1 } }
