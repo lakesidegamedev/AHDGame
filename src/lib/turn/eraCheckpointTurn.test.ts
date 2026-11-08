@@ -374,7 +374,7 @@ describe("processEraCheckpointsTurn", () => {
 
 /**
  * Acceptance: the checkpoint's pull must reach an outcome computed through
- * the GRANULAR vote path (`granularElectorateEnabled`), not merely move a
+ * the GRANULAR vote path, not merely move a
  * stored archetype field the granular substrate never reads (the previous
  * implementation's fatal flaw — see `eraCheckpoints.ts`'s module doc).
  *

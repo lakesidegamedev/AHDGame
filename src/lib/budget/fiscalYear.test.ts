@@ -1014,9 +1014,15 @@ describe("processFiscalYear", () => {
       byCategory: {},
     } as never);
     vi.mocked(calculateStateSpendingDetail).mockResolvedValue({
-      spending: { total: 100_000_000_000, byCategory: {} },
-      lawCosts: [],
-    });
+      spending: { total: 100_000_000_000, byCategory: { education: 100_000_000_000 } },
+      lawCosts: [
+        {
+          law: { legislationTypeId: "state_education", policyOptionIndex: 0 } as never,
+          annualCost: 100_000_000_000,
+          category: "education",
+        },
+      ],
+    } as never);
 
     const db = makeDb({
       states: [{ _id: "US-CA", countryId: "US" }],

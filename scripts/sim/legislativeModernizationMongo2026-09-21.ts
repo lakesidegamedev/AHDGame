@@ -70,9 +70,6 @@ export async function seedLegislativeFixture(
     currentYear: 2023,
     startingYear: 2023,
     eraSystemEnabled: false,
-    departmentFinanceEnabled: true,
-    lawAdministrationEnabled: true,
-    regionalLegislationFinanceEnabled: true,
   });
   await db.collection<StringIdDocument>("gameConfig").insertOne({
     _id: "default",
@@ -216,9 +213,7 @@ export async function runLegislativeModernizationMongo(env: NodeJS.ProcessEnv = 
       .sort({ countryId: 1 })
       .toArray();
     activeWindow = "first";
-    const first = await processDepartmentProgramSettlement(db, 10, {
-      departmentFinanceEnabled: true,
-    });
+    const first = await processDepartmentProgramSettlement(db, 10, {});
     activeWindow = null;
     const afterFirst = await db
       .collection<FederalBudget>("federalBudget")
@@ -226,9 +221,7 @@ export async function runLegislativeModernizationMongo(env: NodeJS.ProcessEnv = 
       .sort({ countryId: 1 })
       .toArray();
     activeWindow = "replay";
-    const replay = await processDepartmentProgramSettlement(db, 10, {
-      departmentFinanceEnabled: true,
-    });
+    const replay = await processDepartmentProgramSettlement(db, 10, {});
     activeWindow = null;
     const afterReplay = await db
       .collection<FederalBudget>("federalBudget")

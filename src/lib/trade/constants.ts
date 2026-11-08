@@ -79,7 +79,7 @@ export const TRADE_EXPORT_PREMIUM_RATE = 6;
 export const TRADE_EXPORT_PREMIUM_CAP = 6;
 
 /**
- * Trade-exposure embargo model (feature-gated on `embargoTradeExposureEnabled`).
+ * Trade-exposure embargo model.
  *
  * Legacy behaviour: a TOTAL embargo (commodity "all", mode "block") mothballs
  * every sector a target-nation corporation runs in the source country — revenue

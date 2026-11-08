@@ -838,9 +838,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         status: 400,
       });
     }
-    const gameState = await getGameState(db);
-    const administrationEnabled =
-      gameState?.lawAdministrationEnabled === true && isResetV2Country(countryId);
+    const administrationEnabled = isResetV2Country(countryId);
     const administrationValidation = validateBillAdministration({
       enabled: administrationEnabled,
       legislationTypes: [selectedLegislationType],

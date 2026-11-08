@@ -8,7 +8,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireHumanSession } from "@/lib/api/requireAuth";
 import { getElectionOpponents } from "@/lib/actions/electionOpponents";
 import { projectCampaignPoll } from "@/lib/campaignTargeting/poll";
-import { isGranularPollEnabled } from "@/lib/demographics/granularPollFlag";
 import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
 import { getGameState } from "@/lib/gameState";
 import { resolvePresidentApproval } from "@/lib/electionEngine/presidentialCoattail";
@@ -29,9 +28,6 @@ vi.mock("@/lib/electionEngine/presidentialCoattail", () => ({
   isHeadOfGovernmentRace: (type: string, countryId: string) =>
     type === "president" && countryId === "US",
   resolvePresidentApproval: vi.fn(async () => null),
-}));
-vi.mock("@/lib/demographics/granularPollFlag", () => ({
-  isGranularPollEnabled: vi.fn(async () => false),
 }));
 vi.mock("@/lib/actions/granularPollPayload", () => ({
   buildGranularPollPayloadForState: vi.fn(() => ({
@@ -128,7 +124,6 @@ describe("commissioning a campaign-aware poll", () => {
       archetypeApprovals: { retirees: 24, "age:senior": -4 },
     });
     db.collection("characters").findOne.mockResolvedValue(character);
-    vi.mocked(isGranularPollEnabled).mockResolvedValue(true);
     vi.mocked(getElectionOpponents).mockResolvedValue({
       electionId: new ObjectId().toString(),
       electionType: "senate",
@@ -200,7 +195,6 @@ describe("commissioning a campaign-aware poll", () => {
       presidentialTenureByCountry: { US: { party: "1", consecutiveTerms: 6 } },
     } as never);
     vi.mocked(resolvePresidentApproval).mockResolvedValue({ partyId: "1", approval: 50 });
-    vi.mocked(isGranularPollEnabled).mockResolvedValue(true);
     vi.mocked(getElectionOpponents).mockResolvedValue({
       electionId: new ObjectId().toString(),
       electionType: "president",

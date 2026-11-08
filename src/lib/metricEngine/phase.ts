@@ -289,8 +289,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         cabinetSystemVersion: 1,
-        departmentFinanceEnabled: 1,
-        regionalLegislationFinanceEnabled: 1,
       },
     }
   );
@@ -494,8 +492,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   });
 
   const employmentPolicies = await loadEmploymentPolicies(db, turn, realStates, {
-    national: eraGameState?.departmentFinanceEnabled === true,
-    regional: eraGameState?.regionalLegislationFinanceEnabled === true,
+    national: true,
+    regional: true,
     year: eraYear ?? undefined,
     baselineYear: eraGameState?.startingYear,
   });
