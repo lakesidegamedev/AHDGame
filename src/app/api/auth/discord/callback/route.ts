@@ -113,7 +113,7 @@ export async function GET(request: Request) {
     const cf = getCfFingerprint(request.headers);
 
     if (isLoginMode) {
-      return runOAuthLogin(
+      return await runOAuthLogin(
         db,
         discordLoginAdapter(discordUser, baseUrl),
         cookieStore,
