@@ -62,6 +62,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     // taken at the start of the bond phase; a buyback in between is paid twice.
     const turnGuard = await rejectDuringTurn(db);
     if (turnGuard) return turnGuard;
+    if (!ObjectId.isValid(bondId)) {
+      return errorResponse(400, "Invalid bond ID");
+    }
 
     const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
