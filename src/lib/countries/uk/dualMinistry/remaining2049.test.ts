@@ -123,10 +123,7 @@ describe("cabinet-bill domain union and quorum shape", () => {
   });
 
   it("builds the proposer domains from every holder row via the union helper", () => {
-    const body = readFileSync(
-      "src/lib/cabinet/cabinetBills.ts",
-      "utf8"
-    );
+    const body = readFileSync("src/lib/cabinet/cabinetBills.ts", "utf8");
     expect(body).toContain("unionLegislativeDomains(");
   });
 });
@@ -415,10 +412,7 @@ describe("briefing shared balance", () => {
   });
 
   it("reads the shared pool on the briefing path instead of the row balance", () => {
-    const body = readFileSync(
-      "src/lib/cabinet/cabinetBriefing.ts",
-      "utf8"
-    );
+    const body = readFileSync("src/lib/cabinet/cabinetBriefing.ts", "utf8");
     expect(body).toContain("sharedMinisterialActions");
     expect(body).toContain("sharedRemaining ??");
   });
