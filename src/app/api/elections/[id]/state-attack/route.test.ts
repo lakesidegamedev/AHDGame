@@ -181,15 +181,6 @@ describe("POST /api/elections/[id]/state-attack", () => {
     expect(update.$inc.funds).toBe(-70_000);
   });
 
-  it("charges the price at the campaign's frozen rate, like campaign income", async () => {
-    const { loadCampaignFxRate } = await import("@/lib/currency/campaignFxRate");
-    vi.mocked(loadCampaignFxRate).mockResolvedValueOnce(2);
-    const res = await callRoute(body({ kind: "voteSuppression" }));
-    expect(res.status).toBe(200);
-    const [, update] = db.collectionMocks.campaigns!.updateOne.mock.calls[0];
-    expect(update.$inc.funds).toBe(-140_000);
-  });
-
   it("lets the kinds run at once on the same rival in the same state", async () => {
     // The duplicate query is scoped to the kind, so three different weapons may
     // run together; a second of the SAME kind is refused.
@@ -259,7 +250,8 @@ describe("POST /api/elections/[id]/state-attack", () => {
   it("charges the war chest in the campaign's own currency", async () => {
     // The constant is anchor-denominated. Comparing it against a local balance
     // would let a campaign in a weak currency buy at a fraction of the price.
-    db.collection("exchangeRates").findOne.mockResolvedValue({ currencyCode: "USD", rate: 2 });
+    const { loadCampaignFxRate } = await import("@/lib/currency/campaignFxRate");
+    vi.mocked(loadCampaignFxRate).mockResolvedValueOnce(2);
     const res = await callRoute();
     expect(res.status).toBe(200);
     const [, update] = db.collectionMocks.campaigns!.updateOne.mock.calls[0];
