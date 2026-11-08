@@ -255,11 +255,9 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   // processNppFundGeneration); otherwise they contribute $0 to revenue.
   const nppEconomyEnabled = gameConfig?.nppEconomyEnabled !== false;
 
-  // GDP-baseline era for income math: the world's reset preset, so historical
-  // worlds estimate in their own denomination (issue #798).
-  // Campaign-fund estimate is LOCAL at the frozen world-seeded currency basis
-  // (mirrors the turn processors) — never live forex. A party is country-scoped,
-  // so one rate applies to every member/NPP.
+  // Income math uses the world's reset preset so historical worlds estimate in
+  // their own denomination. Campaign-fund rate is LOCAL, frozen at world seed
+  // (mirrors turn processors), never live forex. One rate per country-scoped party.
   const campaignRate = campaignLocalRate(partyCountry, campaignRates, preset);
   const toLocal = (anchor: number) =>
     campaignAnchorToLocal(anchor * priceLevel, partyCountry, campaignRates, preset);
@@ -324,7 +322,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
 
   // Region count backing the national GOTV/suppression/registration per-state
   // estimates. Must match the turn engine's divisor: turnout docs for this
-  // country, counting legacy docs without a countryId as US (ticket #1265).
+  // country, counting legacy docs without a countryId as US.
   const effectiveBudget = getEffectivePartyBudgetSpending(nationalBudget, party.treasury);
   const gotvBudgetPercent = effectiveBudget.gotvBudgetPercent;
   const gotvEstimatedSpend =
@@ -362,7 +360,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     );
   // Mirror of computePartyPsGain's spend stream: full-rate conversion bounded by
   // PS_INVESTMENT_MAX_TIERS and by the headroom below the hard cap after passive
-  // (soft-cap bands removed 2026-06-28), so the previewed debit matches what the
+  // (no soft-cap bands), so the previewed debit matches what the
   // turn engine will actually charge.
   let estimatedPsInvestmentDebit = 0;
   const headroomAfterPassive = Math.max(

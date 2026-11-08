@@ -148,10 +148,10 @@ type EnactableBill = Pick<
   otherChamberVoteSnapshot?: Bill["otherChamberVoteSnapshot"];
   overrideDisplaySnapshot?: Bill["overrideDisplaySnapshot"];
   /**
-   * #3598: attribution tag threaded onto the resulting `EnactedLaw` row.
+   * Attribution tag threaded onto the resulting `EnactedLaw` row.
    * Omitted for ordinary bills; set to "scotus_ruling" by the SCOTUS docket
    * turn processor when synthesizing a diverged-case enactment, or
-   * "scotus_surprise_ruling" (#3607) by the surprise-case turn processor, or
+   * "scotus_surprise_ruling" by the surprise-case turn processor, or
    * "uk_judicial_review_surprise" by the UK JR surprise turn.
    */
   source?: EnactedLaw["source"];
@@ -183,13 +183,9 @@ async function applyTaxRateChange(
   retry = 0,
   countryOverride?: CountryId
 ): Promise<void> {
-  // Slider tax laws (ruling #16) carry scope+taxType on `taxSlider`, not the discrete
-  // `taxRateChange` schema — the two are projected side by side, but only for freshly
-  // seeded types. A stored `legislationTypes` doc written before that projection landed
-  // has `taxSlider` alone, and the slider enactment path (see the call site) hands us such
-  // a type. Requiring `taxRateChange` here is what made ticket 1102's Poon Choi Economic
-  // Act enact its VAT/customs sliders without ever writing federalBudget.taxRates. Resolve
-  // from whichever field the type carries so a slider provision always applies.
+  // Slider tax laws carry scope+taxType on `taxSlider`, not `taxRateChange`.
+  // Stored legislationTypes predating the projection may have only `taxSlider`.
+  // Resolve from whichever field the type carries so slider provisions always apply.
   const change = legislationType.taxRateChange ?? legislationType.taxSlider;
   if (!change || selectedOptionRate === undefined) {
     return;
@@ -206,7 +202,7 @@ async function applyTaxRateChange(
     const normalizedTaxRates = normalizeFederalTaxRates(budget.taxRates);
     if (!normalizedTaxRates) return;
 
-    // Ticket #1102: a big move ramps instead of landing whole. The rate starts
+    // A big move ramps instead of landing whole. The rate starts
     // moving this turn and the legislature's figure is still exactly the
     // destination; only the speed changes. Anything within one step applies
     // outright, so ordinary budget tweaks behave as before.
@@ -425,11 +421,9 @@ export async function applyCentralBankIndependenceProvision(
   const banks = db.collection<CentralBank>("centralBanks");
   const bankId = getBankId(countryId);
 
-  // B5: revoking independence costs the INSTITUTION credibility. Taking the
-  // bank by statute was previously free — the government got a bank that does
-  // what it says at no cost to what that bank's word is worth, which is the
-  // one thing that should have moved. Granting independence deliberately
-  // refunds nothing: if it did, grant-revoke cycling would launder scrutiny.
+  // Revoking independence costs the institution credibility; otherwise
+  // statute-taking is free. Granting refunds nothing, else grant-revoke
+  // cycling would launder scrutiny.
   let revocationScrutiny: number | undefined;
   if (governmentControlled) {
     const bank = await banks.findOne({ _id: bankId }, { projection: { chairInfamy: 1 } });
@@ -654,13 +648,10 @@ export async function onBillEnacted(
         effectDirection: p.effectDirection,
         economic: p.economic,
         social: p.social,
-        // Tax-slider laws (ruling #16): the chosen rate lives ONLY on the
-        // provision — there is no options ladder to recover it from. Dropping
-        // it here made every slider tax law inert: the statePolicy and
-        // enactedLaw rows were written, but `processProvisionEnactment`'s
-        // `provision.proposedRate !== undefined` guard never fired, so
-        // federalBudget.taxRates never moved and the duties/VAT the bill
-        // levied were never collected (ticket #1102).
+        // Tax-slider laws: the chosen rate lives ONLY on the provision, with
+        // no options ladder to recover it from. Dropping it makes the law inert:
+        // the `provision.proposedRate !== undefined` guard in
+        // `processProvisionEnactment` never fires and taxRates never move.
         proposedRate: p.proposedRate,
         policyOptionNameSnapshot: p.policyOptionNameSnapshot,
         currentPolicyOptionNameSnapshot: p.currentPolicyOptionNameSnapshot,
@@ -971,7 +962,7 @@ async function processProvisionEnactment(
   // out-of-bounds index makes optionScores[oldIndex] undefined, which drops
   // calculateShiftImpacts onto the legacy bare-index path that inverts every
   // archetype-approval sign for right→left-ordered option sets. Clamping keeps
-  // it on the curated-score path so signs stay correct. (#2899 — ticket 921.)
+  // it on the curated-score path so signs stay correct.
   const optionCount = lt?.policyOptions?.length ?? 0;
   const centerIndex = optionCount ? Math.floor(optionCount / 2) : 3;
   // A region with no row for a new-generation `both` law sits at level 0 — what

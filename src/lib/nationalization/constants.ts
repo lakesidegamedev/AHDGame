@@ -29,45 +29,19 @@ export const NATIONALIZATION_COMPENSATION_PREMIUM = 5;
 
 /**
  * Buyout premium used INSTEAD of {@link NATIONALIZATION_COMPENSATION_PREMIUM}
- * when the market tier is >= "plants" (D11 — exits settle at book).
+ * when the market tier is >= "plants". At plants the compensation base is the
+ * replacement-cost BOOK of built capacity, not a capitalized earnings stream,
+ * so the 5x earnings premium does not apply.
  *
- * Under plants a sector's compensation base changes from a capitalized earnings
- * stream (going-concern NPV) to the replacement-cost BOOK of its built
- * capacity. Those are different quantities with very different magnitudes, so
- * carrying the 5× earnings-premium across would price a taking off a number it
- * was never calibrated against.
+ * SET TO 1.0 (no premium). A premium above 1.0 is a mint: a sector built this
+ * turn has taken no depreciation, so its book equals what the owner just paid,
+ * and any premium pays the taken party more than cost. At 1.0 the taking is
+ * value-neutral on the balance sheet while staying a serious cash commitment
+ * for the treasury, and still strictly above the dissolution salvage fraction,
+ * so a targeted corp prefers being nationalized to liquidating.
  *
- * SET TO 1.0 — compensation is book, with NO premium. This was 1.5 (replacement
- * cost plus half again "for taking it against the owner's will"), and that is a
- * MINT. `capitalStock` under plants is depreciated by the turn processor, but a
- * sector built THIS turn has taken no depreciation yet, so its book is exactly
- * what the owner just paid to build it. A 1.5 premium therefore makes
- * build-then-get-nationalized pay 1.5× cost with certainty: a player who can
- * provoke a taking (or a state whose NatCorp policy is predictable) prints 50%
- * on every unit of capacity they put in the ground, funded by the treasury. No
- * amount of political cost on the taking side fixes that, because the mint
- * accrues to the party being taken FROM.
- *
- * At 1.0 a taking is value-neutral for the owner at the balance-sheet level:
- * they hand over plant and receive exactly what the plant is worth on the books.
- * Nationalization stays a serious fiscal commitment (the treasury pays full
- * replacement cost, in cash, at once) without being an arbitrage. It also stays
- * strictly above the dissolution salvage fraction (< 1), so a targeted corp
- * still prefers being nationalized to liquidating itself — the ordering the 1.5
- * was reached for is preserved at 1.0.
- *
- * TODO(plants, capacity age): a genuine fairness premium is defensible ONLY
- * against capacity the owner has actually held and depreciated — pay above book
- * for an old, written-down plant with productive life left, and at (or below)
- * book for capacity commissioned days ago. That needs per-unit capacity age
- * tracking on the sector (a build cohort/vintage on `capitalStock`, not the
- * single scalar it is today). When that lands, this constant can become an
- * age-scaled function rather than a flat multiplier. Until then, flat 1.0 is the
- * only setting that cannot be farmed.
- *
- * Moves nationalization AND privatization together — `privatizeAsset` prices the
- * reverse trade off this same constant on purpose, so the round trip
- * (nationalize then re-privatize) is a wash rather than a spread to harvest.
+ * Moves nationalization AND privatization together: `privatizeAsset` prices the
+ * reverse trade off this same constant, so the round trip is a wash.
  * Tunable.
  */
 export const NATIONALIZATION_BOOK_PREMIUM = 1.0;
@@ -114,17 +88,9 @@ export const NATIONALIZATION_TRANSITION_TURNS = 120;
 /**
  * Base state-owned-enterprise efficiency penalty.
  *
- * Softened from -10 to -6. SOEs seed at a 12 profit margin, so a -10 penalty
- * left just 2pp of headroom before any other modifier — and in a command economy
- * EVERY producing sector is an SOE, so the whole economy started 2pp from
- * insolvency. Measured at -10.14pp average it was the second-largest drag on the
- * 1000-turn run. It was -6 until 2026-10-18.
- *
- * Owner decision 2026-10-18 (market recovery): no base penalty. A clean state
- * company with no mandates runs like a private one; only corruption, weak
- * governance, the mandates a government sets and an oversized state sector cost
- * anything. Those are the government's own choices, which is where the
- * distortion belongs.
+ * No base penalty: a clean state company with no mandates runs like a private
+ * one. Only corruption, weak governance, the mandates a government sets and an
+ * oversized state sector cost anything, which is where the distortion belongs.
  */
 export const BASE_SOE_PENALTY = 0;
 
@@ -185,9 +151,8 @@ export const CONFIDENCE_RECOVERY_PER_TURN = 0.05;
 
 /**
  * Base investor-confidence points removed for the ACT of expropriating a private
- * owner — fires regardless of how well the taking is paid (a forced taking of a
- * going concern unsettles investors even at fair value). Scaled by the SOCI
- * escalation multiplier, ideology, and a popularity factor. Tunable.
+ * owner, regardless of how well the taking is paid: a forced taking of a going
+ * concern unsettles investors even at fair value. Tunable.
  */
 export const CONFIDENCE_BASE_EXPROPRIATION_HIT = 8;
 
@@ -250,7 +215,7 @@ export const SOVEREIGN_CONFIDENCE_PREMIUM_MAX = 0.03;
 /** Feed 3: max founding-cost multiplier surcharge at confidence 0 (1.0 = no effect at baseline). */
 export const FOUNDING_CONFIDENCE_PENALTY_MAX = 0.25; // up to +25% founding cost
 
-// ── State Ownership Concentration Index (SOCI) — rebalance 2026-06-24 ─────────
+// ── State Ownership Concentration Index (SOCI) ─────────
 
 /**
  * SOCI (0–100) at/below which there is NO escalation — the multiplier is exactly
@@ -330,7 +295,7 @@ export const PRIVATIZATION_APPROVAL_NUDGE = 3;
 /** Legitimacy nudge (pp) at full ideology lean (confidence-model countries); market +, statist −. */
 export const PRIVATIZATION_LEGITIMACY_NUDGE = 3;
 
-// ── CEO operations (Phase 6g, spec 2026-06-03) ───────────────────────────────
+// ── CEO operations (Phase 6g) ───────────────────────────────
 
 /** Hard floor on the budget remittance share of a NatCorp's profit (⇒ retention ≤ 75). */
 export const MIN_PROFIT_REMITTANCE_PERCENT = 25;

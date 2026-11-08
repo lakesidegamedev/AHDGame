@@ -1,26 +1,14 @@
 /**
- * Autonomous international-organization voting (SP4).
+ * Autonomous international-organization voting.
  *
- * Org membership proposals and free-trade agreements resolve by UNANIMOUS "yes"
- * from the eligible member/party set; leadership elections by simple majority.
- * A vote is cast by a country's trade minister (a player). In a disabled/
- * econ-only country there is no player to cast it, so the country never votes —
- * and because no-vote counts as non-approval, a single autonomous member
- * silently vetoes EVERY membership proposal and FTA it is eligible to vote on,
- * forever. This is the intl-org analogue of the SP1–SP3 `userId`-filter stalls.
+ * Membership proposals and FTAs need UNANIMOUS yes; leadership elections need a simple
+ * majority. In a disabled/econ-only country no player casts the vote, and no-vote counts
+ * as non-approval, so a single autonomous member silently vetoes every proposal forever.
+ * This casts a cooperative "yes" for each autonomy-active eligible voter that has not
+ * voted, before the resolvers run.
  *
- * This casts a cooperative "yes" on behalf of each autonomy-active country that
- * is an eligible voter and has not already voted, so autonomous members
- * participate instead of obstructing. Runs before the resolvers each turn.
- *
- * Safety rail: only autonomy-active countries (autonomy enabled AND NOT
- * player-enabled) ever get an auto-cast vote. Player-enabled members are never
- * voted for — their trade minister still decides.
- *
- * Out of scope (deferred): autonomously *initiating* membership applications,
- * FTAs, or leadership candidacies. Voting closes the stall; proposing is a
- * separate, lower-value behavior with open design questions (what would a
- * disabled country choose to join?).
+ * Safety rail: only autonomy-active countries (enabled AND NOT player-enabled) are
+ * auto-voted; player-enabled members are never voted for.
  */
 
 import { ObjectId, type Db } from "mongodb";
@@ -142,17 +130,14 @@ export async function castAutonomousOrgVotes(db: Db, currentTurn: number): Promi
     };
   };
 
-  // ── 1. Membership proposals — NOT VOTED ON HERE ────────────────────────────
+  // Membership proposals are NOT voted on here: admissions are decided by
+  // player-enabled members alone, and every country this function speaks
+  // for is autonomy-active (and so NOT player-enabled). A ballot cast here
+  // could never be counted by the resolver.
   //
-  // An admission is decided by the player-enabled members alone, and every
-  // country this function speaks for is autonomy-active, which means it is NOT
-  // player-enabled. So a ballot cast here could never be counted by the
-  // resolver — it only landed on the proposal for the panels to display,
-  // showing consent beside a tally that ignored it (ticket #1257).
-  //
-  // The instruments below are different and are still voted: an FTA is decided
-  // by its named parties whoever runs them, and a leadership election by the
-  // wider policy roll, which autonomy-active members are on.
+  // FTA legislation and leadership elections ARE voted: an FTA is decided
+  // by its named parties, and a leadership election by the wider policy
+  // roll, which autonomy-active members are on.
 
   // ── 2. FTA legislation — eligible voters = named parties ────────────────────
   const legislationCol = await getOrganizationLegislationCollection(db);

@@ -2,62 +2,26 @@
  * The operating profit a state-owned sector ACTUALLY earned, in the sector's
  * stored currency, on the daily basis `revenue` and `realizedRevenue` use.
  *
- * ─── Why this exists (ticket 1072) ──────────────────────────────────────────
+ * `revenue` is nameplate and ignores mothballing; `effectiveProfitMargin` for
+ * a cold sector is a counterfactual (what its margin WOULD be), not an
+ * achieved number. Multiply those and the page reports large phantom profits
+ * for idle plants. Instead prefer `sector.plantsPnl.profit` when present
+ * (carries upkeep and compliance), else realized revenue x the engine margin,
+ * unfloored, minus the upkeep a cold plant still pays.
  *
- * The National Corporation page used to compute a holding's operating profit as
- *
- *     profit = revenue x max(0, effectiveProfitMargin) / 100
- *
- * Every term in that line is wrong for a plant that is not running, and the
- * three errors compound in the same direction:
- *
- *  1. `revenue` is the NAMEPLATE (capacity x mix price). Mothballing or idling
- *     a plant drives `realizedRevenue` to 0 and leaves the nameplate exactly
- *     where it was, so the basis never notices the plant went cold.
- *  2. `effectiveProfitMargin` is not an achieved margin for such a sector. The
- *     turn processor is explicit about it: a sector with no revenue this turn
- *     "has no ratio to derive from", so it keeps reporting the modifier stack,
- *     which is what its margin WOULD be if it ran. That counterfactual is fine
- *     as a hint and is not a number to multiply money by.
- *  3. `Math.max(0, ...)` floored the margin, so a running sector losing money
- *     reported exactly 0 and could never look worse than a cold one.
- *
- * Together they inverted the incentive the mothball button exists to create.
- * On prod (turn 243) the East German Manufacturing Enterprise had five of six
- * plants cold, producing nothing and realizing nothing, and the page reported
- * +4,775,875 per day of operating profit against an engine-booked income of
- * -68,139 per turn. The reporter read it correctly and said so: "Basically
- * anyone could use this to make huge profits."
- *
- * ─── What replaces it ───────────────────────────────────────────────────────
- *
- * In order of preference:
- *
- *  1. `sector.plantsPnl.profit`, the figure the turn booked, when the row has
- *     it. This is the only source that carries upkeep and compliance, which sit
- *     outside the margin's scope and inside the profit.
- *  2. Realized revenue x the engine margin, unfloored, minus the upkeep a cold
- *     plant still pays. A sector that realized nothing therefore reports the
- *     upkeep it is burning, which is a loss, which is the truth.
- *
- * The upkeep leg mirrors `plantsUpkeepCost` in `sectorTurn`: a mothballed plant
- * pays {@link MOTHBALL_UPKEEP_FRACTION} of running maintenance on its whole
- * capacity, an idle-but-live plant pays {@link IDLE_UPKEEP_FRACTION} on the
- * share of capacity its owner chose to leave idle. It is priced off the held
- * `plantsUpkeepMarginBasisAnchor` for the same reason the turn does: a fixed
- * cost must not grow as the sector's margin falls.
- *
- * Below plants nothing here changes behaviour. There is no mothball button,
- * `realizedRevenue` tracks `revenue`, and the margin is last turn's modifier
- * stack for every sector alike.
+ * The upkeep leg mirrors `plantsUpkeepCost` in `sectorTurn`: mothball pays
+ * {@link MOTHBALL_UPKEEP_FRACTION} on whole capacity, idle pays
+ * {@link IDLE_UPKEEP_FRACTION} on the idle share, priced off the held
+ * `plantsUpkeepMarginBasisAnchor` so a fixed cost does not shrink as the
+ * margin falls. Below plants nothing changes.
  */
 import { activeCapacityFraction, capacityUpkeepUnits } from "@/lib/corporations/investment/rules";
 import { IDLE_UPKEEP_FRACTION, MOTHBALL_UPKEEP_FRACTION } from "@/lib/constants/capacityEconomy";
 
 /**
- * The persisted booked P&L (ticket 1122, `CorporateSector.plantsPnl`), read
- * structurally so this module does not depend on that field having landed yet.
- * Absent or non-finite falls through to the realized-revenue path below.
+ * Persisted booked P&L (`CorporateSector.plantsPnl`), read structurally so this
+ * module doesn't depend on that field. Absent or non-finite falls through to
+ * the realized-revenue path below.
  */
 interface BookedPnlShape {
   profit?: unknown;

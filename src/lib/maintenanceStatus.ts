@@ -98,17 +98,14 @@ export function invalidateMaintenanceCache(): void {
 }
 
 /**
- * Reads the maintenance flag from `gameConfig` — the single source of truth,
+ * Reads the maintenance flag from `gameConfig`, the single source of truth,
  * the same document the admin panel writes and `/api/maintenance` reports.
  *
- * There is deliberately NO environment-variable escape hatch here. A
- * `MAINTENANCE_MODE=false` env override used to short-circuit this function
- * before the DB read, which silently defeated the admin toggle: the admin panel
- * (which reads `gameConfig`) showed the site as sealed while the proxy gate let
- * everyone through. That gap let non-admins register and create characters
- * during a reset. If maintenance needs to be forced on/off, toggle it in the
- * DB via `PATCH /api/admin/maintenance` or `enableMaintenanceMode()` so every
- * reader agrees.
+ * There is deliberately NO environment-variable escape hatch: an env override
+ * would silently defeat the admin toggle, letting the proxy gate disagree with
+ * the admin panel. To force maintenance, toggle it in the DB via
+ * `PATCH /api/admin/maintenance` or `enableMaintenanceMode()` so every reader
+ * agrees.
  */
 export async function getCachedMaintenanceStatus(): Promise<MaintenanceStatusSnapshot> {
   // Local pause belongs to singleplayerRuntime, never to hosted maintenance.

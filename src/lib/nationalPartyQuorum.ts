@@ -8,15 +8,14 @@ import { applyOptionalCountryScope } from "./nationalPartyElectionScope";
 // ─── Quorum Acceleration ─────────────────────────────────────────────────────
 
 /**
- * Quorum acceleration: when >50% of a party's eligible voters have cast a vote
+ * Quorum acceleration: when >50% of a party's eligible voters have voted
  * AND the chair seat is vacant, halve the remaining election timer. Eligible
  * voters are player members (NPPs do not vote in leadership elections), or the
- * committee + leadership for committee-method parties — NOT the stored
- * `memberCount`, which also counts NPPs and drifts. This only applies to
+ * committee + leadership for committee-method parties, NOT the stored
+ * `memberCount` which also counts NPPs and drifts. Applies only to
  * chair-position elections. Fires at most once per election (tracked by
- * `quorumAcceleratedAtTurn`). Skipped on a party's first chair cycle (no prior
- * completed chair election) so inaugural / post-reset leadership races stay in
- * lockstep with viceChair/treasurer (ticket #1023).
+ * `quorumAcceleratedAtTurn`). Skipped on a party's first chair cycle so
+ * inaugural / post-reset races stay in lockstep with viceChair/treasurer.
  *
  * Returns the number of elections that were accelerated this turn.
  */
@@ -149,7 +148,7 @@ export async function applyQuorumAcceleration(
     if (!party) continue;
 
     // Skip inaugural chair races — keep the first cycle aligned with the other
-    // national offices (ticket #1023).
+    // national offices.
     if (!partiesWithPriorChairCycle.has(partyKey)) continue;
 
     // Only accelerate when the chair seat is vacant
@@ -218,21 +217,20 @@ export async function applyQuorumAcceleration(
 
 /**
  * Evict inactive NATIONAL party leadership (chair / vice-chair / treasurer),
- * mirroring {@link vacateInactiveLeadership} for state-party orgs (#3308,
- * follow-up to #972 / PR #3303). Holders whose user fails {@link isUserActive}
- * at the lenient {@link LEADERSHIP_INACTIVE_TURN_THRESHOLD} have their seat
- * `$set` to null so the next cycle opens against an empty seat; an abandoned
- * national chair otherwise blocks quorum acceleration, which requires a vacant
- * chair to fire.
+ * mirroring {@link vacateInactiveLeadership} for state-party orgs. Holders
+ * whose user fails {@link isUserActive} at the lenient
+ * {@link LEADERSHIP_INACTIVE_TURN_THRESHOLD} have their seat `$set` to null so
+ * the next cycle opens against an empty seat; an abandoned national chair
+ * otherwise blocks quorum acceleration, which requires a vacant chair.
  *
- * National-specific concern the state path lacks: when a CHAIR is vacated we
- * must also null the led coalition's `chairCharacterId`, mirroring the
- * elected/vacated chairChanges sync in {@link processCompletedNationalElections}
- * — otherwise coalition leadership desyncs from the (now empty) party chair.
+ * When a CHAIR is vacated, also null the led coalition's `chairCharacterId`,
+ * mirroring the elected/vacated chairChanges sync in
+ * {@link processCompletedNationalElections}; otherwise coalition leadership
+ * desyncs from the now-empty party chair.
  *
- * Batched: one `politicalParties` scan, one `characters` find, one `users` find.
- * Fully inert when everyone is active. Missing character/user/activity data is
- * treated as active (skip-on-missing) so data gaps never punish a holder.
+ * Batched: one `politicalParties` scan, one `characters` find, one `users`
+ * find. Inert when everyone is active. Missing character/user/activity data is
+ * treated as active so data gaps never punish a holder.
  *
  * @returns the number of seats vacated.
  */

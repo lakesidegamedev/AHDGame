@@ -98,36 +98,27 @@ export interface WholeCorpCompensationResult {
 }
 
 /**
- * Whole-corp compensation under plants (D11) — the base and the premium made
- * consistent.
+ * Whole-corp compensation under plants (D11): each asset class compensated on
+ * its own basis, then summed.
  *
- * THE BUG THIS REPLACES: `nationalizeWholeCorp` computed its base with
- * {@link computeWholeCorpValuation}, which takes `max(marketCap,
- * balanceSheetEquity)`, and then handed the winner to {@link applyTier} with
- * `plantsEnabled: true` — i.e. the {@link NATIONALIZATION_BOOK_PREMIUM}. When
- * marketCap won (a listed corp trading above its plant value, which is the
- * normal case for a profitable one) the state paid a BOOK premium on a MARKET
- * base. The premium and the base are calibrated together, so mixing them is a
- * silent, unbounded over- or under-pay on every whole-corp taking.
+ * THE RULE: sector plants are taken at book and carry the
+ * {@link NATIONALIZATION_BOOK_PREMIUM} (the state pays above replacement cost,
+ * which is what makes a taking compensated rather than confiscatory). Cash is
+ * taken at 1.0, since paying 1.5x for a dollar is a money printer and there is
+ * no "premium over replacement cost" for cash.
  *
- * THE RULE HERE: each asset class is compensated on its own basis, then summed.
- * Sector plants are taken at book and carry the book premium (the state pays
- * above replacement cost — that is what makes a taking compensated rather than
- * confiscatory). Cash is taken at 1.0: paying 1.5× for a dollar would be a
- * money printer, and there is no "premium over replacement cost" for cash.
+ * DEBT is netted off the non-sector leg FIRST and only then off the book leg:
+ * debt is a claim on cash before it is a claim on plants, and netting it
+ * against the premium-bearing leg first would let a leveraged corp's
+ * shareholders extract the premium on debt they are being relieved of.
  *
- * DEBT is netted off the non-sector leg FIRST and only then off the book leg.
- * Debt is a claim on the corp's cash before it is a claim on its plants, and
- * netting it against the premium-bearing leg first would let a leveraged corp's
- * shareholders extract 1.5× the debt they are being relieved of.
+ * The market-cap floor is deliberately DROPPED under plants. Below plants its
+ * job was to stop a manipulated-low share price from cheapening a seizure;
+ * under plants the book leg is that floor and cannot be manipulated, being
+ * priced off capacity actually in the ground.
  *
- * The market-cap floor is deliberately DROPPED under plants. Its job below
- * plants was to stop a manipulated-low share price from cheapening a seizure;
- * under plants the book leg is that floor, and it cannot be manipulated at all
- * — it is priced off capacity actually in the ground.
- *
- * Below plants nothing calls this: keep using
- * {@link computeWholeCorpValuation} + {@link applyTier}.
+ * Under plants, prefer {@link computeWholeCorpValuation} + {@link applyTier}
+ * only when `plantsEnabled` is false.
  */
 export function wholeCorpCompensationAnchor(
   input: WholeCorpCompensationInput

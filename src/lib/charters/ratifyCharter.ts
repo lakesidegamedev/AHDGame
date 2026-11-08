@@ -17,19 +17,15 @@ import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCau
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 
 /**
- * Phase 6 — internal helper called by `signCharter` once the 3-of-3
- * threshold is hit. Spawns the actual `politicalParties` row and
- * transitions the charter to `ratified` with `partyId` set.
+ * Internal helper called by `signCharter` once the 3-of-3 threshold is hit.
+ * Spawns the `politicalParties` row and transitions the charter to `ratified`
+ * with `partyId` set.
  *
- * Default party position fields (`economicPosition`, `socialPosition`)
- * are derived from the charter's economic + social axes scaled from
- * `[-60, +60]` to the existing `[-5, +5]` party-position scale.
+ * Party positions are derived from the charter's economic + social axes
+ * scaled from `[-60, +60]` to `[-5, +5]`.
  *
- * Idempotent: a charter that's already `ratified` returns its existing
- * `partyId`. Caller is responsible for transactional safety — this
- * helper does not run inside a session.
- *
- * See plan §"Phase 6 — Tasks" 6.2.
+ * Idempotent: an already `ratified` charter returns its existing `partyId`.
+ * Caller is responsible for transactional safety.
  */
 
 /** Convert charter axis [-60, 60] → party position [-5, 5]. */
@@ -74,13 +70,12 @@ export async function ratifyCharter(
   // Founder slot 0 is the "anchor founder" (the proposer; `draftCharter`
   // always puts them here). They anchor the party's geography (home state
   // for the NPP founding cohort) and the cohort favorability baseline, and
-  // are stamped as `createdBy`. Per suggestion #289 they are ALSO seated as
-  // the party's first chair at ratification so the party is not headless
-  // (wrong color, no logo, no one able to customize it) while it waits for a
-  // leadership election to resolve. Vice-chair and treasurer still start
-  // vacant and are decided by the cycle-aligned national leadership elections
-  // opened at the end of this function; the chair seat is uncontested only for
-  // this first term and re-opens normally on the next cycle.
+  // are stamped as `createdBy`. They are ALSO seated as the party's first
+  // chair at ratification so the party is not headless (wrong color, no logo,
+  // no one able to customize it) while awaiting a leadership election.
+  // Vice-chair and treasurer start vacant and are decided by the
+  // cycle-aligned national leadership elections opened at the end of this
+  // function; the chair seat is uncontested only for this first term.
   const anchorFounderCharacterId = charter.foundersCharacterIds[0];
   const anchorFounder = anchorFounderCharacterId
     ? await db.collection<Character>("characters").findOne({ _id: anchorFounderCharacterId })
@@ -110,7 +105,7 @@ export async function ratifyCharter(
     color: "#4f46e5", // neutral indigo until chair customizes
     economicPosition: axisToPartyPosition(platform.economic),
     socialPosition: axisToPartyPosition(platform.social),
-    // #289 — seat the proposer as first chair so the party isn't headless at
+    // Seat the proposer as first chair so the party isn't headless at
     // birth. Falls back to null if the anchor founder character is missing.
     chairId: anchorFounder?._id ?? null,
     viceChairId: null,
@@ -127,9 +122,8 @@ export async function ratifyCharter(
     treasury: 0,
     nationalTaxRate: 0,
     politicalStrength: 0,
-    // 2026-05-22 treasury-two-person-approval: chartered parties
-    // default to double-approval at ratification, matching default-
-    // party seeds.
+    // Chartered parties default to double-approval at ratification,
+    // matching default-party seeds.
     transactionApprovalMode: "double",
     createdTurn: charterCurrentTurn,
     createdAt: now,
@@ -285,7 +279,7 @@ export async function ratifyCharter(
       /* non-fatal */
     }
     // Founders defecting from another party must not keep active player
-    // endorsements of their old party's primary candidates (ticket #1179).
+    // endorsements of their old party's primary candidates.
     try {
       const { withdrawPlayerEndorsementsOnPartyChange } =
         await import("@/lib/elections/playerEndorsements");
@@ -297,7 +291,7 @@ export async function ratifyCharter(
   // Drop former-party caucus membership for every founder who actually moved.
   // Charter ratification is a party-switch and must clear factionId the same
   // way leave/join do, or founders stay blocked from founding caucuses in the
-  // new party (ticket #1030).
+  // new party.
   const foundersWhoMoved = founderCharacters
     .filter((ch) => ch.party !== partyIdStr)
     .map((ch) => ch._id);
@@ -312,13 +306,12 @@ export async function ratifyCharter(
       /* non-fatal — party spawn already succeeded */
     }
   }
-  // Per former party, now that the founders have left:
+  // Per former party, now that founders have left:
   //   (a) Recompute memberCount from live membership. A blind `$inc: -1` per
-  //       founder drove the stored count negative on an already-drifted party
-  //       (#0701); recomputing is authoritative and can never go negative.
-  //   (b) Tear the founders out of that party's leadership races — withdraw
-  //       their candidacies and delete their (and votes-for-them) ballots, so
-  //       they no longer stand for chair/VC/treasurer of a party they left.
+  //       founder can drive the stored count negative; recompute is
+  //       authoritative and cannot go negative.
+  //   (b) Tear the founders out of that party's leadership races: withdraw
+  //       their candidacies and delete their (and votes-for-them) ballots.
   for (const [oldSeqId, departingIds] of departuresByOldParty) {
     await recomputePartyMemberCount(db, charter.countryId, oldSeqId);
     await withdrawFromPartyLeadershipElections(
@@ -328,7 +321,7 @@ export async function ratifyCharter(
       charter.countryId
     );
   }
-  // F2b (#0701 split-cleanup) — vacate any leadership slot on the founders'
+  // F2b (split-cleanup), vacate any leadership slot on the founders'
   // FORMER parties that still points at a departing founder. Founding a new
   // party is a party-switch, but the charter flow only moved `character.party`
   // and decremented memberCount — it never cleared leadership, leaving e.g. a
@@ -361,9 +354,8 @@ export async function ratifyCharter(
     /* non-fatal — the hourly phase will create them */
   }
 
-  // Notify every founder that the party is live. Non-fatal. The proposer is
-  // seated as chair (#289); vice-chair and treasurer start vacant, so founders
-  // are pointed at the freshly opened elections for those two seats.
+  // Notify each founder that the party is live. Non-fatal. Proposer is
+  // seated as chair; vice-chair and treasurer start vacant.
   try {
     const { createNotification } = await import("@/lib/notifications");
     const anchorFounderId = anchorFounder?._id ?? null;
@@ -393,27 +385,16 @@ export async function ratifyCharter(
     /* non-fatal */
   }
 
-  // F4 (2026-05-22 redesign): spawn the founding NPP cohort so the newly-
-  // ratified party has presence beyond its 3 chartered characters.
+  // Spawn the founding NPP cohort so the newly-ratified party has presence
+  // beyond its 3 chartered characters. Cohort size is 3: NPP 1 always spawns in
+  // the anchor founder's home state with the charter's platform positions; NPPs 2
+  // and 3 come from `charter.foundingCohort` (player-picked states validated
+  // against home-state adjacency, and per-NPP positions). Legacy charters without
+  // `foundingCohort` fall back to all 3 in the anchor's home state at platform
+  // positions. Same-state double-up is allowed.
   //
-  // Cohort size = 3 (down from legacy 5):
-  //   - NPP 1 always spawns in the anchor founder's home state with the
-  //     charter's platform positions (the implicit "anchor" of the party's
-  //     geography).
-  //   - NPPs 2 & 3 come from `charter.foundingCohort` — player-picked states
-  //     (validated against home-state adjacency at draft time) and player-
-  //     chosen per-NPP positions. Legacy charters drafted before the F4
-  //     redesign have no `foundingCohort` and fall back to all 3 in the
-  //     anchor founder's home state at platform positions — matches the
-  //     legacy spawn-on-creation behavior.
-  //   - Same-state double-up is allowed (picker permits picking the home
-  //     state again or repeating an adjacent state).
-  //
-  // All 3 cohort NPPs are seeded as "true believers": high loyalty (75-95),
-  // modest ambition (40-55), moderate stubbornness (40-60). Favorability
-  // tracks the anchor founder's favorability ±5 — at ratification the
-  // proposing founder is the party's public face, so their approval is the
-  // natural baseline for founding cadre.
+  // All 3 are seeded as true believers: loyalty 75-95, ambition 40-55,
+  // stubbornness 40-60. Favorability tracks the anchor founder's ±5.
   //
   // Non-fatal: NPP spawning failures don't roll back ratification.
   try {

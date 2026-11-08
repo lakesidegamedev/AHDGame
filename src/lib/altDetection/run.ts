@@ -1,16 +1,9 @@
-// Alt-detection compute runner (forensics/alt-detection rework plan §3.2,
-// Phase 6 T6.1). Invoked from the HOURLY CRON (`src/lib/cron.ts`), NOT a
-// turn phase — an owner decision to keep the alt-scoring compute cost off
-// the turn loop (see plan §7 open question 3). Best-effort: gated on
-// `isAltScoringEnabled()`, and the whole entry point is wrapped so a throw
-// here never propagates to the caller.
+// Alt-detection compute runner. Invoked from the hourly cron (`src/lib/cron.ts`),
+// not a turn phase, to keep alt-scoring cost off the turn loop. Best-effort:
+// gated on `isAltScoringEnabled()`, and a throw here never propagates.
 //
-// Pipeline: select a bounded candidate `users` set (never a full scan) →
-// assemble each candidate's `AltCandidateFacet` from `users`/`activityLog`/
-// `financialTxLog`/`actionAuditLog` → `buildAltLinks` (Phase 5 `signals.ts`
-// registry + noisy-OR scorer) → `buildAltClusters` (connected components) →
-// UPSERT `altLinks`/`altClusters`, preserving any existing cluster's
-// moderator-set `status`/`reviewedBy`/`reviewNote` across recomputes.
+// Recomputes preserve existing clusters' moderator-set `status`/`reviewedBy`/
+// `reviewNote`.
 
 import { ObjectId, type Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";

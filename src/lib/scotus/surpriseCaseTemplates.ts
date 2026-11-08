@@ -1,44 +1,30 @@
 import type { DocketCaseAxis, DocketCaseEffect } from "@/lib/db/types/scotus";
 
 /**
- * Authored pool of "surprise" Docket case templates (#3607) — flavor-only,
- * non-historical case names/topics, in the style of a real SCOTUS case name
- * ("X v. Y") but about a dispute that never actually happened.
+ * Authored pool of "surprise" Docket case templates: flavor-only, non-historical
+ * case names/topics.
  *
- * Unlike a curated historical `DocketCase` (one authored `effect` that only
- * fires on divergence from a real historical ruling), a surprise case has no
- * real-world ruling to diverge from — every spawn produces a ruling, decided
- * purely by the sitting Court's current majority headcount on the case's
- * tagged axis (see `scotusSurpriseCaseTurn.ts`). That headcount can land
- * either way, so each template carries TWO candidate effects instead of one:
+ * Unlike a curated historical `DocketCase` (one authored `effect` that fires on
+ * divergence from a real ruling), a surprise case has no real-world ruling to
+ * diverge from. Every spawn is decided by the sitting Court's majority headcount
+ * on the case's tagged axis (see `scotusSurpriseCaseTurn.ts`), which can land
+ * either way, so each template carries TWO candidate effects:
  *
  *  - `positiveEffect` fires when the majority headcount is positive
- *    (right-leaning, by the shared [-5,+5] lean-scale convention used by
- *    `ideology.ts`/`legislationTypes.ts`'s `deriveStanceScore` — negative
- *    lean/score is left, positive is right).
+ *    (right-leaning, per the shared [-5,+5] lean convention).
  *  - `negativeEffect` fires when the majority headcount is negative
  *    (left-leaning).
  *
- * There is no "tie" effect — a headcount tie (`majoritySide === 0`,
- * vanishingly rare, only possible with an even seated count split exactly in
- * half) produces a ruling with no clear majority direction, so no policy
- * effect is applied that turn (see `scotusSurpriseCaseTurn.ts`).
+ * No "tie" effect: an exact headcount tie is vanishingly rare and applies no
+ * policy effect that turn.
  *
- * Every effect below references a REAL, already-seeded `legislationTypeId`/
- * `policyOptionId` pair from `src/lib/seeds/reference/legislationTypes.ts`
- * — the same convention the curated Docket content tickets (#3599-3602) use,
- * so a surprise ruling flows through the exact same
- * enactment -> metric-registry -> regional-lean-drift pipeline unmodified.
- * `positiveEffect`/`negativeEffect` always reference option index 5 (mild
- * right) / index 1 (mild left) of that type's usual 7-option ladder — a
- * deliberately mild pick, not the most extreme option on the ladder, so a
- * surprise ruling reads as meaningfully smaller than a landmark historical
- * case by default (per #3607's "rarer and/or lower-magnitude" guidance).
- * `policyOption.economic`/`.social`/`.effectDirection` are looked up from the
- * real legislation type at enactment time (`billEnactment.ts`
- * `processProvisionEnactment`), so `effectDirection` here is just kept in
- * sync with that option's authored value for readability — not a source of
- * truth `onBillEnacted` depends on.
+ * Every effect references a REAL, already-seeded `legislationTypeId`/
+ * `policyOptionId` pair from `seeds/reference/legislationTypes.ts`, so a
+ * surprise ruling flows through the same enactment -> metric-registry ->
+ * regional-lean-drift pipeline unmodified. Effects target a deliberately mild
+ * option on the usual 7-option ladder so a surprise reads as smaller than a
+ * landmark historical case. `effectDirection` is kept in sync with the authored
+ * option for readability only; enactment looks it up from the real type.
  */
 export interface SurpriseCaseTemplate {
   /**

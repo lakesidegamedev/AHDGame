@@ -1,19 +1,16 @@
 /**
- * ONE exit basis for a sector, shared by every preview/executor pair (D11).
+ * ONE exit basis for a sector, shared by every preview and executor pair.
  *
- * The rule: below the plants tier a sector exits at its going-concern NPV;
- * at/above plants it exits at replacement-cost BOOK (built capacity priced at
- * the same ₳/unit the build path charges, plus construction in flight). Book is
- * what closes the build-then-exit mint — salvage can never exceed build cost.
+ * Rule: below the plants tier a sector exits at going-concern NPV; at or above
+ * plants it exits at replacement-cost BOOK (built capacity priced at the same
+ * per-unit cost the build path charges, plus construction in flight). Book caps
+ * exit at build cost, closing the build-then-exit mint.
  *
- * The reason this is a module and not an inline `plantsEnabled ? … : …` at each
- * call site is the P3a audit finding: the bond-default PANEL quoted a
- * salvage/restructure figure derived from NPV while the EXECUTOR it launches
- * settled at book. A CEO chose "dissolve" against one number and was paid
- * another. Preview and executor now call the SAME function with the SAME mode,
- * so the two cannot drift again without the test below going red.
+ * Shared so preview and executor cannot drift: a mismatch here previously let a
+ * CEO choose dissolve against an NPV figure and get paid book. Both call the
+ * same function with the same mode.
  *
- * Every value returned is in ₳.
+ * Every value returned is in the base currency.
  */
 import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";

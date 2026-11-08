@@ -2,54 +2,41 @@
  * Country-and-era GDP-per-capita baselines for campaign income and action costs.
  *
  * PORTABLE RULES (see `rules/currency.ts`): plain data in, plain data out. No
- * database, clock, randomness, env, network, or async — the caller supplies the
- * world preset and this module resolves the number.
+ * database, clock, randomness, env, network, or async.
  *
- * WHY THIS EXISTS (issue #798): campaign income (`getIncomeGdpScalar`) and
- * action costs (`getFundMultiplier`) scale regional GDP per capita against a
- * national baseline. The old table hardcoded five modern-era local-currency
- * values and fell back to the US 65,000 default for everyone else, so any
- * country whose `State.gdp` is stored in a different denomination pinned every
- * scalar to its clamp (JP yen per-capita ~4.2M vs 65,000; IE ~91k euro-proxy
- * vs 65,000). Worse, a single fixed per-country number cannot work across
- * eras: JP's modern seed is JPY millions while its 1953 seed is USD-anchored
- * millions (see `seeds/reference/gdpDenomination.ts`), so the baseline must be
- * keyed by (country, era), not by country alone.
+ * Campaign income (`getIncomeGdpScalar`) and action costs (`getFundMultiplier`)
+ * scale regional GDP per capita against a national baseline. The baseline must
+ * be keyed by (country, era), not country alone: a country's `State.gdp`
+ * denomination differs by era (e.g. JPY millions in the modern seed, USD-anchored
+ * millions in 1953), so a single fixed per-country number pins the scalar to its
+ * clamp.
  *
  * WHAT THE NUMBERS ARE: for each playable country and era bundle, the
  * population-weighted mean regional GDP per capita
- * (SUM gdp x 1e6 / SUM population) over exactly the region bundle that
- * country's seeder writes for that preset, multiplied by the seed-time
- * reconcile scalar where the pre-1999 era gate applies
- * (`admin/seed/reconcileStateGdp.ts`: post-seed regional GDP matches the
- * authored national GDP, so the baseline matches what `State.gdp` actually
- * holds at runtime). Units therefore match `State.gdp` by construction, and
- * the average region resolves a ~1.0 (neutral) scalar.
+ * (SUM gdp x 1e6 / SUM population) over exactly the region bundle that seeder
+ * writes, multiplied by the seed-time reconcile scalar where the pre-1999 era
+ * gate applies, so the units match `State.gdp` by construction and the average
+ * region resolves a ~1.0 (neutral) scalar.
  *
- * Derivation is pinned by `gdpBaseline.table.test.ts`, which recomputes every
- * cell from the seed modules and fails if a seed edit leaves the table stale.
- * To recalibrate: edit seeds, run the table test, copy the recomputed values
- * it reports, and have the result reviewed (balance-sensitive: worldsim).
+ * `gdpBaseline.table.test.ts` recomputes every cell from the seed modules and
+ * fails if a seed edit leaves the table stale. To recalibrate: edit seeds, run
+ * the table test, copy the recomputed values, and have the result reviewed
+ * (balance-sensitive: worldsim).
  *
- * ACTIVATING A NEW COUNTRY: add its per-era row here. Until then the resolver
- * throws for it — deliberately, so a new playable country can never silently
- * inherit a mismatched US denomination.
+ * A new country without a row throws from the resolver, deliberately, so it can
+ * never silently inherit a mismatched US denomination.
  *
- * ⚠️ THAT THROW IS NOT CONTAINED TO THE COUNTRY THAT CAUSES IT. Two surfaces
- * make a missing row far more expensive than a loud error:
+ * That throw is NOT contained to the offending country:
+ * - `/profile` calls `calculateFullFundDistribution` for every character, so one
+ *   missing row 500s that page for its players.
+ * - The turn processor loops every character with no per-character catch and
+ *   writes only after the loop, and `runPhase` aborts on throw, so one missing
+ *   row costs EVERY player that turn's campaign income, plus `partyGOTV` and
+ *   `caucusTax`.
  *
- * - `/profile` calls `calculateFullFundDistribution` for every character, so a
- *   country with no row 500s the page for its own players. DD shipped that way,
- *   and the bug arrived as "cannot log in via Discord" — OAuth succeeds and
- *   redirects onto the page that threw.
- * - The turn processor is worse. `processFundGeneration` loops every character
- *   with no per-character catch and writes only after the loop, and `runPhase`
- *   turns a throw into an aborted phase. One RU character therefore cost EVERY
- *   player that turn's campaign income, plus `partyGOTV` and `caucusTax`.
- *
- * `gdpBaselineCoverage.guard.test.ts` now pins the row set against the region
- * bundles on disk — any era, not just 1953 — so the next country fails a test
- * rather than a player's page and everyone else's payout.
+ * `gdpBaselineCoverage.guard.test.ts` pins the row set against the region
+ * bundles on disk for every era, so a new country fails a test rather than a
+ * player's page and everyone else's payout.
  */
 
 import type { EraId } from "@/lib/seeds/presetSelector";
@@ -60,19 +47,13 @@ import { GDP_DENOMINATION_1953 } from "@/lib/seeds/reference/gdpDenomination";
 export type GdpBaselineUnit = "local" | "usd";
 
 /**
- * Playable countries with an explicit baseline. Matches the `status: "active"`
- * country configs (US/UK/DE/JP/IE/CN), plus coming-soon NG so its calibration
- * lands before activation, plus DD and RU, which a 1953 world seeds and plays
- * regardless of their `status` marker. Other coming-soon countries (BR, …) are
- * intentionally absent: resolving one throws (see below) instead of silently
- * pricing in USD.
+ * Playable countries with an explicit baseline. Resolving any other country
+ * throws instead of silently pricing in USD.
  *
- * ⚠️ `status` IS NOT THE GATE. DD and RU both carry `status: "coming-soon"` and
- * both have live players, because a historical preset seeds the countries that
- * existed in its era, not the ones marked active for the modern world. Whether
- * a country needs a row is decided by whether a world can seed regions for it —
- * pinned in `gdpBaselineCoverage.guard.test.ts`, which reads the seed bundles
- * off disk. SCO and WAL are still missing and listed there as pending.
+ * ⚠️ `status` is NOT the gate. DD and RU carry `status: "coming-soon"` but a
+ * 1953 world seeds and plays them. Whether a country needs a row is decided by
+ * whether a world can seed regions for it, pinned in
+ * `gdpBaselineCoverage.guard.test.ts`. SCO and WAL are listed there as pending.
  */
 export type GdpBaselineCountry = "US" | "UK" | "DE" | "JP" | "IE" | "NG" | "CN" | "DD" | "RU";
 
@@ -173,7 +154,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     // explicit 2027 bundle, so every cell below is bundle-native.
     "1953": 57,
     "1979": 568,
-    // Re-derived after #2676 population reconciliation; regional GDP is unchanged.
+    // Re-derived after population reconciliation; regional GDP is unchanged.
     "1991": 1_865,
     "1999": 7_341,
     "2007": 21_028,

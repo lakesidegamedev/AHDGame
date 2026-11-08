@@ -188,12 +188,10 @@ export function getNationalBudgetId(countryId: CountryId): string {
 }
 
 /**
- * Resolve the sovereign-bond issuer corporation for a country: the **primary**
- * National Corporation (spec §24.1). Prefers the `isPrimaryNationalCorporation`
- * flag; falls back to any `{ countryOwnerId }` for pre-backfill safety so a
- * country whose NatCorp hasn't been flagged yet still resolves its issuer.
- * Sorted on `_id` so a data bug carrying two flagged primaries (ticket #1254)
- * resolves deterministically — the same corp every caller in the turn sees.
+ * Resolve the sovereign-bond issuer corporation for a country: the primary
+ * National Corporation. Prefers the `isPrimaryNationalCorporation` flag; falls
+ * back to any `{ countryOwnerId }` so unflagged countries still resolve.
+ * Sorted on `_id` so duplicate flagged primaries resolve deterministically.
  */
 async function findPrimaryNationalCorporation(
   db: Db,
@@ -614,16 +612,15 @@ export async function issueScheduledSovereignBondSeries(
   }
   const longTenors = presetUsesLongSovereignTenors(options.preset);
 
-  // One read per scheduled quarter: the #1001 tranche-consolidation dark
+  // One read per scheduled quarter: the tranche-consolidation dark
   // gate. Absent or false keeps the historical ladder exactly as issued.
   const issuanceGate = await db
     .collection<GameConfig>("gameConfig")
     .findOne({ _id: "default" }, { projection: { sovereignIssuanceConsolidationEnabled: 1 } });
   const consolidationEnabled = issuanceGate?.sovereignIssuanceConsolidationEnabled === true;
 
-  // Registered, not the raw static list: a country dissolved by a merge keeps
-  // its budget doc, and the scheduler would otherwise keep rolling its debt
-  // over — issuing fresh paper for a state that no longer exists.
+  // Registered, not the raw static list: a dissolved country keeps its budget
+  // doc, and the scheduler would otherwise keep rolling over its debt.
   const configuredCountries: CountryId[] = await getRegisteredCountryIds(db);
   const budgets = await db
     .collection<FederalBudget>("federalBudget")
@@ -744,7 +741,7 @@ export async function issueScheduledSovereignBondSeries(
       resolveCountryCurrencyCode({ countryId, currencyCode: budgetDoc.currencyCode }) ??
       COUNTRY_CURRENCY_MAP[countryId] ??
       "USD";
-    // Plan the ladder first so the gated consolidation (#1001) reshapes rungs
+    // Plan the ladder first so the gated consolidation reshapes rungs
     // before pool underwriting sees them. Gate off: the same rungs, same order.
     const tranchePlans = consolidateSovereignTranches(
       planSovereignTranches(distribution, issueAmount),
@@ -818,21 +815,17 @@ export interface SovereignReconcileResult {
  *
  * The gap = budget.debt.principal minus the haircut-adjusted outstanding
  * sovereign stock (see sovereignPrincipal.ts). Each tranche in `distribution`
- * (defaults to SOVEREIGN_RECONCILE_DISTRIBUTION) receives its share of the
- * gap at getSovereignCouponRate(primeRate, maturity).
+ * receives its share of the gap at getSovereignCouponRate(primeRate, maturity).
  *
- * **Budget impact:** the new tranches add genuine annual coupon service, so
- * spending.debtInterest rises by the new coupons. debt.principal is
- * RE-POINTED at the canonical post-write ledger (pre-existing outstanding
- * plus the face just issued), never incremented by the gap: the gap was
- * already inside the stored principal, so old principal + gap would count
- * the same debt twice (#1975). debtToGdpRatio / creditRating are refreshed
- * off the re-pointed stock.
+ * Budget impact: new tranches add annual coupon service, so spending.debtInterest
+ * rises by the new coupons. debt.principal is RE-POINTED at the canonical
+ * post-write ledger (existing outstanding plus face just issued), never
+ * incremented by the gap, since the gap was already inside stored principal.
+ * debtToGdpRatio / creditRating are refreshed off the re-pointed stock.
  *
- * Retry-safe: the principal write is a pure function of the ledger read
- * back, so a crash between the bond inserts and the budget update converges
- * on retry (the inserted tranches are already in the ledger, the gap reads
- * as zero, nothing issues twice, and the stock still lands on the ledger).
+ * Retry-safe: the principal write is a pure function of the ledger read back, so
+ * a crash between inserts and budget update converges on retry without double
+ * issuance.
  */
 export async function reconcileSovereignDebt(
   db: Db,
@@ -960,7 +953,7 @@ export async function reconcileSovereignDebt(
   // Re-point principal at the post-write ledger. New tranches carry no
   // haircut, so their face adds to the outstanding stock in full. This must
   // NOT be old principal + gap: the gap was already inside the stored
-  // principal, and adding it again double-counts the same debt (#1975).
+  // principal, and adding it again double-counts the same debt.
   // Interest is a flow, not a stock, so it still rises incrementally by the
   // genuine new coupon service. The write lands whenever the stock moved or
   // drifted, so a crash/retry replay that issued nothing still converges the
@@ -1040,10 +1033,9 @@ export async function settleSovereignBondMaturity(
     throw new Error("Bank sovereign maturity share must be within the total repayment");
   }
 
-  // Net exactly this bond's outstanding contribution (face minus any restructure
-  // haircut, see sovereignPrincipal.ts), not raw face: a haircut bond carries
-  // only its written-down stock on the books, so redeeming full face would push
-  // principal below the remaining outstanding sum (#1975).
+  // Net exactly this bond's outstanding contribution (face minus any
+  // restructure haircut): a haircut bond carries only its written-down
+  // stock, so redeeming full face would push principal below outstanding.
   const maturedFace = sovereignBondOutstanding({
     issuerType: "sovereign",
     matured: false,
@@ -1678,9 +1670,8 @@ export interface SovereignPrincipalResync {
 
 /**
  * Re-point a country's stored `debt.principal` at its authoritative outstanding
- * bond stock (see sovereignPrincipal.ts) and refresh the debt-service terms off
- * that stock. Treasury cash is deliberately untouched: a haircut, repudiation,
- * or merge writes down obligations, never cash (#1975).
+ * bond stock and refresh debt-service terms off that stock. Treasury cash is
+ * deliberately untouched.
  *
  * Idempotent: a pure function of the bonds read, so crash/retry replay and the
  * end-of-turn hygiene pass converge to the same value.
@@ -1696,10 +1687,9 @@ export async function resyncSovereignPrincipalFromBonds(
       .collection<Bond>("bonds")
       .find(
         { issuerType: "sovereign", countryId, matured: false, defaulted: false },
-        // The outstanding sum re-checks the query-filtered fields, so they
-        // must be projected: a doc arriving without `issuerType` reads as
-        // non-sovereign and contributes 0, which would re-point the stored
-        // principal at zero (refs #1975).
+        // The outstanding sum re-checks these query-filtered fields, so they must
+        // be projected: a doc missing `issuerType` reads as non-sovereign and
+        // contributes 0, re-pointing stored principal at zero.
         {
           projection: {
             issuerType: 1,
@@ -1816,7 +1806,7 @@ async function fundSovereignSeries(
     (sum, doc) => sum + Math.floor(doc.totalIssued / BOND_UNIT_FACE_VALUE),
     0
   );
-  // Funded Treasury cash forbids minting (#3401): the gap stays unsold and
+  // Funded Treasury cash forbids minting: the gap stays unsold and
   // places later as pool cash allows, with no face, principal or coupon now.
   let monetaryCapacity =
     args.accounting.treasuryCashLedgerEnabled !== true &&

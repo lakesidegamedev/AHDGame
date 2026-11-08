@@ -22,24 +22,19 @@ export function isNetworkUsable(net: IntelligenceNetwork, turn: number): boolean
 }
 
 /**
- * One turn of quiet work: funded progress, and suspicion shed only if the network
- * was left alone. That asymmetry is the whole pace-versus-exposure loop — running
- * operations every turn keeps a network permanently hot.
+ * One turn of quiet work: funded progress, and suspicion shed only if the
+ * network was left alone. Running operations every turn keeps a network
+ * permanently hot; that asymmetry is the pace-versus-exposure loop.
  *
- * A BURNED network still accrues progress while it cools. That is deliberate: the
- * burn already took a level and the operating window, and rebuilding is exactly
- * what a service does after losing a station. Discovery is a setback, not a
- * game over — the same line `covertNuclear` takes with its crackdown.
+ * A BURNED network still accrues progress while cooling: the burn already
+ * took a level and the operating window, and rebuilding is what a service
+ * does after losing a station. Discovery is a setback, not game over.
  *
- * `funded` says whether the appropriation actually paid this network's upkeep this
- * turn. An unfunded network STALLS: it keeps the progress it has and adds none, as
- * though its funding were `none`. It books no debt, because there is no creditor —
- * an asset nobody is paying simply goes quiet.
+ * `funded` says whether the appropriation paid upkeep this turn. Unfunded
+ * networks STALL: keep progress, add none, book no debt (there is no creditor).
  *
- * The parameter is REQUIRED rather than defaulted to `true`. A default would leave
- * every existing call site silently building for free, which is the exact bug this
- * closes: `NETWORK_FUNDING_COST` was declared "drawn from the intelligence budget"
- * and nothing ever charged it.
+ * REQUIRED rather than defaulted to `true`: a default would leave every call
+ * site silently building for free.
  */
 export function stepNetwork(
   net: IntelligenceNetwork,
@@ -62,9 +57,8 @@ export function stepNetwork(
   if (level >= NETWORK_MAX_LEVEL) progress = Math.min(progress, NETWORK_LEVEL_PROGRESS - 1);
 
   const cooledOff = net.status === "burned" && isNetworkUsable(net, turn);
-  // A network that has reached a level is no longer being stood up. Without this
-  // a fully grown network reads "building" forever on the console, which is not
-  // what the player is looking at.
+  // A network at level 1+ is fully grown; without this it would read
+  // "building" forever on the console.
   const grewUp = net.status === "building" && level >= 1;
 
   return {

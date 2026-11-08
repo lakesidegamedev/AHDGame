@@ -1,22 +1,18 @@
 /**
- * Shared action-execution core.
+ * Shared action-execution core, used by both the HTTP route (human players)
+ * and the autonomous NPP brain so they share one implementation of a
+ * political action's effects and persistence.
  *
- * Extracted from `src/app/api/actions/execute/route.ts` so that the HTTP route
- * (human players) and the autonomous NPP brain (`src/lib/nppAutonomy/`) drive
- * the SAME implementation of a political action's effects + persistence, rather
- * than the route and `nppActionProcessing.ts` each re-implementing the math.
+ * The route keeps request concerns (auth, rate-limit, validation, character
+ * resolution, response shaping). This core owns state resolution, forex
+ * boundary handling, the per-count apply loop, and, only on the player path,
+ * action logging and achievement triggers. The NPP path passes
+ * `actor.userId = null` to skip the player-only bookkeeping.
  *
- * The route keeps request concerns (auth, rate-limit, batch/convert validation,
- * character resolution, response shaping). This core owns: state resolution,
- * forex boundary handling, the per-count apply loop, and — only when an actual
- * user is driving (player path) — action logging + achievement triggers. The
- * NPP path passes `actor.userId = null` to skip the player-only bookkeeping and
- * does its own.
- *
- * Currency convention (unchanged from the route): `effect.fundsChange` and
- * `effect.cashOnHandChange` are ANCHOR units; campaign/personal balances are
- * stored LOCAL. Conversion happens at the `$set` boundary via `campaignRate`
- * (the frozen world currency basis ; campaign funds never touch live forex).
+ * Currency convention: `effect.fundsChange` and `effect.cashOnHandChange` are
+ * ANCHOR units; campaign/personal balances are stored LOCAL. Conversion
+ * happens at the `$set` boundary via `campaignRate` (campaign funds never
+ * touch live forex).
  */
 
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
@@ -349,7 +345,7 @@ async function executeCharacterActionImpl(
       effect = action.effect(current, state || undefined, {
         formatFunds: fundsFormatter,
         // GDP-baseline era for cost math: the world's reset preset, so
-        // historical worlds price in their own denomination (issue #798).
+        // historical worlds price in their own denomination.
         preset: gameState?.preset,
         priceLevel,
       });

@@ -1,20 +1,10 @@
 /**
  * The ONE gate for the political-metrics / political-legislation pipeline.
  *
- * Now always true: baselines and law levels resolve by in-game YEAR, so the
- * pipeline is no longer tied to the 1953 seed preset. Playable countries
- * (US/UK/RU/DD) run Political Metrics and the new-generation law book at any
- * preset, and their OLD catalogs are excluded everywhere.
- *
- * Before this, four call sites tested `preset === "1953-default"` independently
- * and drifted — seedPoliticalMetrics was never gated at all, so a non-1953
- * world got political metrics seeded from 1953 baselines alongside the OLD
- * legislation catalog. That split state was the main reason the old and new
- * metric systems kept getting confused for each other.
- *
- * Kept as a function rather than inlined: the four seed gates read it, and the
- * non-playable conversion will need a scope check here rather than a new,
- * drift-prone gate of its own.
+ * Currently always true: baselines and law levels resolve by in-game YEAR,
+ * so the pipeline is not tied to the 1953 seed preset. Kept as a function
+ * rather than inlined because the seed gates read it, and non-playable
+ * conversion will need a scope check here instead of a new gate.
  */
 import { MECHANICAL_RETAINED_IDS } from "@/lib/mechanicalLaws/legislation";
 import {
@@ -44,18 +34,15 @@ export const POLITICAL_LEGISLATION_EXCLUDED_SCOPES: ReadonlySet<string> = new Se
 /**
  * Old-catalog `_id`s that survive the exclusion sweep above.
  *
- * The three US state redistricting levers are mechanical who-may-draw switches,
- * not metric-moving programs: `src/lib/redistricting/caps.ts` reads them BY ID
- * out of `statePolicies` and turns the enacted option INDEX into the caps the
- * map editor enforces. The new-generation law book has no equivalent — a
- * `PoliticalLaw` is a five-level program with a political-metric target, which
- * a three-option authority switch is not — so excluding them by `countryScope`
- * took the whole system's only lever off the board (ticket #1189): every state
- * sat on the index-1 default (bipartisan commission, `canDraw: false`) with no
- * proposable bill able to move it.
+ * The three US state redistricting levers are mechanical who-may-draw
+ * switches, not metric-moving programs: `src/lib/redistricting/caps.ts`
+ * reads them BY ID out of `statePolicies` and turns the enacted option
+ * INDEX into the caps the map editor enforces. A `PoliticalLaw` is a
+ * five-level program with a political-metric target, which does not
+ * substitute for them. Excluding them by `countryScope` removed the only
+ * lever, leaving every state on the index-1 default.
  *
- * Sourced from caps.ts rather than written out so the retained set and the
- * consumer can never drift apart.
+ * Sourced from caps.ts so the retained set and the consumer cannot drift.
  */
 export const POLITICAL_LEGISLATION_RETAINED_OLD_IDS: ReadonlySet<string> = new Set([
   REDISTRICT_AUTHORITY_LAW,

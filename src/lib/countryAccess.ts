@@ -1,28 +1,18 @@
 /**
  * Country access control utilities.
  *
- * Determines which countries are accessible to players based on a two-tier
- * resolution: DB documents in `countryGameStates` override the static config
- * defaults in `COUNTRY_CONFIGS`. Fields fall back independently, so an admin
- * can override just `status` or just `enabledForPlayers` without touching the
- * other field.
+ * Resolves access in two tiers: DB documents in `countryGameStates` override
+ * static `COUNTRY_CONFIGS` defaults. Fields fall back independently, so an
+ * admin can override just `status` or just `enabledForPlayers`. The collection
+ * is lazy; a missing document falls back to the config's `status` ("active" =
+ * enabled, anything else disabled).
  *
- * The `countryGameStates` collection is created lazily — documents only exist
- * once an admin has toggled a setting. A missing document always falls back to
- * the config's `status` field, treating "active" as enabled and everything
- * else as disabled.
+ * Every registered country that is not `enabledForPlayers` is browsable
+ * read-only, including political pages; per-action APIs still require
+ * citizenship/office. Only unregistered countries stay fully hidden.
  *
- * Econ-only nations: every REGISTERED country that is not `enabledForPlayers`
- * is browsable read-only — all of its pages, political ones included. Players
- * cannot act there (the per-action APIs require citizenship/office), but they
- * can see the parties, the legislature, and the elections behind the economy
- * they are investing in. Only an unregistered country (a latent secession
- * target such as SCO/WAL, absent from `COUNTRY_ORDER` until its activation
- * writes a row) stays fully hidden.
- *
- * `economyPreview` no longer gates routes. It survives as the switch that wires
- * a country's economy into the cross-country market lists — see
- * `getEconomyVisibleCountryIds`.
+ * `economyPreview` no longer gates routes; it wires a country's economy into
+ * cross-country market lists via `getEconomyVisibleCountryIds`.
  */
 
 import { AsyncLocalStorage } from "async_hooks";
@@ -105,10 +95,9 @@ export async function getCountryAccess(countryId: CountryId): Promise<CountryAcc
 
 /**
  * Boolean shortcut around `getCountryAccessFromDb`. Phase 10 allowlist gates
- * call this from every player-facing layout / admin tool / API route that
- * used to hardcode a `["US", "UK", "DE", "JP"]`-style array. The admin
- * panel writes `countryGameStates` rows; this helper reads them so a flip
- * activates a country with no code redeploy.
+ * call this from player-facing layouts, admin tools, and API routes. The admin
+ * panel writes `countryGameStates` rows; this reads them so a flip activates a
+ * country with no redeploy.
  */
 export async function isCountryEnabledForPlayers(db: Db, countryId: CountryId): Promise<boolean> {
   const access = await getCountryAccessFromDb(db, countryId);
@@ -159,19 +148,14 @@ export async function getCountryAccessFromDb(db: Db, countryId: CountryId): Prom
     .collection<CountryGameState>("countryGameStates")
     .findOne({ _id: countryId });
 
-  // A DISSOLVED country is not merely disabled — it is out of the registry, the
-  // same answer `registeredBase()` gives the list paths. Without this, the
-  // single-country path contradicts the list paths: a merged country's page
-  // stays browsable "econ-only", its election gates read it as NPP-governed,
-  // and per-country processing that consults access keeps simulating a state
-  // that no longer exists.
+  // A DISSOLVED country is out of the registry, matching `registeredBase()` for
+  // list paths. Otherwise the single-country path contradicts them: a merged
+  // country's page stays browsable "econ-only", its election gates read it as
+  // NPP-governed, and per-country processing keeps simulating a dead state.
   //
-  // A country ABSENT FROM THIS ERA is unregistered for the same reason and must
-  // take the same branch. The two causes stay distinct in the data (see
-  // `absentInEra` in gameState.ts — conflating them would break merge
-  // idempotency) but they produce the identical access answer, and splitting
-  // them here is what would let `/country/dd` keep rendering econ-only in a 1991
-  // world while every list path had already dropped it.
+  // An era-ABSENT country is unregistered for the same reason and takes the
+  // same branch. The causes stay distinct in the data (see `absentInEra`) to
+  // preserve merge idempotency, but produce the identical access answer.
   if (doc?.dissolvedTurn != null || doc?.absentInEra === true) {
     return {
       enabledForPlayers: false,
@@ -301,22 +285,13 @@ export async function getEnabledCountryIds(): Promise<CountryId[]> {
 /**
  * Countries the ENGINE is simulating, as opposed to countries players may join.
  *
- * `getEnabledCountryIdsFromDb` answers "can a player enter this country", which
- * is the wrong question for world-level subsystems: auto-disasters, auto-crises
- * and international-organisation broadcasts should fire in every country the
- * turn engine is actually running, whether or not it is open to players. Those
- * three all used the player predicate, so a sandbox that deliberately closes
- * every country to players (the sim harness must, because `isNppAutonomyActive`
- * refuses to seat governments in player-enabled countries) silently produced
- * ZERO disasters and ZERO crises for an entire run while reporting every phase
- * completed.
+ * World-level subsystems (auto-disasters, auto-crises, IO broadcasts) must fire
+ * in every simulated country, not just player-enterable ones, or a world with
+ * no player-enabled countries silently produces zero events.
  *
- * Resolution: a runtime `countryGameStates.status` if present, else the
- * compiled-in config status; `enabledForPlayers: true` additionally qualifies a
- * country (a world with players in it must be simulated even if its status was
- * never flipped from "coming-soon"). The sandbox case above still works: the
- * harness closes countries by NOT setting `enabledForPlayers`, while their
- * status keeps them simulated.
+ * Status is the runtime `countryGameStates.status` if present, else the
+ * compiled-in config status. `enabledForPlayers: true` also qualifies a country
+ * (a world with players must be simulated even if status was never flipped).
  */
 export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
   const docs = await db
@@ -326,7 +301,7 @@ export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
   const byId = new Map(docs.map((d) => [String(d._id), d]));
   return registeredBase(docs).filter((countryId) => {
     const doc = byId.get(countryId);
-    // A background country (#5702) is registered but outside the full
+    // A background country is registered but outside the full
     // simulation: no crises, disasters or health rows for it.
     if (doc?.backgroundCountry === true) return false;
     const resolved = doc?.status ?? COUNTRY_CONFIGS[countryId].status;

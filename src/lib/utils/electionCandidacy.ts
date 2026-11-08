@@ -178,7 +178,7 @@ export async function withdrawFromMismatchedPrimaries(
   }
 
   // Archive their campaigns so a party switcher's campaign stops appearing on
-  // Campaign Operations alongside the candidates still in the race (#1313).
+  // Campaign Operations alongside the candidates still in the race.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw
@@ -261,7 +261,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
   }
 
   // Archive their campaigns. NPP campaigns key `candidateId` by the NPP id,
-  // which archiveCampaignsForCandidates matches via `nppId` (#1313).
+  // which archiveCampaignsForCandidates matches via `nppId`.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw.map((c) => ({
@@ -467,7 +467,7 @@ export async function cleanupPartyPositionsOnSwitch(
   // 4. Withdraw from the old party's national leadership election candidacies
   // AND delete the leaver's ballots — including ballots cast FOR them — so a
   // departed member no longer stands for, or tallies toward, a seat in a party
-  // they left. Shared with the charter/faction split paths (#0701).
+  // they left. Shared with the charter/faction split paths.
   const { candidatesWithdrawn: withdrawnNationalElections } =
     await withdrawFromPartyLeadershipElections(db, [characterId], oldParty, countryId);
 
@@ -539,7 +539,7 @@ export async function cleanupPartyPositionsOnSwitch(
   }
 
   // 7. Withdraw player endorsements that now violate primary-phase party
-  // alignment (ticket #1179). A member who endorsed their party's presidential
+  // alignment. A member who endorsed their party's presidential
   // candidate must not keep boosting it — standings count and per-turn
   // campaign-action grant included — after defecting to another party or to
   // independence. Cross-party endorsements stay untouched in general-phase
@@ -672,7 +672,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
   }
 
   // Archive their campaigns — a stale-party candidacy that is swept out of the
-  // race must not keep a live campaign on Campaign Operations (#1313).
+  // race must not keep a live campaign on Campaign Operations.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw
@@ -745,7 +745,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
         await removeWithdrawnCandidateFromTally(db, c.electionId, c._id.toString());
       }
       // Archive their campaigns — relocation takes the character out of the
-      // race, so the campaign leaves Campaign Operations with it (#1313).
+      // race, so the campaign leaves Campaign Operations with it.
       await archiveCampaignsForCandidates({
         db,
         candidates: toWithdraw

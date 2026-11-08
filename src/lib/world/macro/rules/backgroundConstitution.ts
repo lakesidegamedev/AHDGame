@@ -1,13 +1,8 @@
 /**
- * Constitutional facts for the 2027 world's background countries (#5702).
- *
- * A background country holds one national election for its lower chamber on
- * its constitutional term and forms a government from the result. These rows
- * are the only per-country political inputs: chamber size, how seats are
- * allocated, the legal threshold, the term, when the next regular election
- * falls after January 2027, and what the head of government is called. The
- * economic expectations (natural unemployment) and the opening primary balance
- * are game values for a central path, not forecasts.
+ * Constitutional facts for background countries: chamber size, seat method,
+ * legal threshold, term, next regular election after January 2027, and head of
+ * government title. The only per-country political inputs for background
+ * election simulation.
  *
  * Seat methods:
  * - `pr_hareQuota`: largest remainder (Hare quota).
@@ -15,8 +10,6 @@
  * - `pr_sainteLague`: Sainte-Lague odd divisors.
  * - `fptp`: single-member districts, modelled nationally as a winner's bonus.
  * - `mixed`: half the chamber by the district bonus, half proportional.
- *
- * Pure data.
  */
 
 /** The only preset with background countries that carry a national state. */

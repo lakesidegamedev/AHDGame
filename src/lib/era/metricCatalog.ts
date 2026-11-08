@@ -33,15 +33,13 @@ export { METRIC_BAND_CURVES, CORE5_NORMALS };
 export type { BandAnchor, IncomeStartVintage, IncomeVintageStamps, MetricBandCurve, NormalAnchor };
 
 /**
- * Metric Era Catalog — the single source of truth for how a metric behaves
- * across eras and countries. Owns three declarative tables (existence windows,
- * band curves, era display names) plus era envelopes, with pure resolvers.
+ * Metric Era Catalog: single source of truth for how a metric behaves across
+ * eras and countries. Holds declarative tables (existence windows, band
+ * curves, era display names) plus era envelopes, with pure resolvers.
  *
- * Everything here is inert while `eraSystemEnabled` is off: every resolver
- * treats a null year as "legacy" (all metrics active, no era bands, no
- * envelopes), so flag-off behavior is byte-identical.
- *
- * Spec: docs/superpowers/specs/2026-07-04-metric-era-catalog-design.md
+ * Inert while `eraSystemEnabled` is off: resolvers treat a null year as
+ * "legacy" (all metrics active, no bands, no envelopes), so flag-off behavior
+ * is byte-identical.
  */
 
 export interface EraNews {
@@ -525,23 +523,15 @@ export function getNewlyActivatedMetrics(
  * 8 countries; interpolated between years, clamped at the ends.
  */
 export const INCOME_ANCHORS: Partial<Record<CountryId, Array<{ year: number; value: number }>>> = {
-  // ── 1953-only countries (P5) ───────────────────────────────────────────────
-  // These eight had NO anchor at all, so `getIncomeAnchor` returned null and
-  // medianIncome fell through to the modern static band — 1953 Italy's $550 was
-  // scored against a $15k-$90k range and read 0, as did most of the others.
+  // 1953-only countries (P5). Each value is the country's own authored
+  // national median from its `*MetricPresets1953.ts`, validated as correctly
+  // denominated by the GDP-scale guard (`medianIncomeGdpScale1953.test.ts`).
   //
-  // Each value is that country's own authored national median from its
-  // `*MetricPresets1953.ts`, which the GDP-scale guard
-  // (`medianIncomeGdpScale1953.test.ts`) already validates as correctly
-  // denominated — the same re-anchoring UK and IE got above, rather than a
-  // fresh derivation that could reintroduce the scale bug.
-  //
-  // ONE anchor each, deliberately: all eight are seeded for 1953 only, so there
-  // is no later era to interpolate toward, and inventing a 1979 value would mean
+  // ONE anchor each, deliberately: all eight are seeded for 1953 only, so
+  // there is no later era to interpolate toward, and a 1979 value would mean
   // modelling the franc and markka redenominations against seeds that do not
-  // exist. The band therefore holds flat if such a world runs forward — worth
-  // revisiting if these countries ever gain a second era, but far better than
-  // scoring them against 2019.
+  // exist. The band holds flat if such a world runs forward; revisit if these
+  // countries gain a second era.
   IT: IT_INCOME_ANCHORS, // USD-anchored, per itMetricPresets1953's header
   FR: FR_INCOME_ANCHORS, // anciens francs
   ES: ES_INCOME_ANCHORS, // pesetas

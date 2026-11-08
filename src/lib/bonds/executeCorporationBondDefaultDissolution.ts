@@ -220,8 +220,6 @@ export async function executeCorporationBondDefaultDissolution(
   const { bondRecoveryPool, shareholderPool, totalBondClaims } = dissolvePreview;
 
   // Fetch names for character, imperial, and corporate equity shareholders.
-  // Bug #0540: corporate shareholders were previously excluded from payouts;
-  // we now distribute to all three buckets plus the publicFloat slice.
   const regularShareholderIds = (refreshedCorporation.shareholders ?? [])
     .map((s) => s.characterId)
     .filter((id): id is ObjectId => id !== undefined);
@@ -547,9 +545,8 @@ export async function executeCorporationBondDefaultDissolution(
     await db.collection<Corporation>("corporations").bulkWrite(corpOps);
   }
 
-  // Bug #0540 fix: pro-rata payout to CORPORATE EQUITY shareholders. Before this,
-  // their share of the pool was silently dropped (allocateShareholderPool
-  // skipped corp rows while still counting their shares in the denominator).
+  // Pro-rata payout to corporate equity shareholders, whose share of the pool
+  // was previously dropped (skipped in allocation while still counted in the denominator).
   if (allocation.corporationRows.length > 0) {
     const equityOps = allocation.corporationRows
       .filter((row) => row.payout > 0)
@@ -594,7 +591,7 @@ export async function executeCorporationBondDefaultDissolution(
     }
   }
 
-  // Bug #0540 fix: publicFloat slice escheats to the country's central bank
+  // fix: publicFloat slice escheats to the country's central bank
   // reserve. Pre-fix, this allocation was silently destroyed.
   if (allocation.publicFloatRow && allocation.publicFloatRow.payout > 0) {
     const cbId = getBankId(refreshedCorporation.countryId);
@@ -632,19 +629,12 @@ export async function executeCorporationBondDefaultDissolution(
     });
   }
 
-  // #3451 gap fix: index funds are the fourth shareholder bucket. Voluntary
-  // dissolution (dissolve route) and nationalization already settle their fund
-  // holders via payFundShareholderRows, but this bond-default path never did:
-  // allocateShareholderPool counted fund shares in the payout denominator while
-  // paying the fund nothing and leaving its holding in place. The corp is then
-  // deleted below, so every fund that held a bankrupt corp kept a dangling
-  // holding marked at stale value forever (the "ghost" holdings dominating the
-  // index-fund book). Pay the fund its ₳ pool slice and drop the holding, exactly
-  // as the other two whole-corp payout flows do.
+  // Index funds are a shareholder bucket: pay the fund its pool slice and
+  // drop its holding, matching the dissolve and nationalization flows.
+  // Otherwise the corp is deleted with dangling fund holdings left behind.
   if (allocation.fundRows.length > 0) {
-    // #992 tranche 3: book each fund credit with the same
-    // corp_dissolution_distribution type as the other shareholder buckets so
-    // the shadow ledger sees the fund side as a two-sided transfer.
+    // Book each fund credit with the same corp_dissolution_distribution type
+    // as other shareholder buckets so the shadow ledger sees a two-sided transfer.
     const { txEntries: fundTxEntries } = await payFundShareholderRows(
       db,
       allocation.fundRows,
@@ -662,22 +652,13 @@ export async function executeCorporationBondDefaultDissolution(
     dissolutionTxEntries.push(...fundTxEntries);
   }
 
-  // Emit the bond_default tx for the defaulting corp (subject side) BEFORE
-  // we delete the corp doc so admin queries can still resolve it via
-  // counterparty=defaulting corp; the recipient tx rows above already carry
-  // the corp _id + name. The amount on this row is the gross bondRecoveryPool
-  // in the corp's home currency.
-  //
-  // #3237: only emitted when the corp actually had bonds. This executor is
-  // also the generic insolvency wind-down (requireDefaultedBonds: false, used
-  // by NPP auto-insolvency and character deletion); a bond-less dissolution
-  // has no default event — emitting the row anyway produced a stream of
-  // misleading amount-0 "Bond default settlement" ledger entries. The
-  // corp_dissolution_distribution / bond_dissolution_payout rows above fully
-  // describe a bond-less wind-down. Real defaults still log exactly once per
-  // event (the corp doc is deleted at the end of this routine, so it cannot
-  // re-emit), including 100%-haircut defaults where the pool is 0 but claims
-  // in meta are non-zero.
+  // Emit the bond_default tx (subject side) BEFORE deleting the corp doc so
+  // admin queries still resolve counterparty; recipient rows already carry
+  // _id + name. Amount is gross bondRecoveryPool in the corp's home currency.
+  // Only emitted when the corp actually had bonds: this executor is also the
+  // generic insolvency wind-down, and a bond-less dissolution has no default
+  // event. Real defaults log once (corp is deleted here, cannot re-emit),
+  // including 100%-haircut defaults with a zero pool but non-zero claims.
   const corpHomeCurrency = (refreshedCorporation.liquidCurrencyCode ??
     COUNTRY_CURRENCY_MAP[refreshedCorporation.countryId as keyof typeof COUNTRY_CURRENCY_MAP] ??
     "USD") as CurrencyCode;

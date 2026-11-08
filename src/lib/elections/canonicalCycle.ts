@@ -1,18 +1,16 @@
 /**
- * Canonical LARP-cycle math for perpetual elections, shared between:
- *   • src/lib/turn/perpetualElections.ts     (cron-driven spawn paths)
- *   • src/app/api/admin/elections/recalibrate-timers/route.ts
- *                                            (admin recalibrate flow)
- *   • scripts/migrations/*                   (one-shot heals)
+ * Canonical LARP-cycle math for perpetual elections, shared between
+ * cron spawn paths, the admin recalibrate flow, and one-shot
+ * migrations.
  *
- * Each supported election type has a canonical end-turn schedule anchored to
- * real-world election years (see the bootstrap values in sync-date). Post-
- * admin-acceleration the canonical anchor is preserved — the spawner walks
- * forward to the next LARP cycle whose remaining primary & general windows
- * each still clear a configurable floor (default 24h + 24h).
+ * Each election type has a canonical end-turn schedule anchored to
+ * real-world election years. Post-admin-acceleration the anchor is
+ * preserved: the spawner walks forward to the next cycle whose primary
+ * and general windows each clear the configured floor (default 24h +
+ * 24h).
  *
- * Snap elections shift the LARP clock: commons / shugiin
- * accept a `priorEndTurn` override that replaces the bootstrap anchor.
+ * Snap elections shift the clock: commons / shugiin accept a
+ * `priorEndTurn` override replacing the bootstrap anchor.
  */
 import { brazilPresidentialRules } from "@/lib/countries/br/rules/presidential";
 
@@ -38,19 +36,12 @@ const CN_NPC_DELEGATE_CYCLE_PERIOD_HOURS = 240; // 5 game-years (48 turns/year �
 /** BR Câmara dos Deputados cycle: 4-year terms. */
 const BR_CHAMBER_CYCLE_PERIOD_HOURS = 192;
 /**
- * BR Federal Senate cycle: elections are held every 4 years (192 turns), same
- * cadence as the Câmara. SIMPLIFICATION: the real Senate is staggered —
- * senators serve 8-year terms and renewal alternates 1/3 then 2/3 of the
- * chamber every 4 years (`upperElectionSystem.staggeredClasses: 2` in
- * countries.ts already declares this). Modeling that accurately needs
- * per-seat class data (which of a state's 3 senators is "up" this cycle),
- * and that data lives at the seed layer (out of scope for this pass — seeds
- * are owned by a different workstream). This models a full-chamber
- * re-election every 4 years instead, riding the `brSenate` anchor — the same
- * simplification already applied to the FR Sénat / TR Senato / IT Senato
- * rows above. Flagged as a residual: a follow-up should backfill a
- * `senateClass` (1 of 2) onto each seat/seed and swap this for a proper
- * staggered model mirroring the US Senate's 3-class mechanism.
+ * BR Federal Senate cycle: every 4 years (192 turns), same cadence as the
+ * Camara. SIMPLIFICATION: the real Senate is staggered (8-year terms,
+ * alternating 1/3 then 2/3 renewal each 4 years, per
+ * `upperElectionSystem.staggeredClasses: 2`). Per-seat class data lives at
+ * the seed layer, out of scope here. This models a full-chamber re-election
+ * every 4 years, matching the FR Senat / TR Senato / IT Senato approach.
  */
 const BR_SENATE_CYCLE_PERIOD_HOURS = 192;
 /** IE Dáil cycle: 5-year maximum, generally ~4 years. Modeled as 4 (192). */
@@ -63,9 +54,8 @@ const IE_LOCAL_COUNCIL_CYCLE_PERIOD_HOURS = 240;
 const DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS = 240;
 /**
  * TR Senate of the Republic (Cumhuriyet Senatosu) cycle: 6-year term (288
- * turns), matching `upperElectionSystem.termYears: 6`. SIMPLIFICATION: the
- * real chamber (1961-1980) renewed one-third every 2 years; this models a
- * full-chamber re-election every 6 years instead (#3791).
+ * turns), matching `upperElectionSystem.termYears: 6`. SIMPLIFICATION: real
+ * chamber renewed one-third every 2 years; modeled as full-chamber re-election.
  */
 const TR_SENATE_CYCLE_PERIOD_HOURS = 288;
 /** IT Senato della Repubblica cycle: 5-year term, same cadence as itCamera. */
@@ -73,7 +63,7 @@ const IT_SENATO_CYCLE_PERIOD_HOURS = 240;
 
 /**
  * Beta-country (NPP-only) parliamentary lower chambers — FR/IT/ES/SE/TR
- * (issue #3239). One table instead of five switch cases: each electionType
+ *. One table instead of five switch cases: each electionType
  * maps to its preset anchor field + fixed cycle period. A `null` anchor
  * era-gates the cycle OFF for that preset (ES 1953: Franco dictatorship —
  * no elections spawn, the country stays static by design).
@@ -109,30 +99,28 @@ const BETA_PARLIAMENT_CYCLES: Record<
   riksdag: { anchor: "seRiksdag", periodHours: 192 },
   // TR Grand National Assembly: 4-year cycle (192 turns).
   milletMeclisi: { anchor: "trMeclis", periodHours: 192 },
-  // GR Vouli ton Ellinon: 4-year cycle (192 turns) (#3791).
+  // GR Vouli ton Ellinon: 4-year cycle (192 turns).
   vouli: { anchor: "grVouli", periodHours: 192 },
-  // AT Nationalrat: 4-year cycle (192 turns) (#3791).
+  // AT Nationalrat: 4-year cycle (192 turns).
   nationalrat: { anchor: "atNationalrat", periodHours: 192 },
-  // FI Eduskunta: 4-year cycle (192 turns) (#3791).
+  // FI Eduskunta: 4-year cycle (192 turns).
   eduskunta: { anchor: "fiEduskunta", periodHours: 192 },
   // FR Sénat: 9-year full-chamber cycle (432 turns) — SIMPLIFICATION: the real
   // Sénat renews by series every 3 years, not the whole chamber every 9; see
-  // `frSenat` in cycleAnchorContext.ts for the full explanation (#3791).
+  // `frSenat` in cycleAnchorContext.ts for the full explanation.
   senat: { anchor: "frSenat", periodHours: 432 },
   // ES Senado: rides the SAME anchor as congresoDiputados — Spain's Congress
   // and Senate have always been elected concurrently (one general election
   // day), so this is accurate, not a simplification. Era-gated OFF (null)
-  // exactly when congresoDiputados is (1953 Franco) (#3791).
+  // exactly when congresoDiputados is (1953 Franco).
   senado: { anchor: "esCongreso", periodHours: 192 },
   // NOTE: IT "senato" and TR "senato" share this literal electionType string
-  // (a pre-existing countries.ts naming collision — TR's upper chamber key
-  // really should be distinct, e.g. "cumhuriyetSenatosu") and need DIFFERENT
-  // anchors/periods, so "senato" is handled by its own countryId-aware switch
-  // case below instead of a single table row (#3791).
-  // RU Supreme Soviet — BOTH chambers ride one anchor (elected the same day);
-  // 4-year cycle (192 turns; the 1936-constitution cadence — D3: this row,
-  // not config termYears, drives the 1954 → 1958 → 1962 schedule). Null
-  // anchor era-gates RU OFF outside the Cold-War presets.
+  // (a naming collision in countries.ts) and need DIFFERENT anchors/periods,
+  // so "senato" is handled by its own countryId-aware switch case below.
+  // RU Supreme Soviet: BOTH chambers ride one anchor (elected the same day);
+  // 4-year cycle (192 turns). This row, not config termYears, drives the
+  // 1954 -> 1958 -> 1962 schedule. Null anchor era-gates RU OFF outside
+  // Cold-War presets.
   supremeSovietDeputy: { anchor: "ruSupremeSoviet", periodHours: 192 },
   nationalitiesDeputy: { anchor: "ruSupremeSoviet", periodHours: 192 },
   // RU republic Supreme Soviets — 4-year cycle, own anchor (1955 / 1980).
@@ -666,7 +654,7 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // IT Senato and TR Senato share this literal electionType string (a
       // pre-existing countries.ts config debt — TR's upper chamber `key`
       // really should be a distinct value like "cumhuriyetSenatosu"; not
-      // renamed here to stay scoped to the election-vacancy fix, #3791). They
+      // renamed here to stay scoped to the election-vacancy fix). They
       // need different anchors/periods, so this case branches on `countryId`
       // instead of going through the single-anchor BETA_PARLIAMENT_CYCLES
       // table used by every other type here.

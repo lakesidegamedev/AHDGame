@@ -92,11 +92,9 @@ export async function applyNationalizeProvision(
   const strategicMatch = corpHasStrategicSector(designatedTypes, countryId, corpSectors);
   const topShare = await getTopMarketSharePercent(db, targetCorp, corpSectors);
 
-  // A PLAYER taking carries the conditions that fired (falling back to the
-  // "supermajority" democratic-authorization marker so it still reads as a real
-  // expropriation in the consequences layer). An NPC / unowned target has no
-  // private owner → stays politics-neutral (never add monopoly/strategic, which
-  // would wrongly fire the P3a expropriation backlash).
+  // Player targets carry fired triggers (fallback "supermajority" so it reads as real
+  // expropriation). NPC/unowned targets stay politics-neutral: never add monopoly/strategic,
+  // which would wrongly fire the P3a expropriation backlash.
   let triggers: NationalizationTrigger[];
   if (targetCorp.userId != null) {
     const fired: NationalizationTrigger[] = [];

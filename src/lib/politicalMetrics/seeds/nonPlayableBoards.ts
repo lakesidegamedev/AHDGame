@@ -6,23 +6,17 @@
  *
  * Keyed PRESET -> COUNTRY -> REGION -> family.
  *
- * Per PRESET because the authored era values are real: each era's metric
- * preset overlays the base seed array (which is written at MODERN levels),
- * and every value is scored against its band FOR THAT YEAR - a 1953 life
- * expectancy of 62 is mid-range for 1953 and bottom-of-scale against modern
- * thresholds. Deriving once and reusing it across eras was wrong in both
- * directions.
+ * Per PRESET because values are scored against bands FOR THAT YEAR; a
+ * 1953 value is mid-range for 1953 and bottom-of-scale against modern bands.
  *
  * Per REGION because the legacy seeds carry real per-region variation in the
- * political half; replicating one national board would flatten regional
- * approval, corp margins, crises and demographics. Regions of one country
- * still share their defense block, which is a national property.
+ * political half; one national board would flatten it. Regions of one country
+ * still share their national defense block.
  *
- * KNOWN GAP: the tier-4 defense table is authored for 1953 only, so every
- * era currently reuses it. That was already true before this file became
- * era-keyed; it is now visible rather than hidden.
+ * KNOWN GAP: the tier-4 defense table is authored for 1953 only, so every era
+ * currently reuses it.
  *
- * Playable countries (US/UK/RU/DD) are absent: they seed from
+ * Playable countries are absent: they seed from
  * POLITICAL_BASELINE_ANCHORS instead.
  */
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";

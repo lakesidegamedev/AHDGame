@@ -46,10 +46,9 @@ export interface CampaignData {
 
   /**
    * True when the viewer owns the ticket's running mate. A running mate gets an
-   * owner-level VIEW of the ticket campaign, but a narrower set of ACTIONS than
-   * a manager/nominee: rally, the fundraising ops lane, and the surrogate panel
-   * (canvass-for-ticket + campaign-in-a-state) only. Every other manage control
-   * stays manager/nominee-only, client-side and server-side.
+   * owner-level VIEW of the ticket campaign, but a narrower set of ACTIONS:
+   * rally, the fundraising ops lane, and the surrogate panel only. Every other
+   * manage control stays manager/nominee-only, client-side and server-side.
    */
   isRunningMate: boolean;
   /**
@@ -107,9 +106,8 @@ export interface CampaignData {
   campaignStrengthMaxBonus?: number;
 
   /**
-   * Presidential tickets: the named running mate, resolved from the candidate's
-   * `runningMateId`. Carried here so the campaign board can show and change the
-   * ticket without pulling the whole election payload. Null when none is named.
+   * Presidential ticket running mate, resolved from the candidate's
+   * `runningMateId`. Null when none is named.
    */
   runningMateName?: string | null;
   runningMateCharacterId?: string | null;
@@ -118,11 +116,9 @@ export interface CampaignData {
   oppositionTargetName: string | null;
   /**
    * Who this campaign may research, already scoped to the race and its phase.
-   *
-   * Sent rather than searched: the picker used to query every character in the
-   * game, so it offered targets the server would refuse and hid the rule that
-   * decides them. Only the manager or nominee can retarget, so only they get
-   * the list.
+   * Sent rather than searched: server-side rules decide valid targets so the
+   * picker cannot offer ones the server refuses. Only the manager or nominee
+   * can retarget, so only they get the list.
    */
   oppositionTargets?: OppositionTarget[];
 
@@ -194,21 +190,18 @@ export interface CampaignData {
     };
   };
   /**
-   * Active player and NPP endorsers of this campaign, newest first. NPP rows
-   * are filtered to the active AND visible set (legacy organic rows stay
-   * hidden), so the length equals the `budget.actions.endorsementCount` the
-   * action panel reports.
+   * Active player and NPP endorsers of this campaign, newest first. NPP rows are
+   * filtered to the active AND visible set (legacy organic rows stay hidden), so
+   * the length matches `budget.actions.endorsementCount`.
    *
    * Governor and executive endorsements are NOT listed here or counted in
-   * `endorsementCount`, though `campaignActionsPerTurn` does pay them. Both are
-   * reachable in game, so a campaign holding one accrues from an endorsement
-   * this list does not name. The tab's filter is Player / Politician by
-   * design; widening it means widening the filter with it.
+   * `endorsementCount`, though `campaignActionsPerTurn` pays them. A campaign can
+   * thus accrue from an endorsement this list does not name; widening the filter
+   * must widen this too.
    *
-   * `since` is the endorsement's real-world timestamp and orders the list. It
-   * is never displayed: endorsement records carry no turn number, and the game
-   * runs on its era preset's calendar, so a wall-clock date would stamp the
-   * wrong year on the fiction.
+   * `since` is a real-world timestamp used only for ordering, never displayed:
+   * endorsement records carry no turn number, and the game runs on its era
+   * calendar, so a wall-clock date would stamp the wrong year on the fiction.
    */
   endorsements?: Array<{
     kind: "player" | "npp";
@@ -234,22 +227,19 @@ export interface CampaignData {
   };
 
   /**
-   * Strategic Operations v2 — per-lever branch-tree view for the owner UI.
-   * Owner-only (undefined for non-owner viewers). Each lever carries its
-   * current tree state plus localized next-tier costs, so the ops modal can
-   * render the starter node + three branch sub-tracks without recomputing
+   * Per-lever branch-tree view for the owner UI. Owner-only (undefined for
+   * non-owner viewers). Each lever carries its current tree state plus
+   * localized next-tier costs so the ops modal can render without recomputing
    * costs client-side. Costs share the server's family-scalar + general-phase
    * surcharge (via `getEffectiveBranchCost`).
    */
   opsTrees?: Record<UpgradeCategory, OpsTreeView>;
 
   /**
-   * Campaign-room briefing — an owner-only, READ-ONLY strategic digest that
-   * composes data the election engine / vote tally already produced. It never
-   * recomputes vote math. Present only for owner-access viewers (nominee /
-   * managers / running mate) on a non-archived campaign; `undefined` for every
-   * non-owner, so the coalition-weakness intel a rival must not see stays behind
-   * the same fog-of-war wall as the exact levels.
+   * Owner-only, READ-ONLY strategic digest composed from data the election
+   * engine / vote tally already produced. Never recomputes vote math. Present
+   * only for owner-access viewers on a non-archived campaign; `undefined` for
+   * non-owners so coalition-weakness intel stays behind fog-of-war.
    */
   briefing?: CampaignBriefing;
 

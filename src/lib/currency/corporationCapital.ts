@@ -1,32 +1,22 @@
 /**
  * Corporation liquidCapital currency helpers.
  *
- * Invariant after the forex migration:
+ * Invariants:
  *   - `corporation.liquidCapital` is denominated in `liquidCurrencyCode` (the
- *     corp's home currency, e.g. JPY for JP corps, GBP for UK corps, USD for
- *     US corps). Pre-forex corps have no `liquidCurrencyCode` and their
- *     balance is still in ₳ (internal / anchor units).
- *   - Internal turn-processor math runs in ₳ (anchor), and the client's
- *     `formatAmount()` likewise assumes ₳ input and multiplies by the display
- *     FX rate. BUT since v0.2.6 several STORED per-corp economic fields —
- *     `CorporateSector.revenue` / `currentGrowthCost`, `sharePrice`,
- *     `marketingBudget` / `logisticsBudget`, `ceoSalary` — are persisted in
- *     the corp's `liquidCurrencyCode`, NOT ₳ (see `corpEconomyFields.ts`).
- *     Normalize those via `readCorpEconomicAnchor` before any ₳ math; never
- *     treat a stored `sector.revenue` as ₳ directly (doing so silently scaled
- *     a sector-revenue-derived cost by the FX rate and broke affordability
- *     gates for non-USD corps).
- *   - ALL forex-active currencies — including USD — float against ₳ and must
- *     use the live exchange rate when converting. ₳ is its own anchor unit;
- *     there is no currency that is 1:1 with ₳ by definition. (Early forex
- *     code treated USD as identical to ₳; that assumption is no longer true
- *     once USD is in `FOREX_ACTIVE_CURRENCIES` and the rate floats.)
+ *     corp's home currency). Corps without that field hold their balance in
+ *     ₳ (anchor units).
+ *   - Internal turn-processor math runs in ₳, as does `formatAmount()`. But
+ *     several STORED per-corp economic fields (`CorporateSector.revenue` /
+ *     `currentGrowthCost`, `sharePrice`, `marketingBudget` /
+ *     `logisticsBudget`, `ceoSalary`) are persisted in `liquidCurrencyCode`,
+ *     NOT ₳. Normalize those via `readCorpEconomicAnchor` before any ₳ math;
+ *     never treat a stored `sector.revenue` as ₳ directly.
+ *   - ALL forex-active currencies, including USD, float against ₳ and must
+ *     use the live rate. There is no currency 1:1 with ₳ by definition.
  *
- * Any code path that wants to `$inc` or compare against `liquidCapital` in
- * home-currency units MUST first convert through one of these helpers.
- * Otherwise we leak value: a 1 ₳ payment gets added literally to a JPY
- * balance (~0.01 ¥ instead of ~87 ¥), so non-anchor corps accrue ~100× less
- * cash than the UI claims they are earning.
+ * Any path that `$inc`s or compares `liquidCapital` in home-currency units
+ * MUST convert through these helpers, otherwise value leaks: a 1 ₳ payment
+ * lands as ~0.01 ¥ instead of ~87 ¥.
  */
 
 import type { Db } from "mongodb";

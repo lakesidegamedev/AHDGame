@@ -274,10 +274,9 @@ async function autoNominateIncumbent(
   const nominationCol =
     officeType === "senate" ? "senateLeadershipNominations" : "houseLeadershipNominations";
 
-  // Idempotent: this runs once per resolved seat, so a single general election
+  // Idempotent: runs once per resolved seat, so a single general election
   // triggers it multiple times with the same game-clock `now`; a bare insert
-  // produced duplicate incumbent nominations with identical createdAt (ticket
-  // #959: "James W L C Polk" listed twice, 0 votes each). Upsert on the active
+  // produced duplicate incumbent nominations. Upsert on the active
   // (role, nominee) so a second call is a no-op. A partial unique index on
   // {role, nomineeId} (status open/voting) is the concurrency backstop.
   await db.collection(nominationCol).updateOne(
@@ -339,9 +338,8 @@ async function autoNominateStandingIncumbent(
   const incumbentParty = char.party ?? speaker.party ?? null;
   if (!isPartyEligible(policy, incumbentParty, ctx)) return;
 
-  // Idempotent for the same reason as autoNominateIncumbent (#959): dedup on the
-  // active nominee (scoped by `role` for the senate pro-tempore collection, which
-  // shares senateLeadershipNominations with the other senate roles).
+  // Idempotent: dedup on the active nominee, scoped by `role` for
+  // senateLeadershipNominations which shares the collection across roles.
   const roleFilter = nominationCollection === "senateLeadershipNominations" ? { role } : {};
   await db.collection(nominationCollection).updateOne(
     { ...roleFilter, nomineeId: speaker.characterId, status: { $in: ["open", "voting"] } },
@@ -411,21 +409,14 @@ export async function clearIneligibleHouseLeadershipNominations(
  * Senate elections resolve → Pro Tempore + Majority Leader + Minority Leader (Senate)
  */
 /**
- * Whether the party that should hold `leaderRole` per the current chamber
- * composition (`expectedParty`) differs from who actually holds it — i.e.
- * whether a new leadership election is actually warranted. Without this,
- * `triggerLeadershipElectionsAfterChamberVote` would reopen a full
- * Speaker/Leader/Whip cycle on every incidental House seat resolution (a
- * routine one-seat special election filling a vacancy), re-electing the same
- * unopposed incumbent and spamming a "Leadership Election Result" notice for
- * an office that never actually changed hands. Mirrors the Senate branch's
- * existing `majorityChanged` check, generalized to any role/expected-party
- * pair (majority ones compare against the majority party, minority ones
- * against the minority party).
+ * Whether who actually holds `leaderRole` differs from `expectedParty` under
+ * current chamber composition, i.e. whether a new leadership election is
+ * warranted. Without this gate, incidental House seat resolutions reopen a
+ * Speaker/Leader/Whip cycle, re-electing the incumbent and spamming a
+ * "Leadership Election Result" notice for an office that never changed hands.
  *
- * Returns true (a new election is warranted) when there's no chamber-majority
- * data yet, when the role is currently vacant (no seated characterId), or
- * when the seated holder's party no longer matches `expectedParty`.
+ * Returns true (election warranted) when `expectedParty` is null, when the
+ * role is vacant, or when the seated holder's party no longer matches.
  */
 async function hasControllingPartyChanged(
   db: Db,
@@ -562,15 +553,10 @@ export async function triggerLeadershipElectionsAfterChamberVote(
       majorityBloc: senate.majorityBloc,
     });
 
-    // Reopen each Senate leadership role on the SAME rule the House loop uses:
-    // whether the party that should hold it (per current composition) differs
-    // from who actually holds it (`hasControllingPartyChanged`). The old gate
-    // keyed on `senateClass === 1`, so on class-2/3 cycles with the majority
-    // unchanged NO Senate leadership elections opened at all — Pro Tem, Minority
-    // Leader and both Whips stayed frozen for two of every three election cycles
-    // (ticket #974: "nothing started in senate"). The in-flight guard below still
-    // prevents reopening a live window, so this is idempotent across the multiple
-    // per-seat trigger calls a general election makes.
+    // Reopen Senate leadership roles when the party that should hold one (per
+    // composition) differs from who holds it, same rule as the House loop.
+    // The in-flight guard below keeps this idempotent across the per-seat
+    // trigger calls a general election makes.
     const senateRoles: {
       role: SenateLeadershipElectionRole;
       autoNominateStanding?: boolean;

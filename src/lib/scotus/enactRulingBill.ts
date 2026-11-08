@@ -26,23 +26,18 @@ export interface RulingBillInput {
 /**
  * Enact a court ruling as a bill.
  *
- * Court rulings — SCOTUS docket divergences (#3598), SCOTUS surprise cases
- * (#3607), and UK judicial review — have no legislative lifecycle: nothing ever
- * proposed a bill, so no `bills` row was created. Each path fabricates a
- * bill-shaped object and drives it through the shared `onBillEnacted` pipeline
- * for the metric-registry + regional-lean-drift effects.
+ * Court rulings (SCOTUS docket divergences, SCOTUS surprise cases, UK judicial review)
+ * have no legislative lifecycle: nothing ever proposed a bill, so no `bills` row was
+ * created. Each path fabricates a bill-shaped object and drives it through the shared
+ * `onBillEnacted` pipeline for the metric-registry + regional-lean-drift effects.
  *
- * `onBillEnacted` assumes the `bills` row already exists — it only ever
- * `updateOne`s it — and it posts a Discord "Bill Enacted" webhook deep-linking
- * to `/congress/bills/<id>`. Before this helper, the synthetic id was never
- * persisted, so that link (and `statePolicies.enactedByBillId`) pointed at a
- * document that did not exist: the "View Bill" link 404'd for every ruling.
+ * `onBillEnacted` assumes the `bills` row already exists (it only `updateOne`s it) and
+ * posts a Discord webhook deep-linking to `/congress/bills/<id>`. We `insertOne` the row
+ * here, BEFORE `onBillEnacted`, so the choke-point's update and the deep-link both
+ * resolve.
  *
- * We `insertOne` the `bills` row here, BEFORE `onBillEnacted`, so the
- * choke-point's update and the deep-link both resolve. Status is `"signed"` —
- * the terminal enacted status — because a ruling is law the moment it is handed
- * down; there are no chamber votes to render, so the vote tally carries the
- * seated majority/minority instead.
+ * Status is `"signed"`, the terminal enacted status: a ruling is law the moment it is
+ * handed down, so the vote tally carries the seated majority/minority instead.
  */
 export async function enactRulingBill(
   db: Db,

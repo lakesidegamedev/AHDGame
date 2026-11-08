@@ -348,21 +348,21 @@ function isStaffCandidate(payload: UserPayload, cached: User | undefined): boole
  * Resolve the user document for an authenticated session.
  *
  * Reads through the short-TTL process cache (`userDocCache`) so the many
- * parallel `/api/*` requests a single page fires don't each re-hit the DB just
- * to enforce ban / token-revocation. Ban + revoke paths invalidate the cache,
+ * parallel `/api/*` requests a page fires don't each re-hit the DB just to
+ * enforce ban / token-revocation. Ban and revoke paths invalidate the cache,
  * so enforcement stays effectively immediate; the TTL is the upper bound for
- * anything we don't explicitly invalidate.
+ * anything not explicitly invalidated.
  *
  * Staff candidates bypass the cache (see `isStaffCandidate`): ordinary-player
  * cache hits keep the fast path, but no staff grant ever comes from a cached
  * record. Only a validated fresh record is cached; a null read (deleted
- * account) drops any stale entry without caching anything. DB failures
- * propagate so the caller fails closed without clearing the session cookie.
+ * account) drops any stale entry without caching. DB failures propagate so the
+ * caller fails closed without clearing the session cookie.
  *
- * The full account read includes `authMigrationFence` so fenced accounts deny
- * even with an otherwise valid signed token. Fence denial is bounded by the
- * 10s cache TTL for sessions cached before fencing; the future fence writer
- * must stamp `authRevokedAt` and evict the cache entry to revoke live sessions.
+ * The full read includes `authMigrationFence` so fenced accounts deny even
+ * with an otherwise valid signed token. Fence denial is bounded by the 10s
+ * cache TTL for sessions cached before fencing; the future fence writer must
+ * stamp `authRevokedAt` and evict the cache entry to revoke live sessions.
  */
 async function resolveUserDoc(db: Db, userId: string, payload: UserPayload): Promise<User | null> {
   const cached = getCachedUser(userId);

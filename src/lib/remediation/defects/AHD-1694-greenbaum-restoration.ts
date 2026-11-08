@@ -15,25 +15,23 @@ import type {
 } from "../types";
 
 /**
- * Support incident #1694, Greenbaum Group (sequential 493).
+ * Remediation for the Greenbaum Group incident (sequential 493).
  *
- * Greenbaum's retail bank failed at turn 438 holding 15.8B of marked
- * sovereign treasuries and a 0.90 capital ratio. The confidence score and the
- * red-band run test read only vault cash, while the treasury auto-sweep had
- * moved spare cash into bills. Contagion from the injection failures pushed it
- * red, flight emptied the 1.32B vault and the run test closed a solvent bank.
- * The code half is PR #5062 (treasuries count as liquid cover).
+ * Greenbaum's retail bank failed holding marked sovereign treasuries while
+ * the confidence score and red-band run test read only vault cash, so the
+ * auto-sweep had moved spare cash to bills and the run test closed a solvent
+ * bank. Treasuries count as liquid cover now (the code-side half).
  *
- * Resolution paid the 16.26B household deposit book from the vault (3.84B),
- * the USD deposit insurance fund (6.54B) and the treasury backstop (5.88B).
- * The bank's own 14.0B bond then matured into the insurance fund at turn 467,
- * and its loan book recoveries keep flowing there. The owner received nothing.
+ * The 16.26B household deposit book was paid from the vault, the USD deposit
+ * insurance fund, and the treasury backstop; the bank's own 14.0B bond matured
+ * into the fund and loan recoveries keep flowing there. The owner received
+ * nothing.
  *
- * Owner decision 2026-10-27: return the 3.005B of capital the owner posted,
- * MOVED from the USD insurance fund (which collected more from Greenbaum's
- * estate than it paid out), so no money is created, and reopen the retail
- * bank with fresh books through `issueCharter`, which posts the required
- * capital out of the corporation's cash like any player charter.
+ * The owner's 3.005B posted capital is refunded from the USD insurance fund
+ * (which collected more from the estate than it paid out), so no money is
+ * created. The retail bank is then reopened with fresh books through
+ * `issueCharter`, which posts required capital from the corporation's cash
+ * like any player charter.
  */
 
 export const DEFECT_ID = "AHD-1694-greenbaum-restoration";

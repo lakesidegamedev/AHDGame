@@ -1,26 +1,16 @@
 /**
  * Election Engine
  *
- * Shared logic for calculating how many votes each candidate can reach per
- * turn, using the same demographic weighting as the poll system.
+ * Shared logic for how many votes each candidate reaches per turn, using the
+ * same demographic weighting as the poll system.
  *
- * Vote accumulation model (Phase 1: Group-Level Competitive Allocation)
- * ────────────────────────────────────────────────────────────────────
  * Each demographic group's share of the turn pool is split among candidates
- * by relative appeal within that group. Groups vote as blocs; higher appeal
- * with a group yields a larger share of that group's votes.
+ * by relative appeal within that group. The final 4 turns are worth 25% of the
+ * pool; early turns share 75%. `totalPool` derives from the state's total
+ * estimated turnout (the poll's totalEstimatedVoters).
  *
- * Per turn:
- *   1. Compute each group's contribution to the turn pool (groupPop x turnout x categoryWeight).
- *   2. For each group, split that contribution among candidates by relative
- *      (appeal x reach x approval x partyOrg) -- candidates compete within each bloc.
- *   3. Accumulate votes. The FINAL 4 turns are worth 25% of the pool; early turns share 75%.
- *
- * "totalPool" is derived from the state's total estimated turnout voters
- * (same number the poll shows as totalEstimatedVoters).
- *
- * This file re-exports all public symbols from focused sub-modules.
- * See src/lib/electionEngine/ for the implementation.
+ * Re-exports public symbols from focused sub-modules; see
+ * src/lib/electionEngine/ for the implementation.
  */
 
 // Constants

@@ -1,30 +1,13 @@
 /**
- * B8 — the discount window.
+ * The discount window: a lender-of-last-resort facility for deposit-taking
+ * banks facing a run.
  *
- * The central bank already had two ways to put money into a private bank: the
- * `liquidity_injection` operation (B1), which pushes money out pro rata whether
- * anyone asked or not, and the CB margin line, which funds a PROPRIETARY book
- * against posted collateral.
- *
- * Neither is a lender of last resort. A deposit-taking bank facing a run had no
- * facility to reach for at all: it could sell assets into a falling market, or
- * it could fail. That is the one thing a central bank exists to do.
- *
- * ## The stigma is the mechanic
- *
- * A discount window with a cheap rate and no consequence is free money, and
- * every bank would sit on it permanently. The real facility is priced above the
- * market and carries a signal: borrowing from the lender of last resort is what
- * a bank does when nobody else will lend to it.
- *
- * So drawing carries BOTH a penalty rate and a confidence hit — and confidence
- * is the input to the existing run mechanic, so using the window makes a run
- * marginally more likely even as it funds you through one. That is the actual
- * trade-off a bank faces, and it is why the facility is a decision rather than
- * an obvious yes.
- *
- * The stigma decays as the debt is repaid, so a bank that uses the window
- * briefly and clears it is not marked forever.
+ * Drawing carries both a penalty rate and a confidence hit, because
+ * borrowing from the lender of last resort signals that nobody else will lend
+ * to you. Since confidence feeds the existing run mechanic, using the window
+ * makes a run marginally more likely even as it funds you through one. The
+ * stigma decays as the debt is repaid, so a bank that borrows briefly and
+ * clears is not marked forever.
  */
 
 import type { BankCharter } from "@/lib/db/types/bank";

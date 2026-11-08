@@ -42,9 +42,8 @@ import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
  * Independent/minor party nominee: slight support (55% for).
  *
- * Exported (not just cabinet-internal) so other Senate-confirmation lifecycles
- * built on the same machinery — e.g. SCOTUS justice confirmation, #3598 — reuse
- * this exact party-line behavior instead of re-implementing it.
+ * Exported so other Senate-confirmation lifecycles (e.g. SCOTUS justice
+ * confirmation) reuse this exact party-line behavior instead of re-implementing it.
  */
 export function nppCabinetVote(
   nppParty: string | undefined,
@@ -296,9 +295,9 @@ export async function processCabinetNominationLifecycle(
   await expireUnansweredCabinetNominationChoices(db, now, currentTurn);
 
   // Pre-fetch US NPP officials and NPPs once. This preload is US-scoped and is
-  // ONLY reused for US nominations below; non-US nominations (e.g. NG) resolve
-  // their own country-scoped NPP officials/president inside castNPPCabinetVotes
-  // so foreign votes maps are not polluted with US NPP senators. See ticket #923.
+  // ONLY reused for US nominations below; non-US nominations resolve their own
+  // country-scoped NPP officials/president inside castNPPCabinetVotes so foreign
+  // votes maps are not polluted with US NPP senators.
   const [nppOfficials, president] = await Promise.all([
     db
       .collection<ElectedOfficial>("electedOfficials")
@@ -443,7 +442,7 @@ export async function processCabinetNominationLifecycle(
       !!nom.nomineeCharacterId &&
       bankHolders.has(nom.nomineeCharacterId.toString());
     // Remember the ballot result: a winner blocked only by a bank office is
-    // offered the seat instead of being rejected outright (ticket #1713).
+    // offered the seat instead of being rejected outright.
     const votePassed = passed;
     if (blockedByBankOffice) passed = false;
 
@@ -685,11 +684,9 @@ export async function processCabinetNominationLifecycle(
         });
       }
     } else {
-      // Rejected — either at the ballot or because the nominee took an office
-      // that cannot be held with a cabinet seat while the vote was open. The
-      // reason is recorded and sent to the nominee as well as the president:
-      // a nominee who won the vote must not learn of the outcome from an empty
-      // seat and no notice (ticket #1713).
+      // Rejected at the ballot or because the nominee took an incompatible
+      // office while the vote was open. The reason is recorded and sent to the
+      // nominee as well as the president.
       const rejectionReason: CabinetNominationRejectionReason = blockedByBankOffice
         ? "incompatible_bank_office"
         : "senate_vote";

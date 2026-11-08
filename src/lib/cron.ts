@@ -85,9 +85,8 @@ let backupCron: ReturnType<typeof cron.schedule> | null = null;
 let stuckLockRecoveryCron: ReturnType<typeof cron.schedule> | null = null;
 
 /**
- * How long a turn lock must sit untouched before the 5-minute recovery sweep
- * will repossess it. Two full stale windows, i.e. twice what the :00/:30 turn
- * crons require — see the rationale at the sweep itself (#1208).
+ * Two full stale windows: twice what the :00/:30 turn crons require before the
+ * 5-minute recovery sweep repossesses a lock.
  */
 const STUCK_LOCK_SWEEP_MIN_AGE_MS = 2 * TURN_LOCK_STALE_MS;
 let playerEventsSweepCron: ReturnType<typeof cron.schedule> | null = null;
@@ -101,10 +100,10 @@ let patreonReconcileCron: ReturnType<typeof cron.schedule> | null = null;
 let patreonReconcileRunning = false;
 
 /**
- * Share-fill orphan recovery sweep (issue #1672). Staggered to :07/:22/:37/:52
- * so it never fires on a turn tick (:00/:30) or the stock refresh (:15), and
- * runs 4x/hour so a crash-orphaned receipt waits at most ~15 minutes. Offset
- * slots double as the test selector (see `findScheduledCallback` in cron.test.ts).
+ * Share-fill orphan recovery sweep. Staggered to :07/:22/:37/:52
+ * so it never fires on a turn tick (:00/:30) or the stock refresh (:15),
+ * and runs 4x/hour so a crash-orphaned receipt waits at most ~15 minutes.
+ * Offset slots double as the test selector (see `findScheduledCallback` in cron.test.ts).
  */
 export const SHARE_FILL_RECOVERY_SCHEDULE = "7,22,37,52 * * * *";
 
@@ -194,10 +193,8 @@ export async function initializeCronJobs() {
     async () => {
       // Tick-fired log is outside Sentry.withMonitor on purpose: it proves the
       // node-cron scheduler ran the callback at the expected time. When the
-      // Sentry monitor goes silent (missed check-ins) while the container is
-      // alive, the presence/absence of this log distinguishes a scheduler
-      // problem from a withMonitor problem (withMonitor hang or throw is the
-      // current leading hypothesis for the 2026-05-25 ~3h cron silence).
+      // Sentry monitor goes silent while the container is alive, presence or
+      // absence of this log distinguishes a scheduler problem from a withMonitor problem.
       const tickStartedAt = Date.now();
       console.log(`[Cron] tick fired at ${new Date(tickStartedAt).toISOString()}`);
       try {
@@ -229,7 +226,7 @@ export async function initializeCronJobs() {
                 // process likely died mid-turn; fall through so processTurn's
                 // findOneAndUpdate-based stale-lock takeover can repossess the
                 // lock. Otherwise the cron would skip forever on a permanently
-                // stuck isProcessing flag (2026-05-24 sandbox-staging incident).
+                // stuck isProcessing flag.
                 const lockState = getProcessingLockState(currentState);
                 if (!lockState.isStale) {
                   console.log("[Cron] Turn processing skipped — turn already in progress");
@@ -346,18 +343,16 @@ export async function initializeCronJobs() {
   // Stuck-lock recovery sweep. STRICTLY a recovery path: it never starts a
   // turn that is merely due, only repossesses one whose lock has gone stale.
   //
-  // Why this exists (2026-08-28): when a process dies mid-turn — a redeploy's
-  // SIGTERM, a heapWatchdog trip, or a hard V8 OOM — gameState.isProcessing is
-  // left set with a frozen heartbeat. Recovery previously depended on the turn
-  // cron's own ticks, which are only :00 and :30, so a turn killed at :05 sat
-  // wedged on "Processing..." until :30, and one killed at :35 until the next
-  // :30 — most of an hour. Sweeping every 5 minutes bounds the wedge to roughly
-  // the stale window plus 5 minutes.
+  // When a process dies mid-turn (SIGTERM, heapWatchdog, OOM),
+  // gameState.isProcessing is left set with a frozen heartbeat. The turn cron
+  // only ticks at :00 and :30, so without this sweep a wedged turn can sit for
+  // most of an hour. Sweeping every 5 minutes bounds the wedge to roughly the
+  // stale window plus 5 minutes.
   //
-  // TURN_LOCK_STALE_MS (20 min) is deliberately NOT shortened to speed this up:
-  // it is the safety interlock that stops a second process stealing the lock
-  // from a turn that is alive but not heart-beating (a long synchronous stretch
-  // starves the 30s heartbeat timer). Observed turns have run 666s and 495s.
+  // TURN_LOCK_STALE_MS (20 min) is deliberately NOT shortened: it is the safety
+  // interlock that stops a second process stealing the lock from a turn that is
+  // alive but not heart-beating (a long synchronous stretch starves the 30s
+  // heartbeat timer).
   stuckLockRecoveryCron = cron.schedule(
     "*/5 * * * *",
     async () => {
@@ -385,19 +380,12 @@ export async function initializeCronJobs() {
         // Deliberately MORE conservative than the :00/:30 crons, which act as
         // soon as the lock is stale at TURN_LOCK_STALE_MS.
         //
-        // #1208 is a real production incident of the hazard: a turn that ran
-        // past the 20-minute threshold WITHOUT heartbeating was taken over by a
-        // second worker while still alive, re-running news-emitting phases and
-        // posting duplicate World News. The dedup added there is explicitly
-        // best-effort, so it mitigates the symptom rather than the race.
-        //
-        // This sweep checks every 5 minutes instead of every 30, so it is far
-        // likelier than those crons to catch a turn in the window where it is
-        // merely blocked (a long synchronous stretch starves the 30s heartbeat
-        // timer) rather than dead. A dead holder never heartbeats again, so
-        // waiting a second full window costs it nothing; a blocked one gets
-        // that much longer to recover and keep its lock. Worst-case wedge is
-        // still bounded well under the up-to-an-hour this sweep exists to fix.
+        // This sweep runs every 5 minutes instead of every 30, so it is far likelier
+        // to catch a turn in the window where it is merely blocked (a long synchronous
+        // stretch starves the 30s heartbeat timer) rather than dead. A dead holder
+        // never heartbeats again, so waiting a second full window costs it nothing; a
+        // blocked one gets that much longer to recover and keep its lock. Worst-case
+        // wedge stays bounded well under the up-to-an-hour this sweep exists to fix.
         const lastTouchMs = lockState.lastTouch?.getTime();
         const lockAgeMs = lastTouchMs === undefined ? Infinity : Date.now() - lastTouchMs;
         if (lockAgeMs < STUCK_LOCK_SWEEP_MIN_AGE_MS) return;
@@ -668,16 +656,13 @@ export async function initializeCronJobs() {
     }).`
   );
   console.log("[Cron] Stuck turn-lock recovery sweep will run every 5 minutes.");
-  // Share-fill orphan recovery (issue #1672). Deliberately NOT a turn phase:
-  // the receipt scan is a query-per-row N+1 that must not run inside
-  // processTurn. This sweep re-drives lonely receipts outside the turn with
-  // a bounded fair pass. Deferrable by design: while a turn holds the
-  // processing lock (fresh OR stale — a stale lock may still be a live but
-  // blocked turn, per #1208) the pass is skipped and retried next tick.
-  // With no world or a paused world there is nothing to recover, so the
-  // sweep returns before touching the database.
-  // `runShareFillRecoveryPass` never throws and carries its own concurrency
-  // guard, so overlapping ticks collapse instead of piling up.
+  // Share-fill orphan recovery. Deliberately NOT a turn phase: the receipt
+  // scan is an N+1 query that must not run inside processTurn, so this sweep
+  // re-drives lonely receipts with a bounded fair pass. Deferrable by design:
+  // while a turn holds the processing lock (fresh OR stale, since a stale lock
+  // may still be a live blocked turn) the pass is skipped and retried next
+  // tick. No world or a paused world means nothing to recover. The pass never
+  // throws and carries its own concurrency guard, so overlapping ticks collapse.
   shareFillRecoveryCron = cron.schedule(
     SHARE_FILL_RECOVERY_SCHEDULE,
     async () => {

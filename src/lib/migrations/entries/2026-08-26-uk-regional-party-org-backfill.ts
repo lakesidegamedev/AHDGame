@@ -7,28 +7,23 @@ import { calculateUKStatePartyOrgs } from "@/lib/seeds/uk/ukStatePartyOrgCalcula
 /**
  * Give the formerly-regional UK parties an organisation row in every region.
  *
- * SNP, Plaid Cymru, the DUP, Sinn Fein and the UUP used to be barred from
- * standing outside their home nation by a hardcoded table in
- * `src/lib/parties/regionalContest.ts`. That gate is gone — they stand
- * UK-wide now — but the seed never wrote them a `statePartyOrg` row outside
- * their home nation, and a party with no row (or `hasPresence: false`) still
- * cannot field NEW candidates there (`canPartyFieldInState`). Without this
- * backfill, lifting the gate would leave them able to file by hand and
- * nothing else.
+ * The hardcoded home-nation gate in `regionalContest.ts` is gone, but the seed
+ * never wrote them a `statePartyOrg` row outside their home nation, and a
+ * party with no row (or `hasPresence: false`) still cannot field NEW
+ * candidates there (`canPartyFieldInState`). Without this backfill they could
+ * file by hand and nothing else.
  *
  * The expected row set comes from `calculateUKStatePartyOrgs` for the world's
- * active preset — the same function the seeder and the reset reconciler use —
- * so the backfill and a fresh world agree by construction, on any preset.
+ * active preset, the same function the seeder and reset reconciler use, so
+ * backfill and a fresh world agree by construction on any preset.
  *
- * Insert-only. An existing row is never touched, which matters on live: Plaid
- * Cymru already carries player-built org in four English regions (EMI 29.2,
- * SWE 33.9, WMI 24.2, EAE 7.4) that was inert under the gate and becomes real
- * the moment it lifts. Overwriting those to the seed floor would confiscate
- * work players had already paid for.
+ * Insert-only. An existing row is never touched: on live, player-built org
+ * that was inert under the gate becomes real the moment it lifts, and
+ * overwriting it to the seed floor would confiscate paid-for work.
  *
- * New rows land wherever the era polling table puts them, which for a party
- * that polled 0 in a region is the MIN_ORG floor of 5 with a registration
- * share of 0 — present and organisable, not competitive.
+ * New rows land where the era polling table puts them: for a region with 0
+ * poll, the MIN_ORG floor of 5 with registration share 0, present and
+ * organisable, not competitive.
  */
 async function backfillUKRegionalPartyOrg(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];

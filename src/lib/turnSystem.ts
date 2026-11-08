@@ -188,7 +188,7 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
     // reads to decide whether re-running would double-apply. Releasing a turn that had
     // already committed writes therefore made the NEXT cron re-run it from the start and
     // pay every additive income phase twice: fund generation, corp dividends, savings
-    // interest, bond coupons, treasury. The #2815 guard exists to prevent precisely that,
+    // interest, bond coupons, treasury. The guard exists to prevent precisely that,
     // and a clean shutdown was defeating it.
     const live = await db
       .collection<GameState>("gameState")
@@ -305,10 +305,9 @@ async function processTurnImpl(
   let turnLogWritten = false;
   let healthSnapshotWritten = false;
   let lastHealth: GameHealthSummary | null = null;
-  // #2815: if the previous lock holder died mid-turn (after phases began
-  // committing writes), we must NOT re-run that turn — that would double-apply
-  // committed income phases. Captured from the pre-lock snapshot, acted on once
-  // we hold the lock.
+  // If the previous lock holder died after phases began committing writes,
+  // do NOT re-run that turn: committed income phases would double-apply.
+  // Captured from the pre-lock snapshot, acted on once we hold the lock.
   let preLockRecoveryTarget: number | null = null;
   /** Set when this turn is a resume; drives the phase skip set below. */
   let resumedFromCrash: CrashedTurnRecovery | null = null;
@@ -322,30 +321,17 @@ async function processTurnImpl(
     const lockAcquiredAt = new Date();
     const staleLockCutoff = new Date(lockAcquiredAt.getTime() - TURN_LOCK_STALE_MS);
 
-    // Auto-pause guard: if wall-clock time since the last *completed* turn (by
-    // turnLog.realTime) exceeds AUTO_PAUSE_DRIFT_MS, cron has stopped firing.
-    // Use realTime — not lastTurnProcessed (game/LARP clock) — so a steady
-    // game-clock offset after an old outage does not false-positive while
-    // hourly cron is still healthy. See docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+    // Auto-pause guard: if wall-clock time since the last *completed* turn
+    // (by turnLog.realTime) exceeds AUTO_PAUSE_DRIFT_MS, cron has stopped
+    // firing. Use realTime, not lastTurnProcessed (game/LARP clock), so a
+    // steady game-clock offset after an outage does not false-positive.
     {
       const preLockState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
-      // SIM-ONLY: the drift guard below models a LIVE deployment where an hourly
-      // cron is supposed to be firing, so a long gap means it stopped. A headless
-      // sandbox world has no cron at all — its turns are driven by runWorld.ts as
-      // fast as the CPU allows — so "wall-clock time since the last completed
-      // turn" measures nothing but how long ago someone last ran the sim.
-      //
-      // Resuming an existing sandbox world therefore trips this guard on its
-      // FIRST turn essentially always: the world was last touched hours or days
-      // ago. That is a hard failure at turn N+1 (runWorld exits 1) for a reason
-      // that has nothing to do with the sim. It bit a 500-turn 1953 run on the
-      // ops box on 2026-07-28, and it would bite every resumed run on a laptop,
-      // which sleeps by definition.
-      //
-      // Undefined in production (runWorld.ts is the only writer), so this is
-      // inert there — the same shape as simTurnPhaseMode below.
-      // A singleplayer world only advances when the player asks it to, so a
-      // gap of days between turns is the normal case, not a dead cron.
+      // SIM-ONLY: the drift guard models a LIVE deployment where an hourly cron
+      // fires, so a long gap means it stopped. A headless sandbox has no cron (turns
+      // run as fast as CPU allows), and a singleplayer world advances only on player
+      // action, so a gap of days is normal. Resuming such a world would trip the
+      // guard on its first turn. Undefined in production, so inert there.
       const turnConfig = localSingleplayer
         ? null
         : await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
@@ -356,7 +342,7 @@ async function processTurnImpl(
         return { success: false, turn: 0, message: residueRefusal, warnings, health: null };
       }
       if (preLockState) {
-        // #2815: detect a stale lock left by a turn that crashed after phases
+        // Detect a stale lock left by a turn that crashed after phases
         // began applying writes. Recorded here; the recovery close-out runs
         // after we acquire the lock (and re-verifies against the locked state).
         if (
@@ -373,12 +359,12 @@ async function processTurnImpl(
           //
           // Only the target is taken from this pre-lock read. The phase state is read
           // from the locked document after takeover, which must name the same target
-          // (#3429).
+          //.
           preLockRecoveryTarget = preLockState.processingTargetTurn;
         } else if (isUnownedFailedTurn(preLockState)) {
           // A turn the ordinary failure path released after phases applied. Its
           // finalized statuses are exact for that holder, so it resumes under the
-          // same rules instead of rerunning from scratch (#3429).
+          // same rules instead of rerunning from scratch.
           preLockRecoveryTarget = preLockState.processingTargetTurn ?? null;
         }
         const lastTp = new Date(preLockState.lastTurnProcessed);
@@ -480,7 +466,7 @@ async function processTurnImpl(
       {
         // Lock fields only. The crash evidence (target, phase, statuses, results)
         // stays as the dead holder left it until the locked document validates the
-        // resume, so a crash during takeover or setup cannot erase it (#3429).
+        // resume, so a crash during takeover or setup cannot erase it.
         $set: lockAcquisitionSet(lockAcquiredAt),
       },
       { returnDocument: "after" }
@@ -502,31 +488,16 @@ async function processTurnImpl(
     const gameState = lockResult;
     activeIteration = gameState.iteration ? { ...gameState.iteration } : undefined;
 
-    // #2815: the previous holder died mid-turn after phases began committing.
-    // Re-running the turn from the start would double-apply every additive income
-    // phase it already landed, so this used to CONSUME the turn: advance the clock
-    // past it and run nothing.
-    //
-    // That is far more expensive than it needs to be. A turn is ~157 phases, and a
-    // redeploy usually kills one a few seconds in, so consuming discarded ~150 phases
-    // that had not run at all: every election, settlement, metric and snapshot the turn
-    // had not reached. On a world that redeploys several times an hour, that is the
-    // outage.
-    //
-    // It now RESUMES instead. `appliedPhases` names what must not run again, `runPhase`
-    // skips exactly those, and the rest of the turn executes normally and completes
-    // normally, advancing the clock itself. A phase reads the turn context (a
-    // read-only snapshot built at turn start) and writes its own `phaseResults`
-    // entry. A few phases do consume an earlier phase's result: V2 treasury cash
-    // settles from bondTurn's actual flows. Those phases are listed in
-    // `turnPhaseResumeResults.ts`, store a bounded copy of their result with their
-    // completed status, and the resume hands that copy back. A missing or
-    // interrupted one fails the dependent explicitly instead of rerunning or
-    // assuming zero (#3429).
-    //
-    // The race guard (target === currentTurn+1 against the freshly locked state) still
-    // ensures a concurrent completion between the pre-lock read and lock acquisition
-    // cannot cause a spurious resume.
+    // Crash recovery RESUMES the interrupted turn instead of consuming it.
+    // `appliedPhases` names phases that must not rerun; `runPhase` skips exactly
+    // those and the rest of the turn executes and advances the clock normally.
+    // A phase reads the read-only turn context and writes its own
+    // `phaseResults`. Phases that consume an earlier phase's result are listed
+    // in `turnPhaseResumeResults.ts`, which stores a bounded copy of that result
+    // with its completed status; a missing or interrupted one fails the
+    // dependent explicitly rather than rerunning or assuming zero. The race
+    // guard (target === currentTurn+1 against the freshly locked state) prevents
+    // a spurious resume when a concurrent completion races the lock.
     const crashedTurnRecovery = validateLockedResume(gameState, preLockRecoveryTarget);
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
@@ -696,7 +667,7 @@ async function processTurnImpl(
         await adapter.execute(context, runtime);
       }
     });
-    // A timed-out phase can still be writing (#3385). Nothing after this line
+    // A timed-out phase can still be writing. Nothing after this line
     // may run, and the lock may not be released, until it has stopped.
     await runtime.drainTimedOutPhases?.();
 
@@ -804,11 +775,11 @@ async function processTurnImpl(
       );
     }
 
-    // The lock is released: players can act again. Reporting phases that only
-    // write history for charts, rankings and diagnostics run now, stamped with
-    // the turn they describe, and finish before this call returns, so the next
-    // turn in this worker cannot start ahead of them. Never throws: a
-    // committed turn must not take the failure path below.
+    // Lock already released. Reporting phases that only write history for
+    // charts, rankings and diagnostics run here, stamped with the turn they
+    // describe, and complete before returning so the next turn cannot start
+    // ahead of them. Never throws: a committed turn must not hit the failure
+    // path.
     const reporting = await runCommittedTurnReporting({
       context,
       committedDurationMs: turnLog.durationMs,
@@ -819,10 +790,9 @@ async function processTurnImpl(
     healthSnapshotWritten = reporting.healthWritten;
     lastHealth = reporting.health;
     if (!localSingleplayer) {
-      // Anti-abuse scans run after the commit, never holding up the turn
-      // (#2694). Started after the reporting above because the suspect scan
-      // reads this turn's portfolio history. Results land on this turn log
-      // under postTurnScans.
+      // Anti-abuse scans run after commit so they never hold up the turn;
+      // started after reporting because the suspect scan reads this turn's
+      // portfolio history. Results land on the turn log under postTurnScans.
       void runPostTurnIntegrityScans(db, context.newTurn).catch((err) =>
         console.warn("[post-turn] integrity scans failed to start", err)
       );
@@ -928,7 +898,7 @@ async function processTurnImpl(
 
     try {
       // Releasing the lock while a timed-out phase is still writing would let
-      // the next turn run against its writes (#3385).
+      // the next turn run against its writes.
       await phaseRuntimeForFailure?.drainTimedOutPhases?.();
       const db = await getDb();
       const finalizedPhaseStatuses = phaseStatusesForFailure
@@ -942,7 +912,7 @@ async function processTurnImpl(
 
       // A fail-closed resume stop keeps the lock held and marked abandoned, with
       // its evidence, so the next attempt resumes and stops again instead of
-      // rerunning the turn from scratch over committed writes (#3429).
+      // rerunning the turn from scratch over committed writes.
       const holdForRepair = isResumeFailClosedError(error);
       const committedPhase =
         currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
@@ -1050,11 +1020,9 @@ async function processTurnImpl(
         await db.collection<TurnLog>("turnLogs").insertOne(crashTurnLog as TurnLog);
       }
     } catch (releaseError) {
-      // If we can't release the lock here it will be reclaimed by the 20-min
-      // stale takeover on a later cron tick — but surface it rather than
-      // swallow, since a silently-stranded lock is exactly what wedged turns in
-      // the 2026-07 incident. Do NOT clear localTurnLockHeld: keeping it set
-      // lets the graceful-shutdown handler retry the release on exit.
+      // A failed release is reclaimed by the 20-min stale takeover, but
+      // surface it rather than swallow: a silently-stranded lock wedges turns.
+      // Do NOT clear localTurnLockHeld, so graceful shutdown can retry.
       console.error("[Turn System] Failed to release lock after turn error:", releaseError);
       Sentry.captureException(releaseError, {
         tags: { component: "turnSystem", op: "lockReleaseAfterError" },

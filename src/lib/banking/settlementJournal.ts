@@ -2,26 +2,19 @@ import { resumeTreasuryReserveTransfer } from "@/lib/budget/treasuryReserveTrans
 /**
  * The Settlement Journal: apply a banking transition exactly once.
  *
- * The money-movement primitive already gives at-most-once legs under a
- * claimed key. What it did not give was the rest of a transition: the loan
- * record, the counter, the status flip that belong with the money and used
- * to be written by hand after it, in whatever order the author chose, with
- * a compensating write for the crash case that never actually ran. The
- * journal takes the whole transition the rules produced, claims the key,
- * lands the legs, then applies the projections, and records which of each
- * landed so a recovery pass can finish what a crash interrupted.
+ * The money-movement primitive gives at-most-once legs under a claimed key.
+ * The journal covers the rest of a transition (loan record, counters, status
+ * flips): claim the key, land the legs, apply projections, record each step
+ * so a recovery pass can finish what a crash interrupted.
  *
- * Order, and why:
- *
- * 1. The key is claimed before anything moves (the primitive's rule).
- * 2. Legs land, guarded debits first. A failed guard leaves a `partial`
- *    record with no projection applied, so the world has "money not yet
- *    delivered", never "loan booked with no cash behind it".
- * 3. Projections apply in order. Each is recorded on the journal as it
- *    lands, so a crash between two projections is visible as exactly which
- *    one is missing, and idempotent to re-run.
- * 4. The result is returned with the audit event the caller should publish.
- *    Publishing is the caller's job because the caller knows the actor.
+ * Order matters:
+ * 1. Claim the key before anything moves.
+ * 2. Land legs, guarded debits first. A failed guard leaves `partial` with no
+ *    projections, so money is not-yet-delivered, never booked-without-cash.
+ * 3. Apply projections in order, recording each so a crash is visible and
+ *    re-running is idempotent.
+ * 4. Return the audit event for the caller to publish (only the caller knows
+ *    the actor).
  */
 
 import { type Collection, type Db, type Document, type Filter } from "mongodb";

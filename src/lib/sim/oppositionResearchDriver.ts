@@ -1,8 +1,8 @@
 /**
  * Source-pinned synthetic-actor driver for the opposition-research flow
- * (issue #2102).
+ *.
  *
- * The #2040 registry marks `campaigns-player-actions` partial because no
+ * The registry marks `campaigns-player-actions` partial because no
  * campaign-entry or action-spend driver existed; the Bundle 3 collectors
  * record generic actor coverage but never enter candidates, fetch eligible
  * opposition targets, purchase, or retain the target identity and effects —
@@ -41,7 +41,7 @@ import { assertKnownActorMechanic } from "./actorCoverage";
 
 /** World preset the bounded experiment runs against. */
 export const OPPO_DRIVER_PRESET = "1953-default";
-/** Processed-turn envelope for the bounded experiment (issue #2102). */
+/** Processed-turn envelope for the bounded experiment. */
 export const OPPO_DRIVER_TURNS = 12;
 /** Turns of post-purchase favorability effects the driver retains. */
 export const OPPO_DRIVER_EFFECT_TURNS = 4;

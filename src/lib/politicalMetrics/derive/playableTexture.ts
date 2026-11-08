@@ -1,45 +1,31 @@
 /**
- * Playable-region texture derivation for the 1953 preset (issue #704).
+ * Playable-region texture derivation for the 1953 preset.
  *
  * Playable countries (US/UK/RU/DD) seed from a single NATIONAL baseline per
- * family, so every region opens byte-identical except for the sparse
- * hand-authored REGIONAL_MODIFIERS_1953 table (24 of 63 families touched).
- * Non-playables instead seed per-region derived boards, which is why the four
- * countries players actually play are the flat ones.
- *
- * Replacing the authored NATIONAL_BASELINES_1953 levels wholesale with
- * deriveCountryBoard output is NOT an option: the derived levels are a
- * mechanical inversion of outcome metrics (US household income derives to 0.0
- * against an authored 72). So this module keeps the authored LEVEL and derives
- * only the per-region TEXTURE: each region's deviation from its
- * population-weighted country mean per family, computed from the same
- * legacy regional seeds (plus the same era overlays) the metric seeders apply.
+ * family, so every region would open identical except for the sparse
+ * hand-authored REGIONAL_MODIFIERS_1953 table. Replacing those authored levels
+ * with deriveCountryBoard output is NOT viable: the derived levels are a
+ * mechanical inversion of outcome metrics. So this module keeps the authored
+ * LEVEL and derives only the per-region TEXTURE: each region's deviation from
+ * its population-weighted country mean per family.
  *
  * Pipeline per country, per family:
- *   1. derive every region's board (deriveCountryBoard, year 1953, the
- *      1953-gated party roster lean). Families with no derivable source
- *      (today: the defense block, which has no legacy layer and no playable
- *      tier-4 row) carry no signal, so their deviation is 0.
+ *   1. derive every region's board; families with no derivable source carry
+ *      no signal and get deviation 0.
  *   2. subtract the population-weighted country mean, so the texture sums to
  *      zero and the authored national level survives reseeding exactly.
  *   3. zero entries where REGIONAL_MODIFIERS_1953 has a hand-authored value:
- *      deliberate history (Mississippi society.integration -18) wins outright
- *      and must not be diluted by a mechanical category average. Zeroed cells
- *      stay exactly zero through every later step.
- *   4. center the surviving subset to its own population-weighted zero mean
- *      (zeroed cells contribute nothing, so the full-population mean is zero
- *      too), then proportionally scale the family vector so the largest
- *      deviation is +/-TEXTURE_BOUND. Scaling, never clamping: clamping one
- *      tail would shift the mean the previous step just fixed.
- *   5. round to 1 decimal (the emitted board precision) and drop exact zeros.
- *
- * SCOPE: 1953-default only. The playable anchor table carries a single 1953
- * anchor, so any other preset's texture would sit unused.
+ *      deliberate history wins outright. Zeroed cells stay zero through every
+ *      later step.
+ *   4. center the surviving subset to its own population-weighted zero mean,
+ *      then proportionally scale the family vector so the largest deviation is
+ *      +/-TEXTURE_BOUND. Scaling, never clamping: clamping would shift the mean.
+ *   5. round to 1 decimal and drop exact zeros.
  *
  * OFFLINE USE ONLY. Feeds the codegen script whose output is committed and
- * reviewed (scripts/debug/derive-playable-region-texture-1953.ts --emit) plus
- * the determinism/staleness gate in regionalTexture1953.test.ts. Pure and
- * synchronous: committed seeds in, plain numbers out. Never reads live data.
+ * reviewed, plus the determinism/staleness gate in
+ * regionalTexture1953.test.ts. Pure and synchronous: committed seeds in, plain
+ * numbers out. Never reads live data.
  */
 import { deriveCountryBoard } from "./deriveFamilies";
 import { countryLeanFromParties, type CountryLean } from "./countryLean";

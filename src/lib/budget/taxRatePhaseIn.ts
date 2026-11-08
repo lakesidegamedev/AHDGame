@@ -1,15 +1,11 @@
 /**
  * Phase-in for enacted tax-rate changes.
  *
- * Ticket #1102. The Poon Choi Act sat at 0% for 67 turns because of an
- * enactment bug, and when the fix landed the real rate arrived in a single
- * turn. The player's words were that it "put us in a crazy recession", which is
- * what a five-point consumption-tax step does to an economy that had priced
- * itself around zero.
- *
- * The bug is fixed, but the sharp edge is general: any large rate move, whether
- * a correction or a deliberate budget, lands in one turn. Rates now walk toward
- * their target at most {@link TAX_RATE_PHASE_IN_MAX_STEP_PP} points per turn.
+ * A large rate move, whether a correction or a deliberate budget, would
+ * otherwise land in a single turn: a multi-point consumption-tax step hits an
+ * economy priced around the old rate and reads as a recession. Rates now walk
+ * toward their target at most {@link TAX_RATE_PHASE_IN_MAX_STEP_PP} points per
+ * turn.
  *
  * Deliberately NOT a delay. The enacted rate starts moving the same turn the
  * bill passes, and the target is exactly what the legislature voted for. Only
@@ -17,7 +13,7 @@
  * the law never means something other than what it says.
  *
  * Small changes are unaffected: anything within one step applies whole, so
- * routine budget tinkering behaves exactly as it did before.
+ * routine budget tinkering behaves as before.
  */
 
 /** Most a tax rate may move in one turn, in percentage points. */

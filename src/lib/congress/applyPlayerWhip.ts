@@ -187,13 +187,13 @@ export async function applyPlayerWhipToBill(
 /**
  * Force-cast votes for each eligible character on a leadership/speaker nomination.
  * Snapshots into whippedFromVote.<characterId>:
- *   - existing vote for a DIFFERENT candidate → snapshot is that candidate's ObjectId string
- *   - existing vote for THIS candidate       → snapshot is "for" (revert no-ops)
- *   - no prior vote                          → snapshot is "unvoted"
+ *   - existing vote for a DIFFERENT candidate → that candidate's ObjectId string
+ *   - existing vote for THIS candidate       → "for" (revert no-ops)
+ *   - no prior vote                          → "unvoted"
  *
- * House/Senate leadership nominations share one collection across roles. Re-votes
- * are scoped to the target's role so whipping Majority Whip cannot steal votes
- * from Pro Tempore / Majority Leader (ticket #1046).
+ * House/Senate leadership nominations share one collection across roles.
+ * Re-votes are scoped to the target's role so whipping one role cannot
+ * steal votes from another.
  */
 export async function applyPlayerWhipToLeadership(
   db: Db,

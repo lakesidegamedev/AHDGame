@@ -1,32 +1,17 @@
 /**
- * A8 phase 2, part B: schemes invest.
+ * Pension schemes invest idle cash in index funds as a new HOLDER KIND, not a
+ * new fund mechanic: they use creditFundPosition, an $inc on the fund's
+ * unitSupply and cashAnchor, and an indexFundTransactions row, whole units at
+ * quoted NAV, so the fund's backing ratio is unchanged.
  *
- * Cash sitting in a pension scheme is a savings account. A pension fund is an
- * institutional investor, and the whole 1.1 fund arc exists to give one somewhere
- * to put its money.
+ * Fail closed: if index funds are off this pass does nothing and schemes hold
+ * cash; contributions, accruals, benefits and funding ratios all keep working.
+ * Investment is optional, never a dependency.
  *
- * ## Through the existing path, not a parallel one
- *
- * A scheme subscribes with the same primitives a player does: `creditFundPosition`
- * for the position, an `$inc` on the fund's `unitSupply` and `cashAnchor`, and an
- * `indexFundTransactions` row. It is a new HOLDER KIND, not a new fund mechanic.
- * Whole units only, priced at the fund's quoted NAV, so the fund's backing ratio
- * is unaffected by the subscription: it receives exactly the ₳ the units are
- * worth.
- *
- * ## Fail closed
- *
- * If index funds are off, this pass returns having done nothing and schemes hold
- * cash. Every other part of A8 keeps working: contributions arrive, liabilities
- * accrue, benefits are paid, funding ratios read off cash alone. Investment is an
- * option a scheme has, never a dependency it carries.
- *
- * ## The buffer
- *
- * See `pensionInvestableCashAnchor`. Fund units are not a payment instrument for
- * a scheme (there is no scheme redemption path), so anything invested is
- * unavailable to pensioners. The buffer is what stops the scheme manufacturing
- * its own benefit cut.
+ * The pensionInvestableCashAnchor buffer exists because fund units are not a
+ * payment instrument for schemes (no redemption path), so invested cash is
+ * unavailable to pensioners; without the buffer a scheme manufactures its own
+ * benefit cut.
  */
 
 import type { Db } from "mongodb";

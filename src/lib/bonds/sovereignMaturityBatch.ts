@@ -1,31 +1,16 @@
 /**
- * One journaled funding move and a run of journaled payout moves for a whole
- * Treasury's maturing sovereign bonds.
+ * Batched journaled funding and payout moves for a whole Treasury's maturing
+ * sovereign bonds.
  *
- * A wave of 688 bonds used to cost about 74 database round trips each: freeze
- * the quote, read the receipts, read the budget, move the Treasury's cash into
- * one bond's escrow, then pay that bond's holders, then retire it. Every step
- * except the holder credits is per Treasury, so the wave is expressed the way
- * the loan service batch expresses a bank's book:
+ * One funding move: a single Treasury debit of the summed principal, one escrow
+ * credit per bond, one signed-position projection. One payout move per chunk:
+ * one escrow debit per bond, one credit per distinct payee summed across the
+ * chunk, one budget retirement projection, one retirement per bond.
  *
- * - one funding move: one Treasury debit of the summed principal, one escrow
- *   credit per bond, one signed-position projection;
- * - one payout move per chunk of bonds: one escrow debit per bond (independent
- *   targets, delivered in one batch), one credit per distinct payee summed
- *   across the chunk's bonds, one budget retirement projection and one
- *   retirement per bond.
- *
- * The money is the same money in the same places. The per-bond path remains for
- * anything the batch cannot express: a novatable public float, a forced
- * rollover, a half-applied receipt, bank lots and their claims, and a Treasury
- * whose phase-start cash cannot cover the whole wave. Each of those shapes is
- * named in `sovereignMaturityWaveIneligibility`; a country is settled wholly
- * one way or wholly the other, never a mix inside the wave.
- *
- * A wave interrupted after it claimed a key is owned by that receipt until it
- * finishes. Re-running the country's bonds on their own keys would move money
- * twice, so the orchestrator resumes the receipt first and reports its bonds as
- * settled, or holds them for the next turn while the repair queue lists it.
+ * Anything the batch cannot express stays on the per-bond path; a country is
+ * settled wholly one way or wholly the other, never a mix. A wave interrupted
+ * after claiming a key is owned by that receipt until it finishes: re-running on
+ * the same keys would move money twice, so resume the receipt first.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Bond } from "@/lib/db/types";

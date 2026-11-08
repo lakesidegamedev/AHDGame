@@ -126,7 +126,7 @@ function fundedTreasuryExpenseTransition(input: {
  *
  * Every nationalization/SOE/privatization cash flow funnels through here as a
  * cash-only `$inc` (concurrent-safe). `debt.principal` belongs to the bond
- * ledger (see bonds/sovereignPrincipal.ts) and is correctly left alone (#1975).
+ * ledger (see bonds/sovereignPrincipal.ts) and is correctly left alone.
  * Returns whether a treasury matched, so callers witness only cash that landed.
  */
 async function incTreasuryBalance(
@@ -490,7 +490,7 @@ export async function creditTreasuryProceeds(
  * corporation in the CORPORATION's currency; handing that same figure to
  * `creditTreasuryProceeds`, which expects country-local units, silently treats
  * (say) 50,000 GBP as 50,000 USD, so a cross-border payer over- or under-pays
- * the government by the whole exchange-rate difference (#808).
+ * the government by the whole exchange-rate difference.
  *
  * Returns the local amount credited.
  */

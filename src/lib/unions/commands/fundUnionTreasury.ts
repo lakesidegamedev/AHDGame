@@ -1,24 +1,17 @@
 /**
  * Move CAMPAIGN FUNDS into the treasury of a union you lead.
  *
- * Player ticket #1121 asked "how do I send money to a union", while still
- * building one, and the honest answer was that there was no way at all. Dues
- * were the only inflow, and dues are collected once a turn from a membership the
- * union must first win, so a new union had no route from zero treasury to the
- * 1,000 an organizing drive costs. A head could found a union and then be unable
- * to act with it. Ticket #1112 ("what is the treasury and how do I get more of
- * it") is the same gap read from the other side.
+ * Dues are the only other inflow and require an existing membership, so a new
+ * union otherwise cannot afford an organizing drive.
  *
- * Campaign funds rather than personal wealth, matching what founding costs.
- * Backing a union is political spending, so it comes out of the same war chest
- * that pays for campaigning and direct action. Personal wealth is deliberately
- * not a route in: it would let a rich character bankroll an industry's labour
- * movement out of pocket, and it would make the treasury a laundering path
- * between a character's own balances.
+ * Campaign funds rather than personal wealth, matching what founding costs:
+ * backing a union is political spending. Personal wealth is deliberately
+ * excluded so a rich character cannot bankroll labour out of pocket or launder
+ * funds between their own balances.
  *
- * Head-only on purpose. Letting any character push money into any union would be
- * a clean channel for moving funds between players with no trace of why, which is
- * exactly the shape of the alt-funding rings the forensics work exists to catch.
+ * Head-only on purpose: letting any character push money into any union would
+ * be a clean, untraceable channel between players, the shape of alt-funding
+ * rings.
  */
 import type { Db } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";

@@ -39,44 +39,40 @@ import type {
  * Whole plants conversion (one time, between turns, before
  * `gameConfig.wholePlantsStage` is switched on).
  *
- * Every sector is recounted to whole plants of `plantSizeForSector(sector)`:
- *
- *   - the part-plant left over is credited to the owner as money at the
- *     sector's book cost per unit (`capacityBookAnchor / capitalStock`, list
- *     price when no basis is recorded), and the basis drops by the same amount;
- *   - a sector holding less than one plant rounds UP to one plant at no charge;
- *   - the sector's in-flight cash orders are pooled and recounted to whole
- *     plants of the sector (`convertQueueToWholePlants`): plant k lands with
- *     the order at which the running total first reaches k plants, remaining
- *     plants ramp from now to each order's unchanged online turn, and the
- *     part-plant left over is refunded at the pool's paid cost per unit. An
- *     order that ends up with no plant is cancelled. A sector that owns no
- *     plant and whose orders add up to less than one gets one plant at no
- *     extra charge. AI-owned sectors (any CEO that is not a character: NPP,
- *     imperial or state) round the pool to the NEAREST plant instead: half a
- *     plant or more rounds up at no charge, less is refunded. Player orders
- *     keep the floor and refund. Financed orders (construction loan or claim) are left
- *     untouched and counted: their bank settlement is a separate step;
+ * Recounts every sector to whole plants of `plantSizeForSector(sector)`:
+ *   - part-plant left over is credited to the owner at book cost per unit
+ *     (`capacityBookAnchor / capitalStock`, list price when no basis), and
+ *     the basis drops by the same amount;
+ *   - a sector holding less than one plant rounds UP to one at no charge;
+ *   - in-flight cash orders are pooled and recounted to whole plants
+ *     (`convertQueueToWholePlants`): plant k lands with the order at which
+ *     the running total reaches k, remaining plants ramp to each order's
+ *     unchanged online turn, part-plant leftover is refunded at the pool's
+ *     paid cost per unit. An order ending with no plant is cancelled. A
+ *     sector with no plant and orders under one gets one free. AI-owned
+ *     sectors round the pool to the NEAREST plant (half or more free, less
+ *     refunded); player orders keep the floor and refund. Financed orders
+ *     (construction loan or claim) are untouched and counted;
  *   - `plantWearUnits` and `plantUnitRemainder` start at 0.
  *
- * MONEY. This heal mints money on purpose: the part-plants are bought back.
- * Each sector's credit is one `corp_capacity_build_refund` tx row
- * (`meta.wholePlantConversion`), the same leg a cancelled build uses, so the
- * shadow ledger and money reconciler attribute it.
+ * MONEY. Mints on purpose: part-plants are bought back. Each credit is one
+ * `corp_capacity_build_refund` tx row (`meta.wholePlantConversion`), the
+ * same leg a cancelled build uses, so the shadow ledger and money reconciler
+ * attribute it.
  *
  * IDEMPOTENCY. Three atomic steps, each guarded so a rerun is a no-op:
- *   1. the sector write is a compare-and-swap on the stock and queue it was
- *      planned from, and stamps `wholePlantsConversion.turn`;
- *   2. the owner credit is an `$inc` under a filter requiring the per-sector
- *      key `remediation.AHD-whole-plants-conversion.<sectorId>_<turn>` to be
+ *   1. sector write is a compare-and-swap on stock and queue, and stamps
+ *      `wholePlantsConversion.turn`;
+ *   2. owner credit is an `$inc` filtered on the per-sector key
+ *      `remediation.AHD-whole-plants-conversion.<sectorId>_<turn>` being
  *      absent, set in the same update;
- *   3. the tx row has an `_id` derived from that key, so a re-emit is a
+ *   3. the tx row's `_id` derives from that key, so a re-emit is a
  *      duplicate and is skipped.
  * A crash between steps leaves state the detector counts and the next apply
  * finishes.
  *
- * ROLLBACK. The runner snapshots every planned sector and owner before the
- * first write. Restore with the CLI rollback, then delete the tx rows with
+ * ROLLBACK. The runner snapshots planned sectors and owners before the first
+ * write. Restore with the CLI rollback, then delete tx rows with
  * `meta.wholePlantConversion: true` and the run's `meta.conversionTurn`.
  */
 

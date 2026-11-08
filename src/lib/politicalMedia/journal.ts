@@ -763,21 +763,13 @@ async function loadMissingSettlementTargets(
 }
 
 /**
- * One journaled move for a whole order: the escrow leaves once, and each payee
- * is credited once.
+ * One journaled move for a whole order: escrow leaves once, each payee is credited once.
  *
- * The per-allocation settlement spent one move per seller receipt, each with its
- * own debit from the same escrow document, so an order that paid N sellers
- * landed N receipts at thirteen round trips each. This move pays the same plan
- * through one receipt: a single debit guarded by the same escrow balance, one
- * credit per payee, the no-outlet fallback and the payer refund. Every leg nets
- * to zero and every balance guard is the one the per-seller path used.
- *
- * Credits are declared in the order the per-seller path paid them: the plan's
- * sellers, then the no-outlet fallback, then the unfilled refund. A credit whose
- * target document is gone stops the list there, so the move spends exactly what
- * the per-seller path would have spent before the same refusal, and an order
- * that stopped short keeps its settling status instead of closing over a hole.
+ * Credits are declared in the order the plan pays them: plan sellers, then the
+ * no-outlet fallback, then the unfilled refund. A credit whose target document
+ * is gone stops the list there, so the move spends exactly what the plan would
+ * have spent before the same refusal, and a short-stopped order keeps its
+ * settling status instead of closing over a hole.
  */
 function settlementMove(
   order: Pick<PoliticalMediaOrderForClearing, "orderId" | "identity" | "settlementPlan"> & {
@@ -975,17 +967,15 @@ function settlementReceipt(args: {
 }
 
 /**
- * Give back the anchor of every credit leg that did not land.
+ * Return the anchor of every credit leg that did not land.
  *
- * The preflight keeps a target that no longer exists out of the move, so a
- * credit still undelivered here is one its own document refused: a contended
- * generation, or a currency guard on the no-outlet fund. Its escrow was debited
- * for it, so the amount goes back through its own keyed receipt and the order
- * settles with that allocation unpaid. The anchor stays visible in escrow rather
- * than being retried against a guard that just rejected it, which is where the
- * per-seller path converged after the same refusal. A credit whose delivery
- * receipt is still stamped may have landed, so only reconciliation may decide
- * that one and the order stays open for another pass.
+ * A credit still undelivered here was refused by its own document (a
+ * contended generation or a currency guard on the no-outlet fund), so its
+ * escrow is returned through its own keyed receipt and the order settles
+ * with that allocation unpaid. The anchor stays visible in escrow rather
+ * than being retried against a guard that just rejected it. A credit whose
+ * delivery receipt is still stamped may have landed, so only reconciliation
+ * may decide it and the order stays open.
  */
 async function returnUndeliveredCredits(
   db: Db,

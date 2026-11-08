@@ -1,29 +1,20 @@
 /**
  * Singleplayer mode.
  *
- * A singleplayer world is this same application, running on the player's own
- * machine against a local database, with exactly one account in it. Nothing
- * about the game changes: the same pages, the same API routes, the same
- * simulation. What changes is that there is no one to authenticate against,
- * so the session is fixed rather than negotiated.
+ * The same application running locally with exactly one account: same pages,
+ * API routes, simulation. Nothing about the game changes; with no one to
+ * authenticate against, the session is fixed rather than negotiated.
  *
- * That makes this module a deliberate authentication bypass, which is only
- * ever safe on a single-user machine. Everything below exists to make it
- * impossible to enable anywhere else. `assertSingleplayerAllowed` throws on
- * any host that looks like a deployment, and it throws rather than returning
- * false so a misconfigured server fails to boot instead of quietly serving
- * every request as the local player.
+ * This is a deliberate authentication bypass, safe only on a single-user
+ * machine. `assertSingleplayerAllowed` throws on any host that looks like a
+ * deployment, so a misconfigured server fails to boot instead of quietly
+ * serving every request as the local player.
  *
  * The seam is the middleware (`src/proxy.ts`), which mints a normal signed
- * session cookie for the local player when one is absent. Nothing downstream
- * is special-cased: `verifyAuth`, the direct cookie readers in /api/auth/me
- * and /api/client-nav, and all 987 call sites see an ordinary logged-in
- * session. That is deliberate. An auth *bypass* would have to be re-applied
- * at every path that reads a session; a real session is read the same way by
- * all of them.
- *
- * This module must stay free of `mongodb` and other Node-only imports: the
- * middleware that consumes it runs on the Edge runtime.
+ * session cookie for the local player. Nothing downstream is special-cased:
+ * a real session is read normally everywhere, unlike a bypass that would have
+ * to be re-applied at every path. Must stay free of `mongodb` and Node-only
+ * imports (Edge runtime).
  */
 
 /**

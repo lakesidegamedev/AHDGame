@@ -49,26 +49,14 @@ const PRESET_RESERVED_DEFAULTS: ReadonlyArray<{
   }));
 
 /**
- * Phase 6 — create a new charter draft.
+ * Phase 6: create a new charter draft.
  *
- * Input is the new third party's metadata + 3 founder characterIds (humans
- * only — each character must have an owning `userId`; NPPs live in a
- * separate collection and never qualify per D3). The draft starts in
- * `pending-signatures` — ready for the listed founders to sign / reject.
- * The character that matches `proposedBy` is treated as the proposer and
- * implicitly auto-signs at draft creation.
+ * Founders are 3 human characterIds (each must have an owning `userId`;
+ * NPPs never qualify). The draft starts in `pending-signatures`; the founder
+ * matching `proposedBy` auto-signs. Founders are keyed by characterId so one
+ * user can hold multiple slots via different characters.
  *
- * Founder identity moved from `userId` to `characterId` so a single user
- * can hold multiple founder slots through different characters (multi-
- * character accounts, admin testing). The Phase 6 D3 unique-founder rule
- * is now a unique-character rule, which is strictly equal in production
- * (one character per user per country in normal play) and strictly more
- * permissive for multi-persona play.
- *
- * Idempotency: caller (the API route) is responsible for not double-
- * submitting. This command always creates a new charter row.
- *
- * See plan §"Phase 6 — Tasks" 6.2 and §D6.
+ * Not idempotent: caller must not double-submit; this always inserts a row.
  */
 export interface DraftCharterInput {
   countryId: CountryId;
@@ -158,7 +146,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     return { ok: false, reason: "founder-wrong-country" };
   }
 
-  // Founder adjacency (2026-07-22): every co-founder must live in the
+  // Founder adjacency: every co-founder must live in the
   // proposer's home state or a state adjacent to it — the party's founding
   // trio is geographically anchored the same way the F4 NPP cohort is.
   // Skipped when the proposer has no homeState (legacy seed data), matching

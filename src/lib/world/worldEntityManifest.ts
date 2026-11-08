@@ -64,9 +64,8 @@ export type LegacyCountryAccess = "player" | "economy-preview" | "hidden" | "con
 /** Treaty posture for a sphere relationship (see src/lib/world/spheres/). */
 export type WorldEntityTreatyState = "none" | "proposed" | "active" | "suspended";
 /**
- * Geographic coverage bucket for the #3728 Tier-3 registry gate.
- * Middle East polities are filed under `asia` (Asia / Pacific roster in the epic).
- * Egypt is filed under `africa` to match the registry checklist.
+ * Geographic coverage bucket for the Tier-3 registry gate.
+ * Middle East polities are filed under `asia`; Egypt under `africa`.
  */
 export type WorldEntityRegion = "europe" | "americas" | "africa" | "asia" | "pacific";
 /** Diplomatic recognition posture for map / UN / transition read models. */
@@ -141,7 +140,7 @@ export interface WorldEntityManifestEntry {
    * (e.g. Somalia Trust Territories under Italy + UK in 1953).
    */
   coParentEntityIds?: readonly WorldEntityId[];
-  /** Non-ordinary dependency / disputed-claimant posture (#3728). */
+  /** Non-ordinary dependency / disputed-claimant posture. */
   exceptionalStatus?: WorldExceptionalStatus;
   /** Coverage region for the Tier-3 registry gate. Optional on legacy rows. */
   region?: WorldEntityRegion;
@@ -165,15 +164,13 @@ export interface WorldEntityManifestEntry {
   readiness: WorldEntityReadiness;
   /**
    * Compatibility seam for the existing countryGameStates access model.
-   * #3714 consumes this field; #3713 deliberately leaves runtime behavior
-   * unchanged.
+   * Runtime behavior is intentionally unchanged.
    */
   legacyAccess: LegacyCountryAccess;
   legacyStatus?: CountryStatus;
   /**
-   * Visible record when a proposed Tier-1 candidate was demoted after the
-   * readiness matrix (#3723). Absent when the entity was never proposed as
-   * Tier 1 or remained full-autonomous.
+   * Demoted Tier-1 candidate record after readiness evaluation.
+   * Absent when never proposed as Tier 1 or still full-autonomous.
    */
   tierReclassification?: TierReclassificationRecord;
 }
@@ -302,8 +299,8 @@ export const COUNTRY_UN_MEMBER_SINCE: Partial<Record<CountryId, number>> = {
 };
 
 /**
- * Preset-specific sphere-sponsor eligibility (#3718).
- * Independent of human control — DDR (`DD`) is intentionally absent (non-sponsoring).
+ * Preset-specific sphere-sponsor eligibility.
+ * Independent of human control; DDR (`DD`) is intentionally absent (non-sponsoring).
  */
 const SPHERE_SPONSOR_ELIGIBILITY: Readonly<Partial<Record<string, ReadonlySet<CountryId>>>> =
   Object.freeze({
@@ -339,9 +336,8 @@ function buildCountryEntry(
   const resolvedAccess =
     legacyAccess === "config-fallback" ? accessFromConfig(countryId) : legacyAccess;
   const unMemberSince = COUNTRY_UN_MEMBER_SINCE[countryId];
-  // Product decision 2026-07-25: Nigeria is a Tier-1 full country in 1953
-  // (self-governing under the Macpherson/Lyttleton trajectory). Keep UN fields
-  // era-honest — Nigeria was not a UN member until 1960.
+  // Nigeria is a Tier-1 full country in 1953 (self-governing), but was not a UN
+  // member until 1960: keep UN fields era-honest.
   const nigeria1953 = presetId === "1953-default" && countryId === "NG";
 
   return {
@@ -401,9 +397,8 @@ function configFallbackEntries(presetId: string): WorldEntityManifestEntry[] {
 }
 
 /**
- * Tier-3 historical-presence entities that are not already Tier-1/2 on this branch.
- * Gold Coast / decolonization tracers stay authored above; the global 1953 registry
- * (#3728) fills the remainder under src/lib/world/registry/.
+ * Tier-3 historical-presence entities not already claimed as Tier-1/2.
+ * Decolonization tracers are authored locally; the rest come from the 1953 registry.
  */
 function historicalPresenceEntries(presetId: string): WorldEntityManifestEntry[] {
   if (presetId !== "1953-default") return [];
@@ -456,7 +451,7 @@ function europeanSphereMacroEntries(presetId: string): WorldEntityManifestEntry[
         un: { state: "eligible", expectedAdmissionYear: 1955 },
         mapFeatureIds: ["040"],
         economicArchetype: "market",
-        // Occupation-era soft Western lean; US is the sole primary (#3717).
+        // Occupation-era soft Western lean; US is the sole primary.
         // Neutrality settles after the 1955 State Treaty.
         primarySphereId: "US",
         relationships: [
@@ -536,23 +531,12 @@ function europeanSphereMacroEntries(presetId: string): WorldEntityManifestEntry[
       }),
       "IE"
     ),
-    // Spain: demoted to sphere-macro for 1953 ONLY (owner decision, 2026-07-28
-    // coverage audit). 1953 Spain is Franco's dictatorship — congresoDiputados
-    // and the Senado are both era-gated off via a shared null anchor, so a
-    // "full-autonomous, economy-preview" Spain never holds an election for the
-    // life of a 1953-default world; it was an economy-only power wearing a
-    // Tier-1 label. Kept as a countryId-backed sphere-macro entry rather than
-    // an abstract NPC; its regions/parties/budget seed
-    // data still resolves, it simply is not routed through the Tier-1
-    // election/player machinery. Spain stays full-autonomous economy-preview
-    // in 1979/1991/1999/2007-default (Franco died 1975; 1977 was Spain's first
-    // democratic election) and historical-presence in 2019-default — this
-    // preset guard only ever returns entries for "1953-default", so those
-    // presets are untouched. See COLD_WAR_ECONOMY / POST_COLD_WAR_ECONOMY
-    // below, which still carry "ES" for 1979+; the sphere-macro entry built
-    // here wins the 1953 manifest slot via last-write-wins entityId dedup in
-    // apply1953Tier1MatrixAdjustments (ES is intentionally removed from that
-    // function's FR/IT/SE/TR full-autonomous re-affirmation loop below).
+    // Spain: sphere-macro for 1953 ONLY. 1953 Spain is Franco's dictatorship;
+    // congresoDiputados and the Senado are era-gated off via a shared null anchor,
+    // so a full-autonomous Spain would never hold an election; an economy-only
+    // power wearing a Tier-1 label. Kept as a countryId-backed sphere-macro entry
+    // so its regions/parties/budget seed data still resolves, without routing it
+    // through Tier-1 election/player machinery. Other 1953-default presets untouched.
     sphereMacroEntry({
       entityId: "ES",
       countryId: "ES",
@@ -568,16 +552,16 @@ function europeanSphereMacroEntries(presetId: string): WorldEntityManifestEntry[
         { sponsorId: "US", alignment: 0.35, integration: 0.15, treatyIds: ["pact-of-madrid-1953"] },
       ],
     }),
-    // PL/CS/HU/RO/BG/YU + UKR/BLR/BAL promoted to full-autonomous Tier-1
-    // (product decision 2026-07-25). Sphere relationship data is re-applied on their full-country
-    // entries in apply1953Tier1MatrixAdjustments — not seeded as sphere-macro.
+    // PL/CS/HU/RO/BG/YU + UKR/BLR/BAL are full-autonomous Tier-1; their sphere
+    // relationship data is re-applied on full-country entries in
+    // apply1953Tier1MatrixAdjustments, not seeded as sphere-macro.
   ];
 }
 
 /**
- * Asian / Middle Eastern 1953 sphere-macro roster (#3720).
- * No CountryIds yet — map geometry unmapped; entityIds are ISO-like codes.
- * North Yemen (YE) is the Mutawakkilite Kingdom; Burma uses MM (ISO) with era name.
+ * Asian / Middle Eastern 1953 sphere-macro roster.
+ * No CountryIds yet since map geometry is unmapped; entityIds are ISO-like codes.
+ * North Yemen (YE) is the Mutawakkilite Kingdom; Burma uses MM with era name.
  */
 function asianMiddleEastSphereMacroEntries(presetId: string): WorldEntityManifestEntry[] {
   if (presetId !== "1953-default") return [];
@@ -683,9 +667,8 @@ function asianMiddleEastSphereMacroEntries(presetId: string): WorldEntityManifes
 }
 
 /**
- * African and American 1953 sphere-macro roster (#3721).
- * No CountryIds yet — map geometry unmapped; entityIds are ISO-like codes.
- * Colonial dependencies (Gold Coast/Congo/Algeria/etc.) stay Tier 3; NG is Tier 1.
+ * African and American 1953 sphere-macro roster.
+ * No CountryIds yet; entityIds are ISO-like codes. Colonial dependencies stay Tier 3; NG is Tier 1.
  */
 function africaAmericasSphereMacroEntries(presetId: string): WorldEntityManifestEntry[] {
   if (presetId !== "1953-default") return [];
@@ -935,11 +918,8 @@ export function defineWorldEntityPresetManifest(
 const COLD_WAR_PLAYER: CountryId[] = ["US", "UK", "RU", "DD"];
 /**
  * Economy-preview Tier-1 roster for Cold War presets.
- * Nigeria + Eastern bloc (PL/CS/HU/RO/BG/YU plus the union republics
- * UKR/BLR/BAL) join FR/IT/ES/SE/TR/… as
- * full-autonomous in 1953 (product decision 2026-07-25). Ireland is also
- * economy-preview so its Tier-1 sectors remain investable, while player access
- * stays blocked.
+ * Ireland is economy-preview so its Tier-1 sectors remain investable,
+ * while player access stays blocked.
  */
 const COLD_WAR_ECONOMY: CountryId[] = [
   "FR",
@@ -976,9 +956,8 @@ const POST_COLD_WAR_ECONOMY: CountryId[] = [
   "NG",
   "BR",
   "IE",
-  // AT/FI/GR: same real-configs-and-seed-data status as their FR/IT/ES/SE/TR
-  // siblings (#3791) — added here so 1991/1999/2007-default also seed them
-  // `status: "beta"` instead of silently freezing on config's "coming-soon".
+  // AT/FI/GR: same real-configs-and-seed-data status as FR/IT/ES/SE/TR,
+  // so 1991/1999/2007-default seed them as beta instead of coming-soon.
   "AT",
   "FI",
   "GR",
@@ -999,7 +978,7 @@ function accessMap(
 }
 
 /**
- * Apply the #3723 Tier-1 readiness matrix outcomes to the 1953 manifest:
+ * Apply the Tier-1 readiness matrix outcomes to the 1953 manifest:
  * reclassify autonomous-blocked proposed Tier-1 countries, patch readiness
  * for remaining Tier-1 candidates, and add unconfigured proposed entities.
  */
@@ -1041,7 +1020,7 @@ function apply1953Tier1MatrixAdjustments(
     });
   }
 
-  // Japan 1953: explicit autonomous-ready / player-blocked resolution (#3723).
+  // Japan 1953: explicit autonomous-ready / player-blocked resolution.
   const japan = byId.get("JP");
   if (japan) {
     byId.set("JP", {
@@ -1064,12 +1043,11 @@ function apply1953Tier1MatrixAdjustments(
   }
 
   // FR/IT/SE/TR: contract-proven autonomous-ready; player-blocked on
-  // adminDiagnostics (no COUNTRY_READINESS_EXPECTATIONS entry yet). #3723
-  // re-promotion — do not demote via hand-authored blocker lists.
-  // ES is deliberately excluded (2026-07-28 owner decision, see the ES
-  // sphereMacroEntry in europeanSphereMacroEntries above) — it is a policy
-  // demotion, not a readiness gap, so it must not be re-affirmed full-autonomous
-  // here even though its own contract probes still report autonomous-ready.
+  // adminDiagnostics (no COUNTRY_READINESS_EXPECTATIONS entry yet).
+  // Do not demote via hand-authored blocker lists.
+  // ES is deliberately excluded: it is a policy demotion, not a readiness
+  // gap, so it must not be re-affirmed full-autonomous here even though its
+  // own contract probes report autonomous-ready.
   for (const entityId of ["FR", "IT", "SE", "TR"] as const) {
     const entry = byId.get(entityId);
     if (!entry) continue;
@@ -1135,13 +1113,12 @@ function apply1953Tier1MatrixAdjustments(
     });
   }
 
-  // Eastern bloc 1953 (PL/CS/HU/RO/BG/YU + UKR/BLR/BAL): product decision
-  // 2026-07-25 promotes
-  // them to Tier-1 full-autonomous / economy-preview. Contract-proven
-  // autonomous-ready and player-ready (one-party + planned-economy); keep
-  // economy-preview access (not auto-open) like DE/CN. Flavor gaps remain work
-  // items. Preserve #3717 sphere relationship data on the full-country entries
-  // (buildCountryEntry starts with relationships: []).
+  // Eastern bloc 1953 (PL/CS/HU/RO/BG/YU + UKR/BLR/BAL) are Tier-1
+  // full-autonomous / economy-preview: contract-proven autonomous-ready and
+  // player-ready (one-party + planned-economy). Keep economy-preview access
+  // (not auto-open) like DE/CN; flavor gaps remain work items. Preserve
+  // sphere relationship data on full-country entries (buildCountryEntry
+  // starts with relationships: []).
   const easternBlocSphere: Record<
     string,
     {
@@ -1348,23 +1325,13 @@ function apply1953Tier1MatrixAdjustments(
 }
 
 /**
- * Overlay the era roster's answer onto the CountryConfig-backed entries.
+ * Overlay the era roster onto manifest entries, restricted to COUNTRY_ORDER.
  *
- * SCOPED TO `COUNTRY_ORDER` ON PURPOSE. The roster classifies the *registered*
- * world; unregistered entities keep whatever classification the manifest already
- * gives them, and there are two kinds that must not be touched:
- *
- * - **Latent countries.** UKR/BLR/BAL are `economy-preview` + full-autonomous in
- *   1953 but `hidden` + historical-presence in 1979. The roster's single
- *   `latent` tier cannot express that split, and does not need to — they are
- *   unregistered either way, which is the only thing the roster decides.
- * - **Sphere-macro, decolonization and historical-presence entities.** These
- *   are not `CountryId`s at all and carry sphere relationships this must
- *   preserve.
- *
- * So this mutates `legacyAccess`/`legacyStatus` in place rather than rebuilding
- * entries: rebuilding would discard Spain's 1953 Pact-of-Madrid relationship and
- * every tier-reclassification record.
+ * The roster only classifies registered countries. Latent countries and
+ * sphere-macro/decolonization/historical-presence entities are deliberately
+ * skipped: their per-preset classification and sphere relationships must be
+ * preserved, so mutate legacyAccess/legacyStatus in place rather than
+ * rebuilding entries.
  */
 function applyRosterAccess(
   presetId: string,
@@ -1399,10 +1366,10 @@ function applyRosterAccess(
       }
       continue;
     }
-    // A background country (2027, #5702) is an aggregate economy, not a full
-    // one. This is the one roster tier that DOES decide the simulation tier:
-    // left alone, config-fallback entries kept Ireland full-autonomous, so the
-    // globe listed it as an economic power and nothing seeded its macro book.
+    // A background country is an aggregate economy, not a full one.
+    // This is the one roster tier that decides the simulation tier: left
+    // alone, config-fallback entries stayed full-autonomous, so the globe
+    // listed them as economic powers and nothing seeded their macro book.
     if (tier === "background") {
       out.push(asBackgroundTierEntry(entry));
       continue;
@@ -1522,9 +1489,8 @@ export const WORLD_ENTITY_MANIFESTS: Readonly<Record<string, WorldEntityPresetMa
         entries: entriesFromAccess(
           "1979-default",
           // NG is already in COLD_WAR_ECONOMY; IE remains economy-preview in 1979+.
-          // AT/FI/GR are full-autonomous in 1953 (promoted from sphere-macro by
-          // europeanSphereMacroEntries' promotion override this pass) and full
-          // country entries in every later preset (#3791).
+          // AT/FI/GR are full-autonomous in 1953 (promoted from sphere-macro) and
+          // full country entries in every later preset.
           accessMap(
             COLD_WAR_PLAYER,
             [...COLD_WAR_ECONOMY, "IE", "AT", "FI", "GR"],

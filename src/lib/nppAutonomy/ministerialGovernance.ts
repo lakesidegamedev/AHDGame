@@ -542,7 +542,7 @@ export async function runMinisterialGovernance(
   currentTurn: number,
   now: Date,
   /**
-   * Guard tuning override (#1994). Defaults to `RESHUFFLE_GUARD_CONFIG` so
+   * Guard tuning override. Defaults to `RESHUFFLE_GUARD_CONFIG` so
    * production runs the centralized constants; worldsim sensitivity sweeps
    * and focused tests pass alternates without mutating shared state.
    */
@@ -583,7 +583,7 @@ export async function runMinisterialGovernance(
 
   // Reshuffle (V1.4 improvement): the head vacates ministers whose briefs are
   // badly missing target, scaled by the head's archetype reshuffle propensity.
-  // Vacated seats are refilled by formNppCabinet next turn. Since #1994 the
+  // Vacated seats are refilled by formNppCabinet next turn. Since the
   // threshold below is only the first gate; the tenure/cooldown/escalation
   // guard further down decides whether the head may act on it this turn.
   const headNppId = gov.presidentNppId ?? gov.pmNppId ?? null;
@@ -596,12 +596,11 @@ export async function runMinisterialGovernance(
     ? governingArchetypeModifiers(headNpp.personality).reshufflePropensity
     : 0;
 
-  // Reshuffle guard (#1994): tenure, government/portfolio cooldowns, and the
-  // bounded structural-escalation path. Persisted on the governmentFormation
-  // doc, so it survives restarts; scoped by government key, so a transition
-  // starts clean. Player-country cabinets never reach this function
-  // (`processNppGovernment` routes them to `runCaretakerMinisters`), and a
-  // player-appointed seat that does reach it is excluded from dismissal below.
+  // Reshuffle guard: tenure, government/portfolio cooldowns, and bounded
+  // structural escalation. Persisted on the governmentFormation doc and scoped
+  // by government key so it survives restarts and a transition starts clean.
+  // Player-country cabinets never reach this function, and any player-appointed
+  // seat that does is excluded from dismissal below.
   const governmentKey = governmentKeyForReshuffle({
     cycle: gov.cycle,
     formedTurn: gov.formedTurn,
@@ -817,22 +816,14 @@ export async function runMinisterialGovernance(
 }
 
 /**
- * Run V2.1 caretaker ministers in a player-enabled country.
+ * Run caretaker ministers: NPPs a player head-of-government appointed into
+ * single cabinet seats. No head NPP or governingAgenda exists, so each
+ * pursues its own portfolio agenda derived from national conditions and its
+ * ideology/personality, steering only its portfolio's levers through the
+ * clamped pipeline.
  *
- * A caretaker minister is an NPP a player head-of-government appointed into a
- * single cabinet seat (so the seat carries `isNPP` + `nppId` + a non-null
- * `appointedByCharacterId`). Unlike a V1 NPP government there is no head NPP and
- * no government-wide `governingAgenda` to read — the player runs the country.
- * So each caretaker pursues its **own portfolio agenda**, derived from national
- * conditions + that NPP's ideology/personality (the same pure
- * `computeGoverningAgenda` a head uses, minus crises), and steers only the
- * levers its portfolio actually controls through the identical clamped pipeline.
- *
- * Player-controlled, not autonomous-controlled: caretakers are never reshuffled
- * here (the appointing player dismisses/replaces them via the cabinet surface).
- *
- * Gating: `nppAutonomyAtLeast(v2)` — caretaker ministers are the comingle-tier,
- * player-country surface. A no-op below v2 / in non-player countries.
+ * Caretakers are never reshuffled here; the appointing player manages them.
+ * No-op below nppAutonomy v2 or in non-player countries.
  */
 export async function runCaretakerMinisters(
   db: Db,
@@ -868,7 +859,7 @@ export async function runCaretakerMinisters(
   const domainHealth = await loadDomainHealth(db, countryId);
   const conditions = await loadConditionsSignal(db, countryId);
   // Caretakers serve the elected government, so they pursue its party's
-  // electoral mandate (#2321) alongside their own ideology.
+  // electoral mandate alongside their own ideology.
   const gov = await getGovernmentFormationsCollection(db).findOne(
     { _id: countryId },
     { projection: { governingPartyId: 1, seatsByParty: 1, totalSeats: 1 } }
@@ -900,7 +891,7 @@ export async function runCaretakerMinisters(
       const npp = nppById.get(minister.nppId.toString());
       if (!npp) continue;
 
-      // NPP resignation (issue #859, UK only): a caretaker whose government
+      // NPP resignation (, UK only): a caretaker whose government
       // stands badly may quit of its own accord. The seat is left vacant for
       // the player head to re-appoint; the flat gauge hit lands in the shell.
       // eslint-disable-next-line local/no-country-literals -- the NPP resignation hook and confidence gauge are UK-specific structures

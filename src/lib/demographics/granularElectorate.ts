@@ -269,7 +269,7 @@ export interface GranularSubstrateInput {
   year?: number | null;
   /**
    * World `gameState.startingYear`. Only used to gate era-checkpoint
-   * de-duplication to the worlds that actually run checkpoints — see
+   * de-duplication to worlds that run checkpoints; see
    * `checkpointBakedShifts.ts`.
    */
   startingYear?: number | null;

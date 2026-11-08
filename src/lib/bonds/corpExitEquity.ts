@@ -1,30 +1,16 @@
 /**
- * Exit equity — ONE asset basis, shared by the two ends of corporate borrowing.
+ * Exit equity: the single asset basis shared by corporate debt issuance
+ * and the insolvency test, so a corp cannot be solvent for borrowing and
+ * insolvent for liquidation. Values what the balance sheet would realize if
+ * bond debt settled today:
  *
- * A corporation's debt ceiling and the insolvency test that can liquidate it
- * have to be measured against the SAME assets. Ticket #1198: they were not.
- * Issuance quoted `cash + sector NPV + CIP` while {@link
- * import("@/lib/turn/bondTurnHelpers").filterInsolventCorps} valued `cash +
- * sector BOOK`. Under `marketSystemMode: "plants"` those bases differ by ~75x
- * for a built-out corp: #624 was offered a ₳468bn debt ceiling, drew under 1%
- * of it, and was declared insolvent by the same system two turns later.
+ *     liquid capital
+ *   + sector exit value (book under plants, NPV below)
+ *   + construction in progress (only where not already inside)
+ *   + held bond portfolio at face
  *
- * `corpExitEquityAnchor` is that single basis — what the balance sheet would
- * actually realize if the bond debt had to be settled today:
- *
- *     exit equity = liquid capital
- *                 + sector exit value            (book under plants, NPV below)
- *                 + construction in progress     (only where not already inside)
- *                 + held bond portfolio at face
- *
- * The portfolio leg is the second half of #1198. `filterInsolventCorps` ignored
- * it outright, yet `executeCorporationBondDefaultDissolution` (in
- * executeCorporationBondDefaultDissolution.ts, the liquidation a default
- * leads to) redeems those same creditor holdings
- * at face into `liquidCapital` before it settles anything. The decision to
- * liquidate refused to count assets the liquidation itself spends. #624 held
- * ₳1.79bn of them against a ₳1.40bn shortfall.
- *
+ * The portfolio leg counts because default dissolution redeems creditor
+ * holdings at face into liquidCapital before settling anything.
  * Every value in and out is in ₳.
  */
 
@@ -47,31 +33,19 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 /**
  * Σ face value, in ₳, of the bonds `corporationId` holds as a CREDITOR.
  *
- * Face rather than market price, because face is what an exit actually pays:
- * both `previewQuickDissolve` and `executeCorporationBondDefaultDissolution`
- * redeem a dissolving corp's creditor holdings at `units × BOND_UNIT_FACE_VALUE`.
- * Valuing them here at anything else would reopen the preview/executor drift
- * that `sectorExitBasis` exists to prevent.
+ * Face, not market price: both exit paths redeem at `units × BOND_UNIT_FACE_VALUE`,
+ * so any other basis reopens preview/executor drift.
  *
- * DEFAULTED issues are excluded — deliberately stricter than those two call
- * sites, which redeem whatever is on the books. A defaulted bond will not pay
- * face, and rescuing a corp from liquidation on an asset that cannot be
- * realized is the dangerous direction of this error; `filterInsolventCorps`
- * already makes the same argument for its unreadable-debt fallback.
+ * DEFAULTED issues are excluded, stricter than the redemption sites: an
+ * unrealizable asset must not rescue a corp from liquidation.
  *
- * Issuer type is not filtered: sovereign and corporate holdings alike are
- * redeemable claims and both are cashed on dissolution.
+ * Issuer type is not filtered; sovereign and corporate holdings both cash out.
  *
- * A corp holding its OWN paper is counted too, and that is correct rather than
- * circular. The debt side of every comparison sums `totalIssued`, which already
- * includes the self-held units, so counting them here nets them back out: the
- * corp does not owe itself. Dropping them would leave the liability standing
- * with its matching asset deleted, and penalize a corp for retiring its own
- * debt. Do not "fix" this by filtering `bond.corporationId === corporationId`
- * without also netting the debt side.
+ * Self-held paper is counted on purpose: the debt side sums `totalIssued`,
+ * which includes it, so counting here nets it out. Filtering here without also
+ * netting the debt side would penalize a corp for retiring its own debt.
  *
- * Each holding converts through its OWN `currencyCode`, never the holder's, so
- * the result is comparable with ₳-denominated debt and equity.
+ * Each holding converts through its OWN `currencyCode`, never the holder's.
  */
 export function sumHeldBondFaceAnchor(
   bonds: readonly Bond[] | undefined | null,

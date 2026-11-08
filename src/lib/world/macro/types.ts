@@ -28,7 +28,7 @@ export interface MacroMarketContribution {
 }
 
 /**
- * A background country's realised trade in the funded producer market (#5702),
+ * A background country's realised trade in the funded producer market,
  * read back by the kernel so capacity follows what actually sold.
  */
 export interface MacroFundedTrade {
@@ -46,8 +46,7 @@ export interface MacroFundedTrade {
 
 /**
  * Market vs planned aggregate archetype.
- * Planned economies use COMECON-style leakage into the shared world market and
- * never seed market corporations (#3719).
+ * Planned economies leak into the shared world market and never seed market corporations.
  */
 export type MacroEconomicSystem = "market" | "planned";
 
@@ -106,7 +105,7 @@ export interface MacroCountryState {
   /** Funded-market trade, background countries on a funded world only; absent otherwise. */
   fundedTrade?: MacroFundedTrade;
   /**
-   * 2027 background countries only (#5702): national government, approval and
+   * 2027 background countries only: national government, approval and
    * elections. Written by the kernel tick; absent until the first one.
    */
   nationalPolitics?: NationalPoliticsState;

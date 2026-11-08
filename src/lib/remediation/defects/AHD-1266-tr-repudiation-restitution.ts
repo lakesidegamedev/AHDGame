@@ -17,52 +17,32 @@ import type {
 } from "../types";
 
 /**
- * Ticket #1266. Turkey repudiated all 32 outstanding sovereign bond series at
- * turn 568, and the cascade's holder write-down debited holder CASH instead
- * of booking a paper loss (holders had already paid face value at purchase;
- * portfolio valuations already price holdings at market). Nine corporations
- * and ten characters were charged 95% of face a second time — e.g. Streibl
- * Defence Systems +38.2M → -281.1M GBP in a single turn.
+ * Restitution for a sovereign bond repudiation whose cascade debited holder CASH
+ * instead of booking a paper loss, charging holders 95% of face a second time.
  *
- * The code half removes the balance mutation from the cascade writer, so a
- * write-down is exposure accounting only. This heal repays the wrongfully
- * debited principal to the debited holders.
+ * The code fix removes the balance mutation from the cascade writer so a
+ * write-down is exposure accounting only. This heal repays the wrongfully debited
+ * principal: units x 1,000 face x 0.95 severity per holder across the bonds
+ * defaulted at the repudiation turn. Characters are credited back in local
+ * currency (the debit hit currencyBalances.personal directly); corporations are
+ * credited in home currency via anchor at the heal-time rate, reversing the
+ * debit's conversion chain.
  *
- * WHAT IS RESTITUTED
+ * Excluded: NPP and fund holders, whose balances the writer never touched (no
+ * debit branch), so they were already paper-loss-only.
  *
- * Exactly the second charge: units × 1,000 TRL face × 0.95 severity, per
- * holder, across the 32 bonds with `defaultedAtTurn: 568`. Characters are
- * credited back in TRL (the debit hit `currencyBalances.personal.TRL`
- * directly); corporations are credited in home currency via anchor at the
- * heal-time rate, mirroring the debit's conversion chain in reverse.
+ * Rows are pinned rather than re-derived because bond docs are live and a holder
+ * could trade defaulted paper after the snapshot; the pinned set keeps this heal
+ * reviewable and testable regardless of later trading.
  *
- * Deliberately EXCLUDED: the ~80 NPP and 3 fund holders of the same bonds.
- * The writer never touched their balances (no debit branch for nppId/fundId),
- * so they were already paper-loss-only and have nothing to repay. The
- * earlier STDS cliffs (turns 411/435/457/524/530) have no defaulted bonds
- * behind them and are out of scope.
- *
- * WHY THE ROWS ARE PINNED
- *
- * Bond docs are live: a holder could trade defaulted paper after the snapshot
- * and move the units. The 19 rows below freeze the affected set as read from
- * prod on 2026-09-03 (selector: bonds with `defaultedAtTurn: 568`, holder
- * kinds corporationId/characterId), which keeps this heal reviewable and
- * testable regardless of later trading.
- *
- * IDEMPOTENCY
- *
- * Each recipient document gets a durable `remediation["AHD-1266-..."]`
- * marker, written in the SAME atomic `updateOne` as the balance increment,
- * under a filter that requires the marker to be absent. A second run matches
- * nothing, and the detector counts recipients missing the marker, so it
- * returns zero once applied.
+ * Idempotency: each recipient gets a durable remediation marker written in the
+ * same atomic updateOne as the balance increment, under a filter requiring the
+ * marker to be absent, so a re-run matches nothing.
  *
  * This heal MINTS MONEY on purpose: it repays value the bug destroyed, so
- * `moneyDelta` is non-zero and the `money-conserving` guard is absent. Every
- * credit emits a `restitution_credit` tx row referencing its source bonds, so
- * the shadow ledger books an attributed `restitution` mint rather than
- * showing an unexplained jump in someone's balance.
+ * moneyDelta is non-zero and the money-conserving guard is absent. Every credit
+ * emits a restitution_credit tx row referencing its source bonds so the shadow
+ * ledger books an attributed mint.
  */
 
 /** Marker key under `remediation` on the recipient document. Presence makes a re-run a no-op. */

@@ -2,21 +2,19 @@
  * Move every political party from one country to another, renumbering them and
  * rewriting every reference.
  *
- * WHY THIS EXISTS AT ALL. `regionScopedCollections` deliberately refuses to move
- * `politicalParties`, because its case is Northern Ireland leaving the UK, where
- * the source survives and its national parties must not be disturbed. A
- * DISSOLVING source inverts that: there is no country left to protect, and its
- * parties are the losing side's whole political identity.
+ * WHY IT EXISTS. `regionScopedCollections` deliberately refuses to move
+ * `politicalParties`, for the Northern Ireland-leaves-the-UK case where the
+ * source survives and its national parties must not be disturbed. A DISSOLVING
+ * source inverts that: nothing is left to protect, and its parties are the
+ * losing side's whole political identity.
  *
  * WHY RENUMBERING IS NOT OPTIONAL. `characters.party` and `electedOfficials.party`
- * hold a stringified PER-COUNTRY `sequentialId`, not a party id. DD's "1" is the
- * SED; DE's "1" is the SPD. Moving the docs without renumbering, or renumbering
- * without rewriting the references, silently reinterprets every member of every
- * party against the target's list. `politicalParties` also carries a unique index
- * on `{countryId, sequentialId}`, so a colliding id would throw on write anyway --
- * the index is a backstop for the data corruption, not the reason for it.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
+ * hold a stringified PER-COUNTRY `sequentialId`, not a party id: DD's "1" is the
+ * SED, DE's "1" is the SPD. Moving docs without renumbering, or renumbering
+ * without rewriting references, silently reinterprets every party member against
+ * the target's list. `politicalParties` also has a unique index on
+ * `{countryId, sequentialId}`, which is a backstop for the corruption, not the
+ * reason for it.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";

@@ -1,22 +1,19 @@
 /**
- * National budget for a background country, derived from its macro economy (#5702).
+ * National budget for a background country, derived from its macro economy.
  *
- * A background country has no regions with tax bases worth simulating and no
- * enacted laws, so its budget is three numbers:
- * - GDP: the seeded national GDP, moved with aggregate output since the
- *   politics model first read it, and with the price level;
- * - revenue: GDP x fiscal capacity x the cumulative tax rises the stabilizer
- *   has enacted;
- * - spending: programmes (a share of GDP, scaled by cumulative cuts) plus the
+ * Background countries have no simulated regions or enacted laws, so the
+ * budget is three numbers:
+ * - GDP: seeded national GDP, moved with aggregate output and price level;
+ * - revenue: GDP x fiscal capacity x cumulative stabilizer tax rises;
+ * - spending: programmes (share of GDP, scaled by cumulative cuts) plus
  *   interest the sovereign bond stock actually carries.
  *
- * At fiscal-year close the shared fiscal stabilizer (#5714) plans a
- * consolidation package when the primary deficit is out of hand, split by the
- * governing parties' economic position, and the politics model pays its
- * approval cost. Programme spending also drifts toward the government's
- * stance: the left spends a little more, the right a little less. Debt interest
- * above half of revenue for two years still restructures through the existing
- * sovereign default path.
+ * At fiscal-year close the shared stabilizer plans a consolidation package
+ * when the primary deficit is out of hand, split by governing parties'
+ * economic position, and the politics model pays its approval cost.
+ * Programme spending drifts toward the government's stance. Debt interest
+ * above half of revenue for two years restructures through the sovereign
+ * default path.
  *
  * Pure: plain data in, plain data out.
  */

@@ -33,16 +33,11 @@ import { depositBookReturnKey } from "@/lib/banking/depositBookReturn";
 /**
  * Charter capital as a multiple of the corporation founding cost.
  *
- * Was 10x. Cut to 5x once the deposit fix landed, because the old number was
- * doing two jobs and failing both. It was set high to keep a bank solvent, but
- * solvency was never a capital problem: deposits arrived without their cash, so
- * no amount of posted capital saved a bank and a simulated charter died on turn
- * 8 at 1x and turn 47 at 5x. With deposits carrying their cash, the same
- * simulation survives 60 turns at 1x, so capital no longer has to buy survival.
- *
- * What it should price is commitment, and 5x the cost of creating the
- * corporation is a real commitment without being a wall. At 1953 US scale that
- * is ~71,700 from the corporate treasury against a ~14,300 founding cost.
+ * This prices commitment, not solvency: with deposits carrying their cash,
+ * capital no longer has to buy survival. 5x the cost of creating the
+ * corporation is a real commitment without being a wall. At 1953 US scale
+ * that is ~71,700 from the corporate treasury against a ~14,300 founding
+ * cost.
  */
 export const CHARTER_CAPITAL_FOUNDING_MULTIPLE = 5;
 
@@ -427,17 +422,12 @@ async function issueCharterInner(
 /**
  * Revoke a charter, returning the deposit book on the way out.
  *
- * This used to set `status: "revoked"` and stop. Depositors stayed pointed at a
- * dead bank, `npcDeposits` stayed on its books with the matching cash beside
- * it, and the owner got nothing back because the refund was gated on the
- * deposit book being empty, which nobody could make it be. That is ticket
- * 1093: a revoke that erased the balance sheet and stranded everything on it.
- *
- * Revocation now runs the same {@link returnDepositBook} waterfall as failure,
- * admin unwind and a charter switch: household deposits go back to the money
- * supply out of the bank's cash (insurance covers any shortfall), player
- * pointers flip to the central bank, and only what is genuinely left over,
- * capped at book equity, reaches the shareholder.
+ * Revocation must run the {@link returnDepositBook} waterfall, as failure, admin
+ * unwind, and charter switch do: household deposits return to the money supply
+ * out of the bank's cash (insurance covers any shortfall), player pointers flip
+ * to the central bank, and only the genuine leftover, capped at book equity,
+ * reaches the shareholder. Skipping this strands depositors on a dead bank and
+ * erases the balance sheet.
  */
 export async function revokeCharter(
   db: Db,
@@ -580,8 +570,8 @@ async function revokeCharterInner(
     $unset: { "bankCharter.pendingRevocationReason": "" },
   };
   // No cash leg here: `returnDepositBook` already moved every currency unit it
-  // was going to move, with a netting check on the legs. Writing a second
-  // refund here is how the unwind path used to pay the shareholder twice.
+  // was going to move, with a netting check on the legs. A second refund here
+  // would pay the shareholder twice.
 
   const result = await db
     .collection<Corporation>("corporations")
@@ -736,28 +726,15 @@ export async function previewCharterSwitch(
 /**
  * Change a bank's charter type in place.
  *
- * Before this existed the only route from retail to investment was to persuade
- * the central-bank chair to revoke your charter and then charter again from
- * scratch, posting capital twice - which is to say there was no route, and a
- * player who picked the wrong type at founding was stuck with it. That is the
- * complaint this fixes.
+ * Moving to an investment charter returns the whole deposit book, since an
+ * investment bank cannot hold deposits: player savings pointers flip back to
+ * the central bank (balances untouched) and NPC household deposits return to
+ * `externalBroadMoney` with conservation. Refusing the switch instead would
+ * leave the CEO with no way to shed deposits, and returning the book is the
+ * honest price: the bank gives up the funding base it built.
  *
- * ## Deposits do not survive a move to an investment charter
- *
- * An investment bank cannot hold deposits, so switching to one returns the
- * whole book: player savings pointers flip back to the central bank (balances
- * untouched - it is a pointer, exactly as `moveCharacterSavings` treats it) and
- * NPC household deposits go back to `externalBroadMoney` with conservation.
- *
- * The alternative was to refuse the switch until the CEO had shed deposits by
- * hand, and there is no mechanism for them to do that - they cannot evict
- * depositors. Refusing would have reproduced the original complaint with extra
- * steps. Returning the book is also the honest price: the bank gives up the
- * funding base it spent turns building, which is a real cost that the cooldown
- * on its own would not impose.
- *
- * Loans are LEFT IN PLACE and keep amortizing, the same rule `unwindBank` uses.
- * They are assets the bank owns; a charter change is not a jubilee.
+ * Loans are left in place and keep amortizing, the same rule `unwindBank`
+ * uses. A charter change is not a jubilee.
  */
 export async function switchCharterType(
   db: Db,

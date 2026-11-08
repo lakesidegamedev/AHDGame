@@ -38,22 +38,22 @@ async function duplicateKeyCount(db: Db, entry: SeedIndexPlanEntry): Promise<num
 }
 
 /**
- * Create seed-defined indexes that a running world never received (#2699).
+ * Create seed-defined indexes that a running world never received.
  *
- * A live world never re-seeds, so every index added to a seed module without
- * its own migration was missing in production (47 at the 2026-09-30 audit).
- * This derives the plan from `seedIndexes` itself and creates what is absent.
+ * A live world never re-seeds, so an index added to a seed module without its
+ * own migration is missing in production. This derives the plan from
+ * `seedIndexes` itself and creates what is absent.
  *
  * Deliberately skipped, and reported:
  * - Text indexes. They add many keys per insert on the busiest logs; adding
  *   them to a live world needs its own insert-cost decision.
  * - TTL indexes. Creating one deletes every already-expired document.
  * - Unique indexes whose keys already have duplicates. Building them would
- *   fail; the duplicates need an owner-reviewed repair first.
+ *   fail; duplicates need an owner-reviewed repair first.
  *
  * Registry only: it ships with the code that relies on these constraints, and
- * large builds must not delay boot. Idempotent: rerun with `--only <id>
- * --force` after new seed indexes land to reconcile them too.
+ * large builds must not delay boot. Idempotent: rerun with
+ * `--only <id> --force` after new seed indexes land.
  */
 export const migration: Migration = {
   id: "2026-10-01-reconcile-seed-indexes",

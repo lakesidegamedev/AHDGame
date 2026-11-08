@@ -126,7 +126,7 @@ export async function appointNppPresident(
     { upsert: true }
   );
 
-  // A newly-seated executive holds no other office (#2038): vacate any
+  // A newly-seated executive holds no other office: vacate any
   // legislative seat the appointee already holds through the real vacancy
   // mechanism before stamping the executive office.
   await vacateNonExecutiveOfficesForExecutive(db, { nppId: president._id }, now);

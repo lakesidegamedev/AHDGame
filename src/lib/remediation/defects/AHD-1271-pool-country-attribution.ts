@@ -1,28 +1,17 @@
-// AHD-1271 (b): `unownedSectors` rows filed under the wrong country.
+// Heal: `unownedSectors` rows filed under the wrong country.
 //
-// The unowned pool row is keyed by (stateId, sectorType) but CARRIES a
-// countryId, and every reader filters on it: the sector browser's country
-// filter, the command-economy drain in `reconcileCommandEconomyUnowned`, and
-// the commodity supply math. `buildCapacity` resolved that countryId as
-// `sector.countryId ?? corporation.countryId` and then fell through to a
-// literal "US" when neither was set, so a sector with no stored country minted
-// a pool row under the corporation's domicile, or under the United States
-// outright.
+// The pool row is keyed by (stateId, sectorType) but carries a countryId
+// that every reader filters on: the sector browser, the command-economy
+// drain, and the commodity supply math. `buildCapacity` resolved it as
+// `sector.countryId ?? corporation.countryId` and fell through to a
+// literal "US", minting rows under the wrong country. A command economy's
+// pool is drained by countryId, so mis-keyed rows were exempt from the
+// drain. `buildCapacity` now resolves the country from the STATE, which is
+// the only authority for where capacity physically is, and never
+// substitutes a hardcoded country.
 //
-// On live this left two rows sitting on Ukrainian states under `countryId: "US"`
-// (UKR_WES agriculture, UKR_KYI media): invisible to Ukraine, counted as
-// American headroom, and — because Ukraine is a command economy whose pool is
-// drained by countryId — permanently exempt from the drain that should have
-// removed them.
-//
-// Half A (code): `buildCapacity` now resolves the country from the STATE, which
-// is the only thing that can be authoritative for where capacity physically is,
-// and never substitutes a hardcoded country.
-// Half B (this heal): re-key the existing rows onto their state's country.
-//
-// Scoped to `unownedSectors` deliberately. The same corruption in
-// `corporateSectors` is AHD-duplicate-sectors, which additionally has to merge
-// the parallel rows a later takeover created; live currently shows none.
+// Scoped to `unownedSectors`; the same corruption in `corporateSectors`
+// additionally needs parallel rows merged and is handled separately.
 
 import type { Db } from "mongodb";
 import type {

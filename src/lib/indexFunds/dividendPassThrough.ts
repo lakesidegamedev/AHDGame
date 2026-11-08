@@ -1,20 +1,10 @@
 import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
 /**
- * Dividend Pass-Through for Index Funds
+ * Dividend pass-through for index funds.
  *
- * When a corporation in which an index fund holds shares pays dividends, the
- * fund receives the dividend on its shareholder entry. Per the plan, 75% is
- * reinvested (added to fund cash for future public-float absorption) and 25%
- * is passed through to unit holders proportionally.
- *
- * This module provides helpers for:
- *   1. Calculating the 75/25 split.
- *   2. Distributing the 25% pass-through to unit holders in proportion to their
- *      unit holdings.
- *   3. Logging the dividend transaction.
- *
- * Called from the turn-processing dividend pipeline when a fund-held
- * corporation pays dividends.
+ * When a fund-held corporation pays dividends, the fund receives them.
+ * Per plan: 75% is reinvested into fund cash, 25% is passed through to
+ * unit holders proportionally.
  */
 
 import {
@@ -705,7 +695,7 @@ export async function processIndexFundDividendsBatch(
         // emitted after the loop: one row instead of one per paying
         // corporation. The credited balance is unchanged (it was already
         // aggregated per NPP) and so is every account total; only the
-        // per-corporation split of anonymous NPP rows is dropped (#2693).
+        // per-corporation split of anonymous NPP rows is dropped.
         const rowKey = `${accrual.fundId.toString()}:${position.nppId.toString()}`;
         const row = nppDividendRows.get(rowKey);
         if (row) {

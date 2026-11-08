@@ -1,18 +1,9 @@
 /**
- * Server-side aggregator for the State Overview tab (Phase 1).
+ * Server-side aggregator for the State Overview tab.
  *
- * Reads:
- *   - statePartyOrg (per-state-per-party Org / Reg)
- *   - politicalParties (party abbreviation + color for display)
- *   - states (state GDP for the Economy summary)
- *   - electedOfficials (regional executive — via getRegionalExecutive)
- *   - elections + electionCandidates + electionVoteTally (Contested
- *     Primaries + Race Watchlist)
- *
- * Phase 1 ships placeholders for extended economy (gdpDeltaPct /
- * unemployment / sectors). Phase 4+ wires those.
- *
- * See plan §"Phase 1 — Task 1.2".
+ * Reads statePartyOrg, politicalParties, states, electedOfficials (regional
+ * executive), and elections data (Contested Primaries + Race Watchlist).
+ * Extended economy fields are placeholders pending later phases.
  */
 
 import type { Db } from "mongodb";
@@ -222,19 +213,13 @@ export async function getStateOverview(
 }
 
 /**
- * Pick the state's top sectors. Prefers the live per-turn
- * `topSectorsCache` (computed by `processTopSectorsRecompute`) and
- * falls back to the seed `sectorSpecializations` when the cache is
- * empty — fresh-reset worlds and states with no corporate activity yet
- * still get a populated card.
+ * Pick the state's top sectors. Prefers the live per-turn `topSectorsCache`
+ * (from `processTopSectorsRecompute`) and falls back to seed
+ * `sectorSpecializations` when empty, so fresh-reset worlds still populate.
  *
- * `specializationBonus` is `"primary"` / `"secondary"` when a live top
- * sector matches the state's seed spec (and carries the +10pp / +5pp
- * regional margin bonus), and `null` otherwise. The fallback path
- * tags its two synthesized rows directly.
- *
- * `share` stays at `0` — the UI only renders the sector list, not the
- * share, so a real revenue figure is a future enhancement.
+ * `specializationBonus` is `"primary"`/`"secondary"` when a live sector
+ * matches the seed spec (and carries its regional margin bonus), else null.
+ * `share` stays 0 because the UI only renders the sector list.
  */
 function buildTopSectors(
   stateDoc: State | null

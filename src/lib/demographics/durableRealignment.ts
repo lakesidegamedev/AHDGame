@@ -96,18 +96,12 @@ const TURNOUT_ABS_MAX = 100;
 
 /**
  * Absolute bounds of the durable turnout-rate OVERLAY delta accumulator
- * (`layer1TurnoutOverrides[dim][bucket]`, see `Layer1TurnoutOverlay`'s doc
- * comment). This is a SIGNED percentage-point delta added on top of an
- * existing `DEMOGRAPHIC_TURNOUT_RATES` bucket baseline
- * (`buildUsTurnoutRates`/`applyTurnoutRateOverlay` in
- * `granularElectorate.ts`), not an absolute turnout reading, so the bound
- * must stay symmetric: a sustained suppression campaign has to be able to
- * pull it negative just as far as an enfranchisement act can push it
- * positive — "gravity, not rails" cuts both ways. ±80 comfortably covers the
- * largest real-world swing this project models (Mississippi Black voter
- * registration ~6.7% (1965) -> 59.8% (1967), a ~53pp move per the U.S.
- * Commission on Civil Rights' 1968 report) while still bounding runaway
- * accumulation.
+ * (`layer1TurnoutOverrides[dim][bucket]`, see `Layer1TurnoutOverlay`). This
+ * is a SIGNED percentage-point delta added on top of a
+ * `DEMOGRAPHIC_TURNOUT_RATES` baseline, not an absolute turnout reading, so
+ * the bound stays symmetric: suppression can pull as far negative as
+ * enfranchisement pushes positive. ±80 covers the largest modeled swing
+ * (~53pp) while bounding runaway accumulation.
  */
 const TURNOUT_OVERLAY_DELTA_MIN = -80;
 const TURNOUT_OVERLAY_DELTA_MAX = 80;

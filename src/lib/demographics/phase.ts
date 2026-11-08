@@ -170,21 +170,15 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 
 /**
  * Surfaced-metric display bounds (mirror of `metricDefinitions.ts` population
- * category). The STOCK (`state.population`) is driven by the UN-clamped flow;
- * only the surfaced metric VALUE is clamped here so a rare >±bound region
- * saturates the readout rather than feeding an out-of-range value into approval
- * scoring (design audit-7). `medianAge` (years) has no fixed bound.
+ * category). `state.population` is driven by the un-clamped flow; only the
+ * surfaced VALUE is clamped so a rare out-of-range region saturates the
+ * readout rather than feeding approval scoring. `medianAge` has no bound.
  *
- * The policy `migrationRate` is deliberately NOT overwritten: this phase READS
- * it as the policy input for the international flow, so writing the realized rate
- * back onto it would (a) slowly erode the immigration-policy signal each turn
- * (realized = input × popNow/popAfter < input while the population grows) and
- * (b) feed a clamp back into the stock input — both forbidden by audit-7.
- * Instead the realized rate is surfaced as a SEPARATE readout,
- * `population.realizedMigrationRate` (§8.2 coexistence wiring): same flow value
- * the migration step actually moved, written alongside (never onto) the policy
- * input so the UI can show realized-vs-policy without eroding the signal. It is
- * excluded from approval scoring (a derived readout, like the others).
+ * The policy `migrationRate` is NOT overwritten: this phase reads it as the
+ * international-flow input, and writing the realized rate back would erode
+ * the policy signal and feed a clamp into the stock input. The realized rate
+ * is surfaced separately as `population.realizedMigrationRate` (excluded from
+ * approval scoring) so UI can show realized-vs-policy.
  */
 const METRIC_BOUNDS = {
   populationGrowth: [-3, 5],
@@ -197,21 +191,20 @@ const METRIC_BOUNDS = {
 } as const;
 
 /**
- * Demographic-flows turn phase (design §4.2/§4.3). Runs AFTER `metricEngine`
- * (reads the `birthRate` / healthcare / `migrationRate` metrics it produces).
- * Advances each region's age×sex vector one turn and persists into three collections:
+ * Demographic-flows turn phase. Runs AFTER `metricEngine` (reads the `birthRate` /
+ * healthcare / `migrationRate` metrics it produces). Advances each region's
+ * age×sex vector one turn and persists into three collections:
  *   - the vector            → `regionDemographics`
  *   - `states`: `population` = Σ (SSOT level) + `votingEligiblePopulation` (Σ ages
- *     ≥ votingAgeEligible, the electorate) + `workingAgePopulation` (labor force L)
- *   - the dynamic metrics    → `macroMetrics.population.*` (SP5 re-home)
+ *     ≥ votingAgeEligible) + `workingAgePopulation`
+ *   - the dynamic metrics    → `macroMetrics.population.*`
  * Skips NATIONAL_SCOPE synthetic docs. Two-stage: (1) per-region LOCAL flows
  * (aging/mortality/fertility/international, from `advanceCohort`), then (2) a
- * per-country INTERNAL migration pass (cross-region, zero-sum, N1/F-B/circuit-
- * breaker — design §4.4) over the intermediate vectors; readouts are derived from
- * the FINAL vectors. International net is per-region from its own `migrationRate`
- * metric; gateway-weighted NATIONAL international allocation remains a later
- * refinement. Current EU membership pairs origin and destination demand through
- * conserved age×sex transfers; unmatched demand keeps the rest-of-world cap.
+ * per-country INTERNAL migration pass (cross-region, zero-sum, circuit-breaker)
+ * over the intermediate vectors; readouts are derived from the FINAL vectors.
+ * International net is per-region from its own `migrationRate` metric. EU
+ * membership pairs origin and destination demand through conserved age×sex
+ * transfers; unmatched demand keeps the rest-of-world cap.
  * Returns the region count + internal-migration circuit-breaker trips.
  */
 /**
@@ -431,10 +424,10 @@ export async function runDemographicFlows(
     blocPop += popNow;
 
     // Per-region international net from its migrationRate metric (annual % → per-turn migrants),
-    // then scaled by ECONOMIC PULL (design 2026-06-15): a stronger regional economy attracts
+    // then scaled by ECONOMIC PULL: a stronger regional economy attracts
     // more foreign migrants (and a weaker one sheds more). Sign-aware + policy-gated; a neutral
-    // economy / missing metrics → ×1.0 (parity). Capped per-region at ±MAX%/yr (design
-    // 2026-06-16) AFTER the pull so a high-growth boom can't push net past the ceiling.
+    // economy / missing metrics → ×1.0 (parity). Capped per-region at ±MAX%/yr
+    // AFTER the pull so a high-growth boom can't push net past the ceiling.
     // Bridge A — same shape as birthRate: the seeded rate is authored per
     // region. For legacy countries society.integration shifts it ±1.5 annual
     // percentage points at the board extremes, unchanged at 50. Playables read

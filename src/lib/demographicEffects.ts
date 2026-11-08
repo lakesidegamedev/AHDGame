@@ -1,47 +1,30 @@
 /**
  * Demographic Effects Processing Module
  *
- * Processes how policies shift demographics over time. Two generations of
- * effect channels exist on `LegislationType.demographicEffects[]`:
+ * Turns policies into demographic shifts. Two generations of channels on
+ * `LegislationType.demographicEffects[]`:
  *
- *  - population (legacy, always active): policies shift a voter group's
- *    population share. E.g. education funding gradually grows the
- *    college-educated share of a state.
- *  - economicLean / socialLean / turnout (v2, gated on the
- *    `legislationDemographicEffectsV2Enabled` game-state flag): policies shift
- *    a voter group's political lean and turnout — the "legislation →
- *    demographics → elections" link. E.g. pro-labour laws pull union workers'
- *    economic lean toward the law's direction and nudge their turnout up.
+ *  - population (legacy, always active): shift a voter group's population share.
+ *  - economicLean / socialLean / turnout (v2, behind the
+ *    `legislationDemographicEffectsV2Enabled` flag): shift a group's lean and
+ *    turnout, linking legislation to demographics to elections.
  *
- * KEY DESIGN DECISIONS:
+ * Key invariant: shifts are additive per group, so multiple policies targeting
+ * the same group stack.
  *
- * 1. Cumulative shifts: Each policy contributes additive shifts to specific
- *    demographic groups. Multiple policies affecting the same group stack.
+ * Federal effects are divided by region count (1/50 US states, 1/12 UK regions)
+ * on every channel, so a national bill cannot dominate region-level demographics
+ * and per-region sums match the intended national total.
  *
- * 2. Federal effect division: Federal policies apply at 1/50 strength per US state
- *    and 1/12 strength per UK region. This prevents a single national bill from
- *    dominating region-level demographics and ensures the sum of per-region
- *    effects roughly equals the intended national total. Lean/turnout targets
- *    reuse the exact same scope multiplier as the population channel.
+ * Policy scores are normalized from -3..+3 to -1..+1 before applying. Some seed
+ * options score up to ±5 (strength ±1.67); this is shared across all channels.
  *
- * 3. Policy strength normalization: Policy economic/social scores (-3 to +3)
- *    are normalized to -1 to +1 range before applying shifts. This creates
- *    a consistent scale across all legislation types. (Some seed options score
- *    up to ±5, i.e. strength up to ±1.67 — pre-existing behavior, shared by
- *    all channels.)
- *
- * 4. Shift rate: SHIFT_RATE_PER_TURN = 0.1% maximum population shift per turn
- *    when policy is at full strength (+3 or -3). Lean/turnout rates are
- *    documented on their constants below.
- *
- * 5. Natural decay: population-analog metrics decay naturally toward baseline
- *    at 0.25%/turn when no active policy is pushing them (see
- *    src/lib/turn/metricDecay.ts DECAY_RATE). Lean/turnout use the same
- *    proportional 0.25%/turn decay toward the state's SEEDED per-group
- *    baseline (`demographicDefaults` collection, falling back to the
- *    DemographicCategory template defaults) whenever no active law targets
- *    that group+axis, so lean drift reverts after legislation is repealed
- *    without eroding intentional per-state seed variation.
+ * Rates: population shifts at most 0.1%/turn at full strength; lean and turnout
+ * rates are documented on their constants. With no active policy targeting a
+ * group+axis, metrics decay proportionally at 0.25%/turn toward the state's
+ * seeded per-group baseline (`demographicDefaults`, falling back to category
+ * template defaults), so lean drift reverts after repeal without eroding
+ * intentional per-state seed variation.
  */
 
 import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
@@ -270,12 +253,10 @@ function computeShiftsByTarget(
 /**
  * Calculate cumulative demographic shifts from all active policies, routed by
  * effect target. Effects without a `target` are population effects (legacy).
- * Includes EVERY effect regardless of `permanent` — this is also what
- * `eraCheckpointTurn.ts`'s counter-pressure netting reads, and a durable
- * ("permanent") law's ongoing per-turn pull should count as counter-pressure
- * against an era checkpoint (or vice versa) exactly like an ordinary one
- * does; `calculateDurableDemographicShiftsByTarget` below is the narrower
- * view used to route the durable subset to the non-decaying channel.
+ * Includes permanent effects: `eraCheckpointTurn.ts` counter-pressure netting
+ * must count durable laws' per-turn pull like ordinary ones; the narrower
+ * `calculateDurableDemographicShiftsByTarget` routes the durable subset to the
+ * non-decaying channel.
  * @param policies - Array of active policies with scope multipliers
  * @param legTypeMap - Pre-fetched map of legislation type IDs to documents
  */
@@ -580,19 +561,15 @@ function addMediaPullUpdates(
 /**
  * Temporary lean/turnout drift for `{ dim, bucket }` effects.
  *
- * An archetype effect drifts `groups.<id>.<axis>` on the LIVE demographics doc
- * and the substrate reads it back as `live − default` (see
- * `computeArchetypeLeanDeltas`). A bucket target has no group to carry that
- * drift on, so it stores the drift directly, in the same overlay shape the
- * DURABLE channel writes to `demographicDefaults` — the same parallel the two
- * docs already have for groups: the defaults doc holds the base, the live doc
- * holds what legislation has moved it to. `buildGranularElectorateSubstrate`
- * folds the live doc's overlay onto unit leans and turnouts exactly where it
- * folds the archetype deltas.
+ * Group-targeted archetype effects drift `groups.<id>.<axis>` on the live
+ * demographics doc and the substrate reads `live - default`. A bucket target
+ * has no group to carry that drift, so it stores the drift directly in the
+ * same overlay shape the DURABLE channel writes to `demographicDefaults`.
+ * `buildGranularElectorateSubstrate` folds the live overlay onto unit leans
+ * and turnouts where it folds archetype deltas.
  *
- * Baseline is 0 rather than a seeded value: this overlay IS the deviation, so
- * the deviation band and the decay-back-to-baseline both measure from zero and
- * a fully decayed law leaves no residue.
+ * Baseline 0: the overlay IS the deviation, so the deviation band and decay
+ * both measure from zero and a fully decayed law leaves no residue.
  */
 function addBucketDriftUpdates(
   demographics: StateDemographics,

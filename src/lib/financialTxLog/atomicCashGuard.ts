@@ -13,25 +13,19 @@ function mongoOptions(options?: CashGuardOptions): { session: ClientSession } | 
 /**
  * Atomically debit `amount` from a character's wallet using a single-document
  * `findOneAndUpdate` with a `$gte` filter on the balance field. Race-safe:
- * MongoDB applies the filter and the increment in the same atomic step, so
- * two concurrent requests can never both succeed when only one balance fits.
+ * MongoDB applies the filter and the increment in the same atomic step, so two
+ * concurrent requests can never both succeed when only one balance fits.
  *
  * Pre-forex (legacy) characters store cash in `cashOnHand`. Post-forex
  * characters use `currencyBalances.personal.<code>`. The dispatch matches
  * `buildPersonalBalanceInc` to keep credit/debit semantics symmetric.
  *
- * Why this exists: the bond/share purchase routes previously did a read-then-
- * write where the cash check ran on a freshly fetched copy of the character
- * doc and the deduction was a separate `updateOne` with no balance filter.
- * Concurrent requests against the same character could both pass the check on
- * stale data, then both writes would deduct (over-deducting), or — the live
- * failure mode observed against the production DB — one of the writes would
- * be silently dropped while the bond holders array was still incremented.
- * The result was multi-billion-dollar phantom credits to top wealth-list
- * players. Forcing every cash debit through this helper makes that class of
- * mismatch impossible: the holder credit only proceeds after the cash debit
- * has provably succeeded, and any downstream failure refunds via
- * `refundCharacterCash`.
+ * Use this for every cash debit rather than read-then-write: a separate
+ * balance check followed by an unfiltered `updateOne` lets concurrent requests
+ * both pass on stale data, over-deducting or silently dropping a write while
+ * still crediting the holder. Route debits through here so holder credit only
+ * proceeds after the debit provably succeeds, and refund via
+ * `refundCharacterCash` on downstream failure.
  */
 export async function atomicallyDebitCharacterCash(
   db: Db,
@@ -97,20 +91,15 @@ export async function refundCharacterCash(
 }
 
 /**
- * Atomically debit a corporation's `liquidCapital`. Same race-safe pattern:
- * single-document `findOneAndUpdate` with `$gte`. Used by routes where a
- * corporation acts as buyer (corp buying bonds, corp buying shares of
- * another corp). `amount` is in the corp's `liquidCurrencyCode` — callers
- * must convert to that unit before calling this helper.
+ * Atomically debit a corporation's `liquidCapital` via a single-document
+ * `findOneAndUpdate` guarded with `$gte`. Used where a corp acts as buyer
+ * (bonds, shares). `amount` is in the corp's `liquidCurrencyCode`; callers
+ * must convert first.
  *
- * This helper is the HOLDING COMPANY's cash and nothing else. A chartered bank's
- * money lives in `bankCharter.cashReserves` and is moved by the helpers in
- * `banking/bankCash.ts`. That separation is structural on purpose: an earlier
- * attempt kept both in `liquidCapital` and bolted a reserve floor onto this
- * filter, which meant every one of the thirty-odd callers here had to be right
- * about a rule none of them knew existed, and it froze eight of twelve live
- * banks out of ordinary corporate spending on the turn it shipped. Two fields
- * make the raid unrepresentable instead of merely refused.
+ * This helper debits HOLDING COMPANY cash only. A chartered bank's money
+ * lives in `bankCharter.cashReserves` and moves via `banking/bankCash.ts`.
+ * Keeping the fields separate makes a reserve raid unrepresentable, rather
+ * than relying on every caller to enforce a reserve floor.
  */
 export async function atomicallyDebitCorpLiquidCapital(
   db: Db,
@@ -163,17 +152,14 @@ export async function refundCorpLiquidCapital(
 }
 
 /**
- * Credit a corp's `liquidCapital` (in the corp's own currency units). Used when
- * a public-float share buy injects the buyer's payment into the issuer treasury
- * (treasury-backed market maker) so float trades conserve money instead of the
- * float minting/burning cash with no counterparty. Returns the new balance, or
- * null if the corp was not found.
+ * Credit a corp's `liquidCapital` (in the corp's own currency units) when a
+ * public-float buy injects the buyer's payment into the issuer treasury, so
+ * float trades conserve money. Returns the new balance, or null if the corp
+ * was not found.
  *
- * When `alsoTrackIssuanceProceeds` is true, the same atomic write also increments
- * `shareIssuanceProceeds` by `amount` as the issuer realizes proceeds from its
- * OWN float. Issuance itself no longer pre-credits either field; see Bug #0624.
- * Callers that debit/credit a BUYER corp (corp-buys-bond, corp-buys-other-corp-
- * shares, escrow) must leave this false so the field is untouched.
+ * When `alsoTrackIssuanceProceeds` is true, increments `shareIssuanceProceeds`
+ * by `amount` in the same atomic write: the issuer realizing proceeds from its
+ * OWN float. Callers that debit/credit a BUYER corp must leave this false.
  */
 export async function creditCorpLiquidCapital(
   db: Db,
@@ -281,19 +267,17 @@ export type EscrowDebitSplit = { escrowDebited: number; treasuryDebited: number 
 
 /**
  * Debit a float SELL against the market-making escrow, but FLOOR the escrow at
- * zero: only the genuinely-collected (positive) escrow balance can pay, and any
- * shortfall is drawn from real `liquidCapital` instead. In one atomic pipeline
- * update:
- *   cover     = min(amount, max(0, shareEscrowBalance))   // escrow can only spend what it holds
+ * zero: only the genuinely-collected escrow balance can pay, and any shortfall
+ * is drawn from real `liquidCapital` instead. In one atomic pipeline update:
+ *   cover     = min(amount, max(0, shareEscrowBalance))
  *   escrow   -= cover
- *   liquid   -= (amount - cover)                          // shortfall from the treasury
+ *   liquid   -= (amount - cover)
  *
- * This keeps the seller paid with REAL corp money (escrow's collected buyer cash
- * first, treasury for the rest) instead of minting cash into a bottomless
- * negative escrow. It never blocks the trade — an under-funded corp simply draws
- * down (and may go negative on) `liquidCapital`, exactly as instant mode already
- * behaves and as the financial-distress path already handles. `shareEscrowBalance`
- * can no longer drift below zero.
+ * Keeps the seller paid with REAL corp money (escrow first, treasury for the
+ * rest) instead of minting cash into a bottomless negative escrow. Never blocks
+ * the trade; an under-funded corp simply draws down (and may go negative on)
+ * `liquidCapital`, matching instant mode and the financial-distress path.
+ * `shareEscrowBalance` cannot drift below zero.
  *
  * Returns the split so a rollback can reverse both legs exactly.
  */

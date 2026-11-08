@@ -1,22 +1,15 @@
 /**
- * Faction split — auto-fires when the regime escalates to Stage 3
- * (internal challenge).
+ * Faction split, auto-fired at regime Stage 3 (internal challenge).
  *
- * Mechanics:
- *   1. Read the country's ruling-party officials.
- *   2. Score each on distance from the party line, blended toward their
- *      caucus's mean so a faction leaves as a faction (see
- *      `./factionDivergence`).
- *   3. Pick max(3, ceil(15% of officials)) defectors by highest
- *      divergence. Stable order via character id when divergences tie.
- *   4. Spawn a new approved party with the per-country
- *      `factionDefectionName`, positioned at the defectors' own centre of
- *      gravity rather than at the position of the party they just left.
- *   5. Re-assign each defector's `party` field to the new sequentialId.
+ * Scores officials on distance from the party line, blended toward their
+ * caucus mean so a faction leaves as a faction (see `./factionDivergence`).
+ * Defects max(3, ceil(15% of officials)) by highest divergence, ties broken
+ * by character id for stable order. Spawns a new approved party at the
+ * defectors' centre of gravity, named via `factionDefectionName`, and
+ * reassigns each defector's `party` to its sequentialId.
  *
- * Per the spec: the defection list is published in the country-history
- * entry (the wider Stage 3 transition handles that — this module just
- * spawns the party + reassigns officials).
+ * The country-history entry listing defectors is written by the wider Stage 3
+ * transition; this module only spawns the party and reassigns officials.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -247,7 +240,7 @@ export async function fireFactionSplit(
     .collection<ElectedOfficial>("electedOfficials")
     .updateMany({ countryId, nppId: { $in: defectorNppIds } }, { $set: { party: String(newSeq) } });
 
-  // #0701 split-cleanup — a defector may have been the ruling party's chair,
+  // split-cleanup, a defector may have been the ruling party's chair,
   // vice chair, or treasurer. Vacate those slots so the ruling party no
   // longer lists leaders who defected. Excludes the new party (whose
   // leadership starts null anyway).

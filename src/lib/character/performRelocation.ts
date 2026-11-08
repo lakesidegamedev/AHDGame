@@ -47,23 +47,13 @@ export interface PerformRelocationOptions {
 }
 
 /**
- * Apply the full relocation pipeline to a character. Assumes caller has
- * already validated:
- *   - the target state exists
- *   - the character is not already in the target state
- *   - any cooldown/permission checks the caller cares about
+ * Apply the full relocation pipeline to a character. Assumes the caller has
+ * validated: target state exists, character is not already there, and any
+ * cooldown/permission checks.
  *
- * Called by:
- *   - POST /api/character/relocate (player flow, cooldown enforced upstream)
- *   - POST /api/character/relocate-with-corp (combined char+corp move)
- *   - PATCH /api/admin/characters/update-country
- *   - PATCH /api/admin/characters/update-state
- *   - PATCH /api/moderator/characters/update-country
- *   - PATCH /api/moderator/characters/update-state
- *
- * When `options.skipCeoResignForCorpId` is supplied, the CEO auto-resign
- * step is skipped if the matching corp is the one the character currently
- * leads — used by the combined character+corp relocation flow.
+ * When options.skipCeoResignForCorpId is supplied, the CEO auto-resign step is
+ * skipped if that corp is the one the character leads. Used by the combined
+ * character+corp relocation flow.
  */
 export async function performRelocation(
   db: Db,
@@ -86,9 +76,8 @@ export async function performRelocation(
   const lastRelocatedAt = gameTime.effectiveNow;
   const lastRelocatedTurn = gameTime.currentTurn;
 
-  // 1. Auto-resign from office when residency breaks.
-  //    State/region-bound seats always resign. Country-scoped seats (VP, President,
-  //    cabinet, …) only resign on a country change — ticket #1057.
+  // Auto-resign from office when residency breaks: state seats always resign;
+  // country-scoped seats only on a country change.
   let resignedFromOffice: string | null = null;
   if (
     character.currentOffice &&
@@ -181,10 +170,8 @@ export async function performRelocation(
       );
     // Caucus participation: closes memberships, withdraws chair candidacies,
     // clears chair/vice-chair seats, AND clears the denormalized
-    // character.factionId pointer. The inline cleanup that used to live here
-    // missed factionId, so relocated players stayed visibly "in" their old
-    // caucus and were blocked from founding or joining caucuses in the new
-    // country (bug #0552).
+    // character.factionId pointer. Missing factionId cleanup leaves relocated
+    // players visibly in their old caucus and blocked from caucuses elsewhere.
     await cleanupCaucusParticipationForCharacters(db, [characterId], {
       removeMembership: true,
       membershipStatus: "left",

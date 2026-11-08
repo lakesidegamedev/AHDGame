@@ -1,38 +1,24 @@
 /**
- * Party-eligibility reconciliation for the majority-gated Congress leadership
- * offices.
+ * Party-eligibility reconciliation for majority-gated Congress leadership offices.
  *
- * Pro Tempore, Majority Leader and Majority Whip are `largest-single-party`
- * roles: the chamber's biggest party runs for them, votes on them, and holds
- * them.
+ * Pro Tempore, Majority Leader and Majority Whip are `largest-single-party` roles:
+ * the chamber's biggest party runs for them, votes on them, and holds them.
  *
- * Three pieces live here.
+ * - `vacateRolesLostToPartySwitch`: gives up only offices the switch disqualifies
+ *   (an `any-seated` office like Speaker survives); `vacateAllLeadershipRoles` is the
+ *   ban-path sibling.
+ * - `openElectionsForVacatedRoles`: opens a race at the vacancy transition, mirroring
+ *   `vacateSpeakerIfLostSeat` -> `openSpeakerElection`.
+ * - `reconcileLeadershipPartyEligibility`: backstop for paths mutating `characters.party`
+ *   outside the cleanup (admin heal, bulk edit). It vacates ineligible holders and uses
+ *   the same opener so both paths behave identically.
  *
- * `vacateRolesLostToPartySwitch` is the front door for a party switch: it gives
- * up only the offices the switch actually disqualifies the holder from, so an
- * `any-seated` office such as the Speaker survives one. `vacateAllLeadershipRoles`
- * is its no-questions sibling, for a ban.
+ * Neither polls for empty seats: a race nobody enters resolves by vacating and closing,
+ * so a poller would re-open forever.
  *
- * `openElectionsForVacatedRoles` is the one that does the day-to-day work.
- * `cleanupPartyPositionsOnSwitch` has always vacated these seats on a party
- * switch, but it stopped there, so the chair read "Vacant" until an admin
- * hand-started a race. This opens that race at the vacancy transition — the same
- * shape as `vacateSpeakerIfLostSeat` → `openSpeakerElection`.
- *
- * `reconcileLeadershipPartyEligibility` is the backstop for the paths that
- * mutate `characters.party` WITHOUT going through that cleanup — the admin heal
- * and bulk-edit routes write the field directly. It vacates a holder whose live
- * party no longer satisfies the policy, then hands the seat to the same opener
- * above so both routes into a vacancy behave identically.
- *
- * Neither one polls for empty seats, and that is deliberate: a race nobody
- * enters resolves by vacating the role and closing, so a poller would read that
- * as a fresh vacancy and re-open forever.
- *
- * The reconciler stays majority-only, because `largest-single-party` is the one
- * policy a direct `characters.party` write can silently break. The opener does
- * not: it covers every US congressional role, Speaker and minority seats
- * included, since a vacated seat with no race never refills itself.
+ * The reconciler stays majority-only (the one policy a direct `party` write can silently
+ * break); the opener covers every US congressional role since a vacated seat with no
+ * race never refills itself.
  */
 import type { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
@@ -88,14 +74,10 @@ export interface LeadershipPartyVacancy {
  * Vacate every majority-gated leadership role in `chamber` whose holder has
  * left the qualifying party, opening a 24-turn election for each.
  *
- * A backstop, not the main path: an ordinary switch is already caught by
- * `cleanupPartyPositionsOnSwitch`, which vacates the seat before this ever runs.
- * What reaches here is the admin routes that write `characters.party` directly
- * and bypass that cleanup entirely.
- *
- * Idempotent: it vacates before opening, so a repeat pass sees an empty seat
- * and returns without touching anything. That matters because this runs on the
- * congress page GETs, not only once per turn.
+ * Backstop for admin routes that write `characters.party` directly and bypass
+ * `cleanupPartyPositionsOnSwitch`. Idempotent: vacates before opening, so a
+ * repeat pass sees an empty seat. Runs on congress page GETs, so idempotency
+ * matters.
  *
  * @returns one entry per role vacated (empty when nothing changed).
  */
@@ -162,27 +144,26 @@ export async function reconcileLeadershipPartyEligibility(
     const party = resolveSeatHolderParty(seat, charByHolder.get(holderKey) ?? null);
     if (isPartyEligible(policy, party, ctx)) continue;
 
-    // Ineligible — but for one of two very different reasons:
+    // Ineligible for one of two reasons:
     //   (a) the holder walked out of the qualifying party, or
     //   (b) the chamber's majority moved out from under a holder who stayed put.
     //
-    // Only (a) belongs here. Case (b) is already handled, more gently, by
-    // `triggerLeadershipElectionsAfterChamberVote`: it opens a race at the next
-    // chamber-changing vote and leaves the incumbent seated (and auto-nominated)
-    // until it resolves. Vacating here would pre-empt that and leave the chamber
-    // with no leaders for 24 turns over a shift they had no part in.
+    // Only (a) belongs here. Case (b) is handled more gently by
+    // `triggerLeadershipElectionsAfterChamberVote`, which opens a race at the
+    // next chamber-changing vote and leaves the incumbent seated. Vacating here
+    // would pre-empt that and leave the chamber leaderless.
     //
     // `congressLeaders.party` is the party the holder qualified under when they
-    // took the office — stamped by the resolver and by the admin assign route,
-    // and deliberately never touched afterwards. If it STILL satisfies the
-    // policy then the office has not moved, so the ineligibility is the holder's
-    // own doing. If it does not, the majority flipped and this is case (b).
+    // took office, stamped by the resolver and admin assign route and never
+    // touched afterwards. If it still satisfies the policy, the office has not
+    // moved, so the ineligibility is the holder's own doing. Otherwise the
+    // majority flipped and this is case (b).
     //
-    // A row with no recorded party gives no baseline at all, so it falls out
-    // here too. Both skips stay silent on purpose: this runs on a public GET and
-    // the condition persists across every page load, so logging it would spam.
-    // `scripts/debug/heal-ineligible-majority-leadership.ts` reports these on
-    // demand instead.
+    // A row with no recorded party has no baseline, so it falls out here too.
+    // Both skips stay silent: this runs on a public GET and the condition
+    // persists across page loads, so logging would spam. See
+    // `scripts/debug/heal-ineligible-majority-leadership.ts` for on-demand
+    // reporting.
     const qualifiedUnder = leader.party ?? null;
     if (qualifiedUnder === null) continue;
     if (!isPartyEligible(policy, qualifiedUnder, ctx)) continue;
@@ -300,18 +281,14 @@ export interface ChamberContexts {
 /**
  * Open a 24-turn race for each US congressional role in `vacatedRoles`.
  *
- * Called at the moment a party switch empties the chair, mirroring
- * `vacateSpeakerIfLostSeat` → `openSpeakerElection`. Every role this module can
- * open a race for belongs here, because a role that is vacated without one sits
- * empty indefinitely: the Speaker's own auto-open early-returns the instant
- * `characterId` is already null, so whichever path empties the chair first
- * suppresses it for good. Roles whose race is run by another module (the DE and
- * CN chairs) are ignored.
+ * Every role this module can open a race for belongs here: a role vacated
+ * without one sits empty indefinitely, because the Speaker's auto-open
+ * early-returns once `characterId` is null, suppressing it for good. Roles
+ * whose race is run by another module (DE and CN chairs) are ignored.
  *
- * This deliberately fires on the vacancy *transition* rather than polling for
- * empty seats. A poller would re-open forever: a race nobody enters resolves by
- * vacating the role and closing, which would look like a fresh vacancy on the
- * next pass.
+ * Fires on the vacancy transition rather than polling for empty seats: a
+ * poller would re-open forever, since a race nobody enters resolves by
+ * vacating the role and closing, looking like a fresh vacancy next pass.
  *
  * @returns the leader roles an election was actually opened for.
  */
@@ -400,24 +377,19 @@ export interface HeldLeadershipRole {
 }
 
 /**
- * Give up the leadership roles a character's party switch has actually cost
- * them, and open a race for each one emptied.
+ * Vacate the leadership roles a party switch actually cost the character, and
+ * open a race for each one emptied.
  *
- * The gate is the role's own eligibility policy, not the fact of the switch:
- * `any-seated` offices (the Speaker above all) are held on the strength of a
- * seat, so their holder keeps them and no race is needed. Vacating those
- * regardless is what left the House with an empty chair and no election — the
- * Speaker's own auto-open cannot recover it, because it early-returns once
- * `characterId` is already null.
+ * Gated on the role's own eligibility policy, not the switch itself:
+ * `any-seated` offices (the Speaker) are held via a seat and must be kept. The
+ * Speaker's auto-open early-returns once `characterId` is null, so vacating
+ * them here would leave the chair empty with no election.
  *
- * `newParty` comes from the caller's argument rather than `characters.party`,
- * so the decision does not depend on whether the switch has been written yet
- * (`performRelocation` deliberately cleans up first — see its comment at the
- * `cleanupPartyPositionsOnSwitch` call).
+ * `newParty` comes from the caller so the decision does not depend on whether
+ * the switch has been persisted yet.
  *
- * A composition read that fails degrades to vacating every party-gated role,
- * which is what this path did before the gate existed: an ineligible holder
- * keeping the office is the worse of the two failures.
+ * A failed composition read degrades to vacating every party-gated role: an
+ * ineligible holder keeping office is the worse failure.
  *
  * @returns the roles actually vacated.
  */

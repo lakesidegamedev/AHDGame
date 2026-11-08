@@ -105,21 +105,18 @@ export function isPartyEligible(
 }
 
 /**
- * Whether the holder of a role under `policy` still qualifies for it after
- * moving to `newParty` — the question a party switch asks, which is narrower
- * than {@link isPartyEligible}.
+ * Whether the holder of a role under `policy` still qualifies after moving to
+ * `newParty`; narrower than {@link isPartyEligible}.
  *
  * `any-seated` roles (Speaker, Bundestagspräsident, the NG chairs) are held on
  * the strength of a seat, not a party, so a switch never costs them the office;
- * losing the seat does, and that is `vacateSpeakerIfLostSeat`'s job. Note this
- * deliberately differs from `isPartyEligible`, which additionally requires the
- * party to hold a chamber seat — a distinction that matters the instant a
- * Speaker founds or joins a party that has yet to win one.
+ * losing the seat does, and that is `vacateSpeakerIfLostSeat`'s job. This
+ * differs from `isPartyEligible`, which also requires the party to hold a
+ * chamber seat, a distinction that matters for a Speaker who founds a party
+ * with no seat yet.
  *
- * With no `ctx` the question cannot be answered (a role outside the two US
- * chambers, or a composition read that came back empty), so it returns false
- * and the caller falls back to vacating, which is what it did before this gate
- * existed.
+ * With no `ctx` the answer is unknowable, so it returns false and the caller
+ * falls back to vacating.
  */
 export function qualifiesAfterPartySwitch(
   policy: RoleEligibilityPolicy,

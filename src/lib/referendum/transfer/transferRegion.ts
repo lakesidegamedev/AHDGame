@@ -66,17 +66,11 @@ export interface TransferRegionArgs {
   /**
    * Skip the two COUNTRY-wide passes at the end, leaving them to the caller.
    *
-   * `computeNationalMetrics` recomputes every country in the world from every
-   * state, and `reseedJoinedRegionElections` re-seeds a whole country's races.
-   * Neither is scoped to the region that just moved, so a merge transferring
-   * sixteen regions one at a time did each of them sixteen times — and that is
-   * not a tidiness point. It is why a live reunification ran at roughly five
-   * seconds a region, blew the request timeout it was started from, and left a
-   * country half-merged.
-   *
-   * A single transfer leaves this false and pays for both, which is right: there
-   * is no later pass coming. A merge sets it and runs them ONCE when the loop is
-   * done, which produces the same end state for a fraction of the work.
+   * `computeNationalMetrics` recomputes every country in the world and
+   * `reseedJoinedRegionElections` re-seeds a whole country's races. Neither is
+   * region-scoped, so a merge transferring many regions would repeat both per
+   * region. A single transfer leaves this false and pays for both; a merge sets
+   * it and runs them once when the loop is done.
    */
   deferCountryWidePasses?: boolean;
 }

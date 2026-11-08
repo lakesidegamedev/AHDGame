@@ -38,17 +38,15 @@ import {
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
 /**
- * Given vote counts and committee size, returns whether the proposal
- * has passed, been rejected, or is still open.
+ * Given vote counts and committee size, returns whether the proposal has
+ * passed, been rejected, or is still open.
  *
- * Per the 2026-05-22 amendments-via-CommitteeProposal redesign:
- *   - Pass requires `yes >= ceil(REQUIRED_YES_FRACTION * committeeSize)`
+ *   - Pass requires `yes >= ceil(REQUIRED_YES_FRACTION * committeeSize)`,
  *     where committeeSize counts only FILLED voter-set slots.
- *   - Reject early when the remaining un-voted slots cannot lift `yes`
- *     to the threshold even if every undecided voter votes yes.
- *   - On `expired: true`, abstainers are treated as nay — the final
- *     verdict is `passed` iff `yesCount >= yesNeeded`, otherwise
- *     `rejected`.
+ *   - Reject early when remaining un-voted slots cannot lift `yes` to the
+ *     threshold even if every undecided voter votes yes.
+ *   - On `expired: true`, abstainers count as nay: `passed` iff
+ *     `yesCount >= yesNeeded`, otherwise `rejected`.
  */
 export function checkResolution(
   yesCount: number,
@@ -107,7 +105,7 @@ async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<v
  * Maps a `positionShift.axis` value to the field name on
  * `PoliticalParty` that stores the current position. Only the two axes
  * the engines read are mappable; `foreignPolicy` / `culture` were
- * retired in ticket #1032 and have no field left to write.
+ * retired in and have no field left to write.
  */
 const POSITION_SHIFT_FIELD_BY_AXIS = {
   economic: "economicPosition",
@@ -122,10 +120,10 @@ function isLiveAxis(axis: string): axis is PositionShiftAxis {
 export async function applyPositionShiftEffect(db: Db, proposal: CommitteeProposal): Promise<void> {
   if (!proposal.positionShift) throw new Error("Not a positionShift proposal");
   const { axis, direction } = proposal.positionShift;
-  // Retired axes (ticket #1032) can no longer be proposed, but a proposal
-  // created before the retirement could still be sitting open. There is no
-  // field left to move, so treat it as a no-op rather than throwing and
-  // wedging the proposal-resolution phase for the whole party.
+  // Retired axes can no longer be proposed, but a proposal created before
+  // the retirement could still be open. There is no field left to move, so
+  // treat it as a no-op rather than throwing and wedging the
+  // proposal-resolution phase for the whole party.
   if (!isLiveAxis(axis)) return;
   const field = POSITION_SHIFT_FIELD_BY_AXIS[axis];
   const party = await db.collection<PoliticalParty>("politicalParties").findOne(
@@ -139,7 +137,7 @@ export async function applyPositionShiftEffect(db: Db, proposal: CommitteePropos
   );
   if (!party) throw new Error("Party not found");
   // Recover from rows where a prior buggy applyPositionShiftEffect wrote NaN
-  // (pre-2026-05-22 redesign would compute `clampPosition(undefined, 1)
+  // (an earlier redesign would compute `clampPosition(undefined, 1)
   // = NaN` and persist it). Without the `Number.isFinite` guard, every
   // subsequent positionShift on the same axis would re-read NaN, compute
   // NaN, and re-write NaN — the proposal "passed" but the visible
@@ -335,10 +333,9 @@ export async function applyElectionDurationEffect(
 }
 
 /**
- * Toggles `PoliticalParty.transactionApprovalMode` to the value carried
- * by the proposal. Used by the 2026-05-22 treasury-two-person-approval
- * workflow to switch a party between "single" (auto-approve) and
- * "double" (Treasurer + Chair/VC) modes.
+ * Sets `PoliticalParty.transactionApprovalMode` to the proposal's mode,
+ * switching a party between "single" (auto-approve) and "double"
+ * (Treasurer + Chair/VC) approval.
  */
 export async function applyTransactionApprovalModeEffect(
   db: Db,
@@ -489,7 +486,7 @@ export async function applyCampaignerAppointmentEffect(
 export function isPositionShiftLocked(
   party: Pick<PoliticalParty, "positionShiftCooldowns">,
   // Only live axes can be proposed, so only they can be locked. Retired
-  // axes (ticket #1032) have no cooldown entry left to consult.
+  // axes have no cooldown entry left to consult.
   axis: PositionShiftAxis,
   currentTurn: number
 ): boolean {
@@ -524,8 +521,6 @@ export function isProposalTypeLocked(
  * affected axis; all other types lock their type-keyed cooldown. Called
  * from `attemptResolution` after the effect applies and before the
  * proposal is marked resolved.
- *
- * Per the 2026-05-22 amendments-via-CommitteeProposal redesign.
  */
 export async function setProposalCooldown(
   db: Db,
@@ -964,7 +959,7 @@ export async function mergePartyInto(
 
       // 4d. Live candidacies follow their candidates. A candidacy keeps the party
       //     it was filed under, so one left on the absorbed party seats its winner
-      //     back into the dead party when the race resolves (ticket 1376). NPP
+      //     back into the dead party when the race resolves. NPP
       //     candidacies carry the NPP's id as `characterId`. Selected by member
       //     rather than by country because legacy candidacies have no countryId.
       const cullIdSet = new Set(cullIds.map((id) => id.toString()));
@@ -1290,15 +1285,11 @@ export async function castVote(
 
 /**
  * Resolves all open proposals whose voting window has closed. At expiry,
- * abstainers count as nay (see `checkResolution`) — so a proposal that
- * sat with 4/9 yes / 0 no / 5 abstentions for the full 24 turns
- * resolves as `rejected` (4 < ceil(0.6 × 9) = 6).
+ * abstainers count as nay (see `checkResolution`), so a proposal with
+ * 4/9 yes / 0 no / 5 abstentions resolves as `rejected` (4 < ceil(0.6 × 9) = 6).
  *
- * Replaces the legacy "mark all expired with no effect-application"
- * behavior. Per the 2026-05-22 redesign, proposals always land in
- * `passed` or `rejected` — the `"expired"` status literal stays in
- * the type union for legacy data compatibility but no new proposal
- * lands there.
+ * Proposals always land in `passed` or `rejected`; the `"expired"` status
+ * literal stays in the type union only for legacy data compatibility.
  *
  * Returns count resolved (regardless of pass / reject).
  */

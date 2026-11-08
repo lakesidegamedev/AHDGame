@@ -81,7 +81,7 @@ export async function listStateLegislatureBills(
   // its displayed tally to who actually sits now — same treatment the bill
   // detail page uses (scopeStateBillVotes). Without this, votes cast before a
   // sub-national election are added to votes cast after it and the card totals
-  // exceed the chamber size (bug #0836 / ticket #973: 48 votes shown in a
+  // exceed the chamber size (: 48 votes shown in a
   // 31-seat chamber). Detail/resolution already scope; only the list card did not.
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
   const chamberOfficials = subNationalOffice
@@ -437,11 +437,11 @@ export async function getStateLegislatureBillDetail(
   // each vote by their current seatsHeld — same treatment the national bill page
   // uses (buildScopedVoteInputs). Without this, votes cast before a sub-national
   // election are added to votes cast after it, so the totals can exceed the
-  // chamber size (bug #0836: 35 votes shown in a 31-seat chamber).
+  // chamber size (: 35 votes shown in a 31-seat chamber).
   // A concluded phase has a frozen snapshot — derive both the headline and the
   // per-party breakdown from it so a post-election chamber turnover cannot
-  // recompute (and collapse) the historical tally (#0982). Only an in-progress
-  // vote (no snapshot yet) live-scopes to the current chamber (#0836).
+  // recompute (and collapse) the historical tally. Only an in-progress
+  // vote (no snapshot yet) live-scopes to the current chamber.
   const originSnapshot = bill.voteSnapshot;
   const scopedVotes = originSnapshot
     ? null
@@ -479,7 +479,7 @@ export async function getStateLegislatureBillDetail(
       ])
     );
     if (bill.overrideVoteSnapshot) {
-      // Frozen override result — same treatment as the origin vote (#0982).
+      // Frozen override result, same treatment as the origin vote.
       voteByPartyOverride = buildVotesByParty(
         bill.overrideVoteSnapshot.votes,
         overrideVoterPartyMap,

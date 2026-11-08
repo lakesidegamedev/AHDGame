@@ -1,5 +1,5 @@
 /**
- * Player handoff for mid-world Tier-1 takeover and constitutional replacement (#3725).
+ * Player handoff for mid-world Tier-1 takeover and constitutional replacement.
  *
  * Deep module, small surface:
  *   - classify claimable vs systemic roles
@@ -7,15 +7,15 @@
  *   - close player access while vacating only claimable player-held roles
  *   - describe how vacancies refill and what caretaker mode may do
  *
- * Locked product rules (epic #3712):
+ * Locked product rules:
  *   - Mid-world entry preserves economy, government, diplomacy, relationships,
  *     and sphere state (no reset / reseed / wipe).
  *   - Only claimable roles transfer to player control; systemic roles stay on
  *     their own pipelines.
- *   - Player exit does not summon an instant NPP replacement — vacancies persist
+ *   - Player exit does not summon an instant NPP replacement; vacancies persist
  *     for election, appointment, succession, and government formation.
  *   - Caretaker mode is technical continuity only (no new strategic or sphere
- *     choices). Country-level strategy remains gated by #3724's player rail.
+ *     choices). Country-level strategy remains gated by the player rail.
  */
 
 import type { Db, ObjectId } from "mongodb";
@@ -165,8 +165,8 @@ export function systemicRolesRetained(): SystemicRoleKind[] {
 }
 
 /**
- * Which constitutional process refills a vacant claimable role. Pure — used to
- * verify exit wires into existing vacancy machinery rather than instant NPP fill.
+ * Which constitutional process refills a vacant claimable role. Pure; used to
+ * verify exit wires into vacancy machinery, not instant NPP fill.
  */
 export function refillProcessForClaimableVacancy(
   role: ClaimableRoleKind,
@@ -192,7 +192,7 @@ export function refillProcessForClaimableVacancy(
 }
 
 /**
- * Country-level caretaker contract after player control / departure (#3724+#3725).
+ * Country-level caretaker contract after player control / departure.
  * Technical continuity (markets, contracts, budget settlement) is allowed;
  * new strategic policy and sphere choices are not.
  *
@@ -251,7 +251,7 @@ async function currentTurn(db: Db): Promise<number> {
 /**
  * Open a ready Tier-1 country to players mid-world.
  *
- * Gates on the #3722 player-readiness verdict. Flips `enabledForPlayers` only —
+ * Gates on the player-readiness verdict. Flips `enabledForPlayers` only -
  * does not reseed or wipe economy, government, diplomacy, relationships, or
  * sphere state. Claimable role *authority* transfers to the player loop; live
  * NPP/player officeholders are left in place.

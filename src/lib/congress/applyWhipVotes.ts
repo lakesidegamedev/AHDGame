@@ -246,9 +246,7 @@ export async function applyWhipVotesToBill(
     if (!npp) continue;
 
     // Country guard: an NPP may only be whipped onto its own country's bill.
-    // Defense-in-depth against the cross-country party sequentialId collision
-    // (bug #0699) — callers country-scope their official query, but this keeps
-    // the invariant local to the writer.
+    // Keeps the invariant local to the writer even though callers country-scope.
     if ((npp.countryId ?? "US") !== (bill.countryId ?? "US")) continue;
 
     // Re-resolve the NPP's vote with the new whip applied via cross-pressure.
@@ -572,7 +570,7 @@ export async function applyWhipVotesToLeadership(
   // Fetch active nominations for re-vote handling. House/Senate leadership
   // nominations share one collection across roles — scope to the target's role
   // so whipping Majority Whip cannot steal Pro Tempore / Majority Leader votes
-  // (ticket #1046). Speaker nominations have no role and stay election-wide.
+  //. Speaker nominations have no role and stay election-wide.
   const openNominations = await db
     .collection<SpeakerNomination>(nominationCollection)
     .find({ status: { $in: ["open", "voting"] } })
@@ -778,20 +776,12 @@ export async function applyWhipVotesToGovernmentVote(
 }
 
 /**
- * Cast votes for NPPs on an open motion to vacate the Speaker's chair.
- *
- * Whip direction "for" means vacate, "against" means keep the Speaker, which
- * matches the ballot values stored on the motion, so no translation is needed.
- *
- * Unlike leadership elections this OVERWRITES an NPP's existing ballot: the
- * motion may already carry auto-cast votes from a closing window, and a whip
- * issued afterwards must be able to move them. The motion caches no tally
- * fields (`computeCongressLeadershipTally` derives them from `votes` on read),
- * so there is no counter bookkeeping to keep in step.
- *
- * Hard whips are binding, matching the other leadership-style targets. Soft
- * whips keep the probabilistic compliance gate and fall back to the bloc's own
- * vacate heuristic when an NPP resists.
+ * Casts NPP votes on an open vacate motion. Whip direction "for" means
+ * vacate, matching ballot values, so no translation is needed. Overwrites
+ * existing ballots (a whip must be able to move auto-cast votes); no tally
+ * fields are cached, so there is no bookkeeping to keep in step. Hard whips
+ * bind; soft whips use the probabilistic compliance gate and fall back to
+ * the bloc's vacate heuristic.
  */
 export async function applyWhipVotesToVacateMotion(
   db: Db,
@@ -859,19 +849,16 @@ export async function applyWhipVotesToVacateMotion(
 /**
  * Cast votes for NPPs on an open impeachment, at whichever stage it is in.
  *
- * Whip "for" means remove ("aye"), "against" means acquit ("nay"). The third
- * ballot value, "abstain", is only ever reached through an NPP's own fallback
- * heuristic; a whip never directs one.
+ * Whip "for" means remove ("aye"), "against" means acquit ("nay"). Whip never
+ * directs "abstain".
  *
- * This OVERWRITES an existing NPP ballot. `processImpeachmentLifecycle` gives
- * every bloc a graded vote on the first turn tick after filing, so by the time
- * a chair whips, votes already exist; skip-if-voted would make the whip a
- * no-op on nearly every case. The cached `*VotesFor/Against/Abstain` counters
- * are display-only (resolution recomputes from live seats via
- * `tallyImpeachmentChamber`), but they are kept in step anyway.
+ * This OVERWRITES an existing NPP ballot: every bloc already has a graded vote
+ * from processImpeachmentLifecycle, so skip-if-voted would make the whip a
+ * near no-op. Cached *VotesFor/Against/Abstain counters are display-only
+ * (resolution recomputes via tallyImpeachmentChamber) but kept in step.
  *
  * Hard whips are binding. Soft whips keep the probabilistic compliance gate and
- * fall back to the bloc's own impeachment heuristic when an NPP resists.
+ * fall back to the bloc's own impeachment heuristic on resistance.
  */
 export async function applyWhipVotesToImpeachment(
   db: Db,

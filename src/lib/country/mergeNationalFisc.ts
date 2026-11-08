@@ -1,28 +1,18 @@
 /**
- * The absorbed country's national balance sheet moves to the survivor.
- *
- * A dissolving country's regions carry their own budgets, laws and money across
- * with `transferRegion` — but the NATIONAL layer has no region to ride: the
- * treasury (signed cash, separate from bond debt), the defence account, the
- * sovereign bonds real players hold, and the national law book. Left behind, the treasury
- * pays coupons from a ghost ledger until it defaults for a country that no
- * longer exists, and the survivor's budget forgets every national programme the
- * absorbed state ever legislated. This module is the assumption of state debts
- * and obligations that every real unification includes.
+ * The absorbed country's national balance sheet moves to the survivor:
+ * treasury, defence account, sovereign bonds held by players, and the
+ * national law book. Regions transfer separately via `transferRegion`, but
+ * the national layer has no region to ride; left behind it pays coupons from
+ * a ghost ledger until it defaults for a country that no longer exists.
  *
  * CURRENCY. Everything crosses at ONE scale (`resolveMergeFxScale`). Bonds
- * convert by scaling UNITS, not the per-unit face: `BOND_UNIT_FACE_VALUE` is a
- * global constant ("one unit = 1,000 of the bond's currencyCode"), so the only
- * value-preserving conversion is units × scale with the currency re-stamped.
- * `avgCostPerUnit` is invariant under that transform (total cost and unit count
- * scale together), which is why it is left untouched. Units may become
- * fractional; every consumer multiplies rather than counts, so that is a
- * display quirk, not a correctness problem.
+ * convert by scaling UNITS, not per-unit face, because `BOND_UNIT_FACE_VALUE`
+ * is a global constant. `avgCostPerUnit` is invariant under that transform
+ * and left untouched. Fractional units are a display quirk only.
  *
- * IDEMPOTENT by filters: a re-run finds no bonds/laws still keyed to the
- * absorbed country and a zeroed absorbed treasury, so every write degrades to a
- * no-op. The `mergedInto` stamp on the absorbed budget is the audit trail, not
- * the guard.
+ * IDEMPOTENT by filters: a re-run finds no bonds/laws keyed to the absorbed
+ * country and a zeroed treasury, so every write is a no-op. The `mergedInto`
+ * stamp is the audit trail, not the guard.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -39,45 +29,23 @@ export interface MergeNationalFiscArgs {
   toCountryId: CountryId;
   currentTurn: number;
   /**
-   * Whether the absorbed side's LEGISLATED levers govern the unified state.
-   *
-   * Defaults true, which is the winner's-law rule: a merge runs winner-into-shell,
-   * so the absorbed side is the one that won and its tax code, wage floor and union
-   * law outlive the state that wrote them.
-   *
-   * ⚠️ FALSE WHEN THE SHELL IS THE WINNER. A settlement can be run in either
-   * direction — the German Question can leave either Germany standing — and when
-   * the SURVIVOR is the victor, carrying the absorbed side's levers would impose
-   * the LOSER's law on the winner, which is the rule stood on its head.
-   *
-   * QUANTITIES ARE NOT LEVERS and cross either way: the treasury, the defence
-   * account, the sovereign bonds and the debt CEILING are how much the unified
-   * state holds and may borrow, not rules about how it behaves. A state that has
-   * absorbed another has not thereby lost the money or the borrowing capacity of
-   * the half it took on.
+   * Whether the absorbed side's legislated levers govern the unified state.
+   * The absorbed side is usually the winner (merge runs winner-into-shell), so
+   * its law carries. But if the SURVIVOR is the victor, this must be false or
+   * the loser's law would govern the winner. Quantities (treasury, defence,
+   * bonds, debt ceiling) are not levers and always cross.
    */
   carryLegislatedLevers?: boolean;
   /**
-   * The two countries' fiscal bases (Σ state.gdp, Σ state.population) captured
-   * BEFORE the region transfers moved, plus each side's live income-band index.
+   * Fiscal bases (gdp and population sums) captured BEFORE region transfers,
+   * plus each side's live income-band index.
    *
-   * Fraction-priced laws price their terms against the LIVE fiscal base of the
-   * country they are keyed to. The merge does not change what either state's
-   * programmes ARE — a 5.93%-of-GDP army is 4x more expensive the moment the
-   * same fraction applies to the merged economy — so without a re-base the
-   * unified treasury inherits a law book sized for one economy and prices it
-   * against a base several times larger, while the revenue side stays under
-   * its Laffer cap. Both books together then price to ~87% of merged GDP
-   * against a ~52-58% revenue ceiling: a permanent structural deficit no
-   * player decision can close (the live German reunification landed at
-   * -103bn/yr from +29bn combined surplus for exactly this reason).
-   *
-   * With the bases present, every national law keeps the ABSOLUTE annual cost
-   * it priced at in its own country — gdp-fraction and income-fraction terms
-   * (v2 and legacy) and GDP-multiplier terms are rescaled onto the merged base
-   * at merge time. Thereafter each law still tracks the unified economy as any
-   * fraction does. Optional only for backwards compatibility: callers that
-   * capture nothing get the old behaviour.
+   * Fraction-priced laws price against the LIVE fiscal base of their country.
+   * Without a re-base, the unified treasury inherits laws sized for one economy
+   * priced against a much larger base, while revenue stays under its cap,
+   * producing a permanent structural deficit. With the bases present, every
+   * national law keeps the ABSOLUTE cost it priced at in its own country.
+   * Optional only for backwards compatibility.
    */
   mergeBases?: MergeFiscalBases;
 }
@@ -145,30 +113,13 @@ export async function mergeNationalFisc(
       if (from.taxRates) lawSet.taxRates = from.taxRates;
       if (from.taxRatePhaseIn) lawSet.taxRatePhaseIn = from.taxRatePhaseIn;
     }
-    // THE DEBT CEILING IS THE ONE LEVER THAT SUMS RATHER THAN REPLACING.
+    // Debt ceiling is the one carried lever that SUMS rather than replaces.
+    // Rates/ratios/prohibitions are rules (winner replaces). A ceiling is a
+    // quantity that survives absorption: the combined state keeps both capacities.
+    // `ceilingLastRaisedYear` takes the LATER year (combined ceiling is new).
     //
-    // Every other carried lever is a RULE — a rate, a ratio, a prohibition — and
-    // one state can only have one of each, so the winner's replaces the
-    // survivor's. A ceiling is a QUANTITY: it is how much this state may borrow,
-    // and a state that has just doubled in size has not thereby lost the
-    // borrowing capacity of the half it absorbed.
-    //
-    // Replacing it was actively wrong. Germany's 18bn EUR ceiling would have
-    // been overwritten by the GDR's 10bn DDM (~12.3bn EUR) — a 32% cut for a
-    // state with three times the GDP, arrived at by treating a balance-sheet
-    // capacity as though it were a tax rate. Summing keeps the arithmetic in the
-    // same place as the treasury and the bond book, which already add.
-    //
-    // `ceilingLastRaisedYear` takes the LATER of the two: the combined ceiling is
-    // new, and dating it to the older of the two raises would make the unified
-    // state look overdue for a raise it just effectively had.
-    //
-    // ⚠️ A SURVIVOR THAT WAS ITSELF ABSORBED CONTRIBUTES NOTHING. `mergedInto` on
-    // the survivor's own budget says its figures are the remnants of a state that
-    // was already merged away, and its ceiling has therefore ALREADY been counted
-    // into the absorbed side's. Adding it again double-counts: reversing a merge
-    // would hand the unified state its own former ceiling a second time. The
-    // remnant is superseded, not additive.
+    // A survivor that was itself absorbed (mergedInto) contributes 0: its ceiling
+    // is already counted on the absorbed side; adding it double-counts.
     const survivorCeiling = to.mergedInto ? 0 : (to.debt?.ceiling ?? 0);
     const fromCeiling = from.debt?.ceiling;
     if (typeof fromCeiling === "number") {
@@ -188,12 +139,10 @@ export async function mergeNationalFisc(
       if (typeof from.unionsBanned === "boolean") lawSet.unionsBanned = from.unionsBanned;
     }
 
-    // The survivor's book: signed add of the SAME number the caller records in
-    // its audit trail (`treasuryMoved` — one expression, so the recorded amount
-    // is by construction the credited amount). Treasury cash crosses as cash:
-    // `debt.principal` belongs to the sovereign bond ledger (see
-    // bonds/sovereignPrincipal.ts) and is re-pointed at the rescoped bond stock
-    // below, never derived from the combined balance (#1975).
+    // The survivor's book: signed add of the same `treasuryMoved` the caller
+    // records in its audit trail. Treasury cash crosses as cash: `debt.principal`
+    // belongs to the sovereign bond ledger and is re-pointed at the rescoped
+    // bond stock below, never derived from the combined balance.
     const newToTreasury = (to.treasuryBalance ?? 0) + treasuryMoved;
     await budgets.updateOne(
       { _id: toCountryId },
@@ -269,11 +218,9 @@ export async function mergeNationalFisc(
     );
   }
 
-  // The bond stock moved (and was FX-scaled) above; re-point both budgets'
-  // stored principal at the ledger rather than at the combined cash. Runs
-  // unconditionally so a retry after a crash between the rescope and this step
-  // still converges: the resync is a pure function of the bonds read, and a
-  // re-run finds no bonds left to rescope, so both steps are no-ops (#1975).
+  // Re-point both budgets' stored principal at the ledger rather than the
+  // combined cash. Safe to re-run: a retry after a crash converges since a
+  // re-run finds no bonds left to rescope.
   await resyncSovereignPrincipalFromBonds(db, toCountryId);
   await resyncSovereignPrincipalFromBonds(db, fromCountryId);
 
@@ -293,31 +240,18 @@ export async function mergeNationalFisc(
     } as import("mongodb").Filter<EnactedLaw>)
     .toArray();
 
-  // ── Fraction-term re-base ──────────────────────────────────────────────────
-  // Fraction-priced terms (v2 costModelV2 and the legacy fraction/multiplier
-  // fields) price against the LIVE fiscal base of the country keying the law.
-  // The merge re-keys the absorbed book and GROWS the survivor's base, so left
-  // alone every one of these laws silently reprices onto the merged economy:
-  // the GDR's 45%-of-GDP law book alone went from 45bn to 168bn the day it
-  // absorbed a country four times its size, and the two books together priced
-  // to ~87% of merged GDP against a ~52-58% Laffer-capped revenue ceiling — a
-  // structural deficit no player decision could close. The live German
-  // reunification swung from +29bn combined surplus to -103bn/yr on this alone.
+  // Fraction-priced terms (v2 costModelV2 and legacy fraction/multiplier fields)
+  // price against the LIVE fiscal base of the country keying the law. The merge
+  // re-keys the absorbed book and grows the survivor's base, so these laws would
+  // silently reprice onto the merged economy. Rule: QUANTITIES CROSS. Each law
+  // keeps its ABSOLUTE annual cost, re-expressed in the survivor frame; after the
+  // merge every fraction tracks the unified economy from that anchor.
   //
-  // The rule the rest of this module already obeys: QUANTITIES CROSS. Each law
-  // keeps the ABSOLUTE annual cost it priced at in its own country, re-expressed
-  // in the survivor frame; after the merge every fraction still tracks the
-  // unified economy from that anchor.
-  //
-  // Ownership decides each law's pre-merge base: a law read from the absorbed
-  // book priced against `fromGdp`/`fromPopulation`; a law the SHELL already
-  // held priced against `toGdp`/`toPopulation`. Both sides get the same
-  // treatment — the unified treasury inherits both states' obligations at their
-  // authored sizes, not the absorbed book resized and the shell's book inflated.
+  // Ownership decides each law's pre-merge base: absorbed-book laws price against
+  // fromGdp/fromPopulation; shell-held laws against toGdp/toPopulation.
   //
   // Idempotency: every re-based law is stamped, and the stamp filter skips
-  // stamped rows, so a re-entered merge (or a re-run after a prior attempt's
-  // rescope landed) cannot apply the ratio twice.
+  // stamped rows, so a re-entered merge cannot apply the ratio twice.
   const rebaseOps: Array<{
     updateOne: { filter: { _id: ObjectId }; update: { $set: Record<string, unknown> } };
   }> = [];

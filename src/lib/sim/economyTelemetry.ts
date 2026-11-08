@@ -19,37 +19,33 @@ import { getGdpBaseline } from "@/lib/utils/fundGeneration";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 
 /**
- * Post-run economy telemetry for the #2159 program acceptances
- * (#968, #991, #992, #2119, #2120, #2122).
+ * Post-run economy telemetry.
  *
- * Collected ONCE per sim run, after turn processing completes
- * (see collectBalanceMetrics), so it costs the turn hot path nothing.
- * Every section is independently best-effort: a missing/empty collection
- * yields a zeroed section with `available: false` and a `note`, never a
- * throw. All filtering/grouping happens in JS over projected finds so the
- * collectors stay portable across real and fake DBs; the committed test
- * fake honors Mongo-style query filters, so any predicate later pushed
- * into a query is actually exercised instead of passing silently.
+ * Collected ONCE per sim run, after turn processing completes, so it costs the
+ * turn hot path nothing. Every section is independently best-effort: a missing
+ * or empty collection yields a zeroed section with `available: false` and a
+ * `note`, never a throw. All filtering and grouping happens in JS over projected
+ * finds so collectors stay portable across real and fake DBs; the committed test
+ * fake honors Mongo-style query filters, so pushed-down predicates are actually
+ * exercised.
  *
- * Two deliberate non-goals, documented so a missing gate is never mistaken
- * for a passing one:
- * - #991 resident-vs-local-producer demand classification: no persisted
- *   field distinguishes them in this tree, so coverage reports presence
- *   only and says so explicitly.
- * - #991 NPP-entry rejection reasons: no funnel/rejection rows exist in
- *   this tree, so the section reports availability only.
+ * Two deliberate non-goals, so a missing gate is never mistaken for a passing
+ * one:
+ * - Resident-vs-local-producer demand classification: no persisted field
+ *   distinguishes them, so coverage reports presence only.
+ * - NPP-entry rejection reasons: no funnel or rejection rows exist, so the
+ *   section reports availability only.
  */
 
-/** Number of trailing reconciliation turns retained (#992: 12-turn gate + margin). */
+/** Number of trailing reconciliation turns retained (: 12-turn gate + margin). */
 export const RECON_TRAILING_TURNS = 16;
 /** Trailing window for fund / commodity means. */
 export const TRAILING_TURNS = 12;
 
 /**
- * Fragile-market set for #991 supplier breadth/fill. No canonical
- * FRAGILE_COMMODITIES constant exists in this tree; the set is taken
- * verbatim from #991's gate text (advertising, fertilizers, freight,
- * rare earths) so the report can express the gate metric.
+ * Fragile-market set for supplier breadth/fill reporting. No canonical
+ * FRAGILE_COMMODITIES constant exists in this tree; these four commodities
+ * are the ones the gate metric treats as fragile.
  */
 export const FRAGILE_COMMODITIES: readonly string[] = [
   "advertising",
@@ -215,7 +211,7 @@ export interface EconomyTelemetry {
   eraCosts: EraCostTelemetry;
   coverage: CoverageTelemetry;
   market: MarketTelemetry;
-  /** Forex orders, trades and rate attribution (#2293); absent on older runs. */
+  /** Forex orders, trades and rate attribution; absent on older runs. */
   forex?: ForexActivityRecord | null;
 }
 

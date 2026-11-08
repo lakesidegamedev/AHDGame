@@ -207,9 +207,8 @@ async function rekeySatellites(
   depositorPointersRekeyed: number;
 }> {
   // Sequential on purpose: each write is an idempotent set keyed on the old
-  // owner, so a throw between writes leaves a well-defined prefix behind and
-  // the next attempt resumes it. Firing them together would leave an
-  // ambiguous subset applied on failure.
+  // owner, so a throw leaves a well-defined prefix and the next attempt
+  // resumes it. Together they would leave an ambiguous subset on failure.
   const targetHex = targetId.toString();
   const destHex = destId.toString();
   const holderPath = `currencyBalances.savingsHolder.${currency}` as const;
@@ -258,11 +257,9 @@ async function clearPlan(
   attemptId: string,
   now: Date
 ): Promise<void> {
-  // Guarded on the planned owner AND the owning attempt token, so two
-  // concurrent resumers cannot clear a newer plan stamped after this attempt
-  // read, and a loser that lost the plan race cannot clear the winner's plan.
-  // A throw here propagates: the re-keys above already landed, so the retry
-  // re-runs them as no-ops and clears the plan then. Either order converges.
+  // Guarded on planned owner and attempt token so concurrent resumers
+  // cannot clear a newer plan or a loser clear the winner's plan. A throw
+  // here is fine: re-keys are idempotent and the retry clears the plan.
   await db.collection<Corporation>("corporations").updateOne(
     {
       _id: targetId,
@@ -275,58 +272,23 @@ async function clearPlan(
 
 /**
  * Move a bank charter from an absorbed corporation to its acquirer, re-keying
- * every satellite record that names the old owner.
+ * every satellite record that names the old owner: loans, both sides of
+ * interbank loans, open/frozen savings accounts, and the legacy per-character
+ * savings projection. Charter fields travel inside the sub-document.
  *
- * Why this exists (ticket-1267): the charter is a sub-document on the
- * corporation, so deleting the absorbed shell deleted its bank with it — the
- * charter (including ring-fenced `cashReserves`), the loan book, and every
- * depositor pointer. Sectors and bonds already re-parent on merge; the bank
- * is the same class of asset and must move the same way.
+ * An active charter cannot move into an occupied slot, so refuse the merge
+ * before any money moves. An inert charter moves into a free slot; if occupied
+ * it dies with the shell.
  *
- * What moves with the charter: `bankLoans` rows, both sides of
- * `interbankLoans`, authoritative `savingsAccounts` (open/frozen — closed
- * accounts are zero-balance history and stay as written), and the legacy
- * per-character `savingsHolder` projection for the charter currency. The
- * ring-fenced cash, NPC book, prop book, debts and blacklist are charter
- * fields and travel inside the sub-document; turn processors resolve the bank
- * by owner id, so they follow automatically.
- *
- * Conflict rule: an active charter cannot move into an occupied slot, so that
- * case reports an error and the caller must refuse the merge BEFORE any money
- * moves. An inert (revoked/failed) charter moves into a free slot so dead-bank
- * estate recovery keeps resolving under the surviving owner; when the slot is
- * occupied the dead record dies with the shell, exactly as before.
- *
- * Crash safety (issue #2014): production Mongo has no multi-document
- * transactions (see `runWithOptionalTransaction`), so the claim, release, and
- * re-keys cannot commit atomically. Instead the shell carries a durable
- * recovery plan (`bankCharterTransfer`: planned owner, charter currency,
- * attempt token, charter fingerprint, plus pending orphan cleanups) stamped
- * before the claim and cleared after the last re-key. Every satellite write
- * is an idempotent set keyed on the old owner, so an interruption or throw
- * after ANY durable write converges on retry: a charterless shell with a
- * surviving plan resumes its re-keys toward the planned owner instead of
- * reporting "no transfer required" over split records, and a shell that still
- * holds its charter resumes at the guarded claim/release. Concurrent
- * same-pair retries are safe for the same reason; nothing here reports
- * success while split.
- *
- * Concurrency hardening (PR #2016): the plan additionally carries a unique
- * attempt token plus a charter fingerprint, stamped once and claimed
- * atomically. Concurrent transfers of one shell to DIFFERENT acquirers used
- * to overwrite each other's plan, so the loser could mistake the winner's
- * release for its own and re-key satellites toward itself. Now every resume,
- * release, cleanup, re-key, and plan-clear decision requires the token:
- * only the plan owner releases the charter and drives the re-keys, a loser
- * returns conflict without writing charter or satellite state, and same-pair
- * retries join the shared plan by (owner, fingerprint) and converge without
- * double-apply. Retargeting a shell whose charter never left (stale foreign
- * plan plus orphan claim) stays safe: the adopt is a compare-and-swap on the
- * old token guarded on the shell still holding the charter, the superseded
- * owner and its claimed fingerprint persist in the plan as pending orphans
- * (carried across chained supersessions), and every owner and joiner drains
- * them with fingerprint-guarded removals before claiming, so a crash between
- * the swap and the cleanup still converges instead of stranding a ghost bank.
+ * No multi-document transactions, so the shell carries a durable transfer plan
+ * (planned owner, currency, unique attempt token, charter fingerprint, pending
+ * orphans) stamped before the claim and cleared after the last re-key. Every
+ * satellite write is an idempotent set keyed on the old owner, so an
+ * interruption anywhere converges on retry. Only the token holder releases
+ * the charter and drives re-keys; concurrent transfers to different acquirers
+ * return conflict instead of overwriting each other's plan; same-pair retries
+ * converge without double-apply. Orphan claims are drained with
+ * fingerprint-guarded removals before claiming.
  */
 export async function transferBankCharterToAcquirer(
   db: Db,
@@ -444,10 +406,9 @@ export async function transferBankCharterToAcquirer(
     sameId(plan.to, acquirerId) &&
     plan.fingerprint !== fingerprint &&
     charterFingerprint(acquirer.bankCharter) === plan.fingerprint;
-  // The slot holds a superseded copy of our own claim that a crash saved
-  // from cleanup after the plan already moved on: the plan records that exact
-  // copy as a pending orphan, so it must not read as a foreign bank occupying
-  // the slot. The owner path drains it before claiming.
+  // A superseded copy of our own claim that a crash left after the plan
+  // moved on: the plan records it as a pending orphan, so it must not read
+  // as a foreign bank occupying the slot.
   const slotFingerprint = acquirer.bankCharter ? charterFingerprint(acquirer.bankCharter) : null;
   const orphanedOwnSlot =
     !!slotFingerprint &&
@@ -520,15 +481,9 @@ export async function transferBankCharterToAcquirer(
       owned = curPlan.attemptId;
       pendingOrphans = [...(curPlan.orphans ?? [])];
     } else if (curPlan && sameId(curPlan.to, acquirerId)) {
-      // Stale own plan: it names this acquirer but its fingerprint predates
-      // the shell's current charter. Fingerprinted economics move on every
-      // banking turn, so any strand between stamp and release drifts within
-      // hours and could otherwise never rejoin — a permanent "claimed by
-      // another merge" dead end for the pinned merge. Take the plan over via
-      // token compare-and-swap guarded on the shell still holding this
-      // charter, then proceed as owner under fresh identity. Foreign plans
-      // never reach here (same `to` is required), so a different acquirer's
-      // race still conflicts below with zero writes.
+      // Stale own plan: names this acquirer but predates the shell's current
+      // charter. Take it over via token CAS guarded on the shell still holding
+      // this charter; fingerprint guards keep foreign plans from matching.
       const takeOverPlan = {
         ...stampPlan,
         orphans: dedupOrphans([
@@ -552,11 +507,9 @@ export async function transferBankCharterToAcquirer(
         pendingOrphans = [...takeOverPlan.orphans];
       }
     } else if (curRaw && !sameId(curRaw.to, acquirerId)) {
-      // Foreign plan: adopt only while the shell still holds this charter.
-      // The token CAS means exactly one adopter wins; losers conflict below
-      // without writing anything. The superseded owner plus the fingerprint
-      // it may have claimed persist in the plan, so a crash ahead of the
-      // cleanup below still converges on retry, as do chained adopts.
+      // Adopt a foreign plan only while the shell still holds this charter.
+      // CAS means one adopter wins; superseded owner and fingerprint persist
+      // in the plan so crashes converge on retry, including chained adopts.
       const adoptPlan = {
         ...stampPlan,
         orphans: dedupOrphans([
@@ -609,15 +562,9 @@ export async function transferBankCharterToAcquirer(
     };
   }
 
-  // Superseded attempts may have left claimed copies behind (crash between
-  // their claim and release, then a plan supersession). Drain every pending
-  // orphan first: each removal is fingerprint-guarded, so a foreign bank
-  // never matches and our own live claim (when present) is skipped. This runs
-  // before claiming, and every same-pair joiner repeats it from the durable
-  // plan, so a crash or throw anywhere in this sequence simply repeats the
-  // idempotent cleanup on retry. Only the plan owner reaches here, and only
-  // with the shell still holding the charter, so every drained copy is
-  // provably orphan.
+  // Drain pending orphans from superseded attempts before claiming.
+  // Each removal is fingerprint-guarded, so foreign banks never match and
+  // our live claim is skipped; the cleanup is idempotent across retries.
   await drainOrphans(db, pendingOrphans, acquirerId, fingerprint, now);
 
   // Claim the acquirer's charter slot, guarded: a charter issued on the

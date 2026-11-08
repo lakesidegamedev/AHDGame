@@ -2,38 +2,31 @@
  * Credit-for-response loader for the economic referendum channel.
  *
  * Finds national-level bills the incumbent government enacted recently that
- * push a suffering misery component in the helpful direction, and hands them to
- * the pure gate in `economicReferendum.ts`.
+ * push a suffering misery component in the helpful direction, and hands them
+ * to the pure gate in `economicReferendum.ts`.
  *
- * SOURCING (verified against the PRODUCERS, not the field names):
- *   • Enacted-policy spine — `statePolicies`, upserted per enacted provision by
- *     `src/lib/billEnactment.ts:833` from the doc built at `billEnactment.ts:798`.
- *     This is the only enactment record in the chain that carries a TURN
- *     (`enactedTurn`). `enactedLaws` carries only `enactedAt`/`enactedYear`, and
- *     `Bill` carries only `enactedAt`, so neither can answer "in the last 24
- *     turns". National scope is the national pseudo-state id (`federal`,
- *     `uk_national`, ...) from `src/lib/constants/nationalScope.ts`.
- *   • Metric impact vectors — bills carry none. The vector lives on the
+ * SOURCING (verified against producers, not field names):
+ *   • Enacted-policy spine: `statePolicies`, upserted per enacted provision.
+ *     This is the only enactment record carrying a TURN (`enactedTurn`);
+ *     `enactedLaws` and `Bill` carry only `enactedAt`/`enactedYear`, so they
+ *     cannot answer "last 24 turns". National scope uses the national
+ *     pseudo-state id (`federal`, `uk_national`, ...).
+ *   • Metric impact vectors: bills carry none. The vector lives on the
  *     legislation type's selected policy option as
- *     `legislationTypes.policyOptions[].metricEffects[]`
- *     (`src/lib/db/types/legislation.ts:594`), which is what
- *     `computeTickRates` in `src/lib/policyEffects.ts:307` reads and applies.
- *     `ratePerTurn` is ADDITIVE ON THE RAW METRIC: negative means the metric's
- *     number goes down, which is helpful for unemployment and poverty and
- *     harmful for incomes.
- *   • Fiscal cost — `enactedLaws`, written once per provision at
- *     `src/lib/budget/enactedLaws.ts:110` from the fields assembled at
- *     `enactedLaws.ts:47`. The bill-side snapshot
- *     `Bill.budgetValidation.costAmount` (`src/lib/billEnactment.ts:402`) is the
- *     fallback for laws whose cost sits on the bill rather than the option.
- *   • Metric history — `macroMetricsHistory`, written every turn by
- *     `snapshotMetricHistory` at `src/lib/metricHistory.ts:99`, capped at 96
- *     turns. Shape is `{ _id, [category]: { [metricId]: {turn, value}[] } }`.
+ *     `legislationTypes.policyOptions[].metricEffects[]`, which
+ *     `computeTickRates` in `policyEffects.ts` reads and applies.
+ *     `ratePerTurn` is ADDITIVE ON THE RAW METRIC: negative lowers the metric
+ *     (helpful for unemployment and poverty, harmful for incomes).
+ *   • Fiscal cost: `enactedLaws`, one per provision. Fallback is
+ *     `Bill.budgetValidation.costAmount` for laws whose cost sits on the bill.
+ *   • Metric history: `macroMetricsHistory`, written each turn by
+ *     `snapshotMetricHistory`, capped at 96 turns. Shape is
+ *     `{ _id, [category]: { [metricId]: {turn, value}[] } }`.
  *
  * KNOWN GAP: inflation. There is no `inflationRate` entry in
- * `src/lib/constants/metricDefinitions.ts`, so no policy option can declare a
- * metric effect on it. An inflation penalty therefore can never be forgiven by
- * this channel. That is a real limit of the data, not a tuning choice.
+ * `metricDefinitions.ts`, so no policy option can declare a metric effect on
+ * it. An inflation penalty can never be forgiven by this channel, a real
+ * limit of the data.
  */
 
 import type { Db, ObjectId } from "mongodb";

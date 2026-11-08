@@ -1,45 +1,24 @@
 /**
- * Deterministic synthetic-actor materialization seeder (issue #1993).
+ * Deterministic synthetic-actor materialization seeder.
  *
  * Shell module: takes a Db, writes sandbox documents, owns the sandbox guard.
- * The pure plan (who the seven actors are) lives in `syntheticActors.ts` /
- * `actorCoverage.ts`; this module is what turns that plan into persisted
- * `users` / `characters` rows plus the minimum connected domain state the
- * seven roles need, so the run manifest can be computed from persisted state
- * after seeding instead of from the intended plan.
+ * The pure plan lives in `syntheticActors.ts` / `actorCoverage.ts`; this module
+ * persists it as `users` / `characters` rows plus the minimum connected domain
+ * state the seven roles need, so the run manifest can be computed from
+ * persisted state after seeding instead of from the intended plan.
  *
  * Safety:
  * - Refuses anything that is not a sandbox world: `gameConfig.simSandbox`
  *   must be true AND the database name must match `ahd_sim_*`. There is no
  *   override flag. Never point this at a live database.
- * - Pure-NPP runs never call this module (runWorld gates on the actor mode),
- *   so a pure run keeps zero characters, zero users, zero synthetic rows.
+ * - Pure-NPP runs never call this module, so a pure run keeps zero synthetic
+ *   rows.
  *
  * Determinism and idempotency:
- * - Every `_id` derives from `syntheticObjectIdHex(seed, key)`, so the same
- *   seed always yields the same documents and every write is an upsert by
- *   `_id`. Retrying a crashed seed changes nothing.
+ * - Every `_id` derives from `syntheticObjectIdHex(seed, key)` and every write
+ *   is an upsert by `_id`, so retrying a crashed seed changes nothing.
  * - Timestamps and turn stamps arrive as caller-supplied `now` / `turn` so
  *   tests can pin them; identities never depend on them.
- *
- * Minimum connected domain state (all upserted, all keyed off the plan):
- * - US president: `electedOfficials` president row (the presidential
- *   head-of-government chain resolves through it).
- * - DD finance minister: `cabinetMembers` row whose `positionId` equals
- *   `COUNTRY_CONFIGS.DD.financeMinisterCabinetId` (the key the national-issuer
- *   gate looks up).
- * - State-party member: one chair candidacy and self-vote against a real
- *   persisted `statePartyOrg`. The active-candidacy index forbids the same
- *   member from contesting multiple offices in one state party at once.
- * - Fed nominee: one nomination queued into the US `centralBanks` nominations
- *   array through the production route checks, so the turn's chair selection
- *   finds a pool.
- * - Founders: two player-CEO corporations (private unlisted + founding IPO
- *   with placed float from the real issuance math) plus one minimal sector
- *   each, mirroring the NPP spawn shape with a character CEO.
- * - Crisis decider: no pre-turn document (crises spawn during turns); the
- *   seated US president supplies the head-of-state role the decision gate
- *   requires.
  */
 
 import { ObjectId, type Db } from "mongodb";

@@ -8,30 +8,30 @@
  *    index backs this, so a replay or a race cannot add a second);
  *  - eligible only if the lifted sectors' last settled profit per turn covers
  *    two turns of standard funding, cash sits two turns of funding above the
- *    NPP reserve (`getNppCashFloorAnchor`, #3561), and the company is not
- *    insolvent, in arrears or in financial distress. NPP companies pay out
- *    spare cash, so a cash-runway test never passes on a live world;
+ *    NPP reserve (`getNppCashFloorAnchor`), and the company is not insolvent,
+ *    in arrears or in financial distress. NPP companies pay out spare cash, so
+ *    a cash-runway test never passes on a live world;
  *  - one seeded roll per eligible company per turn. Per-turn start hazard
- *    p = 1 / (2 x 72) = 1/144, so that about one in three eligible companies
- *    has a product in development at steady state (derivation below);
+ *    p = 1 / (2 x 72) = 1/144, so about one in three eligible companies has a
+ *    product in development at steady state (derivation below);
  *  - the line is drawn with weights favouring outputs that are short in the
- *    market (the same price-ratio signal NPP founding uses, #3485);
+ *    market (the same price-ratio signal NPP founding uses);
  *  - tier: standard when profit covers four turns of funding, else lean.
  *    Never all-in.
  *
  * Steady state. A company alternates idle and developing. Idle time before a
  * start is geometric with mean 1/p turns, development lasts D = 72 turns, so
- * the developing share is f = D / (D + 1/p) = Dp / (1 + Dp). Solving f = 1/3
- * gives Dp = 1/2, hence p = 1/144 ~ 0.69% per turn.
+ * the developing share is f = Dp / (1 + Dp). Solving f = 1/3 gives Dp = 1/2,
+ * hence p = 1/144 ~ 0.69% per turn.
  *
  * Money moves through the same path as a player's venture: this module only
  * inserts the venture document. The per-turn guarded debit with its receipt,
- * the default resolution of decision events at their deadline, and the quality
- * roll are all `processProductVentures`.
+ * default resolution of decision events, and the quality roll are all
+ * `processProductVentures`.
  *
- * Cost: the rolls are pure; when at least one company rolls a start, exactly
- * one query reads the developing ventures' keys and one unordered insert
- * writes the new ones. No per-corporation database round trips.
+ * Cost: the rolls are pure; when at least one company rolls a start, exactly one
+ * query reads the developing ventures' keys and one unordered insert writes the
+ * new ones. No per-corporation database round trips.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";

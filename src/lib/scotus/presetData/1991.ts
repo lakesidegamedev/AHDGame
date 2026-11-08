@@ -1,71 +1,19 @@
 import type { ScotusPresetSeed, ScotusPresetSeatSeed, ScotusPresetDocketCaseSeed } from "./types";
 
 /**
- * 1991 preset SCOTUS content (#3601, spec #3581). Seeds the Rehnquist Court
- * at the 1991 preset's start year, plus the real landmark Docket from 1991
- * through present (2026).
+ * 1991 preset SCOTUS content: Rehnquist Court at the 1991 start year, plus
+ * the real landmark Docket from 1991 to 2026.
  *
- * ============================================================================
- * SIGN CONVENTION (read before editing)
- * ============================================================================
- * `economicLean`/`socialLean` on every occupant, and `historicalMajorityDirection`
- * on every Docket case, share ONE consistent sign:
+ * Sign convention: `economicLean`/`socialLean` and `historicalMajorityDirection`
+ * treat POSITIVE as conservative and NEGATIVE as liberal, matching
+ * PoliticalParty positions. `DocketCaseEffect.effectDirection` uses the
+ * OPPOSITE convention (left +1, right -1); copy it from the policy option,
+ * never derive it from lean here. `party` is the nominating president's party
+ * (Democratic = "1", Republican = "2").
  *
- *   POSITIVE (> 0) = conservative / right-leaning
- *   NEGATIVE (< 0) = liberal / progressive-leaning
- *   ZERO           = genuinely centrist (counts toward neither side of a headcount)
- *
- * This matches the existing `PoliticalParty.economicPosition`/`socialPosition`
- * convention already in the codebase (see `src/lib/seeds/reference/politicalParties.ts`:
- * US Republican Party = economicPosition +2/socialPosition +2 "Center-right";
- * US Democratic Party = economicPosition -2/socialPosition -2 "Center-left").
- * `decideCaseOutcome` (src/lib/scotus/divergence.ts) headcounts positive vs
- * negative on the case's tagged axis — it never reads sign meaning itself, so
- * this file is the single source of truth for what the sign means.
- *
- * NOTE: `DocketCaseEffect.effectDirection` (and the underlying
- * `LegislationPolicyOption.effectDirection` it's copied from) is a SEPARATE,
- * pre-existing, OPPOSITE-signed convention baked into every legislationType
- * option set (see `src/lib/seeds/reference/policyOptionHelpers.ts`):
- *   left/expansionary option  → effectDirection +1
- *   right/restrictive option  → effectDirection -1
- * Every `effect` below copies its `effectDirection` straight from the chosen
- * `policyOptionId`'s own authored value in `src/lib/seeds/reference/legislationTypes.ts`
- * — do not derive it from this file's economicLean/socialLean convention.
- *
- * PARTY FIELD
- * ============================================================================
- * `party` follows the documented `HistoricalJusticeOccupant.party` convention
- * ("opaque identifier, same convention as Character.party/NPP.party" — a
- * stringified `PoliticalParty.sequentialId`). Real justices don't hold formal
- * party membership, so — matching how the rest of the codebase labels
- * real-world, non-elected historical figures with no game-native party record
- * (see `src/lib/npp/seedHistorical.ts` SLUG_TO_NAME → resolvePartyId) — this
- * uses the party of the president who nominated them, the standard convention
- * for describing a justice's political origin. US party sequentialIds are
- * assigned in `politicalParties.ts` seedOrder: Democratic Party = "1",
- * Republican Party = "2".
- *
- * ROSTER START POINT
- * ============================================================================
- * The 1991 preset's turn 1 is January 1, 1991 (`getStartingYearForPreset`).
- * On that date Thurgood Marshall was still sitting; he announced retirement
- * June 27, 1991 and Clarence Thomas was confirmed October 15, 1991 — both
- * events land inside the preset's first calendar year. Seat 3 therefore
- * carries Marshall as `historicalOccupants[0]` (seatedYear 1991, matching
- * "first entry per seat = the preset's start year" per the schema doc
- * comment) with a same-year departure, immediately followed by Thomas —
- * rather than starting the roster directly on Thomas and silently dropping
- * Marshall from history.
- *
- * SUCCESSION CHAINS
- * ============================================================================
- * Each seat's chain is carried all the way to whoever is really sitting as of
- * 2026 (today): every seat below currently ends on a still-serving justice
- * (departureYear: null) except none — all nine 1991 seats have had at least
- * one real-world succession since 1991, and the resulting nine sitting
- * justices (Roberts, Barrett, Thomas, Jackson, Kagan, Alito, Gorsuch,
- * Kavanaugh, Sotomayor) match the real Court as of this writing.
+ * Seat 3 starts on Marshall (seated 1991, same-year departure) because he
+ * retired mid-1991; the chain continues to Thomas. Every seat runs to a
+ * still-serving justice as of 2026.
  */
 
 const US_DEM = "1";

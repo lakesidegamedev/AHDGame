@@ -207,22 +207,18 @@ export const VIETNAM_RUNG_PRESSURE = 24;
 
 /**
  * Apply one leader's move to the ladder. Pure: takes a state, returns the next
- * state. This is the whole escalation mechanic in one function, which is what
- * makes it testable without a database.
+ * state, so the mechanic is testable without a database.
  *
  * Rules:
- *  - Support adds pressure to that side and can climb at most one rung per move.
+ *  - Support adds pressure to that side, climbing at most one rung per move.
  *  - The ladder never climbs past the last rung.
- *  - De-escalation drains that side's own pressure first; only once its pressure
- *    is spent does the rung itself come down. A superpower cannot undo the other
- *    superpower's commitment by announcing restraint.
- *  - Both sides supporting is how the ladder actually climbs fastest, because
- *    pressure is compared per side and the higher one governs.
- *  - A rung is also gated by its `earliestYear`: pressure can max out but the
- *    ladder holds until the calendar reaches the next rung's floor, so an
- *    aggressive US/RU tracks the historical arc's ceiling rather than outrunning
- *    it. Pass `currentYear` to enforce the floor; omit it (tests, callers with
- *    no clock) to fall back to pressure-only, the pre-floor behaviour.
+ *  - De-escalation drains that side's own pressure first; only then does the
+ *    rung come down. One superpower cannot undo the other's commitment.
+ *  - Both sides supporting climbs fastest: pressure is compared per side and
+ *    the higher governs.
+ *  - Each rung is gated by its earliestYear: pressure can max out but the
+ *    ladder holds until the calendar reaches the floor. Omit currentYear
+ *    (tests, clockless callers) for pressure-only behaviour.
  */
 export function applyVietnamMove(
   state: VietnamEscalationState,

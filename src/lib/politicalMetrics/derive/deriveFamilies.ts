@@ -123,20 +123,10 @@ function scoresFrom(
     if (raw == null || !Number.isFinite(raw)) continue;
     const [category, metricId] = path.split(".");
     // ERA WINDOW. A metric the catalog says does not exist yet cannot describe
-    // the era being derived, whatever number the seed happens to hold. Skipping
-    // it lets the family fall through to a tier that CAN — which is the whole
-    // point of the tier ladder.
-    //
-    // This was not academic. `economy.productivity`'s only tier-1 source is
-    // `governance.roboticsAdoption` (window opens 1980) and
-    // `environment.energySecurity`'s is `environment.nuclearSafety` (1957). On
-    // the 1953 board tier 1 fired on both, and the result depended on nothing
-    // but how each country's era overlay happened to treat a metric that should
-    // not have been consulted at all: countries whose overlay zeroed it scored
-    // 0 (JP/DE/SE/TR — 99 of 147 regions floored on productivity), while
-    // countries whose overlay omitted it kept the modern seed and scored 72
-    // (Italy, with robots and nuclear plants in 1953). Inconsistent between
-    // countries, which is worse than uniformly wrong.
+    // the era being derived. Skipping it lets the family fall through to a tier
+    // that can, which is the point of the tier ladder. Otherwise the result
+    // depends on whether each country's overlay zeroed or omitted the metric,
+    // making outcomes inconsistent between countries.
     if (!isMetricActive(metricId, countryId, year ?? null)) continue;
     const score = politicalScoreFromLegacyValue(category, metricId, raw, countryId, year);
     if (score == null) continue;

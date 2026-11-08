@@ -3,17 +3,12 @@ import type { Character, Election, ElectionCandidate, PlayerEndorsement } from "
 import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
 
 /**
- * Party-alignment lifecycle for player endorsements (ticket #1179).
+ * Party-alignment lifecycle for player endorsements.
  *
- * Primaries are intra-party contests: the /president/primary/[partyId] surface
- * only ever offered the endorse control to same-party members. A membership
- * change must therefore not leave an active endorsement pointing at another
- * party's primary candidate — the stale row keeps counting in the standings
- * and keeps granting the endorsed campaign its per-turn player-endorsement
- * campaign actions long after the endorser defected.
- *
- * Cross-party endorsements are legal once a race reaches its general phase,
- * so alignment is only enforced while a race's primary is open.
+ * A stale endorsement pointing at another party's primary candidate keeps
+ * counting in standings and keeps granting its per-turn campaign actions.
+ * Cross-party endorsements are legal after the primary phase, so alignment
+ * is enforced only while a race's primary is open.
  */
 
 /** Time inputs for phase checks; `currentTurn` is preferred when present. */

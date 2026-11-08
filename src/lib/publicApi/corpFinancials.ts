@@ -15,16 +15,8 @@ import type { CorporateSector } from "@/lib/db/types";
  *     `sector.revenue`;
  *   - `effectiveProfitMargin`, the margin the engine actually applied, falling
  *     back to the CEO-set `profitMargin` only when the sector predates it;
- *   - each sector converted from its HOST currency before summing.
- *
- * The public API previously got all three wrong while its comment claimed it
- * "mirrors the per-sector basis the internal corporation detail view uses". At
- * turn 366, 3,403 of 3,805 sectors had `profitMargin` and `effectiveProfitMargin`
- * more than 5 points apart (means 26.4 vs 36.2), and 67 corporations hold
- * sectors in two or more countries, so the un-converted sum added currencies.
- *
- * The FX rule is the one `dailyGrossRevenue.ts` adopted under ticket #1118: a
- * sector earns in the market it operates in, not its parent's home currency.
+ *   - each sector converted from its HOST currency before summing (a sector
+ *     earns in the market it operates in, not its parent's home currency).
  */
 export interface CorpFinancialsInput {
   sectors: Array<{

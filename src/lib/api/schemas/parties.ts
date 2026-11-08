@@ -21,11 +21,8 @@ export const createProposalSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("positionShift"),
-    // Economic and social only — the axes the engines actually read.
-    // `foreignPolicy` / `culture` were offered by the 2026-05-22 redesign
-    // but nothing consumed them, so they were removed (ticket #1032).
-    // Each axis has its own 336-turn cooldown enforced via
-    // `PoliticalParty.positionShiftCooldowns`.
+    // Only the axes the engines read. Each has its own 336-turn cooldown
+    // enforced via `PoliticalParty.positionShiftCooldowns`.
     axis: z.enum(["economic", "social"]),
     direction: z.union([z.literal(1), z.literal(-1)]),
   }),
@@ -43,10 +40,9 @@ export const createProposalSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("removeOfficeHolder"),
-    // Chair, vice-chair, treasurer, committee members, and
-    // committee-confirmed campaigners are subject to committee removal.
-    // Treasurer removal (tickets #1100, #285) lets the committee dislodge
-    // an unopposed incumbent that the leadership election can't unseat.
+    // Chair, vice-chair, treasurer, committee members, and confirmed
+    // campaigners are subject to committee removal; treasurer removal
+    // covers unopposed incumbents the leadership election can't unseat.
     role: z.enum(["chair", "viceChair", "treasurer", "committeeMember", "campaigner"]),
     targetCharacterId: schemas.objectId,
   }),

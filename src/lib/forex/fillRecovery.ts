@@ -1,28 +1,21 @@
 /**
  * Durable peer-fill for forex limit orders on standalone Mongo.
  *
- * The transactional fill path is atomic and needs nothing here. The
- * sequential fallback (standalone Mongo, no multi-document transactions) used
- * to claim the order with a bare `processing` flip and compensate only
- * caught errors: a process crash between two confirmed writes left the filler
- * debited, the poster possibly credited, and the order stuck in `processing`
- * with no retry possible and no record of what landed.
+ * The sequential fallback (no multi-document transactions) can crash between
+ * two confirmed writes, leaving the filler debited, the poster possibly
+ * credited, and the order stuck in `processing` with no retry. This module
+ * makes that path recoverable without duplicating the banking journal:
  *
- * This module fixes the crash path without duplicating the banking journal:
- *
- * 1. The claim carries the full intent (`ProcessingFillIntent`, written in
- *    the same findOneAndUpdate as the status flip), so a later attempt can
- *    finish or undo without recomputing from moved balances.
- * 2. Every forward money leg is stamped (the banking `settledKeys` pattern,
- *    forex-owned stamps): a resumed leg that already landed matches nothing
- *    and verifies as applied, so resume never double-debits or double-credits.
- * 3. Spread distribution reuses `distributeSpreadFee` with per-write stamps;
- *    the trade-history row is keyed by the stable claim key, so its insert is
- *    a no-op on replay.
- * 4. Only a stale claim is recoverable. Fresh claims (a live attempt, or a
- *    recovery already running) are never stolen.
- * 5. Rollback inverts landed legs only and restores open/partial. Anything
- *    that can be neither completed nor rolled back stays `processing` and is
+ * 1. The claim carries the full intent (`ProcessingFillIntent`), written in the
+ *    same findOneAndUpdate as the status flip, so a later attempt can finish or
+ *    undo without recomputing from moved balances.
+ * 2. Every forward money leg is stamped: a resumed leg that already landed
+ *    verifies as applied, so resume never double-debits or double-credits.
+ * 3. Spread distribution reuses `distributeSpreadFee` with per-write stamps; the
+ *    trade-history row is keyed by the stable claim key, so replay is a no-op.
+ * 4. Only a stale claim is recoverable; fresh claims are never stolen.
+ * 5. Rollback inverts landed legs only and restores open/partial. Anything that
+ *    can be neither completed nor rolled back stays `processing` and is
  *    reported, never force-completed.
  *
  * Stable idempotency key: `forex-fill:{orderId}:{filledAmountBefore}`.

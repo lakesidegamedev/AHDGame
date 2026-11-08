@@ -1,18 +1,13 @@
 /**
  * Shared opener for the US Congress leadership races (House and Senate).
  *
- * Both admin `start_election` handlers used to inline this logic, and they
- * drifted: each `$set` only `endsAt`, never `endsOnTurn`. Because
- * `isLeadershipElectionClosed` PREFERS `endsOnTurn`, a stale value left on the
- * doc by the previous race survived the upsert and made the freshly opened
- * election read as already closed — it resolved on the very next GET, re-crowned
- * the auto-nominated incumbent and re-posted the victory webhook, so the button
- * appeared to do nothing. Writing both anchors in one place is what keeps them
- * from drifting apart again.
+ * Must write both `endsAt` and `endsOnTurn` together:
+ * `isLeadershipElectionClosed` prefers `endsOnTurn`, so a stale value on the
+ * doc makes a freshly opened election read as already closed and resolve
+ * immediately. Writing both anchors in one place keeps them from drifting.
  *
  * Mirrors `speaker/openSpeakerElection.ts` and
- * `bundestagspraesident/openElection.ts`; those chambers have their own
- * singleton collections and keep their own openers.
+ * `bundestagspraesident/openElection.ts`; those chambers keep their own openers.
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";

@@ -1,21 +1,15 @@
 import { Session } from "node:inspector/promises";
 
 /*
- * V8 sampling heap-profiler wrapper. Drives `HeapProfiler.startSampling` /
- * `stopSampling` via the built-in `node:inspector` module to capture a
- * function-level allocation profile — each node carries the call frame
- * (functionName + url:line) and `selfSize` (bytes allocated by THIS frame
- * that are still alive at sample-stop time).
+ * V8 sampling heap-profiler wrapper. Drives HeapProfiler.startSampling /
+ * stopSampling via node:inspector to capture a function-level allocation
+ * profile. Each node carries its call frame (functionName + url:line) and
+ * `selfSize` (bytes allocated by THIS frame still alive at stop time).
  *
- * Use this for one-shot leak diagnosis: start sampling at heap baseline,
- * wait until enough creep has accumulated (multiple turn cycles, hours of
- * background activity), stop, look at the top-N nodes by selfSize. The
- * function names + source lines are direct pointers to the leak source.
- *
- * V8 samples every Nth byte of allocation (default 32 KB here). Smaller
- * intervals = more accurate but more sample-collection overhead. 32 KB is
- * fine-grained enough to identify the inter-turn ~1 MB/min creep we are
- * chasing on `fix/timer-issue`.
+ * Use for one-shot leak diagnosis: sample from heap baseline, wait for creep,
+ * stop, inspect top-N nodes by selfSize for direct leak pointers. V8 samples
+ * every Nth byte (default 32 KB here); smaller intervals are more accurate but
+ * costlier.
  */
 
 // V8 HeapProfiler.SamplingHeapProfileNode shape. Defined here instead of
@@ -270,7 +264,7 @@ export function __resetAllocationProfileBusyForTest(): void {
  * Memory overhead is small (a few MB of sample metadata per minute).
  */
 /** Hard deadline on individual inspector calls so a hung V8 inspector
- * (observed 2026-05-26: HeapProfiler.startSampling never resolved on
+ * (HeapProfiler.startSampling never resolved on
  * sandbox) does not lock the capture state forever. The session is still
  * disconnected in the outer finally even if the post() promise we await
  * here loses the race against this timeout. */

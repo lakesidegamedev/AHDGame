@@ -221,7 +221,7 @@ async function spawnNationalizationChallenge(
   }
 ): Promise<void> {
   const { db } = ctx;
-  // SCOTUS is US-only (spec #3581). A challenge in any other country has no
+  // SCOTUS is US-only. A challenge in any other country has no
   // bench to hear it.
   if (ctx.countryId !== "US") {
     console.warn(
@@ -235,9 +235,7 @@ async function spawnNationalizationChallenge(
   const startingYear = gameState?.startingYear ?? getStartingYearForPreset(preset);
 
   // `yearFiringAtOrAfterTurn` is the inverse of the rule `scotusDocketTurn`
-  // actually applies, kept beside `yearToTurn` so the two cannot drift apart
-  // again: this was an inline re-derivation, and it went on inverting the
-  // raw-turn rule after the docket moved to the calendar turn (#1208). Annual
+  // applies, kept beside `yearToTurn` so the two cannot drift apart. Annual
   // granularity means the case can still land up to a year out.
   const CHALLENGE_DELAY_TURNS = 4;
   const targetTurn = ctx.currentTurn + CHALLENGE_DELAY_TURNS;
@@ -436,25 +434,20 @@ async function concessionBill(
 // ── 4. Government-brokered bargaining ──────────────────────────────────────
 
 /**
- * The dispute a scripted sector-wide strike is actually about, opened so the
- * government has something to broker (#127).
+ * Opens the dispute a scripted sector-wide strike is about, so the government
+ * has something to broker.
  *
- * A nationwide steel strike is authored by the crisis, not produced by a
- * player or NPP bargaining campaign, so there was frequently no
- * `bargainingCampaigns` row in `dispute` for the struck sector at all — and
- * the "Bring both sides to the table" option then logged and returned while
- * still paying out its approval effect. The most diplomatic presidential path
- * was mechanically inert.
+ * A nationwide strike is authored by the crisis, not by a player or NPP
+ * bargaining campaign, so there is often no `bargainingCampaigns` row in
+ * `dispute` for the struck sector, and a broker option would log and return
+ * while still paying out its approval effect. This does not fabricate a
+ * settlement: it opens a real campaign from live conditions via
+ * `openBargainingCampaignFromLiveConditions`, records an offer from each side,
+ * and moves it to `dispute`, so downstream mediator odds, settlement terms and
+ * escalation run on the ordinary path.
  *
- * This does not fabricate a settlement: it opens a real campaign against a
- * real employer from live conditions (same `openBargainingCampaignFromLiveConditions`
- * the union and NPP surfaces use, so the mandate is computed from actual
- * locals, treasury, labour tightness and law support), records a genuine offer
- * from each side, and moves it to `dispute`. Everything downstream — mediator
- * odds, settlement terms, escalation — runs on the ordinary path.
- *
- * Returns null when the world genuinely cannot support one, in which case the
- * caller keeps the old log-and-return behaviour.
+ * Returns null when the world genuinely cannot support one; the caller then
+ * keeps the log-and-return behaviour.
  */
 async function openCrisisDispute(
   ctx: CrisisActionContext,

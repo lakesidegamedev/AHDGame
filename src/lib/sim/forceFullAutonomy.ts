@@ -77,20 +77,16 @@ export { stampInitialGameClock } from "@/lib/admin/bootstrapGameWorld";
 export async function forceFullAutonomy(
   db: Db,
   /**
-   * Autonomy tier to force. Defaults to v3 (the historical behavior of this
-   * helper). Pass "v4" to exercise the global tier — the harness previously
-   * hardcoded v3, which meant the one thing v4 changes (autonomy running inside
-   * player-enabled countries) could not be simulated at all. Pass "v5" for the
+   * Autonomy tier to force. Defaults to v3. Pass "v4" for the global tier
+   * (autonomy running inside player-enabled countries), "v5" for the
    * persistent-goal tier, "v6" for NPP engine 6.
    *
-   * Note that at v4 the `enabledForPlayers = false` sweep below stops being the
-   * mechanism that makes autonomy apply everywhere — v4 applies everywhere by
-   * definition. It is still performed so a v3 and a v4 run differ only in the
-   * level, which is what makes an A/B comparison meaningful.
+   * At v4 the `enabledForPlayers = false` sweep below still runs, even though v4
+   * applies everywhere by definition, so a v3 and a v4 run differ only in the
+   * level and stay A/B comparable.
    *
-   * The default is deliberately NOT raised as new tiers ship: every comparison
-   * run has to name its own level, or the baseline silently moves under the
-   * comparison and the A/B stops meaning anything.
+   * The default is deliberately not raised as new tiers ship: every comparison
+   * run names its own level, or the baseline silently moves under the comparison.
    */
   level: NppAutonomyLevel = "v3",
   foreignPolicyMode: NppForeignPolicyMode = "shadow",
@@ -214,24 +210,13 @@ export async function forceFullAutonomy(
       ALL_COUNTRY_IDS.map((countryId) =>
         countryGameStates.updateOne(
           { _id: countryId },
-          // MUST stay false. It reads like it should be true for a world meant to
-          // exercise everything, and flipping it does switch the auto-disaster /
-          // auto-crisis / IO-broadcast spawners on (they walk
-          // `getEnabledCountryIdsFromDb`, which resolves
-          // `doc?.enabledForPlayers ?? status === "active"`; `??` only falls
-          // through on null/undefined, so `false` pins that list to EMPTY).
-          //
-          // But `isNppAutonomyActive` returns false for any player-enabled country
-          // REGARDLESS of autonomy level. It is a legacy strict rail that
-          // deliberately does not extend into player countries even at v2+. It
-          // gates appointNppPrimeMinister, autonomousOrgVoting and central-bank
-          // chair seating, so flipping this would stop every government forming
-          // for the whole run. That is the exact failure this file's header
-          // documents (UK and JP never formed a government across 100 turns).
-          //
-          // The two needs genuinely conflict inside one predicate, so the spawners
-          // were given their own status-based resolver instead:
-          // `getSimulatedCountryIds` in countryAccess.ts.
+          // MUST stay false. Setting it true enables the auto-disaster/auto-crisis/
+          // IO-broadcast spawners, which walk `getEnabledCountryIdsFromDb`
+          // (`doc?.enabledForPlayers ?? status === "active"`), but `isNppAutonomyActive`
+          // returns false for any player-enabled country regardless of autonomy level.
+          // That gates appointNppPrimeMinister, autonomousOrgVoting and central-bank
+          // chair seating, so flipping this stops every government from forming for the
+          // whole run. The spawners instead use `getSimulatedCountryIds`.
           { $set: { enabledForPlayers: false, updatedAt: now } },
           { upsert: true }
         )

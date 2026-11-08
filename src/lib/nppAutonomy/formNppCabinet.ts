@@ -206,10 +206,9 @@ export async function formNppCabinet(
   countryId: CountryId,
   now: Date,
   /**
-   * Game-clock turn the appointments seat on (#1994). Persisted per seat as
+   * Game-clock turn the appointments seat on; persisted per seat as
    * `appointedTurn` so the reshuffle guard can enforce minimum tenure.
-   * Optional so older callers keep compiling; omitted means unstamped
-   * (legacy behavior — the guard waives tenure for unstamped seats).
+   * Optional: omitted means unstamped and the guard waives tenure.
    */
   currentTurn?: number
 ): Promise<FormNppCabinetResult> {

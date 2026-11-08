@@ -21,8 +21,6 @@
  * The stored fields are still named `treasurerApproval` and
  * `leadershipApproval`. They are now simply slot 1 and slot 2; renaming
  * them would be a migration over live rows for no behavioural gain.
- *
- * See `docs/plans/archive/2026-05/2026-05-22-treasury-two-person-approval.md`.
  */
 
 import type { Db, ObjectId } from "mongodb";
@@ -131,13 +129,8 @@ export function canProposePendingTransaction(
  * Validates the party has the seats required to legitimately run a
  * Request Funds workflow: one eligible approver in single mode, two in
  * double. "Eligible" excludes the requester, who may never sign their
- * own request. Counting them used to let a party queue a request that
- * no combination of officers could ever complete, leaving it to sit
- * until the expiry sweep.
- *
- * Request Funds (per the 2026-05-23 spec) is open to any party member;
- * eligibility is about whether there's ANYONE who could approve, not
- * whether the proposer holds an officer seat.
+ * own request. Counting them could let a party queue a request no
+ * combination of officers could ever complete.
  */
 export function canRequestFunds(
   party: OfficerSeats,
@@ -164,15 +157,10 @@ export function canRequestFunds(
 }
 
 /**
- * Resolves the approval mode a party's treasury actions actually run
- * under right now. The configured mode is `transactionApprovalMode`
- * (default "double"), but two people can only sign while two different
- * officers are seated. Below that, double collapses to "single" so the
- * lone officer is not permanently locked out of the treasury.
- *
- * It used to collapse whenever the TREASURER seat specifically was
- * empty, which dropped a Chair-plus-Vice-Chair party to one signature
- * even though two people were sitting there able to give two.
+ * Resolves the approval mode a party's treasury actions actually run under.
+ * The configured mode is `transactionApprovalMode` (default "double"), but
+ * double requires two different seated officers to sign. Below that, double
+ * collapses to "single" so the lone officer is not locked out of the treasury.
  *
  * Single mode is returned unchanged.
  */
@@ -215,7 +203,7 @@ export function isPendingTransactionComplete(
  *   - they hold no Chair / Vice-Chair / Treasurer seat
  *   - they have already signed this row (one person, one signature)
  *   - the row is a Request Funds row AND they're the requester
- *     (self-approval forbidden per the 2026-05-23 spec)
+ *     (self-approval forbidden)
  *   - both slots are already filled
  *
  * The approve route still does the atomic claim with

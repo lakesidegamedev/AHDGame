@@ -159,9 +159,8 @@ export async function getCampaignDetail(
       : Promise.resolve(false),
     getPartyTreasuryAccess(db, campaign, election, user, detailPreset),
   ]);
-  // A running mate gets an owner-level VIEW of the ticket campaign (canSeeExact),
-  // but a narrower action set, enforced client-side and by the server route
-  // gates, not here.
+  // Running mate gets owner-level view (canSeeExact) but a narrower action
+  // set, enforced by client and server route gates, not here.
   const canSeeExact = isManager || isNominee || isAdmin || isRunningMate;
   const isSameParty =
     user?.character?.party === campaign.party &&
@@ -322,13 +321,12 @@ export async function getCampaignDetail(
     );
     base.electionInfo.phase = phase.inPrimary ? "primary" : phase.inGeneral ? "general" : "unknown";
   }
-  // playerEndorsements.candidateId is keyed by the electionCandidates row
-  // _id (not campaign.candidateId, which is the character/NPP identity id —
-  // see ticket #868), so resolve the row once and join on it. A character
-  // can have more than one row per election (e.g. withdrew and re-entered
-  // under a different party). `candidateRow` prefers the active one and falls
-  // back to any row, which is what the ownSupport/suspension panel below
-  // expects. Endorsements do NOT take that fallback: see `activeCandidateRow`.
+  // playerEndorsements.candidateId keys on the electionCandidates row _id,
+  // not campaign.candidateId (the character/NPP identity id). A character can
+  // have multiple rows per election (e.g. re-entered under a different party).
+  // `candidateRow` prefers the active one and falls back to any row, which the
+  // ownSupport/suspension panel expects. Endorsements do NOT fall back: see
+  // `activeCandidateRow`.
   const candidateRowCandidates = await db
     .collection<ElectionCandidate>("electionCandidates")
     .find({
@@ -423,9 +421,8 @@ export async function getCampaignDetail(
     candidateIsNPP: campaign.candidateIsNPP === true,
     baseActionsPerTurn: gameConfigForActions?.baseActionsPerTurn ?? 4,
   });
-  // Rally-tour tick drains actions every turn (campaignTurn.ts subtracts it from the
-  // same $inc). Populated in the owner block below once we know the tour state; the
-  // headline perTurn is reported NET of it so the panel matches the balance movement.
+  // Rally-tour tick drains actions every turn; perTurn is reported
+  // NET of it so the panel matches balance movement. Populated below.
   let rallyTourActionDrain = 0;
 
   // Phase B — own-candidate Support snapshot for the rally panel. Only
@@ -549,13 +546,10 @@ export async function getCampaignDetail(
     ),
   };
 
-  // Campaign-room briefing (owner-only, read-only). Composes data the engine /
-  // tally already produced — never recomputes vote math. Skipped for archived
-  // campaigns (no live plan to brief). Delegate/tipping paths and coalition
-  // weakness are presidential concepts read off the tally; the cash runway
-  // applies to any race.
-  // Regular campaign flows stop while archived or suspended. Geographic
-  // office upkeep runs separately and can still charge a suspended campaign.
+  // Owner-only read-only briefing; composes engine/tally data, never recomputes
+  // vote math. Skipped for archived campaigns. Delegate and coalition weakness
+  // are presidential concepts; cash runway applies to any race. Regular flows
+  // stop while archived or suspended; office upkeep can still charge suspended.
   const accruesNothing = campaign.status === "archived" || campaignSuspended;
   const offices = await db
     .collection<CampaignFieldOffice>("campaignFieldOffices")

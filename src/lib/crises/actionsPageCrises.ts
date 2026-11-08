@@ -10,25 +10,15 @@ export interface ActionsPageCrisisEntry {
 /**
  * Whether an enriched crisis should appear on the Actions page.
  *
- * - Actionable decision prompts (for roles the character holds) are shown.
- * - Every other crisis that reaches this character is shown as an AMBIENT card
- *   whenever it still carries effects, so players know they are affected; they
- *   can dismiss these locally. Full detail lives on /world/crises.
- * - Only crises with nothing to decide AND nothing to feel are hidden.
+ * Actionable decision prompts (for roles the character holds) are shown. Every
+ * other crisis reaching this character is shown as an AMBIENT card when it
+ * still carries effects, so players know they are affected. Only crises with
+ * nothing to decide AND nothing to feel are hidden.
  *
- * "Ambient" is a property of the character, not of the crisis. A crisis is
- * ambient to anyone who cannot act on it — because the prompt belongs to a role
- * they do not hold, or because it has already been answered — and it goes on
- * hitting their metrics either way. This used to return false in both of those
- * cases, which is why an active Recession was invisible to every player in the
- * country except the head of state, and invisible to them too the moment they
- * answered it, while it kept draining GDP, employment, confidence and approval
- * for the rest of its (up to 24-turn) run.
- *
- * Hiding the PROMPT from a character who cannot take it is a separate job, and
- * `sanitizeCrisisForActionsPage` already does it by nulling `currentNode`;
- * `CrisisActionCard` renders the decision block only under `canInteract`. So an
- * entry kept here renders as a name/description/effects card and nothing more.
+ * "Ambient" is a property of the character, not the crisis: it is ambient to
+ * anyone who cannot act on it and it still hits their metrics. Hiding the
+ * PROMPT is a separate job: `sanitizeCrisisForActionsPage` nulls `currentNode`,
+ * and `CrisisActionCard` renders the decision block only under `canInteract`.
  */
 export function shouldShowCrisisOnActionsPage(
   entry: ActionsPageCrisisEntry,
@@ -46,23 +36,13 @@ export function shouldShowCrisisOnActionsPage(
 }
 
 /**
- * Strip everything about the decision from an entry the character cannot act on,
- * before it is sent to the client.
- *
- * All three pieces describe a prompt that is not theirs to take:
- *
- *  - `currentNode` is the prompt itself.
- *  - `interaction` is the live decision state. It also carries
- *    `leaderResponses`, which is where covert campaign choices live, so shipping
- *    it to a bystander would hand them a ledger the crisis page deliberately
- *    redacts. The card reads it only under `canInteract`, for the collective
- *    fund bar.
- *  - `crisis.interactionDefinition` is the authored decision tree. Not secret
- *    (the crisis page shows it to everyone) but it is the bulk of an ambient
- *    card's payload, and this feed is polled by every player once a minute.
- *
- * An ambient card needs the name, the description and the effects, and that is
- * what is left.
+ * Strip decision state from an entry the character cannot act on before it is
+ * sent to the client:
+ *  - currentNode is the prompt itself.
+ *  - interaction is live decision state and carries leaderResponses, where
+ *    covert campaign choices live; the card reads it only under canInteract.
+ *  - crisis.interactionDefinition is the bulk of an ambient card's payload,
+ *    and this feed is polled once a minute by every player.
  */
 export function sanitizeCrisisForActionsPage<T extends ActionsPageCrisisEntry>(entry: T): T {
   if (entry.canInteract) return entry;

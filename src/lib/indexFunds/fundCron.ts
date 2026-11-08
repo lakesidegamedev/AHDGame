@@ -2,18 +2,18 @@ import { settleBankFundSubscriptions } from "./subscriptions";
 /**
  * Index Fund Cron Engine
  *
- * Runs once per game turn (via the turn phase):
+ * Runs once per game turn:
  *   Pass 1: mark holdings to market, recompute NAV, deploy bond reserve.
  *   Pass 2: recompute target constituents (financial-day cadence, or first init).
- *   Pass 3: two-sided rebalance toward those weights (sell overweight, buy underweight from public float).
- *   Pass 3b: cross-fund rebalancing (same financial-day cadence as Pass 2).
+ *   Pass 3: two-sided rebalance toward those weights.
+ *   Pass 3b: cross-fund rebalancing (same cadence as Pass 2).
  *   Pass 3c: process queued redemptions and snapshot NAV.
  *   Step 6: NPP fund investing, throttled by NPP_FUND_INVESTMENT_INTERVAL.
  *   Step 7: sponsored expense fees and wind-down.
  *
- * Gated behind the `indexFundsMode` feature flag. If disabled, the engine
- * is a silent no-op. The HTTP route `/api/cron/index-fund` is a manual/debug
- * entry point; it is not registered in `src/lib/cron.ts`.
+ * Gated behind `indexFundsMode`; a silent no-op when disabled. The HTTP
+ * route `/api/cron/index-fund` is a manual/debug entry point and is not
+ * registered in `src/lib/cron.ts`.
  */
 
 import { withBondPoolLedgerSnapshot } from "@/lib/bonds/marketPoolLedger";
@@ -212,7 +212,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   const timingOn = process.env.SIM_CORP_TIMING === "1";
   const passTimings: Array<[string, number]> = [];
   let _tPrev = timingOn ? Date.now() : 0;
-  // Always feeds the persisted phase sub-steps (#2689).
+  // Always feeds the persisted phase sub-steps.
   const steps = substepMarker();
   const mark = (label: string): void => {
     steps.mark(label);
@@ -233,7 +233,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     }
   );
   const bondLiquidityEnabled = liquidityConfig?.indexFundBondLiquidityEnabled === true;
-  // #1001 domestic coverage: off (or unset) skips the ensure entirely, so the
+  // domestic coverage: off (or unset) skips the ensure entirely, so the
   // pass is unchanged. On, missing home-sovereign funds are seeded before the
   // serviceable-fund read so they deploy real cash into home paper this turn.
   if (domesticCoverageEnabled(liquidityConfig)) {
@@ -261,7 +261,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   );
   const serviceableFunds = await listServiceableFunds(db);
   const redemptionServiceFundIds = serviceableFunds.map((fund) => fund._id);
-  // A background country's national index (#5702) is cash marked to its
+  // A background country's national index is cash marked to its
   // output index by the macro kernel: it owns no equities or bonds, so it
   // skips NAV, bond deployment and rebalancing and is only served below for
   // its redemption queue and snapshot.
@@ -272,7 +272,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   const openOrdersEscrowByFundId = await loadOpenOrdersEscrowByFundId(db, fundIds);
   const queuedUnitsByFundId = await loadQueuedRedemptionUnitsByFundId(db, fundIds);
   const initialBondPrincipalByFundId = await sumFundBondHoldingsByFundId(db, funds, exchangeRates);
-  // #992 tranche 6: one thresholds read for every bond-reserve purchase row
+  // One thresholds read for every bond-reserve purchase row
   // this turn; threaded through each deploy so N funds share it.
   const [bondDeployThresholds, turnLengthMinutes, bondSettleInTransaction] = await Promise.all([
     loadTxThresholds(db),
@@ -545,7 +545,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     // Queued redemptions hold the fund out of trading. One held slot is routine:
     // the queue pays down and the catch-up turn rebalances. Warn only when the
     // fund has already missed a whole day, and only on its own stagger turn so a
-    // stuck fund says so once a day rather than every turn (#5083).
+    // stuck fund says so once a day rather than every turn.
     else if (
       fund.targetConstituents.length > 0 &&
       rebalanceDue(fund) &&

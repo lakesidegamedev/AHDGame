@@ -145,7 +145,7 @@ export interface RunConfig {
   mcpVersion?: string;
   requestedConfig?: Record<string, unknown>;
   effectiveConfigInitial?: Record<string, unknown>;
-  /** Pinned-source identity (#1966): requested pin plus the exact executed
+  /** Pinned-source identity: requested pin plus the exact executed
    * path/SHA recorded by runWorld. Proves which code produced the report. */
   source?: {
     worktree?: string | null;

@@ -321,40 +321,23 @@ const MODIFIER_DEFS: ModifierDef[] = [
     conditions: [{ category: "economic", metric: "rdIntensity", op: ">=", value: 3.2 }],
   },
 
-  // ── Right-coded positive badges (Phase B: bias symmetry) ────────────────────
+  // ── Right-coded positive badges (bias symmetry) ──────────────────────────
   //
-  // Badge symmetry requirement: every left-coded positive badge must have either
-  // a right-coded mirror or a documented exemption. This block redresses the
-  // historical asymmetry where left-coded concepts (universal healthcare, safety
-  // net, green transition, civic participation, social cohesion) had dedicated
-  // badges while right-coded concepts (economic freedom, defense, national
-  // confidence, fiscal discipline) did not.
+  // Badge symmetry: every left-coded positive badge needs a right-coded mirror
+  // or a documented exemption.
   //
-  // Left-coded positive badge      → Right-coded mirror / exemption
-  // ──────────────────────────────── ───────────────────────────────────────
-  // universal_healthcare           → EXEMPTION: healthcare access is universally
-  //                                   valued across the political spectrum; the
-  //                                   right-coded counter (market-based choice)
-  //                                   is not modelled as a distinct badge.
-  // strong_safety_net             → EXEMPTION: food security / low homelessness
-  //                                   are baseline welfare, not ideologically
-  //                                   exclusive to the left.
-  // green_transition / clean_env  → EXEMPTION: environmental quality is a
-  //                                   cross-spectrum good; right-coded
-  //                                   deregulatory stance is captured indirectly
-  //                                   via economic_freedom (low regulatoryBurden).
-  // social_cohesion                → national_confidence (national pride mirror)
-  // civic_flourishing              → EXEMPTION: civic participation overlaps
-  //                                   with voter-turnout and high_public_trust;
-  //                                   no right-coded counter beyond governance
-  //                                   transparency badges.
-  // balanced_budget               → fiscal_discipline (tighter fiscal threshold)
+  // Exempted (not ideologically exclusive):
+  //   universal_healthcare, strong_safety_net, green_transition/clean_env,
+  //   civic_flourishing.
+  // Mirrored:
+  //   social_cohesion     → national_confidence
+  //   balanced_budget     → fiscal_discipline
   //
   // Right-coded badges added below:
-  //   economic_freedom     ← mirror of strong_growth / innovation_economy cluster
-  //   strong_defense       ← mirror of safe_streets (internal ↔ external security)
-  //   national_confidence  ← mirror of social_cohesion
-  //   fiscal_discipline    ← mirror of balanced_budget (stricter conditions)
+  //   economic_freedom    ← strong_growth / innovation_economy cluster
+  //   strong_defense      ← safe_streets (internal ↔ external security)
+  //   national_confidence ← social_cohesion
+  //   fiscal_discipline   ← balanced_budget (stricter conditions)
   {
     id: "economic_freedom",
     label: "Economic Freedom",
@@ -393,9 +376,7 @@ const MODIFIER_DEFS: ModifierDef[] = [
     ],
   },
   // Right-lane axis-metric badges. Thresholds sit above untouched 2019 national
-  // averages but within one full-strength law swing of high-seed regions
-  // (#2898): borderSecurity SOUTH ~58 + enforcement ~+5 ⇒ 63; firearmRights
-  // SOUTH ~82 + state gun law ~+12 ⇒ ~94 (threshold 88).
+  // averages but within one full-strength law swing of high-seed regions.
   {
     id: "secure_border",
     label: "Secure Border",

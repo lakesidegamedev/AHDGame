@@ -14,49 +14,23 @@ import type {
 } from "../types";
 
 /**
- * Support incident #1694. US central bank liquidity injections (turns 274,
- * 365, 392, 405, 449 and 455) credited private banks' vaults and booked the
- * same amount as INTEREST-BEARING central bank margin debt. The banks never
- * asked for the cash. The margin interest exceeded their income and consumed
- * their own capital, until the solvency pass failed them or supervision
- * revoked them as undercapitalized. Resolution then repaid the injected debt
- * from the vault and paid the owners nothing.
+ * Restores banks charged margin interest on central bank liquidity injections
+ * they never requested.
  *
- * The code half (injected debt is interest-free) is PR #5035.
+ * Each bank that paid injection interest gets it refunded to the owning
+ * corporation's liquidCapital, summed from its `cb-margin-interest` money moves.
+ * Banks closed by the injections and not yet rechartered are reopened through
+ * `issueCharter`, which posts the required capital out of the refund.
  *
- * WHAT IS RESTITUTED
+ * Deliberately NOT reopened: banks whose owners already rechartered (refund
+ * only), and banks whose estate never resolved (recharter refused).
  *
- * 1. Every bank that received an injection gets back the margin interest it
- *    paid, credited to the owning corporation's liquidCapital. Every dollar of
- *    these banks' margin debt came from injections (debt at closure equals the
- *    injected total for each), so all of their `cb_margin_interest` payments
- *    are injection interest. Totals are summed from the applied
- *    `cb-margin-interest:<bank>:<turn>` money moves, to the cent.
+ * Idempotency: the refund writes a durable marker in the same atomic update as
+ * the increment, under a filter requiring its absence; the reopen step runs only
+ * on a pending marker with an inactive charter.
  *
- * 2. Banks closed by the injections and not yet rechartered by their owners
- *    are reopened with their original charter type through `issueCharter`,
- *    the normal player path, which posts the required capital out of the
- *    refunded cash. Books start clean: the household deposit book already
- *    went back to the money supply at resolution.
- *
- * Deliberately NOT reopened here:
- *   - American Broadcasting Company and the corporation at sequential 883:
- *     their owners already rechartered; refund only.
- *   - Continental Merchants Bancorp (AI): its estate never resolved
- *     (no depositorsResolvedTurn), so a recharter is refused until it does.
- *   - Greenbaum Group and Artemis Global: injection interest refunded, but
- *     their failures were driven mainly by a deposit run, assessed separately.
- *
- * IDEMPOTENCY
- *
- * The refund writes a durable `remediation["AHD-1694-..."]` marker in the
- * same atomic update as the increment, under a filter requiring its absence.
- * The reopen step only runs on a corporation whose marker has
- * `reopen: "pending"` and whose charter is not active, and stamps the result.
- *
- * This heal MINTS MONEY on purpose: it restores capital the injection
- * interest destroyed. Each credit emits a `restitution_credit` tx row so the
- * shadow ledger books an attributed mint.
+ * This heal MINTS MONEY on purpose, restoring capital the interest destroyed.
+ * Each credit emits a `restitution_credit` tx row so the shadow ledger books it.
  */
 
 export const DEFECT_ID = "AHD-1694-injected-bank-restoration";

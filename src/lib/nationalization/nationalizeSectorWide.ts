@@ -77,15 +77,15 @@ export interface NationalizeSectorWideResult {
 const UNOWNED_DEFAULT_MARGIN = 20;
 
 /**
- * Industry-wide sector nationalization (spec — sector-wide design): carve
- * `carveFraction` of every in-scope `sectorType` holding in the country into the
- * country's National Corporation. Two pools, gated by `scope`:
- *   - corp-held (non-state-owned, player + NPC): the donor is compensated
- *     `applyTier(fraction × sectorNPV)` and its row is shrunk (or removed at 100%);
- *   - unowned market: capacity is moved with NO compensation (no owner).
+ * Industry-wide sector nationalization: carve `carveFraction` of every in-scope
+ * `sectorType` holding in the country into the country's National Corporation.
+ * Two pools, gated by `scope`:
+ *   - corp-held (non-state-owned, player + NPC): donor compensated
+ *     `applyTier(fraction × sectorNPV)` and its row shrunk (or removed at 100%);
+ *   - unowned market: capacity moved with NO compensation (no owner).
  * Carves merge into the NatCorp's existing (type, region) sector or create one.
  * Politics + ledger fire once for the aggregate taking. The passed bill is the
- * authority — there is no per-corp eligibility gate.
+ * authority: there is no per-corp eligibility gate.
  */
 export async function nationalizeSectorWide(
   db: Db,
@@ -138,23 +138,17 @@ export async function nationalizeSectorWide(
   const destCurrency = dest.liquidCurrencyCode ?? "USD";
   const destRate = fxByCurrency.get(destCurrency) ?? 1;
 
-  // An all-zero plant fold, for a taking whose donor carries no capital state
-  // (the unowned pool, or a legacy corp row that predates the plants migration).
-  // `capitalStock` is filled in by the caller of this helper.
+  // All-zero plant fold for a taking whose donor carries no capital state
+  // (unowned pool, or a legacy corp row predating the plants migration).
+  // `capitalStock` is filled in by the caller.
   //
-  // `survivor` is the NatCorp row this synthetic donor is about to be folded
-  // into, or null when the taking is creating a fresh row. It exists for ONE
-  // field: `mothballed`. `mergeSectorPlantFields` ANDs the flag, so a hardcoded
-  // `false` here is not neutral — folding an absent donor into a MOTHBALLED
-  // NatCorp row would flip it back to running, and the state would find itself
-  // producing and paying full upkeep on a plant it had deliberately idled, with
-  // no player action behind it. Seeding the flag from the survivor makes the
-  // empty donor a true merge identity on every field (it is exactly
-  // `identitySectorPlantFields(survivor)` plus the derived capacity), which is
-  // the same trap that helper was written for on the rollback paths.
+  // `survivor` is the NatCorp row being folded into, or null on create. It
+  // exists for ONE field: `mothballed`. `mergeSectorPlantFields` ANDs the flag, so
+  // a hardcoded `false` here would un-mothball an idled NatCorp that then pays full
+  // upkeep with no player action. Seeding from the survivor makes the empty donor a
+  // true merge identity (same trap as `identitySectorPlantFields`).
   //
-  // On the create branch there is no survivor and `false` is correct: a fresh
-  // row grown from unowned headroom starts running.
+  // On create there is no survivor and `false` is correct.
   const emptyPlant = (survivor: CorporateSector | null): SectorPlantFieldsUpdate => ({
     capitalStock: 0,
     plantCount: 0,
@@ -187,27 +181,13 @@ export async function nationalizeSectorWide(
     currentGrowthRate: number,
     incomingPlant: SectorPlantFieldsUpdate | null
   ): Promise<void> {
-    // NOTHING-TO-TRANSFER GUARD — capacity-aware under plants.
-    //
-    // This used to be a bare `if (revenueAnchor <= 0) return;`, and it sat ABOVE
-    // every capacity write below. Under plants that is a capacity INCINERATOR
-    // that the treasury pays for. A sector's `revenue` is DERIVED from
-    // `capitalStock`, and a MOTHBALLED sector reports revenue 0 while holding
-    // its full capital stock (and possibly outstanding CIP / build orders). For
-    // such a donor: compensation upstream is priced on replacement-cost BOOK, so
-    // the treasury pays in full for the plant; this guard then returned before
-    // the NatCorp received anything; and the caller's `deleteOne` (f >= 1) or
-    // complement-shrink (f < 1) removed the capacity from the donor anyway. Net
-    // effect: the state buys a factory at book and the factory ceases to exist.
-    //
-    // The guard's real intent is "there is nothing here to move". Below plants
-    // revenue IS the only quantity that moves, so `revenueAnchor <= 0` still
-    // expresses that exactly and the behaviour is byte-identical. Under plants
-    // the transferable substance is the plant state, so admit any donor carrying
-    // capacity or queued build orders even at zero
-    // revenue. `mothballed` / `plantsStartTurn` alone are deliberately NOT
-    // enough — they are history flags, not substance, and admitting on them
-    // would create empty NatCorp rows.
+    // Nothing-to-transfer guard. Revenue alone misses plant state:
+    // a mothballed donor reports revenue 0 but may still hold capital stock
+    // or queued build orders, which upstream compensation pays for at book.
+    // Without this, the caller removes the capacity and the treasury pays
+    // for a factory that ceases to exist. Admit any donor with plant
+    // substance even at zero revenue. `mothballed` / `plantsStartTurn` alone
+    // are history flags, not substance, and would create empty NatCorp rows.
     const plantHasSubstance =
       plantsEnabled &&
       incomingPlant != null &&
@@ -229,28 +209,25 @@ export async function nationalizeSectorWide(
       writeCorpEconomicLocal(growthCostAnchor, destCurrency, destRate)
     );
     // PLANTS LOCKSTEP. Under `marketSystemMode >= "plants"` a corporate sector's
-    // `revenue` is DERIVED — `sectorTurn` restates it from `capitalStock × mix
-    // price` every turn — so the `$inc: { revenue }` below, on its own, is erased
-    // on the very next tick and a sector-wide taking hands the NatCorp NOTHING
-    // while the donor's row (shrunk or deleted) has really lost the capacity.
-    // The quantity therefore has to land on `capitalStock`.
+    // `revenue` is DERIVED: `sectorTurn` restates it from `capitalStock × mix
+    // price` every turn, so the `$inc: { revenue }` below is erased on the next
+    // tick and the NatCorp gets NOTHING while the donor has really lost the
+    // capacity. The quantity must land on `capitalStock`.
     //
     // Two sources, in priority order:
-    //   1. the donor's own carved plant state — units LEAD, because the donor is
+    //   1. the donor's own carved plant state, units LEAD, because the donor is
     //      losing exactly these units and the taking must conserve them;
-    //   2. failing that (unowned pool, or a legacy row with no `capitalStock`
-    //      yet), `computeSectorImpliedUnits` off the SAME post-haircut ₳ figure
-    //      the revenue leg is written from. That is the engine's own ₳ → units
-    //      conversion, so the units are commensurable with `capitalStock`. It
-    //      takes ₳, NOT the local-currency number: `capitalStock` is currency
-    //      free, and feeding it `transferRevenue` would restate the quantity by
-    //      the NatCorp's FX rate.
+    //   2. failing that (unowned pool, or legacy row with no `capitalStock`),
+    //      `computeSectorImpliedUnits` off the SAME post-haircut ₳ figure the
+    //      revenue leg is written from. It takes ₳, NOT the local-currency
+    //      number: `capitalStock` is currency free, and feeding it
+    //      `transferRevenue` would restate the quantity by the NatCorp's FX rate.
     //
     // Revenue is still written, in lockstep and off the same quantity, so the two
     // views cannot diverge before `sectorTurn` next restates them.
     //
     // Below plants `plantIn` is null and every write here is byte identical to
-    // the pre-P3b behaviour.
+    // the legacy behaviour.
     const haircutAnchor = revenueAnchor * (1 - NATIONALIZATION_REVENUE_HAIRCUT);
     // The survivor is read BEFORE the fold is built: `emptyPlant` needs it to
     // seed `mothballed` (see the note there), so the lookup cannot wait until
@@ -537,31 +514,20 @@ export async function nationalizeSectorWide(
       // Compute the whole-facility split once so donor and state counts are
       // complementary, including a one-facility sub-quantum holding.
       const plantCountSplit = splitWholePlantCount(openingPlantCount, f);
-      // PLANTS — the capacity leg of the carve. Below plants this is null and
-      // both writes below are byte identical to the pre-P3b behaviour.
-      //
-      // `carveSectorPlantFields(sec, f)` is the same slicer the privatization
-      // spin-out uses: capacity and each build order scale by `f`, while
-      // `mothballed` / `plantsStartTurn` are copied (they describe the plant's
-      // history, which both halves inherit).
-      //
-      // The 15% NATIONALIZATION_REVENUE_HAIRCUT is then applied to `capitalStock`
-      // and to `capitalStock` ONLY, for two reasons. It has to be applied to the
-      // capacity leg at all, because under plants revenue is derived FROM
-      // capacity: haircutting only the revenue write would be undone on the next
-      // tick and the deliberate transition loss would silently evaporate, so the
-      // two views would diverge. And it must NOT touch `constructionInProgress
-      // Anchor` or the queue's `costPaidAnchor`, because those are real ₳ already
-      // charged to a corp — shaving 15% off them destroys money rather than
-      // capacity, and breaks the invariant that a sector's CIP equals Σ of its
-      // own queue.
-      //
-      // BUILDINGS IN FLIGHT therefore TRANSFER, at the carve fraction and at full
-      // value. The state seizes the industry as a going concern; a half-built
-      // plant the donor has already paid for is part of the taking, and it is
-      // priced into the compensation above (D11 values replacement-cost book,
-      // which includes CIP). Leaving in-flight orders behind would strand them on
-      // a donor row that is DELETED at f = 1, burning the ₳ outright.
+      // PLANTS: capacity leg of the carve. Null below plants.
+      // `carveSectorPlantFields` is the privatization slicer: capacity and build
+      // orders scale by `f`; mothballed / plantsStartTurn copy (they describe
+      // history both halves inherit).
+      // The 15% haircut applies to `capitalStock` only. It must hit the capacity
+      // leg because revenue is derived from capacity; haircutting only the
+      // revenue write would be undone next tick. It must NOT touch
+      // `constructionInProgressAnchor` or `costPaidAnchor`: those are real \u20b3
+      // already charged, and shaving them destroys money and breaks the
+      // invariant that a sector's CIP equals \u03a3 of its own queue.
+      // In-flight build orders transfer at the carve fraction, at full value:
+      // the state seizes the industry as a going concern (replacement-cost book
+      // includes CIP). Leaving them behind would strand them on a donor row
+      // that is deleted at f = 1, burning the \u20b3.
       const carvedPlant: SectorPlantFieldsUpdate | null = plantsEnabled
         ? (() => {
             const sliced = carveSectorPlantFields(

@@ -108,9 +108,8 @@ export interface AltDigestSelection {
 }
 
 /**
- * Pure selection: given the full current `open` cluster set and the
- * previously-reported id set, determine which clusters are newly notable.
- * Exported for unit tests.
+ * Pure selection: given the current `open` clusters and previously-reported
+ * ids, return clusters that are newly notable. Exported for tests.
  */
 export function selectNewClusters(
   openClusters: AltCluster[],
@@ -139,9 +138,8 @@ export function selectNewClusters(
 }
 
 /**
- * Prune ids that are no longer `open` out of a previously-reported set, so
- * a dismissed-then-reopened ring can be reported again. Exported for unit
- * tests.
+ * Prune ids no longer `open` from a reported set, so a dismissed-then-
+ * reopened ring can be reported again. Exported for tests.
  */
 export function pruneReportedIds(
   reportedIds: ReadonlySet<string>,
