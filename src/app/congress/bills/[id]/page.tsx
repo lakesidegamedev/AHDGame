@@ -227,6 +227,16 @@ function BillDetailContent() {
         : isActiveOther || isConcurrent
           ? bill.otherChamberVotingEndsAt
           : null;
+  const heroDeadlineTurn =
+    bill.status === "veto_override"
+      ? bill.overrideVotingEndsOnTurn
+      : bill.currentChamber === bill.originChamber
+        ? isActive || isConcurrent || isJpOverride || isCabinetReview
+          ? bill.votingEndsOnTurn
+          : null
+        : isActiveOther || isConcurrent
+          ? bill.otherChamberVotingEndsOnTurn
+          : null;
   const heroCast = heroVotes.for + heroVotes.abstain + heroVotes.against;
   const showSeatingHero =
     heroEligible > 0 && (isActive || isActiveOther || isConcurrent || isJpOverride || heroCast > 0);
@@ -247,6 +257,7 @@ function BillDetailContent() {
           votes={heroVotes}
           eligible={heroEligible}
           liveDeadline={heroDeadline}
+          liveDeadlineTurn={heroDeadlineTurn}
           filibustered={filibustered}
           supermajority={supermajority}
           myVote={
@@ -286,7 +297,10 @@ function BillDetailContent() {
                     </p>
                   </div>
                   {bill.overrideVotingEndsAt && (
-                    <DeadlineCountdown deadline={bill.overrideVotingEndsAt} />
+                    <DeadlineCountdown
+                      deadline={bill.overrideVotingEndsAt}
+                      deadlineTurn={bill.overrideVotingEndsOnTurn}
+                    />
                   )}
                 </div>
 
@@ -368,7 +382,11 @@ function BillDetailContent() {
                       bill.votingEndsAt && (
                         <span className="inline-flex items-center gap-1.5 text-xs text-warning">
                           <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                          LIVE · <DeadlineCountdown deadline={bill.votingEndsAt} />
+                          LIVE ·{" "}
+                          <DeadlineCountdown
+                            deadline={bill.votingEndsAt}
+                            deadlineTurn={bill.votingEndsOnTurn}
+                          />
                         </span>
                       )}
                   </div>
@@ -492,6 +510,9 @@ function BillDetailContent() {
                     votesAgainst={bill.otherChamberVotesAgainst}
                     votesAbstain={bill.otherChamberVotesAbstain}
                     deadline={isActiveOther || isConcurrent ? bill.otherChamberVotingEndsAt : null}
+                    deadlineTurn={
+                      isActiveOther || isConcurrent ? bill.otherChamberVotingEndsOnTurn : null
+                    }
                     myVote={bill.myOtherChamberVote}
                     canVote={bill.canVoteOther && !voting}
                     onVote={(v) => handleVote(true, v)}
@@ -602,7 +623,10 @@ function BillDetailContent() {
                     </p>
                   </div>
                   {bill.presidentActionDeadline && (
-                    <DeadlineCountdown deadline={bill.presidentActionDeadline} />
+                    <DeadlineCountdown
+                      deadline={bill.presidentActionDeadline}
+                      deadlineTurn={bill.presidentActionDeadlineOnTurn}
+                    />
                   )}
                 </div>
                 {bill.canPresidentialAction && (
