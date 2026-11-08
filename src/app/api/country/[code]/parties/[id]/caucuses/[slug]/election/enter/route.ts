@@ -61,22 +61,6 @@ export async function POST(
       return errorResponse(403, "Only active caucus members may run for chair.");
     }
 
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: auth.user.character.userId }, { projection: { createdAt: 1 } });
-    const cooldown = isInNewCharacterCooldown({
-      userCreatedAt: userDoc?.createdAt ?? new Date(0),
-      characterCreatedAt: auth.user.character.createdAt,
-      partyJoinedAt: auth.user.character.partyJoinedAt,
-      includePartyJoinedAt: false,
-    });
-    if (cooldown.blocked) {
-      return errorResponse(
-        403,
-        "New characters can't run in caucus chair elections for 24 hours. Try again later."
-      );
-    }
-
     const election = await db.collection<CaucusChairElection>("caucusChairElections").findOne({
       caucusId: caucus._id,
       status: "voting",
@@ -85,18 +69,38 @@ export async function POST(
       return errorResponse(404, "No active caucus chair election found.");
     }
 
-    // Minimum party tenure before standing for caucus chair (leadershipTenure.ts) —
-    // measured on party membership, matching national/state leadership.
-    const currentTurn = await getCurrentTurn(db);
-    // `partyId` (canonical String(party.sequentialId)), not the raw `id` path
-    // segment — "07" and "7" resolve to the same party but compare unequal.
-    const tenure = getLeadershipEligibility(auth.user.character, currentTurn, partyId);
-    if (!tenure.eligible) {
-      return errorResponse(
-        403,
-        `You must be a member of this party for ${tenure.turnsRemaining} more turn${tenure.turnsRemaining === 1 ? "" : "s"} before you can run for leadership.`,
-        { extra: { turnsRemaining: tenure.turnsRemaining } }
-      );
+    // Both gates are waived for founding races, matching the caucus vote route
+    // and the national and state leadership enter routes.
+    if (!election.founding) {
+      const userDoc = await db
+        .collection("users")
+        .findOne({ _id: auth.user.character.userId }, { projection: { createdAt: 1 } });
+      const cooldown = isInNewCharacterCooldown({
+        userCreatedAt: userDoc?.createdAt ?? new Date(0),
+        characterCreatedAt: auth.user.character.createdAt,
+        partyJoinedAt: auth.user.character.partyJoinedAt,
+        includePartyJoinedAt: false,
+      });
+      if (cooldown.blocked) {
+        return errorResponse(
+          403,
+          "New characters can't run in caucus chair elections for 24 hours. Try again later."
+        );
+      }
+
+      // Minimum party tenure before standing for caucus chair (leadershipTenure.ts),
+      // measured on party membership, matching national/state leadership.
+      // `partyId` (canonical String(party.sequentialId)), not the raw `id` path
+      // segment: "07" and "7" resolve to the same party but compare unequal.
+      const currentTurn = await getCurrentTurn(db);
+      const tenure = getLeadershipEligibility(auth.user.character, currentTurn, partyId);
+      if (!tenure.eligible) {
+        return errorResponse(
+          403,
+          `You must be a member of this party for ${tenure.turnsRemaining} more turn${tenure.turnsRemaining === 1 ? "" : "s"} before you can run for leadership.`,
+          { extra: { turnsRemaining: tenure.turnsRemaining } }
+        );
+      }
     }
 
     const now = new Date();

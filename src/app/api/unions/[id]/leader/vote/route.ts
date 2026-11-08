@@ -31,6 +31,10 @@ import {
   tallyUnionLeaderVotes,
 } from "@/lib/unions/unionLeadershipVote";
 import { resolveUnionOwner } from "@/lib/unions/unionOwnerDisplay";
+import { isSameCountry } from "@/lib/api/sameCountry";
+import { isUnionsBanned } from "@/lib/labour/unionLaws";
+import { isUnionProsecutionBarred } from "@/lib/unions/unionProsecutionBar";
+import type { CountryId } from "@/lib/constants/countries";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -113,7 +117,14 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     let myVotingPower = 0;
     if (user?.character) {
       myVotingPower = weights.get(user.character._id.toString()) ?? 0;
-      canVote = myVotingPower > 0 && isUnionLeadershipElectionOpen(union);
+      // Same refusals the vote command applies, so the ballot is never live
+      // for a voter every click would be refused for.
+      canVote =
+        myVotingPower > 0 &&
+        isUnionLeadershipElectionOpen(union) &&
+        isSameCountry(user.character, { countryId: union.countryId as CountryId }) &&
+        !(await isUnionsBanned(db, union.countryId as CountryId)) &&
+        !(await isUnionProsecutionBarred(db, user.character._id));
       const myVoteDoc = votes.find(
         (v) => v.voterCharacterId.toString() === user.character!._id.toString()
       );
@@ -124,13 +135,17 @@ async function handleGET(_request: Request, { params }: RouteParams) {
       union.countryId === "US"
         ? { $or: [{ countryId: "US" as const }, { countryId: { $exists: false } }] }
         : { countryId: union.countryId };
+    // The vote command accepts a seated president even after they moved away,
+    // so reaffirming them must stay possible from the ballot.
     const candidates = canVote
       ? await db
           .collection<Character>("characters")
           .find(
             {
               $and: [
-                candidateCountryFilter,
+                incumbentId && ObjectId.isValid(incumbentId)
+                  ? { $or: [candidateCountryFilter, { _id: new ObjectId(incumbentId) }] }
+                  : candidateCountryFilter,
                 {
                   $or: [
                     { unionLeaderOf: null },

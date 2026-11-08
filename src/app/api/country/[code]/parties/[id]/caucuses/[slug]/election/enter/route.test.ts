@@ -142,4 +142,20 @@ describe("caucus chair election enter route — tenure gate", () => {
     const payload = await response.json();
     expect(payload.turnsRemaining).toBe(14);
   });
+
+  it("waives the tenure gate in a founding race, as the vote route does", async () => {
+    await setup(20, 30); // 10 served, would fail the normal gate
+    db.collectionMocks["caucusChairElections"]!.findOne.mockResolvedValue({
+      _id: new ObjectId(),
+      caucusId,
+      status: "voting",
+      founding: true,
+    });
+    const { POST } = await import("./route");
+    const response = await POST(new Request("http://localhost/api"), {
+      params: Promise.resolve({ code: "us", id: "7", slug: "left" }),
+    });
+
+    expect(response.status).not.toBe(403);
+  });
 });
