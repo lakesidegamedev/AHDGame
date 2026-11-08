@@ -16,6 +16,9 @@ import {
   getNationalBudgetSeedConfigsForPreset,
   type NationalBudgetSeedConfig,
 } from "@/lib/seeds/reference/budgets";
+import { CENSUS_BUNDLES } from "@/lib/seeds/regionCensusData";
+import { METRIC_PRESET_BUNDLES } from "@/lib/seeds/metricPresets";
+import { POPULATION_ANCHOR_BUNDLES } from "@/lib/seeds/populationAnchors";
 import { REGION_TABLES } from "./regionTables";
 
 export interface PresetDataset {
@@ -77,7 +80,26 @@ const BUDGET_COUNTRIES = [
   ),
 ].sort();
 
+/**
+ * Per-country regional overlays (census, metric presets, population anchors).
+ * A country with a 2019 overlay needs its own in every preset, because no
+ * preset may read the 2019 one; a country without any needs none.
+ */
+function overlayDatasets(
+  kind: string,
+  bundles: Readonly<Record<string, Partial<Record<string, unknown>> | undefined>>
+): PresetDataset[] {
+  return Object.entries(bundles).map(([countryId, byPreset]) => ({
+    id: `${kind}:${countryId}`,
+    requiredIn: byPreset?.["2019-default"] ? ALL_PRESETS : [],
+    provide: (preset) => byPreset?.[preset],
+  }));
+}
+
 export const PRESET_DATASETS: readonly PresetDataset[] = [
+  ...overlayDatasets("census", CENSUS_BUNDLES),
+  ...overlayDatasets("metricPresets", METRIC_PRESET_BUNDLES),
+  ...overlayDatasets("populationAnchors", POPULATION_ANCHOR_BUNDLES),
   ...Object.entries(REGION_TABLES).map(([countryId, entry]): PresetDataset => ({
     id: `regions:${countryId}`,
     requiredIn: entry.seededIn,
