@@ -87,6 +87,7 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
     const countryId = sector.countryId ?? ctx.corp.countryId;
     const world = {
       sectorResearch: ctx.sectorResearchByLane?.get(operatingType),
+      laneResearch: ctx.sectorResearchByLane,
       diffusion: ctx.techDiffusion
         ? { snapshot: ctx.techDiffusion, countryId, adopter: "npp" as const }
         : undefined,
