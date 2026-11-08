@@ -115,7 +115,7 @@ describe("cabinet-bill domain union and quorum shape", () => {
   });
 
   it("counts the quorum in distinct characters so a second title buys no extra seat", () => {
-    const source = "src/app/api/country/[code]/legislature/cabinet-bills/route.ts";
+    const source = "src/lib/cabinet/cabinetBills.ts";
     const body = readFileSync(source, "utf8");
     expect(body).toContain('.distinct("characterId"');
     expect(body).toContain("new Set(");
@@ -124,7 +124,7 @@ describe("cabinet-bill domain union and quorum shape", () => {
 
   it("builds the proposer domains from every holder row via the union helper", () => {
     const body = readFileSync(
-      "src/app/api/country/[code]/legislature/cabinet-bills/route.ts",
+      "src/lib/cabinet/cabinetBills.ts",
       "utf8"
     );
     expect(body).toContain("unionLegislativeDomains(");
@@ -416,7 +416,7 @@ describe("briefing shared balance", () => {
 
   it("reads the shared pool on the briefing path instead of the row balance", () => {
     const body = readFileSync(
-      "src/app/api/country/[code]/executive/cabinet/[positionId]/briefing/route.ts",
+      "src/lib/cabinet/cabinetBriefing.ts",
       "utf8"
     );
     expect(body).toContain("sharedMinisterialActions");

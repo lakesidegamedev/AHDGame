@@ -1300,8 +1300,8 @@
     },
     "src/app/api/country/[code]/coalitions/[id]/invite/accept/route.ts": {
       "characters": 1,
-      "politicalParties": 2,
-      "untyped": 2
+      "politicalParties": 1,
+      "untyped": 1
     },
     "src/app/api/country/[code]/coalitions/[id]/invite/decline/route.ts": {
       "characters": 1,
@@ -1313,8 +1313,8 @@
     },
     "src/app/api/country/[code]/coalitions/[id]/join/accept/route.ts": {
       "characters": 1,
-      "politicalParties": 2,
-      "untyped": 2
+      "politicalParties": 1,
+      "untyped": 1
     },
     "src/app/api/country/[code]/coalitions/[id]/join/cancel/route.ts": {
       "politicalParties": 1
@@ -1863,7 +1863,7 @@
     },
     "src/app/api/country/[code]/region/[id]/economy/adjust-growth/route.ts": {
       "corporateSectors": 2,
-      "corporations": 3
+      "corporations": 2
     },
     "src/app/api/country/[code]/region/[id]/economy/attack-sector/route.ts": {
       "corporateSectors": 2,
@@ -2971,9 +2971,6 @@
     "src/app/wiki/random-events/page.tsx": {
       "untyped": 1
     },
-    "src/app/world/conflicts/page.tsx": {
-      "states": 1
-    },
     "src/app/world/crises/[id]/page.tsx": {
       "states": 1
     },
@@ -4002,6 +3999,19 @@
       "characters": 2,
       "electedOfficials": 1
     },
+    "src/lib/cabinet/cabinetBills.ts": {
+      "characters": 8,
+      "politicalParties": 1,
+      "untyped": 4
+    },
+    "src/lib/cabinet/cabinetBriefing.ts": {
+      "characters": 1,
+      "corporations": 1,
+      "federalBudget": 1,
+      "politicalParties": 1,
+      "states": 1,
+      "untyped": 1
+    },
     "src/lib/cabinet/liveGameYear.ts": {
       "gameState": 2
     },
@@ -4199,6 +4209,13 @@
     },
     "src/lib/coldwar/standingPressure.ts": {
       "untyped": 1
+    },
+    "src/lib/commodities/commodityDetail.ts": {
+      "corporateSectors": 1,
+      "corporations": 1,
+      "federalBudget": 1,
+      "gameState": 1,
+      "states": 1
     },
     "src/lib/congress/applyPlayerWhip.ts": {
       "electedOfficials": 4,
@@ -4902,9 +4919,6 @@
       "corporateSectors": 1,
       "states": 1
     },
-    "src/lib/corporations/techTree/featureFlag.ts": {
-      "gameState": 1
-    },
     "src/lib/corporations/techTree/frontierResearch.ts": {
       "corporations": 2
     },
@@ -5196,10 +5210,6 @@
     "src/lib/countries/ie/elections/billLifecycle.ts": {
       "characters": 1
     },
-    "src/lib/countries/ie/elections/perpetual.ts": {
-      "elections": 12,
-      "states": 2
-    },
     "src/lib/countries/ie/resetV2/ensureForReunification.ts": {
       "gameState": 2
     },
@@ -5237,10 +5247,6 @@
     },
     "src/lib/countries/ng/data/ngStatePartyOrgCalculations.ts": {
       "politicalParties": 1
-    },
-    "src/lib/countries/ng/elections/perpetual.ts": {
-      "elections": 15,
-      "states": 3
     },
     "src/lib/countries/ro/electoralNpcProposals1992.ts": {
       "electedOfficials": 1,
@@ -7563,6 +7569,13 @@
     "src/lib/partyAnalytics/slate.ts": {
       "elections": 1
     },
+    "src/lib/partyWhips/commands/issueCaucusWhip.ts": {
+      "characters": 3,
+      "electedOfficials": 2,
+      "gameState": 1,
+      "npps": 1,
+      "untyped": 3
+    },
     "src/lib/partyWhips/commands/issueNationalPartyWhip.ts": {
       "characters": 2,
       "electedOfficials": 1,
@@ -8141,6 +8154,13 @@
     },
     "src/lib/scotus/seedScotus.ts": {
       "untyped": 3
+    },
+    "src/lib/search/universalSearch.ts": {
+      "characters": 3,
+      "corporations": 2,
+      "electedOfficials": 1,
+      "elections": 1,
+      "npps": 1
     },
     "src/lib/seeds/ensureDefaultParties.ts": {
       "politicalParties": 3
@@ -9097,8 +9117,8 @@
       "untyped": 3
     },
     "src/lib/turn/perpetualElections/shared.ts": {
-      "elections": 23,
-      "states": 6
+      "elections": 19,
+      "states": 5
     },
     "src/lib/turn/politicalMetricsDynamics.ts": {
       "states": 1

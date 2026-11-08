@@ -1917,10 +1917,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/api/world/conflicts/cold-war/dials/route.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/app/api/world/german-question/play/route.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -2554,10 +2550,6 @@
       "narrativeLines": 1
     },
     "src/app/world/crises/[id]/page.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/world/crises/page.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -4289,6 +4281,10 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/lib/cabinet/cabinetBriefing.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/cabinet/nationalMetricSource.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -4541,6 +4537,10 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/lib/commodities/commodityDetail.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
     "src/lib/commodities/inputDemandReconciliation.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -4747,7 +4747,7 @@
     },
     "src/lib/constants/electionDurations.ts": {
       "longBlocks": 2,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/constants/eraConfigOverrides.test.ts": {
       "longBlocks": 1,
@@ -6028,10 +6028,6 @@
     "src/lib/countries/ie/elections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/countries/ie/elections/perpetual.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/countries/ie/eras/1991.ts": {
       "longBlocks": 1,
@@ -10313,6 +10309,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/partyWhips/commands/issueCaucusWhip.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/patreon/tierPriceFormat.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -12029,10 +12029,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/turn/census.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/turn/census.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -12058,7 +12054,7 @@
       "narrativeLines": 0
     },
     "src/lib/turn/coldWarTensionTurn.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/turn/commandEconomyTurn.ts": {
@@ -12978,7 +12974,7 @@
       "narrativeLines": 2
     },
     "src/lib/turn/perpetualElections/shared.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 2
     },
     "src/lib/turn/pmVacancyDeadline.ts": {

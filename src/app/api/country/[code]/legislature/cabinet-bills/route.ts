@@ -65,7 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     return await proposeCabinetBill({
       countryId,
       character,
-      isAdmin: auth.user.isAdmin,
+      isAdmin: Boolean(auth.user.isAdmin),
       input: parsed.data,
     });
   } catch (error) {
