@@ -165,7 +165,8 @@ export async function openPrivatizationVote(
   const hasNonCeoCharOrCorp = corporation.shareholders.some(
     (s) =>
       (s.characterId && s.characterId.toString() !== corporation.ceoId.toString()) ||
-      Boolean(s.corporationId)
+      Boolean(s.corporationId) ||
+      Boolean(s.nppId)
   );
   const hasFundHolders = corporation.shareholders.some(
     (s) => s.fundId && !s.characterId && !s.corporationId

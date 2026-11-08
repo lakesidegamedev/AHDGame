@@ -401,6 +401,24 @@ describe("executeFundOnlyBuyout", () => {
     });
   });
 
+  it("moves no money when an NPP holds shares alongside the fund", async () => {
+    const { db, updateOne } = makeDb({ funds: [], afterCorp: null });
+    const corp = makeCorp({
+      shareholders: [
+        { characterId: CEO_ID, shares: 9_980_000 },
+        { fundId: FUND_ID, shares: 10_000 },
+        { nppId: new ObjectId(), shares: 10_000 },
+      ],
+    });
+
+    const result = await executeFundOnlyBuyout(db, corp as never, 1000);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(409);
+    expect(sellFundHoldingShares).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalled();
+  });
+
   it("aborts if a non-CEO holder is still present after buyback (drift guard)", async () => {
     vi.mocked(sellFundHoldingShares).mockResolvedValue({
       cashRaisedAnchor: 10_000,
