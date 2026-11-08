@@ -59,6 +59,7 @@ import {
 } from "@/lib/auth/lakesideLoginReturn";
 import { resolveReauthIssuedAt } from "@/lib/auth/sessionIssue";
 import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/auth/sourceFence";
+import { authConfig } from "@/lib/config/auth";
 
 // GET /api/auth/google/callback — Handles the Google OAuth callback to log in or register a user via Google.
 // Auth: public
@@ -115,9 +116,9 @@ export async function GET(request: Request) {
   }
   cookieStore.delete("google_oauth_state");
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const clientId = authConfig.googleClientId();
+  const clientSecret = authConfig.googleClientSecret();
+  const redirectUri = authConfig.googleRedirectUri();
 
   if (!clientId || !clientSecret || !redirectUri) {
     return callbackRedirect(resultUrl("error", "not_configured"));

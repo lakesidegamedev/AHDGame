@@ -23,7 +23,7 @@ vi.mock("@/lib/singleplayer", () => ({
   SINGLEPLAYER_USER_ID: "504c41594552000000000001",
   isSingleplayer: vi.fn(() => true),
 }));
-// ⚠️ MOCK THE FOLDER MODULE, NOT `@/lib/uk/cabinetEligibility`. That path is a
+// ⚠️ MOCK THE FOLDER MODULE, NOT `@/lib/countries/uk/cabinetEligibility`. That path is a
 // forwarder now, and `cabinetApi` imports the folder directly -- mocking the
 // forwarder leaves the real implementation in place and the spy never fires.
 // Mocking the folder covers both, because the forwarder re-exports it.
@@ -40,7 +40,7 @@ vi.mock("@/lib/countries/uk/cabinetEligibility", async (importOriginal) => {
   };
 });
 
-import { getCabinetCharactersHandler } from "@/lib/uk/cabinetApi";
+import { getCabinetCharactersHandler } from "@/lib/countries/uk/cabinetApi";
 import { POST as voteOnCabinetBill } from "@/app/api/country/[code]/legislature/cabinet-bills/[id]/vote/route";
 import { unionLegislativeDomains } from "./rules";
 import { resolveOfficeActionBonus } from "@/lib/actions/officeActionBonus";

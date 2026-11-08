@@ -20,6 +20,8 @@ import { createSourceFenceWriter } from "@/lib/auth/sourceFenceWriter";
 import { createSourceOwnershipProofStore } from "@/lib/auth/sourceOwnershipProof";
 import { createDisabledTargetProvisioner } from "@/lib/auth/unifiedProvisioning";
 import { recoverCredentialImport } from "@/lib/auth/credentialImportRecovery";
+import { authConfig } from "@/lib/config/auth";
+import { readEnv } from "@/lib/config/read";
 
 const SOURCE_ISSUER = "urn:lakeside:legacy:ahd:production";
 const AUTHORITY = "ahd-unified-cohort";
@@ -58,7 +60,7 @@ function storedSourceFence(value: unknown): StoredSourceFence | null {
 }
 
 function required(name: string): string {
-  const value = process.env[name];
+  const value = readEnv(name);
   if (!value) throw new Error(`Missing unified migration configuration: ${name}`);
   return value;
 }
@@ -87,7 +89,7 @@ function cohort(): ReadonlyMap<string, CohortTarget> {
  * by default and is never inferred from traffic or email.
  */
 function generalCohort(): ReadonlySet<string> {
-  const raw = process.env.AHD_UNIFIED_GENERAL_COHORT;
+  const raw = authConfig.unifiedGeneralCohort();
   if (raw === undefined || raw === "") return new Set();
   let parsed: unknown;
   try {

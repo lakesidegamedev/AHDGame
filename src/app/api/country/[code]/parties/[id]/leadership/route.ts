@@ -7,7 +7,7 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { getGameTime } from "@/lib/time/gameTime";
-import { getLeadershipState } from "@/lib/uk/leadership/leadershipCommands";
+import { getLeadershipState } from "@/lib/countries/uk/leadership/leadershipCommands";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;

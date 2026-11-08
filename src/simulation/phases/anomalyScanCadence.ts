@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * How often the anti-abuse scans run in a shared world.
  *
@@ -26,7 +28,7 @@ export const ANTI_ABUSE_SCAN_PHASES: ReadonlySet<string> = new Set([
 ]);
 
 export function resolveAnomalyScanCadence(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = serverEnv()
 ): number {
   const raw = env.AHD_ANOMALY_SCAN_EVERY_TURNS;
   const parsed = raw === undefined || raw === "" ? ANOMALY_SCAN_EVERY_TURNS : Number(raw);

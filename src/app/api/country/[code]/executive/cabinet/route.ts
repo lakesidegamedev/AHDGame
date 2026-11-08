@@ -26,7 +26,7 @@ import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getGameTime } from "@/lib/time/gameTime";
 import { getCountryState } from "@/lib/countryState";
-import { canReshuffle, getReshuffleIdentity } from "@/lib/uk/cabinet/reshuffleLimit";
+import { canReshuffle, getReshuffleIdentity } from "@/lib/countries/uk/cabinet/reshuffleLimit";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {

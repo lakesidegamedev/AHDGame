@@ -28,6 +28,7 @@ import {
 } from "@/lib/auth/unifiedMigration";
 import { issueUnifiedGameSession } from "@/lib/auth/unifiedGameSession";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
+import { authConfig } from "@/lib/config/auth";
 
 // One random, unused hash per process gives unknown accounts a real bcrypt
 // comparison at the same cost as account registration, without a stored credential.
@@ -125,8 +126,7 @@ export async function POST(request: Request) {
     // its already fenced operation. This path never grants a legacy session.
     if (isAuthMigrationFenced(user)) {
       const isRecoveryCohort =
-        process.env.AHD_UNIFIED_COHORT_ENABLED === "true" &&
-        isUnifiedMigrationCohort(user._id.toString());
+        authConfig.unifiedCohortEnabled() && isUnifiedMigrationCohort(user._id.toString());
       const isRecoveryPassword =
         isRecoveryCohort && user.password && (await bcrypt.compare(password, user.password));
       if (isRecoveryPassword) {
@@ -172,10 +172,7 @@ export async function POST(request: Request) {
       return errorResponse(401, "Invalid credentials");
     }
 
-    if (
-      process.env.AHD_UNIFIED_COHORT_ENABLED === "true" &&
-      isUnifiedMigrationCohort(user._id.toString())
-    ) {
+    if (authConfig.unifiedCohortEnabled() && isUnifiedMigrationCohort(user._id.toString())) {
       const target = await migratePasswordLoginToUnified(user._id.toString(), password);
       const cookieStore = await cookies();
       const sessionUser = await issueUnifiedGameSession({

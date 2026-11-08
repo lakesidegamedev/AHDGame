@@ -66,7 +66,7 @@ import { getCountryState, updateCountryState } from "@/lib/countryState";
 import { logger } from "../observability/logger";
 import { resolveGoverningPartyIdsFromDocuments } from "@/lib/government/governingPartyIds";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
-import { hasRequiredPrimeMinisterSeat } from "@/lib/uk/pmSeatEligibility";
+import { hasRequiredPrimeMinisterSeat } from "@/lib/countries/uk/pmSeatEligibility";
 import { isSingleplayer } from "@/lib/singleplayer";
 import {
   classifyFormationSeats,

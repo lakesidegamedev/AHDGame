@@ -9,7 +9,7 @@ import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { sharedPoolFromRows } from "@/lib/uk/dualMinistry/rules";
+import { sharedPoolFromRows } from "@/lib/countries/uk/dualMinistry/rules";
 import { isOfficePoolAccrualTurn } from "@/lib/actions/officePoolAccrual";
 
 export { MINISTERIAL_ACTION_RESET_HINT } from "./ministerialActionHint";

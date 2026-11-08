@@ -6,7 +6,7 @@ import {
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getParliamentaryCountryIds } from "@/lib/turn/parliamentaryGovernment";
-import { tickParliamentaryGovernmentConfidence } from "@/lib/uk/confidence/confidenceGaugeStore";
+import { tickParliamentaryGovernmentConfidence } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 
 /** Tick shared confidence after the parliamentary government has been resolved. */
 export async function runParliamentaryGovernmentConfidencePhase(

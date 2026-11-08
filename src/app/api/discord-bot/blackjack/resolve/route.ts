@@ -10,6 +10,7 @@ import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import { getCurrencyFxRate } from "@/lib/currency/corporationCapital";
 import { houseLimits, loadHouse, settleHouseBet } from "@/lib/casino/house";
 import { casinoFailure, guardCasinoPlayer, guardCasinoRequest } from "@/lib/casino/routeSupport";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 const resolveSchema = z.object({
   discordId: z.string().min(1, "discordId is required"),
@@ -32,7 +33,7 @@ interface PendingWager {
 
 /** House edge taken from blackjack winnings. BLACKJACK_HOUSE_EDGE overrides, clamped to 0..1. */
 function blackjackHouseEdge(): number {
-  return Math.min(Math.max(parseFloat(process.env.BLACKJACK_HOUSE_EDGE ?? "0.05"), 0), 1);
+  return Math.min(Math.max(parseFloat(runtimeConfig.blackjackHouseEdge() ?? "0.05"), 0), 1);
 }
 
 // POST /api/discord-bot/blackjack/resolve — Settles a dealt hand against the casino house.

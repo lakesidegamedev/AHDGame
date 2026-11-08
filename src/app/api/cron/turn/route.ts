@@ -8,6 +8,8 @@ import { requireCron } from "@/lib/api/requireCron";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { shouldFireBackupTurn } from "@/lib/cron/backupFireGuard";
 import { captureTurnHealth } from "@/lib/observability/turnHealth";
+import { servicesConfig } from "@/lib/config/services";
+import { serverEnv } from "@/lib/config/read";
 
 // Give the hourly turn route enough headroom to finish the full pipeline while
 // phase-level guards still get the first chance to fail fast and release the lock.
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
     const start = Date.now();
     if (!requireCron(req)) {
       logRequest("GET", "/api/cron/turn", 401, Date.now() - start);
-      const secret = process.env.CRON_SECRET;
+      const secret = servicesConfig.cronSecret();
       const authHeader = req.headers.get("authorization");
       if (!secret) {
         console.error("[cron/turn] Unauthorized: CRON_SECRET env var is not configured");
@@ -52,7 +54,7 @@ export async function GET(req: Request) {
 
     // The worker runs the schedule itself; an external trigger here would run the
     // turn inside the web server and block player requests for its duration.
-    if (turnsOwnedByWorker(process.env)) {
+    if (turnsOwnedByWorker(serverEnv())) {
       console.info("[cron/turn] Skipped: the turn worker owns turns (CRON_OWNER=worker)");
       return NextResponse.json({ skipped: true, message: "The turn worker owns turns." });
     }

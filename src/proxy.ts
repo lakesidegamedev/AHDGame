@@ -15,6 +15,7 @@ import {
   acquisitionFromRequest,
   serializeAcquisition,
 } from "@/lib/analytics/acquisition";
+import { authConfig } from "@/lib/config/auth";
 
 // Well-known root files that must never be rewritten under /wiki on the
 // subdomain — /robots.txt would otherwise hit the wiki [slug] route and serve
@@ -351,7 +352,7 @@ export async function proxy(request: NextRequest) {
  * the player through an unauthenticated render.
  */
 async function grantSingleplayerSession(request: NextRequest): Promise<NextResponse> {
-  const secret = process.env.AUTH_SECRET;
+  const secret = authConfig.authSecret();
   if (!secret) {
     throw new Error("SINGLEPLAYER is set but AUTH_SECRET is missing; cannot mint a local session.");
   }

@@ -9,7 +9,7 @@ vi.mock("@/lib/db/collections/gameState", () => ({
 vi.mock("@/lib/turn/parliamentaryGovernment", () => ({
   getParliamentaryCountryIds: vi.fn().mockReturnValue(["UK", "JP", "DE", "FR", "IT"]),
 }));
-vi.mock("@/lib/uk/confidence/confidenceGaugeStore", () => ({
+vi.mock("@/lib/countries/uk/confidence/confidenceGaugeStore", () => ({
   tickParliamentaryGovernmentConfidence: tick,
 }));
 import { runParliamentaryGovernmentConfidencePhase } from "./parliamentaryGovernmentConfidencePhase";

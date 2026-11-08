@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
+import { servicesConfig } from "@/lib/config/services";
 
 // Loose IPv4/IPv6 shape check - just enough to reject empty strings, header
 // injection garbage, and multi-token junk that split(",") missed.
@@ -32,7 +33,7 @@ function firstValidIp(headerValue: string | null): string | null {
  * x-forwarded-for path rather than 500-ing the auth route.
  */
 function cfConnectingIpTrusted(originSecretHeader: string | null): boolean {
-  const secret = process.env.CF_ORIGIN_SECRET;
+  const secret = servicesConfig.cfOriginSecret();
   if (!secret) return true;
   if (!originSecretHeader) return false;
   try {

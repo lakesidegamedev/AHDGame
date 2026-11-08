@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Env } from "@/lib/env";
+import type { Env } from "@/lib/config/validatedEnv";
 import type { Db } from "mongodb";
 import { runResetAndBootstrapCli } from "./resetAndBootstrapCli";
 

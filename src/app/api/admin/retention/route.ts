@@ -15,6 +15,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { runRetention } from "@/lib/retention/retention";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 const bodySchema = z.object({
   dryRun: z.boolean().optional().default(true),
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     }
     const { dryRun, collections, compact } = parsedBody.data;
 
-    if (!dryRun && process.env.RETENTION_ENABLED !== "1") {
+    if (!dryRun && !runtimeConfig.retentionEnabled()) {
       return errorResponse(
         403,
         "Retention execution is disabled. Set RETENTION_ENABLED=1 to run for real."

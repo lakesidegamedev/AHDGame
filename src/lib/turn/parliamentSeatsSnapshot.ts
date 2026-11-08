@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
+import { workerConfig } from "@/lib/config/worker";
 
 /**
  * Turns of seat history retained. 96 (two years at 48 turns/year) is the right
@@ -9,7 +10,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
  * via SIM_SEAT_HISTORY_CAP; the live game is untouched by the default.
  */
 const HISTORY_CAP = (() => {
-  const raw = Number(process.env.SIM_SEAT_HISTORY_CAP);
+  const raw = Number(workerConfig.simSeatHistoryCap());
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 96;
 })();
 

@@ -34,7 +34,7 @@ vi.mock("@/lib/db/collections", () => ({
   getCharactersCollection: vi.fn(),
 }));
 
-vi.mock("@/lib/env", () => ({}));
+vi.mock("@/lib/config/validatedEnv", () => ({}));
 
 describe("auth", () => {
   let mockCookies: ReturnType<typeof vi.fn>;

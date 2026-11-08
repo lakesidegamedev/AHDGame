@@ -10,7 +10,7 @@
  *  - committee faction-control resolution from seat tags.
  */
 
-import type { LeadershipElectorate } from "@/lib/uk/leadership/leadershipRemoval";
+import type { LeadershipElectorate } from "@/lib/countries/uk/leadership/leadershipRemoval";
 
 /** Turn spacing between two committee amendments to the same party's ruleset. */
 export const LEADERSHIP_AMENDMENT_COOLDOWN_TURNS = 24;

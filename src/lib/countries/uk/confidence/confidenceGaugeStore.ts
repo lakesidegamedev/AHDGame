@@ -20,6 +20,7 @@ import {
   isDissolutionTriggered,
   type ConfidenceEvent,
 } from "@/lib/countries/uk/confidence/confidenceGauge";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 const MAX_CONFIDENCE_HISTORY_POINTS = 500;
 
@@ -35,7 +36,7 @@ const MAX_CONFIDENCE_HISTORY_POINTS = 500;
  */
 
 export function isConfidenceDissolutionEnabled(): boolean {
-  return process.env.UK_CONFIDENCE_GAUGE_DISSOLUTION === "1";
+  return runtimeConfig.ukConfidenceGaugeDissolution();
 }
 
 /** Current gauge value (defaults to full when unset). */

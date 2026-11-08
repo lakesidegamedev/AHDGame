@@ -1,5 +1,5 @@
 import LoginPageClient from "./LoginPageClient";
-import { isMissingRequiredEnvError } from "@/lib/env";
+import { isMissingRequiredEnvError } from "@/lib/config/validatedEnv";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";

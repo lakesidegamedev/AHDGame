@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { authConfig } from "@/lib/config/auth";
 
 const patchSchema = z.object({
   enabled: z.boolean(),
@@ -29,7 +30,7 @@ export async function GET() {
       }
     );
 
-    const hasSecret = !!process.env.TEST_SECRET;
+    const hasSecret = !!authConfig.testSecret();
 
     return NextResponse.json({
       enabled: config?.testMode ?? false,
@@ -54,7 +55,7 @@ export async function PATCH(request: Request) {
     const { enabled } = parsed.data;
 
     // Require TEST_SECRET env var to enable test mode
-    if (enabled && !process.env.TEST_SECRET) {
+    if (enabled && !authConfig.testSecret()) {
       return errorResponse(
         400,
         "Cannot enable test mode: TEST_SECRET environment variable is not set."

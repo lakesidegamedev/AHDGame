@@ -13,9 +13,12 @@ import {
   getUKPartyConferencesCollection,
   getUKPartyPlatformsCollection,
 } from "@/lib/db/collections/ukPartyConferences";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
-import { selectNppPledges } from "@/lib/uk/manifesto/nppManifesto";
-import { validateRulesetAmendment, type RulesetAmendmentPatch } from "@/lib/uk/leadership/rules";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
+import { selectNppPledges } from "@/lib/countries/uk/manifesto/nppManifesto";
+import {
+  validateRulesetAmendment,
+  type RulesetAmendmentPatch,
+} from "@/lib/countries/uk/leadership/rules";
 import {
   CONFERENCE_MOTION_QUORUM_FLOOR,
   CONFERENCE_PLATFORM_QUORUM_FLOOR,
@@ -24,14 +27,14 @@ import {
   conferenceYearForTurn,
   conferenceYearStartTurn,
   quorumFor,
-} from "@/lib/uk/conference/rules";
+} from "@/lib/countries/uk/conference/rules";
 import {
   conferenceHistoryEntry,
   getConference,
   getOrSeedConference,
   pushConferenceHistory,
-} from "@/lib/uk/conference/conferenceStore";
-import type { ConferenceRulesMotion, UKPartyConference } from "@/lib/uk/conference/types";
+} from "@/lib/countries/uk/conference/conferenceStore";
+import type { ConferenceRulesMotion, UKPartyConference } from "@/lib/countries/uk/conference/types";
 import type { Character, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {

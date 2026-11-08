@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
-import { defectCommonsSeat } from "@/lib/uk/elections/commonsSeatCommands";
+import { defectCommonsSeat } from "@/lib/countries/uk/elections/commonsSeatCommands";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" };
 

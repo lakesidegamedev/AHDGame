@@ -1,4 +1,4 @@
-import { getValidatedEnv, type Env } from "@/lib/env";
+import { getValidatedEnv, type Env } from "@/lib/config/validatedEnv";
 import type { ResetAndBootstrapOptions } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
 import type { Db } from "mongodb";

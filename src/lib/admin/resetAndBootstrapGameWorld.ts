@@ -62,7 +62,7 @@ import {
   resetSelectionPreflight,
   resetSystemSelectionsFrom,
 } from "@/lib/resetVersions/rules";
-import { getValidatedEnv } from "@/lib/env";
+import { getValidatedEnv } from "@/lib/config/validatedEnv";
 import {
   assertResetDatabaseMatchesApplication,
   assertSeedContractForReset,

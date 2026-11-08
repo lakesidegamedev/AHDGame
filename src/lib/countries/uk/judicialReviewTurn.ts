@@ -10,12 +10,12 @@ import { enactRulingBill } from "@/lib/scotus/enactRulingBill";
 import { createSystemNewsPost } from "@/lib/news";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
 import type { PoliticalParty } from "@/lib/db/types";
-import { rollUkJrSurpriseSpawn } from "@/lib/uk/judicialReview/surpriseSpawn";
+import { rollUkJrSurpriseSpawn } from "@/lib/countries/uk/judicialReview/surpriseSpawn";
 import {
   UK_JR_SURPRISE_TEMPLATES,
   type JrCaseEffect,
   type JrCaseAxis,
-} from "@/lib/uk/judicialReview/surpriseTemplates";
+} from "@/lib/countries/uk/judicialReview/surpriseTemplates";
 
 export interface UkJrSurpriseCaseRecord {
   _id: ObjectId;

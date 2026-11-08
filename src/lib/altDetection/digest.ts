@@ -39,6 +39,7 @@ import type { AltCluster } from "@/lib/db/types/altDetection";
 import { isAltScoringEnabled } from "./featureFlag";
 import { resolveAltScoringConfig } from "./config";
 import { sendDiscordWebhookMultiple, type DiscordEmbed } from "@/lib/discordWebhooks";
+import { readEnv } from "@/lib/config/read";
 
 /** Env var carrying the mod-facing digest webhook URL. Mirrors the
  * `DISCORD_ALERT_WEBHOOK_URL` pattern in `src/lib/observability/alertOps.ts`
@@ -251,7 +252,7 @@ export async function runAltDigest(
   options: { now?: Date; adminUrl?: string } = {}
 ): Promise<AltDigestRunResult> {
   const startedAt = Date.now();
-  const webhookUrl = process.env[WEBHOOK_ENV_VAR];
+  const webhookUrl = readEnv(WEBHOOK_ENV_VAR);
   const webhookConfigured = Boolean(webhookUrl);
   let enabled = false;
 

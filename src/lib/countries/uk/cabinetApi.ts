@@ -41,9 +41,12 @@ import {
   getEligibleCabinetCharacters,
   requireCurrentPrimeMinister,
 } from "@/lib/countries/uk/cabinetEligibility";
-import { canHoldAdditionalAppointment, roleSlotForPosition } from "@/lib/uk/dualMinistry/rules";
+import {
+  canHoldAdditionalAppointment,
+  roleSlotForPosition,
+} from "@/lib/countries/uk/dualMinistry/rules";
 import { reconcileUkSharedPool } from "@/lib/cabinet/ministerialActionPool";
-import { preserveSurvivingCabinetRow } from "@/lib/uk/dualMinistry/survivor";
+import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
 import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { GREAT_OFFICE_POSITION_IDS } from "@/lib/countries/uk/confidence/confidenceGauge";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";

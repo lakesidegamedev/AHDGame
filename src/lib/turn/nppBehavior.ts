@@ -21,6 +21,7 @@ import { processNppEndorsements } from "./npp/endorsements";
 import { processBillVoting } from "./npp/billVoting";
 import { processStateBillVoting } from "./npp/stateBillVoting";
 import { processSlateResponses, syncPersistentSlateAssignments } from "./npp/slateResponses";
+import { workerConfig } from "@/lib/config/worker";
 
 // ─── Main Export ───────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ async function runNppTurn(
 
   // Env-gated sub-step timing (SIM_CORP_TIMING=1), matching
   // processCorporationTurn; zero-cost when off.
-  const timingOn = process.env.SIM_CORP_TIMING === "1";
+  const timingOn = workerConfig.simCorpTiming();
   const timings: Array<[string, number]> = [];
   let _tPrev = timingOn ? Date.now() : 0;
   // Always feeds the persisted phase sub-steps (#2689).

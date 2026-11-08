@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { isAppleSignInConfigured } from "@/lib/auth/apple";
 import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus";
+import { authConfig } from "@/lib/config/auth";
 
 /**
  * Which ways of signing up actually work on THIS deployment.
@@ -48,11 +49,9 @@ export async function GET() {
     const intake = computeIntakeStatus(config);
 
     const discordConfigured = Boolean(
-      process.env.DISCORD_CLIENT_ID && process.env.DISCORD_REDIRECT_URI
+      authConfig.discordClientId() && authConfig.discordRedirectUri()
     );
-    const googleConfigured = Boolean(
-      process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REDIRECT_URI
-    );
+    const googleConfigured = Boolean(authConfig.googleClientId() && authConfig.googleRedirectUri());
 
     const appleConfigured = isAppleSignInConfigured();
 

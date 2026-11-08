@@ -12,7 +12,7 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { checkLegislationFreeze } from "@/lib/api/parliamentaryFreeze";
 import { getCabinetMechanics } from "@/lib/constants/cabinetMechanics";
-import { unionLegislativeDomains } from "@/lib/uk/dualMinistry/rules";
+import { unionLegislativeDomains } from "@/lib/countries/uk/dualMinistry/rules";
 import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
 import { getPartyHex, formatBillPositionLabel } from "@/lib/utils/politics";
 import {

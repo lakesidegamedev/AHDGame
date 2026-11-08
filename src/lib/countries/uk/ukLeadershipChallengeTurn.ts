@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
-import { processExpiredLeadershipChallenges } from "@/lib/uk/leadership/leadershipCommands";
+import { processExpiredLeadershipChallenges } from "@/lib/countries/uk/leadership/leadershipCommands";
 
 export interface UkLeadershipChallengeTurnResult {
   expired: number;

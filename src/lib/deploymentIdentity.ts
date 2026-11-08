@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * Which deployment this process is — the one thing a database restore cannot
  * carry with it.
@@ -7,7 +9,7 @@
  * project, so it is only a fallback, and anything off Railway (a local `next
  * dev`, a script) is "local".
  */
-export function deploymentServiceSlug(env: NodeJS.ProcessEnv = process.env): string {
+export function deploymentServiceSlug(env: NodeJS.ProcessEnv = serverEnv()): string {
   const slug = (env.RAILWAY_SERVICE_NAME ?? env.RAILWAY_ENVIRONMENT_NAME ?? "local")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -82,7 +84,7 @@ const SOLO_CHARTER_SERVICE_SLUGS: ReadonlySet<string> = new Set([
  * on a known non-production service, so the variable leaking onto the live
  * game (under any name) changes nothing.
  */
-export function isSoloCharterTestingEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+export function isSoloCharterTestingEnabled(env: NodeJS.ProcessEnv = serverEnv()): boolean {
   const flag = env.AHD_SANDBOX_SOLO_CHARTER;
   if (flag !== "1" && flag !== "true") return false;
   return SOLO_CHARTER_SERVICE_SLUGS.has(deploymentServiceSlug(env));

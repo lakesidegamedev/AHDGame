@@ -32,10 +32,11 @@ import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { logger } from "../observability/logger";
 import { CHAIR_CHANGE_SCRUTINY_RETAINED } from "@/lib/centralBank/credibility";
+import { workerConfig } from "@/lib/config/worker";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
-const CB_CHAIR_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+const CB_CHAIR_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

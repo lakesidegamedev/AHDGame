@@ -20,6 +20,7 @@ import {
 import type { Suggestion, User } from "@/lib/db/types";
 import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { resolveSuggestionReporterIdentity } from "@/lib/suggestions/reporterIdentity";
+import { servicesConfig } from "@/lib/config/services";
 
 const DISCORD_SYNC_SPACING_MS = 400;
 
@@ -230,7 +231,7 @@ export async function POST(request: Request) {
     const result = await coll.insertOne(doc as Suggestion);
 
     let githubIssueUrl: string | undefined;
-    if (process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
+    if (servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       const reporterUsername = userId
         ? (
             await db

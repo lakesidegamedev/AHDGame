@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { getDb } from "@/lib/mongodb";
+import { servicesConfig } from "@/lib/config/services";
 
 export type BotApiScope = "campaign" | "full";
 export type BotApiSource = "env" | "user";
@@ -42,7 +43,7 @@ export async function requireBotApiAccess(
   const token = request.headers.get("X-Bot-Token");
   if (!token) return { ok: false as const, reason: "missing" };
 
-  const privateKey = process.env.DISCORD_BOT_API_KEY;
+  const privateKey = servicesConfig.discordBotApiKey();
   if (privateKey && token === privateKey) {
     return {
       ok: true as const,
@@ -52,7 +53,7 @@ export async function requireBotApiAccess(
     };
   }
 
-  const publicKey = process.env.PUBLIC_BOT_API_KEY;
+  const publicKey = servicesConfig.publicBotApiKey();
   if (publicKey && token === publicKey) {
     if (requiredScope === "full") return { ok: false as const, reason: "insufficient_scope" };
     return {

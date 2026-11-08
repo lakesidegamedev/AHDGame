@@ -19,8 +19,8 @@ import { resignExecutiveOffice } from "@/lib/elections/resignExecutiveOffice";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { vacateCommonsSeat } from "@/lib/uk/elections/commonsVacancyShell";
-import { preserveSurvivingCabinetRow } from "@/lib/uk/dualMinistry/survivor";
+import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
+import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
 import type {
   CabinetMember,
   Character,

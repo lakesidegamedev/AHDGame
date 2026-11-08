@@ -44,9 +44,10 @@ import type {
 import type { CorporateSector, TxThresholds } from "@/lib/db/types";
 import type { Db } from "mongodb";
 import type { MarketContext } from "@/lib/market/marketContext";
+import { workerConfig } from "@/lib/config/worker";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
-export const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
 
 /** Sends capacity notices, writes audits, pays dividends and settles payouts; returns per-character currency income. */
 export async function settleCorporationTurnPayouts({
