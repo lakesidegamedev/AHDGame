@@ -52,8 +52,8 @@ describe("CN Historical Seats", () => {
     }
   });
 
-  it("getPresetSeats 2020-default includes CN", () => {
-    const seats = getPresetSeats("2020-default");
+  it("getPresetSeats 2019-no-parties (the 2020 roster) includes CN", () => {
+    const seats = getPresetSeats("2019-no-parties");
     const cnSeats = seats.filter((s) =>
       ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"].includes(s.state)
     );

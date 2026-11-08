@@ -44,9 +44,8 @@ describe("getRegionMetricPresets", () => {
     expect(p!["governance.militaryReadiness"]).toBe(85); // Cold-War peak
   });
 
-  it("falls back to the 2019 bundle when the preset is absent", () => {
-    const p = getRegionMetricPresets("IE", "DUB", "some-unknown-preset");
-    expect(p).toBeTruthy();
+  it("never borrows another preset's overlay", () => {
+    expect(getRegionMetricPresets("IE", "DUB", "some-unknown-preset")).toBeNull();
   });
 
   it("returns null for an unknown country or region", () => {

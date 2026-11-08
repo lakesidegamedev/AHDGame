@@ -28,7 +28,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   INITIAL_RATES,
   getCountryIdForCurrency,
-  getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   INTERVENTION_FAILURE_INFAMY,
   INTERVENTION_HISTORY_MAX,
@@ -153,7 +153,7 @@ export async function processForexTurn(
 
   // Resolve the era-selected initial-rate table ONCE per turn (not per country)
   // — the same lookup `seedExchangeRates` used at world creation.
-  const eraInitialRates = getInitialRates(preset ?? DEFAULT_SEED_PRESET);
+  const eraInitialRates = getRuntimeInitialRates(preset ?? DEFAULT_SEED_PRESET);
   const activeCountries = getPresetMonetaryScope(preset ?? DEFAULT_SEED_PRESET).forexCountries;
 
   const euroUnion = await reconcileEuroMonetaryUnion(db, currentTurn);

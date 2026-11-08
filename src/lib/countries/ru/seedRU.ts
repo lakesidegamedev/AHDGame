@@ -29,18 +29,9 @@ export async function seedRURegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "RU" });
   }
-  const { ruRegions } = await import("@/lib/seeds/ru/ruRegions");
-  const { ruRegions1953 } = await import("@/lib/seeds/ru/ruRegions1953");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "2019-default": ruRegions,
-      "1953-default": ruRegions1953,
-      "1979-default": ruRegions,
-    },
-    "seedRU:ruRegions"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("RU"), "regions:RU");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

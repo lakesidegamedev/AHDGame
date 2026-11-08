@@ -13,7 +13,7 @@
  */
 
 import type { CountryId } from "./countries";
-import { recordPresetFallback } from "@/lib/seeds/presetSelector";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
 import { isBackgroundInPreset, tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import { COUNTRY_ORDER } from "./countries";
 import {
@@ -4262,24 +4262,11 @@ const SEAT_GROUPS_1979: SeatGroups = mergeGroups(
 );
 
 /**
- * The seat groups for a preset.
- *
- * ⚠️ 1999, 2007, 2023 and any unrecognised preset receive the 2020 groups. That
- * mirrors `getPresetSeats`'s `default:` case exactly - see the warning there -
- * and making the reuse explicit is not an endorsement of it: a 1999 world seats
- * the February 2020 Congress. Authoring real 1999/2007 rosters is a separate
- * historical-data task.
+ * The seat groups authored for a preset. A preset without its own roster has no
+ * seats to seed and throws `SeedContractError`; the 2020 roster is never lent.
+ * `2019-no-parties` is the 2019 world without starting parties and seats the
+ * 2020 roster it has always used.
  */
-/** Presets with their own seat groups; everything else takes the 2020 set. */
-const EXPLICIT_SEAT_PRESETS = new Set([
-  "2019-default",
-  "1991-default",
-  "1953-default",
-  "1979-default",
-  "2027-default",
-  "empty",
-]);
-
 export function seatGroupsFor(presetId: string): SeatGroups {
   switch (presetId) {
     case "2019-default":
@@ -4294,8 +4281,10 @@ export function seatGroupsFor(presetId: string): SeatGroups {
       return SEAT_GROUPS_2027;
     case "empty":
       return {};
-    default:
+    case "2019-no-parties":
       return SEAT_GROUPS_2020;
+    default:
+      throw missingPresetEntry(presetId, "historicalSeats:seatGroups");
   }
 }
 
@@ -4307,31 +4296,9 @@ export function seatGroupsFor(presetId: string): SeatGroups {
  * WHICH country a seat belongs to must use `seatsForCountry` / `seatCountFor`
  * in `presetSeatGroups.ts`, because `officeType` alone cannot tell them.
  *
- * ⚠️ SILENT 2020 FALLBACK - recorded, not hidden.
- *
- * Any preset without an explicit case in `seatGroupsFor` receives the ENTIRE
- * 2020 chamber roster. That is how 1999-default, 2007-default and 2023-default
- * came to report seat counts byte-identical to 2019-default: they are not
- * reusing these arrays by design, they are unrecognised. Downstream that shows
- * up as jp_* and de_* seats naming parties whose `validForPresets` excludes
- * those eras, so `resolvePartyId` misses and folds them to "independent" - the
- * failure `seedHistorical.test.ts` already guards for 1991's de_spd.
- *
- * Authoring real 1999/2007 rosters is a historical-data task, and those presets
- * cannot currently be reset into at all (no budgets, no parties: see S2). The
- * fallback is left in place because returning nothing would be worse.
+ * Throws `SeedContractError` for a preset with no authored roster.
  */
 export function getPresetSeats(presetId: string): HistoricalSeat[] {
-  // Recorded HERE rather than in `seatGroupsFor`, matching the pre-grouping call
-  // frequency: `seatGroupsFor` is also called per country per chamber by the
-  // contract checks, and recording there would flood the report with one entry
-  // per lookup instead of one per seed lane. `recordPresetFallback` ignores
-  // 2019-era presets itself, so this only fires for a preset genuinely taking
-  // another era's seats, and `runSeed`'s closing "N seed lane(s) had no bundle
-  // and used 2019 data" line names it.
-  if (!EXPLICIT_SEAT_PRESETS.has(presetId)) {
-    recordPresetFallback("historicalSeats:getPresetSeats", presetId);
-  }
   // Background countries (#5702) seat no NPP politicians: they stay in the
   // seat table as authored data, but the seeding path never sees them.
   return Object.entries(seatGroupsFor(presetId))

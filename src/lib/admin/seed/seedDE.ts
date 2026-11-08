@@ -28,29 +28,9 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
  * modern 16-Land bundle silently overwrites the GDR's own economy rows.
  */
 async function deRegionRosterForPreset(preset: string) {
-  const { deRegions } = await import("@/lib/seeds/de/deRegions");
-  const { deRegions1953 } = await import("@/lib/seeds/de/deRegions1953");
-  const { deRegions1979 } = await import("@/lib/seeds/de/deRegions1979");
-  const { deRegions1991 } = await import("@/lib/seeds/de/deRegions1991");
-  const { deRegions1999 } = await import("@/lib/seeds/de/deRegions1999");
-  const { deRegions2007 } = await import("@/lib/seeds/de/deRegions2007");
-  const { deRegions2023 } = await import("@/lib/seeds/de/deRegions2023");
-  const { deRegions2027 } = await import("@/lib/seeds/de/deRegions2027");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  return selectPresetBundle(
-    preset,
-    {
-      "1953-default": deRegions1953,
-      "2019-default": deRegions,
-      "1979-default": deRegions1979,
-      "1991-default": deRegions1991,
-      "1999-default": deRegions1999,
-      "2007-default": deRegions2007,
-      "2023-default": deRegions2023,
-      "2027-default": deRegions2027,
-    },
-    "seedDE:deRegions1953"
-  );
+  return selectPresetBundle(preset, regionTableFor("DE"), "regions:DE");
 }
 
 export async function seedDERegions(

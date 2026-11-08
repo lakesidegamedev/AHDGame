@@ -21,9 +21,8 @@ describe("getInitialRates", () => {
     expect(rates.CN).toBeCloseTo(5.32);
   });
 
-  it("falls back to 2019 rates for unknown preset", () => {
-    const rates = getInitialRates("3000-default");
-    expect(rates.UK).toBeCloseTo(0.75);
+  it("refuses an unknown preset instead of lending 2019 rates", () => {
+    expect(() => getInitialRates("3000-default")).toThrow(/fxRates/);
   });
 
   it("returns 1953 rates for 1953-default including IE at GBP par", () => {

@@ -63,7 +63,10 @@ import {
   resetSystemSelectionsFrom,
 } from "@/lib/resetVersions/rules";
 import { getValidatedEnv } from "@/lib/env";
-import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
+import {
+  assertResetDatabaseMatchesApplication,
+  assertSeedContractForReset,
+} from "@/lib/admin/resetPreflight";
 import { resetPoliticalMetricsRuntimeState } from "@/lib/admin/seed/resetPoliticalMetricsRuntimeState";
 import { resetMacroMetricsRuntimeState } from "@/lib/admin/seed/resetMacroMetricsRuntimeState";
 import { resetStateRuntimeFields } from "@/lib/admin/seed/resetStateRuntimeFields";
@@ -219,6 +222,9 @@ export async function resetAndBootstrapGameWorld(
         "calendar stays pinned to the era start until it resolves"
     );
   }
+
+  // A preset with missing, copied or out-of-scale seed data never starts.
+  assertSeedContractForReset(preset);
 
   // Reject a staged but unsupported v2 reset before the seal changes the
   // running world. A failed preflight must leave v1 playable.

@@ -198,7 +198,7 @@ describe("seedFromSeats historical roster", () => {
   it.each(["1999-default", "2007-default"])(
     "does not back-project the 2019 presidential seat into %s",
     (preset) => {
-      expect(seatGroupsFor(preset).IE!.some((seat) => seat.officeType === "uachtaran")).toBe(false);
+      expect(() => seatGroupsFor(preset)).toThrow(/historicalSeats:seatGroups/);
     }
   );
 });
