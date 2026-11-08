@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
 import { seedTRRegions } from "@/lib/admin/seed/seedTR";
 import { TR_GEOGRAPHY } from "../geography";
+import { NATIONAL_FIGURES_2027 } from "@/lib/seeds/reference/nationalFigures2027";
 import { trRegions } from "./trRegions";
 import { trRegions1953 } from "./trRegions1953";
 import { trRegions1991 } from "./trRegions1991";
@@ -70,7 +71,7 @@ describe("Turkey modern regional population source and seed routes", () => {
     ]);
   });
 
-  it.each(["2019-default", "2023-default", "2027-default"])(
+  it.each(["2019-default", "2023-default"])(
     "uses the same explicit modern geography in registry and seed writes for %s",
     async (preset) => {
       expect(TR_GEOGRAPHY.regionBundles[preset as keyof typeof TR_GEOGRAPHY.regionBundles]).toBe(
@@ -84,6 +85,19 @@ describe("Turkey modern regional population source and seed routes", () => {
       });
     }
   );
+
+  it("allocates the modern geography to the 2027 national population and seeds it", async () => {
+    const bundle = TR_GEOGRAPHY.regionBundles["2027-default"]!;
+    expect(bundle.map((region) => region._id)).toEqual(trRegionsModern.map((region) => region._id));
+    expect(bundle.reduce((sum, region) => sum + region.population, 0)).toBe(
+      NATIONAL_FIGURES_2027.TR.population
+    );
+    const written = await writtenRows("2027-default");
+    expect(written.map(({ id }) => id)).toEqual(bundle.map((region) => region._id));
+    written.forEach(({ id, row }, index) => {
+      expect(row, `2027-default/${id}`).toEqual(rowWithoutId(bundle[index]!));
+    });
+  });
 
   it.each([
     ["1953-default", trRegions1953],
