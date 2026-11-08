@@ -38,6 +38,9 @@ import type { GameIteration } from "@/lib/db/types/gameState";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
+import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
+import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
+import { PRESERVED_ACTIVITY_LOG_TYPES } from "@/lib/admin/resetContract/rules/preservedFields";
 import {
   resetSelectionPreflight,
   resetSystemSelectionsFrom,
@@ -75,24 +78,7 @@ export const RUNTIME_WIPE_SPECIAL_CASES: ReadonlySet<string> = new Set<string>([
   "activityLog",
 ]);
 
-/**
- * `activityLog` rows that describe the ACCOUNT rather than the world, and so
- * survive a reset. Login/logout rows carry the IP, user agent, fingerprint and
- * tracking id that alt detection (`altDetection/run.ts`) and the moderation
- * dossier read, and `character_deleted` is the moderator marker written before
- * a hard delete. Dropping them let an account rotate its address across a
- * reset with no trail left behind.
- *
- * Every other type is world state and must go: `suspiciousDetection` reads
- * `turn_summary` by `turnNumber`, which restarts at 1, and NPP party capacity
- * counts recent `game_action`/`turn_summary` rows per user, so a surviving
- * world row would be read as the new world's activity.
- */
-export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
-  "login",
-  "logout",
-  "character_deleted",
-]);
+export { PRESERVED_ACTIVITY_LOG_TYPES };
 
 /**
  * Accounts a full reset (`deleteProfiles: true`) deletes: everyone except
@@ -370,6 +356,8 @@ interface ResetGameWorldOptions {
 export interface ResetGameWorldResult {
   success: true;
   message: string;
+  /** The identity and turn this teardown stamped on the new world. */
+  world?: { resetWorldId: string; currentTurn: number };
   details: {
     officialsDeleted: number;
     officialsSeeded: number;
@@ -634,35 +622,15 @@ export async function resetGameWorld(
       `${nppsResult.deletedCount} NPPs, ${billsResult.deletedCount} bills counted separately)`
   );
 
-  // Clear imperial-character references on admin accounts, but preserve the
-  // characters themselves so head-of-state NPPs survive across resets.
-  await db
-    .collection<User>("users")
-    .updateMany(
-      { activeImperialCharacterId: { $exists: true } },
-      { $unset: { activeImperialCharacterId: "", activeCharacterType: "" } }
-    );
-
-  // Clear regular-character pointers too — both reset modes either delete or
-  // retire all characters, so any `activeCharacterId` still pointing at one
-  // of those rows is stale. Leaving it set causes a redirect loop on /profile
-  // (findOne returns null → "Authentication required" → /login → repeat).
-  // Admin users survive the wipe but still need this cleared.
-  await db
-    .collection<User>("users")
-    .updateMany({ activeCharacterId: { $exists: true } }, { $unset: { activeCharacterId: "" } });
-
-  // Clear the turn-based corporation refounding cooldown on every (preserved)
-  // user. The legacy-named field stores the last corporation-end turn,
-  // and currentTurn resets to 1 below, so a stale high value would block
-  // founding for the whole new game. `lastRetiredAt` is intentionally left
-  // alone — it's a wall-clock anti-abuse cooldown, not game-turn state.
-  await db
-    .collection<User>("users")
-    .updateMany(
-      { lastCorporationFoundedTurn: { $exists: true } },
-      { $unset: { lastCorporationFoundedTurn: "" } }
-    );
+  // Account and imperial fields follow the preserved-field contract: pointers
+  // to retired characters, old-world turn cooldowns and wallets are cleared,
+  // identity and preferences survive. Runs after every character is gone.
+  const contractModified = await applyPreservedFieldContracts(db);
+  log(
+    `Applied preserved-field contracts: ${Object.entries(contractModified)
+      .map(([name, count]) => `${name} ${count}`)
+      .join(", ")}`
+  );
 
   // ⚠️ LEGACY BRANCH — dead on every real path, and it does NOT seed the world.
   //
@@ -757,12 +725,22 @@ export async function resetGameWorld(
     gameStateUnset.preIteration = "";
   }
 
+  // Rebuild rather than patch: every outgoing field that is neither written
+  // above nor on the keep list goes, including fields no type declares.
+  const outgoingState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const rebuild = planGameStateRebuild(
+    Object.keys(outgoingState ?? {}),
+    Object.keys(gameStateUpdate),
+    Object.keys(GAME_STATE_RESET_PRESERVED_FIELD_REASONS),
+    Object.keys(gameStateUnset)
+  );
+  const rebuildUnset = Object.fromEntries(rebuild.unset.map((field) => [field, ""] as const));
   await db
     .collection<GameState>("gameState")
     .updateOne(
       { _id: "current" },
-      Object.keys(gameStateUnset).length > 0
-        ? { $set: gameStateUpdate, $unset: gameStateUnset }
+      rebuild.unset.length > 0
+        ? { $set: gameStateUpdate, $unset: rebuildUnset }
         : { $set: gameStateUpdate },
       { upsert: true }
     );
@@ -802,22 +780,6 @@ export async function resetGameWorld(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .deleteMany({ _id: { $not: { $regex: /^party_/ } } } as any);
 
-  // Imperial characters are account identities, so preserve their documents,
-  // but a new world starts their personal wallets empty. Reset the legacy
-  // scalar and forex wallet together so either read path observes zero wealth.
-  await db.collection<ImperialCharacter>("imperialCharacters").updateMany({}, [
-    {
-      $set: {
-        cashOnHand: 0,
-        "currencyBalances.personal": {},
-        incomeTaxBatchReceipt: null,
-        incomeTaxStartTurn: 1,
-        pendingStockTaxReceipts: [],
-        incomeTier: { $ifNull: ["$initialIncomeTier", "high"] },
-      },
-    },
-  ]);
-
   // The imperial roll also survives the reset. Restore its sequential counter
   // from the preserved roster after the generic counter sweep, so a new
   // country's imperial profile cannot reuse an existing profile URL.
@@ -850,6 +812,10 @@ export async function resetGameWorld(
   // rows deleted) are only knowable after the new world exists.
   return {
     success: true,
+    world: {
+      resetWorldId: gameStateUpdate.resetWorldId as string,
+      currentTurn: resetDate.currentTurn,
+    },
     message: options.deleteProfiles
       ? "Game fully reset - all data deleted"
       : "Game reset successfully",

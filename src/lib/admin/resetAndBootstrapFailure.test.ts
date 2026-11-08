@@ -18,6 +18,9 @@ vi.mock("@/lib/mongodb", async (importOriginal) => {
 vi.mock("@/lib/admin/resetGameWorld", () => ({ resetGameWorld: vi.fn() }));
 vi.mock("@/lib/admin/bootstrapGameWorld", () => ({ bootstrapGameWorld: vi.fn() }));
 vi.mock("@/lib/admin/finalizeResetGameWorld", () => ({ finalizeResetGameWorld: vi.fn() }));
+vi.mock("@/lib/admin/resetContract/residueScan", () => ({
+  runResidueScan: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("@/lib/maintenanceStatus", () => ({
   enableMaintenanceMode: vi.fn(),
   normalizeMaintenanceMode: vi.fn(),
@@ -161,12 +164,12 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     const { REFERENCE_REBUILD_CLEARED_COLLECTIONS } =
       await import("@/lib/admin/seed/referenceRebuildClear");
     const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
-    const cleared: string[] = [];
+    const cleared = new Set<string>();
     for (const { name } of REFERENCE_REBUILD_CLEARED_COLLECTIONS) {
       db.collection(name).deleteMany.mockImplementation(async (filter: unknown) => {
-        expect(filter).toEqual({});
+        if (Object.keys(filter ?? {}).length > 0) return { deletedCount: 0 } as never;
         expect(vi.mocked(bootstrapGameWorld)).not.toHaveBeenCalled();
-        cleared.push(name);
+        cleared.add(name);
         return { deletedCount: 1 } as never;
       });
     }
@@ -177,7 +180,9 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
       preset: "1953-default",
     });
 
-    expect(cleared).toEqual(REFERENCE_REBUILD_CLEARED_COLLECTIONS.map(({ name }) => name));
+    expect([...cleared].sort()).toEqual(
+      REFERENCE_REBUILD_CLEARED_COLLECTIONS.map(({ name }) => name).sort()
+    );
     expect(vi.mocked(bootstrapGameWorld)).toHaveBeenCalledOnce();
     expect(result.logs.join(" ")).toContain("Cleared reference data for rebuild");
   });
@@ -479,9 +484,44 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
       status: "healthy",
       criticalChecks: [],
       baselineCaptured: true,
+      residueViolations: [],
     });
     expect(closeUpdate().$set["resetRun.status"]).toBe("succeeded");
     expect(captureSeedBaseline).toHaveBeenCalled();
+  });
+
+  it("keeps the world paused and lists every residue violation in the run record", async () => {
+    const { runResidueScan } = await import("@/lib/admin/resetContract/residueScan");
+    const { captureSeedBaseline } = await import("@/lib/admin/seedDiagnostic");
+    vi.mocked(runResidueScan).mockResolvedValueOnce([
+      { check: "predates-reset", collection: "conflicts", detail: "1 document(s) older" },
+      { check: "appropriation", collection: "federalBudget", detail: "US defence account" },
+    ]);
+    const result = await run();
+    expect(result.status).toBe("partial");
+    expect(result.readiness.status).toBe("blocked");
+    expect(result.readiness.residueViolations).toEqual([
+      "predates-reset conflicts: 1 document(s) older",
+      "appropriation federalBudget: US defence account",
+    ]);
+    expect(captureSeedBaseline).not.toHaveBeenCalled();
+    expect(closeUpdate().$set["resetRun.residueViolations"]).toBe(2);
+    expect(closeUpdate().$set["resetRun.failures"]).toEqual([
+      { phase: "residue", name: "predates-reset", error: expect.stringContaining("conflicts") },
+      { phase: "residue", name: "appropriation", error: expect.stringContaining("federalBudget") },
+    ]);
+    const lastReset = db.collectionMocks.gameConfig.updateOne.mock.calls.at(-1)?.[1] as {
+      $set: { lastReset: { residueViolations: number; status: string } };
+    };
+    expect(lastReset.$set.lastReset).toMatchObject({ status: "partial", residueViolations: 2 });
+  });
+
+  it("treats a residue scan that throws as a violation, never as a pass", async () => {
+    const { runResidueScan } = await import("@/lib/admin/resetContract/residueScan");
+    vi.mocked(runResidueScan).mockRejectedValueOnce(new Error("cursor died"));
+    const result = await run();
+    expect(result.status).toBe("partial");
+    expect(result.readiness.residueViolations).toEqual(["residue scan failed: cursor died"]);
   });
 
   it("records critical checks as partial readiness, skips baseline and remains sealed", async () => {
@@ -513,6 +553,7 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
       status: "blocked",
       criticalChecks: [check],
       baselineCaptured: false,
+      residueViolations: [],
     });
     expect(captureSeedBaseline).not.toHaveBeenCalled();
     expect(closeUpdate().$set["resetRun.status"]).toBe("partial");
@@ -536,6 +577,7 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
       status: "blocked",
       criticalChecks: [],
       baselineCaptured: false,
+      residueViolations: [],
       error: "audit unavailable",
     });
     expect(closeUpdate().$set["resetRun.status"]).toBe("partial");
@@ -557,6 +599,7 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
       status: "not-checked",
       criticalChecks: [],
       baselineCaptured: false,
+      residueViolations: [],
     });
     expect(runSeedDiagnostic).not.toHaveBeenCalled();
     expect(captureSeedBaseline).not.toHaveBeenCalled();
