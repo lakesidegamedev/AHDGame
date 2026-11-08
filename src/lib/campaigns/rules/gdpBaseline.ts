@@ -42,6 +42,7 @@
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { aggregateNationalGdp } from "@/lib/utils/nationalGdp";
 import { GDP_DENOMINATION_1953 } from "@/lib/seeds/reference/gdpDenomination";
 
 export type GdpBaselineUnit = "local" | "usd";
@@ -317,4 +318,85 @@ export function hasGdpBaseline(countryId: string): boolean {
 /** Read-only view of the table for tests and diagnostics. */
 export function getGdpBaselineTable(): Record<GdpBaselineCountry, Record<EraId, number>> {
   return GDP_BASELINE_TABLE;
+}
+
+/**
+ * Baseline a regional GDP-per-capita ratio is measured against.
+ *
+ * With no live figure (previews and tests with no world) it is the static
+ * table cell, which equals the population-weighted national mean at world
+ * start. With a live national GDP per capita it IS that figure, so the ratio
+ * is regional versus national at every point in the game and income and cost
+ * scalars stop drifting to their clamps as the whole economy grows.
+ *
+ * @throws when a live figure is supplied but is not a positive finite number:
+ *   a missing national GDP must never quietly fall back to the start value.
+ */
+export function effectiveGdpBaseline(
+  countryId: string,
+  preset?: string,
+  nationalGdpPerCapita?: number
+): number {
+  if (nationalGdpPerCapita === undefined) return gdpBaselinePerCapita(countryId, preset);
+  if (!Number.isFinite(nationalGdpPerCapita) || nationalGdpPerCapita <= 0) {
+    throw new Error(
+      `effectiveGdpBaseline: invalid live national GDP per capita for "${countryId}" ` +
+        `(${String(nationalGdpPerCapita)}); refusing to fall back to the era baseline.`
+    );
+  }
+  return nationalGdpPerCapita;
+}
+
+/**
+ * Live national GDP per capita for every country present in `states`, in the
+ * same unit as `State.gdp`. Countries whose regions sum to no usable GDP are
+ * left out, so `requireNationalGdpPerCapita` throws for them.
+ */
+export function nationalGdpPerCapitaIndex(
+  states: Iterable<{ countryId?: string; gdp?: number; population: number }>
+): Map<string, number> {
+  const byCountry = new Map<string, { gdp?: number; population: number }[]>();
+  for (const s of states) {
+    const key = s.countryId ?? "US";
+    const bucket = byCountry.get(key);
+    if (bucket) bucket.push(s);
+    else byCountry.set(key, [s]);
+  }
+  const index = new Map<string, number>();
+  for (const [countryId, rows] of byCountry) {
+    const { perCapita } = aggregateNationalGdp(rows);
+    if (Number.isFinite(perCapita) && perCapita > 0) index.set(countryId, perCapita);
+  }
+  return index;
+}
+
+/**
+ * Read one country from a `nationalGdpPerCapitaIndex`.
+ *
+ * @throws when the country has no usable regional GDP. Callers pricing live
+ *   money must not continue on a guess.
+ */
+export function requireNationalGdpPerCapita(
+  index: ReadonlyMap<string, number>,
+  countryId: string
+): number {
+  const perCapita = index.get(countryId);
+  if (perCapita === undefined) {
+    throw new Error(
+      `requireNationalGdpPerCapita: no usable regional GDP for country "${countryId}"; ` +
+        `refusing to price campaign money without it.`
+    );
+  }
+  return perCapita;
+}
+
+/** Single-country form of the index lookup; throws like `requireNationalGdpPerCapita`. */
+export function nationalGdpPerCapitaFromStates(
+  states: readonly { countryId?: string; gdp?: number; population: number }[],
+  countryId: string
+): number {
+  return requireNationalGdpPerCapita(
+    nationalGdpPerCapitaIndex(states.filter((s) => (s.countryId ?? "US") === countryId)),
+    countryId
+  );
 }

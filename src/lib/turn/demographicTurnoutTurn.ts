@@ -5,6 +5,10 @@
  */
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
+  nationalGdpPerCapitaIndex,
+  requireNationalGdpPerCapita,
+} from "@/lib/campaigns/rules/gdpBaseline";
+import {
   campaignAnchorToLocal,
   campaignLocalRate,
   loadCampaignCurrencyRates,
@@ -189,6 +193,8 @@ interface RevenueContext {
   // Raw state GDP (undefined when absent → country-average scalar 1.0, matching
   // the turn processor; coalescing to 0 would wrongly clamp to the 0.9 floor).
   stateGdpMap: Map<string, number | undefined>;
+  /** Live national GDP per capita by country, the income-scalar baseline. */
+  nationalGdpIndex: ReadonlyMap<string, number>;
   // NPPs only generate/are taxed when the economy is enabled (mirrors
   // processNppFundGeneration); otherwise they contribute $0 to revenue, so GOTV
   // never budgets against NPP income the treasury will not receive.
@@ -238,6 +244,7 @@ function calculatePartyRevenueFromContext(
         politicalInfluence: member.politicalInfluence ?? 0,
         preset: ctx.preset,
         priceLevel: ctx.priceLevel,
+        nationalGdpPerCapita: requireNationalGdpPerCapita(ctx.nationalGdpIndex, countryId),
       });
       // Treasuries hold LOCAL campaign money: the deposit phases convert anchor
       // generation to local before taxing, so the revenue estimate must too.
@@ -296,6 +303,7 @@ function calculatePartyRevenueFromContext(
         politicalInfluence: member.politicalInfluence ?? 0,
         preset: ctx.preset,
         priceLevel: ctx.priceLevel,
+        nationalGdpPerCapita: requireNationalGdpPerCapita(ctx.nationalGdpIndex, countryId ?? "US"),
       });
       revenue += calculateTaxAmount(
         campaignAnchorToLocal(
@@ -537,6 +545,7 @@ export async function processPartyGOTV(
       // the revenue estimate uses the same base.
       statePopMap: new Map(allStates.map((s) => [s._id, s.population])),
       stateGdpMap: new Map(allStates.map((s) => [s._id, s.gdp])),
+      nationalGdpIndex: nationalGdpPerCapitaIndex(allStates),
       nppEconomyEnabled,
       charactersByParty,
       charactersByPartyState,

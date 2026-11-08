@@ -122,6 +122,8 @@ export interface ActionEffectContext {
   preset?: string;
   /** Resolved between-era campaign price level; 1 preserves current behavior. */
   priceLevel?: number;
+  /** Live national GDP per capita for the cost baseline; absent = era table. */
+  nationalGdpPerCapita?: number;
 }
 
 /**
@@ -322,6 +324,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
               population: state.population,
               countryId: character.countryId,
               preset: ctx?.preset,
+              nationalGdpPerCapita: ctx?.nationalGdpPerCapita,
             }
           : undefined,
         ctx?.priceLevel
@@ -357,6 +360,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
               population: state.population,
               countryId: character.countryId,
               preset: ctx?.preset,
+              nationalGdpPerCapita: ctx?.nationalGdpPerCapita,
             }
           : undefined,
         ctx?.priceLevel
@@ -394,6 +398,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
               population: state.population,
               countryId: character.countryId,
               preset: ctx?.preset,
+              nationalGdpPerCapita: ctx?.nationalGdpPerCapita,
             }
           : undefined,
         ctx?.priceLevel
@@ -555,6 +560,8 @@ export type CanPerformActionOptions = {
   preset?: string;
   /** Resolved between-era campaign price level; 1 preserves current behavior. */
   priceLevel?: number;
+  /** Live national GDP per capita for the cost baseline; absent = era table. */
+  nationalGdpPerCapita?: number;
 };
 
 /**
@@ -591,6 +598,7 @@ export function canPerformAction(
             population: state.population,
             countryId: character.countryId,
             preset: options?.preset,
+            nationalGdpPerCapita: options?.nationalGdpPerCapita,
           }
         : undefined,
       options?.priceLevel
@@ -617,6 +625,7 @@ export function canPerformAction(
             population: state.population,
             countryId: character.countryId,
             preset: options?.preset,
+            nationalGdpPerCapita: options?.nationalGdpPerCapita,
           }
         : undefined,
       options?.priceLevel
@@ -708,6 +717,7 @@ export function canPerformAction(
             population: state.population,
             countryId: character.countryId,
             preset: options?.preset,
+            nationalGdpPerCapita: options?.nationalGdpPerCapita,
           }
         : undefined,
       options?.priceLevel
@@ -745,6 +755,7 @@ export function canPerformAction(
     formatFunds: plainFunds,
     preset: options?.preset,
     priceLevel: options?.priceLevel,
+    nationalGdpPerCapita: options?.nationalGdpPerCapita,
   });
   if (effect.fundsChange && effect.fundsChange < 0) {
     const costAnchor = Math.abs(effect.fundsChange);
@@ -785,7 +796,7 @@ function applyEffectToCharacter(
   state: ActionStateEconomics | undefined,
   forexEnabled = false,
   homeFxRate?: number,
-  pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita"> = {}
 ): Character {
   const effect = ACTIONS[actionType].effect(character, state, {
     formatFunds: plainFunds,
@@ -853,7 +864,7 @@ export function simulateActionBatch(
   count: number,
   forexEnabled = false,
   homeFxRate?: number,
-  pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita"> = {}
 ): SimulateActionBatchResult {
   let c: Character = { ...character };
   let totalActionPoints = 0;
@@ -908,7 +919,7 @@ export function getBatchAffordability(
   count: number,
   forexEnabled = false,
   homeFxRate?: number,
-  pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita"> = {}
 ): BatchAffordability {
   const full = simulateActionBatch(
     character,

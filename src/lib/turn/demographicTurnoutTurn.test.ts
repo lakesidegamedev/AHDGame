@@ -417,7 +417,7 @@ describe("demographicTurnoutTurn", () => {
       db.collectionMocks["stateDemographicTurnout"]!.find.mockReturnValue(cursorFor([mockTurnout]));
       db.collectionMocks["politicalParties"]!.find.mockReturnValue(cursorFor([mockParty]));
       db.collectionMocks["states"]!.find.mockReturnValue(
-        cursorFor([{ _id: stateId, population: 100_000 }])
+        cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "US" }])
       );
 
       await processPartyGOTV();
@@ -532,7 +532,7 @@ describe("demographicTurnoutTurn", () => {
       db.collectionMocks["characters"]!.find.mockReturnValue(cursorFor([mockCharacter]));
       db.collectionMocks["npps"]!.find.mockReturnValue(cursorFor([]));
       db.collectionMocks["states"]!.find.mockReturnValue(
-        cursorFor([{ _id: stateId, population: 100_000 }])
+        cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "US" }])
       );
 
       await processPartyGOTV();
@@ -677,7 +677,7 @@ describe("demographicTurnoutTurn", () => {
 
       expect(treasuryOps).toHaveLength(1);
       const usSpend = Math.abs(treasuryOps[0].updateOne.update.$inc.treasury);
-      expect(usSpend).toBe(75);
+      expect(usSpend).toBe(50);
     });
 
     it("emits one national treasury row for GOTV and one for suppression instead of collapsing both into repeated state-shaped entries", async () => {
@@ -768,7 +768,14 @@ describe("demographicTurnoutTurn", () => {
       db.collectionMocks.characters.find.mockReturnValue(cursorFor([mockCharacter]));
       db.collectionMocks.npps.find.mockReturnValue(cursorFor([]));
       db.collectionMocks.states.find.mockReturnValue(
-        cursorFor(stateIds.map((stateId) => ({ _id: stateId, population: 100_000 })))
+        cursorFor(
+          stateIds.map((stateId) => ({
+            _id: stateId,
+            population: 100_000,
+            gdp: 100_000,
+            countryId: "US",
+          }))
+        )
       );
 
       const { emitTreasuryTransactionsBulk } = await import("@/lib/treasury/emit");

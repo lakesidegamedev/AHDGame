@@ -3,6 +3,7 @@
  * Costs use the actor's equivalent self-action quotes with a premium; see executeSimpleInfluence.
  */
 
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { ObjectId, Db } from "mongodb";
 import type { Campaign, Character, Election, GameConfig, NPP, State } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
@@ -141,6 +142,7 @@ async function getSimpleInfluencePrices(
     population: state.population,
     countryId: targetCountryId,
     preset,
+    nationalGdpPerCapita: await loadNationalGdpPerCapita(db, targetCountryId),
   };
   // Quote against the target's own stats and home economy so a low-stat booster
   // cannot discount the action. NPPs and pre-stat characters use neutral stats.

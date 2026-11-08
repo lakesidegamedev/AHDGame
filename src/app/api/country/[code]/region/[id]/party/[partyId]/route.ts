@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
@@ -235,6 +236,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // GDP-baseline era for income math: the world's reset preset, so
     // historical worlds estimate in their own denomination (issue #798).
     const preset = await getGameStatePresetOrDefault(db);
+    const nationalGdpPerCapita = await loadNationalGdpPerCapita(db, countryId);
     // 1. Calculate for players
     for (const character of characters) {
       // Skip banned users (already filtered from members)
@@ -249,6 +251,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         countryId,
         politicalInfluence: character.politicalInfluence ?? 0,
         preset,
+        nationalGdpPerCapita,
       });
       expectedHourlyIncome += calculateTaxAmount(toLocal(totalFundRate), stateTaxRate);
     }

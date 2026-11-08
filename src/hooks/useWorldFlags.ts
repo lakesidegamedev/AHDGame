@@ -9,6 +9,8 @@ export interface WorldFlags {
   maastrichtEligibleCountries?: string[];
   preset: string;
   campaignPriceLevel: number;
+  /** Live national GDP per capita by country: the baseline campaign cost scalars measure regions against. */
+  nationalGdpPerCapita: Record<string, number>;
   eurozoneEnabled: boolean;
   euroMonetaryUnion?: EuroMonetaryUnion;
   euroMemberCurrencies?: CurrencyCode[];
@@ -47,6 +49,7 @@ export interface WorldFlags {
 const DEFAULT_FLAGS: WorldFlags = {
   preset: "2019-default",
   campaignPriceLevel: 1,
+  nationalGdpPerCapita: {},
   eurozoneEnabled: true,
   eraSystemEnabled: false,
   currentYear: null,
