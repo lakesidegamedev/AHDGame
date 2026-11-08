@@ -35,6 +35,7 @@ import { shouldGrantOwnerAdminOnRegister } from "@/lib/singleplayerOwnerAdmin";
 import { lakesideAccountFields } from "@/lib/auth/lakesideAccount";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import type { ActionAuditNet } from "@/lib/db/types/actionAuditLog";
+import { authConfig } from "@/lib/config/auth";
 
 /** Partially redact an IP for display in forensic surfaces — never store the
  * raw address in `actionAuditLog.net` (plan §3.1 "net" doc-comment). */
@@ -169,7 +170,7 @@ export async function POST(request: Request) {
 
     // Block registration when test mode is enabled and no valid test secret is provided
     if (config?.testMode) {
-      const expectedSecret = process.env.TEST_SECRET;
+      const expectedSecret = authConfig.testSecret();
       if (!expectedSecret || !timingSafeCompare(testSecret ?? "", expectedSecret)) {
         recordAudit({
           source: "api",
@@ -280,7 +281,7 @@ export async function POST(request: Request) {
         });
         return errorResponse(403, "Admin registration is currently disabled.");
       }
-      const adminRegKey = process.env.ADMIN_REGISTRATION_KEY;
+      const adminRegKey = authConfig.adminRegistrationKey();
       if (adminRegKey && timingSafeCompare(adminKey ?? "", adminRegKey)) {
         isAdmin = true;
       } else {

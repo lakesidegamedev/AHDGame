@@ -1,9 +1,10 @@
 /** Helpers shared by the NPP action sweeps. */
 import type { CountryId } from "@/lib/constants/countries";
+import { workerConfig } from "@/lib/config/worker";
 
 // Optional global salt so headless sim runs can vary the NPP action RNG across
 // runs while staying reproducible within a run (set by the sim harness).
-export const NPP_ACTION_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+export const NPP_ACTION_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
 
 // v3 = non-player-only autonomy, v4 = global; see the econActive/econGlobal
 // gate in processNppActions. The ordering is the canonical export from

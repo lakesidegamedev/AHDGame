@@ -19,7 +19,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { getManifestosForElections } from "@/lib/db/collections/manifestos";
 import { MANIFESTO_PLEDGE_COUNT, MAX_MANIFESTO_ELECTION_IDS } from "@/lib/db/types/manifesto";
 

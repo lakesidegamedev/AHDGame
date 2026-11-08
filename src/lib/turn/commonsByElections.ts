@@ -32,21 +32,21 @@ import {
   COMMONS_BY_ELECTION_FILING_TURNS,
   COMMONS_BY_ELECTION_GENERAL_TURNS,
   COMMONS_BY_ELECTION_RETRY_COOLDOWN_TURNS,
-} from "@/lib/uk/elections/commonsRecallRules";
-import { computeByElectionCarveFraction } from "@/lib/uk/elections/byElectionCarve";
+} from "@/lib/countries/uk/elections/commonsRecallRules";
+import { computeByElectionCarveFraction } from "@/lib/countries/uk/elections/byElectionCarve";
 import { regularRaceFillsSeatFirst } from "@/lib/turn/byElections";
 import {
   claimVacanciesForElection,
   createCommonsVacancy,
   findLiveVacancyForOfficial,
   markVacanciesFilled,
-} from "@/lib/uk/elections/commonsVacancyShell";
+} from "@/lib/countries/uk/elections/commonsVacancyShell";
 import {
   advanceRecallPetition,
   ensureRecallWatch,
   evaluatePetitionTriggers,
   getActivePetitionForOfficial,
-} from "@/lib/uk/elections/recallPetitionShell";
+} from "@/lib/countries/uk/elections/recallPetitionShell";
 import type { UkCommonsVacancy } from "@/lib/db/types/ukByElection";
 
 export const SPECIAL_COMMONS_ELECTION_TYPE = "special_commons";

@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * Per-deployment auth cookie name.
  *
@@ -11,7 +13,7 @@
  * Mirrors the slug derivation used by the Sentry cron monitor in cron.ts
  * so per-env identifiers stay consistent across the system.
  */
-export function computeAuthCookieName(env: NodeJS.ProcessEnv = process.env): string {
+export function computeAuthCookieName(env: NodeJS.ProcessEnv = serverEnv()): string {
   const tag = (env.RAILWAY_SERVICE_NAME ?? env.RAILWAY_ENVIRONMENT_NAME ?? "local")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

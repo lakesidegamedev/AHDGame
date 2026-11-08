@@ -1,8 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { UKBudget, UKBudgetStatus } from "@/lib/db/types/ukBudget";
 import type { Bill, BillProvision } from "@/lib/db/types/legislation";
-import { validateBudget } from "@/lib/uk/budget/budgetValidation";
-import { applyConfidenceEventToGov } from "@/lib/uk/confidence/confidenceGaugeStore";
+import { validateBudget } from "@/lib/countries/uk/budget/budgetValidation";
+import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 
 /** Hours a Budget vote runs — mirrors the UK bill voting window. */

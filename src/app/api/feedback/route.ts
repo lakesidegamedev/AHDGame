@@ -15,6 +15,7 @@ import { createGitHubIssue } from "@/lib/github";
 import { createNotification } from "@/lib/notifications";
 import type { Feedback, FeedbackType, BugCategory, SuggestionCategory } from "@/lib/db/types";
 import type { User } from "@/lib/db/types";
+import { servicesConfig } from "@/lib/config/services";
 
 /**
  * POST /api/feedback
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
 
     // Create GitHub issue if GIT_TOKEN and GITHUB_REPO are configured
     let githubIssueUrl: string | undefined;
-    if (process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
+    if (servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       const reporterUsername = userId
         ? (
             await db

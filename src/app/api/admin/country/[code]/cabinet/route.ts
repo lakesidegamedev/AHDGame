@@ -34,9 +34,12 @@ import { getUKCabinetCooldownsCollection } from "@/lib/db/collections/ukGovernme
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
-import { canHoldAdditionalAppointment, roleSlotForPosition } from "@/lib/uk/dualMinistry/rules";
+import {
+  canHoldAdditionalAppointment,
+  roleSlotForPosition,
+} from "@/lib/countries/uk/dualMinistry/rules";
 import { reconcileUkSharedPool } from "@/lib/cabinet/ministerialActionPool";
-import { preserveSurvivingCabinetRow } from "@/lib/uk/dualMinistry/survivor";
+import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
 
 const actionSchema = z
   .object({
@@ -98,7 +101,7 @@ async function vacateSeat(
 
   // Restore the character's currentOffice to their legislative seat (if any)
   // so they keep the right bonuses after leaving cabinet — mirrors the
-  // PM-facing fire flow in src/lib/uk/cabinetApi.ts. An NPP-held seat has no
+  // PM-facing fire flow in src/lib/countries/uk/cabinetApi.ts. An NPP-held seat has no
   // character office to restore, so this is skipped for NPP members.
   if (member.characterId) {
     const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);

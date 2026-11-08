@@ -6985,6 +6985,10 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/lib/countries/uk/elections/commonsVerticalSlice.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/countries/uk/elections/perpetual.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -8542,10 +8546,6 @@
       "narrativeLines": 0
     },
     "src/lib/energyTransition/rules.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/env.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -14272,10 +14272,6 @@
     "src/lib/tutorial/world.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/uk/elections/commonsVerticalSlice.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/unions/commands/bargaining.ts": {
       "longBlocks": 1,

@@ -109,7 +109,7 @@ import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
 import {
   resolveElectionManifestoMultipliers,
   deriveGroupLeans,
-} from "@/lib/uk/manifesto/electionManifestoResolver";
+} from "@/lib/countries/uk/manifesto/electionManifestoResolver";
 import { buildCurrentRegistrationBaseline } from "./electionFormulaFactors";
 import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
 import {

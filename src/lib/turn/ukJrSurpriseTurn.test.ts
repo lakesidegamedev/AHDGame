@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { UK_JR_SURPRISE_TEMPLATES } from "@/lib/uk/judicialReview/surpriseTemplates";
-import { UK_JR_SURPRISE_SPAWN_PROBABILITY_PER_TURN } from "@/lib/uk/judicialReview/surpriseSpawn";
+import { UK_JR_SURPRISE_TEMPLATES } from "@/lib/countries/uk/judicialReview/surpriseTemplates";
+import { UK_JR_SURPRISE_SPAWN_PROBABILITY_PER_TURN } from "@/lib/countries/uk/judicialReview/surpriseSpawn";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/billEnactment", () => ({ onBillEnacted: vi.fn().mockResolvedValue(undefined) }));

@@ -1,6 +1,6 @@
 import { errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId, isParliamentarySystem } from "@/lib/constants/countries";
-import { getWhipWithdrawnHandler } from "@/lib/uk/cabinetApi";
+import { getWhipWithdrawnHandler } from "@/lib/countries/uk/cabinetApi";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;

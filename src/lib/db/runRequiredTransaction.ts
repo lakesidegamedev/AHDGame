@@ -1,6 +1,7 @@
 import type { ClientSession, MongoClient, TransactionOptions } from "mongodb";
 import { ReadPreference } from "mongodb";
 import { getMongoClient, resolveMongoDbName } from "@/lib/mongodb";
+import { serverEnv } from "@/lib/config/read";
 
 const DEFAULT_TRANSACTION_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_COMMIT_TIME_MS = 5_000;
@@ -156,7 +157,7 @@ const BARRIER_ID = "transactionMajorityBarrier";
 async function awaitMajorityBarrier(client: MongoClient): Promise<void> {
   if (!acknowledgesBelowMajority(client)) return;
   await client
-    .db(resolveMongoDbName(process.env as Parameters<typeof resolveMongoDbName>[0]))
+    .db(resolveMongoDbName(serverEnv() as Parameters<typeof resolveMongoDbName>[0]))
     .collection<{ _id: string; at: Date }>(BARRIER_COLLECTION)
     .updateOne(
       { _id: BARRIER_ID },

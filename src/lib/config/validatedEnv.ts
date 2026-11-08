@@ -1,15 +1,7 @@
 /**
- * Startup environment validation.
- *
- * Validates required environment variables the first time a runtime path
- * needs them, so builds can compile safely while requests still fail closed
- * before any auth or database work runs without secrets.
- *
- * Import this module in `mongodb.ts` and `auth.ts` so runtime callers share
- * the same validation and error formatting.
- *
- * In the test environment (NODE_ENV==="test") validation is skipped so
- * unit/integration tests can run without setting up real credentials.
+ * Required environment validation, run the first time a runtime path needs it
+ * so builds compile without secrets while requests still fail closed. Skipped
+ * when NODE_ENV is "test" so tests need no real credentials.
  */
 
 import { z } from "zod";

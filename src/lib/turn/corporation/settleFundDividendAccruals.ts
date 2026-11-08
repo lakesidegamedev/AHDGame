@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { workerConfig } from "@/lib/config/worker";
 
 type FundDividendAccruals =
   import("@/lib/indexFunds/dividendPassThrough").FundDividendAccrualInput[];
@@ -24,7 +25,7 @@ export async function settleFundDividendAccruals(
       // dividendPassThrough.test.ts. The paths are not bit-identical (double
       // addition order); worst drift is 1.5e-8 absolute, far below the cent
       // flooring discards. Set AHD_BATCH_FUND_DIVIDENDS=off to fall back.
-      if (process.env.AHD_BATCH_FUND_DIVIDENDS !== "off") {
+      if (workerConfig.batchFundDividends() !== "off") {
         const { processIndexFundDividendsBatch } =
           await import("@/lib/indexFunds/dividendPassThrough");
         await processIndexFundDividendsBatch(db, fundDividendAccruals, {

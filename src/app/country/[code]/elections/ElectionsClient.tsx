@@ -35,7 +35,7 @@ import {
 import { resolveChamberForOffice } from "@/lib/elections/officeResolution";
 import { CommonsCarveUpPanel } from "@/components/uk/elections/CommonsCarveUpPanel";
 import { ManifestoFlavorBar } from "@/components/uk/elections/ManifestoFlavorBar";
-import { buildCommonsCarveUpSlices } from "@/lib/uk/elections/commonsCarveUp";
+import { buildCommonsCarveUpSlices } from "@/lib/countries/uk/elections/commonsCarveUp";
 import { ELECTION_STATE_NAMES } from "@/app/elections/electionsHelpers";
 import { isCommonsGeneralElection } from "@/lib/utils/electionLabels";
 

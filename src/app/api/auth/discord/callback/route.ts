@@ -60,6 +60,7 @@ import {
 } from "@/lib/auth/lakesideLoginReturn";
 import { resolveReauthIssuedAt } from "@/lib/auth/sessionIssue";
 import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/auth/sourceFence";
+import { authConfig } from "@/lib/config/auth";
 
 // GET /api/auth/discord/callback — Handles the Discord OAuth callback to log in or register a user via Discord.
 // Auth: public
@@ -139,8 +140,8 @@ export async function GET(request: Request) {
 
   cookieStore.delete("discord_oauth_state");
 
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+  const clientId = authConfig.discordClientId();
+  const clientSecret = authConfig.discordClientSecret();
   const redirectUri = discordRedirectUri();
 
   if (!clientId || !clientSecret || !redirectUri) {

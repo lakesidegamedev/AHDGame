@@ -14,7 +14,7 @@ import {
   isSpecialCommonsElection,
   officeKeyForElectionType,
 } from "@/lib/utils/electionLabels";
-import { reopenCommonsVacanciesForRetry } from "@/lib/uk/elections/commonsVacancyShell";
+import { reopenCommonsVacanciesForRetry } from "@/lib/countries/uk/elections/commonsVacancyShell";
 import { triggerLeadershipElectionsAfterChamberVote } from "@/lib/congress/leadershipElections";
 import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";

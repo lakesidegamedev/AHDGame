@@ -1,5 +1,5 @@
 import { resolveMongoDbName } from "@/lib/mongodb";
-import type { Env } from "@/lib/env";
+import type { Env } from "@/lib/config/validatedEnv";
 import { assertSeedContract } from "@/lib/seeds/contract/checkSeedContract";
 
 type ResetDatabaseEnv = Pick<Env, "MONGODB_URI" | "MONGODB_DB">;

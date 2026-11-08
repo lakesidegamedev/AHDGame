@@ -79,6 +79,7 @@ import { readHuMixedElectionPlan } from "@/lib/countries/hu/readMixedElectionPla
 import type { HuMixedPlan } from "@/lib/countries/hu/rules/mixedElectionPlan";
 import { captureElectionResolved } from "@/lib/analytics/electionAnalytics";
 import { isNativeRussianAssemblyElection } from "@/lib/countries/ru/rules/assemblyElection";
+import { workerConfig } from "@/lib/config/worker";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -638,7 +639,7 @@ export async function resolveGeneralElections(
   // ordering (generalElectionResolutionOrder) is preserved: presidents still see
   // the freshly-seated Congress. Bounded so we don't overwhelm the Mongo pool;
   // set ELECTION_RESOLUTION_CONCURRENCY=1 to fall back to fully sequential.
-  const concurrency = Math.max(1, Number(process.env.ELECTION_RESOLUTION_CONCURRENCY) || 4);
+  const concurrency = Math.max(1, Number(workerConfig.electionResolutionConcurrency()) || 4);
 
   // completedElections is pre-sorted by resolution order, so contiguous runs of
   // the same order form each group.

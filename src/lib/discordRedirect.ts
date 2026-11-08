@@ -1,3 +1,5 @@
+import { authConfig } from "@/lib/config/auth";
+
 /**
  * The OAuth redirect URI sent to Discord.
  *
@@ -10,6 +12,6 @@
  * and broke every Discord sign-in, so the environment stays authoritative.
  */
 export function discordRedirectUri(): string | undefined {
-  const raw = process.env.DISCORD_REDIRECT_URI?.trim();
+  const raw = authConfig.discordRedirectUri()?.trim();
   return raw || undefined;
 }

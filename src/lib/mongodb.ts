@@ -1,12 +1,15 @@
 import { isSingleplayer } from "@/lib/singleplayer";
 import { prepareManagedMongo } from "@/lib/singleplayer/prepareManagedMongo";
 import { MongoClient, Db, type WriteConcernSettings } from "mongodb";
-import { getValidatedEnv } from "@/lib/env";
+import { getValidatedEnv } from "@/lib/config/validatedEnv";
 import {
   attachMongoCommandMonitor,
   mongoCommandMonitoringWanted,
 } from "@/lib/observability/mongoMonitor";
 import { isTurnWorkerProcess } from "@/lib/turn/turnWorkerHandoff";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { serverEnv } from "@/lib/config/read";
+import { databaseConfig } from "@/lib/config/database";
 
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
@@ -80,7 +83,7 @@ export function resolveMongoWriteConcern(
 
 function getClientPromise(): Promise<MongoClient> {
   const uri =
-    process.env.NODE_ENV === "test" ? process.env.MONGODB_URI : getValidatedEnv().MONGODB_URI;
+    process.env.NODE_ENV === "test" ? databaseConfig.mongoUri() : getValidatedEnv().MONGODB_URI;
   if (!uri) {
     throw new Error(
       "MONGODB_URI is not set. Add it to .env.local for local development or your deployment environment variables."
@@ -99,14 +102,14 @@ function getClientPromise(): Promise<MongoClient> {
       maxIdleTimeMS: 0, // Never idle-timeout pooled connections; proxy handles its own lifecycle
       serverSelectionTimeoutMS: 10_000, // Fail fast in serverless rather than blocking for 30 s
       // Prevent individual operations from hanging indefinitely; the turn worker raises it.
-      socketTimeoutMS: resolveMongoSocketTimeoutMs(process.env),
-      writeConcern: resolveMongoWriteConcern(process.env),
+      socketTimeoutMS: resolveMongoSocketTimeoutMs(serverEnv()),
+      writeConcern: resolveMongoWriteConcern(serverEnv()),
       monitorCommands: mongoCommandMonitoringWanted(),
     });
     // Instrument every query (breadcrumbs + slow-query/failure capture) centrally.
     attachMongoCommandMonitor(client);
     global._mongoClientPromise = (async () => {
-      if (process.env.SINGLEPLAYER === "1" && process.env.SINGLEPLAYER_MANAGED_MONGO === "1")
+      if (runtimeConfig.singleplayer() && runtimeConfig.singleplayerManagedMongo())
         await prepareManagedMongo(uri);
       return client.connect();
     })().catch((err) => {
@@ -120,7 +123,7 @@ function getClientPromise(): Promise<MongoClient> {
 export async function getDb(): Promise<Db> {
   const dbName =
     process.env.NODE_ENV === "test"
-      ? resolveMongoDbName(process.env as MongoDbNameEnv)
+      ? resolveMongoDbName(serverEnv() as MongoDbNameEnv)
       : resolveMongoDbName(getValidatedEnv());
 
   try {

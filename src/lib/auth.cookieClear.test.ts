@@ -6,7 +6,7 @@ import { clearAuthCookie } from "./auth";
 vi.mock("@sentry/nextjs", () => ({ addBreadcrumb: vi.fn(), captureMessage: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn(), headers: vi.fn() }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/env", () => ({}));
+vi.mock("@/lib/config/validatedEnv", () => ({}));
 
 const setCookie = vi.fn();
 

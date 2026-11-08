@@ -22,6 +22,9 @@ import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTradi
 import { captureServerProductEvent } from "@/lib/analytics/captureServer";
 import { isCronWorkerProcess, shouldStartHostedBackgroundServices } from "@/lib/startupMode";
 import { PatreonReconcileLockBusyError, runPatreonReconcile } from "@/lib/patreon/reconcile";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { servicesConfig } from "@/lib/config/services";
+import { serverEnv } from "@/lib/config/read";
 
 /*
  * Sentry cron-monitor slug for the primary turn cron. Service-suffixed so
@@ -37,7 +40,7 @@ import { PatreonReconcileLockBusyError, runPatreonReconcile } from "@/lib/patreo
  * extras) and normal (every hour) modes. A missed check-in within
  * `checkinMargin` is tolerated; beyond that Sentry alerts.
  */
-export function deriveTurnCronMonitorSlug(env: NodeJS.ProcessEnv = process.env): string {
+export function deriveTurnCronMonitorSlug(env: NodeJS.ProcessEnv = serverEnv()): string {
   return `turn-cron-${deploymentServiceSlug(env)}`;
 }
 const TURN_CRON_MONITOR_SLUG = deriveTurnCronMonitorSlug();
@@ -135,7 +138,7 @@ function getCronSchedule(fastMode?: boolean): string {
 export async function initializeCronJobs() {
   nativePushCron?.stop();
   nativePushCron = null;
-  if (process.env.NATIVE_PUSH_ENABLED === "true" && process.env.SINGLEPLAYER !== "1") {
+  if (runtimeConfig.nativePushEnabled() && !runtimeConfig.singleplayer()) {
     nativePushCron = cron.schedule("* * * * *", async () => {
       if (pushDispatchRunning) return;
       pushDispatchRunning = true;
@@ -534,7 +537,7 @@ export async function initializeCronJobs() {
     "30 4 * * *",
     async () => {
       try {
-        const enabled = process.env.RETENTION_ENABLED === "1";
+        const enabled = runtimeConfig.retentionEnabled();
         const summary = await runRetention({ dryRun: !enabled, compact: enabled });
         const totalDeleted = summary.results.reduce((s, r) => s + (r.deletedCount ?? 0), 0);
         const totalArchived = summary.results.reduce((s, r) => s + (r.archivedCount ?? 0), 0);
@@ -652,7 +655,7 @@ export async function initializeCronJobs() {
   console.log("[Cron] API abuse detection will scan every hour.");
   console.log(
     `[Cron] History retention will run daily at 04:30 UTC (${
-      process.env.RETENTION_ENABLED === "1" ? "live" : "dry-run"
+      runtimeConfig.retentionEnabled() ? "live" : "dry-run"
     }).`
   );
   console.log("[Cron] Stuck turn-lock recovery sweep will run every 5 minutes.");
@@ -700,10 +703,11 @@ export async function initializeCronJobs() {
   // for authenticated dry-runs and explicit operator applies.
   if (
     process.env.NODE_ENV === "production" &&
-    isCronWorkerProcess(process.env) &&
-    shouldStartHostedBackgroundServices(process.env) &&
+    isCronWorkerProcess(serverEnv()) &&
+    shouldStartHostedBackgroundServices(serverEnv()) &&
     // Sandboxes do not inherit the creator token or reconcile live supporters.
-    (process.env.SENTRY_ENVIRONMENT !== "sandbox" || !!process.env.PATREON_CREATOR_TOKEN?.trim())
+    (servicesConfig.sentryEnvironment() !== "sandbox" ||
+      !!servicesConfig.patreonCreatorToken()?.trim())
   ) {
     patreonReconcileCron = cron.schedule(
       PATREON_RECONCILIATION_SCHEDULE,

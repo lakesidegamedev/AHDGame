@@ -28,6 +28,8 @@ import {
 } from "@/lib/observability/mongoRoundTrips";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { isTurnWorkerProcess } from "@/lib/turn/turnWorkerHandoff";
+import { workerConfig } from "@/lib/config/worker";
+import { serverEnv } from "@/lib/config/read";
 
 /** Driver chatter that carries no diagnostic value — never instrumented. */
 const IGNORED_COMMANDS = new Set([
@@ -196,7 +198,7 @@ let attachedClients = new WeakSet<MongoClient>();
  * Sentry keeps the last 100 of. On a production copy the corporation phase ran
  * 130 s with it on and 108 s with it off.
  */
-export function mongoMonitorWanted(env: Record<string, string | undefined> = process.env): boolean {
+export function mongoMonitorWanted(env: Record<string, string | undefined> = serverEnv()): boolean {
   if (env.OBSERVABILITY_DB_MONITOR === "false") return false;
   if (isTurnWorkerProcess(env) && env.OBSERVABILITY_DB_MONITOR !== "true") return false;
   return !isSingleplayer(env);
@@ -205,8 +207,8 @@ export function mongoMonitorWanted(env: Record<string, string | undefined> = pro
 /** Local simulation counters do not depend on remote observability. */
 export function mongoCommandMonitoringWanted(): boolean {
   return (
-    process.env.AHD_TURN_ROUNDTRIP_MONITOR === "1" ||
-    process.env.AHD_TURN_ROUNDTRIP_PROFILE === "1" ||
+    workerConfig.roundTripMonitor() ||
+    workerConfig.roundTripProfile() ||
     (process.env.NODE_ENV !== "test" && mongoMonitorWanted())
   );
 }

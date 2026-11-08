@@ -13,7 +13,7 @@ import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { Character, ElectedOfficial, ElectionCandidate } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { vacateCommonsSeat } from "@/lib/uk/elections/commonsVacancyShell";
+import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
 
 export type CommonsSeatCommandResult =
   | { ok: true; officialId: ObjectId; vacancyId: ObjectId; label: string }

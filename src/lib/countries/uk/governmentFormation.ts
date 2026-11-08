@@ -23,10 +23,10 @@ import { lowerChamberMajorityThreshold } from "@/lib/legislature/lowerChamberSea
 import {
   getUkConfidenceErosionScale,
   tickConfidenceForGov,
-} from "@/lib/uk/confidence/confidenceGaugeStore";
+} from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { loadUkBrokenPromiseMeter } from "@/lib/countries/uk/manifesto/deliveryMeter";
-import { tickNhsFromBudget } from "@/lib/uk/nhs/nhsStore";
+import { tickNhsFromBudget } from "@/lib/countries/uk/nhs/nhsStore";
 import { triggerSnapElection } from "@/lib/turn/snapElection";
 import { canDissolveOnConfidence } from "@/lib/turn/rules/snapElection";
 import { getGameState } from "@/lib/gameState";

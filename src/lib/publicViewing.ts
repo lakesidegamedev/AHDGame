@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 /**
  * "Public viewing mode" — the master switch governing whether unauthenticated
@@ -74,7 +75,7 @@ export function invalidatePublicViewingCache(): void {
  * fresh/legacy config and any transient lookup gap both fail open (public).
  */
 export async function getCachedPublicViewingMode(): Promise<boolean> {
-  const envOverride = process.env.PUBLIC_VIEWING_MODE;
+  const envOverride = runtimeConfig.publicViewingMode();
   if (envOverride === "true") return true;
   if (envOverride === "false") return false;
 

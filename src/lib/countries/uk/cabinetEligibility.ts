@@ -8,7 +8,7 @@ import {
   isCandidateEligibleForVacancy,
   roleSlotForPosition,
   type UkMinisterialRoleSlot,
-} from "@/lib/uk/dualMinistry/rules";
+} from "@/lib/countries/uk/dualMinistry/rules";
 import {
   getCabinetEligibleChamberKeys as resolveCabinetEligibleChamberKeys,
   getCountryConfig,

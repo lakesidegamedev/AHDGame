@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * Singleplayer mode.
  *
@@ -45,7 +47,7 @@ function flagIsSet(value: string | undefined): boolean {
  * `NEXT_PUBLIC_BASE_URL` is included because the desktop build always points
  * at loopback: a public origin means this is serving somebody else.
  */
-function deploymentSignals(env: SingleplayerEnv = process.env): string[] {
+function deploymentSignals(env: SingleplayerEnv = serverEnv()): string[] {
   const signals: string[] = [];
   if (env.RAILWAY_ENVIRONMENT_NAME) signals.push("RAILWAY_ENVIRONMENT_NAME");
   if (env.RAILWAY_SERVICE_NAME) signals.push("RAILWAY_SERVICE_NAME");
@@ -106,7 +108,7 @@ export class SingleplayerNotAllowedError extends Error {
  * Throws when singleplayer is requested on anything that looks like a server.
  * Safe to call when singleplayer is not requested: it does nothing.
  */
-export function assertSingleplayerAllowed(env: SingleplayerEnv = process.env): void {
+export function assertSingleplayerAllowed(env: SingleplayerEnv = serverEnv()): void {
   if (!flagIsSet(env.SINGLEPLAYER)) return;
   const signals = deploymentSignals(env);
   if (signals.length > 0) throw new SingleplayerNotAllowedError(signals);
@@ -117,14 +119,14 @@ export function assertSingleplayerAllowed(env: SingleplayerEnv = process.env): v
  * false on a deployment, so the bypass can never degrade into "off" on a
  * machine that was one env var away from serving every request as one user.
  */
-export function isSingleplayer(env: SingleplayerEnv = process.env): boolean {
+export function isSingleplayer(env: SingleplayerEnv = serverEnv()): boolean {
   if (!flagIsSet(env.SINGLEPLAYER)) return false;
   assertSingleplayerAllowed(env);
   return true;
 }
 
 /** Whether the local player also gets the admin surfaces. Opt-in. */
-export function singleplayerIsAdmin(env: SingleplayerEnv = process.env): boolean {
+export function singleplayerIsAdmin(env: SingleplayerEnv = serverEnv()): boolean {
   return isSingleplayer(env) && flagIsSet(env.SINGLEPLAYER_ADMIN);
 }
 
@@ -133,7 +135,7 @@ export function singleplayerIsAdmin(env: SingleplayerEnv = process.env): boolean
  * in `@/lib/auth`. Signed by the middleware with the local `AUTH_SECRET`, so
  * downstream verification is the ordinary path and not a special case.
  */
-export function singleplayerSessionClaims(env: SingleplayerEnv = process.env): {
+export function singleplayerSessionClaims(env: SingleplayerEnv = serverEnv()): {
   userId: string;
   email: string;
   username: string;

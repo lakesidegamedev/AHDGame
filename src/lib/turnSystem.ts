@@ -92,6 +92,7 @@ import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
+import { serverEnv } from "@/lib/config/read";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -256,7 +257,7 @@ export function processTurn(
 ): ReturnType<typeof processTurnImpl> {
   // When the worker owns turns, the web server never runs one: a turn holds the
   // event loop and takes the site down for its whole duration (turn 372).
-  const refusal = inProcessTurnRefusal(process.env);
+  const refusal = inProcessTurnRefusal(serverEnv());
   if (refusal) {
     console.error(`[Turn System] Refused in-process turn: ${refusal}`);
     return Promise.resolve({

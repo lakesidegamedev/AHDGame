@@ -1,3 +1,5 @@
+import { servicesConfig } from "@/lib/config/services";
+
 /**
  * Transactional email via the Resend HTTP API.
  *
@@ -23,8 +25,8 @@ export async function sendEmail({
   html,
   text,
 }: SendEmailArgs): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
+  const apiKey = servicesConfig.resendApiKey();
+  const from = servicesConfig.emailFrom();
   if (!apiKey || !from) {
     return { sent: false, reason: "email-not-configured" };
   }

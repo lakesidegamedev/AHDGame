@@ -14,7 +14,7 @@ import {
   canTriggerChallenge,
   resolveLeadershipBallot,
   type LeadershipElectorate,
-} from "@/lib/uk/leadership/leadershipRemoval";
+} from "@/lib/countries/uk/leadership/leadershipRemoval";
 import {
   LEADERSHIP_AMENDMENT_COOLDOWN_TURNS,
   LEADERSHIP_BALLOT_DURATION_TURNS,
@@ -23,13 +23,16 @@ import {
   validateRulesetAmendment,
   type CommitteeControl,
   type RulesetAmendmentPatch,
-} from "@/lib/uk/leadership/rules";
+} from "@/lib/countries/uk/leadership/rules";
 import {
   getOrSeedPartyLeadership,
   historyEntry,
   pushHistoryEntry,
-} from "@/lib/uk/leadership/leadershipStore";
-import type { LeadershipChallenge, UKPartyLeadership } from "@/lib/uk/leadership/leadershipTypes";
+} from "@/lib/countries/uk/leadership/leadershipStore";
+import type {
+  LeadershipChallenge,
+  UKPartyLeadership,
+} from "@/lib/countries/uk/leadership/leadershipTypes";
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Caucus, CaucusMembership } from "@/lib/db/types/caucus";
 import type { CountryId } from "@/lib/constants/countries";
