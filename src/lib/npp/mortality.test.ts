@@ -12,8 +12,12 @@ import {
   randomReplacementBirthYear,
 } from "@/lib/npp/mortality";
 import type { NPP } from "@/lib/db/types/npp";
+import { createSystemNewsPost } from "@/lib/news";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
+import { NPP_TURNOVER_CONFIG as CONFIG } from "@/lib/npp/turnoverData";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
+
+vi.mock("@/lib/news", () => ({ createSystemNewsPost: vi.fn().mockResolvedValue(undefined) }));
 
 vi.mock("@/lib/nppAutonomy/featureFlag", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/nppAutonomy/featureFlag")>();
@@ -57,10 +61,10 @@ describe("nppAgeAtYear", () => {
 
 describe("annualDeathProbability", () => {
   it("rises monotonically with age at actuarial orders of magnitude", () => {
-    const p30 = annualDeathProbability(30);
-    const p50 = annualDeathProbability(50);
-    const p65 = annualDeathProbability(65);
-    const p85 = annualDeathProbability(85);
+    const p30 = annualDeathProbability(30, CONFIG.death);
+    const p50 = annualDeathProbability(50, CONFIG.death);
+    const p65 = annualDeathProbability(65, CONFIG.death);
+    const p85 = annualDeathProbability(85, CONFIG.death);
     expect(p30).toBeGreaterThan(0);
     expect(p30).toBeLessThan(p50);
     expect(p50).toBeLessThan(p65);
@@ -70,15 +74,15 @@ describe("annualDeathProbability", () => {
   });
 
   it("caps at 50% and rejects nonsense", () => {
-    expect(annualDeathProbability(150)).toBe(0.5);
-    expect(annualDeathProbability(-5)).toBe(0);
+    expect(annualDeathProbability(150, CONFIG.death)).toBe(0.5);
+    expect(annualDeathProbability(-5, CONFIG.death)).toBe(0);
   });
 });
 
 describe("randomReplacementBirthYear", () => {
   it("mints a working-age adult (32-68)", () => {
     for (let i = 0; i < 200; i++) {
-      const y = randomReplacementBirthYear(2019, Math.random);
+      const y = randomReplacementBirthYear(2019, Math.random, CONFIG.replacement);
       expect(2019 - y).toBeGreaterThanOrEqual(32);
       expect(2019 - y).toBeLessThanOrEqual(68);
     }
@@ -87,19 +91,19 @@ describe("randomReplacementBirthYear", () => {
 
 describe("annualRetirementProbability", () => {
   it("is zero before 70, climbs to 35% at 80 and holds", () => {
-    expect(annualRetirementProbability(69)).toBe(0);
-    expect(annualRetirementProbability(70)).toBeCloseTo(0.05);
-    expect(annualRetirementProbability(75)).toBeCloseTo(0.2);
-    expect(annualRetirementProbability(80)).toBeCloseTo(0.35);
-    expect(annualRetirementProbability(95)).toBeCloseTo(0.35);
-    expect(annualRetirementProbability(Number.NaN)).toBe(0);
+    expect(annualRetirementProbability(69, CONFIG.retirement)).toBe(0);
+    expect(annualRetirementProbability(70, CONFIG.retirement)).toBeCloseTo(0.05);
+    expect(annualRetirementProbability(75, CONFIG.retirement)).toBeCloseTo(0.2);
+    expect(annualRetirementProbability(80, CONFIG.retirement)).toBeCloseTo(0.35);
+    expect(annualRetirementProbability(95, CONFIG.retirement)).toBeCloseTo(0.35);
+    expect(annualRetirementProbability(Number.NaN, CONFIG.retirement)).toBe(0);
   });
 
   it("rolls per turn at the annual rate divided by turns per year", () => {
-    expect(nppRetiresThisTurn(80, () => 0.35 / 48 - 1e-9, 48)).toBe(true);
-    expect(nppRetiresThisTurn(80, () => 0.35 / 48 + 1e-9, 48)).toBe(false);
-    expect(nppRetiresThisTurn(60, () => 0, 48)).toBe(false);
-    expect(nppRetiresThisTurn(80, () => 0, 0)).toBe(false);
+    expect(nppRetiresThisTurn(80, () => 0.35 / 48 - 1e-9, 48, CONFIG.retirement)).toBe(true);
+    expect(nppRetiresThisTurn(80, () => 0.35 / 48 + 1e-9, 48, CONFIG.retirement)).toBe(false);
+    expect(nppRetiresThisTurn(60, () => 0, 48, CONFIG.retirement)).toBe(false);
+    expect(nppRetiresThisTurn(80, () => 0, 0, CONFIG.retirement)).toBe(false);
   });
 });
 
@@ -108,8 +112,8 @@ describe("backfillBirthYear", () => {
     const ages = new Set<number>();
     for (let i = 0; i < 500; i++) {
       const id = new ObjectId().toHexString();
-      const y = backfillBirthYear(id, 2027);
-      expect(backfillBirthYear(id, 2027)).toBe(y);
+      const y = backfillBirthYear(id, 2027, CONFIG.backfill);
+      expect(backfillBirthYear(id, 2027, CONFIG.backfill)).toBe(y);
       expect(2027 - y).toBeGreaterThanOrEqual(35);
       expect(2027 - y).toBeLessThanOrEqual(70);
       ages.add(2027 - y);
@@ -472,8 +476,74 @@ describe("processNppMortality", () => {
       expect(ops).toHaveLength(2);
       expect(ops[0].updateOne.filter).toEqual({ _id: missing[0]._id, birthYear: null });
       expect(ops[0].updateOne.update.$set.birthYear).toBe(
-        backfillBirthYear(missing[0]._id.toHexString(), 2027)
+        backfillBirthYear(missing[0]._id.toHexString(), 2027, CONFIG.backfill)
       );
+    });
+
+    describe("leaders", () => {
+      const now = new Date("2027-01-01T00:00:00Z");
+      const turnsAway = (turns: number) => new Date(now.getTime() + turns * 3_600_000);
+
+      function seatLeader(leader: NPP, termTurns: number | null) {
+        const cursorOf = (rows: unknown[]) => ({ toArray: vi.fn().mockResolvedValue(rows) });
+        db.collection("governmentFormations");
+        db.collectionMocks["governmentFormations"].find.mockReturnValue(
+          cursorOf([{ pmNppId: leader._id }])
+        );
+        db.collection("electedOfficials");
+        db.collectionMocks["electedOfficials"].find.mockReturnValue(
+          cursorOf(
+            termTurns === null ? [] : [{ nppId: leader._id, termEnds: turnsAway(termTurns) }]
+          )
+        );
+      }
+
+      async function run() {
+        return processNppMortality(db as unknown as Db, {
+          now,
+          year: 2027,
+          // survive death, then always pass the retirement roll
+          rng: (() => {
+            let n = 0;
+            return () => (n++ % 2 === 0 ? 0.99 : 0);
+          })(),
+          mintReplacement: mintStub,
+        });
+      }
+
+      it("holds a mid-term leader in office until the window before the term ends", async () => {
+        setTurnover(true);
+        const leader = npp({ birthYear: 1947 });
+        seatLeader(leader, CONFIG.leaders.windowTurns + 50);
+        seedWithBackfill([], [leader]);
+
+        const result = await run();
+
+        expect(result).toMatchObject({ retirements: 0, leadersDeparted: 0 });
+        expect(createSystemNewsPost).not.toHaveBeenCalled();
+      });
+
+      it("retires a leader inside the window and posts news", async () => {
+        setTurnover(true);
+        const leader = npp({ birthYear: 1947, name: "Ada Quill" });
+        seatLeader(leader, 5);
+        seedWithBackfill([], [leader]);
+
+        const result = await run();
+
+        expect(result).toMatchObject({ retirements: 1, leadersDeparted: 1 });
+        expect(createSystemNewsPost).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(createSystemNewsPost).mock.calls[0]?.[0]).toContain("Ada Quill");
+      });
+
+      it("retires a very old leader mid-term", async () => {
+        setTurnover(true);
+        const leader = npp({ birthYear: 1930 });
+        seatLeader(leader, 150);
+        seedWithBackfill([], [leader]);
+
+        expect(await run()).toMatchObject({ retirements: 1, leadersDeparted: 1 });
+      });
     });
 
     it("keeps the V5 gate, no retirement and no backfill when the flag is absent", async () => {
@@ -492,7 +562,13 @@ describe("processNppMortality", () => {
       });
 
       // The US 80-year-old survives the only roll it gets; the UK NPP is gated.
-      expect(result).toEqual({ deaths: 0, retirements: 0, replacements: 0, birthYearsAssigned: 0 });
+      expect(result).toEqual({
+        deaths: 0,
+        retirements: 0,
+        replacements: 0,
+        birthYearsAssigned: 0,
+        leadersDeparted: 0,
+      });
       expect(rng).toHaveBeenCalledTimes(1);
       expect(db.collectionMocks["npps"].bulkWrite).not.toHaveBeenCalled();
     });
@@ -509,7 +585,13 @@ describe("processNppMortality", () => {
         mintReplacement: mintStub,
       });
 
-      expect(result).toEqual({ deaths: 0, retirements: 0, replacements: 0, birthYearsAssigned: 0 });
+      expect(result).toEqual({
+        deaths: 0,
+        retirements: 0,
+        replacements: 0,
+        birthYearsAssigned: 0,
+        leadersDeparted: 0,
+      });
       expect(db.collectionMocks["npps"].find).not.toHaveBeenCalled();
     });
   });
