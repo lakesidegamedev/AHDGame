@@ -342,6 +342,8 @@ export interface GameConfig {
    * to its floor (one glut turn steps it down). >= 2: the never-below-last-
    * turn's-sales floor subtracts stock held beyond producerStockCover turns of
    * sales, so a plant sitting on a pile sells from it instead of making more.
+   * >= 3: a line whose sold units lost money after inputs, wages and site costs
+   * steps down a cut a turn, below last turn's sales if need be.
    * 0 or absent = off.
    */
   producerRunPlanStage?: number;
