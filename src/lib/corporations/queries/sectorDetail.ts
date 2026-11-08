@@ -1,38 +1,11 @@
-import {
-  expansionOperatingReserve,
-  expansionGapAfterExistingCapacity,
-  sellableExpansionUnits,
-} from "@/lib/corporations/investment/expansion/rules";
-import {
-  commodityTollModels,
-  loadCommodityDominanceContext,
-} from "@/lib/corporations/commodityDominanceContext";
-import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
-import { deliveredFraction } from "@/lib/corporations/buildDelivery";
-import { runningFlowsPerTurn } from "@/lib/corporations/rules/operatingReserve";
-import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondReference";
 import { NextResponse } from "next/server";
-import { findMergedRegionMetrics } from "@/lib/macroMetrics/merge";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { getAuthUser } from "@/lib/auth";
-import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import {
-  corporationPathIdFromDoc,
-  resolveCorporation,
-  requireCeo,
-} from "@/lib/api/corporations/resolveQuery";
-import { canDirectSubsidiaryAsParent } from "@/lib/corporations/subsidiaries/authorization";
+import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
-import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
-import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
-import { loadOwnedMetricInputs } from "@/lib/resetMetrics/loadOwnedInputs";
-import { ownedPoliticalModifiers } from "@/lib/resetMetrics/rules/ownedInputs";
 import { isLabourWagesEnabled, isLabourFullMode } from "@/lib/labour/featureFlag";
 import { undergroundUnrestVisible } from "@/lib/unions/enforcementCosts";
 import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
@@ -44,89 +17,38 @@ import {
 } from "@/lib/labour/laborCost";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
 import { buildStateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
-import type {
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  StateBudget,
-  State,
-  Character,
-  User,
-  ImperialCharacter,
-  Tariff,
-  UnownedSector,
-  Subsidy,
-  Union,
-  BankLoan,
-  Bond,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, FederalBudget } from "@/lib/db/types";
 import {
   getTariffBlendWeights,
   buildSectorPresenceKeys,
   tariffRulesNeedSectorPresenceKeys,
 } from "@/lib/tariffs/tariffEffects";
-import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
-import {
-  OPERATING_SECTOR_TYPE_LABELS,
-  calculateWorkers,
-  managementOverheadPp,
-  TURNS_PER_DAY,
-} from "@/lib/constants/corporations";
-import type {
-  OperatingSectorType,
-  StateMetricValues,
-  MacroEconomicValues,
-} from "@/lib/constants/corporations";
+import { buildFtaCoverageLookup } from "@/lib/tariffs/ftaOverrides";
+import { OPERATING_SECTOR_TYPE_LABELS, calculateWorkers } from "@/lib/constants/corporations";
+import type { OperatingSectorType, StateMetricValues } from "@/lib/constants/corporations";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import {
   computeOwnershipMarginTerms,
   roundOwnershipTerms,
 } from "@/lib/nationalization/ownershipMarginTerms";
 import { loadEconomicModelsByCountry } from "@/lib/economicModels/queries";
-import {
-  eraScaledBasePrices,
-  commodityMixWeight,
-  COMMODITY_BASE_PRICES,
-  type CommodityType,
-} from "@/lib/constants/commodities";
-import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
-import { commodityDemandGap, isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
-import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentShortageSignal";
-import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
+import { type CommodityType } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CommodityPrice, GameConfig, GameState } from "@/lib/db/types";
+import type { GameConfig } from "@/lib/db/types";
 import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
-  getSectorStrategies,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
-import { computeRetoolHint } from "@/lib/corporations/retoolHint";
-import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
-import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
-import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { loadReceiptLanePrices } from "@/lib/corporations/queries/receiptLanePrices";
-import {
-  explainOwnSupplyReach,
-  type OwnSupplyRow,
-} from "@/lib/corporations/queries/sectorDetailOwnSupply";
-import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
-import {
-  getCorpFxRate,
-  fxRateForSectorHostFromMap,
-  getSectorHostFxRate,
-  loadFxRatesByCurrency,
-  resolveSectorHostCurrencyCode,
-  resolveCorpLiquidCurrencyCode,
-} from "@/lib/currency/corporationCapital";
-import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { getNationalCommodityBalance } from "@/lib/commodity-map";
 import { buildDepositCapacityRows } from "@/lib/corporations/strategyRevenuePreview";
-import { shouldRedactCorporation, redactPrivateCorporation } from "@/lib/corporations/redaction";
+import { redactPrivateCorporation } from "@/lib/corporations/redaction";
 import { computeSectorExtractionCapacityContext } from "@/lib/corporations/queries/sectorDetailExtraction";
 import {
   computeResourceOpportunities,
@@ -134,15 +56,8 @@ import {
 } from "@/lib/corporations/queries/extractionOpportunities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { buildSectorCommoditySections } from "@/lib/corporations/queries/sectorDetailCommodities";
-import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import {
-  sectorSiteStatement,
-  scaleSiteStatement,
-  matchingSiteReceipt,
-} from "@/lib/corporations/rules/siteStatement";
-import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
-import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
+import { scaleSiteStatement } from "@/lib/corporations/rules/siteStatement";
 import {
   buildSectorAttackInfo,
   buildSectorCrisisSection,
@@ -151,26 +66,11 @@ import {
   computeSectorMarginSection,
   computeSectorMarketPosition,
   computeSectorTaxSection,
-  buildSectorPlantsSection,
 } from "@/lib/corporations/queries/sectorDetailSections";
-import {
-  RUN_REPORT_STAGE_PROJECTION,
-  withRunReport,
-} from "@/lib/corporations/queries/sectorRunReport";
-import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
-import { buildMarketContext } from "@/lib/market/marketContext";
-import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
-import {
-  buildNationalDominanceShareBySectorId,
-  unownedHeadroomUnitsOf,
-} from "@/lib/corporations/marketShare";
-import { getSectorTechEffects, getStrategyAvailability } from "@/lib/constants/techTree";
-import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
-import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
-import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
-
-import type { SiblingCorpProjection } from "./sectorDetailTypes";
+import { RUN_REPORT_STAGE_PROJECTION } from "@/lib/corporations/queries/sectorRunReport";
 import { computeTechGrowthCostReductionPct, loadSectorTechContext } from "./sectorTechContext";
+import { loadSectorDetailContext } from "./sectorDetailContext";
+import { buildSectorDetailPlantsTier } from "./sectorDetailPlantsTier";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -246,425 +146,51 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // Check if requesting user is CEO
     const user = await getAuthUser().catch(() => null);
     const isCeo = !!user && requireCeo(corporation, user.userId) === null;
-    const viewerIsAdmin = user?.isAdmin === true;
-    const modViewEnabled =
-      !viewerIsAdmin &&
-      user?.isModerator === true &&
-      new URL(request.url).searchParams.get("modView") === "1";
-    // The CEO of the controlling parent is an insider of its subsidiary, same
-    // rule GET /api/corporations/[id] applies.
-    let isParentCeo = false;
-    let parentDirection: {
-      parentName: string;
-      parentPathId: string;
-      protectedUntilTurn: number | null;
-    } | null = null;
-    const controllingParent = user && !isCeo ? getControllingCorporateParent(corporation) : null;
-    if (user && controllingParent) {
-      const parentCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: controllingParent.corporationId },
-          { projection: { userId: 1, ceoVacant: 1, name: 1, sequentialId: 1 } }
-        );
-      isParentCeo =
-        !!parentCorp &&
-        parentCorp.ceoVacant !== true &&
-        parentCorp.userId?.toString() === user.userId;
-      // The parent CEO may retool an AI-run managed subsidiary's sectors; the
-      // strategy command re-checks the same rule.
-      if (
-        parentCorp &&
-        isParentCeo &&
-        (await canDirectSubsidiaryAsParent(db, new ObjectId(user.userId), corporation))
-      ) {
-        parentDirection = {
-          parentName: parentCorp.name,
-          parentPathId: corporationPathIdFromDoc(parentCorp),
-          protectedUntilTurn: sector.parentDirectedStrategy?.untilTurn ?? null,
-        };
-      }
-    }
-    const shouldRedact =
-      !isParentCeo &&
-      shouldRedactCorporation(
-        corporation,
-        user?.userId ?? undefined,
-        viewerIsAdmin,
-        modViewEnabled
-      );
-    // Financial fog of war (public corps only, non-insiders), mirrors the
-    // protection GET /api/corporations/[id] already applies, so a competitor
-    // can't see a public corp's live sector financials through this page when
-    // the corp page itself would show them a fogged/delayed estimate instead.
-    // Unlike the corp page, there is no per-sector historical snapshot to
-    // build a jittered quarterly estimate from, so this takes the stricter
-    // path of hiding the figures outright rather than approximating them.
-    const isPublicCorp = !corporation.isPrivate && !corporation.countryOwnerId;
-    const isInsider = isCeo || isParentCeo || viewerIsAdmin;
-    const publicFinancialFog = isPublicCorp && !shouldRedact && !isInsider;
+    const {
+      allTariffs,
+      allSectorsRaw,
+      corpByIdForLookup,
+      activeFtaPairs,
+      sectorCountryId,
+      federalBudget,
+      stateMetrics,
+      gameState,
+      state,
+      siblingCorps,
+      siblingsSectors,
+      siblingFxByCurrency,
+      unownedDoc,
+      allStates,
+      commodityPrices,
+      sectorAmountAnchor,
+      politicalBaseModifiers,
+      macroEcon,
+      totalCorpSectors,
+      activeSubsidies,
+      allFederalBudgets,
+      allSiblingStateBudgets,
+      allCorpSectors,
+      shouldRedact,
+      publicFinancialFog,
+      ceo,
+      corporationFxRate,
+      viewerCorpFxRate,
+      sectorHostFxRate,
+      sectorHostLiquidCode,
+      sectorAmountInCorpCurrency,
+      coveringIndustryUnionDoc,
+      representingUnionDoc,
+      parentDirection,
+      viewerCorporation,
+    } = await loadSectorDetailContext({
+      user,
+      request,
+      isCeo,
+      corporation,
+      db,
+      sector,
+    });
 
-    // Look up the viewer's corporation (for attack/split UI)
-    let viewerCorporation: Corporation | null = null;
-    if (user) {
-      const userDoc = await db
-        .collection<User>("users")
-        .findOne(
-          { _id: new ObjectId(user.userId) },
-          { projection: { activeCharacterType: 1, activeImperialCharacterId: 1 } }
-        );
-      const imperialActive =
-        userDoc?.activeCharacterType === "imperial" && !!userDoc.activeImperialCharacterId;
-      const viewerChar = imperialActive
-        ? await db.collection<ImperialCharacter>("imperialCharacters").findOne(
-            {
-              _id: userDoc.activeImperialCharacterId,
-              userId: new ObjectId(user.userId),
-            },
-            { projection: { _id: 1 } }
-          )
-        : await getCharacterByUserId(db, user.userId);
-      if (viewerChar) {
-        viewerCorporation = await db.collection<Corporation>("corporations").findOne(
-          {
-            ceoId: viewerChar._id,
-            ...(imperialActive ? { ceoType: "imperial" } : {}),
-            ceoVacant: { $ne: true },
-          },
-          {
-            projection: {
-              _id: 1,
-              userId: 1,
-              ceoVacant: 1,
-              marketingStrength: 1,
-              liquidCapital: 1,
-              splitEscalation: 1,
-              headquartersState: 1,
-              countryId: 1,
-              liquidCurrencyCode: 1,
-            },
-          }
-        );
-      }
-    }
-    // Resolve viewer's home-currency FX rate so we can convert liquidCapital → ₳
-    // before sending to the client (splitCost / attackCost are in ₳; mixing units
-    // makes the Split panel warn "Need $X capital" against a raw local-currency
-    // balance that the client's formatAmount helper then interprets as ₳).
-    const [viewerCorpFxRate, sectorHostFxRate, corporationFxRate] = await Promise.all([
-      viewerCorporation ? getCorpFxRate(db, viewerCorporation) : Promise.resolve(1.0),
-      getSectorHostFxRate(db, sector, corporation),
-      getCorpFxRate(db, corporation),
-    ]);
-    // The sector's economic fields are stored in its HOST-state currency (the
-    // market it operates in), not the owning corp's, resolve that code/rate to
-    // normalize sector.revenue to ₳ for the retool/cancel/attack cost previews.
-    const sectorHostLiquidCode = resolveSectorHostCurrencyCode(sector, corporation);
-    const corporationLiquidCode = resolveCorpLiquidCurrencyCode(corporation);
-    const sectorAmountAnchor = (amount: number) =>
-      readCorpEconomicAnchor(amount, sectorHostLiquidCode, sectorHostFxRate);
-    const sectorAmountInCorpCurrency = (amount: number) =>
-      writeCorpEconomicLocal(sectorAmountAnchor(amount), corporationLiquidCode, corporationFxRate);
-
-    // Fetch state, all state ids, state metrics, CEO, commodity prices, corp siblings, and game state in parallel
-    // SP4 §4a: the region's political board rides along for the margin overlay.
-    const politicalDocPromise = isPoliticalApprovalCountry(sector.countryId)
-      ? db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
-          .findOne({ _id: sector.stateId, countryId: sector.countryId })
-      : Promise.resolve(null);
-    const [state, allStates, stateMetrics, ceo, commodityPrices, allCorpSectors, gameState] =
-      await Promise.all([
-        db
-          .collection<State>("states")
-          .findOne({ _id: sector.stateId, countryId: sector.countryId }),
-        db
-          .collection<State>("states")
-          .find({}, { projection: { _id: 1, countryId: 1, name: 1 } })
-          .toArray(),
-        findMergedRegionMetrics(db, { _id: sector.stateId, countryId: sector.countryId }),
-        corporation.ceoType === "imperial"
-          ? db
-              .collection("imperialCharacters")
-              .findOne(
-                { _id: corporation.ceoId },
-                { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
-              )
-          : corporation.ceoType === "npp"
-            ? db
-                .collection("npps")
-                .findOne(
-                  { _id: corporation.ceoId },
-                  { projection: { name: 1, sequentialId: 1, avatarUrl: 1 } }
-                )
-            : db.collection<Character>("characters").findOne(
-                { _id: corporation.ceoId },
-                {
-                  projection: {
-                    name: 1,
-                    sequentialId: 1,
-                    avatarUrl: 1,
-                    // Plants tier: the build-cost quote is acumen-sensitive, and
-                    // this is the CEO document the quote is about. Projected here
-                    // rather than re-read so the plants block costs no extra query.
-                    "stats.businessAcumen": 1,
-                  },
-                }
-              ),
-        db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-        db
-          .collection<CorporateSector>("corporateSectors")
-          .find(
-            { corporationId: corporation._id },
-            {
-              projection: {
-                _id: 1,
-                stateId: 1,
-                countryId: 1,
-                revenue: 1,
-                realizedRevenue: 1,
-                profitMargin: 1,
-                currentGrowthCost: 1,
-                "plantsPnl.totalCost": 1,
-                "plantsPnl.turn": 1,
-                "plantsPnl.policyCredit": 1,
-                operatingCapacityUnits: 1,
-                capitalStock: 1,
-                buildQueue: 1,
-                freightBillingCharge: 1,
-                // What each site made last turn, for the own-supply reason on inputs.
-                "producerSettlement.turn": 1,
-                "producerSettlement.products.commodity": 1,
-                "producerSettlement.products.producedUnits": 1,
-                "producerSettlement.products.soldUnits": 1,
-                "producerSettlement.products.internalDeliveredUnits": 1,
-              },
-            }
-          )
-          .toArray(),
-        db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      ]);
-    const totalCorpSectors = allCorpSectors.length;
-    // SP4 §4a: political margin overlay for playable regions (null elsewhere).
-    const politicalDoc = await politicalDocPromise;
-    const ownedInputs = (await loadOwnedMetricInputs(db)).get(sector.stateId);
-    const politicalBaseModifiers = politicalDoc
-      ? ownedInputs?.countryId === sector.countryId
-        ? ownedPoliticalModifiers(
-            politicalDoc.values,
-            ownedInputs.observations,
-            ownedInputs.countryId,
-            ownedInputs.year
-          )
-        : buildPoliticalBaseModifiers(politicalDoc.values)
-      : null;
-
-    // Fetch federal budget for macroeconomic margin modifiers
-    // Fallback to state or corporation countryId for pre-migration sectors
-    const sectorCountryId = sector.countryId ?? state?.countryId ?? corporation.countryId;
-    // Fetch all countries' federal budgets and all sibling states' state budgets so we can
-    // apportion tax across every sector (not just this one), matches corp page math.
-    // (stateCountryMap is redeclared later for commodity balance math; use inline lookup here.)
-    const stateCountryLookup = new Map(allStates.map((s) => [s._id, s.countryId]));
-    const siblingCountryIds = new Set<string>();
-    const siblingStateIds = new Set<string>();
-    for (const s of allCorpSectors) {
-      siblingCountryIds.add(
-        s.countryId ?? stateCountryLookup.get(s.stateId) ?? corporation.countryId
-      );
-      siblingStateIds.add(s.stateId);
-    }
-    const [federalBudget, allFederalBudgets, allSiblingStateBudgets, coveringIndustryUnionDoc] =
-      await Promise.all([
-        db.collection<FederalBudget>("federalBudget").findOne(
-          { countryId: sectorCountryId },
-          {
-            projection: {
-              "economicFactors.inflationRate": 1,
-              debtToGdpRatio: 1,
-              surplus: 1,
-              gdp: 1,
-              unionsBanned: 1,
-              "taxRates.domesticCorporateTax": 1,
-              "taxRates.foreignCorporateTax": 1,
-              investorConfidence: 1,
-              stateOwnershipConcentration: 1,
-              minimumWageKaitzRatio: 1,
-            },
-          }
-        ),
-        db
-          .collection<FederalBudget>("federalBudget")
-          .find(
-            { countryId: { $in: [...siblingCountryIds] } },
-            {
-              projection: {
-                countryId: 1,
-                "taxRates.domesticCorporateTax": 1,
-                "taxRates.foreignCorporateTax": 1,
-              },
-            }
-          )
-          .toArray(),
-        db
-          .collection<StateBudget>("stateBudgets")
-          .find(
-            { _id: { $in: [...siblingStateIds] } },
-            {
-              projection: {
-                _id: 1,
-                "taxRates.domesticCorporateTax": 1,
-                "taxRates.foreignCorporateTax": 1,
-              },
-            }
-          )
-          .toArray(),
-        // One union covers every local in a country's industry. Return its
-        // identity even while the presidency is vacant so a sector's workforce
-        // can always link to the institution organizing it. Wage demands still
-        // only count once that union has a leader, preserving the existing
-        // player-run-union rule.
-        //
-        // Union dues v1 note: since players can found rivals, this find-one no
-        // longer identifies THE union of the industry, only one of them. It is
-        // kept for the existing wage-demand display, which predates rivals.
-        // Which union actually represents THIS sector is a separate lookup
-        // below, keyed on the sector's own `representingUnionId`.
-        db.collection<Union>("unions").findOne(
-          {
-            countryId: sectorCountryId,
-            sectorType: sector.sectorType,
-            industryModel: sector.industryModel ?? null,
-          },
-          { projection: { name: 1, ownerId: 1, demandedWageLevel: 1, undergroundStrength: 1 } }
-        ),
-      ]);
-
-    // Union dues v1: the union that actually holds this sector, which may be a
-    // founded rival rather than the seeded industry union above, or nobody at
-    // all. The sector page needs it to say whether organizing here is a first
-    // claim or a raid.
-    const representingUnionDoc = sector.representingUnionId
-      ? await db
-          .collection<Union>("unions")
-          .findOne(
-            { _id: sector.representingUnionId },
-            { projection: { name: 1, undergroundStrength: 1 } }
-          )
-      : null;
-    const macroEcon: MacroEconomicValues = {
-      inflationRate: federalBudget?.economicFactors?.inflationRate ?? null,
-      debtToGdpRatio: federalBudget?.debtToGdpRatio ?? null,
-      surplusToGdpRatio: federalBudget?.gdp
-        ? (federalBudget.surplus ?? 0) / federalBudget.gdp
-        : null,
-    };
-
-    // Load tariff policy and market context together; these reads are independent.
-    const [allTariffs, activeSubsidies, activeFtaPairs, allSectorsRaw, siblingsSectors] =
-      await Promise.all([
-        db.collection<Tariff>("tariffs").find({}).toArray(),
-        db.collection<Subsidy>("subsidies").find({ active: true }).toArray(),
-        loadActiveFtaPairs(db),
-        db
-          .collection<CorporateSector>("corporateSectors")
-          .find(
-            {},
-            {
-              projection: {
-                corporationId: 1,
-                stateId: 1,
-                countryId: 1,
-                sectorType: 1,
-                industryModel: 1,
-                mediaDiscriminator: 1,
-                revenue: 1,
-                strategyId: 1,
-                transitionFromStrategyId: 1,
-                transitionStartTurn: 1,
-                operatingCapacityUnits: 1,
-                capitalStock: 1,
-                plantCount: 1,
-                producedUnits: 1,
-                buildQueue: 1,
-              },
-            }
-          )
-          .toArray(),
-        db
-          .collection<CorporateSector>("corporateSectors")
-          .find({
-            stateId: sector.stateId,
-            sectorType: sector.sectorType,
-            industryModel: sector.industryModel ?? null,
-            mediaDiscriminator: sector.mediaDiscriminator ?? null,
-          })
-          .toArray(),
-      ]);
-
-    // FTA coverage shares are unconditionally needed by getDomesticTariffMalus
-    // and getTariffBlendWeights to scale broad-tariff friction by partner
-    // exposure. blendPresenceKeys is additionally needed only when origin/corp
-    // tariffs exist. Both are computed from the same sectors+corps slice.
-    const corpIds = [...new Set(allSectorsRaw.map((s) => s.corporationId.toString()))];
-    const siblingCorpIds = [...new Set(siblingsSectors.map((s) => s.corporationId.toString()))].map(
-      (id) => new ObjectId(id)
-    );
-    const [corpsForLookup, siblingCorps, siblingFxByCurrency, unownedDoc] = await Promise.all([
-      corpIds.length > 0
-        ? db
-            .collection<Corporation>("corporations")
-            .find(
-              { _id: { $in: corpIds.map((cid) => new ObjectId(cid)) } },
-              {
-                projection: {
-                  _id: 1,
-                  countryId: 1,
-                  ...(gameState?.sectorTechTreesEnabled === true
-                    ? {
-                        type: 1,
-                        industryModel: 1,
-                        mediaDiscriminator: 1,
-                        unlockedTechNodeIds: 1,
-                        techDecadeLane: 1,
-                        frontierProgrammes: 1,
-                      }
-                    : {}),
-                },
-              }
-            )
-            .toArray()
-        : Promise.resolve([] as Corporation[]),
-      siblingCorpIds.length > 0
-        ? db
-            .collection<Corporation>("corporations")
-            .find({ _id: { $in: siblingCorpIds } })
-            .project<SiblingCorpProjection>({
-              _id: 1,
-              name: 1,
-              sequentialId: 1,
-              brandColor: 1,
-              countryId: 1,
-              liquidCurrencyCode: 1,
-              marketingStrength: 1,
-              // Who actually OWNS the corp, for the market panel's player/NPP
-              // split. `caretakerCeo` rides along because an NPP caretaker runs
-              // a corp whose owner is still a player, and that corp belongs with
-              // the player corps.
-              ceoType: 1,
-              caretakerCeo: 1,
-            })
-            .toArray()
-        : Promise.resolve([] as SiblingCorpProjection[]),
-      loadFxRatesByCurrency(db),
-      db.collection<UnownedSector>("unownedSectors").findOne({
-        stateId: sector.stateId,
-        sectorType: sector.sectorType,
-        industryModel: sector.industryModel ?? null,
-        mediaDiscriminator: sector.mediaDiscriminator ?? null,
-      }),
-    ]);
-    const corpByIdForLookup = new Map(corpsForLookup.map((c) => [c._id.toString(), c]));
     const blendPresenceKeys = tariffRulesNeedSectorPresenceKeys(allTariffs)
       ? buildSectorPresenceKeys(allSectorsRaw, corpByIdForLookup)
       : new Set<string>();
@@ -969,613 +495,59 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // is the thing the player owns, and revenue is derived from what it makes
     // and sells. Below plants this whole block is `null` and the page is
     // unchanged. One extra read (the host prime rate) and only when plants is on.
-    const marketMode = await getMarketSystemMode();
-    const plantsEnabled = marketAtLeast(marketMode, "plants");
-    let plants: Awaited<ReturnType<typeof buildSectorPlantsSection>> | null = null;
-    let freightState: { observedLoad: number; capacity: number; turn: number | null } | undefined;
-    const ownSupplyByCommodity = new Map<string, OwnSupplyRow>();
-    if (plantsEnabled && !shouldRedact && !publicFinancialFog) {
-      const [latestSourcingNetwork] = await db
-        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
-        .find({})
-        .sort({ turn: -1 })
-        .limit(1)
-        .toArray();
-      if (isCeo) {
-        await explainOwnSupplyReach({
-          db,
-          corporation,
-          sector,
-          siblings: allCorpSectors,
-          funded:
-            typeof governorConfig?.producerMarketLiveFromTurn === "number" &&
-            currentTurn >= governorConfig.producerMarketLiveFromTurn,
-          shortInputs: demandsWithShortage
-            .filter((d) => typeof d.inputAvailability === "number" && d.inputAvailability < 0.999)
-            .map((d) => d.commodity),
-          stateNameById: new Map(allStates.map((s) => [s._id, s.name ?? s._id])),
-          ownRouteDelivered: latestSourcingNetwork?.ownRouteDelivered ?? [],
-          ownRouteTurn: latestSourcingNetwork?.turn ?? null,
-          currentTurn,
-          out: ownSupplyByCommodity,
-        });
-      }
-      const observedFreight = latestSourcingNetwork?.freightTeuByState[sector.stateId];
-      const freightPrice = commodityPrices.find((price) => price.commodity === "freight");
-      freightState = {
-        observedLoad:
-          Math.max(0, observedFreight?.bulk ?? 0) + Math.max(0, observedFreight?.special ?? 0),
-        capacity: Math.max(0, freightPrice?.stateSupply?.[sector.stateId] ?? 0),
-        turn: latestSourcingNetwork?.turn ?? null,
-      };
-      const nationalMarketShare =
-        buildNationalDominanceShareBySectorId({
-          sectors: allSectorsRaw,
-          stateById: new Map(allStates.map((candidate) => [candidate._id, candidate])),
-          unownedSectors: [],
-          exchangeRatesByCurrency: siblingFxByCurrency,
-        }).get(sector._id.toString()) ?? 0;
-      // Same governor bounds the turn processor resolves (turn/corporation
-      // index.ts), read from gameConfig, not gameState, so the "market support"
-      // pill counts down against the ramp the engine is actually applying.
-      const marketCtx = buildMarketContext(marketMode, {
-        cap: governorConfig?.marketGovernorCap,
-        rampTurns: governorConfig?.marketGovernorRampTurns,
-        currentTurn,
-        glideStartTurn: governorConfig?.marketGovernorGlideStartTurn,
-        glideTurns: governorConfig?.marketGovernorGlideTurns,
-        glideMode: governorConfig?.marketGovernorGlideMode,
-        glideFloor: governorConfig?.marketGovernorGlideFloor,
-      });
-      if (
-        pricing &&
-        governorConfig?.explicitPlantCostsEnabled === true &&
-        supportsCostPlusPricing(sector.sectorType)
-      ) {
-        pricing.costPlusEnabled = true;
-        pricing.costPlusReady = validCostPlusBasis(sector.costPlusCostBasis);
-        pricing.pricingMode = sector.pricingMode === "costPlus" ? "costPlus" : "market";
-      }
-      const primeRate = await resolveCountryPrimeRate(db, sectorCountryId);
-      const ceoAcumen =
-        (ceo as { stats?: { businessAcumen?: number } } | null)?.stats?.businessAcumen ??
-        NEUTRAL_STAT;
-      const techBuildEffects = techTreesEnabled
-        ? getSectorTechEffects(
-            techCorpView,
-            sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          )
-        : null;
-      const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
-      const techDominanceShield = techBuildEffects
-        ? upkeptDominanceShield(
-            techCorpView,
-            sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator,
-            techCurrentYear,
-            governorConfig?.strengthUpkeepStage
-          )
-        : 0;
-      // The physical input bill: the same demand rows the Inputs panel renders,
-      // priced at the BILLED unit price (base x realization factor, the price
-      // computeInputsCost actually charges), so the panel and the engine's
-      // booked bill cannot disagree. Raw `marketPrice` is context, not the bill.
-      const inputsAnchor = demandsWithShortage.reduce(
-        (sum, d) => sum + (d.units > 0 ? d.units * (d.billedUnitPrice ?? d.marketPrice) : 0),
-        0
-      );
-      // True buyers' room for THIS sector's outputs, in sector output units.
-      // `headroomUnits` (the unowned pool) measures claimable market SHARE,
-      // under a clearing glut it reads tens of thousands of "room" while every
-      // leg goes unsold (ticket #1027 follow-up: player read it as demand).
-      //
-      // Scoped to the sector's HOME COUNTRY reachable book, which is the book
-      // the clearing engine actually settles this sector against (see
-      // market/tradePartition). The world aggregate it used to read counted
-      // embargoed and untraded supply the sector can neither buy from nor lose
-      // a sale to, so a sector in a real shortage was told it was oversupplied
-      // Falls back to the aggregate when no book is persisted.
-      const reachableBooks = await loadReachableBooks(db, currentTurn);
-      const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
-      const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
-        // Demand audit step 1: restore the 1.5x-cap-hidden demand to the
-        // sector gap the player reads. Zero below the cap (quote unchanged).
-        const doc = priceDocByCommodity.get(gapCommodity);
-        const latentDemandTopUp = doc
-          ? isStateScopedCommodity(gapCommodity)
-            ? latentTopUpForState(doc, sector.stateId)
-            : latentTopUpForCountry(doc, sectorCountryId)
-          : 0;
-        return commodityDemandGap({
-          commodity: gapCommodity,
-          stateBalance: stateBalances.get(gapCommodity),
-          reachableBook: bookFor(reachableBooks, sectorCountryId, gapCommodity),
-          globalBalance: globalBalances.get(gapCommodity),
-          latentDemandTopUp,
-        });
-      });
-
-      // The sizing shortcut uses actual buyers for every output, not the
-      // weighted expansion appetite or latent price-cap demand above.
-      // Include all output competitors, not just this state/type cell. Reachable
-      // goods clear nationally and several sector types can make the same commodity.
-      const stateCountry = new Map(
-        allStates.map((candidate) => [candidate._id, candidate.countryId])
-      );
-      const producerOutputMultiplier = (
-        candidate: CorporateSector,
-        supply: Partial<Record<CommodityType, number>>
-      ) => {
-        const owner =
-          candidate.corporationId.toString() === corporation._id.toString()
-            ? corporation
-            : corpByIdForLookup.get(candidate.corporationId.toString());
-        if (techTreesEnabled && !owner) return NaN;
-        const tech =
-          techTreesEnabled && owner
-            ? getSectorTechEffects(
-                owner,
-                getOperatingSectorType(
-                  candidate.sectorType,
-                  candidate.industryModel,
-                  candidate.mediaDiscriminator
-                ),
-                candidate.industryModel,
-                candidate.mediaDiscriminator
-              ).outputRateMult
-            : undefined;
-        return productionProductivityMultiplier({
-          sectorType: candidate.sectorType,
-          supply,
-          outputRateMult: tech,
-          currentTurn,
-          preset: sectorDetailPreset,
-        });
-      };
-      const focalOutputMultiplier = producerOutputMultiplier(sector, effectiveRates.supply);
-      const existingProducers = allSectorsRaw.map((candidate) => {
-        const supply = getEffectiveStrategyRatesForOperatingModel(
-          candidate.sectorType,
-          candidate.strategyId ?? "standard",
-          candidate.transitionFromStrategyId,
-          candidate.transitionStartTurn,
-          currentTurn,
-          candidate.industryModel,
-          candidate.mediaDiscriminator,
-          sectorDetailPreset,
-          gameState?.hardwareInputReliefStartTurn
-        ).supply;
-        const multiplier = producerOutputMultiplier(candidate, supply);
-        const capacityUnits = candidate.operatingCapacityUnits ?? candidate.capitalStock ?? NaN;
-        return {
-          stateId: candidate.stateId,
-          countryId: stateCountry.get(candidate.stateId) ?? candidate.countryId,
-          capacity: capacityUnits * multiplier,
-          // A newly founded sector has no plants and has not run a turn yet, so
-          // it has no recorded output. With zero capacity it cannot produce
-          // anything, so its output is exactly zero rather than unknown.
-          produced: candidate.producedUnits ?? (capacityUnits === 0 ? 0 : undefined),
-          queued:
-            (candidate.buildQueue ?? []).reduce(
-              (sum, order) =>
-                sum + order.unitsOrdered * (1 - deliveredFraction(order, currentTurn)),
-              0
-            ) * multiplier,
-          supply,
-        };
-      });
-      const currentDemand = Object.entries(effectiveSupply)
-        .filter(([, rate]) => (rate ?? 0) > 0)
-        .every(([commodity]) => {
-          const key = commodity as CommodityType;
-          return isStateScopedCommodity(key)
-            ? priceDocByCommodity.get(key)?.turn === currentTurn
-            : !!bookFor(reachableBooks, sectorCountryId, key);
-        });
-      const expansionLegs = Object.entries(effectiveSupply)
-        .filter(([, rate]) => (rate ?? 0) > 0)
-        .map(([commodity]) => {
-          const key = commodity as CommodityType;
-          const gap = commodityDemandGap({
-            commodity: key,
-            stateBalance: stateBalances.get(key),
-            reachableBook: bookFor(reachableBooks, sectorCountryId, key),
-            globalBalance: globalBalances.get(key),
-            latentDemandTopUp: 0,
-          });
-          return {
-            weight: commodityMixWeight(effectiveSupply, COMMODITY_BASE_PRICES, key),
-            gap: expansionGapAfterExistingCapacity(
-              gap,
-              existingProducers
-                .filter(
-                  (candidate) =>
-                    (candidate.supply?.[key] ?? 0) > 0 &&
-                    (isStateScopedCommodity(key)
-                      ? candidate.stateId === sector.stateId
-                      : candidate.countryId === sectorCountryId)
-                )
-                .map((candidate) => ({
-                  capacity: candidate.capacity ?? NaN,
-                  produced: candidate.produced ?? NaN,
-                  queued: candidate.queued,
-                  weight: commodityMixWeight(candidate.supply ?? {}, COMMODITY_BASE_PRICES, key),
-                }))
-            ),
-          };
-        });
-      const measuredDemandGapUnits =
-        currentDemand &&
-        Number.isFinite(focalOutputMultiplier) &&
-        focalOutputMultiplier > 0 &&
-        expansionLegs.every((leg) => leg.gap != null)
-          ? Math.max(
-              0,
-              sellableExpansionUnits(expansionLegs.map((leg) => ({ ...leg, gap: leg.gap! }))) /
-                focalOutputMultiplier
-            )
-          : null;
-      // Existing debt needs a repayment budget, which this operating scenario
-      // does not model. Do not offer automatic sizing for an indebted company.
-      const [activeLoan, activeBond] = await Promise.all([
-        db.collection<BankLoan>("bankLoans").findOne(
-          {
-            borrowerType: "corporation",
-            borrowerId: corporation._id,
-            status: { $in: ["pending", "current", "arrears", "defaulted"] },
-            $or: [{ outstanding: { $gt: 0 } }, { principal: { $gt: 0 } }],
-          },
-          { projection: { _id: 1 } }
-        ),
-        db
-          .collection<Bond>("bonds")
-          .findOne({ corporationId: corporation._id, matured: false }, { projection: { _id: 1 } }),
-      ]);
-      const unsettled =
-        !!activeLoan ||
-        !!activeBond ||
-        corporation.imfBailoutActive === true ||
-        (corporation.shareEscrowBalance ?? 0) < 0 ||
-        Object.values(corporation.operatingCashArrearsByCurrency ?? {}).some(
-          (value) => value > 0
-        ) ||
-        Object.values(corporation.federalTaxArrearsAnchorByCountry ?? {}).some(
-          (value) => value > 0
-        );
-      // What next turn's run costs and earns, for the build warning.
-      const runFlows = runningFlowsPerTurn(
-        allCorpSectors.flatMap((s) => (s.producerSettlement ? [s.producerSettlement] : [])),
-        currentTurn
-      );
-      const operatingReserveAnchor =
-        unsettled || !enginePnl
-          ? null
-          : expansionOperatingReserve({
-              overheadPerTurnAnchor:
-                corpLiquidCapitalToAnchor(
-                  corpLevelCosts + (corporation.rdBudget ?? 0),
-                  corporation,
-                  corporationFxRate
-                ) / TURNS_PER_DAY,
-              sectors: allCorpSectors.map((s) => ({
-                current: s.plantsPnl?.turn === currentTurn,
-                capacityUnits: s.operatingCapacityUnits ?? s.capitalStock ?? 0,
-                queuedUnits: (s.buildQueue ?? []).reduce(
-                  (sum, order) =>
-                    sum + order.unitsOrdered * (1 - deliveredFraction(order, currentTurn)),
-                  0
-                ),
-                costPerTurnAnchor:
-                  readCorpEconomicAnchor(
-                    (s.plantsPnl?.totalCost ?? NaN) +
-                      Math.max(0, s.plantsPnl?.policyCredit ?? 0) +
-                      Math.max(0, s.freightBillingCharge ?? 0),
-                    resolveSectorHostCurrencyCode(s, corporation),
-                    fxRateForSectorHostFromMap(s, corporation, siblingFxByCurrency)
-                  ) / TURNS_PER_DAY,
-              })),
-            });
-
-      // When the plant is held back because the valuable part of its output
-      // is oversupplied, name the strategy whose output this market is short
-      // of. Advisory only. Prices and books are the sector's own market.
-      const marketRatioFor = (commodity: CommodityType): number | null => {
-        const doc = priceDocByCommodity.get(commodity);
-        if (!doc || !(doc.basePrice > 0)) return null;
-        const price = isStateScopedCommodity(commodity)
-          ? doc.statePrices?.[sector.stateId]
-          : (doc.reachablePrices?.[sectorCountryId] ?? doc.nationalPrices?.[sectorCountryId]);
-        const value = typeof price === "number" && price > 0 ? price : doc.globalPrice;
-        return typeof value === "number" && value > 0 ? value / doc.basePrice : null;
-      };
-      const marketBookFor = (commodity: CommodityType) => {
-        const doc = priceDocByCommodity.get(commodity);
-        if (!doc) return null;
-        if (isStateScopedCommodity(commodity)) {
-          return {
-            supply: doc.stateSupply?.[sector.stateId] ?? 0,
-            demand: doc.stateDemand?.[sector.stateId] ?? 0,
-          };
-        }
-        const supply = doc.nationalSupply?.[sectorCountryId];
-        const demand = doc.nationalDemand?.[sectorCountryId];
-        return typeof supply === "number" && typeof demand === "number"
-          ? { supply, demand }
-          : { supply: doc.globalSupply, demand: doc.globalDemand };
-      };
-      const retoolHint = computeRetoolHint({
-        currentStrategyId: sector.strategyId ?? "standard",
-        currentSupply: effectiveSupply,
-        soldByCommodity: sector.soldByCommodity,
-        demandThrottleFactor: sector.demandThrottleFactor,
-        mothballed: sector.mothballed === true,
-        isTransitioning: effectiveRates.isTransitioning,
-        producedUnits: sector.producedUnits,
-        capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,
-        strategies: getSectorStrategies(
-          sectorType,
-          governorConfig?.mediaOperatingModelsEnabled === true,
-          sector.mediaDiscriminator,
-          sectorDetailPreset
-        ),
-        isAvailable: (candidate) =>
-          !getStrategyAvailability(
-            techCorpView,
-            candidate,
-            techCurrentYear,
-            techTreesEnabled,
-            strategyWorld
-          ).locked,
-        supplyFor: (candidate) =>
-          applyExtractionResourceCapacityToSupply(
-            sectorType,
-            candidate.supply,
-            stateResources === undefined ? undefined : (stateResources ?? {})
-          ),
-        rescaleRatio: (toStrategyId) =>
-          capacityRescaleRatio(
-            sectorType,
-            sector.strategyId,
-            toStrategyId,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
-        priceRatioFor: marketRatioFor,
-        balanceFor: marketBookFor,
-        basePrices: eraScaledBasePrices(sectorDetailUnitScale),
-      });
-
-      const commodityDominanceCtx = await loadCommodityDominanceContext(db, {
+    const { plantsEnabled, plants, ownSupplyByCommodity, freightState } =
+      await buildSectorDetailPlantsTier({
+        shouldRedact,
+        publicFinancialFog,
+        db,
+        isCeo,
         corporation,
         sector,
-        turn: currentTurn,
-        currentYear: techCurrentYear,
-      });
-
-      const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
-      const matchingReceipt = matchingSiteReceipt(sector);
-      const statement = scaleSiteStatement(
-        sectorSiteStatement(sector, {
-          revenue: sectorEconomicRevenue(sector),
-          totalCost:
-            sectorEconomicRevenue(sector) -
-            profit +
-            (sector.freightBillingCredit ?? 0) -
-            (sector.freightBillingCharge ?? 0),
-          freightIncome: sector.freightBillingCredit ?? 0,
-          freightCost: sector.freightBillingCharge ?? 0,
-          ownSiteValue: ownSite ? (ownSite.valueAnchor * TURNS_PER_DAY) / sectorAmountAnchor(1) : 0,
-        }),
-        sectorAmountAnchor(1)
-      );
-      plants = buildSectorPlantsSection({
-        bankingCommodityScale: commodityProductionCapacityScale(
-          corporation.bankCharter,
-          governorConfig?.privateBankingEnabled === true
-        ),
-        sector,
-        sectorType,
-        commodityTollModels: commodityDominanceCtx
-          ? commodityTollModels(commodityDominanceCtx)
-          : [],
+        allCorpSectors,
+        governorConfig,
         currentTurn,
-        currentYear: techCurrentYear,
-        governorCap: marketCtx.governorCap,
-        governorRampTurns: marketCtx.governorRampTurns,
-        worldGovernorAnchorTurn: marketCtx.worldGovernorAnchorTurn,
-        governorGlideEndTurn: marketCtx.governorGlideEndTurn,
-        governorGlide: marketCtx.governorGlide,
-        marketSharePercent: marketShare,
-        nationalMarketSharePercent: nationalMarketShare,
-        // Distinct RIVAL corps in this (state, type) cell. `siblingsSectors` is
-        // already scoped to exactly that cell, so this needs no extra read,
-        // but it must be distinct CORPS, not sectors, or a rival holding two
-        // sectors here would read as two competitors. Same definition as
-        // `fetchSectorCompetitorCount`, which the build command charges from.
-        competitorCount: new Set(
-          siblingsSectors
-            .filter((s) => s.corporationId.toString() !== corporation._id.toString())
-            .map((s) => s.corporationId.toString())
-        ).size,
-        primeRate,
-        ceoAcumen,
-        hostCostOfLivingIndex: metrics.costOfLiving,
-        techGrowthCostMultiplier: techBuildCostMultiplier,
-        techDominanceShield,
-        eraUnitScale: sectorDetailUnitScale,
-        preset: sectorDetailPreset,
-        corpCapitalAnchor: corpLiquidCapitalToAnchor(
-          corporation.liquidCapital,
-          corporation,
-          corporationFxRate
-        ),
-        headroomUnits: unownedHeadroomUnitsOf(
-          sectorType,
-          unownedDoc?.headroomUnits,
-          unownedDoc?.revenue ?? 0,
-          sectorDetailUnitScale
-        ),
-        demandGapUnits,
-        measuredDemandGapUnits,
-        // Every producer's capacity in this cell (the focal sector included),
-        // so "Unclaimed share" reads the same pool `headroomUnits` measures.
-        retoolHint,
-        ownedCellCapacityUnits: siblingsSectors.reduce((sum, s) => {
-          const units = s.operatingCapacityUnits ?? s.capitalStock;
-          return (
-            sum + (typeof units === "number" && Number.isFinite(units) && units > 0 ? units : 0)
-          );
-        }, 0),
-        workers: sector.workers ?? calculateWorkers(sectorRevenueAnchor, metrics.workforceSkill),
-        investment: {
-          operatingReserveAnchor,
-          indebted: unsettled,
-          overheadDailyAnchor:
-            corpLiquidCapitalToAnchor(
-              corpLevelCosts + (corporation.rdBudget ?? 0),
-              corporation,
-              corporationFxRate
-            ) * thisRevenueShare,
-          taxRatePercent: sectorFederalRate + sectorStateRate,
-          inventoryRevenueDailyAnchor: sectorAmountAnchor(enginePnl?.inventoryRevenue ?? 0),
-          freightNetCostDailyAnchor: sectorAmountAnchor(
-            (sector.freightBillingCharge ?? 0) - (sector.freightBillingCredit ?? 0)
-          ),
-        },
-        money: {
-          statement,
-          nameplateRevenueAnchor: sectorAmountAnchor(sector.revenue),
-          realizedRevenueAnchor: statement.revenue,
-          maintenanceNetAnchor: sectorAmountAnchor(maintenanceNet) + statement.charge,
-          labourAnchor: matchingReceipt
-            ? (matchingReceipt.labourPaid + (matchingReceipt.labourArrears ?? 0)) * TURNS_PER_DAY
-            : sectorAmountAnchor(sectorLaborCost),
-          growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
-          profitAnchor: statement.profit,
-          inputsAnchor: matchingReceipt
-            ? matchingReceipt.inputsConsumed * TURNS_PER_DAY
-            : inputsAnchor,
-          internalSupplyIncomeAnchor: sectorAmountAnchor(
-            sector.plantsPnl?.internalSupplyIncome ?? 0
-          ),
-          internalSupplyChargeAnchor: sectorAmountAnchor(
-            sector.plantsPnl?.internalSupplyCharge ?? 0
-          ),
-          freightCostAnchor: sectorAmountAnchor(sector.freightBillingCharge ?? 0),
-          freightIncomeAnchor: sectorAmountAnchor(sector.freightBillingCredit ?? 0),
-          fundedComplianceAnchor:
-            sector.plantsPnl?.source === "funded" &&
-            typeof sector.plantsPnl.compliance === "number" &&
-            Number.isFinite(sector.plantsPnl.compliance)
-              ? sectorAmountAnchor(sector.plantsPnl.compliance)
-              : null,
-          // Turn's own lines, normalized to ₳. Null on sectors that have not run a turn since the field shipped; the builder then falls back to reconstruction.
-          enginePnl: enginePnl
-            ? {
-                revenue: sectorAmountAnchor(enginePnl.revenue),
-                inputs: sectorAmountAnchor(enginePnl.inputs),
-                labour: sectorAmountAnchor(enginePnl.labour),
-                upkeep: sectorAmountAnchor(enginePnl.upkeep),
-                compliance: sectorAmountAnchor(enginePnl.compliance),
-                otherOpex: sectorAmountAnchor(enginePnl.otherOpex),
-                financialLegs: sectorAmountAnchor(enginePnl.financialLegs),
-                internalSupplyDiscountAnchor: sectorAmountAnchor(
-                  enginePnl.internalSupplyDiscountCost ?? 0
-                ),
-                inventoryCarry: sectorAmountAnchor(enginePnl.inventoryCarry ?? 0),
-                policyCredit: sectorAmountAnchor(enginePnl.policyCredit),
-                policyPp: enginePnl.policyPp,
-                operatingCost: sectorAmountAnchor(enginePnl.operatingCost),
-                totalCost: sectorAmountAnchor(enginePnl.totalCost),
-                profit: sectorAmountAnchor(enginePnl.profit),
-              }
-            : null,
-        },
-        // The modifier stack behind that credit, already in money and summing
-        // to it exactly, so the panel can show WHY the profit is what it is
-        // rather than one opaque line. Same rows the corporation page's margin
-        // drilldown lists, minus commodity pressure, which the physical model
-        // prices directly as the input bill and the sale price.
-        policyStack: enginePnl
-          ? buildPolicyStackRows({
-              policyCreditAnchor: sectorAmountAnchor(enginePnl.policyCredit),
-              revenueAnchor: sectorAmountAnchor(enginePnl.revenue),
-              mods: {
-                ...mods,
-                ...ownershipTerms,
-                // The overhead the turn applied (group basis when on, SOEs
-                // exempt); before the first turn writes it, the corp's own
-                // plant count.
-                managementOverheadModifier: -(
-                  corporation.managementOverheadPp ??
-                  managementOverheadPp(
-                    allSectorsRaw.reduce(
-                      (sum, s) =>
-                        s.corporationId.equals(corporation._id) && Number.isFinite(s.plantCount)
-                          ? sum + (s.plantCount as number)
-                          : sum,
-                      0
-                    ),
-                    governorConfig?.managementOverheadPpPerDoubling ?? 0
-                  )
-                ),
-              },
-              appliedPolicyPp: enginePnl.policyPp,
-            })
-          : [],
-        regulatoryBurdenPp: mods.dominanceRegulatoryBurdenPp ?? 0,
-        crisisMarginPenaltyPp: crisisMarginPenalty,
-        autopilotEnabled: corporation.autopilot != null,
-        // C9: the same spread `buildCapacity` charges on top of the build cost.
-        // Priced off 1 ₳ so the result is the RATE, which is all the quote needs
-        // (the spread is strictly proportional to the construction cost).
-        fxSpreadRate: corpToSectorCountrySpread(corporation, sectorCountryId, 1).spreadAnchor,
-        depositBound:
-          sectorType === "extraction" &&
-          Object.values(thisSectorMultipliers).some((m) => typeof m === "number" && m < 0.999),
+        demandsWithShortage,
+        allStates,
+        commodityPrices,
+        allSectorsRaw,
+        siblingFxByCurrency,
+        pricing,
+        sectorCountryId,
+        ceo,
+        techTreesEnabled,
+        techCorpView,
+        sectorType,
+        techCurrentYear,
+        effectiveSupply,
+        stateBalances,
+        globalBalances,
+        corpByIdForLookup,
+        sectorDetailPreset,
+        effectiveRates,
+        gameState,
+        enginePnl,
+        corpLevelCosts,
+        corporationFxRate,
+        strategyWorld,
+        stateResources,
+        sectorDetailUnitScale,
+        profit,
+        sectorAmountAnchor,
+        marketShare,
+        siblingsSectors,
+        metrics,
+        unownedDoc,
+        sectorRevenueAnchor,
+        thisRevenueShare,
+        sectorFederalRate,
+        sectorStateRate,
+        maintenanceNet,
+        sectorLaborCost,
+        mods,
+        ownershipTerms,
+        crisisMarginPenalty,
+        thisSectorMultipliers,
       });
-      plants.buildQuote.runningBillsAnchor = runFlows.bills;
-      plants.buildQuote.runRevenueAnchor = runFlows.revenue;
-      withRunReport(plants, sector.producerSettlement, currentTurn, governorConfig);
-    }
-
-    if (
-      plants &&
-      isCeo &&
-      governorConfig?.privateBankingEnabled === true &&
-      governorConfig.bankConstructionFinanceEnabled === true &&
-      governorConfig.treasuryCashLedgerEnabled === true &&
-      Number.isFinite(corporationFxRate) &&
-      corporationFxRate > 0
-    ) {
-      const currency = resolveCorpLiquidCurrencyCode(corporation);
-      if (currency)
-        plants.buildQuote.financing = {
-          corporationId: String(corporation._id),
-          currency,
-          localPerAnchor: corporationFxRate,
-          ...(sector.constructionFinancing?.status === "awaiting_approval" ||
-          sector.constructionFinancing?.status === "funding"
-            ? {
-                pendingRequest: {
-                  claimId: sector.constructionFinancing.claimId,
-                  status: sector.constructionFinancing.status,
-                },
-              }
-            : {}),
-        };
-    }
-
-    if (plants?.investment) {
-      plants.investment.bondReference = await loadInvestmentBondReference(
-        db,
-        resolveCorpLiquidCurrencyCode(corporation),
-        currentTurn
-      );
-    }
 
     const marketActionsAvailable =
       !!viewerCorporation &&

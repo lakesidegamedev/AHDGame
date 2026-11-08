@@ -10,7 +10,6 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type {
   Election,
-  ElectionCandidate,
   ElectedOfficial,
   ElectionStatus,
   ElectionVoteTally,
@@ -18,158 +17,44 @@ import type {
   OfficeType,
   CareerEvent,
   Character,
-  CountryGameState,
 } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
-import { updatePoliticianPagesAfterElection } from "@/lib/wiki/updatePoliticianPageOnElection";
 import {
   ELECTION_TYPE_SHORT_LABEL,
-  MULTI_SEAT_TYPES,
   isCommonsGeneralElection,
-  isSpecialCommonsElection,
   officeKeyForElectionType,
 } from "@/lib/utils/electionLabels";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
-import { triggerLeadershipElectionsAfterChamberVote } from "@/lib/congress/leadershipElections";
 import { resolvePresidentElection } from "@/lib/turn/election/presidentResolution";
 import { resolveNGPresidentElection } from "@/lib/turn/election/ngPresidentResolution";
-import {
-  COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS,
-  COUNTRY_CONFIGS,
-  isPresidentialGovernmentType,
-  type CountryId,
-} from "@/lib/constants/countries";
-import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
+import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
 import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
-import { countPrStv, validateRankedBallots } from "./rules/prStv";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
-import { loadApportionment } from "@/lib/elections/apportionment";
-import { getUkCommonsSeats } from "@/lib/constants/states";
-import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocList";
-import { getCountryState } from "@/lib/countryState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
-import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
+import { validateRankedBallots } from "./rules/prStv";
 import { getGameStateCollection } from "@/lib/db/collections";
-import { maybeReconcileBundestag } from "@/lib/turn/election/germanyAMS";
-import { updatePartyPresence } from "@/lib/turn/partyOrg";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
-import {
-  maybeApplyIndependenceDesireHook,
-  type FirstMinisterBonusContext,
-} from "@/lib/turn/election/independenceDesireHook";
-import {
-  buildJapanMixedRegionalList,
-  countJapanMixedShugiin,
-  remapJapanShugiinListVotes,
-} from "@/lib/countries/jp/rules/mixedShugiinCount";
+import { type FirstMinisterBonusContext } from "@/lib/turn/election/independenceDesireHook";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { getElectionMethod } from "@/lib/elections/electionMethod";
-import { bgDhondtSeats } from "@/lib/countries/bg/rules/ordinaryElection";
-import { allocateHuModernPeople } from "@/lib/countries/hu/rules/modernMandates2011";
 import type { ElectionNewsOutcome } from "./electionNotifications";
 import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecycle";
 import {
-  buildPrimaryShareMap,
   carryForwardCommonsConstituency,
-  getChamberClass,
-  multiSeatOfficialFilter,
   preserveExecutiveOffice,
   resolveElectionWithNoRankedCandidates,
   resolveElectionWithNoTally,
   resolveElectionWithZeroVotes,
-  sweepStaleOffice,
   type OneElectionResult,
 } from "./generalResolutionHelpers";
-import { logger } from "../../observability/logger";
 import { finishFinalizedElectionCleanup } from "./finalizedElectionCleanup";
-import { applyConversionVotePenalty, applyLegacySeatFloor } from "./conversionTerms";
-import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
-import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
-import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import {
+  recordJapanShugiinRegionalCapacity,
+  reconcileGermanElection,
+  applyGeneralElectionAftermath,
+} from "./generalResolutionAftermath";
+import { loadGeneralElectionCandidates } from "./generalResolutionCandidates";
+import { selectGeneralElectionWinners } from "./generalResolutionWinners";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
-
-async function recordJapanShugiinRegionalCapacity(
-  db: Db,
-  election: Election,
-  currentTurn: number,
-  now: Date
-): Promise<void> {
-  if (
-    election.countryId !== "JP" ||
-    (election.electionType !== "shugiin" && election.electionType !== "snap_shugiin") ||
-    !election.japanShugiinRules ||
-    !election.state
-  )
-    return;
-  try {
-    const { districtSeats, listSeats, ruleVersion } = election.japanShugiinRules;
-    const totalSeats = districtSeats + listSeats;
-    if (
-      !Number.isSafeInteger(districtSeats) ||
-      !Number.isSafeInteger(listSeats) ||
-      districtSeats < 0 ||
-      listSeats < 0 ||
-      totalSeats !== election.totalSeats
-    ) {
-      throw new Error(
-        "Resolved Japan Shugiin capacity does not match its frozen election snapshot"
-      );
-    }
-    const regionRuleKey = `jpShugiinResolvedRegionalRules.${election.state}`;
-    await db.collection<CountryGameState>("countryGameStates").updateOne(
-      {
-        _id: "JP",
-        $or: [
-          { [`${regionRuleKey}.cycle`]: { $exists: false } },
-          { [`${regionRuleKey}.cycle`]: { $lte: election.cycle } },
-        ],
-      },
-      {
-        $set: {
-          [regionRuleKey]: {
-            ruleVersion,
-            totalSeats,
-            districtSeats,
-            listSeats,
-            electionId: election._id.toString(),
-            cycle: election.cycle,
-            resolvedAtTurn: currentTurn,
-          },
-        },
-      }
-    );
-  } catch (error) {
-    // Empty-race helpers already mark the election resolved. Keep a failed
-    // capacity write eligible for retry, including the finalized-tally path.
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { status: "completed", updatedAt: now } });
-    throw error;
-  }
-}
-
-/** A failed list/holder write must keep the finalized race eligible for retry. */
-async function reconcileGermanElection(db: Db, election: Election, now: Date): Promise<void> {
-  if (
-    getElectionMethod(election.countryId, election.electionType) !== "ams" ||
-    (election.electionType !== "bundestag" && election.electionType !== "snap_bundestag")
-  )
-    return;
-  try {
-    const reconciled = await maybeReconcileBundestag(db, election.cycle, now);
-    if (reconciled) {
-      const { triggerBundestagspraesidentElectionAfterReconcile } =
-        await import("@/lib/congress/bundestagspraesident/openElection");
-      await triggerBundestagspraesidentElectionAfterReconcile(db, now);
-    }
-  } catch (error) {
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { status: "completed", updatedAt: now } });
-    throw error;
-  }
-}
 
 /**
  * Resolves a single completed election — determines winners, writes elected
@@ -417,246 +302,22 @@ export async function resolveOneGeneralElection(
     // Closed lists can seat a registered replacement with zero personal votes.
     // Preserve that nominee in the candidate load and saved result, rather than
     // discarding their national mandate because they had no tally key.
-    if (bgOrdinaryCandidateSeats)
-      effectiveVotes = {
-        ...Object.fromEntries(Object.keys(bgOrdinaryCandidateSeats).map((id) => [id, 0])),
-        ...effectiveVotes,
-      };
-    const candidateIdsBeforeLoad = [
-      ...new Set([
-        ...Object.keys(effectiveVotes),
-        ...(isJapanMixedShugiin
-          ? Object.values(tally.japanShugiinConstituencyVotes ?? {}).flatMap((votesByCandidate) =>
-              Object.keys(votesByCandidate)
-            )
-          : []),
-      ]),
-    ];
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .find({
-        ...(isJapanMixedShugiin
-          ? {
-              electionId: election._id,
-              status: "active",
-              $or: [
-                { _id: { $in: candidateIdsBeforeLoad.map((id) => new ObjectId(id)) } },
-                { isNPP: true },
-                { japanShugiinListOrder: { $exists: true } },
-              ],
-            }
-          : {
-              _id: { $in: candidateIdsBeforeLoad.map((id) => new ObjectId(id)) },
-              status: "active",
-            }),
-      })
-      .toArray();
-    if (isJapanMixedShugiin) {
-      for (const candidate of candidates) {
-        if (candidate.isNPP || candidate.japanShugiinListOrder != null) {
-          effectiveVotes[candidate._id.toString()] ??= 0;
-        }
-      }
-    }
-    const candidateIds = Object.keys(effectiveVotes);
-
-    // A candidacy filed under a party that has since merged away counts for,
-    // and seats into, the party that absorbed it (ticket 1376).
-    const survivingParty = await loadSurvivingPartyResolver(db, election.countryId ?? "US");
-    for (const c of candidates) c.party = survivingParty(c.party) ?? c.party;
-
-    const candidateMap = new Map(candidates.map((c) => [c._id.toString(), c]));
-
-    // Mortality withdraws a deceased NPP's candidacies before ordinary
-    // resolution. Keep the resolver safe if it runs against a stale row or a
-    // concurrent process that retired the NPP after the candidate query.
-    const candidateNppIds = candidates
-      .filter((c): c is typeof c & { nppId: ObjectId } => !!c.isNPP && !!c.nppId)
-      .map((c) => c.nppId);
-    const liveCandidateNpps =
-      candidateNppIds.length > 0
-        ? await db
-            .collection<NPP>("npps")
-            .find({ _id: { $in: candidateNppIds }, retiredAt: null }, { projection: { _id: 1 } })
-            .toArray()
-        : [];
-    const liveCandidateNppIds = new Set(liveCandidateNpps.map((npp) => npp._id.toString()));
-    const retiredNppCandidateIds = new Set(
-      candidates
-        .filter((c) => !!c.isNPP && !!c.nppId && !liveCandidateNppIds.has(c.nppId.toString()))
-        .map((c) => c._id.toString())
-    );
-    // A sitting national executive in a presidential system cannot take a
-    // legislative (or any non-executive) seat (#2038). The resolver usually
-    // seats the executive after the legislature, but a delayed executive
-    // seating retry or a filing after the seating can produce the reverse
-    // order. Exclude such winners before allocation so the seat falls to the
-    // next eligible candidate (or the vacancy path when none remains).
-    // Parliamentary heads of government legitimately sit in the legislature,
-    // so this applies only where the country config is presidential.
-    const executiveIneligibleCandidateIds = new Set<string>();
-    if (
-      election.electionType !== "president" &&
-      isPresidentialGovernmentType(
-        COUNTRY_CONFIGS[(election.countryId ?? "US") as CountryId]?.governmentType
-      )
-    ) {
-      const holderCharIds = candidates
-        .filter((c): c is typeof c & { characterId: ObjectId } => !c.isNPP && !!c.characterId)
-        .map((c) => c.characterId);
-      const holderNppIds = candidates
-        .filter((c): c is typeof c & { nppId: ObjectId } => !!c.isNPP && !!c.nppId)
-        .map((c) => c.nppId);
-      const [holderChars, holderMpps] = await Promise.all([
-        holderCharIds.length > 0
-          ? db
-              .collection<Character>("characters")
-              .find({ _id: { $in: holderCharIds } }, { projection: { currentOffice: 1 } })
-              .toArray()
-          : Promise.resolve([]),
-        holderNppIds.length > 0
-          ? db
-              .collection<NPP>("npps")
-              // Seat resolution reads the office, never the 30KB stance map.
-              .find({ _id: { $in: holderNppIds } }, { projection: { currentOffice: 1 } })
-              .toArray()
-          : Promise.resolve([]),
-      ]);
-      const holderOfficeById = new Map<string, Character["currentOffice"] | NPP["currentOffice"]>();
-      for (const h of holderChars) holderOfficeById.set(h._id.toString(), h.currentOffice);
-      for (const h of holderMpps) holderOfficeById.set(h._id.toString(), h.currentOffice);
-      for (const c of candidates) {
-        const holderId = c.isNPP ? c.nppId?.toString() : c.characterId?.toString();
-        if (holderId && isExecutiveOffice(holderOfficeById.get(holderId) ?? null)) {
-          executiveIneligibleCandidateIds.add(c._id.toString());
-        }
-      }
-      if (executiveIneligibleCandidateIds.size > 0) {
-        console.warn(
-          `[Turn] Election ${election._id} (${election.electionType}/${election.state}): ` +
-            `excluding ${executiveIneligibleCandidateIds.size} sitting-executive candidate(s) ineligible for a non-executive seat`
-        );
-      }
-    }
-    const droppedCandidateIds = new Set([
-      ...retiredNppCandidateIds,
-      ...executiveIneligibleCandidateIds,
-    ]);
-    if (droppedCandidateIds.size > 0) {
-      if (retiredNppCandidateIds.size > 0) {
-        console.warn(
-          `[Turn] Election ${election._id} (${election.electionType}/${election.state}): ` +
-            `excluding ${retiredNppCandidateIds.size} retired or missing NPP candidate(s)`
-        );
-      }
-      effectiveVotes = Object.fromEntries(
-        Object.entries(effectiveVotes).filter(([id]) => !droppedCandidateIds.has(id))
-      );
-      totalVotesCast = Object.values(effectiveVotes).reduce((sum, votes) => sum + votes, 0);
-    }
-
-    // Warn if any candidate IDs in the tally have no matching document — votes would be lost.
-    const missingIds = candidateIds.filter((id) => !candidateMap.has(id));
-    if (missingIds.length > 0) {
-      console.warn(
-        `[Turn] Election ${election._id} (${election.electionType}/${election.state}): ` +
-          `${missingIds.length} candidate ID(s) in tally not found in electionCandidates — ` +
-          `${isPrStv ? "preferences transfer past unavailable candidates" : "votes discarded"}: ${missingIds.join(", ")}`
-      );
-    }
-
-    // Phase 5 devolution electoral hook: UK SCO/WAL/NIR
-    // commons/regionalCouncil/governor elections get the legacy soft vote-share
-    // nudge plus any qualifying high-desire First Minister party bonus. Applies
-    // before ranking so the resolver picks winners from the adjusted tally.
-    // No-op for any other (countryId, electionType, state) combination.
-    const hookResult = await maybeApplyIndependenceDesireHook(db, {
-      countryId: election.countryId ?? "",
-      electionType: election.electionType,
-      state: election.state ?? undefined,
+    const loadGeneralElectionCandidatesResult = await loadGeneralElectionCandidates({
+      bgOrdinaryCandidateSeats,
       effectiveVotes,
-      candidates: candidates
-        .filter((c) => !retiredNppCandidateIds.has(c._id.toString()))
-        .map((c) => ({ _id: c._id, party: c.party })),
-      totalVotes: totalVotesCast,
-      bonusContext: devolutionBonusContext,
+      isJapanMixedShugiin,
+      tally,
+      db,
+      election,
+      totalVotesCast,
+      isPrStv,
+      devolutionBonusContext,
     });
-    if (hookResult.nudgeApplied !== 0 || hookResult.firstMinisterBonusApplied !== 0) {
-      effectiveVotes = hookResult.adjustedVotes;
-      // The transfer nudge preserves the grand total, but the multiplicative
-      // First Minister party bonus inflates it. Refresh totalVotesCast so the
-      // downstream share-eligibility check in allocateSeats
-      // (votes / totalVotesCast) uses the new denominator instead of the stale
-      // pre-hook total.
-      if (hookResult.firstMinisterBonusApplied !== 0) {
-        totalVotesCast = Object.values(effectiveVotes).reduce((s, v) => s + v, 0);
-      }
-      console.log(
-        `[Turn] Election ${election._id} (${election.electionType}/${election.state}): ` +
-          `Devolution hook applied nudge=${hookResult.nudgeApplied.toFixed(3)}, ` +
-          `firstMinisterBonus=${hookResult.firstMinisterBonusApplied.toFixed(3)}`
-      );
-    }
+    effectiveVotes = loadGeneralElectionCandidatesResult.effectiveVotes;
+    totalVotesCast = loadGeneralElectionCandidatesResult.totalVotesCast;
+    const { candidateIds, candidateMap, ineligibleCandidateIds, survivingParty, candidates } =
+      loadGeneralElectionCandidatesResult;
 
-    // First election after a forced one-party-state conversion: the former
-    // ruling party's votes take the conversion's penalty before ranking.
-    const penalizedVotes = applyConversionVotePenalty(
-      effectiveVotes,
-      (id) => candidateMap.get(id)?.party,
-      election.conversionTerms
-    );
-    if (penalizedVotes) {
-      effectiveVotes = penalizedVotes;
-      totalVotesCast = Object.values(effectiveVotes).reduce((s, v) => s + v, 0);
-    }
-
-    // ── Defense-in-depth: never seat a hard-deleted character ────────────────
-    // Account deletion (and admin force-delete) hard-removes the character doc
-    // but can leave a dangling active candidacy behind. If such a candidacy
-    // out-polls the field it would otherwise be seated as a phantom official
-    // referencing a character that no longer exists. Drop deleted-character
-    // candidates before allocation so the seat falls to the next eligible
-    // candidate (or stays vacant if none remain). NPP "candidates" have no
-    // character document and are unaffected.
-    const candidateCharIds = candidates
-      .filter((c): c is typeof c & { characterId: ObjectId } => !c.isNPP && !!c.characterId)
-      .map((c) => c.characterId);
-    const deletedCandidateIds = new Set<string>();
-    if (candidateCharIds.length > 0) {
-      const existingChars = await db
-        .collection<Character>("characters")
-        .find(
-          {
-            _id: { $in: candidateCharIds },
-            ...(bgOrdinaryCandidateSeats
-              ? {
-                  countryId: "BG",
-                  federationPendingResidenceId: { $exists: false },
-                }
-              : {}),
-          },
-          { projection: { _id: 1 } }
-        )
-        .toArray();
-      const existingCharIds = new Set(existingChars.map((c) => c._id.toString()));
-      for (const c of candidates) {
-        if (!c.isNPP && c.characterId && !existingCharIds.has(c.characterId.toString())) {
-          deletedCandidateIds.add(c._id.toString());
-        }
-      }
-      if (deletedCandidateIds.size > 0) {
-        console.warn(
-          `[Turn] Election ${election._id} (${election.electionType}/${election.state}): ` +
-            `excluding ${deletedCandidateIds.size} winning-eligible candidate(s) whose character no longer exists`
-        );
-      }
-    }
-
-    const ineligibleCandidateIds = new Set([
-      ...deletedCandidateIds,
-      ...retiredNppCandidateIds,
-      ...executiveIneligibleCandidateIds,
-    ]);
     const ranked = candidateIds
       // `party` lets allocateSeats compute its minimum-share eligibility on the
       // PARTY aggregate share (same-party candidates pooled) instead of the
@@ -688,403 +349,33 @@ export async function resolveOneGeneralElection(
       return result;
     }
 
-    const totalSeats = election.totalSeats ?? 1;
-    // House seat counts are preset-dependent (1990 vs 2020 census). Fetch the
-    // active preset only for House races; other multi-seat types ignore the
-    // houseSeats arg, so undefined correctly falls through to the default.
-    // Commons likewise needs the era map (625 in 1953 vs modern 650); without
-    // it allocateSeats always used the modern UK_COMMONS_SEATS.
-    let houseSeats: Record<string, number> | undefined;
-    let commonsSeats: Record<string, number> | undefined;
-    let allocationMethod = election.allocationMethod;
-    let gsForHouse: {
-      preset?: string;
-      redistrictingEnabled?: boolean;
-      currentYear?: number;
-    } | null = null;
-    if (election.electionType === "house") {
-      gsForHouse = await (await getGameStateCollection(db)).findOne({ _id: "current" });
-      // Live (census-updated) House apportionment; equals the preset seed until a
-      // decennial census reapportions. `currentYear` keeps states admitted
-      // mid-game in the map; without it `authoritativeSeats` silently fell back
-      // to the election's own `totalSeats`.
-      houseSeats = (await loadApportionment(db, gsForHouse?.preset, gsForHouse?.currentYear))
-        .houseSeats;
-    }
-
-    // Older Japan races predate the per-race snapshot. Resolve them against
-    // their world's era rules; newly spawned races keep their frozen method.
-    if (
-      !allocationMethod &&
-      election.countryId === "JP" &&
-      election.japanShugiinRules?.ruleVersion !== "mixed-1994-v1" &&
-      (election.electionType === "shugiin" || election.electionType === "snap_shugiin")
-    ) {
-      const gameState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
-      allocationMethod = getElectionMethod("JP", election.electionType, gameState?.preset);
-    }
-
-    if (
-      election.electionType === "commons" ||
-      election.electionType === "snap_commons" ||
-      isSpecialCommonsElection(election.electionType)
-    ) {
-      const gsForCommons = await (await getGameStateCollection(db)).findOne({ _id: "current" });
-      commonsSeats = getUkCommonsSeats(gsForCommons?.preset);
-    }
-
-    // Districted per-district resolution (US House, flag on). Returns null when the
-    // state has no congressionalDistricts docs → fall back to legacy allocateSeats.
-    let districted: Awaited<ReturnType<typeof districtedHouseResolution>> = null;
-    if (
-      election.electionType === "house" &&
-      (election.countryId ?? "US") === "US" &&
-      isRedistrictingEnabled(gsForHouse)
-    ) {
-      const candidateParty: Record<string, string> = {};
-      const candidateCharacterId: Record<string, string | null> = {};
-      const candidateNppId: Record<string, string | null> = {};
-      for (const id of Object.keys(effectiveVotes)) {
-        const c = candidateMap.get(id);
-        candidateParty[id] = c?.party ?? tally?.candidateParties?.[id] ?? "";
-        // NPP candidates carry characterId === nppId, but that id lives in the
-        // `npps` collection. Route them to the NPP holder field so seat holders
-        // resolve correctly (else the seat renders as unheld).
-        if (c?.isNPP && c?.nppId) {
-          candidateNppId[id] = c.nppId.toString();
-          candidateCharacterId[id] = null;
-        } else {
-          candidateCharacterId[id] = c?.characterId ? c.characterId.toString() : null;
-          candidateNppId[id] = null;
-        }
-      }
-      const primaryShares = buildPrimaryShareMap(tally?.primaryResults ?? null);
-      districted = await districtedHouseResolution(db, {
-        countryId: "US",
-        stateId: election.state as string,
-        candidateVotes: effectiveVotes,
-        candidateParty,
-        candidateCharacterId,
-        candidateNppId,
-        primaryShares,
-        districtBoosts: (
-          election as {
-            districtCampaignBoosts?: Record<string, Record<string, number>>;
-          }
-        ).districtCampaignBoosts,
-        now,
-        // The one caller that may write holders: this is the real result.
-        persist: true,
-      });
-    }
-
-    const configuredBlocQuota = blocListQuota(election.countryId);
-    const runtimeBlocQuota = configuredBlocQuota
-      ? blocListQuotaForGovernment(
-          election.countryId,
-          (await getCountryState(db, election.countryId)).governmentType
-        )
-      : null;
-    const prStvResult = isPrStv
-      ? countPrStv(
-          ranked.map((c) => c.id),
-          totalSeats,
-          tally.rankedBallots!
-        )
-      : undefined;
-    if (prStvResult) {
-      const holders = ranked.map(({ id }) => {
-        const c = candidateMap.get(id)!;
-        return `${c.isNPP ? "npp" : "player"}:${c.isNPP ? c.nppId : c.characterId}`;
-      });
-      if (new Set(holders).size !== holders.length)
-        throw new Error("PR-STV requires distinct candidate holder identities");
-    }
-    const bgOrdinaryAllocation = bgOrdinaryCandidateSeats
-      ? (() => {
-          const seatsEstimate: Record<string, number> = { ...bgOrdinaryCandidateSeats };
-          const eligibleIds = new Set(ranked.map((row) => row.id));
-          for (const [id, seats] of Object.entries(seatsEstimate)) {
-            const candidate = candidateMap.get(id);
-            if (
-              !Number.isSafeInteger(seats) ||
-              seats < 0 ||
-              (seats > 0 && (!eligibleIds.has(id) || !candidate || (!candidate.isNPP && seats > 1)))
-            )
-              throw new Error("Bulgarian frozen allocation has an unavailable or invalid holder");
-          }
-          if (Object.values(seatsEstimate).reduce((sum, seats) => sum + seats, 0) !== totalSeats)
-            throw new Error("Bulgarian frozen allocation does not fill the regional capacity");
-          return {
-            isMultiSeat: true,
-            authoritativeSeats: totalSeats,
-            seatsEstimate,
-            winners: Object.entries(seatsEstimate).filter(([, seats]) => seats > 0) as [
-              string,
-              number,
-            ][],
-            losers: Object.entries(seatsEstimate)
-              .filter(([, seats]) => seats === 0)
-              .map(([id]) => id),
-          };
-        })()
-      : null;
-    const bgAllocation =
-      bgEligibleParties &&
-      election.countryId === "BG" &&
-      election.electionType === "nationalAssembly" &&
-      election.cycle === 1
-        ? (() => {
-            const seatsEstimate = bgDhondtSeats(
-              ranked.map((candidate) => {
-                const row = candidateMap.get(candidate.id);
-                if (!row?.party) throw new Error("Bulgaria list candidate has no party");
-                return {
-                  id: candidate.id,
-                  party: row.party,
-                  votes: candidate.votes,
-                  listOrder: row.enteredAt?.getTime() ?? 0,
-                };
-              }),
-              totalSeats,
-              bgEligibleParties
-            );
-            return {
-              isMultiSeat: true,
-              authoritativeSeats: totalSeats,
-              seatsEstimate,
-              winners: Object.entries(seatsEstimate).filter(([, seats]) => seats > 0) as [
-                string,
-                number,
-              ][],
-              losers: Object.entries(seatsEstimate)
-                .filter(([, seats]) => seats === 0)
-                .map(([id]) => id),
-            };
-          })()
-        : null;
-    const huAllocation = huMixedCandidateSeats
-      ? (() => {
-          const seatsEstimate: Record<string, number> = Object.fromEntries(
-            ranked.map((candidate) => [candidate.id, 0])
-          );
-          const wantedByParty: Record<string, number> = {};
-          for (const [candidateId, seats] of Object.entries(huMixedCandidateSeats)) {
-            const rawParty =
-              candidateMap.get(candidateId)?.party ?? tally.candidateParties[candidateId];
-            if (!rawParty) throw new Error("Hungary mixed mandate has no party");
-            const party = rawParty === "independent" ? `independent@${candidateId}` : rawParty;
-            wantedByParty[party] = (wantedByParty[party] ?? 0) + seats;
-          }
-          const assigned = allocateHuModernPeople({
-            quotas: wantedByParty,
-            people: ranked.map((candidate) => ({
-              id: candidate.id,
-              partyId:
-                candidate.party === "independent"
-                  ? `independent@${candidate.id}`
-                  : (candidate.party ?? ""),
-              votes: candidate.votes,
-              isNpc: candidateMap.get(candidate.id)?.isNPP === true,
-            })),
-          });
-          if (!assigned) throw new Error("Hungary modern mandate has insufficient viable people");
-          Object.assign(seatsEstimate, assigned);
-          return {
-            isMultiSeat: true,
-            authoritativeSeats: totalSeats,
-            seatsEstimate,
-            winners: Object.entries(seatsEstimate).filter(([, seats]) => seats > 0) as [
-              string,
-              number,
-            ][],
-            losers: Object.entries(seatsEstimate)
-              .filter(([, seats]) => seats === 0)
-              .map(([id]) => id),
-          };
-        })()
-      : null;
-    const japanMixedAllocation = isJapanMixedShugiin
-      ? (() => {
-          const districtVotes = tally.japanShugiinConstituencyVotes;
-          const listVotes = tally.japanShugiinListVotes;
-          if (!districtVotes || !listVotes)
-            throw new Error("Japan mixed election lacks separate district and list ballots");
-          const counted = countJapanMixedShugiin(
-            {
-              districtVotes: Object.fromEntries(
-                Object.entries(districtVotes).map(([districtId, votesByCandidate]) => [
-                  districtId,
-                  Object.entries(votesByCandidate)
-                    .filter(
-                      ([candidateId]) =>
-                        candidateMap.has(candidateId) && !ineligibleCandidateIds.has(candidateId)
-                    )
-                    .map(([candidateId, votes]) => {
-                      const candidate = candidateMap.get(candidateId)!;
-                      const partyId = candidate.party ?? tally.candidateParties[candidateId];
-                      if (!partyId)
-                        throw new Error("Japan district ballot names a candidate without a party");
-                      return {
-                        candidateId,
-                        partyId,
-                        votes,
-                        isNPP: candidate.isNPP,
-                      };
-                    }),
-                ])
-              ),
-              listVotesByRegion: {
-                [election.state]: remapJapanShugiinListVotes(
-                  listVotes,
-                  (partyId) => survivingParty(partyId) ?? null
-                ),
-              },
-              regionalLists: {
-                [election.state]: buildJapanMixedRegionalList(
-                  candidates.flatMap((candidate) => {
-                    const candidateId = candidate._id.toString();
-                    const partyId = candidate.party;
-                    return partyId
-                      ? [
-                          {
-                            candidateId,
-                            partyId,
-                            listOrder: candidate.japanShugiinListOrder,
-                            isNPP: candidate.isNPP,
-                            enteredAt: candidate.enteredAt?.getTime(),
-                          },
-                        ]
-                      : [];
-                  }),
-                  ineligibleCandidateIds
-                ),
-              },
-            },
-            election.state
-          );
-          if (counted.totalSeats !== totalSeats)
-            throw new Error(
-              "Japan mixed election capacity does not match its frozen district/list map"
-            );
-          const seatsEstimate: Record<string, number> = Object.fromEntries(
-            ranked.map((candidate) => [candidate.id, counted.seatsByCandidate[candidate.id] ?? 0])
-          );
-          if (
-            Object.keys(counted.seatsByCandidate).some((id) => !candidateMap.has(id)) ||
-            Object.values(seatsEstimate).some((seats) => !Number.isSafeInteger(seats) || seats < 0)
-          )
-            throw new Error("Japan mixed count allocated seats to an unavailable candidate");
-          return {
-            isMultiSeat: true,
-            authoritativeSeats: counted.totalSeats,
-            seatsEstimate,
-            winners: Object.entries(seatsEstimate).filter(([, seats]) => seats > 0) as [
-              string,
-              number,
-            ][],
-            losers: Object.entries(seatsEstimate)
-              .filter(([, seats]) => seats === 0)
-              .map(([id]) => id),
-          };
-        })()
-      : null;
-    // The opt-in ranked count seats individual people, not aggregate seat blocks.
-    const { isMultiSeat, seatsEstimate, winners, losers } = prStvResult
-      ? {
-          isMultiSeat: true,
-          seatsEstimate: prStvResult.seats,
-          winners: prStvResult.elected.map((id): [string, number] => [id, 1]),
-          losers: ranked.filter((c) => !prStvResult.seats[c.id]).map((c) => c.id),
-        }
-      : (bgOrdinaryAllocation ??
-        bgAllocation ??
-        japanMixedAllocation ??
-        huAllocation ??
-        applyLegacySeatFloor(
-          districted ??
-            allocateSeats(
-              election.electionType,
-              election.state,
-              totalSeats,
-              ranked,
-              totalVotesCast,
-              houseSeats,
-              // National Front chambers: the quota decides the party split, not the
-              // vote. Undefined for every non-bloc-list country, so their allocation
-              // is byte-identical.
-              runtimeBlocQuota?.shares,
-              commonsSeats,
-              election.countryId ?? "US",
-              allocationMethod
-            ),
-          ranked,
-          election.conversionTerms
-        ));
-
-    if (isMultiSeat) {
-      if (isSpecialCommonsElection(election.electionType)) {
-        // ADDITIVE seating: a by-election fills only its claimed vacancies. Remove
-        // holder-less `commons` rows (tombstones for recorded vacancies) up to the
-        // seats this race filled, and leave every seated MP untouched; the winner
-        // loop below inserts fresh rows for filled seats.
-        const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
-        if (seatsFilled > 0) {
-          const vacantRows = await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .find(
-              {
-                officeType: "commons",
-                state: election.state,
-                ...(election.countryId ? { countryId: election.countryId } : {}),
-                characterId: null,
-                nppId: null,
-              },
-              { projection: { _id: 1 }, sort: { _id: 1 }, limit: seatsFilled }
-            )
-            .toArray();
-          if (vacantRows.length > 0) {
-            await db
-              .collection<ElectedOfficial>("electedOfficials")
-              .deleteMany({ _id: { $in: vacantRows.map((r) => r._id) } });
-          }
-        }
-      } else {
-        await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .deleteMany(multiSeatOfficialFilter(election));
-      }
-      // Class-scoped multi-seat chambers (JP Sangiin): the filter above keys on
-      // chamberClass, so councillors seeded WITHOUT a class are invisible to it
-      // — every class election inserted winners beside the seeded roster and
-      // the chamber accumulated without bound (measured 54% overfull). Mirror
-      // of the single-winner classless-retirement below: retire as many
-      // classless legacy rows as seats this election filled, oldest first, so
-      // the chamber converges to its real size as classes cycle.
-      const multiSeatClass = getChamberClass(election);
-      if (multiSeatClass) {
-        const seatsFilled = winners.reduce((n, [, s]) => n + s, 0);
-        if (seatsFilled > 0) {
-          const legacyRows = await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .find(
-              {
-                officeType: officeKeyForElectionType(election.electionType, election.countryId),
-                state: election.state,
-                ...(election.countryId ? { countryId: election.countryId } : {}),
-                $and: [{ senateClass: { $exists: false } }, { chamberClass: { $exists: false } }],
-              },
-              { projection: { _id: 1 }, sort: { electedAt: 1 }, limit: seatsFilled }
-            )
-            .toArray();
-          if (legacyRows.length > 0) {
-            await db
-              .collection<ElectedOfficial>("electedOfficials")
-              .deleteMany({ _id: { $in: legacyRows.map((r) => r._id) } });
-          }
-        }
-      }
-    }
+    const {
+      winners,
+      isMultiSeat,
+      losers,
+      seatsEstimate,
+      prStvResult,
+      bgOrdinaryAllocation,
+      districted,
+      runtimeBlocQuota,
+    } = await selectGeneralElectionWinners({
+      election,
+      db,
+      effectiveVotes,
+      candidateMap,
+      tally,
+      now,
+      isPrStv,
+      ranked,
+      bgOrdinaryCandidateSeats,
+      bgEligibleParties,
+      huMixedCandidateSeats,
+      isJapanMixedShugiin,
+      ineligibleCandidateIds,
+      survivingParty,
+      candidates,
+      totalVotesCast,
+    });
 
     const officeAnalytics: Array<{
       officeType: string;
@@ -1662,265 +953,26 @@ export async function resolveOneGeneralElection(
 
     await createNotifications(loserNotifInputs);
 
-    await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
-      { electionId: election._id },
-      {
-        $set: {
-          seatsEstimate,
-          finalized: true,
-          updatedAt: now,
-          resolvedAtTurn: currentTurn,
-          resolvedSeatHolders: winners.map(([candidateId, seats]) => {
-            const candidate = candidateMap.get(candidateId)!;
-            return {
-              identity: `${candidate.isNPP ? "npp" : "player"}:${candidate.isNPP ? candidate.nppId : candidate.characterId}`,
-              party: candidate.party,
-              seats,
-              seatSource: "direct" as const,
-            };
-          }),
-          resolvedTotalSeats: winners.reduce((sum, [, seats]) => sum + seats, 0),
-          ...(prStvResult ? { prStvResult } : {}),
-          resolutionPath: prStvResult
-            ? "pr_stv"
-            : bgOrdinaryAllocation
-              ? "bg_ordinary_national"
-              : districted
-                ? "districted_house"
-                : runtimeBlocQuota
-                  ? "bloc_list"
-                  : election.countryId === "DE" &&
-                      (election.electionType === "bundestag" ||
-                        election.electionType === "snap_bundestag")
-                    ? "ams_direct"
-                    : isMultiSeat
-                      ? "hare_quota"
-                      : "single_winner",
-        },
-      }
-    );
-
-    const winnerCandidateIds = new Set(winners.map(([id]) => id));
-    const loserCandidateIds = new Set(losers);
-    await db
-      .collection("electionCandidates")
-      .updateMany(
-        { _id: { $in: candidateIds.map((id) => new ObjectId(id)) } },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
-
-    // Root-cause guard: a character/NPP who just won a seat must not remain an
-    // active candidate in any OTHER concurrent race. A lingering candidacy
-    // (e.g. a second filing, or auto-reentry into a future cycle) would
-    // otherwise resolve later and seat them into a second office they should
-    // not hold — the failure mode that produced the IL phantom senator.
-    const seatedCharIds: ObjectId[] = [];
-    const seatedNppIds: ObjectId[] = [];
-    for (const [candidateId] of winners) {
-      const winnerCandidate = candidateMap.get(candidateId);
-      if (!winnerCandidate) continue;
-      if (winnerCandidate.isNPP) {
-        if (winnerCandidate.nppId) seatedNppIds.push(winnerCandidate.nppId);
-      } else if (winnerCandidate.characterId) {
-        seatedCharIds.push(winnerCandidate.characterId);
-      }
-    }
-    const seatedIdentityOr: Record<string, unknown>[] = [];
-    if (seatedCharIds.length > 0) seatedIdentityOr.push({ characterId: { $in: seatedCharIds } });
-    if (seatedNppIds.length > 0) seatedIdentityOr.push({ nppId: { $in: seatedNppIds } });
-    if (seatedIdentityOr.length > 0) {
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .updateMany(
-          { electionId: { $ne: election._id }, status: "active", $or: seatedIdentityOr },
-          { $set: { status: "withdrawn", withdrawnAt: now } }
-        );
-    }
-
-    // Clean up campaigns (primarily relevant for presidential; no-op for other types)
-    await db.collection("campaigns").deleteMany({ electionId: election._id });
-
-    // ── Presence refresh ───────────────────────────────────────────────────
-    // Every party that fielded a candidate in this state-level race may now
-    // have presence (won a seat) or lost it (last seat fell). Refresh the
-    // hasPresence flag for each participating party.
-    if (election.state) {
-      const participatingParties = new Set<string>();
-      const winnerIds = winners.map(([id]) => id);
-      for (const candidateId of [...winnerIds, ...losers]) {
-        const candidate = candidateMap.get(candidateId);
-        if (candidate?.party) participatingParties.add(candidate.party);
-      }
-      for (const partyId of participatingParties) {
-        await updatePartyPresence(db, election.state, partyId);
-      }
-    }
-
-    const politicianHistory = updatePoliticianPagesAfterElection(
+    await applyGeneralElectionAftermath({
       db,
       election,
+      seatsEstimate,
+      now,
+      currentTurn,
+      winners,
+      candidateMap,
+      prStvResult,
+      bgOrdinaryAllocation,
+      districted,
+      runtimeBlocQuota,
+      isMultiSeat,
+      losers,
       candidateIds,
       tally,
-      winnerCandidateIds,
-      loserCandidateIds,
-      seatsEstimate,
-      now
-    );
-    if (isPrStv) await politicianHistory;
-    else
-      politicianHistory.catch((err) =>
-        logger.error("Turn", "Failed to update politician pages", err)
-      );
-
-    console.log(
-      `[Turn] Election ${election._id} (${election.electionType}/${election.state}) resolved — ` +
-        `${winnerCandidateIds.size} winner(s), ${candidateIds.length - winnerCandidateIds.size} loser(s)`
-    );
-
-    if (election.electionType === "house") {
-      await spawnHouseElection(db, election, now);
-      await triggerLeadershipElectionsAfterChamberVote(db, "house", now);
-    }
-    if (election.electionType === "senate") {
-      await triggerLeadershipElectionsAfterChamberVote(db, "senate", now);
-    }
-    // Sweep stale currentOffice for multi-seat elections: losers and non-runners
-    // get cleared. Skipped for Commons by-elections since the rest of the
-    // delegation was not on the ballot; sitting MPs keep their seats.
-    if (
-      MULTI_SEAT_TYPES.has(election.electionType) &&
-      !isSpecialCommonsElection(election.electionType) &&
-      election.state
-    ) {
-      await sweepStaleOffice(
-        db,
-        election.electionType,
-        election.state,
-        now,
-        getChamberClass(election),
-        { turn: currentTurn, nationId: election.countryId }
-      );
-    }
-    // Spawn next cycle for election types with dedicated respawn functions
-    // (JP shugiin/sangiin are respawned by ensureJPElections in perpetualElections)
-    if (isCommonsGeneralElection(election.electionType) && election.state) {
-      await spawnCommonsElection(db, election, now);
-    }
-    await recordJapanShugiinRegionalCapacity(db, election, currentTurn, now);
-    await db
-      .collection<Election>("elections")
-      .updateOne(
-        { _id: election._id },
-        { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-      );
-    await Promise.all(
-      winnerAnalytics
-        .filter(
-          () =>
-            !(
-              election.countryId === "DE" &&
-              getElectionMethod(election.countryId, election.electionType) === "ams" &&
-              (election.electionType === "bundestag" || election.electionType === "snap_bundestag")
-            )
-        )
-        .map((winner) =>
-          captureElectionWon({
-            db,
-            accountId: winner.accountId,
-            electionId: winner.electionId,
-            electionType: winner.electionType,
-            partyId: winner.partyId,
-            seatCount: winner.seatCount,
-            voteSharePct: winner.voteSharePct,
-            marginPct: winner.marginPct,
-            incumbent: winner.incumbent,
-            nationId: winner.nationId,
-            turn: winner.turn,
-            winnerOrdinal: winner.winnerOrdinal,
-          })
-        )
-    );
-    await Promise.all(
-      officeAnalytics.map((transition) =>
-        captureOfficeTransition({
-          db,
-          officeType: transition.officeType,
-          transitionType: transition.transitionType,
-          partyId: transition.partyId,
-          selectionMethod: "election",
-          tenureTurns: 0,
-          careerStage: transition.careerStage,
-          nationId: transition.nationId,
-          turn: currentTurn,
-        })
-      )
-    );
-    await voidDebateSessionsForElection(db, election._id, now);
-
-    await reconcileGermanElection(db, election, now);
-
-    // ── CN NPC Standing Committee Chairman auto-open ──────────────────────────
-    // The NPC is filled across multiple regional `npcDelegate` elections. Once
-    // the final one of this cycle resolves, open a Chairman election for the
-    // newly-seated chamber — parity with the US Speaker / DE Bundestagspräsident
-    // auto-open. The opener is idempotent, so an early trigger is harmless.
-    if (election.countryId === "CN" && election.electionType === "npcDelegate") {
-      try {
-        const remaining = await db.collection<Election>("elections").countDocuments({
-          countryId: "CN",
-          electionType: "npcDelegate",
-          cycle: election.cycle,
-          status: { $ne: "resolved" satisfies ElectionStatus },
-          _id: { $ne: election._id },
-        });
-        if (remaining === 0) {
-          const { triggerNpcscChairElectionAfterReconcile } =
-            await import("@/lib/congress/npcscChair/openElection");
-          await triggerNpcscChairElectionAfterReconcile(db, now);
-          const { triggerCppccChairElectionAfterReconcile } =
-            await import("@/lib/congress/cppccChair/openElection");
-          await triggerCppccChairElectionAfterReconcile(db, now);
-        }
-      } catch (err) {
-        logger.error("Turn", `CN chair auto-open failed (cycle ${election.cycle})`, err);
-      }
-    }
-
-    // ── RU Supreme Soviet convocation trigger ────────────────────────────────
-    // Same remaining===0 last-of-cycle detection as the CN hook above, but the
-    // RU actions are DESTRUCTIVE (formation reset), so an explicit cycle guard
-    // inside handleRuConvocationReset makes the trigger idempotent: only the
-    // first resolver of a new cycle resets the government (spec §2.4).
-    const regularRuType = election.electionType.startsWith("snap_")
-      ? election.electionType.slice(5)
-      : election.electionType;
-    if (
-      election.countryId === "RU" &&
-      [
-        "supremeSovietDeputy",
-        "unionCongressDeputy",
-        "congressDeputy",
-        "congressOfPeoplesDeputies",
-        "dumaDeputy",
-        "stateDuma",
-      ].includes(regularRuType)
-    ) {
-      try {
-        const remaining = await db.collection<Election>("elections").countDocuments({
-          countryId: "RU",
-          electionType: election.electionType,
-          cycle: election.cycle,
-          status: { $in: ["upcoming", "active", "completed"] satisfies ElectionStatus[] },
-          _id: { $ne: election._id },
-        });
-        if (remaining === 0) {
-          const { handleRuConvocationReset } = await import("@/lib/turn/ruConvocation");
-          await handleRuConvocationReset(db, election.cycle ?? 1, now, election.electionType);
-        }
-      } catch (err) {
-        logger.error("Turn", `RU convocation trigger failed (cycle ${election.cycle})`, err);
-      }
-    }
+      isPrStv,
+      winnerAnalytics,
+      officeAnalytics,
+    });
 
     return { resolved: true, newsOutcomes };
   } finally {

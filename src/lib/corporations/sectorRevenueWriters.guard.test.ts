@@ -316,10 +316,10 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   // `unownedPoolTrailingSet` stage restate revenue, so the detector no longer
   // sees a revenue write in the file and a registry entry would be STALE. The
   // sector docs it builds are still covered — they are inserted by
-  // `src/lib/turn/corporation/index.ts`, registered below.
+  // `src/lib/turn/corporation/corporationTurnPayouts.ts`, registered below.
 
   // ─── Found only once the detector learned about indirect inserts ─────────
-  "src/lib/turn/corporation/index.ts": {
+  "src/lib/turn/corporation/corporationTurnPayouts.ts": {
     writeSites: 1,
     status: "plants-gated",
     reason:
@@ -390,7 +390,7 @@ const MUST_BE_PLANTS_AWARE = [
   // (`nppCorporationBehavior.ts` was here too — see the note in ALLOWED_WRITERS
   // for why it no longer writes the field at all.)
   // Surfaced by the indirect-insert rule.
-  "src/lib/turn/corporation/index.ts",
+  "src/lib/turn/corporation/corporationTurnPayouts.ts",
   // The two nationalization writers. These were the guard's own worked example
   // of the failure it exists to prevent (see the attestation note below):
   // `nationalizeSectorWide` sat in ALLOWED_WRITERS, registered green, while BOTH
