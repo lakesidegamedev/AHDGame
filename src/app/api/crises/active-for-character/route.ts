@@ -128,9 +128,7 @@ export async function GET(request: Request) {
               }
             : storedCurrentNode;
 
-        // Multi-responder (global choice) crises: each country's leader answers
-        // once. A leader whose country already responded can no longer act, so
-        // the prompt drops off their Actions page.
+        // Multi-responder (global choice) crises: each country's leader answers once. A leader whose country already responded cannot act.
         const multiResponder = !!currentNode && isMultiResponderNode(crisis, currentNode);
         const alreadyResponded =
           multiResponder && countryId

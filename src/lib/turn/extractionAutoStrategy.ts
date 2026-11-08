@@ -118,7 +118,7 @@ function capacityRescaleUpdate(
  * Self-limiting: only global-shortage resources (S/D < SHORTAGE_SD) are targeted
  * and only states with headroom (stateSupply < capacity) are eligible, both read
  * fresh each run, so as conversions lift supply the resource stops qualifying,
- * which doubles as a glut guard. Gated on gameState.extractionAutoStrategyEnabled.
+ * which doubles as a glut guard.
  *
  * Pass 2: NPP-run miners are additionally re-scored every run by normalized
  * expected contribution: damped output prices, deposit headroom, lagged aggregate
@@ -312,20 +312,16 @@ export async function processExtractionAutoStrategy(
   db: Db,
   currentTurn: number,
   preloadedGameState?: {
-    extractionAutoStrategyEnabled?: boolean;
     lastExtractionAutoStrategyTurn?: number;
     nppEntryViabilityMode?: NppEntryViabilityMode;
   }
 ): Promise<ExtractionAutoStrategyResult> {
-  if (!preloadedGameState?.extractionAutoStrategyEnabled) {
-    return { converted: 0, byResource: {}, skippedReason: "disabled" };
-  }
-  const lastTurn = preloadedGameState.lastExtractionAutoStrategyTurn ?? 0;
+  const lastTurn = preloadedGameState?.lastExtractionAutoStrategyTurn ?? 0;
   if (currentTurn - lastTurn < EXTRACTION_AUTO_STRATEGY_CADENCE_TURNS) {
     return { converted: 0, byResource: {}, skippedReason: "cadence" };
   }
   const placementViabilityMode = nppEntryViabilityModeFrom(
-    preloadedGameState.nppEntryViabilityMode
+    preloadedGameState?.nppEntryViabilityMode
   );
 
   // Resolved ONCE per run and threaded into both passes' rescale calls — the

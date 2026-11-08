@@ -85,8 +85,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const lowerKey = config.legislature.lowerChamber.key;
     const upperKey = config.legislature.upperChamber?.key;
     // Bill-active bicameral legislatures (JP/NG) let the upper chamber originate
-    // bills too; UK Lords / DE Bundesrat are `bicameral: false` and stay lower-only
-    // (#912 — NG senators were rejected as ineligible proposers).
+    // bills too; UK Lords / DE Bundesrat are `bicameral: false` and stay lower-only.
     // Era-aware: TR 1953 is unicameral (no Senato).
     const allowedOriginKeys: string[] =
       config.legislature.bicameral && upperKey ? [lowerKey, upperKey] : [lowerKey];

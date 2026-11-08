@@ -41,11 +41,9 @@ const commandSchema = z.object({
   role: z.string(),
 });
 const bodySchema = z.object({
-  // Ids must be unique: every client action keys on `commandId` through a `.map`, so
-  // two commands sharing an id are edited together, render as one selection, and open
-  // the wrong detail panel. Client ids used to come from a counter that reset each
-  // page load, which produced exactly that. Refused here so the corrupt shape cannot
-  // reach the database again.
+  // Ids must be unique: every client action keys on `commandId` via a
+  // `.map`, so duplicate ids edit and select together. Refused here so the
+  // corrupt shape cannot reach the database.
   commands: z.array(commandSchema).refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, {
     message: "Duplicate command id",
   }),

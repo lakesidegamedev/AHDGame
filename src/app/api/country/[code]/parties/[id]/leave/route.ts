@@ -61,16 +61,9 @@ export async function POST(
         const now = new Date();
         const characterId = auth.character._id;
 
-        // Update character to independent and reset party influence.
-        // Clear partyJoinedAt since the third cooldown anchor no longer applies.
-        //
-        // Becoming independent is NOT a party switch, so it must not (re)arm the
-        // 24-hour join cooldown — that cooldown is incurred only by joining an
-        // actual party (the join route stamps lastPartySwitchAt). We deliberately
-        // leave the existing lastPartySwitchAt untouched: a player who joined a
-        // party minutes ago still serves out that join's cooldown through an
-        // independent stint (no leave→rejoin hop escape), while a long-tenured
-        // member who quits is free to join elsewhere immediately.
+        // Becoming independent is NOT a party switch: leave lastPartySwitchAt
+        // untouched so a recent join's cooldown still applies, but clear
+        // partyJoinedAt since the third cooldown anchor no longer applies.
         await db.collection("characters").updateOne(
           { _id: characterId },
           {
@@ -141,9 +134,8 @@ export async function POST(
 
         // Caucuses are scoped to a single (countryId, partyId), so leaving the
         // party means leaving the caucus. Closes membership, clears factionId,
-        // withdraws chair candidacies, vacates chair/vice-chair seats. Without
-        // this the character keeps factionId pointing at the old caucus and is
-        // blocked from founding or joining caucuses elsewhere (bug #0552).
+        // withdraws chair candidacies, vacates chair/vice-chair seats, and frees
+        // the character to found or join caucuses elsewhere.
         const caucusCleanup = await cleanupCaucusParticipationForCharacters(db, [characterId], {
           removeMembership: true,
           membershipStatus: "left",
@@ -199,11 +191,9 @@ export async function POST(
             );
         }
 
-        // Clear any state-level party leadership seats this character held (ticket
-        // #0860). Leaving the party (like retiring) invalidates a state chair/vice
-        // chair/treasurer seat, but this previously only cleared the *national*
-        // leadership fields above — a departed state chair left a stale id behind,
-        // permanently blocking new appointments to that seat ("not vacant").
+        // Clear any state-level party leadership seats this character held. Leaving the
+        // party invalidates a state chair/vice chair/treasurer seat; a stale id would
+        // permanently block new appointments ("not vacant").
         await db
           .collection("statePartyOrg")
           .updateMany({ chairId: characterId }, { $set: { chairId: null, updatedAt: now } });

@@ -1,5 +1,5 @@
 /**
- * Tests for the granular-cell electorate substrate (`granularElectorateEnabled`).
+ * Tests for the granular-cell electorate substrate.
  *
  * Covers:
  *  - archetype→bucket mapping invariants (weights sum to 1, valid dims, 1-3 buckets)

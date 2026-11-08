@@ -25,8 +25,6 @@ export interface WorldFlags {
   incomeBandIndexByCountry: Partial<Record<string, number>> | null;
   /** Income vintage provenance for the medianIncome anchor; null flag-off or legacy data. */
   incomeStartVintages: Partial<Record<string, string>> | null;
-  /** Live election results page master gate; gates "Live Results" links. */
-  liveElectionResultsEnabled: boolean;
   /** Reset choice: "none" means the playable countries opened with no parties. */
   startingPartiesMode: "default" | "none";
   /** Set while the founding round runs: the turns its races close on. */
@@ -56,7 +54,6 @@ const DEFAULT_FLAGS: WorldFlags = {
   startingYear: null,
   incomeBandIndexByCountry: null,
   incomeStartVintages: null,
-  liveElectionResultsEnabled: false,
   startingPartiesMode: "default",
   foundingRound: null,
   resetSystemVersions: {

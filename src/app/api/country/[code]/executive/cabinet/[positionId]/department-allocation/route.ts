@@ -73,13 +73,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         status: result.ok ? 200 : result.status,
       });
     }
-    if (gameState?.departmentFinanceEnabled !== true) {
-      return errorResponse(404, "Department finance is not enabled");
-    }
     const definition = getDepartmentDefinitions(
       countryId as DepartmentCountryId,
-      resolveGameYear(gameState),
-      new Set(gameState.manuallyEnabledSeats ?? [])
+      resolveGameYear(gameState ?? {}),
+      new Set(gameState?.manuallyEnabledSeats ?? [])
     ).find(
       (candidate) =>
         candidate.id === parsed.data.departmentId &&
@@ -120,7 +117,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, validation.error);
     }
 
-    const currentTurn = gameState.currentTurn ?? 1;
+    const currentTurn = gameState?.currentTurn ?? 1;
     if ((account.lastAllocationChangedTurn ?? 0) >= currentTurn) {
       return errorResponse(400, "Department allocations can only be updated once per turn");
     }

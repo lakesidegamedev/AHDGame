@@ -46,16 +46,14 @@ void _bondTxTypesCoverage;
 /**
  * GET /api/corporations/[id]/bonds/history
  *
- * Paginated bond ledger for a corporation. `pageSize` counts TURNS per page,
- * not rows — each turn expands into N events in the response.
+ * Paginated bond ledger. `pageSize` counts TURNS, not rows: each turn expands
+ * into N events in the response.
  *
- * Server-side filter via `direction=income|payment|all`: applied BEFORE page
- * slicing, so `pageCount` and `totalTurns` reflect the filtered universe (no
- * "Page 3 of 5" with zero rows on the page).
+ * `direction=income|payment|all` filters server-side BEFORE page slicing, so
+ * `pageCount` and `totalTurns` reflect the filtered universe.
  *
- * Out-of-range page values are silently clamped to `[1, pageCount]` — the
- * client doesn't have to do a second round-trip to recover from a stale
- * `?page=999` request.
+ * Out-of-range `page` is silently clamped to `[1, pageCount]` so stale
+ * `?page=999` requests don't need a second round-trip.
  *
  * Auth: public read (parallel to /shares/history).
  * Errors: 400 (bad query), 404 (corp not found).

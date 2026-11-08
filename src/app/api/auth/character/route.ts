@@ -301,9 +301,7 @@ export async function POST(request: Request) {
           name,
           homeState,
           countryId,
-          // Per-character starting nationality. `users.accountCountryId` is set from
-          // the player's first character only, so it cannot answer "where did THIS
-          // character start" (ticket 1107).
+          // Per-character starting nationality. `users.accountCountryId` reflects only the first character, so it cannot answer where THIS character started.
           startingCountryId: countryId,
           initialIncomeTier: demographics.wealth,
           incomeTier: demographics.wealth,
@@ -421,9 +419,8 @@ export async function POST(request: Request) {
         };
 
         // Reserve the character slot atomically before inserting. The read-time
-        // check above is only a fast path: two requests (or one request that
-        // inserted and then failed before counting) could otherwise both pass it
-        // and leave the account with an uncounted second character (ticket 1394).
+        // check above is only a fast path: two concurrent requests could
+        // otherwise both pass it and leave an uncounted second character.
         const characterLimit = isTestMode ? TEST_MODE_CHARACTER_LIMIT : 1;
         const slotFilter: Record<string, unknown> = { _id: new ObjectId(userId) };
         if (!isAdmin) {

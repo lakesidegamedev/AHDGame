@@ -1,20 +1,16 @@
 /**
  * POST /api/admin/seed
  *
- * Universal seeder endpoint. Admin-only (no SEED_SECRET needed).
+ * Admin-only universal seeder.
  *
  * Body (JSON):
- *   targets: string[]   - which datasets to seed. Valid values:
- *       "states", "policies", "demographics", "gameConfig",
- *       "parties", "statePartyOrg", "regionMetrics",
- *       "legislationTypes", "achievements", "statePolicies",
- *       "politicalLegislation", "indexes"
- *   reset: boolean       - drop target collections first (default false)
- *   scope: CountryId|"both" - which country's targets a full seed covers (default "US")
- *   preset: string       - era baseline for preset-aware seeders, e.g.
- *                          "2019-default" (default) or "1991-default"
- *
- * If targets is empty or omitted, seeds everything (full seed).
+ *   targets: string[]   - datasets to seed ("states", "policies", "demographics",
+ *     "gameConfig", "parties", "statePartyOrg", "regionMetrics",
+ *     "legislationTypes", "achievements", "statePolicies",
+ *     "politicalLegislation", "indexes"); empty/omitted seeds everything
+ *   reset: boolean      - drop target collections first (default false)
+ *   scope: CountryId|"both" - country for a full seed (default "US")
+ *   preset: string      - era baseline for preset-aware seeders (default "2019-default")
  */
 
 import { NextResponse } from "next/server";

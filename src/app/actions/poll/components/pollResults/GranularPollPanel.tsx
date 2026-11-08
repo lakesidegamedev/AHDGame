@@ -81,13 +81,11 @@ function aggregateVoteShares(
     }
   }
 
-  // Every accumulator above is weighted by cell.share, so it is currently
-  // expressed as a fraction of the WHOLE electorate. Dividing by the subset's
-  // share re-expresses each one as a fraction of THIS subset, which is what a
-  // vote share means and what makes you + opponents + undecided sum to 100%.
-  // Without this the topline (share === 1, so a no-op) was being compared
-  // against segment figures scaled down by the segment's size, which is what
-  // made "your share vs. topline" unreadable (ticket-1121).
+  // Accumulators are weighted by cell.share, so they are fractions of the
+  // WHOLE electorate. Dividing by the subset's share re-expresses them as
+  // fractions of THIS subset, so you + opponents + undecided sum to 100%.
+  // Without this, segment figures are scaled down by segment size and
+  // unreadable against the topline (share === 1, a no-op).
   you /= share;
   undecided /= share;
   for (const entry of Object.values(opponentTotals)) {
@@ -344,9 +342,8 @@ export function GranularPollPanel({ poll, pollData }: { poll: StoredPoll; pollDa
         keys.add(cell.buckets[dim]);
       }
       // Restore US pruned buckets (under polling floor) only when this dim is
-      // actually US-shaped. DEMOGRAPHIC_LABELS.education is no_college/college/
-      // graduate — merging it into every country's `education` dim leaked those
-      // US keys onto DD/DE/JP polls (ticket #1121).
+      // actually US-shaped. Merging DEMOGRAPHIC_LABELS.education (US keys) into
+      // every country's `education` dim leaks those keys onto non-US polls.
       const usLabelKeys = Object.keys(DEMOGRAPHIC_LABELS[dim] ?? {});
       const usLabelSet = new Set(usLabelKeys);
       const cellKeys = Array.from(keys);

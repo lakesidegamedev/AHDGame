@@ -176,16 +176,12 @@ export async function GET(request: Request) {
         0,
         Math.min(100, sector.profitMargin + unemploymentMod + stateSectorSpecializationMod)
       );
-      // Ticket 1122: under plants the turn persists the P&L it booked. Prefer
-      // it: the margin rebuilt here is two modifiers wide and never saw the
-      // physical cost model, and inverting ANY margin drops upkeep and
-      // compliance and cannot represent a negative operating cost. Falls back
-      // to the old expression for rows without the field.
-      // Realized, not nameplate — the same basis the NPV block further down in
-      // this same route already uses, so the per-sector rows and the balance
-      // sheet in one response cannot disagree. `workers` below deliberately
-      // stays on the nameplate: headcount tracks installed capacity, not what
-      // the sector managed to sell. See lib/corporations/sectorRevenueBasis.
+      // Under plants the turn persists the booked P&L; prefer it over the
+      // rebuilt margin, which never saw the physical cost model and cannot
+      // represent a negative operating cost. Falls back to the old expression
+      // for rows without the field. Realized, not nameplate, matching the NPV
+      // block below; `workers` below stays nameplate. See
+      // lib/corporations/sectorRevenueBasis.
       const sectorRevenue = sectorEconomicRevenue(sector);
       const bookedPnl = readPlantsPnl(sector);
       const maintenance = bookedPnl
@@ -298,11 +294,10 @@ export async function GET(request: Request) {
         Math.min(100, sector.profitMargin + unemploymentMod + stateSectorSpecializationMod)
       );
       const sectorRevenue = sectorEconomicRevenue(sector);
-      // Ticket 1122: under plants the turn persists the P&L it booked. Prefer
-      // it: the margin rebuilt here is two modifiers wide and never saw the
-      // physical cost model, and inverting ANY margin drops upkeep and
-      // compliance and cannot represent a negative operating cost. Falls back
-      // to the old expression for rows without the field.
+      // Under plants the turn persists the P&L it booked. Prefer it: the margin
+      // rebuilt here is two modifiers wide and never saw the physical cost
+      // model, and inverting any margin drops upkeep and compliance and cannot
+      // represent a negative operating cost. Falls back for pre-field rows.
       const bookedNpvPnl = readPlantsPnl(sector);
       const profit = bookedNpvPnl
         ? bookedNpvPnl.profit

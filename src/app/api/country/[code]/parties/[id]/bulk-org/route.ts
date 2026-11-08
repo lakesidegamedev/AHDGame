@@ -108,8 +108,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     // Party sequentialId is unique per country, so a foreign character's party
-    // id collides onto the same-id party in this country. Block cross-country
-    // actors (admins included) — Bug #0668.
+    // id collides onto the same-id party here. Block cross-country actors.
     const crossCountry = crossCountryActionGuard(authUser.character, countryId);
     if (crossCountry) return crossCountry;
 

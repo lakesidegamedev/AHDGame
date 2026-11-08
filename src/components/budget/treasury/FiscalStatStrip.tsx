@@ -62,10 +62,9 @@ export interface FiscalStatStripProps {
   /** Prior fiscal year point (for compare deltas); null when unavailable. */
   prev?: FyHistoryPoint | null;
   /**
-   * Optional era-dollar equivalent of a local-currency amount. When this
-   * returns a number, money tiles show `≈ $X` so a US player reading a
-   * Soviet (or yen, etc.) budget does not compare ₽565B to $100B as if
-   * both were dollars (ticket-1065).
+   * Optional era-dollar equivalent of a local-currency amount. When it
+   * returns a number, money tiles show `≈ $X` so budgets in different
+   * currencies are not compared as if both were dollars.
    */
   toUsd?: (localAmount: number) => number | null;
 }

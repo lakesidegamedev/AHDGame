@@ -22,10 +22,8 @@ interface JusticeActionPanelProps {
 }
 
 /**
- * Justice self-serve actions (#3598 justiceActions.ts, #3605 UI). Mirrors
- * `VpActionPanel` (src/app/country/[code]/executive/vice-president/components)
- * exactly: a banked action counter, one card per action, inline
- * success/error feedback — judicial-flavored instead of executive-flavored.
+ * Justice self-serve actions: a banked action counter, one card per action,
+ * inline success/error feedback. Mirrors VpActionPanel.
  */
 export function JusticeActionPanel({
   actions,

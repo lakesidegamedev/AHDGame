@@ -42,16 +42,12 @@ export function useMilitaryState(seed: MilitarySeed): {
   droppedCommanders: number;
 } {
   const [draftState, dispatch] = useReducer(militaryReducer, seed, (s): MilitaryState => {
-    // Heal colliding ids before anything selects or dispatches against them. Command
-    // ids used to come from a counter that reset each page load, so an org built over
-    // two sessions can arrive with two commands sharing an id — which highlights both
-    // rows, opens the wrong one, and makes every commandId action edit both.
-    //
-    // Then drop commanders who have left the country or been dismissed. The saved
-    // org keeps their character id, the panel cannot render a row for someone the
-    // roster no longer holds, and the PUT rejects the whole array over that id — so
-    // without this the command becomes permanently unsavable with nothing on screen
-    // to remove. See reconcileCommandCommanders.
+    // Heal colliding command ids before anything selects or dispatches against
+    // them: duplicates highlight both rows, open the wrong one, and make every
+    // commandId action edit both. Then drop commanders who left the country or
+    // were dismissed; the saved org keeps their id, and the PUT rejects the whole
+    // array over it, making the command unsavable with nothing on screen to
+    // remove. See reconcileCommandCommanders.
     const commands = s.commanderIds
       ? reconcileCommandCommanders(dedupeCommandIds(s.commands), s.commanderIds).commands
       : dedupeCommandIds(s.commands);
@@ -92,9 +88,8 @@ export function useMilitaryState(seed: MilitarySeed): {
     "Command changes could not be saved."
   );
 
-  // Counted against the SEED, not against live state: once the Secretary starts
-  // editing, `state.commands` no longer carries the stale ids, and the notice has
-  // to keep explaining why the roster it loaded is shorter than it was.
+  // Counted against the seed, not live state: after edits the notice
+  // must still explain why the loaded roster is shorter than it was.
   const droppedCommanders = useMemo(
     () =>
       seed.commanderIds ? reconcileCommandCommanders(seed.commands, seed.commanderIds).removed : 0,

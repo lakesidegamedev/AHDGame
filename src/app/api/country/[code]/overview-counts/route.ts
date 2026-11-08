@@ -92,10 +92,8 @@ async function resolveCommandEconomyActive(db: Db, countryId: CountryId): Promis
   const enabled = config?.commandEconomyEnabled === true;
   if (!enabled) return false;
   const currentYear = state?.currentYear ?? null;
-  // Prefer the persisted (endogenous) level over the era schedule — the
-  // stored-level registry is process-local, so this API process must read the
-  // persisted value. A country that has fully marketized past the dual-track
-  // ceiling (70) no longer shows the planned-economy surface.
+  // Prefer the persisted level over the era schedule: the stored-level registry
+  // is process-local, so this process must read the persisted value.
   const persisted = budget?.economicFactors?.marketizationLevel;
   const level =
     typeof persisted === "number" && Number.isFinite(persisted)

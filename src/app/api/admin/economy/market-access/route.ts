@@ -40,8 +40,8 @@ async function resolveLatestTurn(db: Awaited<ReturnType<typeof getDb>>): Promise
 // for the latest (or requested) turn: per-commodity landed premium / delivered
 // price, the intra-state / interstate / import delivery mix, the top
 // origin->destination routes by delivered units, and the resident-vs-local-
-// producer demand split (#968, #991). Reads the persisted sourcing and
-// market-formation inputs the snapshot phase writes; recomputes nothing else.
+// producer demand split. Reads the persisted sourcing and market-formation
+// inputs the snapshot phase writes; recomputes nothing else.
 // Auth: requireAdmin
 // Errors: 400, 403, 404
 export const GET = withAdminRoute(async (_auth, request: Request) => {

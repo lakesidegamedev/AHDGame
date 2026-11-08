@@ -37,12 +37,9 @@ const WAR_FALLBACK_TITLE =
   "How the war is going, and how long the public has carried it. Affects approval only.";
 
 /**
- * Zero is its own tone, not a shade of negative.
- *
- * The chip used to branch on `effect > 0` alone, which painted a zero in the
- * same red as a two point penalty and gave it a downward arrow. Only the war
- * chips can reach zero and still render, and a war term that is currently a
- * wash is not costing the government anything.
+ * Zero is its own tone, not a shade of negative. Only war chips can reach zero
+ * and still render; a war term that is currently a wash costs the government
+ * nothing.
  */
 export function toneFor(effect: number): ModifierTone {
   if (effect > 0) return "positive";

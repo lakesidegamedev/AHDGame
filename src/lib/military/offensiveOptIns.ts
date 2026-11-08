@@ -3,7 +3,6 @@ import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { TheaterStateDoc } from "@/lib/db/types/theaterState";
 import { listTheaterStates } from "@/lib/db/collections/theaterState";
 import { getAllCountryAccess } from "@/lib/countryAccess";
-import { readNppOffensiveJoinEnabled } from "@/lib/nppAutonomy/offensiveFlags";
 
 /**
  * Who joins an offensive at a front without declaring one.
@@ -17,9 +16,8 @@ export interface OffensiveOptInSources {
   /** Every country's standing orders, as written by the player auto-join route. */
   theaterStates: TheaterStateDoc[];
   /**
-   * Countries the `nppOffensiveJoinEnabled` switch opts in wholesale, or empty when
-   * the switch is off. Membership of a specific front is NOT decided here — see
-   * `offensiveOptInsAtFront`.
+   * Countries nobody is playing, opted in wholesale. Membership of a specific front
+   * is NOT decided here — see `offensiveOptInsAtFront`.
    */
   nppAutoJoiners: ReadonlySet<string>;
 }
@@ -29,26 +27,21 @@ export interface OffensiveOptInSources {
  *
  * Read once per tick / per request on purpose: neither answer can change between the
  * fronts of a single resolution pass, and the resolver runs inside a phase with a turn
- * time budget. The country-access sweep is skipped entirely while the switch is off,
- * so a world that has not enabled it pays one projected `gameState` read.
+ * time budget.
  */
 export async function loadOffensiveOptInSources(db: Db): Promise<OffensiveOptInSources> {
   const nppAutoJoiners = new Set<string>();
-  const [theaterStates, joinEnabled] = await Promise.all([
+  const [theaterStates, countryAccess] = await Promise.all([
     listTheaterStates(db),
-    readNppOffensiveJoinEnabled(db),
+    getAllCountryAccess(db),
   ]);
-  if (joinEnabled) {
-    // `enabledForPlayers` and not `nppGoverned`, deliberately. `nppGoverned` also
-    // requires the NPP autonomy ladder to be at v1 or above, which would make this
-    // switch silently do nothing in a world with autonomy off — the admin flips it,
-    // no ally ever attacks, and nothing says why. Joining an ally's attack needs no
-    // autonomy engine: the units are already at the front and the coalition is
-    // already attacking. `enabledForPlayers` is also the exact predicate
-    // `isNppAutonomyActive` uses for "nobody is playing this country".
-    for (const [countryId, access] of Object.entries(await getAllCountryAccess(db))) {
-      if (!access.enabledForPlayers) nppAutoJoiners.add(countryId);
-    }
+  // `enabledForPlayers` and not `nppGoverned`, deliberately. `nppGoverned` also
+  // requires the NPP autonomy ladder to be at v1 or above. Joining an ally's attack
+  // needs no autonomy engine: the units are already at the front and the coalition
+  // is already attacking. `enabledForPlayers` is also the exact predicate
+  // `isNppAutonomyActive` uses for "nobody is playing this country".
+  for (const [countryId, access] of Object.entries(countryAccess)) {
+    if (!access.enabledForPlayers) nppAutoJoiners.add(countryId);
   }
   return { theaterStates, nppAutoJoiners };
 }
@@ -60,13 +53,12 @@ export async function loadOffensiveOptInSources(db: Db): Promise<OffensiveOptInS
  *
  * - A standing order names its front. A player wrote it for this theatre deliberately,
  *   so it is taken as given — including the case where `sideOf` places that player on a
- *   side by bloc rather than by roster, which is long-standing behaviour and not this
- *   switch's to change.
+ *   side by bloc rather than by roster, which is long-standing behaviour.
  * - The NPP set names nobody. It is a blanket permission, so it is narrowed to the
  *   conflict's actual belligerents here. Without that, `sideOf`'s permissive bloc
  *   fallback would enrol an unrostered bloc member that happened to have units parked
  *   at the theatre into attacking a war it never entered. A player opting in one front
- *   at a time could never reach that; a blanket switch reaches it on every front at
+ *   at a time could never reach that; a blanket opt-in reaches it on every front at
  *   once, which is why the narrowing lives on this side of the union only.
  */
 export function offensiveOptInsAtFront(

@@ -247,9 +247,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         throw err;
       }
 
-      // Route the FX spread the corp already paid on a cross-currency bond buy
-      // into the CB system (reserve slice → bond-currency CB as a foreign reserve;
-      // forexRevenue → corp's CB). Previously this spread was simply destroyed.
+      // Route the FX spread already paid on a cross-currency bond buy into the CB system instead of destroying it.
       if (corpCurrency && corpCurrency !== bondCurrency) {
         await distributeConversionSpread(
           db,

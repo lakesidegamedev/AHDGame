@@ -55,9 +55,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const electionOid = resolved.election._id;
     // Exclude archived campaigns (primary losers / withdrawn) from this active
-    // list surface — they are retained for history but should not appear
-    // alongside the candidates still in the race. The direct /campaign/[id]
-    // page still renders an archived campaign for its owner.
+    // list; the direct /campaign/[id] page still renders them for the owner.
     const allCampaigns = await db
       .collection<Campaign>("campaigns")
       // activityHistory is not returned by this endpoint (see the privileged
@@ -77,13 +75,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ campaigns: [] });
     }
 
-    // Then narrow to candidates who are actually still standing. `status:
-    // "archived"` alone is not trustworthy here: it is bookkeeping that every
-    // withdrawal path has to remember to set, and several (party-switch sweeps,
-    // relocation, inactivity) historically did not — which left withdrawn
-    // candidates rendering on this list with a live campaign. The candidacy row
-    // is the real predicate and cannot drift, so it gates the list. Campaigns
-    // for active candidates are guaranteed to exist by selfHealMissingCampaigns.
+    // Gate on an active candidacy row, not status: "archived", which withdrawal paths must remember to set and have historically missed, leaving withdrawn candidates with live campaigns. Self-heal guarantees campaigns exist for active candidates.
     const activeCandidacies = await db
       .collection<ElectionCandidate>("electionCandidates")
       .find({ electionId: electionOid, status: "active" })

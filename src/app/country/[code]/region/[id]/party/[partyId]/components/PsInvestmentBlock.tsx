@@ -26,16 +26,14 @@ interface PsInvestmentBlockProps {
 }
 
 /**
- * Chair-set per-turn PS investment budget input, with live-preview of
- * expected PS per turn and a clamp warning if the budget exceeds the
- * `PS_INVESTMENT_MAX_TIERS` cap. Used on both the State Treasurer tab and
- * the National Party Hub.
+ * Chair-set per-turn PS investment budget input with live preview and
+ * clamp warning above `PS_INVESTMENT_MAX_TIERS`. Used on both the State
+ * Treasurer tab and the National Party Hub.
  *
- * The input is the party's local home currency; the parent POSTs it to
- * `/ps-investment` as-is (no FX conversion, post-Phase-6). Spend converts at
- * the full rate up to the hard cap (soft-cap bands removed 2026-06-28); near
- * the cap the turn engine only buys — and only charges for — the PS that fits
- * below the cap.
+ * Budget is in the party's local home currency; the parent POSTs it to
+ * `/ps-investment` as-is. Spend converts at the full rate up to the hard
+ * cap; near the cap the turn engine only buys and charges for the PS that
+ * fits below the cap.
  */
 export function PsInvestmentBlock({
   partyColor,

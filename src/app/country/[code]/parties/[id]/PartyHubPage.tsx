@@ -610,9 +610,8 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     user?.character?.party === id &&
     user?.character?.countryId === party.countryId;
   const canUsePartyInfluenceEarly = user?.isAdmin || isChairEarly || isViceChairEarly;
-  // Committee-confirmed campaigners reach NPP Management but not Recruitment
-  // or the other chair/VC surfaces (suggestion #269), so this is a separate
-  // predicate rather than a widening of `canUsePartyInfluence`.
+  // Committee-confirmed campaigners reach NPP Management but not
+  // Recruitment or other chair/VC surfaces, so this is separate from `canUsePartyInfluence`.
   const isCampaignerEarly =
     hasCharEarly && !!party?.campaigners?.some((c) => c.id === user?.character?.id);
   const canManageNppsEarly = canUsePartyInfluenceEarly || isCampaignerEarly;

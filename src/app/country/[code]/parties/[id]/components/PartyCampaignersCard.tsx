@@ -15,17 +15,15 @@ interface PartyCampaignersCardProps {
 /**
  * Chair-Office card for the national party's Campaigners (up to
  * `MAX_NATIONAL_CAMPAIGNERS`). Renders the shared {@link CampaignerPicker} in
- * 3-slot (`triple`) mode with no state filter — national campaigners may come
+ * 3-slot (`triple`) mode with no state filter: national campaigners may come
  * from any state, unlike the state-party single slot which restricts to
  * in-state members.
  *
- * Saving is asymmetric per suggestion #269: names removed here lose the seat
- * at once, names added go to the National Committee as nominations and only
- * seat on a passing vote. The save handler surfaces whichever happened.
+ * Saving is asymmetric: names removed here lose the seat at once, names added
+ * go to the National Committee as nominations and only seat on a passing vote.
  *
- * `canAssign` is always true here: this card only renders inside the Chair
- * Office tab, which the party page gates to the acting chair, and the POST
- * route re-checks chair authority server-side regardless.
+ * `canAssign` is always true here because this card only renders inside the
+ * Chair Office tab, and the POST route re-checks chair authority server-side.
  */
 export function PartyCampaignersCard({ party, countryCode, onUpdate }: PartyCampaignersCardProps) {
   return (

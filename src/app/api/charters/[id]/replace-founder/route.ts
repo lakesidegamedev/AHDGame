@@ -14,18 +14,13 @@ interface RouteParams {
 }
 
 /**
- * POST /api/charters/[id]/replace-founder — Swaps a founder slot with a fresh
- * characterId and returns the charter to `pending-signatures`. Works both for
- * a voided founder (rejected / banned / withdrawn, status
- * `founder-replacement`) and, per suggestion #287, for a voluntary swap of an
- * inactive UNSIGNED founder while the charter is still `pending-signatures`.
+ * POST /api/charters/[id]/replace-founder: swaps a founder slot with a fresh
+ * characterId and returns the charter to `pending-signatures`. Handles both a
+ * voided founder (status `founder-replacement`) and a voluntary swap of an
+ * inactive unsigned founder while still `pending-signatures`.
  *
- * Authorization: caller must own at least one of the current founder
- * characters (the surviving founders OR the outgoing founder themselves
- * — self-replacement is allowed when a player wants to hand their slot
- * over).
- *
- * Auth: requireAuthWithCharacter
+ * Authorization: caller must own at least one current founder character,
+ * including the outgoing founder (self-replacement allowed).
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {

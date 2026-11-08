@@ -87,9 +87,8 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
   const [tradeOpen, setTradeOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
-    // Whole body guarded: a rejected fetch (network drop) used to skip every
-    // setLoading(false) below, leaving the page spinning forever. try/finally
-    // guarantees the spinner ends; the catch surfaces an error state + reports.
+    // try/finally guarantees setLoading(false) even on rejected fetch;
+    // catch surfaces an error state and reports.
     try {
       const [res, ordersRes] = await Promise.all([
         fetch("/api/forex/exchange"),

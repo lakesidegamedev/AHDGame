@@ -12,17 +12,14 @@ export function scaleToPeriod(value: number, period: Period): number {
 /**
  * Net margin = net income as a share of total income taken in.
  *
- * `income` is coupon-inclusive (it folds in bond coupon income and IMF facility
- * receipts), so dividing by operating revenue alone produces margins above 100%
- * for corps whose earnings are dominated by a bond portfolio (support #941 /
- * #942 showed 194% and 121%). Broaden the denominator to the same non-operating
- * inflows that feed net income so the ratio reads as "profit per dollar of total
- * income", which stays within a sane range and is what a reader expects.
+ * `income` is coupon-inclusive, so dividing by operating revenue alone yields
+ * margins above 100% for corps dominated by bond portfolios. The denominator
+ * includes the same non-operating inflows that feed net income, so the ratio
+ * reads as profit per dollar of total income.
  *
- * The numerator is the same realized-when-available basis as the headline tile
- * (`corpIncomeBasis`). Using the projected `income` here let a corp booking a
- * realized loss every turn display a positive margin two tiles away from a red
- * "Net income (last turn)".
+ * The numerator uses the same realized-when-available basis as the headline
+ * tile (`corpIncomeBasis`); using projected `income` would let a corp booking
+ * realized losses show a positive margin next to a red net income tile.
  */
 export function netMarginPct(
   f: Pick<
@@ -44,24 +41,10 @@ export function netMarginPct(
 
 /**
  * The single net-income basis every corporation surface must read from.
- *
- * Ticket #1098: the masthead and Overview showed a NEGATIVE income per turn for
- * a corp the Financials page reported as profitable. Two independent errors:
- *
- *  1. They subtracted `dividendDistribution` from `realizedIncome`. The engine
- *     books `income = afterTaxOperating − dividendPayout`, so the realized
- *     figure is ALREADY net of dividends — subtracting again double-counts.
- *  2. `dividendDistribution` is derived from the PROJECTED income, which can be
- *     several times the realized figure (the projection cannot reproduce
- *     embargo/tariff/clearing haircuts). Netting a projection-sized dividend off
- *     a realized-sized income flips the sign on a profitable corp.
- *
- * Symmetrically, the Financials headline added bond coupons + dividends received
- * on top of `realizedIncome`, which has folded both in since #941 — so it
- * overstated by the whole non-operating leg.
- *
- * `netIncome` is pre-dividend (the income-statement headline). `retained` is
- * what stays with the corp after the payout, which is what the masthead and
+ * realizedIncome is already net of dividends (income = afterTaxOperating −
+ * dividendPayout) and already includes bond coupons and dividends received, so do
+ * not subtract dividendDistribution or add non-operating cash on top.
+ * netIncome is pre-dividend; retained is post-payout and is what the masthead and
  * Overview report.
  */
 /** Retained P&L plus last-turn supply-agreement CFD cash, in daily display units. */
@@ -190,10 +173,7 @@ export function buildAllocation(
   ];
 
   const accountedCosts = costRows.reduce((sum, [, , raw]) => sum + raw, 0);
-  // Anything `income` reflects that the rows above don't explain. This should be
-  // ~0; when it isn't, show it rather than letting the column quietly fail to
-  // add up. A visible "Other" row is a bug report from the player; a silent
-  // mismatch is a support ticket.
+  // Anything `income` reflects that the rows above don't explain. Should be ~0; show it rather than let the column silently fail to add up.
   const residual = f.totalRevenue - accountedCosts - f.income;
 
   const allRows: Array<[AllocTone, string, number]> = [...costRows, ["other", "Other", residual]];

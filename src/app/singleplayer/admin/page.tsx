@@ -9,9 +9,9 @@ import { SingleplayerAdmin } from "./SingleplayerAdmin";
 export const dynamic = "force-dynamic";
 
 /**
- * Owner panel for a local world. The first local account owns the machine
- * (see @/lib/singleplayerOwnerAdmin), so the DB account record decides who
- * sees this panel. Anyone else returns to the game, like old bookmarks did.
+ * Owner panel for a local world. The first local account owns the machine, so
+ * the DB account record decides who sees this panel; anyone else returns to
+ * the game.
  */
 export default async function SingleplayerAdminPage() {
   if (!isSingleplayer()) notFound();

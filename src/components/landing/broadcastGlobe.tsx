@@ -4,13 +4,12 @@
  * with the borders it left behind drawn in, and satellites on tilted orbits
  * that beam down to the datelines of the year's headlines.
  *
- * Everything renders inside `MapSVGContent` through its `underlay` / `overlay`
- * slots and is inert, so drag, hover and click still reach the countries
- * underneath. React draws the static art once; everything that moves is
- * written by `render` on the globe's own frame loop, which already caps the
- * frame rate, halves it on a weak device, and stops when the hero is scrolled
- * away or the tab is hidden. Each moving piece is its own small element, so a
- * frame repaints a satellite's trail rather than the whole globe.
+ * Renders inside `MapSVGContent` through its `underlay` / `overlay` slots and
+ * is inert, so drag, hover and click still reach the countries underneath.
+ * Static art is drawn once by React; moving pieces render on the globe's own
+ * frame loop, which caps and halves frame rate on weak devices and stops when
+ * the hero is scrolled away or the tab is hidden. Each moving piece is its own
+ * element so a frame repaints a trail, not the whole globe.
  */
 import { useCallback, useMemo, useRef } from "react";
 import type { MultiLineString } from "geojson";

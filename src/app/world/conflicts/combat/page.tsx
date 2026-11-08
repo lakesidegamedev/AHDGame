@@ -103,13 +103,10 @@ export default async function CombatCommandPage() {
   // conflict record page, and the war room's target picker has to be built from it.
   const engagedIds = new Set(units.map((u) => u.theaterId));
   const engagedConflicts = activeConflicts.filter((c) => engagedIds.has(c._id));
-  // Every host of every engaged war, not just each war's anchor: a conflict is
-  // fought over `hostEntities`, and the front line is placed as a share of the land
-  // the map can see. Resolving the anchor alone drew half a two-host theatre and
-  // measured the line against that half.
-  //
-  // Still deduped across the whole page, which is what the anchor-keyed version was
-  // for: two wars hosted in the same country previously issued one states query each.
+  // Every host of every engaged war, not just the anchor: a conflict spans
+  // `hostEntities`, and the front line is a share of the land the map can see.
+  // Resolving only the anchor drew half of a two-host theatre.
+  // Deduped across the page so co-hosted wars issue one states query per host.
   const zoneHosts = [...new Set(engagedConflicts.flatMap((c) => hostEntitiesOf(c)))];
   const regionCodesByHost = new Map(
     await Promise.all(

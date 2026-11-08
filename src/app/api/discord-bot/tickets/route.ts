@@ -244,9 +244,7 @@ function closeDeliveryState(deliveryState: CloseTicketState) {
   const currentDmDeliveryNote = dmDeliveryNote(deliveryState.resolution?.createdAt);
   const hasDmDeliveryMarker =
     deliveryState.statusHistory?.some((entry) => entry.note === currentDmDeliveryNote) === true;
-  // Before channel and DM delivery were tracked separately, Ops and the old
-  // bot wrote deliveredAt after posting in the ticket channel. Only channel-
-  // less legacy tickets can treat that timestamp as a delivered DM.
+  // deliveredAt predates DM tracking: for channel-less tickets it means a delivered DM.
   const resolutionDelivered = Boolean(
     hasDmDeliveryMarker ||
     (!deliveryState.discordChannelId && deliveryState.resolution?.deliveredAt)
@@ -431,9 +429,7 @@ export async function POST(request: Request) {
     // counter seeds from the current max, so it still advances past any
     // backfilled max for subsequent live tickets.
     const ticketNumber = body.ticketNumber ?? (await getNextTicketNumber());
-    // Backfill stamps the ticket with its original open time; live tickets use
-    // now. createdAt also anchors reviewAfter so old tickets are immediately
-    // eligible for triage rather than held for the live review window.
+    // Backfill preserves original open time; createdAt anchors reviewAfter so old tickets are immediately eligible.
     const createdAt = body.createdAt ? new Date(body.createdAt) : new Date();
     const status = body.status ?? "open";
 
@@ -787,9 +783,7 @@ export async function PATCH(request: Request) {
     }
 
     if (body.action === "retriage") {
-      // Force the ops triage worker to re-assess on its next tick: clear the
-      // prior assessment linkage and reopen the ticket with reviewAfter now.
-      // The old `assessments` doc is intentionally left in place as history.
+      // Force the triage worker to re-assess: clear assessment linkage, reopen with reviewAfter now. The old assessments doc is kept as history.
       const current = await coll.findOne(filter, {
         projection: { "resolution.message": 1 },
       });

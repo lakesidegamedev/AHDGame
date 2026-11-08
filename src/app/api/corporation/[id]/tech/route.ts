@@ -184,11 +184,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
           techCashFloorLocal,
           techPlantBasis
         );
-        // What the node is worth per turn to this corp, and how long its cash
-        // price takes to earn back. Null when redacted or when the node has no
-        // running plant value.
-        // Owned techs from before the previous decade no longer apply their
-        // running plant effects in the turn, so they are worth nothing now.
+        // Per-turn value of this node to the corp, and turns of cash cost
+        // to earn it back. Null when redacted, or when an owned node's
+        // running plant effects have expired (past decades no longer apply).
         const effectExpired =
           owned && isTechNodeEffectExpired(node, activeDecadeIds, { shieldExpires });
         const valuePerTurn =
@@ -335,14 +333,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       redacted: redact,
       rdScore,
       rdBudget: redact ? null : Math.round(corporation.rdBudget ?? 0),
-      // Mirror the turn engine / Budget / Operations formula exactly: FX-anchor
-      // the R&D budget and subtract decay (calculateCorpStrengthProjection).
-      // Previously fed the RAW local-currency rdBudget straight into calcRdGrowth
-      // with no anchor and no decay, which inflated the figure ~2.7× for non-USD
-      // corps (e.g. JPY ~130× budget through the log curve) and disagreed with
-      // every other tab (#903).
+      // Must match the turn engine / Budget / Operations formula: FX-anchor the
+      // R&D budget and subtract decay (calculateCorpStrengthProjection).
       // While an active product is in development it takes a bounded share of
-      // the R&D budget, so only the rest earns points (#1724).
+      // the R&D budget, so only the remainder earns points.
+
       rdGainPerTurn: rdProjection ? Math.round(rdProjection.rdScoreNetChange * 10) / 10 : null,
       rdDecayPerTurn: rdProjection ? Math.round(rdProjection.rdScoreDecay * 10) / 10 : null,
       rdFundedProduct:

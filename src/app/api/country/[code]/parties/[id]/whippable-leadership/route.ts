@@ -169,10 +169,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       .find({
         party: partyIdStr,
         officeType: { $in: officeTypes },
-        // Country-scope the officials: party sequentialIds collide across
-        // countries and "house"/"senate" are shared office types, so without
-        // this a chair saw whippable items on the strength of a foreign party's
-        // members (bug #0699). The sibling whippable-bills route already does.
+        // Country-scope officials: party sequentialIds collide across
+        // countries and "house"/"senate" are shared office types, so
+        // without this a chair saw whippable items from a foreign party's
+        // members.
         ...officialsCountryScope(countryId),
       })
       .toArray();
@@ -328,10 +328,10 @@ export async function GET(request: Request, { params }: RouteParams) {
      * NPP cap = 2; character cap = 1.
      */
     const buildSummaries = (key: string, since?: Date) => {
-      // Leadership elections reuse a stable _id ("current" for Speaker, the role
-      // name for chamber leaders), so whips keyed by targetType_targetId_chamber
+      // Leadership elections reuse a stable _id ("current" for Speaker, the
+      // role name for chamber leaders), so whips keyed by targetType_targetId_chamber
       // survive across election instances. Scope to the current instance by
-      // dropping whips issued before this election opened (ticket #959).
+      // dropping whips issued before this election opened.
       const inWindow = (w: BillWhip) => !since || w.createdAt >= since;
       const npp = (nppWhipsByTarget.get(key) ?? []).filter(inWindow);
       const char = (charWhipsByTarget.get(key) ?? []).filter(inWindow);

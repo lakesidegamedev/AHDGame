@@ -19,19 +19,13 @@ const INTENT_TEXT = { success: "text-success", warn: "text-warning", error: "tex
 /**
  * The Commanding General's read-only view of their own command.
  *
- * A Command is built in the defence seat's office and employed here, and for a
- * while the only route to its makeup was a link into that office — which the
- * cabinet fog-of-war gate closes to everyone but the seat holder, their head of
- * government and their head of state. A Commanding General is none of those, so
- * their own order of battle became unreachable to them.
+ * The defence office is fog-of-war gated to the seat holder, head of government
+ * and head of state, none of which a Commanding General is, so this publishes
+ * just the one slice that is theirs. The department's budget, arsenal and
+ * standing orders stay closed to them.
  *
- * The answer is not to open the department: its budget, arsenal and standing
- * orders are still none of a field commander's business. It is to publish the
- * one slice that is theirs — the command they command — where they already work.
- *
- * Read-only by construction. Every lever over this structure (posture, regions,
- * commanders, which units are in it) belongs to the defence seat; the CG's own
- * levers are postings, which live below this panel.
+ * Read-only by construction: every lever over this structure belongs to the
+ * defence seat; the CG's own levers are postings, which live below.
  */
 export function CommandStructurePanel({
   command,

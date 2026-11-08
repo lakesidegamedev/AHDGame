@@ -361,55 +361,6 @@ export interface GameState {
   nppForeignPolicyStage?: NppForeignPolicyStage;
   nppForeignPolicyStageBy?: string;
   nppForeignPolicyStageAt?: string;
-  /**
-   * May an NPP belligerent declare an offensive of its own? When false the
-   * `conduct_war` choice is never offered, so the country spends its foreign-policy
-   * slot elsewhere instead of queueing a battle declaration. Default false.
-   * Toggled from Admin → World → Conflicts. Player governments are unaffected:
-   * they declare through the cabinet battle route either way.
-   *
-   * Governs the DECISION, not the queue. A declaration already filed still resolves
-   * on the following turn after this is switched off, because an offensive always
-   * resolves a turn after it is declared — that gap is the defender's window, and
-   * cancelling a filed order here would be a hole in it. Expect at most one more tick
-   * of NPP offensives after turning this off.
-   */
-  nppOffensiveInitiationEnabled?: boolean;
-  nppOffensiveInitiationEnabledBy?: string;
-  nppOffensiveInitiationEnabledAt?: string;
-  /**
-   * May an NPP belligerent join an ally's offensive at a front where it already has
-   * troops posted? When true it is treated as having a standing auto-join order on
-   * every front it is deployed to, without one being written to `theaterState`.
-   * Default false, which leaves NPP allies fighting defensively only. Player
-   * governments keep their own explicit `theaterState.autoJoin` orders either way.
-   */
-  nppOffensiveJoinEnabled?: boolean;
-  nppOffensiveJoinEnabledBy?: string;
-  nppOffensiveJoinEnabledAt?: string;
-  /**
-   * When true, NPP-run countries build intelligence networks and run operations
-   * of their own. Default false, which leaves them purely defensive.
-   *
-   * This gates INITIATIVE only. Counter-intelligence posture is derived for every
-   * NPP country each turn regardless of this switch, because defence needs no
-   * order: a country nobody is playing still resists being spied on.
-   */
-  /**
-   * When true, a successful military covert action actually degrades the
-   * target's front supply and formation readiness. Default false.
-   *
-   * Off because it is a BALANCE change and the balance report that CLAUDE.md
-   * requires could not be produced: the live world has no engaged front to
-   * measure against (see scripts/sim/reports/). The code ships reviewed and
-   * inert; turning it on is a deliberate act that should follow the report.
-   */
-  intelligenceMilitarySabotageEnabled?: boolean;
-  intelligenceMilitarySabotageEnabledBy?: string;
-  intelligenceMilitarySabotageEnabledAt?: string;
-  nppIntelligenceOperationsEnabled?: boolean;
-  nppIntelligenceOperationsEnabledBy?: string;
-  nppIntelligenceOperationsEnabledAt?: string;
   /** When true, crisis international-aid nodes use the slider + legislature-bill flow. */
   crisisAidBillsEnabled?: boolean;
   crisisAidBillsEnabledBy?: string;
@@ -447,12 +398,6 @@ export interface GameState {
   coldWarEnabled?: boolean;
   coldWarEnabledBy?: string;
   coldWarEnabledAt?: string;
-  /** Master switch for the corporate M&A / deal-making subsystem (agreed
-   *  corp-to-corp acquisitions). Default false — the Deals tab and the
-   *  acquisition endpoints are inert until an admin enables it. */
-  corpDealsEnabled?: boolean;
-  corpDealsEnabledBy?: string;
-  corpDealsEnabledAt?: string;
   /**
    * When true, the RPG stat system is live: character creation allocates stats,
    * grandfathered characters are prompted to allocate, stat efficacy/drift apply,
@@ -508,14 +453,6 @@ export interface GameState {
   /** Turn on which the auto-sector seeding last fired. Guards the 48-turn interval. */
   lastAutoSeedTurn?: number;
   /**
-   * Master gate for extraction auto strategy adoption (Phase 1a of the
-   * extraction-capacity remediation): nudges standard miners on shortage
-   * deposits onto the matching focused mining strategy. Default off.
-   */
-  extractionAutoStrategyEnabled?: boolean;
-  extractionAutoStrategyEnabledBy?: string;
-  extractionAutoStrategyEnabledAt?: string;
-  /**
    * Safety rollout for the realized-viability check on autonomous NPP mine
    * founding. Absent resolves to observe so existing worlds collect evidence
    * without changing placement. Only enforce can reject a candidate.
@@ -543,7 +480,6 @@ export interface GameState {
    * pause land in full.
    */
   buildDeliverySettledTurn?: number;
-  /** Master gate for the US House districted-redistricting system. Default off. */
   /**
    * NPP corporation strategy loop. DEFAULT ON: absent means enabled, so
    * existing worlds keep the behaviour they were promoted with. Only an
@@ -558,6 +494,7 @@ export interface GameState {
   nppCorpStrategyEnabled?: boolean;
   nppCorpStrategyEnabledBy?: string;
   nppCorpStrategyEnabledAt?: string;
+  /** Master gate for the US House districted-redistricting system. Default off. */
   redistrictingEnabled?: boolean;
   redistrictingEnabledBy?: string;
   redistrictingEnabledAt?: string;
@@ -569,19 +506,6 @@ export interface GameState {
   subsidiaryCorporationsEnabled?: boolean;
   subsidiaryCorporationsEnabledBy?: string;
   subsidiaryCorporationsEnabledAt?: string;
-  /**
-   * Trade-exposure embargo model. When on, a total embargo strips only a
-   * foreign sector's cross-border (export-exposed) revenue instead of
-   * mothballing the whole sector, preserving domestic host sales. Default off
-   * (legacy total-mothball behaviour). See TRADE_EMBARGO_EXPORT_LOSS_SHARE.
-   */
-  embargoTradeExposureEnabled?: boolean;
-  embargoTradeExposureEnabledBy?: string;
-  embargoTradeExposureEnabledAt?: string;
-  /** Master gate for the live election results page (/elections/[id]/results). Default off. */
-  liveElectionResultsEnabled?: boolean;
-  liveElectionResultsEnabledBy?: string;
-  liveElectionResultsEnabledAt?: string;
   /**
    * Master gate for legislation demographic effects v2: lean/turnout
    * DemographicEffect targets (economicLean/socialLean/turnout) plus their
@@ -648,30 +572,6 @@ export interface GameState {
   intOrgAlignmentEnabled?: boolean;
   intOrgAlignmentEnabledBy?: string;
   intOrgAlignmentEnabledAt?: string;
-  /**
-   * Stage-1 proof gate for department-funded legislation. Only the US
-   * `public_health_opt_1` vertical slice reads it. Fail-closed and deliberately
-   * absent from default flags until Gate 1 is accepted.
-   */
-  departmentProgramSliceEnabled?: boolean;
-  departmentProgramSliceEnabledBy?: string;
-  departmentProgramSliceEnabledAt?: string;
-  /** Generalized national department accounts and program settlement. */
-  departmentFinanceEnabled?: boolean;
-  departmentFinanceEnabledBy?: string;
-  departmentFinanceEnabledAt?: string;
-  /** Jurisdiction selection, conflict rules, and delivered law outcomes. */
-  lawAdministrationEnabled?: boolean;
-  lawAdministrationEnabledBy?: string;
-  lawAdministrationEnabledAt?: string;
-  /** Regional discretion, underfunding settlement, and national grants. */
-  regionalLegislationFinanceEnabled?: boolean;
-  regionalLegislationFinanceEnabledBy?: string;
-  regionalLegislationFinanceEnabledAt?: string;
-  /** Canonical metric aliases and derived political readouts. */
-  canonicalPoliticalMetricsEnabled?: boolean;
-  canonicalPoliticalMetricsEnabledBy?: string;
-  canonicalPoliticalMetricsEnabledAt?: string;
   /**
    * Master gate for settlement crises (the German Question). Fail-closed: only
    * an explicit `true` enables. Fresh worlds seed it on
@@ -752,21 +652,6 @@ export interface GameState {
   macroGrowthV1?: boolean;
   macroGrowthV1By?: string;
   macroGrowthV1At?: string;
-  /**
-   * Master gate for granular poll breakdowns: cross-product Layer-1 electorate
-   * cells (race × age × education × wealth) attached to poll results. Default
-   * false; US-only and purely additive to existing poll math.
-   */
-  granularPollEnabled?: boolean;
-  granularPollEnabledBy?: string;
-  granularPollEnabledAt?: string;
-  /**
-   * Granular-cell electorate engine: per-state vote-share/appeal computation
-   * in elections runs over IPF-raked Layer-1 demographic cells instead of the
-   * 12 voter archetypes (see `src/lib/demographics/granularElectorate.ts`).
-   * Fail-closed: false/absent = byte-identical legacy archetype behavior.
-   */
-  granularElectorateEnabled?: boolean;
   /**
    * Per-country GDP-per-capita baseline for the era income band (metric era
    * catalog). Self-healed by computeNationalMetrics on the first flag-on turn

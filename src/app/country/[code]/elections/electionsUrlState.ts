@@ -13,12 +13,8 @@ import { COUNTRY_OFFICES } from "@/lib/constants/countryOfficesClient";
 
 /**
  * A race filter is an office key, a chamber key, or `senate-N` for the classed
- * US Senate. It is validated against the keys some country actually defines, so
- * a junk `?type=` falls back to "all races" instead of filtering the page empty.
- *
- * Previously this was a hand-written union of 16 values. That silently ignored
- * `?type=cameraDeputati`, `?type=riksdag`, `?type=supremeSovietDeputy` and the
- * rest, so most countries had no working race deep-link at all.
+ * US Senate. Validated against the keys some country actually defines, so a
+ * junk `?type=` falls back to "all races" instead of filtering the page empty.
  */
 export type RaceFilter = string;
 

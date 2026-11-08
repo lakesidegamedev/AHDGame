@@ -8,27 +8,24 @@ import type { TradeHistoryEntry, TradeSource } from "@/lib/db/types";
 
 /**
  * GET /api/forex/transactions
- * Turn-bucketed forex activity feed for the Transactions tab.
+ * Turn-bucketed forex activity feed.
  *
- * Response groups rows per turn so the UI can render a separator for each
- * turn tick. Inside each turn, auto-income conversions (dividends + bond
- * coupons) are aggregated across all players into summary rows — one per
- * (source, fromCurrency, toCurrency) — because "every player's coupon" is
- * noise; we just want the net market-making pressure. Non-aggregated rows
- * (manual, direct, limit_order, auto_purchase) are kept individual.
+ * Rows are grouped per turn so the UI can render a turn separator. Auto-income
+ * conversions (dividends + bond coupons) are aggregated per
+ * (source, fromCurrency, toCurrency) because per-player coupon rows are noise;
+ * other sources (manual, direct, limit_order, auto_purchase) stay individual.
  *
  * Auth: requireAuthWithCharacter
  * Indexes used: tradeHistory (turn, createdAt)
  *
  * Query params:
- *   turns       number of recent turns to return (1..8, default 2)
- *   offset      skip the latest N turns, for pagination (default 0, max 8)
- *   source      optional filter: manual | direct | limit_order | auto_purchase |
- *               auto_income (= auto_dividend + auto_coupon)
- *   currency    optional filter — only trades that touched this currency
- *   scope       "all" (default) | "mine" — "mine" restricts individual rows
- *               to trades involving the authenticated character (summary
- *               aggregates are always global — they're what move rates)
+ *   turns     recent turns to return (1..8, default 2)
+ *   offset    skip the latest N turns (default 0, max 8)
+ *   source    manual | direct | limit_order | auto_purchase |
+ *             auto_income (= auto_dividend + auto_coupon)
+ *   currency  only trades that touched this currency
+ *   scope     "all" (default) | "mine": "mine" restricts individual rows to
+ *             the authenticated character; summaries stay global
  */
 async function handleGET(request: Request) {
   try {

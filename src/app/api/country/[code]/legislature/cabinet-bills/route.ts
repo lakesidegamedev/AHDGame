@@ -146,9 +146,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
             canPropose = !existingActiveBill;
             allowedPolicyDomains = null;
           } else {
-            // A dual-office holder proposes from the union of both portfolios
-            // (issue #2049): every row they hold contributes its domains, so the
-            // second title widens what they may propose but never votes twice.
+            // A dual-office holder proposes from the union of both portfolios:
+            // each row contributes its domains, but they still vote only once.
             const cabinetRows = await db
               .collection("cabinetMembers")
               .find({ characterId: character._id, countryId })
@@ -404,11 +403,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
     const isPM = gov?.pmCharacterId?.toString() === character._id.toString();
 
-    // Cabinet member lookup — the unified cabinetMembers collection is the
-    // single source across all countries. A player queries by their own id, so
-    // NPP-held seats (null characterId) never match. All rows are loaded (not
-    // findOne) so a dual-office holder proposes from the union of both
-    // portfolios (issue #2049).
+    // Queried by the player's own id, so NPP-held seats (null characterId)
+    // never match. All rows are loaded so a dual-office holder proposes from
+    // the union of both portfolios.
     const cabinetRows = !isPM
       ? await db
           .collection("cabinetMembers")
@@ -496,10 +493,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       });
     }
 
-    // Check minimum 2 player-held cabinet positions (PM + at least 1 minister).
-    // Counted as distinct characters (issue #2049): a dual-office holder's two
-    // rows are one minister, and votes are keyed by character id, so a second
-    // title never buys a second vote toward this quorum either.
+    // Require PM plus at least 1 distinct player-held minister. Counting distinct
+    // characters means dual-office holders don't buy extra votes toward quorum.
     const playerHolderIds = await db
       .collection("cabinetMembers")
       .distinct("characterId", { countryId, characterId: { $ne: null } });
@@ -838,9 +833,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         status: 400,
       });
     }
-    const gameState = await getGameState(db);
-    const administrationEnabled =
-      gameState?.lawAdministrationEnabled === true && isResetV2Country(countryId);
+    const administrationEnabled = isResetV2Country(countryId);
     const administrationValidation = validateBillAdministration({
       enabled: administrationEnabled,
       legislationTypes: [selectedLegislationType],

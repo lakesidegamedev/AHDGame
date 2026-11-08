@@ -37,11 +37,8 @@ async function fetchLegislationTypes(
     if (domains?.length) query.policyDomain = { $in: domains };
   }
 
-  // Filter by country scope - only show legislation types for the specified country.
-  // Any country scopes to its own `countryScope`; US (and a blank/unknown country)
-  // additionally catches legacy types with no countryScope. Previously a hardcoded
-  // allowlist meant seeded countries missing from it (NG, and others) fell through
-  // with NO country filter, leaking every country's laws into the picker (#912).
+  // Non-US countries scope to their own countryScope; US (and blank/unknown)
+  // also catches legacy types with no countryScope.
   if (country && country !== "us") {
     query.countryScope = country;
   } else {

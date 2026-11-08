@@ -1,19 +1,16 @@
 "use client";
 
 /**
- * Factor Ledger card — a read-only breakdown of why a presidential candidate is
+ * Factor Ledger card: read-only breakdown of why a presidential candidate is
  * ahead or behind, split into named factors.
  *
- * The viewer picks a candidate; the card renders that candidate's national
- * waterfall from `ElectionResponse.factorLedger` (teed off the engine's own vote
- * math server-side, never recomputed). Each factor is a signed diverging bar in
- * the same visual language as PersuasionDrivers / NationalMoodGauge: positive
- * pushes toward the candidate (party color), negative away (drag red).
+ * Renders the candidate's national waterfall from `ElectionResponse.factorLedger`
+ * (computed server-side, never recomputed). Each factor is a signed diverging
+ * bar: positive toward the candidate (party color), negative away (drag red).
  *
- * Fog-of-war is applied server-side: the factor waterfall is public for every
- * candidate, but `bucketAppeal` (where a candidate's support comes from) is
- * present only for a candidate the viewer owns. Renders nothing when the field
- * is absent (races that ran before the ledger existed).
+ * Fog-of-war: the waterfall is public for every candidate, but `bucketAppeal`
+ * is present only for a candidate the viewer owns. Renders nothing when the
+ * field is absent.
  */
 
 import { useMemo, useState } from "react";

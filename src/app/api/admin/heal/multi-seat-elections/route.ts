@@ -67,10 +67,8 @@ export async function GET() {
       });
     }
 
-    // House seat counts are era- and census-dependent. Without the live
-    // apportionment `allocateSeats` falls back to the modern 2020 map, so on a
-    // 1953 world this heal "corrected" delegations to the wrong size and undid
-    // the census sizing the turn loop maintains (#1190).
+    // Seat counts are era- and census-dependent. Without live apportionment
+    // allocateSeats falls back to 2020, corrupting non-modern delegations.
     const gs = await (await getGameStateCollection(db)).findOne({ _id: "current" });
     const { houseSeats } = await loadApportionment(db, gs?.preset, gs?.currentYear);
 
@@ -197,10 +195,8 @@ export async function POST() {
       });
     }
 
-    // House seat counts are era- and census-dependent. Without the live
-    // apportionment `allocateSeats` falls back to the modern 2020 map, so on a
-    // 1953 world this heal "corrected" delegations to the wrong size and undid
-    // the census sizing the turn loop maintains (#1190).
+    // Seat counts are era- and census-dependent. Without live apportionment
+    // allocateSeats falls back to 2020, corrupting non-modern delegations.
     const gs = await (await getGameStateCollection(db)).findOne({ _id: "current" });
     const { houseSeats } = await loadApportionment(db, gs?.preset, gs?.currentYear);
 

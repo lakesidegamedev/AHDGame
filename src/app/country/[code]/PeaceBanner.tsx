@@ -2,25 +2,17 @@ import Link from "next/link";
 import type { CountryPeaceNotice } from "@/lib/military/countryPeaceNotice";
 
 /**
- * The strip that says a peace decision is waiting on the reader, under the wartime
- * strip on every one of this country's pages.
+ * Strip announcing a pending peace decision, rendered under the wartime strip
+ * on every page of this country.
  *
- * STACKED under the war strip rather than replacing it, because a country can be at
- * war and holding an offer at the same time, and collapsing the two would drop
- * whichever mattered more. Sits in the country LAYOUT for the same reason the war
- * strip does: a pending settlement is a fact about the country, not about the tab
- * you happen to be reading, so it cannot be forgotten on the next surface somebody
- * adds.
+ * Stacked rather than replacing the war strip: a country can be at war and
+ * holding an offer at once. Lives in the country layout because a pending
+ * settlement is a fact about the country, not the tab being viewed.
  *
- * SEAT GATED, unlike the strip above it. `loadCountryPeaceNotice` returns null for
- * anyone who cannot act, so this component never renders for a reader who would only
- * be told about a decision they cannot take.
+ * Seat gated: `loadCountryPeaceNotice` returns null for readers who cannot act,
+ * so this never renders for someone who could not take the decision.
  *
- * Three colours for three meanings: a won war uses the warning tone because it is on
- * a clock, an incoming offer and an open invitation use info because neither expires
- * without warning.
- *
- * Copy rules: no em or en dashes, no calendar years, and durations in turns.
+ * Tone: `warning` for a won war on a clock, `info` for offers and invitations.
  */
 export function PeaceBanner({
   notice,

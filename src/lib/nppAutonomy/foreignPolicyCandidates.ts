@@ -449,7 +449,6 @@ export function warCandidates(
           offer.expiresTurn > context.currentTurn
       );
       if (
-        context.offensiveInitiationEnabled &&
         deployed.length > 0 &&
         deployedReadiness >= 40 &&
         context.approvalRating >= 40 &&

@@ -129,10 +129,9 @@ export default function InputsOutputsPanel({
   const realizedOutputPrice =
     commodities.supplies.length === 1 ? (plants.pnl?.avgSalePriceAnchor ?? null) : null;
   // Multi-output sector: split the blended average by each output's recorded
-  // share of revenue, so ordnance and chemicals each show what they sold for
-  // instead of one price that fits neither (ticket 1507). Empty until the
-  // sector has cleared a turn that recorded the split; rows then keep the
-  // market price.
+  // revenue share, so ordnance and chemicals each show what they sold for
+  // instead of one price that fits neither. Empty until a turn records the
+  // split; rows then keep the market price.
   const perProductPrice = perProductSalePrices({
     supplies: commodities.supplies.map((f) => ({
       commodity: f.commodity,

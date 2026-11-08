@@ -1,10 +1,10 @@
 /**
- * UK Budget authoring (epic #856, ticket #858).
+ * UK Budget authoring.
  *
- * GET  /api/country/[code]/budget → current fiscal-year draft + tax levers +
+ * GET  /api/country/[code]/budget -> current fiscal-year draft + tax levers +
  *      spending categories + whether the caller is the Chancellor.
  * POST /api/country/[code]/budget  body { taxRates, programLevels, action }
- *      action "save" → draft; "table" → validate, table, and create the
+ *      action "save" -> draft; "table" -> validate, table, and create the
  *      vote-vehicle bill so the Commons votes on it.
  *
  * The Chancellor may author. The Prime Minister acts when that office is vacant.

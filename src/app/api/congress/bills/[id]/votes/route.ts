@@ -167,9 +167,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       officials,
       voteOfficeType ? { countryId: country, officeType: voteOfficeType } : null
     );
-    // A concluded phase has a frozen snapshot — show the roster (and seat weights)
-    // as they were at close, so a later election cannot drop the voters who
-    // actually voted (#0982). Only an in-progress phase live-scopes.
+    // A concluded phase has a frozen snapshot: show the roster and seat
+    // weights as they were at close, so a later election cannot drop actual
+    // voters. Only an in-progress phase live-scopes.
     const phaseSnapshot = chamber === "other" ? bill.otherChamberVoteSnapshot : bill.voteSnapshot;
     const scopedVotesMap = phaseSnapshot ? phaseSnapshot.votes : (scopedVoteInputs.votes ?? {});
     const weightMap = phaseSnapshot ? snapshotWeightMap(phaseSnapshot) : scopedVoteInputs.weightMap;

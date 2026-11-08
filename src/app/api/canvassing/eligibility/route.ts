@@ -15,12 +15,7 @@ async function handleGET() {
 
     const db = await getDb();
 
-    // A running mate on an active general-phase presidential ticket canvasses AS
-    // a surrogate: their eligible state is the ticket's travel state, not their
-    // own home / candidacy. Surface that branch first so the canvass panel
-    // targets the ticket state (which routes the POST through the surrogate
-    // pool). `needs_travel` means they are a running mate but the ticket has no
-    // travel state set yet.
+    // A running mate on an active general-phase ticket canvasses AS a surrogate: their eligible state is the ticket's travel state, not their own. Surface this branch first so the panel targets the ticket state. `needs_travel` means the ticket has no travel state set yet.
     const mate = await resolveRunningMateCanvassState(db, auth.user.character);
     if (mate.ok) {
       return NextResponse.json({ ok: true, stateId: mate.stateId, source: "runningMateSurrogate" });

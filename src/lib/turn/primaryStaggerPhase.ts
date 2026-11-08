@@ -213,13 +213,11 @@ export async function runPrimaryStaggerWaveIfDue(
       currentTurn?: number;
       startingYear?: number;
       eraSystemEnabled?: boolean;
-      granularElectorateEnabled?: boolean;
     }>("gameState")
     .findOne({ _id: "current" });
   const delegatePreset = gsForDelegates?.preset;
   // Live era clock (null while `eraSystemEnabled` is off — legacy behavior).
   const eraYear = eraYearContextFromGameState(gsForDelegates);
-  // Campaign rules require cells for paid ads. Older races retain the admin gate.
 
   // Bootstrapping the tally at stagger start is load-bearing: wave history,
   // per-state primary votes, and delegates all persist on electionVoteTallies.
@@ -352,21 +350,15 @@ export async function runPrimaryStaggerWaveIfDue(
     includePartyPositions: true,
     countryId: (election.countryId ?? "US") as CountryId,
   });
-  const granularElectorateEnabled =
-    usesCampaignAds(election, enriched) || gsForDelegates?.granularElectorateEnabled === true;
-
   // Seeded snapshots for the granular substrate's legislation lean-drift fold.
-  // Only fetched when the flag is on so the legacy path pays no extra read.
-  const demographicDefaultsByState = granularElectorateEnabled
-    ? new Map(
-        (
-          await db
-            .collection<StateDemographics>("demographicDefaults")
-            .find({ _id: { $in: waveStates } })
-            .toArray()
-        ).map((d) => [d._id as string, d])
-      )
-    : undefined;
+  const demographicDefaultsByState = new Map(
+    (
+      await db
+        .collection<StateDemographics>("demographicDefaults")
+        .find({ _id: { $in: waveStates } })
+        .toArray()
+    ).map((d) => [d._id as string, d])
+  );
   const partyOrgByStateParty = new Map<string, StatePartyOrg>();
   for (const po of partyOrgs) {
     partyOrgByStateParty.set(`${po.stateId}_${po.partyId}`, po);
@@ -643,39 +635,36 @@ export async function runPrimaryStaggerWaveIfDue(
         { preset: delegatePreset, year: eraYear.year, startingYear: eraYear.startingYear }
       );
 
-      // Granular-cell electorate substrate (granularElectorateEnabled) — swap
-      // the archetype substrate for Layer-1 cells BEFORE the primary
-      // retention/shift steps: those helpers are generic over group ids, so
-      // the directional-alignment retention applies to cells unchanged. Null
-      // substrate (no Layer-1 census) → legacy path. Flag OFF: eff* variables
-      // are the legacy values — byte-identical behavior.
+      // Granular-cell electorate substrate: swap the archetype substrate for
+      // Layer-1 cells BEFORE the primary retention/shift steps: those helpers
+      // are generic over group ids, so the directional-alignment retention
+      // applies to cells unchanged. Null substrate (no Layer-1 census) → legacy
+      // archetype path.
       let effBaseDemographics = rawDemographicsDoc;
       let effCategories = categories;
       let effGeneralTurnouts = generalTurnouts;
       let effPartyCandidates = partyCandidates;
-      if (granularElectorateEnabled) {
-        const substrate = buildGranularElectorateSubstrate({
-          campaignRulesVersion: election.campaignRulesVersion,
-          currentTurn: currentTurn,
-          countryId: (election.countryId ?? "US") as CountryId,
-          stateId,
-          preset: delegatePreset,
-          year: eraYear.year,
-          startingYear: eraYear.startingYear,
-          turnoutDoc: turnoutForElection(turnoutMap.get(stateId), election),
-          statePopulation: state.population,
-          demographics: rawDemographicsDoc,
-          categories,
-          liveTurnouts: generalTurnouts,
-          enriched: partyCandidates,
-          demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
-        });
-        if (substrate) {
-          effBaseDemographics = substrate.demographics;
-          effCategories = substrate.categories;
-          effGeneralTurnouts = substrate.liveTurnouts;
-          effPartyCandidates = substrate.enriched;
-        }
+      const substrate = buildGranularElectorateSubstrate({
+        campaignRulesVersion: election.campaignRulesVersion,
+        currentTurn: currentTurn,
+        countryId: (election.countryId ?? "US") as CountryId,
+        stateId,
+        preset: delegatePreset,
+        year: eraYear.year,
+        startingYear: eraYear.startingYear,
+        turnoutDoc: turnoutForElection(turnoutMap.get(stateId), election),
+        statePopulation: state.population,
+        demographics: rawDemographicsDoc,
+        categories,
+        liveTurnouts: generalTurnouts,
+        enriched: partyCandidates,
+        demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
+      });
+      if (substrate) {
+        effBaseDemographics = substrate.demographics;
+        effCategories = substrate.categories;
+        effGeneralTurnouts = substrate.liveTurnouts;
+        effPartyCandidates = substrate.enriched;
       }
 
       const liveTurnouts = applyPrimaryTurnoutRetention(

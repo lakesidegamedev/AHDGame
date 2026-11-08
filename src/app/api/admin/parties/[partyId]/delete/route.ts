@@ -60,10 +60,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     const partySeqIdStr = String(party.sequentialId);
     const partyCountryId = party.countryId ?? "US";
 
-    // Cascade-clean the party's NPPs: pull them out of any active/upcoming
-    // candidacies and held seats, then retire them. Without this, deleting a
-    // party leaves orphaned NPPs holding chamber seats and running in elections
-    // for a party that no longer exists.
+    // Cascade-clean the party's NPPs: pull them out of active/upcoming
+    // candidacies and held seats, then retire them. Otherwise they are left
+    // orphaned, holding seats and running for a party that no longer exists.
     const partyNpps = await db
       .collection<NPP>("npps")
       .find({ countryId: partyCountryId, party: partySeqIdStr, retiredAt: null })

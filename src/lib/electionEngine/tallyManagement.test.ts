@@ -1964,12 +1964,12 @@ describe("accumulateVoteTurn — granular electorate substrate", () => {
     return { electionId };
   }
 
-  it("flag ON: engine receives the granular-cell substrate (PA has a Layer-1 census)", async () => {
+  it("engine receives the granular-cell substrate (PA has a Layer-1 census)", async () => {
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
 
     const { electionId } = await setupForFlag({
-      gameState: { _id: "current", granularElectorateEnabled: true },
+      gameState: { _id: "current" },
     });
     await accumulateVoteTurn(electionId, 1, new Date());
 

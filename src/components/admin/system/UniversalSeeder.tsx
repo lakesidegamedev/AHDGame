@@ -576,9 +576,7 @@ type SeedScope = CountryId | "all";
 type YearTab = "2019" | "1991";
 type SeedMode = "full" | "partial";
 
-// Maps the UI year tab to the engine preset id consumed by /api/admin/seed.
-// The "2019" baseline is the January-2019 era (116th Congress, post-2019 UK
-// general election) — historically the codebase keyed this as "2019-default".
+// Maps UI year tab to the engine preset id consumed by /api/admin/seed.
 const PRESET_BY_YEAR: Record<YearTab, string> = {
   "2019": "2019-default",
   "1991": "1991-default",

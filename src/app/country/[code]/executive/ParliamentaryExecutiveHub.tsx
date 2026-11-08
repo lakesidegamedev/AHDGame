@@ -105,9 +105,8 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     surface.heroTitleUsesImperialPossessive
       ? fetchImperialPossessive(db, countryId)
       : Promise.resolve(null),
-    // Live chamber size (era overlay + region sum) — not the modern-config
-    // default. Ticket #1078: 1953 UK showed "625 of 650" because this panel
-    // called getCountryConfig without the world preset.
+    // Live chamber size (era overlay + region sum), not the modern-config
+    // default. Must use the world preset.
     getLiveLowerChamberSeats(db, countryId),
   ]);
 

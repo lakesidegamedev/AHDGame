@@ -57,12 +57,9 @@ function lockReasonLabel(reason: string | null | undefined, opensYear?: number |
 }
 
 /**
- * A strategy's whole effect is the commodity supply/demand mix it imposes, which
- * lands on BOTH the effective margin and realized revenue. Combine the two legs
- * into the one number the decision actually turns on: the change in daily
- * operating profit. Without this a player has to weigh "more revenue vs the loss
- * in profit margin" in their head with neither figure shown — the complaint
- * OGBuildz raised in #gameplay-advisors on 2026-07-29.
+ * A strategy's effect is the commodity supply/demand mix it imposes, which
+ * affects both effective margin and realized revenue. Combine both legs into
+ * the number the decision turns on: change in daily operating profit.
  */
 export function projectStrategyOutcome(
   s: AvailableStrategy,

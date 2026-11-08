@@ -79,11 +79,8 @@ export const CARDS: ActionCard[] = [
     tagline: "Puts your own cash into the campaign",
     flavor:
       "Half the money is lost in the transfer, and the donation adds Infamy that grows with its size. Infamy above 20 drains Favorability every turn.",
-    // Canonical ConvertCash owner: the flat AP cost the shared rules quote
-    // execution debits (quoteConvertCashAction). This card's actionCost
-    // renders live (no page-level prop shadows it, unlike the
-    // state-dependent campaign/advertise/buildDonorBase costs), so it reads
-    // the const directly.
+    // Canonical ConvertCash actionCost: the flat AP cost the shared rules quote
+    // (quoteConvertCashAction). Renders live here, so read the const directly.
     actionCost: CONVERT_CASH_ACTION_COST,
     fundCost: () => null,
     fundLabel: (c) => {
@@ -106,10 +103,8 @@ export const CARDS: ActionCard[] = [
     tagline: "Quick read of your support",
     flavor:
       "Shows your overall appeal in your state and the five voter groups you do best and worst with. A higher Intellect lowers the money cost.",
-    // Canonical Poll owner: flat AP cost and unscaled ANCHOR base fund cost
-    // from the shared rules quote execution debits (quotePollAction). The
-    // card preview stays display-only: the intellect-scaled debit is quoted
-    // by the poll route, not recomputed here.
+    // Poll costs come from shared rules quotes: flat AP, unscaled ANCHOR fund.
+    // Card preview is display-only; the poll route quotes the scaled debit.
     actionCost: getPollActionCost("small"),
     fundCost: () => getPollBaseFundCost("small"),
     fundLabel: () => formatFundsCompact(getPollBaseFundCost("small")),
@@ -185,9 +180,7 @@ export const CARDS: ActionCard[] = [
     tagline: "Chance to raise Debate",
     flavor:
       "A successful roll raises your Debate skill by 1. It costs no money, and the action is spent whether or not the roll succeeds.",
-    // Single source of truth: the same rules quote the execute shell gates
-    // on, so the advertised cost and odds can never drift from the resolved
-    // roll (the label previously advertised 10% while the roll resolved 15%).
+    // Same rules the execute shell gates on, so cost and odds can never drift from the resolved roll.
     actionCost: DEBATE_PREP_ACTION_COST,
     fundCost: () => null,
     fundLabel: () => "Free",

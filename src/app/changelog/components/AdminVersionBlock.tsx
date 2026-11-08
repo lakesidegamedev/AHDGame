@@ -77,10 +77,7 @@ export function AdminVersionBlock({
             );
             return Array.from(counts.entries()).map(([heading, count], idx) => {
               const color = SECTION_COLORS[heading] ?? DEFAULT_SECTION;
-              // Composite key — `counts` is built from a Map so headings are
-              // unique here, but several long releases historically have two
-              // `### Mechanics`-style blocks; if the upstream parser ever
-              // skips the Map dedup, the index suffix keeps render stable.
+              // Composite key: headings are deduped upstream via a Map, but the index suffix guards render stability if duplicates ever slip through.
               return (
                 <span
                   key={`${heading}-${idx}`}

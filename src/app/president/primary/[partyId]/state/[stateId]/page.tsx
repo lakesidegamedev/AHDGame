@@ -242,14 +242,12 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     countryId: "US",
   });
 
-  // Percentage denominators must cover exactly the candidates we render a row
-  // for. `tally.primaryStateVotes` is an append-only historical record that
-  // keeps entries for candidates who have since withdrawn or been vacated from
-  // the primary, while `rows` below is built from the LIVE `candidates` list.
-  // Summing the raw map therefore inflated the denominator and the visible
-  // percentages added up to less than 100% (ticket #974: "some of the primaries
-  // are not showing a 100% total"). Scope both totals to the live candidate set
-  // so the column always reconciles to 100%.
+  // Percentage denominators must cover exactly the candidates we render a
+  // row for. `tally.primaryStateVotes` is an append-only record that keeps
+  // withdrawn/vacated candidates, while `rows` uses the LIVE `candidates`
+  // list. Summing the raw map inflates the denominator and visible
+  // percentages fall short of 100%. Scope both totals to the live set so the
+  // column always reconciles to 100%.
   const liveCandidateIds = new Set(candidates.map((c) => c._id.toString()));
   const sumForLiveCandidates = (scores: Record<string, number>): number =>
     Object.entries(scores).reduce((s, [cid, v]) => (liveCandidateIds.has(cid) ? s + v : s), 0);

@@ -14,20 +14,12 @@ interface ClockDriftBannerProps {
 }
 
 /**
- * Banner that surfaces a cron-stall auto-pause to staff (admins + moderators).
+ * Staff banner for a cron-stall auto-pause (`pauseKind === "auto-drift"`);
+ * renders null otherwise. Game-clock/wall-clock drift is not surfaced
+ * because deadlines are turn-based.
  *
- * - pauseKind === "auto-drift" → red banner with reason + link
- * - otherwise renders null.
- *
- * Note: the old "game clock is behind real time" warn-drift banner was removed
- * once deadlines became turn-based (Phase 5) — a game-clock/wall-clock offset no
- * longer affects any deadline, so warning about it was misleading. The
- * cron-stall auto-pause (no turn completed in N hours) is a real failure and
- * keeps its banner.
- *
- * Mount inside a panel layout (admin or moderator) — it consumes useGameClock
- * so it stays in sync with the shared turn-status polling. Gate visibility to
- * staff at the mount-point layout rather than inside this component.
+ * Mount inside a staff panel layout; consumes `useGameClock` for shared
+ * polling. Gate visibility at the mount point, not here.
  */
 export function ClockDriftBanner({
   panelHref = "/admin",

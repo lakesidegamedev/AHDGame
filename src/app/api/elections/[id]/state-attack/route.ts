@@ -228,11 +228,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       createdAt: now,
     };
 
-    // Crash-safe spend (issue #1672): the actions and funds debits are keyed
-    // idempotent legs and the attack row a deterministic insert, so a crash
-    // between the sequential writes reconciles instead of charging for an
-    // attack that never landed. `Idempotency-Key` replays the stored outcome
-    // without charging again.
+    // Crash-safe spend: the actions and funds debits are keyed idempotent legs
+    // and the attack row a deterministic insert, so a crash between sequential
+    // writes reconciles instead of charging for an attack that never landed.
+    // `Idempotency-Key` replays the stored outcome without charging again.
     const headerKey = request.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");

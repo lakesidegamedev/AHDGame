@@ -61,26 +61,24 @@ const schema = z.object({
 /**
  * POST /api/political-operations/state-org/build
  *
- * Increments the authenticated US character's Campaign Presence level for the
- * given state by +1. The level ladder is UNBOUNDED — what limits it is the
- * escalating price (`stateOrgLevelCost`) against a bonus curve that flattens
- * (`stateOrgBonusFraction`), so the marginal level gets rapidly worse value.
+ * Increments the campaign's Campaign Presence level for the given state by +1.
+ * The level ladder is unbounded; escalating price (`stateOrgLevelCost`) against
+ * a flattening bonus curve (`stateOrgBonusFraction`) makes marginal levels
+ * worse value.
  *
- * Paid from the CAMPAIGN's own pools (`campaigns.actions` / `campaigns.funds`),
+ * Paid from the CAMPAIGN's pools (`campaigns.actions` / `campaigns.funds`),
  * not the player's personal ones. Presence is campaign infrastructure and
- * should compete with the media / ground-game / opposition-research trees for
- * one budget. This also puts the price against the pot that actually holds the
- * money: live presidential treasuries run $196M-$284M, against which the old
- * flat $50k was ~0.02% and effectively free.
+ * competes with the media / ground-game / opposition-research trees for one
+ * budget.
  *
- * With `campaignId`, the campaign's candidate or one of its appointed campaign
- * managers builds for that campaign's candidate: the level is written under the
+ * With `campaignId`, the campaign's candidate or an appointed campaign manager
+ * builds for that campaign's candidate: the level is written under the
  * candidate's character, priced in the candidate's home currency, and paid from
- * that campaign. The running mate and everyone else are refused. Without it,
- * the caller builds for their own campaign, as before.
+ * that campaign. Running mates and everyone else are refused. Without it, the
+ * caller builds for their own campaign.
  *
- * Auth: requireAuthWithCharacter (must be a US character with a campaign, or
- *       the candidate / a manager of the named campaign)
+ * Auth: requireAuthWithCharacter (US character with a campaign, or the
+ *       candidate / a manager of the named campaign)
  * Errors: 400 (bad input / no campaign / insufficient campaign actions or
  *         funds / throttled), 403 (non-US), 401, 409 (race), 500
  */
