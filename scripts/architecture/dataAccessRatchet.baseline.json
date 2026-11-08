@@ -9109,13 +9109,13 @@
       "gameState": 1,
       "politicalParties": 2
     },
-    "src/lib/turn/perpetualElections/engine.ts": {
+    "src/lib/elections/scheduling/engine.ts": {
       "elections": 10,
       "gameState": 1,
       "states": 1,
       "untyped": 3
     },
-    "src/lib/turn/perpetualElections/shared.ts": {
+    "src/lib/elections/scheduling/shared.ts": {
       "elections": 19,
       "states": 5
     },

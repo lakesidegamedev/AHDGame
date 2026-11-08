@@ -12961,19 +12961,19 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/turn/perpetualElections/countries/betaParliaments.ts": {
+    "src/lib/elections/scheduling/countries/betaParliaments.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/turn/perpetualElections/countries/easternBloc.ts": {
+    "src/lib/elections/scheduling/countries/easternBloc.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/turn/perpetualElections/engine.ts": {
+    "src/lib/elections/scheduling/engine.ts": {
       "longBlocks": 3,
       "narrativeLines": 2
     },
-    "src/lib/turn/perpetualElections/shared.ts": {
+    "src/lib/elections/scheduling/shared.ts": {
       "longBlocks": 1,
       "narrativeLines": 2
     },

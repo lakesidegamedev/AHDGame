@@ -1,6 +1,7 @@
 /**
- * Forwarder. Germany's perpetual-election spawners moved to the country folder.
+ * Forwarder. Moved into the elections home.
  *
- * ⚠️ A FORWARDER HOLDS NO COPY; the registry still imports from here.
+ * A forwarder holds no copy, so existing importers are untouched and there is
+ * still exactly one declaration.
  */
-export * from "@/lib/countries/de/elections/perpetual";
+export * from "@/lib/elections/scheduling/countries/de";

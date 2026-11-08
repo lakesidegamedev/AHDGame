@@ -256,6 +256,7 @@ const DATA_DIRS = [
   // is not ownership. Only the per-country config directories belong here.
   "src/lib/turn/billLifecycle/configs/",
   "src/lib/turn/perpetualElections/countries/",
+  "src/lib/elections/scheduling/countries/",
 ];
 
 /**
@@ -481,7 +482,7 @@ function isCountryFolderShim(raw: string): boolean {
   // detector that only accepted `export *` then called every one of them a data
   // file holding UK facts.
   return statements.every((s) =>
-    /^(?:export\s+\*\s+from|export\s*\{[^}]*\}\s*from|import)\s+["']@\/lib\/countries\/[^"']+["']$/.test(
+    /^(?:export\s+\*\s+from|export\s*\{[^}]*\}\s*from|import)\s+["']@\/lib\/(?:countries|elections\/scheduling\/countries)\/[^"']+["']$/.test(
       s
     )
   );

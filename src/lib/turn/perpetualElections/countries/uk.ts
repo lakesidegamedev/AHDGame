@@ -1,11 +1,7 @@
 /**
- * Forwarder. The United Kingdom's perpetual-election spawners moved to the
- * country folder.
+ * Forwarder. Moved into the elections home.
  *
- * ⚠️ A FORWARDER HOLDS NO COPY. `ensureUKElections`,
- * `ensureUKRegionalCouncilElections` and `ensureUKGovernorElections` have
- * exactly one definition, at `@/lib/countries/uk/elections/perpetual`. The
- * registry still imports them from here, unchanged, exactly as Japan's shim
- * works.
+ * A forwarder holds no copy, so existing importers are untouched and there is
+ * still exactly one declaration.
  */
-export * from "@/lib/countries/uk/elections/perpetual";
+export * from "@/lib/elections/scheduling/countries/uk";
