@@ -229,7 +229,7 @@
     "src/lib/turn/crisisV2/legacyContent.ts": 1,
     "src/lib/turn/crisisV2/spillover.ts": 1,
     "src/lib/turn/crisisV2Turn.ts": 2,
-    "src/lib/turn/election/contingentActingPresidency.ts": 1,
+    "src/lib/elections/resolution/contingentActingPresidency.ts": 1,
     "src/lib/turn/npp/billSponsorship.ts": 1,
     "src/lib/turn/partyTierTurn.ts": 1,
     "src/lib/turn/politicalMetricsDynamics.ts": 1,
