@@ -3,13 +3,24 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Db, ObjectId } from "mongodb";
 import type { ActiveCrisisStage, CrisisRole, LeverCost } from "@/lib/crises/v2/types";
-import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
+import { AID_DEFAULT_PCT_GDP, AID_MAX_PCT_GDP } from "@/lib/constants/crises";
+import type { FederalBudget } from "@/lib/db/types/budget";
+import type { Crisis, CrisisInteraction, CrisisLeverUse } from "@/lib/db/types/crisis";
 import { getGameState } from "@/lib/gameState";
 import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
 import { leverActionCost } from "@/lib/crises/v2/leverActions";
 import { leverBlock } from "./availability";
 import { governsAffectedState } from "./jurisdiction";
 import { resolveLeverRoles } from "./roles";
+
+/** Size bounds for an aid pledge, as shares of the sender's GDP. */
+export interface AidPledgeRange {
+  defaultPctGdp: number;
+  maxPctGdp: number;
+  /** The sender's GDP in local currency, for showing the amount. */
+  senderGdp: number;
+  currencyCode: string;
+}
 
 export interface AvailableLever {
   id: string;
@@ -22,6 +33,8 @@ export interface AvailableLever {
   actionCost: number;
   /** True when pulling it raises an emergency bill rather than acting directly. */
   viaBill: boolean;
+  /** Present on an aid pledge, which the holder sizes before pulling. */
+  aid?: AidPledgeRange;
 }
 
 export interface AvailableCrisisLevers {
@@ -70,6 +83,46 @@ async function countriesOf(db: Db, crises: LiveCrisis[]): Promise<Map<string, st
  * roles, and that character's recent pulls, so it is cheap enough for a nav
  * badge as well as the crises page.
  */
+async function loadAidRanges(
+  db: Db,
+  crisisIds: ObjectId[],
+  countryId: string | undefined
+): Promise<Map<string, AidPledgeRange>> {
+  const ranges = new Map<string, AidPledgeRange>();
+  if (crisisIds.length === 0 || !countryId) return ranges;
+  const [interactions, budget] = await Promise.all([
+    db
+      .collection<CrisisInteraction>("crisisInteractions")
+      .find(
+        { crisisId: { $in: crisisIds } },
+        {
+          projection: {
+            crisisId: 1,
+            "decisionTree.nodeId": 1,
+            "decisionTree.type": 1,
+            "decisionTree.aidMaxPctGdp": 1,
+            "decisionTree.aidDefaultPctGdp": 1,
+          },
+        }
+      )
+      .toArray(),
+    db.collection<FederalBudget>("federalBudget").findOne({ countryId }),
+  ]);
+  const senderGdp =
+    budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
+  for (const interaction of interactions) {
+    const node = interaction.decisionTree.find((n) => n.type === "aid");
+    const maxPctGdp = node?.aidMaxPctGdp ?? AID_MAX_PCT_GDP;
+    ranges.set(interaction.crisisId.toString(), {
+      defaultPctGdp: Math.min(node?.aidDefaultPctGdp ?? AID_DEFAULT_PCT_GDP, maxPctGdp),
+      maxPctGdp,
+      senderGdp,
+      currencyCode: budget?.currencyCode ?? "USD",
+    });
+  }
+  return ranges;
+}
+
 export async function getAvailableLevers(
   db: Db,
   characterId: ObjectId
@@ -116,6 +169,16 @@ export async function getAvailableLevers(
     lastPulled.set(key, Math.max(lastPulled.get(key) ?? -Infinity, pull.submittedTurn));
   }
 
+  const aidRanges = await loadAidRanges(
+    db,
+    crises
+      .filter((c) =>
+        getCrisisDefinition(c.v2.definitionId)?.levers.some((l) => l.legacy?.kind === "aid")
+      )
+      .map((c) => c._id),
+    actor.countryId
+  );
+
   const result: AvailableCrisisLevers[] = [];
   for (const crisis of crises) {
     const def = getCrisisDefinition(crisis.v2.definitionId);
@@ -150,6 +213,9 @@ export async function getAvailableLevers(
         cooldownTurns: lever.cooldownTurns ?? 0,
         actionCost: leverActionCost(lever.cost.politicalCapital),
         viaBill: lever.role === "legislature",
+        ...(lever.legacy?.kind === "aid" && aidRanges.has(crisis._id.toString())
+          ? { aid: aidRanges.get(crisis._id.toString()) }
+          : {}),
       });
     }
     if (levers.length === 0) continue;

@@ -363,6 +363,20 @@ describe("pooled aid and collective levers", () => {
     expect(hooks.aidBill).toHaveBeenCalledTimes(1);
   });
 
+  it("refuses a pledge above the node's cap and refunds the pull", async () => {
+    install("aid");
+    db.collectionMocks.federalBudget.findOne.mockResolvedValue(BUDGET);
+    db.collectionMocks.crisisAidCommitments.findOne.mockResolvedValue(null);
+    for (const pctGdp of [0.5, 0.0001 * -1]) {
+      const result = await pull("pool.aid", { pctGdp });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.message).toBe("Invalid aid amount");
+    }
+    expect(hooks.undo).toHaveBeenCalledTimes(2);
+    expect(hooks.spend).not.toHaveBeenCalled();
+    expect(hooks.aidBill).not.toHaveBeenCalled();
+  });
+
   it("refunds the pull when the pledge spend fails", async () => {
     install("aid");
     db.collectionMocks.federalBudget.findOne.mockResolvedValue(BUDGET);
