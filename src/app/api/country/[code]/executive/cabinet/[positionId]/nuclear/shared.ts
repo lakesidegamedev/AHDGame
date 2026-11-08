@@ -131,6 +131,7 @@ export async function resolveEligibility(
  * in-world gates a 403/409.
  */
 export async function requireEligible(db: Db, countryId: CountryId) {
+  const gs = (await loadGameStateSlice(db)) ?? {};
   const eligibility = await resolveEligibility(db, countryId);
   if (!eligibility.capable) {
     return {
