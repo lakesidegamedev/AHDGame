@@ -1257,10 +1257,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/api/auth/character/route.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/app/api/auth/discord/login/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 1

@@ -1,0 +1,599 @@
+import { requiresDiscordForNewCharacter } from "@/lib/auth/rules/discordCharacterGate";
+import { NEW_CHARACTER_STARTING_INFLUENCE } from "@shared/constants/formulas";
+import {
+  campaignAnchorToLocal,
+  campaignLocalRate,
+  loadCampaignCurrencyRates,
+} from "@/lib/campaigns/campaignCurrency";
+import { rememberCharacterActivation } from "@/lib/analytics/characterActivation";
+import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { errorResponse } from "@/lib/api/errors";
+import { setCharacterGateCookie } from "@/lib/auth/characterGateCookie";
+import { MongoServerError, ObjectId, type Db } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import type { Character, GameConfig, State } from "@/lib/db/types";
+import { computeIntakeStatus } from "@/lib/auth/intakeStatus";
+import { accountAgeBand, authProviderOf, captureIntakeEvent } from "@/lib/analytics/intakeEvents";
+import type { createCharacterSchema } from "@/lib/api/schemas/settings";
+import type { z } from "zod";
+import { getNextSequentialId } from "@/lib/db/sequentialId";
+import { getCountryAccess } from "@/lib/countryAccess";
+import { getGameTime } from "@/lib/time/gameTime";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
+import { energyActionLimits } from "@/lib/stats/statDrift";
+import { STAT_MIN } from "@/lib/stats/statsConstants";
+import { getSeedCurrencyCode } from "@/lib/constants/currencies";
+import { getWealthBonus, type WealthLevel } from "@/lib/constants/characterWealth";
+import { getEraNominalAmount } from "@/lib/constants/sectorSeedEra";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { type CountryId } from "@/lib/constants/countries";
+import type { SingleplayerConfig } from "@/lib/db/types";
+import { isSingleplayer } from "@/lib/singleplayer";
+import {
+  getSingleplayerHeadOfStateOfficeType,
+  seatSingleplayerHeadOfState,
+} from "@/lib/singleplayerHeadOfState";
+import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
+import type { CharacterStats } from "@/lib/stats/statsConstants";
+import { sendSystemMail } from "@/lib/mail/systemMail";
+import { onboardingRewardAmount } from "@/lib/onboarding/reward";
+import {
+  buildWelcomeMailBody,
+  WELCOME_MAIL_SENDER,
+  WELCOME_MAIL_SUBJECT,
+} from "@/lib/onboarding/welcomeMail";
+import {
+  loadUsPoliticalStateIds,
+  unplayableTerritoryHomeError,
+} from "@/lib/elections/usPoliticalHome";
+import { isUsResidentPoliticalRegion } from "@/lib/elections/statehoodAdmission";
+import { findPartyBySequentialId } from "@/lib/db/partyLookup";
+import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
+import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+
+const MIN_STARTING_DONOR_BASE_LEVEL = 1;
+
+async function repairLegacyCharacterUserIdIndex(db: Db): Promise<boolean> {
+  const collection = db.collection("characters");
+  const indexes = await collection.indexes();
+  const userIdIndexes = indexes.filter((index) => index.key?.userId === 1);
+  const legacyIndex = userIdIndexes.find((index) => index.unique === true);
+  const hasNonUniqueIndex = userIdIndexes.some((index) => !index.unique);
+
+  if (!legacyIndex?.name) return false;
+
+  await collection.dropIndex(legacyIndex.name);
+  if (!hasNonUniqueIndex) {
+    await collection.createIndex({ userId: 1 }, { name: "characters_userId" });
+  }
+  return true;
+}
+
+function isUserIdDuplicateKey(error: unknown): error is MongoServerError {
+  return (
+    error instanceof MongoServerError &&
+    error.code === 11000 &&
+    (!!error.keyPattern?.userId ||
+      /(?:^|[.\s])userId_1\b/.test(error.message) ||
+      /\bcharacters_userId\b/.test(error.message))
+  );
+}
+
+export type CreateCharacterInput = z.infer<typeof createCharacterSchema>;
+
+/** Creates the account's character with starting stats, party membership and referral bonuses. */
+export async function createCharacterForAccount(userId: string, data: CreateCharacterInput) {
+  const {
+    name,
+    homeState,
+    countryId: requestedCountryId,
+    party: selectedParty,
+    policies,
+    demographics,
+    stats: rawStats,
+    tutorialTrack,
+  } = data;
+
+  // Validate the optional 28-point stat allocation. When provided it must be a
+  // legal spread; when omitted the character is created without stats and is
+  // routed through the grandfather allocation flow on next login.
+  let allocatedStats: CharacterStats | undefined;
+  if (rawStats !== undefined) {
+    const statValidation = validateStatAllocation(rawStats);
+    if (!statValidation.ok) {
+      return errorResponse(400, statValidation.error);
+    }
+    allocatedStats = statValidation.stats;
+  }
+
+  const db = await getDb();
+  const worldPreset = await getGameStatePresetOrDefault(db);
+
+  const singleplayerConfig = isSingleplayer()
+    ? (
+        await db
+          .collection<{ _id: string; singleplayerConfig?: SingleplayerConfig }>("gameState")
+          .findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } })
+      )?.singleplayerConfig
+    : undefined;
+  if (singleplayerConfig?.mode === "head-of-state") {
+    const countryId = requestedCountryId.toUpperCase() as CountryId;
+    if (!getSingleplayerHeadOfStateOfficeType(countryId, worldPreset)) {
+      return errorResponse(
+        400,
+        "Head of State mode requires a nation with a playable head-of-state office."
+      );
+    }
+  }
+  if (singleplayerConfig?.mode === "worldsim") {
+    return errorResponse(409, "Worldsim mode is playerless and does not allow character creation.");
+  }
+
+  // Verify state exists, scoped to the country the user picked at registration.
+  const stateDoc = await db.collection<State>("states").findOne({
+    _id: homeState,
+    countryId: requestedCountryId.toUpperCase() as import("@/lib/constants/countries").CountryId,
+  });
+  if (!stateDoc) {
+    return errorResponse(400, "Invalid home state");
+  }
+
+  // Alaska and Hawaii retain territorial politics before statehood: they are
+  // playable homes with party organization and territorial governor races.
+  if ((stateDoc.countryId ?? "US") === "US") {
+    const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
+    if (!isUsResidentPoliticalRegion(stateDoc._id, preset, admittedIds)) {
+      return errorResponse(400, unplayableTerritoryHomeError(stateDoc.name));
+    }
+  }
+
+  // Get game config, user, country access, and current turn in parallel
+  const [gameConfig, userDoc, countryAccess, gameTime] = await Promise.all([
+    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+    db.collection("users").findOne({ _id: new ObjectId(userId) }),
+    getCountryAccess(stateDoc.countryId),
+    getGameTime(),
+  ]);
+
+  // Check character limit: admins are unlimited; test mode allows 3 for everyone; otherwise 1.
+  const activeCount = userDoc?.activeCharacterCount ?? 0;
+  const isAdmin = !!userDoc?.isAdmin;
+  const isTestMode = !!gameConfig?.testMode;
+  const TEST_MODE_CHARACTER_LIMIT = 3;
+
+  if (!isAdmin) {
+    if (isTestMode && activeCount >= TEST_MODE_CHARACTER_LIMIT) {
+      return errorResponse(
+        409,
+        `Test server allows up to ${TEST_MODE_CHARACTER_LIMIT} characters per account`
+      );
+    } else if (!isTestMode && activeCount >= 1) {
+      return errorResponse(409, "You already have a character");
+    }
+  }
+
+  if (!gameConfig) {
+    return errorResponse(500, "Game not configured. Please contact administrator.");
+  }
+
+  // Block character creation during maintenance: admins bypass so they can
+  // verify a freshly-reset world before reopening it.
+  //
+  // This guard is enforced here, in the route, rather than relying on the
+  // proxy's maintenance redirect: `src/proxy.ts` returns early for `/api/*`
+  // (so API clients get JSON, not a maintenance HTML redirect), which means
+  // no API route is covered by that gate. Without this check a non-admin who
+  // reached the creation form: or simply POSTed here directly: could still
+  // create a character while the site was sealed. Mirrors the same guard on
+  // `POST /api/auth/register`, and reads `gameConfig` directly so it agrees
+  // with the admin panel and `/api/maintenance`.
+  // `computeIntakeStatus` is the same derivation /create-character reads
+  // before it shows the form, so the page and this route cannot disagree.
+  if (!isAdmin && !computeIntakeStatus(gameConfig).characterCreation.open) {
+    return errorResponse(
+      503,
+      "Character creation is disabled during maintenance. Please try again later."
+    );
+  }
+
+  if (
+    requiresDiscordForNewCharacter(gameConfig.discordLinkRequiredForCharacter, userDoc?.discordId)
+  ) {
+    return errorResponse(
+      403,
+      "Link your Discord account before creating a new character. Your existing characters remain playable.",
+      { code: "DISCORD_LINK_REQUIRED" }
+    );
+  }
+
+  const isReferred = !!userDoc?.referredBy;
+  // Era money: a 1953 world's economy is ~70x smaller in nominal terms, and
+  // corp founding costs deflate with this, so the two stay in proportion.
+  const REFERRAL_PERSONAL_CAPITAL_BONUS = getEraNominalAmount(500_000, worldPreset);
+
+  // Wealth background sets personal cash only; campaign funds are flat from gameConfig.
+  // WEALTH_BONUS is shared with the registration UI so the previewed amount and the
+  // amount actually credited here can never drift.
+  const wealthBonus = getWealthBonus(demographics.wealth as WealthLevel, worldPreset);
+  const startingDonorBaseLevel = Math.max(
+    gameConfig.startingDonorBaseLevel ?? 0,
+    MIN_STARTING_DONOR_BASE_LEVEL
+  );
+
+  // Create character with starting values
+  // Derive countryId from the state document (populated from DB above)
+  const countryId = stateDoc.countryId;
+
+  const forexEnabled = await isForexEnabled();
+  const campaignRates = await loadCampaignCurrencyRates(db);
+  const startingRate = campaignLocalRate(countryId, campaignRates, worldPreset);
+  const startingCampaignFunds = Math.round(
+    gameConfig.startingFunds *
+      resolveCampaignPriceLevel(gameConfig.campaignEraPriceLevelEnabled, worldPreset)
+  );
+  const homeCurrency = getSeedCurrencyCode(countryId as CountryId, worldPreset);
+
+  // Block character creation in disabled countries (admins bypass for testing)
+  if (!isAdmin && !countryAccess.enabledForPlayers) {
+    return errorResponse(403, "This country is not currently available for new characters.");
+  }
+
+  return await withPartyTerritoryMutation(db, [{ countryId, partyId: selectedParty }], async () => {
+    // Validate BEFORE insertion: the new member must not create the very
+    // presence that would make their otherwise out-of-reach party eligible.
+    if (selectedParty !== "independent") {
+      if (!/^[1-9]\d*$/.test(selectedParty)) {
+        return errorResponse(400, "Invalid starting party");
+      }
+      const party = await findPartyBySequentialId(db, selectedParty, countryId);
+      if (!party || party.isDefunct) {
+        return errorResponse(400, "Starting party is not available in this country");
+      }
+      if (!isAdmin) {
+        if (party.membershipMode === "approval") {
+          return errorResponse(
+            403,
+            "This party requires approval. Start as Independent and apply to join."
+          );
+        }
+        const frontier = await canCharacterJoinParty(db, { homeState }, party, countryId);
+        if (!frontier.ok) return errorResponse(403, frontier.error);
+      }
+    }
+
+    const startingInfluence = Math.max(
+      gameConfig.startingPoliticalInfluence ?? 0,
+      NEW_CHARACTER_STARTING_INFLUENCE
+    );
+    const character: Omit<Character, "_id"> = {
+      userId: new ObjectId(userId),
+      ...(singleplayerConfig?.mode === "head-of-state" ? { singleplayerHeadOfState: true } : {}),
+      name,
+      homeState,
+      countryId,
+      // Per-character starting nationality. `users.accountCountryId` reflects only the first character, so it cannot answer where THIS character started.
+      startingCountryId: countryId,
+      initialIncomeTier: demographics.wealth,
+      incomeTier: demographics.wealth,
+      incomeTaxStartTurn: gameTime.currentTurn + 1,
+
+      // Core Stats (10% bonus if referred, except donorBase). Starting
+      // influence never goes below the NPP seed of 10.
+      politicalInfluence: isReferred ? Math.floor(startingInfluence * 1.1) : startingInfluence,
+      // Recorded so onboarding metrics can tell real growth from the start.
+      startingPoliticalInfluence: isReferred
+        ? Math.floor(startingInfluence * 1.1)
+        : startingInfluence,
+      favorability: isReferred
+        ? Math.floor(gameConfig.startingFavorability * 1.1)
+        : gameConfig.startingFavorability,
+      infamy: gameConfig.startingInfamy,
+
+      // Resources (+10 extra actions and personal capital bonus if referred)
+      // Wealth level affects personal cash only; campaign funds start flat from gameConfig
+      funds: startingCampaignFunds,
+      cashOnHand: wealthBonus + (isReferred ? REFERRAL_PERSONAL_CAPITAL_BONUS : 0),
+      actions: isReferred ? gameConfig.startingActions + 10 : gameConfig.startingActions,
+      // Dual-write: both legacy fields (funds, cashOnHand) and new currencyBalances are set.
+      // When forexEnabled, `currencyBalances.campaign` stores the home-currency
+      // campaign balance while `funds` remains the internal/anchor mirror for
+      // compatibility reads.
+      //
+      // Starting endowments and founding costs share the world's frozen base.
+      // Live market changes never create different endowments between cohorts.
+      ...(forexEnabled
+        ? {
+            currencyBalances: {
+              campaign: Math.round(startingCampaignFunds * startingRate),
+              personal: {
+                [homeCurrency]: Math.round(
+                  (wealthBonus + (isReferred ? REFERRAL_PERSONAL_CAPITAL_BONUS : 0)) * startingRate
+                ),
+              },
+            },
+            displayCurrencyPreference: "local" as const,
+            autoConvertEnabled: true,
+          }
+        : {}),
+      donorBaseLevel: startingDonorBaseLevel,
+
+      // RPG stats: written only when the creation UI supplied a legal 28-point
+      // allocation. Seed an empty XP ledger and anchor the Debate decay clock.
+      ...(allocatedStats
+        ? {
+            stats: allocatedStats,
+            statsAllocated: true,
+            statXp: {},
+            debateDecayAnchor: new Date(),
+          }
+        : {}),
+
+      // Policy Positions (economic and social, -5 to +5)
+      policies: {
+        economic: Math.round(policies.economic),
+        social: Math.round(policies.social),
+      },
+
+      // Demographics
+      demographics,
+
+      // Political Status
+      party: selectedParty,
+      // Tenure anchor for the leadership gate: only when starting in a real
+      // party (independents have no party tenure). See leadershipTenure.ts.
+      ...(selectedParty && selectedParty !== "independent"
+        ? {
+            partyJoinedTurn: gameTime.currentTurn,
+            // `partyJoinedAt` anchors the career-history party-tenure date to the
+            // game clock so a character created mid-era shows the correct game-era
+            // join year, not a wall-clock fallback (e.g. ~1997 for a 1991-start
+            // game at turn 300). See buildPartyTenures tail reconciliation.
+            // `effectiveNow` = lastTurnProcessed when not paused, which maps
+            // through formatGameMonth() to the current game month/year.
+            partyJoinedAt: gameTime.effectiveNow,
+          }
+        : {}),
+      currentOffice: null,
+
+      // Legacy savings mirror (pre-forex); forex-era equivalent is currencyBalances.savings
+      savingsOnHand: 0,
+      // Line of credit: initialized empty so the turn processor can safely
+      // read balances/arrears without checking for document existence first.
+      lineOfCredit: {
+        balances: {},
+        arrears: {},
+      },
+
+      // Career & influence (initialized empty so readers never see undefined)
+      careerHistory: [],
+      executiveTermsServed: {},
+      nationalInfluence: 0,
+      partyInfluence: 0,
+      groupFavorability: {},
+      archetypeApprovals: {},
+      onboardingDismissed: false,
+      // Only set when an older client still sends it. New characters answer the
+      // welcome flow instead, which writes `tutorial` (see tutorialPlan.ts).
+      ...(tutorialTrack ? { tutorialTrack } : {}),
+      hasReadWiki: false,
+      autoRunForReelection: false,
+      positionUpdateVouchers: 0,
+
+      // Sequential ID for stable URLs
+      sequentialId: await getNextSequentialId(db, "character"),
+      createdAt: new Date(),
+      // Turn-first anchor for the 48-turn new-character transfer barrier.
+      createdTurn: gameTime.currentTurn,
+      updatedAt: new Date(),
+    };
+
+    // Reserve the character slot atomically before inserting. The read-time
+    // check above is only a fast path: two concurrent requests could
+    // otherwise both pass it and leave an uncounted second character.
+    const characterLimit = isTestMode ? TEST_MODE_CHARACTER_LIMIT : 1;
+    const slotFilter: Record<string, unknown> = { _id: new ObjectId(userId) };
+    if (!isAdmin) {
+      slotFilter.$or = [
+        { activeCharacterCount: { $exists: false } },
+        { activeCharacterCount: { $lt: characterLimit } },
+      ];
+    }
+    const reserved = await db
+      .collection("users")
+      .updateOne(slotFilter, { $inc: { activeCharacterCount: 1 } });
+    if (reserved.matchedCount === 0) {
+      return errorResponse(409, "You already have a character");
+    }
+    const releaseSlot = () =>
+      db
+        .collection("users")
+        .updateOne({ _id: new ObjectId(userId) }, { $inc: { activeCharacterCount: -1 } });
+
+    let result: { insertedId: ObjectId };
+    try {
+      result = await db.collection("characters").insertOne(character);
+    } catch (err) {
+      // Older environments can still carry the legacy unique characters.userId index.
+      // Admin/test-mode multi-character creation is the first place that stale index surfaces.
+      if (isUserIdDuplicateKey(err)) {
+        if ((isAdmin || isTestMode) && (await repairLegacyCharacterUserIdIndex(db))) {
+          try {
+            result = await db.collection("characters").insertOne(character);
+            // Retry succeeded after removing the stale unique userId index.
+          } catch (retryErr) {
+            await releaseSlot();
+            if (isUserIdDuplicateKey(retryErr)) {
+              return errorResponse(409, "You already have a character");
+            }
+            throw retryErr;
+          }
+        } else {
+          await releaseSlot();
+          return errorResponse(409, "You already have a character");
+        }
+      } else {
+        await releaseSlot();
+        throw err;
+      }
+    }
+    const characterId = result.insertedId;
+
+    // Point the account at the new character before any best-effort follow-up
+    // work. If a later step throws, the player still lands on this character
+    // instead of being sent back to character creation.
+    await db.collection("users").updateOne(
+      { _id: new ObjectId(userId) },
+      {
+        $set: {
+          hasCompletedSetup: true,
+          activeCharacterId: characterId,
+          accountCountryId: userDoc?.accountCountryId ?? countryId,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    if (singleplayerConfig?.mode === "head-of-state") {
+      await seatSingleplayerHeadOfState(db, {
+        characterId,
+        countryId,
+        now: new Date(),
+        preset: worldPreset,
+      });
+    }
+
+    // Reward referrer: +10 actions, +$500k personal capital, increment referralCount
+    if (isReferred && userDoc?.referredBy) {
+      const referrerChar = await db
+        .collection("characters")
+        .findOne({ userId: userDoc.referredBy });
+      if (referrerChar) {
+        const referrerCountry = (referrerChar.countryId as string) ?? "US";
+        const referrerCurrency = getSeedCurrencyCode(referrerCountry as CountryId, worldPreset);
+        const contestStartedAt = gameConfig?.referralContestStartedAt;
+        const contestActive =
+          contestStartedAt instanceof Date && character.createdAt >= contestStartedAt;
+        const referrerUserInc: Record<string, number> = { referralCount: 1 };
+        if (contestActive) referrerUserInc.referralContestCount = 1;
+
+        await Promise.all([
+          db.collection("characters").updateOne(
+            { _id: referrerChar._id },
+            {
+              $inc: {
+                actions: 10,
+                ...buildPersonalBalanceInc(
+                  REFERRAL_PERSONAL_CAPITAL_BONUS,
+                  referrerCurrency,
+                  forexEnabled
+                ),
+              },
+              $set: { updatedAt: new Date() },
+            }
+          ),
+          db.collection("users").updateOne({ _id: userDoc.referredBy }, { $inc: referrerUserInc }),
+        ]);
+        // Clamp the post-bonus total at the referrer's Energy-scaled action cap
+        // (matches actionRefresh), not the static baseline.
+        const referrerCap = energyActionLimits(referrerChar.stats?.energy ?? STAT_MIN).cap;
+        await db
+          .collection("characters")
+          .updateOne({ _id: referrerChar._id }, [
+            { $set: { actions: { $min: [referrerCap, "$actions"] } } },
+          ]);
+      }
+    }
+
+    // Award Alpha Tester achievement (account-bound, keyed by userId)
+    try {
+      const { awardAchievement } = await import("@/lib/achievements");
+      await awardAchievement(new ObjectId(userId), "alpha_tester", characterId);
+    } catch (e) {
+      console.error("Achievement award failed:", e);
+    }
+
+    // Welcome mail pointing at the onboarding checklist (best-effort).
+    try {
+      await sendSystemMail(db, {
+        toCharacterId: characterId,
+        toCharacterName: name,
+        toCharacterSequentialId: character.sequentialId ?? 0,
+        toUserId: new ObjectId(userId),
+        senderName: WELCOME_MAIL_SENDER,
+        subject: WELCOME_MAIL_SUBJECT,
+        body: buildWelcomeMailBody({
+          countryId,
+          startingFunds: character.funds ?? startingCampaignFunds,
+          startingActions: character.actions,
+          rewardAmount: onboardingRewardAmount(startingCampaignFunds),
+          turnLengthMinutes: gameConfig.turnLengthMinutes,
+          currencyCode: homeCurrency,
+          localStartingFunds: campaignAnchorToLocal(
+            character.funds ?? gameConfig.startingFunds,
+            countryId,
+            campaignRates,
+            worldPreset
+          ),
+          localRewardAmount: campaignAnchorToLocal(
+            onboardingRewardAmount(startingCampaignFunds),
+            countryId,
+            campaignRates,
+            worldPreset
+          ),
+        }),
+      });
+    } catch (e) {
+      console.error("Welcome mail failed:", e);
+    }
+
+    // Clear the character-creation hint cookie now that the player has a
+    // character, so the post-create redirect to /dashboard is not bounced back
+    // to /create-character by the middleware on a stale hint.
+    await setCharacterGateCookie(await cookies(), false);
+
+    // Get username to update the account_created log with character name
+    const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+    if (user?.username) {
+      // Update the account_created log to include the character name
+      await db.collection("adminLogs").updateOne(
+        {
+          username: user.username,
+          action: "account_created",
+          $or: [{ characterName: { $exists: false } }, { characterName: null }],
+        },
+        { $set: { characterName: name } }
+      );
+    }
+
+    // Anonymous, consent-independent count (see intakeEvents.ts): nothing in
+    // it identifies the account.
+    await captureIntakeEvent("character_registered", {
+      auth_provider: authProviderOf(user),
+      account_age_band: accountAgeBand(user?.createdAt),
+      first_character: activeCount === 0,
+      nation_id: (stateDoc.countryId ?? requestedCountryId).toLowerCase(),
+    });
+
+    if (data.analyticsConsent) {
+      await rememberCharacterActivation(db, result.insertedId.toString(), {
+        createdTurn: gameTime.currentTurn,
+        startingNationId: stateDoc.countryId ?? requestedCountryId.toUpperCase(),
+        characterCount: activeCount + 1,
+      });
+    }
+
+    return NextResponse.json(
+      {
+        message: "Character created successfully",
+        characterId: result.insertedId.toString(),
+        createdTurn: gameTime.currentTurn,
+        countryId: stateDoc.countryId ?? requestedCountryId.toUpperCase(),
+        characterCount: activeCount + 1,
+      },
+      { status: 201 }
+    );
+  });
+}

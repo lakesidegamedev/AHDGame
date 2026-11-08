@@ -1,0 +1,645 @@
+import {
+  getOperatingSectorType,
+  getStrategyForOperatingModel,
+} from "@/lib/constants/sectorStrategies";
+import { NextResponse } from "next/server";
+import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
+import { ObjectId } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import type { getAuthUser } from "@/lib/auth";
+import { errorResponse } from "@/lib/api/errors";
+import type { CountryId } from "@/lib/constants/countries";
+import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
+import type {
+  State,
+  Corporation,
+  CorporateSector,
+  Character,
+  StateMetrics,
+  Tariff,
+  UnownedSector,
+  ImperialCharacter,
+  User,
+} from "@/lib/db/types";
+import { getEffectiveTariffRate, getSplitCaptureMultiplier } from "@/lib/tariffs/tariffEffects";
+import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
+import {
+  corpLiquidCapitalToAnchor,
+  fxRateForSectorHostFromMap,
+  getCorpFxRate,
+  loadFxRatesByCurrency,
+  resolveSectorHostCurrencyCode,
+} from "@/lib/currency/corporationCapital";
+import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+  operatingSectorIdentity,
+  type OperatingSectorType,
+  SECTOR_MARKET_GDP_FRACTION,
+  SECTOR_TYPE_COUNT,
+  SPLIT_BASE_CAPTURE_FRACTION,
+  UNOWNED_CAPTURE_BONUS_MULTIPLIER,
+  ATTACK_OWNED_CONTESTED_FRACTION,
+  MS_CAPTURE_DIVISOR,
+  calculateWorkers,
+  getDominanceAttackEaseMultiplier,
+  getUnderdogAttackAmplifier,
+} from "@/lib/constants/corporations";
+import { roundMarketingStrength } from "@/lib/utils/formatters";
+import {
+  calculateAttackCostAnchor,
+  calculateSplitCostAnchor,
+  calculateSplitMsCost,
+} from "@/lib/corporations/marketActionCosts";
+import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import {
+  buildRoomUnits,
+  loadBuildRoomContext,
+  loadCountryQueuedUnitsByLane,
+  queuedUndeliveredUnits,
+  supplyMixSharesCountryDemand,
+} from "@/lib/corporations/buildRoom";
+import { shouldRedactCorporation } from "@/lib/corporations/redaction";
+import { effectiveMarketAnchor } from "@/lib/corporations/marketShare";
+import { aggregateCountrySectorMix } from "@/lib/economy/sectorMix";
+import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
+import type { GameState } from "@/lib/db/types/gameState";
+import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
+
+type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
+
+export interface RegionEconomyArgs {
+  countryId: CountryId;
+  stateId: string;
+  user: AuthedViewer;
+  modViewRequested: boolean;
+}
+
+/** Economic breakdown for one region: market size, corporate owners and the unowned remainder per sector. */
+export async function buildRegionEconomyResponse({
+  countryId,
+  stateId,
+  user,
+  modViewRequested,
+}: RegionEconomyArgs) {
+  const db = await getDb();
+
+  // Optionally get current user's corporation for UI hints
+  let userCorporationId: string | null = null;
+  let userCorporationSectorType: OperatingSectorType | null = null;
+  let userMarketingStrength = 0;
+  let userLiquidCapitalAnchor = 0;
+  let userSplitEscalation = 0;
+  let userCorpCountryId: string | null = null;
+
+  // Private corps hide marketingStrength/revenue/workers unless viewer is owner, admin, or moderator with ?modView=1.
+  const viewerUserId = user?.userId;
+  const viewerIsAdmin = user?.isAdmin === true;
+  const modViewEnabled = !user?.isAdmin && user?.isModerator === true && modViewRequested;
+
+  if (user) {
+    const corpProjection = {
+      projection: {
+        _id: 1,
+        type: 1,
+        industryModel: 1,
+        mediaDiscriminator: 1,
+        marketingStrength: 1,
+        liquidCapital: 1,
+        liquidCurrencyCode: 1,
+        splitEscalation: 1,
+        countryId: 1,
+      },
+    };
+
+    // Check imperial mode first, then fall back to regular character
+    const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    let corp: Corporation | null = null;
+
+    if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
+      const imperial = await db
+        .collection<ImperialCharacter>("imperialCharacters")
+        .findOne({ _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) });
+      if (imperial) {
+        corp = await db
+          .collection<Corporation>("corporations")
+          .findOne(
+            { ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } },
+            corpProjection
+          );
+      }
+    } else {
+      const character = await db.collection<Character>("characters").findOne({
+        userId: new ObjectId(user.userId),
+      });
+      if (character) {
+        corp = await db
+          .collection<Corporation>("corporations")
+          .findOne({ ceoId: character._id, ceoVacant: { $ne: true } }, corpProjection);
+      }
+    }
+
+    if (corp) {
+      userCorporationId = corp._id.toString();
+      userCorporationSectorType = getOperatingSectorType(
+        corp.type,
+        corp.industryModel,
+        corp.mediaDiscriminator
+      );
+      userMarketingStrength = corp.marketingStrength ?? 0;
+      userLiquidCapitalAnchor = corpLiquidCapitalToAnchor(
+        corp.liquidCapital ?? 0,
+        corp,
+        await getCorpFxRate(db, corp)
+      );
+      userSplitEscalation = corp.splitEscalation ?? 0;
+      userCorpCountryId = corp.countryId ?? null;
+    }
+  }
+
+  const [state, stateMetricsDoc, stateTariffs, stateCapDoc, activeFtaPairs] = await Promise.all([
+    db.collection<State>("states").findOne({ _id: stateId, countryId }),
+    // SP5: workforce skill spans both pipelines: shared loader.
+    loadWorkforceSkillByState(db, [stateId]).then((m) => {
+      const value = m.get(stateId);
+      return value == null ? null : ({ education: { workforceSkill: { value } } } as StateMetrics);
+    }),
+    db.collection<Tariff>("tariffs").find({ countryId }).toArray(),
+    db
+      .collection("stateResourceCapacity")
+      .findOne({ stateId }, { projection: { stateId: 1, resources: 1 } }),
+    loadActiveFtaPairs(db),
+  ]);
+  if (!state) {
+    return errorResponse(404, "State not found");
+  }
+  const workforceSkill = stateMetricsDoc?.education?.workforceSkill?.value ?? null;
+
+  // Macro header context. Null-safe throughout: missing metrics degrade the
+  // header, they never fail the route.
+  //
+  // This region's own rate comes from its own metrics document.
+  const regionGrowthDoc = await db
+    .collection<StateMetrics>("macroMetrics")
+    .findOne({ _id: stateId }, { projection: { "economic.gdpGrowth.value": 1 } });
+  const regionGrowthValue = regionGrowthDoc?.economic?.gdpGrowth?.value;
+  const stateGdpGrowth =
+    typeof regionGrowthValue === "number" && Number.isFinite(regionGrowthValue)
+      ? regionGrowthValue
+      : null;
+
+  // The NATIONAL figure is the canonical one, NOT a population-weighted mean of
+  // the regions. This page reported 6.56% for RU where the Economy and Central
+  // Bank pages both said 5.14%, because population is the wrong weight: the
+  // engine compounds each region's GDP by that region's own rate, so only a
+  // GDP-weighted aggregate is consistent, and the national doc already is one.
+  // See lib/country/nationalGdpGrowth.
+  const growthGameState = await db
+    .collection<GameState>("gameState")
+    .findOne({ _id: "current" }, { projection: { currentYear: 1, currentTurn: 1 } });
+  const nationalGdpGrowth = await loadNationalGdpGrowth(
+    db,
+    countryId,
+    growthGameState?.currentYear
+  );
+
+  // GDP→₳ rate is era-scoped: each world normalizes with its own era's rates.
+  const economyPreset = await loadWorldPreset(db);
+  const usdExchangeRate = getGdpAnchorRate(countryId, economyPreset);
+  const totalMarketPerSector = Math.round(
+    (state.gdp * usdExchangeRate * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT
+  );
+
+  // Get all corporate sectors in this state
+  const sectors = await db
+    .collection<CorporateSector>("corporateSectors")
+    .find({ stateId })
+    .toArray();
+
+  // Get unowned sectors for this state from DB
+  const unownedDocs = await db
+    .collection<UnownedSector>("unownedSectors")
+    .find({ stateId })
+    .toArray();
+  // Keyed by operating lane: the vehicles and entertainment markets are their own rows.
+  const laneOf = (
+    row: Pick<UnownedSector, "sectorType" | "industryModel" | "mediaDiscriminator">
+  ) => getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator);
+  const unownedByType = new Map(unownedDocs.map((u) => [laneOf(u), u.revenue]));
+  // Plants tier: the state board reframes the unowned pool as UNMET DEMAND in
+  // output units, the quantity a player can build against rather than a pool
+  // they can no longer buy into. Headroom is self-healed from revenue for
+  // rows predating the backfill; a bare 0 would report a busy market as no demand.
+  const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+
+  // Get corporation details for each sector
+  const corpIds = [...new Set(sectors.map((s) => s.corporationId))];
+  const corporations =
+    corpIds.length > 0
+      ? await db
+          .collection<Corporation>("corporations")
+          .find({ _id: { $in: corpIds } })
+          .project({
+            _id: 1,
+            name: 1,
+            ceoId: 1,
+            ceoType: 1,
+            ceoVacant: 1,
+            sequentialId: 1,
+            brandColor: 1,
+            logoUrl: 1,
+            marketingStrength: 1,
+            countryOwnerId: 1,
+            countryId: 1,
+            liquidCurrencyCode: 1,
+            isPrivate: 1,
+            userId: 1,
+          })
+          .toArray()
+      : [];
+  const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
+
+  // Sector economic fields are stored in the HOST market's currency, not
+  // the owner's home currency. Normalize host -> ₳ before aggregating mixed
+  // domestic/foreign ownership in this regional market.
+  const fxByCurrency = await loadFxRatesByCurrency(db);
+  const sectorRevenueAnchorById = new Map<string, number>();
+  for (const s of sectors) {
+    const owner = corpMap.get(s.corporationId.toString());
+    const hostCode = resolveSectorHostCurrencyCode(s, owner);
+    const hostRate = fxRateForSectorHostFromMap(s, owner, fxByCurrency);
+    sectorRevenueAnchorById.set(
+      s._id.toString(),
+      readCorpEconomicAnchor(s.revenue, hostCode, hostRate)
+    );
+  }
+
+  // Get CEO names for display: query both characters and imperialCharacters
+  const regularCeoIds: import("mongodb").ObjectId[] = [];
+  const imperialCeoIds: import("mongodb").ObjectId[] = [];
+  for (const c of corporations) {
+    if (!c.ceoId) continue;
+    if ((c as Corporation).ceoType === "imperial") {
+      imperialCeoIds.push(c.ceoId);
+    } else {
+      regularCeoIds.push(c.ceoId);
+    }
+  }
+
+  const ceoProjection = { _id: 1, name: 1, sequentialId: 1, countryId: 1 };
+  const [regularCeos, imperialCeos] = await Promise.all([
+    regularCeoIds.length > 0
+      ? db
+          .collection<Character>("characters")
+          .find({ _id: { $in: regularCeoIds } })
+          .project<{
+            _id: import("mongodb").ObjectId;
+            name: string;
+            sequentialId?: number;
+            countryId?: string;
+          }>(ceoProjection)
+          .toArray()
+      : [],
+    imperialCeoIds.length > 0
+      ? db
+          .collection<ImperialCharacter>("imperialCharacters")
+          .find({ _id: { $in: imperialCeoIds } })
+          .project<{
+            _id: import("mongodb").ObjectId;
+            name: string;
+            sequentialId?: number;
+            countryId?: string;
+          }>(ceoProjection)
+          .toArray()
+      : [],
+  ]);
+  const ceoMap = new Map([...regularCeos, ...imperialCeos].map((c) => [c._id.toString(), c]));
+
+  // Drop orphan sectors (corporationId points to a deleted corp). These show up
+  // as "Unknown" defenders in the UI and any Attack Sector click against them
+  // dies at the defender lookup in /attack-sector. Filtering here removes them
+  // from the owners list so they no longer surface as attackable rows; the
+  // unowned-market fallback naturally absorbs the empty slot. A separate
+  // migration sweeps the stale rows out of `corporateSectors`.
+  const liveSectors = sectors.filter((s) => corpMap.has(s.corporationId.toString()));
+
+  // Group sectors by type
+  const sectorsByType = new Map<OperatingSectorType, CorporateSector[]>();
+  for (const sector of liveSectors) {
+    const lane = laneOf(sector);
+    const list = sectorsByType.get(lane) ?? [];
+    list.push(sector);
+    sectorsByType.set(lane, list);
+  }
+
+  // Build response for each sector type. Revenue aggregation + market-share
+  // ratio both run on ₳-normalized values via sectorRevenueAnchorById so
+  // mixed-currency corps in the same state (cross-border ownership) don't
+  // distort the totals. Per-row `revenue` stays ₳ too: UI layer formats
+  // via wallet preference (no native corp-currency stamped per row because
+  // rows can be from different-currency corps).
+  const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
+  const buildQueueTurn = growthGameState?.currentTurn ?? 0;
+  // Lanes whose outputs all sell into the national book have ONE room to
+  // build for the whole country, so it nets off plants under construction
+  // anywhere in the country. The expansion picker reads it the same way.
+  const countryQueuedByLane = buildRoom
+    ? await loadCountryQueuedUnitsByLane(db, state.countryId ?? countryId, buildQueueTurn)
+    : new Map<OperatingSectorType, number>();
+  const economySectors = OPERATING_SECTOR_TYPES.map((sectorType) => {
+    const typeSectors = sectorsByType.get(sectorType) ?? [];
+    const ownedRevenue = typeSectors.reduce(
+      (sum, s) => sum + (sectorRevenueAnchorById.get(s._id.toString()) ?? 0),
+      0
+    );
+    // Use the persisted unowned pool when present so admin-spawned market is
+    // preserved; fall back to the GDP-derived gap, but never below owned revenue
+    // in this (state, sectorType): a sector can't hold >100% of its market.
+    // unownedSectors.revenue is native units so it sums with the anchor total.
+    // Under plants, market share is revenue over the cell's total real revenue:
+    // no unowned pool, splits retired (unowned is 0).
+    const persistedUnownedRevenue = unownedByType.get(sectorType);
+    const effectiveTotalMarket = plantsMode
+      ? Math.max(0, ownedRevenue)
+      : effectiveMarketAnchor(ownedRevenue, persistedUnownedRevenue, totalMarketPerSector);
+    const unownedRevenue = plantsMode ? 0 : Math.max(0, effectiveTotalMarket - ownedRevenue);
+
+    // Attacker's share of this (state, sectorType) cell: used by the
+    // underdog amplifier so the preview's capture estimate matches what the
+    // attack route will actually produce.
+    const userRevenueAnchorInType = userCorporationId
+      ? typeSectors
+          .filter((s) => s.corporationId.toString() === userCorporationId)
+          .reduce((sum, s) => sum + (sectorRevenueAnchorById.get(s._id.toString()) ?? 0), 0)
+      : 0;
+    const attackerShareInType =
+      effectiveTotalMarket > 0
+        ? Math.min(100, (userRevenueAnchorInType / effectiveTotalMarket) * 100)
+        : 0;
+
+    const owners = typeSectors.map((s) => {
+      const corp = corpMap.get(s.corporationId.toString());
+      const ceo = corp?.ceoId && !corp.ceoVacant ? ceoMap.get(corp.ceoId.toString()) : null;
+      const isNatcorp = !!corp?.countryOwnerId;
+      const sectorRevenueAnchor = sectorRevenueAnchorById.get(s._id.toString()) ?? 0;
+      const sectorMarketShare =
+        effectiveTotalMarket > 0
+          ? Math.min(100, Math.round((sectorRevenueAnchor / effectiveTotalMarket) * 10000) / 100)
+          : 0;
+      const dominanceAttackMult = getDominanceAttackEaseMultiplier(sectorMarketShare);
+      const underdogMult = getUnderdogAttackAmplifier(attackerShareInType, sectorMarketShare);
+      const hasPersistedPlantLedger =
+        Number.isInteger(s.plantCount) &&
+        (s.plantCount ?? 0) >= 2 &&
+        typeof s.capacityBookAnchor === "number" &&
+        Number.isFinite(s.capacityBookAnchor) &&
+        s.capacityBookAnchor >= 0;
+      const plantSplitQuote =
+        plantsMode &&
+        userCorporationId &&
+        userCorporationId !== s.corporationId.toString() &&
+        !isNatcorp &&
+        hasPersistedPlantLedger
+          ? calculatePlantSectorSplit({
+              defenderPlantCount: s.plantCount as number,
+              defenderBookValueAnchor: s.capacityBookAnchor as number,
+              attackerMarketingStrength: userMarketingStrength,
+              defenderMarketingStrength: corp?.marketingStrength ?? 0,
+            })
+          : null;
+      return {
+        sectorId: s._id.toString(),
+        corporationId: s.corporationId.toString(),
+        corporationName: corp?.name ?? "Unknown",
+        corporationSequentialId: corp?.sequentialId,
+        displayName: s.displayName ?? null,
+        sectorLabel: OPERATING_SECTOR_TYPE_LABELS[laneOf(s)],
+        brandColor: corp?.brandColor,
+        logoUrl: corp?.logoUrl ?? null,
+        ceoName: ceo?.name ?? "Unknown",
+        ceoCountryId: ceo?.countryId ?? null,
+        ceoSequentialId: ceo?.sequentialId,
+        revenue: Math.round(sectorRevenueAnchor),
+        marketShare: sectorMarketShare,
+        ...(plantsMode && hasPersistedPlantLedger ? { plantCount: s.plantCount } : {}),
+        workers: calculateWorkers(sectorRevenueAnchor, workforceSkill),
+        targetGrowthRate: s.targetGrowthRate ?? s.currentGrowthRate ?? s.growthRate ?? 0,
+        currentGrowthRate: s.currentGrowthRate ?? s.growthRate ?? 0,
+        productionLevel: s.productionPolicyLevel ?? 0,
+        defenderMarketingStrength: roundMarketingStrength(corp?.marketingStrength ?? 0),
+        isNatcorp,
+        isNpp: corp?.ceoType === "npp",
+        // For-sale listing (₳-anchored price): surfaces "for sale" badge
+        // and asking price on the state economy view.
+        forSale: s.forSale
+          ? {
+              listedAt: s.forSale.listedAt,
+              priceAnchor: s.forSale.priceAnchor,
+              npvAnchor: s.forSale.npvAnchor,
+            }
+          : null,
+        // Attack-owned estimates (when user has corp, not own sector, and not a natcorp).
+        // Cost denominated in ₳ so the UI formatter can convert to whatever
+        // currency the attacker's wallet prefers. Dominance multiplier scales
+        // the contested fraction so dominant defenders bleed more per attack.
+        ...(!plantsMode &&
+          userCorporationId &&
+          userCorporationId !== s.corporationId.toString() &&
+          !isNatcorp &&
+          (() => {
+            // Legacy worlds still quote the same cost and capture enforced by
+            // the attack route. Plant worlds use plantSplitQuote above.
+            const defenderMS = corp?.marketingStrength ?? 0;
+            const msSum = userMarketingStrength + defenderMS;
+            const attackerShare = msSum > 0 ? userMarketingStrength / msSum : 1;
+            const contestedAmount =
+              sectorRevenueAnchor *
+              ATTACK_OWNED_CONTESTED_FRACTION *
+              dominanceAttackMult *
+              underdogMult;
+            const actualCapture = Math.min(
+              Math.round(contestedAmount * attackerShare),
+              Math.max(0, Math.floor(sectorRevenueAnchor) - 1)
+            );
+            return {
+              attackCost: calculateAttackCostAnchor(sectorRevenueAnchor),
+              attackEstimatedCapture: actualCapture,
+            };
+          })()),
+        ...(plantSplitQuote ? { plantSplitQuote } : {}),
+      };
+    });
+
+    // Display corps from largest share to smallest so the UI ranks dominant
+    // players first. marketShare is rounded to 0.01%; revenue is rounded to
+    // whole anchor units, giving finer granularity, so it tiebreaks cleanly
+    // when two corps round to the same share. Sort is stable, so identical
+    // revenues preserve insertion order.
+    owners.sort((a, b) => b.marketShare - a.marketShare || b.revenue - a.revenue);
+
+    // Private corps hide marketingStrength/revenue/workers from non-CEO/admin/mod
+    // viewers (canonical allowlist in lib/corporations/redaction). marketShare is
+    // kept so the ownership ranking / Sector Targets view still works. Attack
+    // cost and estimated capture are KEPT visible: they are derived from
+    // revenue, but nulling them hides the Attack button in the UI, making
+    // private corps effectively immune to market-share attacks (reported bug).
+    // The defender's sensitive data (revenue, workers, MS) is still hidden.
+    // Redact after sorting so the revenue tiebreak above stays intact.
+    const redactedOwners = owners.map((o) => {
+      const corp = corpMap.get(o.corporationId);
+      const redact =
+        !!corp &&
+        shouldRedactCorporation(
+          { isPrivate: corp.isPrivate, userId: corp.userId },
+          viewerUserId,
+          viewerIsAdmin,
+          modViewEnabled
+        );
+      if (!redact) return o;
+      return {
+        ...o,
+        revenue: null as number | null,
+        workers: null as number | null,
+        defenderMarketingStrength: null as number | null,
+      };
+    });
+
+    // Unowned SPLITS are retired under plants: capacity is built, rivals are
+    // attacked. Still compute split quotes off-plants so legacy worlds work.
+    const sectorCountry = countryId;
+    const tariffEffectiveRate =
+      userCorpCountryId !== null
+        ? getEffectiveTariffRate(
+            stateTariffs,
+            sectorCountry,
+            sectorType,
+            userCorpCountryId as CountryId,
+            undefined,
+            activeFtaPairs
+          )
+        : 0;
+    const isDomesticSplitting = userCorpCountryId !== null && sectorCountry === userCorpCountryId;
+    const tariffMultiplier = getSplitCaptureMultiplier(tariffEffectiveRate, isDomesticSplitting);
+    const captureMultiplier = (1 + userMarketingStrength / MS_CAPTURE_DIVISOR) * tariffMultiplier;
+    const estimatedCapture = plantsMode
+      ? 0
+      : Math.min(
+          Math.round(
+            unownedRevenue *
+              SPLIT_BASE_CAPTURE_FRACTION *
+              captureMultiplier *
+              UNOWNED_CAPTURE_BONUS_MULTIPLIER
+          ),
+          Math.round(unownedRevenue)
+        );
+
+    const estimatedCapturePercent =
+      !plantsMode && effectiveTotalMarket > 0
+        ? Math.round((estimatedCapture / effectiveTotalMarket) * 10000) / 100
+        : 0;
+
+    // Plants-tier room to build in output units/day: buyers not being served,
+    // less capacity already under construction. Not the legacy unowned pool
+    // (a market can be short with an empty pool).
+    let room: { units: number; scope: "state" | "country" } | null = null;
+    if (buildRoom) {
+      const identity = operatingSectorIdentity(sectorType);
+      const supplyMix =
+        getStrategyForOperatingModel(
+          identity.sectorType,
+          "standard",
+          identity.industryModel,
+          identity.mediaDiscriminator
+        ).supply ?? {};
+      const countryShared = supplyMixSharesCountryDemand(supplyMix);
+      room = {
+        units: buildRoomUnits(
+          buildRoom.demandGapUnits(supplyMix, stateId, state.countryId ?? countryId),
+          countryShared
+            ? (countryQueuedByLane.get(sectorType) ?? 0)
+            : typeSectors.reduce(
+                (sum, s) => sum + queuedUndeliveredUnits(s.buildQueue, buildQueueTurn),
+                0
+              )
+        ),
+        scope: countryShared ? "country" : "state",
+      };
+    }
+
+    return {
+      type: sectorType,
+      label: OPERATING_SECTOR_TYPE_LABELS[sectorType],
+      totalMarket: effectiveTotalMarket,
+      ownedRevenue: Math.round(ownedRevenue),
+      unownedRevenue: Math.round(unownedRevenue),
+      unownedPercent:
+        effectiveTotalMarket > 0
+          ? Math.round((unownedRevenue / effectiveTotalMarket) * 10000) / 100
+          : 0,
+      splitCost: plantsMode ? 0 : calculateSplitCostAnchor(unownedRevenue),
+      estimatedCapture,
+      estimatedCapturePercent,
+      // Plants-tier: unmet demand in output units/day. Null elsewhere.
+      // Room to build: buyers here not being served, less capacity already
+      // under construction. Not the legacy unowned pool (a market can be
+      // short with an empty pool).
+      headroomUnits: room?.units ?? null,
+      // "country" when the figure above is shared by every state in the country.
+      headroomScope: room?.scope ?? null,
+      tariffEffectiveRate,
+      tariffMultiplier,
+      owners: redactedOwners,
+    };
+  });
+
+  // National effective-market totals per sector (₳) for the "X holds ≈Y% of
+  // the national market" cross-link line. Same aggregation the national
+  // Economic Outlook page renders, so the two surfaces can never disagree.
+  const nationalMix = await aggregateCountrySectorMix(db, countryId);
+  const nationalSectorTotals = Object.fromEntries(
+    nationalMix.map((entry) => [entry.type, entry.totalMarketAnchor])
+  );
+
+  // NPP corps are individually attackable unless an admin explicitly disabled it.
+  const attackCfg = await db
+    .collection("gameConfig")
+    .findOne({ _id: "default" } as Record<string, unknown>, {
+      projection: { nppCorpsAttackable: 1 },
+    });
+  const nppAttackable =
+    (attackCfg as { nppCorpsAttackable?: boolean } | null)?.nppCorpsAttackable !== false;
+
+  return NextResponse.json({
+    nppAttackable,
+    plantsMode,
+    stateId,
+    stateName: state.name,
+    stateGdp: state.gdp,
+    macro: { stateGdpGrowth, nationalGdpGrowth },
+    nationalSectorTotals,
+    sectorSpecializations: state.sectorSpecializations
+      ? {
+          primary: state.sectorSpecializations.primary,
+          primaryLabel: OPERATING_SECTOR_TYPE_LABELS[state.sectorSpecializations.primary],
+          primaryBonus: 10,
+          secondary: state.sectorSpecializations.secondary,
+          secondaryLabel: OPERATING_SECTOR_TYPE_LABELS[state.sectorSpecializations.secondary],
+          secondaryBonus: 5,
+        }
+      : null,
+    totalMarketPerSector,
+    sectors: economySectors,
+    userCorporationId,
+    userCorporationSectorType,
+    userMarketingStrength: roundMarketingStrength(userMarketingStrength),
+    userLiquidCapitalAnchor: Math.round(userLiquidCapitalAnchor),
+    // Rival attacks retain the escalation cost under plants even though
+    // unowned-market splits are retired there.
+    attackMsCost: calculateSplitMsCost(userSplitEscalation),
+    // MS escalation only mattered for unowned splits; zero under plants so no
+    // client can invent a Split CTA from a leftover quote.
+    splitMsCost: plantsMode ? 0 : Math.pow(2, userSplitEscalation),
+    stateResources: stateCapDoc?.resources ?? null,
+  });
+}
