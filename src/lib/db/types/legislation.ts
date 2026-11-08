@@ -651,6 +651,16 @@ export interface Bill {
    *  crisis-aid bills (category "foreign policy", no provisions) for the
    *  per-turn resolution sweep. */
   crisisAidId?: ObjectId;
+  /** Set on fast-track bills a legislature lever raises against a Crisis v2
+   *  crisis. The per-turn sweep records the lever use or the inaction once the
+   *  bill resolves. */
+  crisisEmergency?: {
+    crisisId: ObjectId;
+    leverId: string;
+    holderId: ObjectId;
+    /** Turn the sweep recorded the outcome; absent while unrecorded. */
+    recordedTurn?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
