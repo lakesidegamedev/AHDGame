@@ -170,7 +170,7 @@ describe("buildCorporationLookups — bond holdings", () => {
         evaluateResetApprovalModifiers(observations, {
           countryId: "UK",
           preset: "1991-default",
-          year: null,
+          year: 1991,
         })
       )
     );

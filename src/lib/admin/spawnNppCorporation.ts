@@ -351,7 +351,7 @@ export async function createNppCorporationShell(
   );
   const techGrantIds = autoGrantedNodeIds(
     getOperatingSectorType(type, industryModel, mediaDiscriminator),
-    resolveGameYear(techGameState) ?? getStartingYearForPreset(preset)
+    (techGameState ? resolveGameYear(techGameState) : null) ?? getStartingYearForPreset(preset)
   );
   const startingCapital =
     customCapital ??
