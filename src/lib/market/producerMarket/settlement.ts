@@ -645,8 +645,11 @@ export async function settleProducerTurn(
     clock.lap("closeMs");
     validateTargets(payload);
     clock.lap("validateTargetsMs");
-    checkBudget();
-    const encoded = encodeReceipt(payload, checkBudget);
+    // The market is fully computed here. The execution deadline guards the
+    // expensive clearing only: encoding and staging a finished receipt must not
+    // discard it, because a retry recomputes the same market against the same
+    // ceiling. The phase timeout still bounds this tail and keeps late completion.
+    const encoded = encodeReceipt(payload);
     clock.lap("encodeReceiptMs");
     const candidate: ProducerTurnRecord = {
       _id: key,
@@ -664,8 +667,7 @@ export async function settleProducerTurn(
       ...producerPlanningWarnings(payload.result.planning),
     ];
     clock.lap("verifyPhysicalAndCashMs");
-    await stageReceiptChunks(db, encoded.chunks, checkBudget);
-    checkBudget();
+    await stageReceiptChunks(db, encoded.chunks);
     clock.lap("stageChunksMs");
     try {
       await turns.insertOne(candidate);

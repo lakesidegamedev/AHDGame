@@ -220,6 +220,26 @@ describe("frozen producer turn settlement", () => {
       clock.mockRestore();
     }
   });
+  it("does not discard a fully computed market when the deadline passes during receipt work", async () => {
+    const { db, input, memory } = fixture();
+    let elapsed = 0;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => (elapsed += 1));
+    try {
+      // The deadline expires after clearing finishes, while the receipt is encoded and staged.
+      const result = await settleProducerTurn(db, {
+        ...input,
+        executionBudgetMs: 100_000,
+        close: () => {
+          elapsed += 1_000_000;
+          return { transfers: [] };
+        },
+      });
+      expect(result.close).toBeDefined();
+      expect(memory.collection("producerEconomyTurns").docs).toHaveLength(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
   it("freezes a runtime cutoff's actual pass count and retains diagnostics and warnings on retry", async () => {
     const { db, input, memory } = fixture();
     input.production.maximumPlanningPasses = 64;

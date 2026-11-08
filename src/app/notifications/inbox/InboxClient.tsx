@@ -48,6 +48,8 @@ function segmentLabel(seg: "all" | "action" | "notifs" | "mail"): string {
 
 const FOCUS_LIMIT = 24;
 
+const asRead = (item: InboxItem): InboxItem => ({ ...item, unread: false, action: false });
+
 /**
  * Keep the broad inbox views useful on busy accounts. Actionable unread items
  * always win the first slots, then the remaining unread items, then recent
@@ -143,11 +145,12 @@ export function InboxClient() {
     if (state.seg === "action") {
       return base.filter((i) => {
         const effectivelyUnread = i.unread && !state.readIds.has(i.id);
-        return i.action && effectivelyUnread;
+        // The open item stays put after opening it marks it read.
+        return (i.action && effectivelyUnread) || i.id === state.selId;
       });
     }
     return base;
-  }, [items, state.seg, state.archivedIds, state.snoozedIds, state.readIds]);
+  }, [items, state.seg, state.archivedIds, state.snoozedIds, state.readIds, state.selId]);
 
   const counts = useMemo(() => {
     const activeItems = items.filter(
@@ -162,18 +165,15 @@ export function InboxClient() {
     };
   }, [items, state.archivedIds, state.snoozedIds, state.readIds]);
 
-  const itemsWithReadState = useMemo(
-    () =>
-      visibleItems.map((item) =>
-        state.readIds.has(item.id) ? { ...item, unread: false, action: false } : item
-      ),
-    [visibleItems, state.readIds]
-  );
-
-  const railItems = useMemo(
-    () => (showHistory ? itemsWithReadState : focusItems(itemsWithReadState)),
-    [itemsWithReadState, showHistory]
-  );
+  // The open item keeps its original rank in the focused list (it is ranked
+  // before it turns read), then is shown as read.
+  const railItems = useMemo(() => {
+    const ranked = visibleItems.map((item) =>
+      state.readIds.has(item.id) && item.id !== state.selId ? asRead(item) : item
+    );
+    const shown = showHistory ? ranked : focusItems(ranked);
+    return shown.map((item) => (state.readIds.has(item.id) ? asRead(item) : item));
+  }, [visibleItems, state.readIds, state.selId, showHistory]);
 
   // Derive effective selected item (default to first if none selected)
   const selId =
