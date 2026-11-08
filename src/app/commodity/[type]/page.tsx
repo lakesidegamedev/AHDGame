@@ -1,7 +1,7 @@
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import BackButton from "@/components/BackButton";
-import { getCommodityDetailData } from "../../api/commodities/[type]/route";
+import { getCommodityDetailData } from "@/lib/commodities/commodityDetail";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES, COMMODITY_LABELS } from "@/lib/constants/commodities";
 import type { CommodityDetail } from "./types";
