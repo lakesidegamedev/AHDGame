@@ -6,9 +6,10 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { cabinetMacroRegistry } from "@/lib/resetCabinet/rules/gameplay";
 import { sumObservedOutput, outputHistorySpanTurns } from "./rules/outputVolume";
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { StateMetrics, GameConfig } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
+import type { FederalBudget } from "@/lib/db/types/budget";
 import { isLabourMacroEnabled } from "@/lib/labour/featureFlag";
 import { getEraEnvelope } from "@/lib/era/metricCatalog";
 import { resolveGameYear } from "@/lib/era/era";
@@ -32,6 +33,14 @@ import {
 } from "@/lib/turn/gdpGrowth";
 import { evaluateRegistry } from "./evaluate";
 import { compoundGdpLevel } from "./gdpLevel";
+import {
+  GDP_SMOOTHING_INERTIA,
+  advancePriceIndex,
+  resolvePriceIndex,
+  smoothNationalGdpPerTurn,
+  toNominalOutput,
+  toRealOutput,
+} from "./priceLevel";
 import { advanceCapitalStock, seedCapitalStock } from "./capitalStock";
 import { combineAdditionalCapitalInvestment } from "./publicCapital";
 import {
@@ -592,22 +601,62 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   // National state-ownership concentration (SOCI) per country — lagged command signal.
   const sociByCountry = new Map<string, number>();
   const budgets = await db
-    .collection<{ _id: string; countryId?: string; stateOwnershipConcentration?: number }>(
-      "federalBudget"
+    .collection<{
+      _id: string;
+      countryId?: string;
+      stateOwnershipConcentration?: number;
+      priceIndex?: number;
+      gdp?: number;
+      gdpSmoothed?: number;
+      economicFactors?: { inflationRate?: number };
+    }>("federalBudget")
+    .find(
+      {},
+      {
+        projection: {
+          countryId: 1,
+          stateOwnershipConcentration: 1,
+          priceIndex: 1,
+          gdp: 1,
+          gdpSmoothed: 1,
+          "economicFactors.inflationRate": 1,
+        },
+      }
     )
-    .find({}, { projection: { countryId: 1, stateOwnershipConcentration: 1 } })
     .toArray();
+  // Price level per country: `state.gdp` is nominal (real output times the index).
+  // The index before this turn deflates it for the real economy; the index after
+  // inflates the compounded real output back.
+  const priceIndexBefore = new Map<string, number>();
+  const priceIndexAfter = new Map<string, number>();
+  const budgetIdByCountry = new Map<string, string>();
+  const smoothedGdpBefore = new Map<string, number | undefined>();
+  const inflationByCountry = new Map<string, number>();
   for (const b of budgets) {
     const cid = b.countryId || (b._id === "federal" ? "US" : b._id);
+    budgetIdByCountry.set(cid, b._id);
+    priceIndexBefore.set(cid, resolvePriceIndex(b.priceIndex));
+    smoothedGdpBefore.set(cid, b.gdpSmoothed ?? b.gdp);
+    // An unseeded budget has no inflation to compound.
+    inflationByCountry.set(cid, b.economicFactors?.inflationRate ?? 0);
     if (typeof b.stateOwnershipConcentration === "number") {
       sociByCountry.set(cid, b.stateOwnershipConcentration);
     }
   }
+  for (const [cid, before] of priceIndexBefore) {
+    priceIndexAfter.set(
+      cid,
+      advancePriceIndex(before, inflationByCountry.get(cid) ?? 0, TURNS_PER_YEAR)
+    );
+  }
+  const realGdpOf = (s: { countryId: string; gdp?: number }) =>
+    toRealOutput(s.gdp ?? 0, priceIndexBefore.get(s.countryId));
+  const nominalGdpByCountry = new Map<string, number>();
   // Σ GDP + population per country from the states already loaded.
   const gdpByCountry = new Map<string, number>();
   const popByCountry = new Map<string, number>();
   for (const s of realStates) {
-    gdpByCountry.set(s.countryId, (gdpByCountry.get(s.countryId) ?? 0) + (s.gdp ?? 0));
+    gdpByCountry.set(s.countryId, (gdpByCountry.get(s.countryId) ?? 0) + realGdpOf(s));
     popByCountry.set(s.countryId, (popByCountry.get(s.countryId) ?? 0) + (s.population ?? 0));
   }
   const rows: CountryMacroRaw[] = [];
@@ -761,9 +810,9 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       model: prevDocById.get(getNationalDocId(countryId) ?? "")?.economicModel,
     };
 
-    // Advance the Solow capital stock off THIS turn's output level (pre-compound
-    // state.gdp, millions — same unit as K). Cold-start seeds K ≈ 3×gdp (P1c-0).
-    const output = state.gdp ?? 0;
+    // Advance the Solow capital stock off THIS turn's REAL output level (pre-compound
+    // state.gdp deflated, millions — same unit as K). Cold-start seeds K ≈ 3×gdp (P1c-0).
+    const output = realGdpOf(state);
     const capital = state.capitalStock ?? seedCapitalStock(output);
     // O1c (design §5): fold THIS turn's paid corp growth cost into investment,
     // capped at 5% of region GDP/yr. Only when the write is from this turn
@@ -1256,7 +1305,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
 
     // Compound the region's GDP LEVEL by the INTEGRATED gdpGrowth this turn (exact
     // per-turn form). state.gdp is the SSOT (millions); national GDP = Σ state.gdp.
-    const compoundedGdp = compoundGdpLevel(state.gdp ?? 0, integratedGdp, TURNS_PER_YEAR);
+    const compoundedGdp = compoundGdpLevel(output, integratedGdp, TURNS_PER_YEAR);
     // Conflict destruction and its budget-funded repair move the stock once; the
     // applied ledger is written with the stock so a replayed turn changes nothing.
     const capacityEntries = capacityByRegion.get(state._id) ?? [];
@@ -1286,6 +1335,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       }
     }
     const newGdp = capacityFold?.gdp ?? compoundedGdp;
+    const newNominalGdp = toNominalOutput(newGdp, priceIndexAfter.get(countryId));
+    nominalGdpByCountry.set(countryId, (nominalGdpByCountry.get(countryId) ?? 0) + newNominalGdp);
     if (employment)
       macroSet.labourProductivity = advanceProductivity({
         previous: prevDoc?.labourProductivity,
@@ -1300,7 +1351,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         filter: { _id: state._id },
         update: {
           $set: {
-            gdp: newGdp,
+            gdp: newNominalGdp,
             capitalStock: capacityFold?.capitalStock ?? capStep.capital,
             ...(capacityFold ? { conflictCapacityApplied: capacityFold.applied } : {}),
             outputGap: trendStep.gap,
@@ -1355,5 +1406,47 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     await db.collection<State>("states").bulkWrite(stateOps);
   }
   await settleCapacityObligations(db, settledCapacityIds);
+  await advanceBudgetGdpBasis(db, {
+    budgetIdByCountry,
+    priceIndexAfter,
+    smoothedGdpBefore,
+    nominalGdpMillionsByCountry: nominalGdpByCountry,
+  });
   return realStates.length;
+}
+
+/**
+ * Writes each country's price index and the budget GDP basis once per turn. Both
+ * `gdp` and `gdpSmoothed` carry the same smoothed nominal level, so every budget
+ * reader (debt ratio, spending envelopes, deposit-book return, inflation fiscal
+ * term) sees one up-to-date basis instead of a fiscal-close snapshot.
+ */
+async function advanceBudgetGdpBasis(
+  db: Db,
+  input: {
+    budgetIdByCountry: Map<string, string>;
+    priceIndexAfter: Map<string, number>;
+    smoothedGdpBefore: Map<string, number | undefined>;
+    nominalGdpMillionsByCountry: Map<string, number>;
+  }
+): Promise<void> {
+  const ops: AnyBulkWriteOperation<FederalBudget>[] = [];
+  for (const [countryId, millions] of input.nominalGdpMillionsByCountry) {
+    const budgetId = input.budgetIdByCountry.get(countryId);
+    const priceIndex = input.priceIndexAfter.get(countryId);
+    if (budgetId === undefined || priceIndex === undefined) continue;
+    const $set: Record<string, number> = { priceIndex };
+    if (millions > 0) {
+      const smoothed = smoothNationalGdpPerTurn(
+        input.smoothedGdpBefore.get(countryId),
+        millions * 1_000_000,
+        GDP_SMOOTHING_INERTIA,
+        TURNS_PER_YEAR
+      );
+      $set.gdp = smoothed;
+      $set.gdpSmoothed = smoothed;
+    }
+    ops.push({ updateOne: { filter: { _id: budgetId as never }, update: { $set } } });
+  }
+  if (ops.length > 0) await db.collection<FederalBudget>("federalBudget").bulkWrite(ops);
 }
