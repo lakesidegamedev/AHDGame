@@ -1,10 +1,13 @@
 import type { Db } from "mongodb";
-import type { State, ElectedOfficial, Election, CountryGameState } from "@/lib/db/types";
+import type { State, CountryGameState } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { apportionSeats as apportionRegionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 const HU_REFORM_SEATS = 199;
 
@@ -50,15 +53,17 @@ export async function runHuAssemblyReform(
         );
       if (current?.preset !== "1991-default" || current.huAssemblyReformedAtYear != null)
         return false;
-      const regions = await db
-        .collection<State>("states")
+      const regions = await (
+        await getStatesCollection(db)
+      )
         .find(
           { countryId: "HU" },
           { session, projection: { _id: 1, population: 1, houseDistricts: 1 } }
         )
         .toArray();
-      const resolved = await db
-        .collection<Election>("elections")
+      const resolved = await (
+        await getElectionsCollection(db)
+      )
         .find(
           {
             countryId: "HU",
@@ -86,8 +91,9 @@ export async function runHuAssemblyReform(
         regions.some((region) => !capacities.has(String(region._id)))
       )
         return false;
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await (
+        await getElectedOfficialsCollection(db)
+      )
         .find(
           {
             countryId: "HU",
@@ -114,14 +120,16 @@ export async function runHuAssemblyReform(
         if (installed !== capacities.get(String(region._id))) return false;
       }
       // Lock the already installed mandates against concurrent seat changes.
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .updateMany(
-          { _id: { $in: officials.map((row) => row._id) } },
-          { $set: { updatedAt: now } },
-          { session }
-        );
-      await db.collection<State>("states").bulkWrite(
+      await (
+        await getElectedOfficialsCollection(db)
+      ).updateMany(
+        { _id: { $in: officials.map((row) => row._id) } },
+        { $set: { updatedAt: now } },
+        { session }
+      );
+      await (
+        await getStatesCollection(db)
+      ).bulkWrite(
         regions.map((region) => ({
           updateOne: {
             filter: { _id: region._id },

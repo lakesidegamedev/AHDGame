@@ -29,6 +29,8 @@ import {
 } from "@/lib/seeds/reference/statePartyOrg";
 import { politicalParties as SEED_PARTIES } from "@/lib/seeds/reference/politicalParties";
 import { logger } from "@/lib/observability/logger";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -290,9 +292,9 @@ export async function runStatehoodAdmission(
   _turn: number,
   currentYearOverride?: number
 ): Promise<StatehoodResult> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" } as Partial<GameState>);
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" } as Partial<GameState>);
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
   const currentYear = currentYearOverride ?? gameState?.currentYear;
@@ -305,8 +307,9 @@ export async function runStatehoodAdmission(
 
   const preset = gameState?.preset;
   const candidateIds = TERRITORY_ADMISSIONS.map((t) => t.stateId);
-  const existing = (await db
-    .collection<State>("states")
+  const existing = (await (
+    await getStatesCollection(db)
+  )
     .find({ _id: { $in: candidateIds } }, { projection: { _id: 1, admittedYear: 1 } })
     .toArray()) as unknown as Array<{ _id: string; admittedYear?: number }>;
   const alreadyAdmitted = new Set(
@@ -317,11 +320,11 @@ export async function runStatehoodAdmission(
   if (pending.length === 0) {
     // Nothing can ever be admitted in this world — stamp the year so the query
     // above does not run again until the calendar moves.
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" } as Partial<GameState>, {
-        $set: { lastStatehoodYear: currentYear },
-      });
+    await (
+      await getGameStateCollection(db)
+    ).updateOne({ _id: "current" } as Partial<GameState>, {
+      $set: { lastStatehoodYear: currentYear },
+    });
     return { ran: true, year: currentYear, admitted: [] };
   }
 
@@ -345,11 +348,13 @@ export async function runStatehoodAdmission(
         },
       },
     }));
-    await db.collection<State>("states").bulkWrite(ops);
+    await (await getStatesCollection(db)).bulkWrite(ops);
     await seedAdmittedStatePolitics(db, admitted, new Date(), preset);
   }
 
-  await db.collection<GameState>("gameState").updateOne({ _id: "current" } as Partial<GameState>, {
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" } as Partial<GameState>, {
     $set: { lastStatehoodYear: currentYear },
   });
 

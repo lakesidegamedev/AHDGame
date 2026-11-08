@@ -180,33 +180,63 @@ export async function resolveEvent(
     treasuryCashLedgerEnabled: useFrozenFundedPath,
   };
 
-  if (handler.applyEffects) {
-    await handler.applyEffects(ctx);
-  }
-  if (handler.onResolve) {
-    await handler.onResolve(ctx);
-  }
-
   const now = new Date();
   const terminalStatus = resolutionReason === "timeout" ? "expired" : "resolved";
-  const update = await coll.findOneAndUpdate(
-    {
-      _id: instanceId,
-      status: "pending",
-      ...(claimFundedChoice ? { "resolutionClaim.optionId": option.id } : {}),
-    },
-    {
-      $set: {
-        status: terminalStatus,
-        resolvedAt: now,
-        resolvedOptionId: option.id,
-        resolvedTierLabel: tier.label,
-        resolveReason: resolutionReason,
-        updatedAt: now,
+  const markTerminal = () =>
+    coll.findOneAndUpdate(
+      {
+        _id: instanceId,
+        status: "pending",
+        ...(claimFundedChoice ? { "resolutionClaim.optionId": option.id } : {}),
       },
-    },
-    { returnDocument: "after" }
-  );
+      {
+        $set: {
+          status: terminalStatus,
+          resolvedAt: now,
+          resolvedOptionId: option.id,
+          resolvedTierLabel: tier.label,
+          resolveReason: resolutionReason,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: "after" }
+    );
+
+  // Without a funded reservation nothing else stops two concurrent resolves,
+  // so claim the terminal status before any effect lands. A failed effect
+  // hands the event back to pending.
+  const preClaimed = claimFundedChoice ? null : await markTerminal();
+  if (!claimFundedChoice && !preClaimed) {
+    throw new EventNotResolvableError(
+      `resolveEvent: instance ${instanceId.toHexString()} was resolved concurrently`
+    );
+  }
+  try {
+    if (handler.applyEffects) {
+      await handler.applyEffects(ctx);
+    }
+    if (handler.onResolve) {
+      await handler.onResolve(ctx);
+    }
+  } catch (err) {
+    if (preClaimed) {
+      await coll.updateOne(
+        { _id: instanceId, status: terminalStatus, resolvedAt: now },
+        {
+          $set: { status: "pending", updatedAt: new Date() },
+          $unset: {
+            resolvedAt: "",
+            resolvedOptionId: "",
+            resolvedTierLabel: "",
+            resolveReason: "",
+          },
+        }
+      );
+    }
+    throw err;
+  }
+
+  const update = preClaimed ?? (await markTerminal());
 
   if (!update) {
     throw new EventNotResolvableError(

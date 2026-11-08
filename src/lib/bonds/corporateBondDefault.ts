@@ -359,6 +359,14 @@ export interface FundShareholderPayoutRow {
   payout: number;
 }
 
+export interface NppShareholderPayoutRow {
+  nppId: string;
+  name: string;
+  shares: number;
+  /** Anchor-denominated; credited to the NPP's personal ₳ balance as-is. */
+  payout: number;
+}
+
 export interface ShareholderAllocation {
   /** Character + imperial-character shareholder rows. Paid to personal cash balances. */
   characterRows: ShareholderPayoutRow[];
@@ -366,6 +374,8 @@ export interface ShareholderAllocation {
   corporationRows: CorporateShareholderPayoutRow[];
   /** Index-fund shareholders. Paid into the fund's cashAnchor (₳). */
   fundRows: FundShareholderPayoutRow[];
+  /** NPP shareholders. Paid into the NPP's personal ₳ balance. */
+  nppRows: NppShareholderPayoutRow[];
   /** Allocation for shares sitting in publicFloat. Paid to the country's central bank reserve. */
   publicFloatRow: PublicFloatPayoutRow | null;
 }
@@ -383,7 +393,13 @@ export function allocateShareholderPool(
   nameById: Map<string, string>
 ): ShareholderAllocation {
   if ((corp.totalShares ?? 0) <= 0 || shareholderPool <= 0) {
-    return { characterRows: [], corporationRows: [], fundRows: [], publicFloatRow: null };
+    return {
+      characterRows: [],
+      corporationRows: [],
+      fundRows: [],
+      nppRows: [],
+      publicFloatRow: null,
+    };
   }
   // Divide by every share on the register, not just the stored total, so a
   // register that drifted above totalShares cannot pay out more than the pool.
@@ -396,6 +412,7 @@ export function allocateShareholderPool(
   const characterRows: ShareholderPayoutRow[] = [];
   const corporationRows: CorporateShareholderPayoutRow[] = [];
   const fundRows: FundShareholderPayoutRow[] = [];
+  const nppRows: NppShareholderPayoutRow[] = [];
 
   for (const sh of corp.shareholders ?? []) {
     if (sh.shares <= 0) continue;
@@ -437,6 +454,15 @@ export function allocateShareholderPool(
         shares: sh.shares,
         payout,
       });
+    } else if (sh.nppId) {
+      // Counted in totalShares, so it must be paid or the slice is destroyed.
+      const id = sh.nppId.toString();
+      nppRows.push({
+        nppId: id,
+        name: nameById.get(id) ?? "NPP shareholder",
+        shares: sh.shares,
+        payout,
+      });
     }
   }
 
@@ -449,7 +475,7 @@ export function allocateShareholderPool(
         }
       : null;
 
-  return { characterRows, corporationRows, fundRows, publicFloatRow };
+  return { characterRows, corporationRows, fundRows, nppRows, publicFloatRow };
 }
 
 export function isBondDefaultCreditPenaltyActive(corp: Corporation, currentTurn: number): boolean {

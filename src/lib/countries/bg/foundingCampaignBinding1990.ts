@@ -9,6 +9,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -80,7 +81,7 @@ async function materializeBgFoundingCampaignBinding(input: {
       { countryId: "BG" },
       {
         session,
-        projection: { _id: 1, population: 1, votingEligiblePopulation: 1 },
+        projection: STATE_POPULATION_FIELDS,
       }
     )
     .toArray();

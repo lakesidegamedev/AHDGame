@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
+import type { AnyBulkWriteOperation, Db, Document, ObjectId } from "mongodb";
 import type {
   CommitteeProposal,
   CommitteeProposalVote,
@@ -25,6 +25,7 @@ import { selectMergeNppCull } from "@/lib/npp/mergeNppCap";
 import { selectNationalMergeNppCull } from "@/lib/npp/rules/mergeNationalCap";
 import { getPartyNppCapacity } from "@/lib/npp/partyCapacity";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
+import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
 import {
   deriveOrganizationShares,
   resolveOrganizationUnits,
@@ -1047,6 +1048,18 @@ export async function mergePartyInto(
         }
       );
 
+      // 9b. Close the absorbed party's in-flight internal races, which would
+      //     otherwise seat a chair or committee of a party that no longer exists.
+      const openRaces = applyOptionalCountryScope(
+        { partyId: proposingStrId, status: "voting" },
+        countryId
+      );
+      const cancelRace = { $set: { status: "cancelled", updatedAt: now } };
+      await Promise.all([
+        db.collection<Document>("nationalPartyElections").updateMany(openRaces, cancelRace),
+        db.collection<Document>("nationalCommitteeElections").updateMany(openRaces, cancelRace),
+      ]);
+
       // 10. Update target party member count
       await db
         .collection<PoliticalParty>("politicalParties")
@@ -1083,6 +1096,20 @@ async function markResolved(
  * in `passed` or `rejected` regardless of whether the threshold is
  * mathematically locked yet.
  */
+async function markProposalTerminal(
+  db: Db,
+  proposal: CommitteeProposal,
+  status: "expired" | "rejected",
+  currentTurn: number
+): Promise<void> {
+  await db
+    .collection<CommitteeProposal>("committeeProposals")
+    .updateOne(
+      { _id: proposal._id, status: "open" },
+      { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+    );
+}
+
 export async function attemptResolution(
   db: Db,
   proposal: CommitteeProposal,
@@ -1097,7 +1124,12 @@ export async function attemptResolution(
       { _id: proposal.partyId },
       { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
     );
-  if (!proposingParty) return;
+  if (!proposingParty) {
+    // A deleted party can never come back, so an unresolvable row must not sit
+    // open forever blocking the duplicate-proposal guard.
+    await markProposalTerminal(db, proposal, "expired", currentTurn);
+    return;
+  }
 
   // removeOfficeHolder excludes the target from both the voter set AND
   // the denominator (procedural fairness — you don't get to vote on
@@ -1120,7 +1152,10 @@ export async function attemptResolution(
   // Decide the outcome on reads alone; nothing below writes until the claim.
   let outcome: "passed" | "rejected" | "open" = proposingOutcome;
   if (proposal.type === "merge" && proposingOutcome !== "rejected") {
-    if (!proposal.merge) return;
+    if (!proposal.merge) {
+      await markProposalTerminal(db, proposal, "expired", currentTurn);
+      return;
+    }
 
     const targetParty = await db
       .collection<PoliticalParty>("politicalParties")
@@ -1128,7 +1163,12 @@ export async function attemptResolution(
         { _id: proposal.merge.targetPartyId },
         { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
       );
-    if (!targetParty) return;
+    if (!targetParty) {
+      // The merge target is gone; the merge can never execute and the open row
+      // would otherwise lock the proposing party's merge lane forever.
+      await markProposalTerminal(db, proposal, "expired", currentTurn);
+      return;
+    }
 
     const targetSize = getEligibleVoterSet(targetParty).size;
     const tYes = (proposal.targetVotes ?? []).filter((v) => v.vote === "yes").length;

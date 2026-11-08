@@ -398,6 +398,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (turnGuard) return turnGuard;
 
     const forexEnabled = await isForexEnabled();
+    if (!ObjectId.isValid(bondId)) {
+      return errorResponse(400, "Invalid bond ID");
+    }
 
     const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
@@ -454,6 +457,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     if (sellAsCorp) {
+      if (!ObjectId.isValid(sellAsCorp)) {
+        return errorResponse(400, "Invalid corporation ID");
+      }
       const corp = await db
         .collection<Corporation>("corporations")
         .findOne({ _id: new ObjectId(sellAsCorp) });

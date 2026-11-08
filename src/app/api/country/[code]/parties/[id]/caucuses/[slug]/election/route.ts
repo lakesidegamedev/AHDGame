@@ -132,7 +132,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const isActiveMember =
       !!authUser.character && memberIds.includes(authUser.character._id.toString());
     let canParticipate = isActiveMember;
-    if (isActiveMember && authUser.character) {
+    // Founding races waive the cooldown and tenure gates, as the vote and enter
+    // routes do, so the ballot must not be disabled for brand-new members.
+    if (isActiveMember && authUser.character && !activeElection?.founding) {
       const userDoc = await db
         .collection("users")
         .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });

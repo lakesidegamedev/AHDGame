@@ -12,7 +12,7 @@ import type {
   SectorBuildOrder,
   StateResourceCapacity,
 } from "@/lib/db/types";
-import type { GameState, NppEntryViabilityMode } from "@/lib/db/types/gameState";
+import type { NppEntryViabilityMode } from "@/lib/db/types/gameState";
 import {
   EXTRACTABLE_RESOURCES,
   type CommodityType,
@@ -48,6 +48,9 @@ import {
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ESSENTIAL_SHORTAGE_SCORE } from "@/lib/turn/npp/marketSignals";
 import { isParentDirectedStrategyProtected } from "@/lib/turn/npp/rules/parentDirectedStrategy";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 const NPC_CORPORATION_USER_ID = new ObjectId("000000000000000000000000");
 
@@ -410,8 +413,9 @@ export async function processExtractionAutoStrategy(
     Corporation,
     "_id" | "countryId" | "type" | "ceoType" | "userId" | "caretakerCeo" | "earningsHistory"
   >;
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       ceoType: "npp",
       userId: NPC_CORPORATION_USER_ID,
@@ -466,8 +470,9 @@ export async function processExtractionAutoStrategy(
     | "buildQueue"
     | "otherOpexPerUnitAnchor"
   >;
-  const candidates = await db
-    .collection<CorporateSector>("corporateSectors")
+  const candidates = await (
+    await getCorporateSectorsCollection(db)
+  )
     .find({ sectorType: "extraction" })
     .project<CandidateSector>({
       _id: 1,
@@ -543,7 +548,9 @@ export async function processExtractionAutoStrategy(
     // NPP-owned miners; charging 25% of daily revenue would deepen the very
     // insolvencies this is trying to relieve. The 12-turn transition blend and
     // its −5% margin penalty (getEffectiveStrategyRates) still apply.
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await (
+      await getCorporateSectorsCollection(db)
+    ).bulkWrite(
       chosen.map((p) => ({
         updateOne: {
           filter: { _id: p.sector._id },
@@ -605,8 +612,9 @@ export async function processExtractionAutoStrategy(
       | "clearingStartTurn"
       | "throughputStartTurn"
     >;
-    const nppSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const nppSectors = await (
+      await getCorporateSectorsCollection(db)
+    )
       .find({
         sectorType: "extraction",
         corporationId: { $in: npcCorps.map((c) => c._id as ObjectId) },
@@ -759,7 +767,9 @@ export async function processExtractionAutoStrategy(
       const now = new Date();
       // Same no-retool-cost rationale as pass 1: these are NPP-run miners the
       // system is steering; transition blend + −5% margin penalty still apply.
-      await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      await (
+        await getCorporateSectorsCollection(db)
+      ).bulkWrite(
         chosenSwitches.map((p) => ({
           updateOne: {
             filter: { _id: p.sector._id },
@@ -803,8 +813,9 @@ export async function processExtractionAutoStrategy(
   // its recipe extracts produces nothing and still buys inputs and pays
   // labour, and state companies are exempt from every other mothball path, so
   // this is the only exit. Mothballed, never retooled; a minister can restart.
-  const stateCompanies = await db
-    .collection<Corporation>("corporations")
+  const stateCompanies = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       $or: [{ countryOwnerId: { $type: "string", $not: /^$/ } }, { ownershipState: "stateOwned" }],
       ceoVacant: true,
@@ -813,8 +824,9 @@ export async function processExtractionAutoStrategy(
     .project<Pick<Corporation, "_id">>({ _id: 1 })
     .toArray();
   if (stateCompanies.length > 0) {
-    const stateCompanySectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const stateCompanySectors = await (
+      await getCorporateSectorsCollection(db)
+    )
       .find({
         sectorType: "extraction",
         corporationId: { $in: stateCompanies.map((c) => c._id as ObjectId) },
@@ -848,7 +860,9 @@ export async function processExtractionAutoStrategy(
     .slice(0, EXTRACTION_DEAD_DEPOSIT_MOTHBALL_MAX_PER_RUN);
   if (mothballs.length > 0) {
     const now = new Date();
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await (
+      await getCorporateSectorsCollection(db)
+    ).bulkWrite(
       mothballs.map((sector) => ({
         updateOne: {
           filter: { _id: sector._id },
@@ -987,7 +1001,7 @@ export async function processExtractionAutoStrategy(
 }
 
 async function stampRun(db: Db, currentTurn: number): Promise<void> {
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, { $set: { lastExtractionAutoStrategyTurn: currentTurn } });
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" }, { $set: { lastExtractionAutoStrategyTurn: currentTurn } });
 }

@@ -6,7 +6,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CentralBank, FomcSeat, FomcBallot, FomcNomination } from "@/lib/db/types/centralBank";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -29,6 +28,8 @@ import {
 } from "@/lib/monetaryGovernance/governanceShell";
 import { loadExecutionPolicies } from "@/lib/monetaryGovernance/executionPolicy";
 import { decideGovernance } from "@/lib/monetaryGovernance/rules/machine";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -43,9 +44,9 @@ async function loadMacroContext(
 ): Promise<FomcMacroContext> {
   const targetInflation = getInflationTarget(countryId, currentYear);
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(countryId) });
+  const budget = await (
+    await getFederalBudgetCollection(db)
+  ).findOne({ _id: getNationalBudgetId(countryId) });
   const inflationRate = finiteOr(budget?.economicFactors?.inflationRate, targetInflation);
 
   const nationalDocId = getNationalDocId(countryId);
@@ -75,8 +76,9 @@ async function findNominationExecutives(
   const execKey = COUNTRY_CONFIGS[countryId]?.officeTypes.find((o) => o.isExecutive)?.key;
   if (!execKey) return [];
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ countryId, userId: { $exists: true }, "currentOffice.type": execKey })
     .project<Pick<Character, "name" | "userId">>({ name: 1, userId: 1 })
     .toArray();

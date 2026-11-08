@@ -2,7 +2,7 @@
 import { deriveCeoArchetype } from "@/lib/turn/ceoArchetype";
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { StatePartyOrg, NPP, GameState, CorporateSector } from "@/lib/db/types";
+import type { StatePartyOrg, NPP } from "@/lib/db/types";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import {
   preloadNppBuildOrgSweepCache,
@@ -10,7 +10,6 @@ import {
 } from "@/lib/nppAutonomy/v3/party/nppBuildOrg";
 import { careerArchetypeModifiersContinuous } from "@/lib/nppAutonomy/v3/careerArchetype";
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { resolveShareExecutionPrice } from "@/lib/corporations/marketExecution";
 import { getSeedCurrencyCode, COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -51,6 +50,10 @@ import {
   groupInOrder,
   NPP_SWEEP_PARTITION_CONCURRENCY,
 } from "./nppActionShared";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 
 // v3 party-org building: counteracts processPartyOrgTurn's unconditional
 // per-turn Org decay, which nothing has ever offset autonomously (growth was
@@ -132,7 +135,7 @@ export async function buildNppPartyOrgSurplus(
   // One query for every possible actor, grouped by the same key the rows use.
   const actorsByKey = new Map<string, Pick<NPP, "_id" | "personality">[]>();
   {
-    const actorCursor = db.collection<NPP>("npps").find(
+    const actorCursor = (await getNppsCollection(db)).find(
       {
         retiredAt: null,
         homeState: { $in: [...new Set(rows.map((r) => r.stateId))] },
@@ -234,8 +237,9 @@ export async function sellNppStockSurplus(
   preset?: string,
   engine6 = false
 ): Promise<void> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { "shareholders.nppId": { $exists: true }, ...countryScopeFilter(countryScope) },
       // Price fields widen the projection but not the query — same round trip,
@@ -268,8 +272,9 @@ export async function sellNppStockSurplus(
   }
   if (nppIdByString.size === 0) return;
 
-  const nppDocs = await db
-    .collection<NPP>("npps")
+  const nppDocs = await (
+    await getNppsCollection(db)
+  )
     .find(
       { _id: { $in: [...nppIdByString.values()] } },
       { projection: { countryId: 1, personality: 1 } }
@@ -425,8 +430,9 @@ export async function foundNppCorporationsSurplus(
   // change. One gameState read plus one federalBudget $in, once per sweep.
   const blockedSet = await loadPrivateEnterpriseBlockedCountries(db);
   const blockedCountries = [...blockedSet];
-  const candidates = await db
-    .collection<NPP>("npps")
+  const candidates = await (
+    await getNppsCollection(db)
+  )
     .find(
       {
         retiredAt: null,
@@ -461,8 +467,9 @@ export async function foundNppCorporationsSurplus(
   // stream below is untouched.
   const alreadyCeoIds = new Set<string>();
   {
-    const rows = await db
-      .collection<Corporation>("corporations")
+    const rows = await (
+      await getCorporationsCollection(db)
+    )
       .find(
         { ceoId: { $in: candidates.map((c) => c._id) }, ceoVacant: { $ne: true } },
         { projection: { ceoId: 1 } }
@@ -489,7 +496,9 @@ export async function foundNppCorporationsSurplus(
   // Funded producer market: founding picks the recipe whose outputs are short,
   // and a lane's shortage counts every recipe it can run. Legacy worlds keep
   // the standard recipe and the static sector table.
-  const world = await db.collection<GameState>("gameState").findOne(
+  const world = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: {
@@ -540,8 +549,9 @@ export async function foundNppCorporationsSurplus(
       default: typeField,
     },
   });
-  const cellCounts = await db
-    .collection<Corporation>("corporations")
+  const cellCounts = await (
+    await getCorporationsCollection(db)
+  )
     .aggregate<{ _id: { c: string; t: string }; n: number }>([
       { $group: { _id: { c: "$countryId", t: operatingLaneExpression("$type") }, n: { $sum: 1 } } },
     ])
@@ -553,8 +563,9 @@ export async function foundNppCorporationsSurplus(
     existingByCell.get(`${countryId}:${type}`) ?? 0;
   // Capacity per firm per sector, world-wide, so a sector one firm dominates
   // draws new founders. One grouped read per sweep.
-  const capacityRows = await db
-    .collection<CorporateSector>("corporateSectors")
+  const capacityRows = await (
+    await getCorporateSectorsCollection(db)
+  )
     .aggregate<{ _id: { t: string; c: ObjectId }; w: number }>([
       {
         $group: {

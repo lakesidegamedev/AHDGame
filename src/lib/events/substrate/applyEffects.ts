@@ -582,10 +582,11 @@ export async function applyDeclarativeEffects(
           campaignRates,
           ctx.preset
         );
-        const campaignField = forexEnabled ? "currencyBalances.campaign" : "funds";
+        // Campaign documents hold their spendable money in `funds`; every
+        // campaign reader and upkeep path uses it, with or without forex.
         await ctx.db
           .collection("campaigns")
-          .updateOne({ characterId, electionId }, { $inc: { [campaignField]: localDelta } });
+          .updateOne({ characterId, electionId }, { $inc: { funds: localDelta } });
         break;
       }
       case "campaignSupport": {

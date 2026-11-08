@@ -48,19 +48,14 @@ import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { byElectionTypesFor } from "@/lib/utils/electionLabels";
-import type {
-  Character,
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  ElectionStatus,
-  GameState,
-  NPP,
-  Seat,
-} from "@/lib/db/types";
+import type { CountryGameState, Election, ElectionStatus, GameState, Seat } from "@/lib/db/types";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { snapElectionResolutionYear, shouldStartVacancySnap } from "@/lib/turn/rules/snapElection";
 import { japanShugiinRulesForRegion } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 export const SNAP_ELECTION_LIMIT = 2;
 export const SNAP_ELECTION_COOLDOWN_TURNS = 336;
@@ -111,28 +106,31 @@ export async function vacateDissolvedLowerChamber(
   now: Date,
   currentTurn = 0
 ): Promise<void> {
-  const departing = await db
-    .collection<Character>("characters")
+  const departing = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { countryId, "currentOffice.type": lowerChamberKey },
       { projection: { _id: 1, party: 1 } }
     )
     .toArray()
     .catch(() => []);
-  await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+  await (
+    await getElectedOfficialsCollection(db)
+  ).deleteMany({
     officeType: lowerChamberKey,
     ...officialsCountryScope(countryId),
   });
 
   await Promise.all([
-    db.collection<Character>("characters").updateMany(
+    (await getCharactersCollection(db)).updateMany(
       {
         countryId,
         "currentOffice.type": lowerChamberKey,
       },
       { $set: { currentOffice: null, updatedAt: now } }
     ),
-    db.collection<NPP>("npps").updateMany(
+    (await getNppsCollection(db)).updateMany(
       {
         countryId,
         "currentOffice.type": lowerChamberKey,
@@ -249,12 +247,12 @@ export async function triggerSnapElection(
   // Live races identify the same vacancy across turns and process restarts.
   const liveVacancySnap =
     opts.reason === "auto-snap"
-      ? await db
-          .collection<Election>("elections")
-          .findOne(
-            { countryId, electionType: snapElectionType, status: { $in: ["active", "upcoming"] } },
-            { projection: { _id: 1 } }
-          )
+      ? await (
+          await getElectionsCollection(db)
+        ).findOne(
+          { countryId, electionType: snapElectionType, status: { $in: ["active", "upcoming"] } },
+          { projection: { _id: 1 } }
+        )
       : null;
 
   if (opts.reason === "auto-snap") {
@@ -294,8 +292,9 @@ export async function triggerSnapElection(
   //    are dissolved below, and a by-election resolving after the snap would
   //    seat on top of the full delegation the snap elects. The by-election
   //    watcher reopens their vacancies, which the snap result then subsumes.
-  const electionsToCancel = await db
-    .collection<Election>("elections")
+  const electionsToCancel = await (
+    await getElectionsCollection(db)
+  )
     .find(
       {
         countryId,
@@ -308,12 +307,12 @@ export async function triggerSnapElection(
   const cancelledElectionIds = electionsToCancel.map((e) => e._id);
 
   if (cancelledElectionIds.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .updateMany(
-        { _id: { $in: cancelledElectionIds } },
-        { $set: { status: "cancelled" as ElectionStatus, updatedAt: now } }
-      );
+    await (
+      await getElectionsCollection(db)
+    ).updateMany(
+      { _id: { $in: cancelledElectionIds } },
+      { $set: { status: "cancelled" as ElectionStatus, updatedAt: now } }
+    );
     await db
       .collection("electionCandidates")
       .updateMany(
@@ -352,8 +351,9 @@ export async function triggerSnapElection(
 
   // Inherit cycle number from most recent regular-or-snap election per region,
   // so snap elections slot into the same cycle sequence as regulars.
-  const lastElections = await db
-    .collection<Election>("elections")
+  const lastElections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       countryId,
       electionType: { $in: [lowerChamberKey, snapElectionType] },
@@ -428,9 +428,9 @@ export async function triggerSnapElection(
   });
 
   if (snapElections.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(snapElections.map(withCampaignRules) as Election[]);
+    await (
+      await getElectionsCollection(db)
+    ).insertMany(snapElections.map(withCampaignRules) as Election[]);
   }
 
   // 4. Dissolution immediately ends every lower-chamber mandate. This must

@@ -2,12 +2,12 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
-import type { PoliticalParty } from "@/lib/db/types/party";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { Caucus } from "@/lib/db/types/caucus";
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { appendActionGrantLog } from "./actionGrantLog";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -159,7 +159,7 @@ export async function processPartyInfluenceTurn(
   const maxBonus = Math.max(config?.partyInfluenceMaxBonus ?? 0, DEFAULT_PARTY_INFLUENCE_MAX_BONUS);
 
   // Load all parties; key by countryId:sequentialId per project convention
-  const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+  const parties = await (await getPoliticalPartiesCollection(db)).find({}).toArray();
   const partyMap = new Map(parties.map((p) => [`${p.countryId}:${p.sequentialId}`, p]));
 
   // State-party leadership — chairs / vice chairs accumulate partyInfluence

@@ -13,12 +13,12 @@
  */
 
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export interface TradeGrowthMirrorResult {
   countriesUpdated: number;
@@ -46,8 +46,9 @@ export async function mirrorTradeGrowth(db: Db): Promise<TradeGrowthMirrorResult
   // Batch-fetch all relevant budgets
   const budgets =
     budgetIdSet.size > 0
-      ? await db
-          .collection<FederalBudget>("federalBudget")
+      ? await (
+          await getFederalBudgetCollection(db)
+        )
           .find(
             { _id: { $in: Array.from(budgetIdSet) } },
             { projection: { "economicFactors.tradeGrowth": 1 } }

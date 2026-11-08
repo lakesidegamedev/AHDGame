@@ -664,7 +664,9 @@ export async function settleCorporationTurnPayouts({
       forexEnabled,
       lookups.stockHoldingTaxStartTurn !== undefined && turn >= lookups.stockHoldingTaxStartTurn
     );
-    void processVoteReminders(db, turn);
+    void processVoteReminders(db, turn).catch((error: unknown) =>
+      console.error("[corporationTurn] vote reminder sweep failed:", error)
+    );
     mark("voteAutoResolve");
     // Resolve nationalizations whose notice window has elapsed (spec §14): cure-cancel
     // or complete the taking. Awaited so its effects land within this corp turn.

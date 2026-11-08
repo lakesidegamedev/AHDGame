@@ -1,8 +1,8 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import { logger } from "@/lib/observability/logger";
 import { logWireEvent } from "@/lib/wireEvent";
 import type { Crisis, CrisisLeverUse, CrisisV2Output } from "@/lib/db/types/crisis";
-import type { State } from "@/lib/db/types/state";
 import {
   recordInaction,
   recordLeverUses,
@@ -81,8 +81,8 @@ const LIVE_PROJECTION = {
 } as const;
 
 async function loadWorld(db: Db): Promise<World> {
-  const states = await db
-    .collection<State>("states")
+  const statesCollection = await getStatesCollection(db);
+  const states = await statesCollection
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const stateIdsByCountry = new Map<string, string[]>();

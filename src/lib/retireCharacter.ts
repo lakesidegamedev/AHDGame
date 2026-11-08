@@ -5,7 +5,7 @@ import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import { ObjectId } from "mongodb";
-import type { Db } from "mongodb";
+import type { Db, Document } from "mongodb";
 import type {
   PoliticalParty,
   ExchangeRate,
@@ -445,6 +445,19 @@ export async function retireCharacter(
       { $set: { status: "withdrawn", withdrawnAt: now } }
     );
   await db.collection("nationalCommitteeVotes").deleteMany({ voterId: characterId });
+
+  // A nomination still naming a deleted character would confirm a ghost into
+  // the cabinet, the court or the central bank board.
+  const openNomination = {
+    nomineeCharacterId: characterId,
+    status: { $in: ["proposed", "active", "awaiting_choice"] },
+  };
+  const withdrawNomination = { $set: { status: "withdrawn", updatedAt: now } };
+  await Promise.all([
+    db.collection<Document>("cabinetNominations").updateMany(openNomination, withdrawNomination),
+    db.collection<Document>("scotusNominations").updateMany(openNomination, withdrawNomination),
+    db.collection<Document>("fomcNominations").updateMany(openNomination, withdrawNomination),
+  ]);
 
   await db.collection("congressLeaders").deleteMany({ characterId });
   await db.collection("statePartyCandidates").deleteMany({ characterId });

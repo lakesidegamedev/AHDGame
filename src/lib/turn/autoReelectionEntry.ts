@@ -1,11 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type {
-  Character,
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { ElectedOfficial, Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import { electionStatusBlocksFurtherEntry } from "@/lib/elections/activeCandidacy";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
@@ -16,6 +10,10 @@ import {
   canFieldExecutiveCandidate,
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 
 const EXCLUDED_TYPES = new Set(["president", "vicePresident"]);
 
@@ -53,8 +51,9 @@ export async function runAutoReelectionEntry(
   now: Date,
   currentTurn: number
 ): Promise<void> {
-  const optedInCharacters = await db
-    .collection<Character>("characters")
+  const optedInCharacters = await (
+    await getCharactersCollection(db)
+  )
     .find({ autoRunForReelection: true })
     .toArray();
 
@@ -78,8 +77,9 @@ export async function runAutoReelectionEntry(
     characters.map((character) => [character._id.toHexString(), character] as const)
   );
 
-  const offices = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const offices = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find({ characterId: { $in: characterIds } })
     .toArray();
   // Characters already holding an office: a by-election fills only vacated seats, so auto-filing here would double-seat a sitting winner (additive resolution never sweeps).
@@ -101,8 +101,9 @@ export async function runAutoReelectionEntry(
   ];
   const priorElections =
     priorElectionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await (
+          await getElectionsCollection(db)
+        )
           .find({
             _id: { $in: priorElectionIds.map((id) => new ObjectId(id)) },
             status: "resolved",
@@ -131,8 +132,9 @@ export async function runAutoReelectionEntry(
   const blockingElectionsByCharacter = new Map<string, Set<string>>();
   if (activeCandidacies.length > 0) {
     const referencedIds = [...new Set(activeCandidacies.map((c) => c.electionId.toHexString()))];
-    const statusRows = await db
-      .collection<Election>("elections")
+    const statusRows = await (
+      await getElectionsCollection(db)
+    )
       .find(
         { _id: { $in: referencedIds.map((id) => new ObjectId(id)) } },
         { projection: { status: 1 } }
@@ -185,8 +187,9 @@ export async function runAutoReelectionEntry(
     targetSeatByCharacterId.set(characterKey, value.seatKey);
   }
 
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       status: { $in: ["active", "upcoming"] },
       electionType: { $nin: Array.from(EXCLUDED_TYPES) },
@@ -207,8 +210,9 @@ export async function runAutoReelectionEntry(
   }
   const partyByKey = new Map<string, Pick<PoliticalParty, "regimeStatus">>();
   if (opsConfigByCountry.size > 0) {
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await (
+      await getPoliticalPartiesCollection(db)
+    )
       .find({ countryId: { $in: [...opsConfigByCountry.keys()] } })
       .toArray();
     for (const party of parties) {

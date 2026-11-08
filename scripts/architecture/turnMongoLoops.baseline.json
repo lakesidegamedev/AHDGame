@@ -113,7 +113,7 @@
     "99ec6b6ddbf0c9235f4c9a469205d383e9f260c8c103374a146101384964ce51": 1,
     "086ceefdc80c90fcaeb96d115ca2ddc0e31d000452b3d143d93610c8a5c4ec91": 1,
     "ee81e50a7767eff93009f8e0c135ac932cc5f1650eaffaf5f734d91ca8b23c0a": 1,
-    "bab38a7bad5c93a206a76b3b08f3709e23c74467465e650d8baece1f873d77c7": 1,
+    "c86aaf5bda9f6a1cf47a045c9075ec26b2256f39ccdfc16bd53e3ef8b4433b10": 1,
     "225d779da7248a46bbceb4d94cc01ece808cd8b1c67fe0df2c92861c0b791881": 1,
     "cb23e500bc41bccf25795d816b64e2ecfb50ae3acba3a57b7e3d59f930d77ef8": 1,
     "c5fd47f5230badd946f9bb356751ac79246e0296919d97cb2e672fc8d98f3a36": 1,
@@ -437,7 +437,7 @@
     "9b1a39f31d423d600dba9e6a63aed828fb9b9f05db0142a833d56ab3f77461a9": 1,
     "99677781049ea3b499e97b20a6c248d6f45a997a5dfa84e82415eab3e039e527": 1,
     "efe73618febaeabc1c20eb268c1249fc922180de9d1ff079c93b0401197d3632": 1,
-    "01b59334563f1408ab202dbe79423ae940e823b401638f09b66b61eec3e1359b": 1,
+    "cbec4a71c5dbe70be896aab2b2a839a3d6a9149051fe98fa9b9fe0c97e8c316a": 1,
     "66695e7a93c11f60e550b856020549e0d083e1b0d6bdba9a9cc5e4563791fece": 1,
     "b14cdf85c7e9fee834aafe9ce97af398cf8708c1b16d3c8dd807a09e4f9ce59d": 1,
     "bfe9b9e31e259060f1436fafbcc8d08dcd50d89cd6a3e045c539a947a82cf5a8": 1,
@@ -1481,7 +1481,7 @@
       "operation": "updateOne",
       "owner": "applyDeclarativeEffects",
       "expression": "ctx.db .collection(\"campaigns\") .updateOne({ characterId, electionId }, { $inc: { [campaignField]: localDelta } })",
-      "fingerprint": "bab38a7bad5c93a206a76b3b08f3709e23c74467465e650d8baece1f873d77c7"
+      "fingerprint": "c86aaf5bda9f6a1cf47a045c9075ec26b2256f39ccdfc16bd53e3ef8b4433b10"
     },
     {
       "file": "src/lib/events/substrate/applyEffects.ts",
@@ -3819,7 +3819,7 @@
       "operation": "findOne",
       "owner": "expireShareListings",
       "expression": "db .collection<Corporation>(\"corporations\") .findOne({ _id: listing.corporationId, \"shareholders.corporationId\": listing.sellerCorporationId }, { projection: { \"shareholders.$\": 1 } })",
-      "fingerprint": "01b59334563f1408ab202dbe79423ae940e823b401638f09b66b61eec3e1359b"
+      "fingerprint": "cbec4a71c5dbe70be896aab2b2a839a3d6a9149051fe98fa9b9fe0c97e8c316a"
     },
     {
       "file": "src/lib/turn/corporation/shareListings.ts",

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
-import type { Election, GameState } from "@/lib/db/types";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 /*
  * Detect completion of the pre-iteration founding phase and end it.
@@ -22,15 +23,15 @@ export async function detectPreIterationComplete(
   db: Db,
   newTurn: number
 ): Promise<{ completed: boolean }> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { preIteration: 1, preset: 1, startingPartiesMode: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { preIteration: 1, preset: 1, startingPartiesMode: 1 } }
+  );
   if (!gameState?.preIteration?.active) return { completed: false };
 
-  const elections = db.collection<Election>("elections");
+  const elections = await getElectionsCollection(db);
   const [pending, resolvedElections] = await Promise.all([
     elections.countDocuments({ cycle: 0, status: { $in: ["active", "upcoming"] } }),
     elections
@@ -103,7 +104,9 @@ export async function detectPreIterationComplete(
     return { completed: false };
   }
 
-  await db.collection<GameState>("gameState").updateOne(
+  await (
+    await getGameStateCollection(db)
+  ).updateOne(
     { _id: "current" },
     {
       $set: {

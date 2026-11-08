@@ -25,6 +25,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
+    if (!ObjectId.isValid(voteId)) {
+      return errorResponse(400, "Invalid vote ID");
+    }
 
     const vote = await db.collection<CorporationVote>("corporationVotes").findOne({
       _id: new ObjectId(voteId),

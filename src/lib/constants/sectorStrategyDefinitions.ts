@@ -902,6 +902,10 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       researchThreshold: 5000,
+      requiresLaneResearch: [
+        { lane: "technology", threshold: 3000 },
+        { lane: "energy", threshold: 3000 },
+      ],
       name: "Autonomous Districts",
       description:
         "Whole neighborhoods run by agents, storage and sensors. More service per building, paid for with software, electronics, power and constant network traffic.",
@@ -1443,6 +1447,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       researchThreshold: 8000,
+      requiresLaneResearch: [{ lane: "logistics", threshold: 3000 }],
       name: "Space Resources",
       description:
         "Lunar and asteroid pilot mining that lands rare earths and metals. Launch energy, electronics and freight make it the most input-hungry way to mine.",

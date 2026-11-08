@@ -177,7 +177,11 @@ export async function materializeBgGrandPartialPlayerFiling(
     .toArray();
   const alreadyFiled = await db.collection<ElectionCandidate>("electionCandidates").findOne(
     {
-      electionId: { $in: activeJobs.map((row) => row.activeElectionId) },
+      electionId: {
+        $in: activeJobs
+          .map((row) => row.activeElectionId)
+          .filter((id): id is ObjectId => id != null),
+      },
       characterId: character._id,
       isNPP: { $ne: true },
       status: "active",

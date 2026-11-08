@@ -21,6 +21,7 @@ import {
 import { computeImfFacilityPaymentTurn } from "@/lib/imf/imfFacilityMath";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import type { CorpSnapshot } from "@/lib/turn/corporation/types";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 const PRINCIPAL_EPS = 1e-6;
 
@@ -147,7 +148,7 @@ export async function processImfBailoutPayments(
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops);
+    await (await getCorporationsCollection(db)).bulkWrite(ops);
   }
 
   return { paymentsApplied };

@@ -12,6 +12,7 @@ import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constan
 import type { Corporation } from "@/lib/db/types";
 import { countsAsFrontierResearch } from "@/lib/constants/techTree/breakthrough";
 import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 
 /** Mongo filter for the corporations whose tech tree is this lane's. */
 export function laneCorporationFilter(lane: OperatingSectorType): Record<string, unknown> {
@@ -52,6 +53,30 @@ export async function loadLaneBreakthroughResearch(
   if (!techTreesEnabled) return undefined;
   const gated = (SECTOR_STRATEGIES[lane] ?? []).some((s) => s.researchThreshold != null);
   return gated ? loadSectorFrontierResearch(db, lane) : undefined;
+}
+
+/**
+ * World research for every lane that a method of `strategies` lists in
+ * `requiresLaneResearch`, or undefined when trees are off or none do.
+ */
+export async function loadPrerequisiteLaneResearch(
+  db: Db,
+  strategies: readonly Pick<SectorStrategy, "requiresLaneResearch">[],
+  techTreesEnabled: boolean
+): Promise<ReadonlyMap<string, number> | undefined> {
+  if (!techTreesEnabled) return undefined;
+  const lanes = new Set<string>();
+  for (const strategy of strategies) {
+    for (const req of strategy.requiresLaneResearch ?? []) lanes.add(req.lane);
+  }
+  if (lanes.size === 0) return undefined;
+  const entries = await Promise.all(
+    [...lanes].map(
+      async (lane) =>
+        [lane, await loadSectorFrontierResearch(db, lane as OperatingSectorType)] as const
+    )
+  );
+  return new Map(entries);
 }
 
 /** One grouped corporation identity and its summed frontier research. */

@@ -48,6 +48,7 @@ export interface PlannedLeg {
     | "corporations"
     | "federalBudget"
     | "indexFunds"
+    | "npps"
     | "equityMarketPools";
   /** Hex string for `_id` docs, country id for the treasury leg, currency for the pool leg. */
   id: string;
@@ -84,6 +85,8 @@ export interface PayoutPlanInput {
   creditorByHolderHex: Record<string, CorpCapitalCurrencyInfo | null | undefined>;
   /** Fund docs present by fund hex. */
   fundsPresentHex: string[];
+  /** NPP docs present by NPP hex. */
+  nppsPresentHex?: string[];
   /** Whether the treasury (federalBudget) doc for the target country exists. */
   treasuryPresent: boolean;
   /**
@@ -363,6 +366,27 @@ export function buildAcquisitionPayoutPlan(input: PayoutPlanInput): PayoutPlan {
       currencyCode: "USD",
       note: "index-fund holder buyout credit",
       // No ledger: fund cash is not yet a ledger account, same as the legacy flow.
+      ledgers: [],
+    });
+  }
+
+  const nppsPresent = new Set(input.nppsPresentHex ?? []);
+  for (const row of allocation.nppRows ?? []) {
+    if (!(row.payout > 0)) continue;
+    if (!nppsPresent.has(row.nppId)) {
+      unpayable.push({ key: `holder:npp:${row.nppId}`, reason: "NPP no longer exists" });
+      continue;
+    }
+    legs.push({
+      key: `holder:npp:${row.nppId}`,
+      kind: "holder_credit",
+      collection: "npps",
+      id: row.nppId,
+      inc: { "currencyBalances.personal.USD": row.payout },
+      payoutAnchor: row.payout,
+      costInAcquirerCapital: costOfAnchor(row.payout),
+      currencyCode: "USD",
+      note: "NPP holder buyout credit",
       ledgers: [],
     });
   }

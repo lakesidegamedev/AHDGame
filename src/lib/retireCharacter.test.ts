@@ -325,6 +325,22 @@ describe("retireCharacter", () => {
     expect(insertCall.snapshot.stats.indexFundValueAnchor).toBe(300);
   });
 
+  it("withdraws open cabinet, court and central bank nominations naming the character", async () => {
+    const { retireCharacter } = await import("./retireCharacter");
+
+    await retireCharacter(db as unknown as Db, makeCharacter(), userId, "player_deleted");
+
+    for (const name of ["cabinetNominations", "scotusNominations", "fomcNominations"]) {
+      expect(db.collection(name).updateMany).toHaveBeenCalledWith(
+        {
+          nomineeCharacterId: charId,
+          status: { $in: ["proposed", "active", "awaiting_choice"] },
+        },
+        { $set: { status: "withdrawn", updatedAt: expect.any(Date) } }
+      );
+    }
+  });
+
   it("vacates CEO seats after cleanup", async () => {
     const { retireCharacter } = await import("./retireCharacter");
     const character = makeCharacter();

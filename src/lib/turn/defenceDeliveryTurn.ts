@@ -18,6 +18,7 @@ import {
 import {
   listActiveContracts,
   advanceContract,
+  cancelContract,
   reverseContractDelivery,
   stampDeliveryCarry,
   recordContractPayment,
@@ -39,6 +40,7 @@ import {
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { resolveDefenseLine } from "@/lib/turn/defenseEnvelope";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 
 /**
  * Idempotency key for one contract's settlement in one turn.
@@ -132,6 +134,18 @@ export async function applyDefenceDeliveries(
         .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED }),
     ]);
     if (!sector || !corp) {
+      // The supplier plant or corp is gone, so the order can never deliver and
+      // would hold its encumbrance and window quota forever. Tear it up for
+      // cause: the supplier side vanished, so no minister break fee is owed.
+      await cancelContract(db, contract._id, {
+        termination: {
+          basis: "cause",
+          fee: 0,
+          lotsCancelled: Math.max(0, (contract.allocatedLots ?? 0) - (contract.lotsDelivered ?? 0)),
+          favorabilityPenalty: 0,
+          turn: currentTurn,
+        },
+      });
       stalled++;
       continue;
     }
@@ -545,7 +559,9 @@ export async function applyDefenceDeliveries(
   // contribution next turn. The turn stamp is what makes it expire on its own when a
   // contract completes or is cancelled — no sweep has to go and clear it.
   if (divertedBySector.size > 0) {
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await (
+      await getCorporateSectorsCollection(db)
+    ).bulkWrite(
       [...divertedBySector.values()].map(({ sector, lots: delivered }) => ({
         updateOne: {
           filter: { _id: sector._id },

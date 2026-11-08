@@ -946,7 +946,9 @@ export interface GameConfig {
    * units to one shared bond per issuer, currency, coupon, term and turn
    * instead of inserting one bond per maturing claim. Money, debt and units
    * are identical either way; only the number of bond documents changes.
-   * Absent or false keeps one replacement bond per claim.
+   * On unless explicitly false, so a world that never stored the field still
+   * keeps its maturity walls bounded. Only an explicit false inserts one
+   * replacement bond per claim.
    */
   sovereignRolloverConsolidationEnabled?: boolean;
   /**

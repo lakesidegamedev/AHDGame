@@ -1,13 +1,10 @@
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import type { Db } from "mongodb";
-import type {
-  Character,
-  NPP,
-  PartyHistorySnapshot,
-  PoliticalParty,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { PartyHistorySnapshot, StatePartyOrg } from "@/lib/db/types";
 import { COUNTRY_ORDER, COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 const HISTORY_CAP = 48;
 
@@ -30,8 +27,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
   const partyIds = activeCountries.map((id) => id);
 
   const [parties, orgRows, playerRows, nppRows] = await Promise.all([
-    db
-      .collection<PoliticalParty>("politicalParties")
+    (await getPoliticalPartiesCollection(db))
       .find(countryFilter)
       .project({ sequentialId: 1, countryId: 1 })
       .toArray(),
@@ -47,8 +43,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
         },
       ])
       .toArray(),
-    db
-      .collection<Character>("characters")
+    (await getCharactersCollection(db))
       .aggregate<CountRow>([
         { $match: { countryId: { $in: partyIds } } },
         {
@@ -62,8 +57,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
         },
       ])
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    (await getNppsCollection(db))
       .aggregate<CountRow>([
         { $match: { countryId: { $in: partyIds }, retiredAt: null } },
         {

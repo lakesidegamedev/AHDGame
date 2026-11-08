@@ -176,3 +176,43 @@ describe("getNationalPartyElectionState — committee election method", () => {
     expect(state.canVote).toBe(false);
   });
 });
+
+describe("getNationalCommitteeState", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("disables the committee ballot during the new-character cooldown the vote route enforces", async () => {
+    const { getAuthUserWithCharacter } = await import("@/lib/auth");
+    vi.mocked(getAuthUserWithCharacter).mockResolvedValue({
+      userId: new ObjectId().toString(),
+      character: {
+        _id: characterId,
+        name: "Fresh Join",
+        party: "8",
+        countryId: "UK",
+        createdAt: new Date("2026-01-01T00:00:00Z"),
+        partyJoinedAt: new Date(),
+      },
+    } as never);
+    const db = makeDb();
+    db.collectionMocks["nationalCommitteeElections"]!.findOne.mockResolvedValue(null);
+
+    const { getNationalCommitteeState } = await import("./leadership");
+    const state = await getNationalCommitteeState(db as unknown as Db, makeParty());
+
+    expect(state.runCooldownUntil).not.toBeNull();
+    expect(state.canVote).toBe(false);
+  });
+
+  it("keeps the ballot open for a member past the cooldown", async () => {
+    await mockViewer();
+    const db = makeDb();
+    db.collectionMocks["nationalCommitteeElections"]!.findOne.mockResolvedValue(null);
+
+    const { getNationalCommitteeState } = await import("./leadership");
+    const state = await getNationalCommitteeState(db as unknown as Db, makeParty());
+
+    expect(state.canVote).toBe(true);
+  });
+});

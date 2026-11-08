@@ -40,8 +40,9 @@ describe("spendFromTreasury", () => {
       newDebtPrincipal: 250,
     });
     const setOp = (db.collection("federalBudget").updateOne as ReturnType<typeof vi.fn>).mock
-      .calls[0][1].$set;
-    expect(setOp.treasuryBalance).toBe(600);
+      .calls[0][1];
+    expect(setOp.$inc.treasuryBalance).toBe(-400);
+    expect(setOp.$set).not.toHaveProperty("treasuryBalance");
     expect(setOp).not.toHaveProperty("debt.principal");
   });
 
@@ -55,8 +56,8 @@ describe("spendFromTreasury", () => {
       newDebtPrincipal: 250,
     });
     const setOp = (db.collection("federalBudget").updateOne as ReturnType<typeof vi.fn>).mock
-      .calls[0][1].$set;
-    expect(setOp.treasuryBalance).toBe(-200);
+      .calls[0][1];
+    expect(setOp.$inc.treasuryBalance).toBe(-500);
     expect(setOp).not.toHaveProperty("debt.principal");
   });
 
@@ -65,8 +66,8 @@ describe("spendFromTreasury", () => {
     const impact = await creditTreasury(db as unknown as Db, "US", 500);
     expect(impact).toMatchObject({ newTreasuryBalance: 300, newDebtPrincipal: 500 });
     const setOp = (db.collection("federalBudget").updateOne as ReturnType<typeof vi.fn>).mock
-      .calls[0][1].$set;
-    expect(setOp.treasuryBalance).toBe(300);
+      .calls[0][1];
+    expect(setOp.$inc.treasuryBalance).toBe(500);
     expect(setOp).not.toHaveProperty("debt.principal");
   });
 

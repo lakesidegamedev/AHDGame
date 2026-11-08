@@ -78,6 +78,7 @@ import {
   markAcquisitionApplied,
   markAcquisitionProgress,
 } from "./acquisitionSettlement";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -382,8 +383,11 @@ async function runAgreedAcquisition(
   const fundIds = (allocation?.fundRows ?? [])
     .filter((r) => r.payout > 0)
     .map((r) => new ObjectId(r.fundId));
+  const nppIds = (allocation?.nppRows ?? [])
+    .filter((r) => r.payout > 0)
+    .map((r) => new ObjectId(r.nppId));
   const floatPaid = Boolean(allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0);
-  const [chars, imperials, creditors, funds, treasury, equityPool] = await Promise.all([
+  const [chars, imperials, creditors, funds, npps, treasury, equityPool] = await Promise.all([
     charIds.length > 0
       ? db
           .collection<Character>("characters")
@@ -407,6 +411,11 @@ async function runAgreedAcquisition(
           .collection<IndexFund>("indexFunds")
           .find({ _id: { $in: fundIds } })
           .toArray()
+      : [],
+    nppIds.length > 0
+      ? getNppsCollection(db).then((npps) =>
+          npps.find({ _id: { $in: nppIds } }, { projection: { _id: 1 } }).toArray()
+        )
       : [],
     floatPaid
       ? db
@@ -499,11 +508,13 @@ async function runAgreedAcquisition(
       characterRows: [],
       corporationRows: [],
       fundRows: [],
+      nppRows: [],
       publicFloatRow: null,
     },
     currencyByHolderHex,
     creditorByHolderHex,
     fundsPresentHex: funds.map((f) => f._id.toString()),
+    nppsPresentHex: npps.map((n) => n._id.toString()),
     treasuryPresent: treasury != null,
     equityPoolPresent: equityPool != null,
     fxByCurrency: fxRecord,

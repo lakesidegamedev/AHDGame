@@ -69,6 +69,7 @@ type SeriesBond = Pick<
   | "requestedUnits"
   | "holders"
   | "updatedAt"
+  | "sovereignRolloverConsolidated"
 > & { reconcile?: boolean };
 
 export interface SeriesPlan {
@@ -138,6 +139,9 @@ export function seriesKey(bond: SeriesBond): string {
     String(bond.maturityTurn),
     String(bond.marketPrice),
     bond.reconcile === true ? "reconcile" : "",
+    // The shared rollover bond and a scheduled issue of the same coupon and
+    // turn are two bonds by design, not a split series.
+    bond.sovereignRolloverConsolidated === true ? "rollover" : "",
   ].join("|");
 }
 
@@ -196,6 +200,7 @@ export async function surveySovereignSeries(db: Db): Promise<Payload> {
         requestedUnits: 1,
         holders: 1,
         reconcile: 1,
+        sovereignRolloverConsolidated: 1,
       },
     })
     .sort({ _id: 1 })

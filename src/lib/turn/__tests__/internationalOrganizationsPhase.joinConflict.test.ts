@@ -567,7 +567,8 @@ describe("join_conflict enactment", () => {
       new Error("transient write failure")
     );
 
-    await expect(runPhase(["US"])).rejects.toThrow("transient write failure");
+    // Per-resolution isolation logs the failure and leaves the row for next turn.
+    await runPhase(["US"]);
 
     expect(
       legislationUpdateOne.mock.calls.some(

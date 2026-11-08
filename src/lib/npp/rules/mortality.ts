@@ -1,3 +1,5 @@
+import type { NppTurnoverConfig } from "./turnoverConfig";
+
 /**
  * When NPP turnover is on (or under V5), seated NPPs age each game year, can die
  * and, with the turnover flag, retire; successors inherit seats.
@@ -35,51 +37,96 @@ export function nppAgeAtYear(
 }
 
 /** Annual death probability for a sitting politician at the supplied age. */
-export function annualDeathProbability(age: number): number {
+export function annualDeathProbability(age: number, config: NppTurnoverConfig["death"]): number {
   if (!Number.isFinite(age) || age < 0) return 0;
-  const p = 0.00005 * Math.exp(0.095 * age);
-  return Math.min(p, 0.5);
+  const p = config.baseAnnual * Math.exp(config.exponentPerYear * age);
+  return Math.min(p, config.maxAnnual);
 }
 
 /** Roll one turn of mortality using an injected RNG and turns-per-year value. */
-export function nppDiesThisTurn(age: number, rng: () => number, turnsPerYear: number): boolean {
+export function nppDiesThisTurn(
+  age: number,
+  rng: () => number,
+  turnsPerYear: number,
+  config: NppTurnoverConfig["death"]
+): boolean {
   if (!Number.isFinite(turnsPerYear) || turnsPerYear <= 0) return false;
-  return rng() < annualDeathProbability(age) / turnsPerYear;
+  return rng() < annualDeathProbability(age, config) / turnsPerYear;
 }
 
 /** Generate a working-age replacement birth year from an injected RNG. */
-export function randomReplacementBirthYear(currentYear: number, rng: () => number): number {
-  const age = 32 + Math.floor(rng() * 37);
+export function randomReplacementBirthYear(
+  currentYear: number,
+  rng: () => number,
+  config: NppTurnoverConfig["replacement"]
+): number {
+  const age = config.minAge + Math.floor(rng() * config.ageSpan);
   return currentYear - age;
 }
 
 /**
  * Annual retirement probability for a sitting politician at the supplied age.
- * Nobody retires before 70; from 70 the chance climbs linearly from 5% to 35%
- * at 80 and holds there.
+ * Zero below the start age, then a linear climb to the maximum, held after.
  */
-export function annualRetirementProbability(age: number): number {
-  if (!Number.isFinite(age) || age < 70) return 0;
-  return Math.min(0.35, 0.05 + ((age - 70) * 0.3) / 10);
+export function annualRetirementProbability(
+  age: number,
+  config: NppTurnoverConfig["retirement"]
+): number {
+  if (!Number.isFinite(age) || age < config.startAge) return 0;
+  const climb = (age - config.startAge) / (config.maxAge - config.startAge);
+  return Math.min(
+    config.maxAnnual,
+    config.startAnnual + climb * (config.maxAnnual - config.startAnnual)
+  );
 }
 
 /** Roll one turn of retirement using an injected RNG and turns-per-year value. */
-export function nppRetiresThisTurn(age: number, rng: () => number, turnsPerYear: number): boolean {
+export function nppRetiresThisTurn(
+  age: number,
+  rng: () => number,
+  turnsPerYear: number,
+  config: NppTurnoverConfig["retirement"]
+): boolean {
   if (!Number.isFinite(turnsPerYear) || turnsPerYear <= 0) return false;
-  return rng() < annualRetirementProbability(age) / turnsPerYear;
+  return rng() < annualRetirementProbability(age, config) / turnsPerYear;
+}
+
+/**
+ * Per-turn retirement chance for a party leader or head of government.
+ * Outside the window before their term ends it is zero, unless the leader is
+ * past the mid-term age or has no known term end. Inside it, the chance a
+ * leader would have retired over a whole term is spread across the window, so
+ * leaders retire between terms as often as they would have mid-term.
+ */
+export function leaderRetirementChancePerTurn(
+  age: number,
+  turnsToTermEnd: number | null,
+  turnsPerYear: number,
+  retirement: NppTurnoverConfig["retirement"],
+  leaders: NppTurnoverConfig["leaders"]
+): number {
+  const perTurn = annualRetirementProbability(age, retirement) / turnsPerYear;
+  if (age >= leaders.midTermRetirementAge || turnsToTermEnd === null) return perTurn;
+  if (turnsToTermEnd < 0 || turnsToTermEnd > leaders.windowTurns) return 0;
+  const overTerm = 1 - Math.pow(1 - perTurn, leaders.termTurns);
+  return 1 - Math.pow(1 - overTerm, 1 / leaders.windowTurns);
 }
 
 /**
  * Deterministic stand-in birth year for an office-holder seeded without one,
- * so they can age out. The id seeds an age of 35-70 at the supplied year; the
- * same id always gets the same age.
+ * so they can age out. The id seeds an age in the configured range; the same
+ * id always gets the same age.
  */
-export function backfillBirthYear(id: string, currentYear: number): number {
+export function backfillBirthYear(
+  id: string,
+  currentYear: number,
+  config: NppTurnoverConfig["backfill"]
+): number {
   let hash = 2166136261;
   for (let i = 0; i < id.length; i++) {
     hash ^= id.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  const age = 35 + ((hash >>> 0) % 36);
+  const age = config.minAge + ((hash >>> 0) % config.ageSpan);
   return currentYear - age;
 }

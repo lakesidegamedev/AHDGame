@@ -81,7 +81,7 @@ describe("worldEvents.sportsVictory — offer → resolve → effects (Phase 0 p
     // treasuryDelta moved the treasury and logged a conservation-tracked tx row.
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(
       { countryId: "US" },
-      expect.objectContaining({ $set: expect.objectContaining({ treasuryBalance: 1_005_000 }) })
+      expect.objectContaining({ $inc: { treasuryBalance: 5_000 } })
     );
     expect(db.collectionMocks.financialTxLog!.insertOne).toHaveBeenCalledTimes(1);
     const txDoc = db.collectionMocks.financialTxLog!.insertOne.mock.calls[0][0];

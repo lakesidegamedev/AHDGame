@@ -62,7 +62,7 @@ const REGISTRY: Record<string, Registered> = {
     ],
   },
   "src/lib/corporations/groups/applyGroupRelief.ts": {
-    writers: ["debitTreasury"],
+    writers: ["debitTreasuryCompensation"],
     witness: [{ kind: "flow", flows: ["group_loss_relief"] }],
   },
   "src/lib/corporations/groups/applyTransferPricingAudit.ts": {

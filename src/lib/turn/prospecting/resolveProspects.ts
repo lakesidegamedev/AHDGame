@@ -151,7 +151,7 @@ export async function resolveProspects(
 
     surveyBulk.push({
       updateOne: {
-        filter: { _id: survey._id },
+        filter: { _id: survey._id, status: "active" },
         update: {
           $set: {
             status: success ? "succeeded" : "failed",
@@ -181,6 +181,11 @@ export async function resolveProspects(
     }
   }
 
+  // Close the surveys before granting anything. A failure after this point
+  // loses at most this turn's gains; the other order re-rolls the same surveys
+  // next turn and grants capacity again on every retry.
+  if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
+
   // Apply capacity growth (one updateOne per state with all resource $incs).
   const capBulk: AnyBulkWriteOperation<StateResourceCapacity>[] = [];
   for (const [key, inc] of capIncByKey) {
@@ -201,7 +206,6 @@ export async function resolveProspects(
     capByKey,
     capIncByKey
   );
-  if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
   if (notifications.length > 0) await createNotifications(notifications);
 
   return result;

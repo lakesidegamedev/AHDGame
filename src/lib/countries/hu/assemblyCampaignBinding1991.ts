@@ -14,6 +14,7 @@ import type {
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 
 export async function materializeHu1991CampaignBinding(input: {
   db: Db;
@@ -97,7 +98,7 @@ export async function materializeHu1991CampaignBinding(input: {
       { countryId: "HU" },
       {
         session,
-        projection: { _id: 1, population: 1, votingEligiblePopulation: 1 },
+        projection: STATE_POPULATION_FIELDS,
       }
     )
     .toArray();

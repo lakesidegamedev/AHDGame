@@ -170,6 +170,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    // Claim the invite before any money moves: a double-submit or an
+    // accept-vs-cancel race must fail here, not debit twice and miss an
+    // unchecked post-facto status write.
+    const inviteClaim = await db
+      .collection<CorporationShareInvite>("corporationShareInvites")
+      .updateOne(
+        { _id: inviteOid, status: "pending" },
+        { $set: { status: "accepted", acceptedAt: now, updatedAt: now } }
+      );
+    if (inviteClaim.modifiedCount === 0) {
+      return errorResponse(409, "Invite is no longer pending");
+    }
+
     const forexEnabled = await isForexEnabled();
     const debitResult = await atomicallyDebitCharacterCash(
       db,
@@ -179,6 +192,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       forexEnabled
     );
     if (!debitResult.ok) {
+      await db
+        .collection<CorporationShareInvite>("corporationShareInvites")
+        .updateOne(
+          { _id: inviteOid, status: "accepted" },
+          { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+        );
       return errorResponse(
         400,
         `Insufficient funds. Need ${invite.totalCost.toLocaleString()} ${homeCurrency}.`
@@ -206,16 +225,15 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       if (!credited) {
         await refundCharacterCash(db, invitee._id, homeCurrency, invite.totalCost, forexEnabled);
+        await db
+          .collection<CorporationShareInvite>("corporationShareInvites")
+          .updateOne(
+            { _id: inviteOid, status: "accepted" },
+            { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+          );
         return errorResponse(500, "Failed to credit shares — please retry");
       }
       sharesCredited = true;
-
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "pending" },
-          { $set: { status: "accepted", acceptedAt: now, updatedAt: now } }
-        );
 
       emitTx(db, {
         type: "stock_trade_buy",
@@ -261,6 +279,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         console.error("[private-invite accept] failed after credit", err);
       } else {
         await refundCharacterCash(db, invitee._id, homeCurrency, invite.totalCost, forexEnabled);
+        await db
+          .collection<CorporationShareInvite>("corporationShareInvites")
+          .updateOne(
+            { _id: inviteOid, status: "accepted" },
+            { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+          );
       }
       throw err;
     }

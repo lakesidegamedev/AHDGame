@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { MILITARY_BRANCHES_BY_COUNTRY, isMilitaryEraActive } from "@/lib/constants/military";
@@ -10,6 +9,7 @@ import { buildCountryRoster } from "@/lib/admin/seed/seedMilitaryUnits";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { createSystemNewsPost } from "@/lib/news";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface MilitaryBranchYearCrossingResult {
   ran: boolean;
@@ -58,12 +58,12 @@ export async function runMilitaryBranchYearCrossing(
 ): Promise<MilitaryBranchYearCrossingResult> {
   const result: MilitaryBranchYearCrossingResult = { ran: false, raised: [], posted: [] };
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, lastMilitaryBranchYearProcessed: 1, eraSystemEnabled: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, lastMilitaryBranchYearProcessed: 1, eraSystemEnabled: 1 } }
+  );
   if (!gameState) return result;
 
   // Prefer the turn context's authoritative year: the persisted
@@ -139,9 +139,9 @@ export async function runMilitaryBranchYearCrossing(
 
   if (staged.length > 0) await units.insertMany(staged);
 
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, { $set: { lastMilitaryBranchYearProcessed: currentYear } });
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" }, { $set: { lastMilitaryBranchYearProcessed: currentYear } });
 
   return { ...result, ran: true, ...(firstRun ? { healed: true } : {}) };
 }

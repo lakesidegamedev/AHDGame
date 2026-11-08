@@ -12,7 +12,6 @@ import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import type { MetricCategoryId } from "@/lib/db/types";
-import type { State } from "@/lib/db/types/state";
 import {
   createCrisisInteraction,
   getExpiredInteractions,
@@ -37,6 +36,7 @@ import {
   livingVietnamAsLegacyState,
   retireLegacyVietnamCrises,
 } from "@/lib/livingConflict/vietnamCompat";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 /**
  * Process active crises for the current turn.
@@ -101,7 +101,7 @@ export async function processCrisisTurn(
 
   if (crises.length === 0) return 0;
 
-  const allStates = await db.collection<State>("states").find({}).toArray();
+  const allStates = await (await getStatesCollection(db)).find({}).toArray();
 
   // country → stateId[] for scope resolution
   const statesByCountry = new Map<string, string[]>();
@@ -209,13 +209,27 @@ export async function processCrisisTurn(
     }
   }
 
+  // Shared response windows derive and apply their aggregate outcome before
+  // the generic lifecycle close. The resolver is idempotent on replay, so a
+  // crisis whose resolver throws stays active and retries alone next turn
+  // instead of holding every other expiring crisis open with it.
+  const resolvable: Crisis[] = [];
+  for (const crisis of toResolve) {
+    if (crisis.globalResponse) {
+      try {
+        await resolveGlobalResponse(db, crisis._id);
+      } catch (error) {
+        console.error(`[crisisTurn] global response for crisis ${crisis._id} failed:`, error);
+        continue;
+      }
+    }
+    resolvable.push(crisis);
+  }
+  toResolve.length = 0;
+  toResolve.push(...resolvable);
+
   // Batch-resolve expired crises
   if (toResolve.length > 0) {
-    // Shared response windows derive and apply their aggregate outcome before
-    // the generic lifecycle close. The resolver is idempotent on replay.
-    for (const crisis of toResolve) {
-      if (crisis.globalResponse) await resolveGlobalResponse(db, crisis._id);
-    }
     const ids = toResolve.map((c) => c._id);
     await db
       .collection<Crisis>("crises")
@@ -263,7 +277,11 @@ export async function processCrisisTurn(
 
   const expiredInteractions = await getExpiredInteractions(db);
   for (const interaction of expiredInteractions) {
-    await autoResolveCrisisInteraction(db, interaction._id);
+    try {
+      await autoResolveCrisisInteraction(db, interaction._id);
+    } catch (error) {
+      console.error(`[crisisTurn] auto-resolve of interaction ${interaction._id} failed:`, error);
+    }
   }
 
   return crises.length;
@@ -343,8 +361,9 @@ function resolveScope(
  */
 async function resolveCrisisTargetStateIds(db: Db, crisis: Crisis): Promise<string[]> {
   if (crisis.scope === "region") return crisis.regionIds;
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   if (crisis.scope === "global") return states.map((s) => s._id);
