@@ -368,7 +368,8 @@ describe("executeCorporationBondDefaultDissolution ledger rows (#3237)", () => {
     await executeCorporationBondDefaultDissolution(db, corp, { requireDefaultedBonds: true });
 
     // Claims net of own units are 600k against 500k of assets: ratio 5/6.
-    const fundOps = vi.mocked(db.collection("indexFunds").bulkWrite).mock.calls[0]![0] as {
+    const fundOps = vi.mocked(db.collection("indexFunds").bulkWrite).mock
+      .calls[0]![0] as unknown as {
       updateOne: { update: { $inc: { cashAnchor: number } } };
     }[];
     expect(fundOps[0]!.updateOne.update.$inc.cashAnchor).toBeCloseTo(250_000, 0);
