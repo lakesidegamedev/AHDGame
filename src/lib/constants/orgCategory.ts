@@ -119,10 +119,7 @@ export const ORGANIZATION_CATEGORY_META: Record<OrganizationCategory, OrgCategor
       "declare_war",
       "join_conflict",
     ],
-    // A bloc honours Article 5 like any defence pact, and is also where a standing
-    // charter (NATO, the Warsaw Pact) binds without a vote: those two are `bloc` only
-    // in a world that began in the Cold War, which is exactly when their charters
-    // were enforced before this was data.
+    // A bloc honours Article 5 like any defence pact, and standing charters (NATO, Warsaw Pact) bind without a vote.
     mutualDefence: { byPosture: true, honoursStandingCharter: true },
   },
 };
@@ -188,21 +185,17 @@ export const BLOC_DESIGNATED_ORG_IDS: readonly string[] = ["NATO", "WARSAW_PACT"
  * An organisation's EFFECTIVE category in a given world.
  *
  * NATO and the Warsaw Pact are `security` by archetype and `bloc` in a world
- * that began in the Cold War — they were not ordinary defence pacts but the
- * instruments two superpowers ran their spheres through, so they get the
- * patronage and coercion a security alliance is otherwise denied.
+ * that began in the Cold War; they get the patronage and coercion a security
+ * alliance is otherwise denied.
  *
- * NOT DERIVED FROM THE YEAR, and that is the whole point. `resolveAlignmentEra`
- * flips to post-cold-war at 1991, and hanging this off it would end the Cold War
- * on the calendar whether or not anyone had resolved it — a 1953 game still
- * being fought in 1992 would silently strip both blocs of half their tools. The
- * Cold War ends when the game says it has, not when the date says so. That is
- * the same principle the org window already follows: the Warsaw Pact carries a
- * `dissolvedYear` of 1991 and is still never force-dissolved while it has
- * members, because a running game outranks history.
+ * NOT DERIVED FROM THE YEAR, deliberately. `resolveAlignmentEra` flips to
+ * post-cold-war at 1991, and hanging this off it would end the Cold War on the
+ * calendar whether or not anyone had resolved it. The Cold War ends when the
+ * game says it has, not when the date says so, matching how the Warsaw Pact
+ * carries a `dissolvedYear` but is never force-dissolved while it has members.
  *
- * `coldWarEnded` is the seam for an ending nobody has built yet. Until something
- * sets it, it is always false and the designation simply holds.
+ * `coldWarEnded` is the seam for an ending nobody has built yet; until
+ * something sets it, the designation simply holds.
  */
 export function resolveOrgCategory(params: {
   organizationId: string;

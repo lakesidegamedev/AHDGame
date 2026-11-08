@@ -99,9 +99,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     let userCorpCountryId: string | null = null;
     const user = await getAuthUser();
 
-    // Private-corp redaction context (mirrors /api/corporations/[id]). Private
-    // corps hide marketingStrength/revenue/workers from anyone who isn't the
-    // owner, an admin, or a moderator viewing with ?modView=1.
+    // Private corps hide marketingStrength/revenue/workers unless viewer is owner, admin, or moderator with ?modView=1.
     const viewerUserId = user?.userId;
     const viewerIsAdmin = user?.isAdmin === true;
     const modViewEnabled =
@@ -171,9 +169,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     }
 
-    // The country-wide states read that used to live here existed only to
-    // population-weight a national GDP-growth average. That average was the wrong
-    // aggregate (see below), so the read went with it.
     const [state, stateMetricsDoc, stateTariffs, stateCapDoc, activeFtaPairs] = await Promise.all([
       db.collection<State>("states").findOne({ _id: stateId, countryId }),
       // SP5: workforce skill spans both pipelines — shared loader.
@@ -222,9 +217,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       growthGameState?.currentYear
     );
 
-    // Total market size per sector type based on state GDP. The GDP→₳ rate is
-    // era-scoped (refs #3778): a 1953 world normalizes with 1953 rates, not the
-    // base config's modern/1979 ones.
+    // GDP→₳ rate is era-scoped: each world normalizes with its own era's rates.
     const economyPreset = await loadWorldPreset(db);
     const usdExchangeRate = getGdpAnchorRate(countryId, economyPreset);
     const totalMarketPerSector = Math.round(
@@ -248,10 +241,9 @@ export async function GET(request: Request, { params }: RouteParams) {
     ) => getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator);
     const unownedByType = new Map(unownedDocs.map((u) => [laneOf(u), u.revenue]));
     // Plants tier: the state board reframes the unowned pool as UNMET DEMAND in
-    // output units, because that is the quantity a player can actually act on
-    // (build against) rather than a ₳ pool they can no longer buy into. Headroom
-    // is self-healed from revenue for rows predating the backfill — a bare 0
-    // there would report a busy market as having no demand at all.
+    // output units, the quantity a player can build against rather than a pool
+    // they can no longer buy into. Headroom is self-healed from revenue for
+    // rows predating the backfill; a bare 0 would report a busy market as no demand.
     const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
     // Get corporation details for each sector
@@ -374,19 +366,12 @@ export async function GET(request: Request, { params }: RouteParams) {
         (sum, s) => sum + (sectorRevenueAnchorById.get(s._id.toString()) ?? 0),
         0
       );
-      // Use the persisted unowned pool when present so admin-spawned market is preserved.
-      // If the pool has not been seeded yet, fall back to the GDP-derived market gap —
-      // but never below the revenue already owned in this (state, sectorType): a sector
-      // can't hold >100% of its market. Without that floor, a nationalization that
-      // consumed the unowned pool left a tiny GDP baseline against the consolidated
-      // owned revenue, so every participant clamped to 100% (Bug #0775). Shared,
-      // tested helper — same invariant the sector-detail + turn paths use.
-      // unownedSectors.revenue is ₳-native (Task 9) so it sums safely with the anchor total.
-      // Ticket #1145: under plants, market share is a corp's revenue over the
-      // cell's TOTAL real revenue — there is no unowned pool in the denominator,
-      // and splits are retired (estimatedCapture/splitCost below are already 0),
-      // so unowned is 0. Below plants (legacy split worlds) keep the pool so the
-      // split quotes further down still work.
+      // Use the persisted unowned pool when present so admin-spawned market is
+      // preserved; fall back to the GDP-derived gap, but never below owned revenue
+      // in this (state, sectorType): a sector can't hold >100% of its market.
+      // unownedSectors.revenue is native units so it sums with the anchor total.
+      // Under plants, market share is revenue over the cell's total real revenue:
+      // no unowned pool, splits retired (unowned is 0).
       const persistedUnownedRevenue = unownedByType.get(sectorType);
       const effectiveTotalMarket = plantsMode
         ? Math.max(0, ownedRevenue)

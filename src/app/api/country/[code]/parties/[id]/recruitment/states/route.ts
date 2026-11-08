@@ -88,9 +88,8 @@ export async function GET(
     const partyActionPoints = party.nppActionPoints ?? nppActionPointCap("national", apTier);
     const partyTreasury = party.treasury ?? 0;
 
-    // States that already have a state Chair or Vice Chair. We surface this as
-    // an informational flag to the UI but no longer filter such states out —
-    // national leadership can recruit anywhere within their country.
+    // Informational flag only: national leadership can recruit in states that
+    // already have a Chair or Vice Chair, so do not filter them out.
     const statesWithLeadership = new Set(
       statePartyOrgs.filter((o) => o.chairId || o.viceChairId).map((o) => o.stateId)
     );

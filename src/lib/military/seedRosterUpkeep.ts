@@ -51,36 +51,33 @@ function forPreset(preset: string): Map<string, number> {
 }
 
 /**
- * The `aggregateForce().totalUpkeep` of a country's SEEDED order of battle — the
- * denominator `upkeepPerTurn` divides the live roster by, so that a nation sitting at its
- * historical starting force pays exactly `SEED_UPKEEP_TARGET_SHARE` of its appropriation
- * and everything it adds beyond that costs real money.
+ * The `aggregateForce().totalUpkeep` of a country's SEEDED order of battle: the
+ * denominator `upkeepPerTurn` divides the live roster by, so a nation at its
+ * historical starting force pays exactly `SEED_UPKEEP_TARGET_SHARE` of its
+ * appropriation and everything beyond that costs real money.
  *
- * DERIVED from the seeder rather than stored as a generated literal. `buildCountryRoster`
- * is pure and seeded per country, so this reproduces the real roster exactly — and a
- * checked-in table would silently go stale the moment an archetype's upkeep, a branch's
- * era gate, or an authored order of battle changed, shifting every country's upkeep share
- * with nothing to catch it. Deriving it means the numerator and denominator always come
- * from the same source of truth. `scripts/calibrate-defence-upkeep.ts` prints the same
- * numbers for review.
+ * DERIVED from the seeder rather than stored as a generated literal.
+ * `buildCountryRoster` is pure and seeded per country, so this reproduces the
+ * real roster exactly; a checked-in table would silently go stale whenever an
+ * archetype's upkeep, a branch's era gate, or an authored order of battle
+ * changed. Deriving keeps numerator and denominator on the same source of
+ * truth. `scripts/calibrate-defence-upkeep.ts` prints the same numbers.
  *
- * Memoised per preset: a world only ever asks about its own, and the computation is pure
- * arithmetic over ~80 countries with no I/O.
+ * Memoised per preset: a world only asks about its own, and the computation is
+ * pure arithmetic over ~80 countries with no I/O.
  *
- * Falls back to the NEAREST preset in either direction — earlier first, then later — before
- * giving up at 0.
+ * Falls back to the NEAREST preset in either direction, earlier first then
+ * later, before giving up at 0.
  *
- * Searching later presets matters and is not symmetry for its own sake: a country whose
- * armed forces are established after the world's start year has no seed-era roster at all.
- * DD, DE, AT and NG all seed nothing in 1953 (NVA 1956, Bundeswehr 1955, Bundesheer 1955,
- * Nigerian independence 1960) but seed real rosters from 1979. Those nations can still
- * ACQUIRE units on a 1953 world — by recruiting, or by the clock crossing their branch's
- * establishment year — and an earlier-only search would hand every one of them a permanently
- * free army. The live testing world already had two such DD units.
+ * Searching later presets matters: a country whose armed forces are established
+ * after the world's start year seeds nothing in that era (DD, DE, AT, NG all
+ * seed nothing in 1953) but seeds real rosters in later presets. Those nations
+ * can still ACQUIRE units on a 1953 world, and an earlier-only search would
+ * hand them a permanently free army.
  *
- * A 0 makes `upkeepPerTurn` charge nothing, which is the safe direction for a per-turn sweep
- * over every country, but it is still a free army — so `seedRosterUpkeep.test.ts` asserts
- * that any country seeding units in ANY preset resolves above zero in EVERY preset.
+ * A 0 makes `upkeepPerTurn` charge nothing, which is safe for a per-turn sweep
+ * but is still a free army, so `seedRosterUpkeep.test.ts` asserts that any
+ * country seeding units in ANY preset resolves above zero in EVERY preset.
  */
 export function seedRosterUpkeepFor(preset: string, countryId: string): number {
   const direct = forPreset(preset).get(countryId);

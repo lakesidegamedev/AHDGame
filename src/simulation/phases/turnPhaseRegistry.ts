@@ -268,8 +268,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // after auto-seed and BEFORE the corporation turn so a newly-adopted
         // focused mining strategy is in effect when this turn's supply/revenue
         // is computed. Reads the prior turn's commodity S/D (one-turn lag, same
-        // as auto-seed); writes only sector strategy fields. Inert unless
-        // gameState.extractionAutoStrategyEnabled.
+        // as auto-seed); writes only sector strategy fields.
         const extractionAutoStrategyResult = await runtime.runPhase("extractionAutoStrategy", () =>
           processExtractionAutoStrategy(context.db, newTurn, gameState)
         );

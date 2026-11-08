@@ -142,10 +142,8 @@ export async function POST(request: Request) {
     const log: string[] = [];
     const redirectBuckets = await loadSeedProtectedBucketKeys(db);
     // PLANTS: `headroomUnits`, not `revenue`, is the pool players draw from.
-    // Both boost paths below scale the two legs in lockstep via the SAME shared
-    // pipeline the per-turn auto-seeder uses. This route used to scale revenue
-    // alone, so under plants an admin stimulus moved a number nothing reads and
-    // left the unit view stale.
+    // Both boost paths scale the two legs in lockstep via the same shared
+    // pipeline the per-turn auto-seeder uses.
     const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
     const eraUnitScale = await loadWorldEraUnitScale(db);
 

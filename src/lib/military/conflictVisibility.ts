@@ -8,8 +8,6 @@ import { isArchiveOpen } from "./conflictLifecycle";
  * Visibility and ACTIONS are separate axes: a posted general and a defense minister
  * see the same thing and differ only in what they may do (actions stay with
  * `canActAtTheater`). Pure — the page gathers the facts, this decides the tier.
- *
- * Spec: docs/superpowers/specs/2026-07-26-conflict-viewer-tiers-design.md
  */
 
 export type ConflictTier = "public" | "command" | "archive";
@@ -63,23 +61,16 @@ export function belligerentSideOf(
 }
 
 /**
- * The tier a viewer reads this conflict at. A resolved war becomes an open record
- * for everyone once its fog window has lapsed (`isArchiveOpen`); until then, and
- * for every live war, command sight needs BOTH a belligerent country and a SEAT
- * in its command structure.
+ * The tier a viewer reads this conflict at. A resolved war becomes an open
+ * record for everyone once its fog window has lapsed; until then, and for every
+ * live war, command sight needs BOTH a belligerent country and a SEAT in its
+ * command structure.
  *
- * The fog outlives the war on purpose. The day a war ends, its order of battle is
- * still a live intelligence picture of nations that may fight again next season,
- * so a freshly resolved war reads exactly as it did while it ran: own side for a
- * belligerent seat, the public layer for everyone else.
+ * The fog outlives the war on purpose: a freshly resolved war's order of battle
+ * is still live intelligence, so it reads as it did while it ran.
  *
- * An account flag is not a seat. `isAdmin` used to escalate here, which meant a
- * staff member holding no office in a belligerent nation was handed their own
- * side's full order of battle while the role panel beside it correctly called
- * them a citizen who gives no orders at this front — the page contradicting
- * itself on the one question it exists to answer. Staff oversight of a war, if
- * it is wanted, belongs on an admin surface that says so, not disguised as the
- * public record.
+ * An account flag is not a seat. `isAdmin` must not escalate here; staff
+ * oversight, if wanted, belongs on an admin surface that says so.
  */
 export function conflictTier(f: ViewerFacts): ConflictTier {
   if (isArchiveOpen(f, f.currentTurn)) return "archive";

@@ -176,7 +176,7 @@ describe("preset seat groups", () => {
   it("assigns every seat to exactly one country", () => {
     for (const preset of ALL_PRESETS) {
       const groups = seatGroupsFor(preset);
-      // Background countries (#5702) keep their authored rows here, but the
+      // Background countries keep their authored rows here, but the
       // seeding path (`getPresetSeats`) never sees them.
       const total = Object.entries(groups)
         .filter(([countryId]) => !isBackgroundInPreset(preset, countryId))

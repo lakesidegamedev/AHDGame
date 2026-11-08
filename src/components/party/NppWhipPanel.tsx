@@ -358,8 +358,8 @@ export function NppWhipPanel({
     postWhip(`cv_${voteId}_${direction}`, () => {
       const config = getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId);
       const chamber = chamberOverride ?? config.legislature.lowerChamber.key;
-      // A state party panel must post to its own region route; a governor
-      // impeachment is shown there.
+      // A state party panel must post to its own region route; the national
+      // URL breaks governor impeachment.
       return {
         url: nationalOrRegionWhipUrl(),
         body: { targetType, targetId: voteId, chamber, direction },

@@ -169,10 +169,9 @@ export async function applyTransferPricingAudit(
       });
       const collected = debit.ok ? localAmount : 0;
       if (collected > 0) {
-        // Same cross-border unit mismatch as the divestiture fine (#808):
-        // `collected` is in the LIABLE CORP's currency, and transfer pricing is
-        // by definition the cross-border case, so the claimant country must be
-        // credited the ₳ amount converted into its own currency.
+        // `collected` is in the LIABLE CORP's currency, and transfer pricing is the
+        // cross-border case, so the claimant country must be credited the amount
+        // converted into its own currency.
         await creditTreasuryProceedsFromAnchor(
           db,
           assessment.claimantCountryId as CountryId,

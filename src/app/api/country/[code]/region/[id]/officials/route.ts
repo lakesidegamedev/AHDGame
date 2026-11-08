@@ -24,10 +24,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    // State ids are stored upper-case ("BEO", "SN"). The server-rendered region
-    // page already uppercases before querying; this route did not, so a
-    // lower-case id in the URL matched nothing and the parliament list came
-    // back empty (ticket-1107).
+    // State ids are stored upper-case ("BEO", "SN"). The region page
+    // uppercases before querying; a lower-case URL id would otherwise
+    // match nothing and return an empty parliament list.
     const stateId = id.toUpperCase();
 
     const db = await getDb();

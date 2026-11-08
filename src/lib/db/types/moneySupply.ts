@@ -5,7 +5,7 @@ import type { MoneyAggregates } from "@/lib/moneySupply/calculate";
 export interface MoneySupplySnapshot extends MoneyAggregates {
   /**
    * Observation contract version: 1 pre-method, 2 comparable-window, 3 with
-   * bond-pool settlement inventory outside observed M2 (#2021). Absent on
+   * bond-pool settlement inventory outside observed M2. Absent on
    * legacy demographic/weighted observations. Growth is only comparable
    * between snapshots on the same version; `excludedBondPoolCash` /
    * `observedBondPoolCash` are absent before v3.

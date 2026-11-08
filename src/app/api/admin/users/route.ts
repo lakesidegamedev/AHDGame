@@ -148,10 +148,9 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
         modNote: user.modNote || null,
         latestModNote: user.modNotes?.at(-1)?.text ?? user.modNote ?? null,
         ipDetails: user.ipDetails ?? null,
-        // Annotation only — every value emitted above is unchanged. Nulling
-        // ineligible signals here would blank the Registration IP / Last Known
-        // IP columns in the users table for any account inactive 30+ days,
-        // which is a forensic regression in a view this change does not touch.
+        // Annotation only, emitted values are unchanged. Nulling ineligible
+        // signals here would blank the Registration IP / Last Known IP columns
+        // for accounts inactive 30+ days, a forensic regression.
         signalEligibility: eligibleIdentitySignals(user, now),
       };
     });

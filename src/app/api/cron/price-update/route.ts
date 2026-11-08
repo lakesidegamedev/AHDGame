@@ -7,8 +7,7 @@ import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers"
 import { getProcessingLockState } from "@/lib/turn/processingLock";
 
 // GET /api/cron/price-update
-// Retained for manual invocation. Price multipliers are now applied as part of
-// stock-exchange-refresh (every 5 minutes) so this cron is no longer scheduled.
+// Manual invocation only: price multipliers now run via stock-exchange-refresh.
 // Auth: requireCron
 export async function GET(req: Request) {
   const start = Date.now();

@@ -338,11 +338,7 @@ export interface SideMults {
 export function sideMults(A: SideAgg, B: SideAgg): SideMults {
   const cl = (x: number) => Math.max(-0.5, Math.min(0.5, x));
   const pen = 1 + 0.3 * cl((A.fp - B.ar) / 120);
-  // Head to head hold on the sky, decided by `navairOperations` before this battle
-  // ran. The 0.24 coefficient and the 120 spread are UNCHANGED from the previous
-  // formula on purpose: the input changes, the magnitude does not, so the static
-  // replay isolates the effect of measuring air power properly from the effect of
-  // retuning it. Retune only once the replay says what the first change did.
+  // Air superiority comes from navairOperations before this battle. Coefficients and spread are unchanged on purpose so static replay isolates the input change from retuning.
   const airm = 1 + 0.24 * cl((A.airSuperiority - B.airSuperiority) / 120);
   const rec = 1 + 0.15 * cl((A.rc - B.rc) / 120);
   const stand = 1 + 0.15 * cl((A.rn - B.rn) / 120);
@@ -599,24 +595,19 @@ const ENGAGE_PRIORITY: Record<string, number> = {
   rear: 5,
 };
 
-/**
- * Fill a front to `capacity` in combat value; hold everything past it in depth.
+/*
+ * Fill a front to `capacity` in combat value; hold the rest in depth.
  *
- * Computed ONCE for a whole side and consumed by both the strength path
- * (`ownSideProfile`) and the casualty path (`unitOutcomes`). Those were independent, and
- * that is exactly how a formation could be out of contact for strength purposes and go
- * on bleeding anyway.
+ * Computed once per side and consumed by both `ownSideProfile` (strength) and
+ * `unitOutcomes` (casualties), so they cannot disagree about who is in contact.
  *
- * Order: the player's own role assignment first, so the existing role system is the
- * control surface and there is no new concept to learn; then combat value, so the best
- * formations hold the line; then unit id, so a tie never depends on the order Mongo
- * returned the units in. That last tiebreak is not cosmetic -- the roster reaches the
- * battle report.
+ * Order: player role assignment, then combat value, then unit id. The id
+ * tiebreak keeps the ordering stable in the battle report regardless of Mongo
+ * return order.
  *
- * Deliberately NOT applied to `supplyState`: a formation held in depth really is doing
- * rear-area work, and its logistics presence is not the question the cap is asking.
+ * Not applied to `supplyState`: depth formations still do rear-area work.
  *
- * One formation is always in contact. A side that fielded nothing would not be a battle.
+ * One formation is always in contact; a side with no units would not be battle.
  */
 export function planEngagement(
   ctxs: BattleContext[],
@@ -877,21 +868,18 @@ function enemyFaction(ctx: BattleContext, f: Front): string {
 }
 
 /** Per-unit casualties/readiness/xp for one contingent at a front, given the battle ratio
- *  (own perspective) and a shared rng stream. Two draws per unit — the exact order
- *  the synthetic and PvP paths both rely on. Returns results + total casualties.
+ *  (own perspective) and a shared rng stream. Two draws per unit, the order both the
+ *  synthetic and PvP paths rely on.
  *
- * `share` is the unit's fraction of the SIDE's combat value at the front, passed in
- * as `sideRawTotal` by the PvP path. The old denominator renormalised every
- * contingent to 1.0, so a one-unit ally's `share` read 1.0 and its (0.6 + share)
- * concentration term charged it as though its handful of divisions were the whole
- * army. Absent `sideRawTotal` (the synthetic forecast path, one context by
- * construction) the contingent's own total is the denominator, exactly as before.
+ * `share` is the unit's fraction of the SIDE's combat value, passed as `sideRawTotal`
+ * by the PvP path. Without it the contingent renormalises to 1.0 and a one-unit ally's
+ * concentration term overcharges it. Absent `sideRawTotal` (synthetic forecast path,
+ * one context by construction) the contingent's own total is the denominator.
  *
- * `sustain` is the opposite question and takes the opposite answer: it is a property of
- * a nation's OWN tail, looked up per unit in `contingentSustain`. Side-wide, it let an
- * ally's rear echelon shelter your frontline. The `rearShare`/`reserveRes` scalars remain
- * as the fallback for the synthetic path, where the side IS the contingent and the two
- * are identical by construction. */
+ * `sustain` is the opposite: property of a nation's OWN tail, looked up per unit in
+ * `contingentSustain`. Side-wide, an ally's rear echelon shelters your frontline.
+ * `rearShare`/`reserveRes` are the fallback for the synthetic path, where side and
+ * contingent are identical by construction. */
 function unitOutcomes(
   units: CombatUnit[],
   positions: Record<string, string>,
@@ -935,18 +923,13 @@ function unitOutcomes(
       u.personnel * Math.min(0.4, Math.max(0, intensity) * CASUALTY_RATE_SCALE) * (0.6 + share)
     );
     /**
-     * Readiness is SUBTRACTED, not assigned.
-     *
-     * `armorMit` and `rc` are the same terms the casualty line above uses, and they are
-     * correct for a subtraction: armour reduces what a battle takes out of a crew, and a
-     * more exposed role increases it. Assigning them to a LEVEL inverted both, which is
-     * why an armoured division used to end a battle more exhausted than the infantry
-     * beside it, and a carrier that lost three men ended more exhausted than either.
+     * Readiness is SUBTRACTED, not assigned. `armorMit` and `rc` are correct for a
+     * subtraction: armour reduces what a battle takes out of a crew, and exposure
+     * increases it. Assigning them to a LEVEL inverts both.
      *
      * `depletion` is measured against the NOMINAL posture baseline, not the arrears- or
-     * tier-suppressed one: it asks how worn this formation is against what its posture
-     * normally holds, and an unfunded army must not read as fresher merely because its
-     * target sagged.
+     * tier-suppressed one: an unfunded army must not read as fresher because its target
+     * sagged.
      */
     const baseline = readinessBaselineOf(u.posture);
     const depletion = Math.max(0, Math.min(1, 1 - u.readiness / Math.max(1, baseline)));
@@ -1200,9 +1183,7 @@ export function battleForecast(
   theaterId: string,
   /**
    * What the naval and air layer delivered to each side at this front this turn.
-   * Optional so every existing caller keeps its previous behaviour exactly: absent
-   * means no air superiority, no close air support and no interdiction, which is
-   * what a battle fought before this subsystem existed had.
+   * Optional: absent means no air superiority, close air support or interdiction.
    */
   supportA: FrontSupport = NO_SUPPORT,
   supportD: FrontSupport = NO_SUPPORT

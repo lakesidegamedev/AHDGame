@@ -59,10 +59,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     const db = await getDb();
 
-    // The target must be a bucket THIS country's electorate actually has.
-    // Validated here rather than in the schema because the valid set depends on
-    // the game's preset. A stale or foreign bucket used to be accepted, charged,
-    // and then applied to no voters at all.
+    // The target must be a bucket THIS country's electorate has. Validated
+    // here, not in the schema, because the valid set depends on the preset.
     const targetId = parsed.data.targetDemographicGroupId;
     if (targetId) {
       const gs = await db

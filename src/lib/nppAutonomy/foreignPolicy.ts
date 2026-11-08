@@ -30,7 +30,6 @@ import {
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
-import { nppOffensiveFlagFrom } from "./offensiveFlags";
 import {
   DECISION_COLLECTION,
   MINIMUM_ACTION_SCORE,
@@ -339,7 +338,6 @@ async function loadContext(
         _id: string;
         nppForeignPolicyMode?: ForeignPolicyMode;
         nppForeignPolicyStage?: NppForeignPolicyStage;
-        nppOffensiveInitiationEnabled?: boolean;
       }>("gameState")
       .findOne({ _id: "current" }),
     db.collection<CountryAlignment>("countryAlignments").find({}).toArray(),
@@ -472,7 +470,6 @@ async function loadContext(
     militaryUnits,
     pendingBattleDeclarations,
     pendingPeaceOffers,
-    offensiveInitiationEnabled: nppOffensiveFlagFrom(gameState?.nppOffensiveInitiationEnabled),
   };
 }
 

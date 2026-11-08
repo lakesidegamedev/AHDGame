@@ -146,10 +146,8 @@ export async function loadCorporationDetailView(args: {
     commodityPrices,
   });
 
-  // Realization-vs-nameplate reconciliation (#2958): derived from the corp's
-  // own latest history snapshot; applied uniformly as the fallback for
-  // sectors without an exact persisted realizedRevenue (#3001/#3002).
-  // See realizationRatio.ts.
+  // Fallback realization ratio from the corp's latest history snapshot for
+  // sectors without a persisted realizedRevenue. See realizationRatio.ts.
   const revenueRealizationRatio = await computeRevenueRealizationRatio(
     db,
     corporation,
@@ -429,7 +427,7 @@ export async function loadCorporationDetailView(args: {
       // uses that live recompute, but the shown rating should be the announced one.
       creditRatingSnapshot: corporation.creditRatingSnapshot ?? undefined,
       creditCompositeSnapshot: corporation.creditCompositeSnapshot ?? undefined,
-      // Suggestion #62: index-fund ownership and whether it has reached the
+      // Index-fund ownership and whether it has reached the
       // level that earns the credit notch and the price premium. Surfaced so
       // inclusion is a visible, chaseable goal rather than an invisible buff.
       indexOwnershipPercent: Math.round(indexFundOwnershipFraction(corporation) * 1000) / 10,

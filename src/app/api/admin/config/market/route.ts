@@ -313,9 +313,7 @@ export async function PATCH(request: Request) {
         return errorResponse(400, activationError);
       }
     }
-    // #1001 dark gates are sandbox-only until the worldsim comparison and
-    // stress report land: enabling them on the live world is refused here.
-    // Explicit false (or absent) is fine and persists like any other flag.
+    // Sandbox-only until worldsim comparison and stress report land; enabling on the live world is refused here. Explicit false or absent persists normally.
     if (
       sovereignIssuanceConsolidationEnabled === true ||
       domesticSovereignBondCoverageEnabled === true

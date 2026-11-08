@@ -180,13 +180,10 @@ export interface Character {
   countryId: CountryId;
   /**
    * The country THIS character was created in. Immutable per character, unlike
-   * `countryId`, which moves when the character emigrates. Profile "Starting
-   * Nationality" reads this. It replaces `users.accountCountryId` for that
-   * purpose: `accountCountryId` is account-level and set once from the player's
-   * FIRST ever character, so on a second character (or after a world reset) it
-   * showed a nationality from a character the player no longer has (ticket 1107).
-   * Optional because characters created before this field exists do not have it;
-   * fall back to `countryId`.
+   * `countryId`, which moves on emigration. Profile "Starting Nationality" reads
+   * this; `users.accountCountryId` is account-level (set from the player's first
+   * character) and wrong for later characters. Optional on pre-existing
+   * characters; fall back to `countryId`.
    */
   startingCountryId?: CountryId;
   name: string;
@@ -239,17 +236,13 @@ export interface Character {
   mediaEditorialLastAppliedTurn?: number;
   infamy: number;
   /**
-   * @deprecated Removed from the schema in cf-inconsistency-fix Phase 5.
-   * Still optional in the type during the migration so unmigrated test
-   * fixtures keep compiling — production data has the field unset by the
-   * 2026-05-18 migration. Read from `currencyBalances.campaign` instead.
+   * @deprecated Read from `currencyBalances.campaign` instead.
+   * Optional only so unmigrated fixtures compile.
    */
   funds?: number;
   /**
-   * @deprecated Removed in cf-inconsistency-fix Phase 8. Optional during the
-   * migration so unmigrated test fixtures keep compiling — production data
-   * has the field unset by the 2026-05-18 migration. Read from
-   * `currencyBalances.personal[homeCurrency]` instead.
+   * @deprecated Read from `currencyBalances.personal[homeCurrency]` instead.
+   * Optional only so unmigrated fixtures compile.
    */
   cashOnHand?: number;
   /**
@@ -339,9 +332,8 @@ export interface Character {
   currentOffice: OfficeType | null;
   careerHistory?: CareerEvent[];
   /**
-   * Shared UK ministerial action pool (issue #2049). One pool per UK player
-   * across both offices, so a second title grants no extra actions. Optional
-   * so legacy characters without the migration still read.
+   * Shared UK ministerial action pool: one pool per UK player across both
+   * offices, so a second title grants no extra actions. Optional for legacy rows.
    */
   sharedMinisterialActions?: number;
   /** YYYY-MM-DD (`America/New_York`) the shared pool was seeded. Optional for legacy rows. */
@@ -368,15 +360,8 @@ export interface Character {
   groupFavorability?: Record<string, number>;
   /**
    * Per-group approval modifiers (-100 to +100), keyed on Layer-1 census
-   * BUCKETS (`"education:no_college"`). Bill enactment writes them from the
-   * bucket affinity tables (`src/lib/bucketAffinities.ts`), and the vote path
-   * remaps them onto granular units by bucket membership.
-   *
-   * Legacy voter-archetype keys still resolve: `archetypeValuesToBuckets` fans
-   * an archetype out across its buckets and passes a bucket key through
-   * untouched, so rows written before the conversion keep working until the
-   * migration has run. The field name is the last archetype-era artefact here
-   * and goes with the rest of the vocabulary in the deletion pass.
+   * buckets (`"education:no_college"`). Legacy voter-archetype keys still
+   * resolve via `archetypeValuesToBuckets` until the migration runs.
    *
    * Applied as: effectiveFavorability = favorability + approval * 0.5
    * Decays 0.5% per turn toward 0.
@@ -437,10 +422,8 @@ export interface Character {
   autoRunForReelection?: boolean;
   createdAt: Date;
   /**
-   * Game turn the character was created on. Turn-first anchor for the 24-turn
-   * new-character transfer barrier (see newCharacterTransferBarrier.ts). Absent on
-   * documents created before this field shipped — the barrier falls back to the
-   * `createdAt` Date for those.
+   * Game turn the character was created on. Anchors the 24-turn new-character
+   * transfer barrier; absent on older documents, which fall back to `createdAt`.
    */
   createdTurn?: number;
   /**

@@ -1,15 +1,13 @@
 import { ALL_COUNTRY_IDS, COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 /**
- * Pure race-resolution helpers for the /predict bot route, derived entirely from
- * COUNTRY_CONFIGS so new countries become predictable via config alone — the same
- * data-driven approach the rest of the discord-bot API uses (CORPORATION_TYPES,
- * COUNTRY_ORDER). Previously these were hardcoded maps covering only US/UK/CA/DE/JP,
- * so IE/BR/CN/NG races were rejected with an empty "valid races" list.
+ * Pure race-resolution helpers for the /predict bot route, derived entirely
+ * from COUNTRY_CONFIGS so new countries become predictable via config alone,
+ * matching the data-driven approach the rest of the discord-bot API uses.
  *
  * A "race" is a national, elected legislative chamber. The race value IS the
- * office key — it matches both ElectedOfficial.officeType and Election.electionType
- * — so no separate race→office translation table is needed.
+ * office key: it matches both ElectedOfficial.officeType and Election.electionType,
+ * so no separate race-to-office translation table is needed.
  */
 
 const VALID_COUNTRIES = new Set<string>(ALL_COUNTRY_IDS);

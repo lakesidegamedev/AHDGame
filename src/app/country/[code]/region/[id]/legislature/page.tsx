@@ -22,9 +22,8 @@ export default async function StateLegislaturePage({
   const countryId = code.toUpperCase() as CountryId;
   const db = await getDb();
 
-  // The session, the state document and the world preset are independent; the
-  // preset used to be awaited inside the JSX props, after everything else, so
-  // it was always a third serial round trip.
+  // The session, state document and world preset are independent;
+  // fetch them together rather than serially.
   const [state, auth, gameState] = await Promise.all([
     db.collection<State>("states").findOne({
       _id: stateId,

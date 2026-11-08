@@ -180,13 +180,13 @@ export async function POST(
       );
     }
 
-    // The character also can't already be a member of any other active caucus
-    // in the party — one caucus per Character (Phase 1 invariant).
+    // One caucus per Character (Phase 1 invariant): the character can't
+    // already be in an active caucus in the party.
     //
-    // Self-heal stale pointers left behind by older party-switch paths that
-    // moved `character.party` without clearing caucus membership / factionId
-    // (ticket #1030). If the pointed-at caucus is not an active caucus of
-    // *this* party, drop the leftover membership and continue.
+    // Self-heal stale pointers left by older party-switch paths that moved
+    // `character.party` without clearing caucus membership / factionId. If the
+    // pointed-at caucus is not an active caucus of *this* party, drop the
+    // leftover membership and continue.
     if (auth.user.character.factionId) {
       const pointedCaucus = await db.collection<Caucus>("caucuses").findOne({
         _id: auth.user.character.factionId,

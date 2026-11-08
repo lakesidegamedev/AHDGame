@@ -17,11 +17,9 @@ export interface StatePartyFundraisingPanelProps {
   setTaxRate: (v: number) => void;
   savingTax: boolean;
   handleSaveTax: () => void;
-  // PS Investment budget — chair-set per-turn cash spend that debits
-  // treasury and converts to PS. The always-on baseline trickle (5%
-  // of treasury) stacks on top of this without debiting; the merged
-  // PsInvestmentBlock shows both. Chair-override of the trickle %
-  // was removed 2026-05-22.
+  // PS Investment budget: chair-set per-turn spend that debits
+  // treasury and converts to PS. The always-on 5% baseline trickle
+  // stacks on top without debiting; the merged PsInvestmentBlock shows both.
   psInvestmentBudget: string;
   setPsInvestmentBudget: (v: string) => void;
   savingPsInvestment: boolean;

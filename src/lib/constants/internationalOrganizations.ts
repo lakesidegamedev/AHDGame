@@ -183,30 +183,22 @@ export const GDP_MILLIONS_TO_USD = 1_000_000;
  */
 export const DEFAULT_ORG_DUES_RATE_ANNUAL = 0.00006;
 
-/**
- * Annual tribute, as a share of GDP, owed by members who cannot vote — per
- * organisation, because the two blocs do not levy the same rate.
+/*
+ * Annual tribute, as a share of GDP, owed by members who cannot vote, per
+ * organisation because the two blocs levy different rates.
  *
- * Fixed rather than member-voted on purpose: tribute payers have no say, so
- * letting the voting members set it would be taxation without representation
- * dressed up as a mechanic.
+ * Fixed rather than member-voted: tribute payers have no say, so letting
+ * voters set it would be taxation without representation.
  *
- * Scope and rate live in ONE table so an organisation cannot be added to the
- * system without being given a price. Membership of anything not listed here
- * costs nothing.
+ * One table so an organisation cannot be added without a price. Membership
+ * of anything not listed costs nothing.
  *
  * WHY THE PACT PAYS MORE. The playable countries are US, UK, DD and RU, so
- * every other member of either bloc is a tribute payer. Measured against the
- * 1953 seed that leaves NATO collecting from France, Italy, Turkey and Greece
- * ($74.2B combined) and the Pact from Poland, Hungary, Romania, Bulgaria and
- * Czechoslovakia ($33.5B) — a 2.2x client-wealth gap from a comparable number
- * of clients. A flat rate would hand the West a structurally deeper pool for
- * nothing it did; half again as much narrows NATO's lead to about 1.5x.
- *
- * It deliberately does NOT equalise. Parity needs roughly 1.1% a year, and
- * taking that much from economies already the poorer of the two buys balance
- * with a fiction. A bloc extracting harder from a weaker periphery, and still
- * ending up with less, is the truer shape.
+ * every other member of either bloc is a tribute payer; the client-wealth gap
+ * favours the West. A flat rate would hand NATO a structurally deeper pool for
+ * nothing; the higher Pact rate narrows NATO's lead to about 1.5x. It
+ * deliberately does NOT equalise: parity would mean extracting more from the
+ * poorer economies, buying balance with a fiction.
  */
 export const ORG_TRIBUTE_RATES_ANNUAL: Readonly<
   Partial<Record<BuiltInInternationalOrganizationId, number>>
@@ -376,40 +368,18 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
     // a seedable 1991 country (bootstrap gates the bloc to 1953/1979).
     foundingMembersByEra: {
       /**
-       * The real UN of 1953: 60 states, of which 58 exist as entities here —
-       * plus Italy and Ireland, seated by design decision (see below).
+       * The real UN of 1953: 60 states, of which 58 exist as entities here plus
+       * Italy and Ireland, seated by design decision.
        *
-       * The 51 founders of 1945 plus the nine admitted before the Cold War
-       * froze admissions — Afghanistan, Iceland, Sweden and Thailand in 1946,
-       * Pakistan and Yemen in 1947, Burma in 1948, Israel in 1949, Indonesia in
-       * 1950. Nothing then joined until December 1955, which is why so many
-       * obvious names are missing below.
+       * Two founders have no seat: the Byelorussian and Ukrainian SSRs held their
+       * own seats, but Ukraine is inside the soviet-union shard and Byelorussia is
+       * a dependency (seating it would give the USSR two votes).
        *
-       * TWO FOUNDERS HAVE NO SEAT HERE. The Byelorussian and Ukrainian SSRs
-       * each held their own General Assembly seat, a Soviet negotiating win at
-       * Yalta. Ukraine has no entity at all (it is drawn inside the
-       * soviet-union shard), and Byelorussia is modelled as a dependency of RU
-       * rather than a sovereign — seating a dependency would give the USSR two
-       * votes through the back door, which is exactly what the real arrangement
-       * was, but not something the membership model expresses.
+       * The China seat is held by CN, though historically it was the Republic of
+       * China on Taiwan.
        *
-       * THE CHINA SEAT is CN here, though in 1953 it was held by the Republic
-       * of China on Taiwan — the PRC did not take it until 1971. Left as CN
-       * because that is the existing seating and changing it is a separate
-       * decision about what TW is for.
-       *
-       * ABSENT ON PURPOSE, all admitted December 1955 or later: Spain, Austria,
-       * Finland, Portugal, Hungary, Romania, Bulgaria, Albania, Jordan, Laos,
-       * Cambodia, Nepal, Ceylon and Libya (1955); Japan (1956); Nigeria (1960);
-       * Mongolia (1961); Bhutan and Oman (1971); both Germanies (1973); both
-       * Vietnams (1977); Liechtenstein (1990); Korea, North and South (1991);
-       * San Marino (1992); Monaco and Andorra (1993); Switzerland (2002). The
-       * Vatican has never joined.
-       *
-       * Italy and Ireland belong to that 1955 cohort too and ARE seated anyway,
-       * by decision. If a further divergence is ever wanted, add it here with
-       * the same note — the rule is that a departure from history is written
-       * down as one, never left looking like an oversight.
+       * Members admitted December 1955 or later are omitted on purpose. Departures
+       * from history are written down as such, never left looking like oversights.
        */
       "1953-default": [
         // Permanent members and Europe
@@ -786,10 +756,9 @@ export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | nul
   CN: CN_CABINET_SEAT_IDS.foreignAffairs,
   NG: NG_CABINET_SEAT_IDS.foreignAffairs,
   // The eastern bloc and RU reuse DD_CABINET_POSITIONS, which defines a real
-  // `minister_of_foreign_affairs`. These were null — the same defect #980 fixed for
-  // CN/IE/NG, left standing for eight more countries: a player foreign minister here
-  // was never recognized, and only the head-of-government fallback could act. Note
-  // the same cabinets also hold `minister_of_foreign_trade`, which is NOT this seat.
+  // `minister_of_foreign_affairs`. These must not be null: a player foreign
+  // minister would otherwise go unrecognized and only the head-of-government
+  // fallback could act. Note `minister_of_foreign_trade` is NOT this seat.
   HU: HU_CABINET_SEAT_IDS.foreignAffairs,
   PL: PL_CABINET_SEAT_IDS.foreignAffairs,
   RO: RO_CABINET_SEAT_IDS.foreignAffairs,

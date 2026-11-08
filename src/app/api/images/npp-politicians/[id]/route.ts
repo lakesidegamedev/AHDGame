@@ -2,15 +2,12 @@
  * NPP politician portrait image route.
  * Serves the portrait bytes for an opaque portrait token (or a legacy pool id).
  *
- * The portrait pool is a set of generic faces for fictional politicians. The
- * route proxies the image instead of redirecting so the response never
- * carries the upstream file name, which usually names the person pictured.
- * Licence attribution for the pool is given site-wide (source only), never
- * per photograph or per person.
+ * Proxies rather than redirects so the response never carries the upstream
+ * file name, which usually names the person pictured.
  *
- * Auth:    Public (no auth required, used as an <img src>)
- * Cache:   7 days (portrait sources are stable)
- * Errors:  404 if the id is not in the pool; 502 if the source is unavailable
+ * Auth:   Public (used as an <img src>)
+ * Cache:  7 days
+ * Errors: 404 if the id is not in the pool; 502 if the source is unavailable
  */
 
 import { NextResponse } from "next/server";

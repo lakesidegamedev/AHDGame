@@ -17,9 +17,9 @@ export interface EstimateBoxProps {
     ladderPS: number;
   };
   /**
-   * Optional funds cost. Build Org charges treasury alongside PS from
-   * 2026-09-02; `fundedFraction` below 1 means the treasury can only part-fund
-   * the click. A successful Build Org click still deposits one fixed unit.
+   * Optional funds cost. Build Org charges treasury alongside PS;
+   * `fundedFraction` below 1 means the treasury can only part-fund the click.
+   * A successful Build Org click still deposits one fixed unit.
    */
   funds?: {
     amount: number;

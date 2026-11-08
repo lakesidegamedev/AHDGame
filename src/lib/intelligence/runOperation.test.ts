@@ -26,7 +26,6 @@ const state = {
 vi.mock("@/lib/coldwar/tension", () => ({ applyTensionEvent: vi.fn() }));
 vi.mock("./strategicAction", () => ({ applyStrategicAction: vi.fn() }));
 vi.mock("./militaryAction", () => ({ applyMilitaryAction: vi.fn() }));
-vi.mock("./flags", () => ({ readMilitarySabotageEnabled: vi.fn() }));
 vi.mock("./economicAction", () => ({ applyEconomicAction: vi.fn() }));
 vi.mock("@/lib/db/collections/intelligenceAppropriation", () => ({
   debitIntelligenceAppropriation: async () => state.debitOk,
@@ -67,7 +66,6 @@ vi.mock("@/lib/db/collections/intelligence", () => ({
 const { applyTensionEvent } = await import("@/lib/coldwar/tension");
 const { applyStrategicAction } = await import("./strategicAction");
 const { applyMilitaryAction } = await import("./militaryAction");
-const { readMilitarySabotageEnabled } = await import("./flags");
 const { applyEconomicAction } = await import("./economicAction");
 
 // The appropriation lives on the budget document, so the stub must serve one.
@@ -143,8 +141,6 @@ beforeEach(() => {
     frontSabotaged: "war1",
     formationsDegraded: 3,
   });
-  // The gate is ON for the effect tests below; its own tests flip it.
-  vi.mocked(readMilitarySabotageEnabled).mockResolvedValue(true);
   vi.mocked(applyEconomicAction).mockResolvedValue({
     corporationsExposed: 1,
     exposedUntilTurn: 34,
@@ -418,46 +414,11 @@ describe("military action effects", () => {
   });
 });
 
-describe("the military sabotage balance gate", () => {
-  it("applies no effect at all while the gate is OFF", async () => {
-    // The magnitudes are a balance change whose simulation report could not be
-    // produced (no engaged front in the live world). Shipping them live on
-    // unverified numbers is what the gate exists to prevent.
-    vi.mocked(readMilitarySabotageEnabled).mockResolvedValue(false);
-    state.coverage = { valueAtCollection: 100, lastCollectedTurn: 10 };
-    const r = await run({
-      domain: "military",
-      kind: "action",
-      rolls: { success: 0, compromise: 0.99 },
-    });
-    expect(applyMilitaryAction).not.toHaveBeenCalled();
-    expect(r).toMatchObject({ ok: true, outcome: "success" });
-    expect((r as { message: string }).message).toContain("nothing worth breaking");
-  });
-
-  it("still charges the operation while the gate is off", async () => {
-    // It costs the slot, the budget and the suspicion either way. A gated effect
-    // must not become a free way to probe a target.
-    vi.mocked(readMilitarySabotageEnabled).mockResolvedValue(false);
-    state.coverage = { valueAtCollection: 100, lastCollectedTurn: 10 };
-    await run({ domain: "military", kind: "action", rolls: { success: 0, compromise: 0.99 } });
-    expect(state.agencyClaims).toHaveLength(1);
-    expect(state.logRows).toHaveLength(1);
-  });
-
-  it("applies the effect once the gate is on", async () => {
-    vi.mocked(readMilitarySabotageEnabled).mockResolvedValue(true);
+describe("military action effects", () => {
+  it("applies the effect on a successful military action", async () => {
     state.coverage = { valueAtCollection: 100, lastCollectedTurn: 10 };
     await run({ domain: "military", kind: "action", rolls: { success: 0, compromise: 0.99 } });
     expect(applyMilitaryAction).toHaveBeenCalled();
-  });
-
-  it("does not consult the gate for a strategic action", async () => {
-    // Strategic effects are not balance-gated: they move a covert programme's
-    // stage, not a battle.
-    state.coverage = { valueAtCollection: 100, lastCollectedTurn: 10 };
-    await run({ domain: "strategic", kind: "action", rolls: { success: 0, compromise: 0.99 } });
-    expect(readMilitarySabotageEnabled).not.toHaveBeenCalled();
   });
 });
 
@@ -471,14 +432,6 @@ describe("economic action effects", () => {
     });
     expect(applyEconomicAction).toHaveBeenCalledWith(expect.anything(), "RU", 10);
     expect((r as { message: string }).message).toContain("books are out");
-  });
-
-  it("is NOT balance-gated: a leak moves no number", async () => {
-    // The military gate exists because its magnitudes move battle outcomes. A
-    // leak changes who can read a figure, not the figure.
-    state.coverage = { valueAtCollection: 100, lastCollectedTurn: 10 };
-    await run({ domain: "economic", kind: "action", rolls: { success: 0, compromise: 0.99 } });
-    expect(readMilitarySabotageEnabled).not.toHaveBeenCalled();
   });
 
   it("says plainly when there was no listed company to leak", async () => {

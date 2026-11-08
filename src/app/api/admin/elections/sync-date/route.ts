@@ -1,37 +1,13 @@
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/elections/sync-date
- *
- * Re-initializes elections with a fresh start date using zero-gap timing:
- * - Resets currentTurn to 1, currentYear to STARTING_YEAR (2020)
- * - Deletes ALL elections, candidates, vote tallies, and campaigns
- * - Creates new elections anchored to their next real-world election year.
- *   All elections start as "active" (primaries open immediately — no "upcoming" gap).
- *   NO elections occur in 2020. Each type bootstraps to:
- *   - House: cycle 1 active now, ends turn 144 (LARP year 2022). Standard 48h general.
- *   - Senate Class 2: active now, ends turn 336 (LARP year 2026). Standard 48h general.
- *   - Senate Class 3: active now, ends turn 144 (LARP year 2022). Standard 48h general.
- *   - Senate Class 1: active now, ends turn 240 (LARP year 2024). Standard 48h general.
- *   - Governor (all): active now, ends turn 240 (LARP year 2024). Standard 48h general.
- *   - State Senate: active now, ends turn 240 (LARP year 2024). Standard 48h general.
- *   - President: active now, ends turn 240 (LARP year 2024). Full primary + 24h general.
- *   - UK Commons: ACTIVE — starts now, cycle 1 ends turn 219 (July 2024 general election)
- *   - UK Regional Council: ACTIVE transition cycle 0 synchronized with Commons;
- *     five annual cohorts begin after it resolves
- *   - JP Shugiin: ACTIVE — starts now, cycle 1 ends turn 240 (LARP year 2024)
- *   - JP Sangiin: ACTIVE — Class 1 ends turn 123 (Jul 2022), Class 2 ends turn 267 (Jul 2025)
- *   - JP Governor: ACTIVE — starts now, cycle 1 ends turn 240 (LARP year 2024)
- *   - DE Bundestag: ACTIVE — starts now, cycle 1 ends turn 240 (LARP year 2024)
- *
- * All elections store full DEFAULT_DURATIONS metadata so ensurePerpetualElections
- * correctly inherits full cycle lengths from cycle 2 onward.
- *
- * GameState reset: currentTurn→1, currentYear→2020, lastTurnProcessed→now,
- *   pausedAt→null, nextScheduledTurn→null (prevents stale pause from shifting
- *   newly-created election timestamps when the game restarts).
- *
- * Election-linked data cleared: elections, electionCandidates, electionVoteTallies,
- *   campaigns, primarySnapshot, nppEndorsements, playerEndorsements.
+ * Re-initializes the game with zero-gap election timing: resets GameState
+ * (currentTurn→1, currentYear→2020, clears stale pause fields), wipes all
+ * election-linked data (elections, candidates, vote tallies, campaigns,
+ * endorsements, primarySnapshot), and recreates each election anchored to its
+ * next real-world year with full DEFAULT_DURATIONS metadata so
+ * ensurePerpetualElections inherits correct cycle lengths from cycle 2 on.
+ * All types start active now; none occur in 2020.
  */
 
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
@@ -187,10 +163,8 @@ export const POST = withAdminRoute(async (_auth) => {
   );
 
   // Live (census-updated) House apportionment. `state.houseDistricts` is what
-  // the decennial census rewrites, so the frozen preset map goes stale the
-  // moment a world reapportions and these races would be stood up at the old
-  // size — the drift #1190 fixes everywhere else. Prefer the live value and
-  // keep the preset map as the fallback for a state that carries none.
+  // the decennial census rewrites, so the frozen preset map goes stale once a
+  // world reapportions. Prefer the live value; fall back to the preset map.
   const liveHouseDistricts = new Map(
     states
       .filter((s) => (s as { countryId?: string }).countryId === "US")

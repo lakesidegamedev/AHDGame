@@ -77,11 +77,10 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
           $add: [{ $ifNull: [`$currencyBalances.personal.${currency}`, 0] }, cashOnHand],
         };
       } else {
-        // Route to each character's home currency, converting ₳ → home currency at the
-        // live FX rate so every country receives equal real value. `cashOnHand` is
-        // interpreted as internal units (USD-equivalent, rate = 1.0). Built per-currency
-        // so currencies shared by two countries (EUR: DE + IE) accumulate into one bucket
-        // at one rate instead of clobbering each other (which previously zeroed out DE).
+        // Route to each character's home currency, converting ₳ → home currency at
+        // the live FX rate so every country receives equal real value. `cashOnHand`
+        // is internal units (USD-equivalent, rate = 1.0). Bucket per currency so
+        // currencies shared by two countries (EUR: DE + IE) accumulate together.
         const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
         const rateByCountry = new Map<string, number>(
           rateDocs.map((r) => [r._id as string, r.rate])

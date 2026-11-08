@@ -281,12 +281,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     // the takeover proceeds.
 
     // The buyback escrow only ADDS to the transfer when it holds real collected
-    // cash (positive). A negative escrow is a phantom/tracked buyback debt that
-    // was never debited from liquidCapital (see shareEscrowSettlement money-
-    // printing fix) — folding it in would net the target's REAL liquidCapital
-    // down to a fraction and destroy value for the acquirer (the H&K/#787
-    // incident, issue #2942). Floor escrow at 0 so the acquirer always inherits
-    // the target's real liquid capital.
+    // cash (positive). A negative escrow is phantom debt never debited from
+    // liquidCapital; folding it in would net the target's real liquidCapital
+    // down and destroy value for the acquirer. Floor escrow at 0 so the
+    // acquirer always inherits the target's real liquid capital.
     const targetNetLiquidLocal =
       (target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0);
 
@@ -305,7 +303,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       targetFxPre
     );
 
-    // Bank-NAV floor (issue #1750): the quoted share price recognizes only a
+    // Bank-NAV floor: the quoted share price recognizes only a
     // haircut of a subsidiary bank's book equity, so a bank-heavy target can
     // otherwise be squeezed out for less than the realizable bank net assets
     // the acquirer inherits (ring-fenced cash plus loans plus the marked
@@ -412,10 +410,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       );
     }
 
-    // Serialize the whole squeeze-debit → cash-transfer sequence against other
-    // same-corp money ops on the parent (e.g. a bond issuance firing in the same
-    // instant, issue #2949) so a concurrent read-then-write can't clobber one of
-    // the parent's balance writes and silently lose money.
+    // Serialize the whole squeeze-debit to cash-transfer sequence against other
+    // same-corp money ops on the parent (e.g. concurrent bond issuance) so a
+    // read-then-write cannot clobber a balance write and lose money.
     return await withCorpLock(parent._id, async () => {
       const now = new Date();
       const targetSectors = await db
@@ -495,16 +492,12 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       const parentLedgerCurrency = (resolveCorpLiquidCurrencyCode(parent) ?? "USD") as CurrencyCode;
 
       try {
-        // Banked subsidiary (ticket-1267): move the charter and re-key its loan
-        // book, interbank sides, savings accounts and depositor pointers to the
-        // parent BEFORE the shell is deleted below. Runs INSIDE this try, right
-        // after the debit and before any payout, so a mid-merge conflict (the
-        // parent chartered a bank between the pre-lock check and this write, or
-        // the target's charter changed under us) throws into the catch refund
-        // below instead of returning past it with the debit unrefunded. The
-        // transfer helper leaves no partial charter behind on its !ok paths
-        // (conflict returns before any write; a lost release race rolls the
-        // claim back), so refunding money here restores everything.
+        // Move the banked subsidiary's charter and re-key its loan book,
+        // interbank sides, savings and depositor pointers to the parent BEFORE the
+        // shell is deleted below. Runs INSIDE this try after the debit and before any
+        // payout, so a mid-merge conflict throws into the catch refund instead of
+        // returning past it with the debit unrefunded. The transfer helper leaves no
+        // partial charter on its !ok paths, so refunding restores everything.
         const bankTransfer = await transferBankCharterToAcquirer(db, target._id, parent._id, now);
         if (!bankTransfer.ok) {
           throw new BankCharterRaceError(bankTransfer.error);

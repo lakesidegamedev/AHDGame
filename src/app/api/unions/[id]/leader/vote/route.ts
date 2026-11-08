@@ -147,9 +147,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
           .toArray()
       : [];
 
-    // Roster with influence. Organizing was previously a black box: the page
-    // showed a headcount and your own weight, so you could not tell who else
-    // held sway in the union or how far behind you were.
+    // Roster with influence: shows who else holds sway in the union and how far behind you are.
     const totalBankedStrength = organizerDocs.reduce(
       (sum, organizer) => sum + Math.max(0, organizer.strength ?? 0),
       0

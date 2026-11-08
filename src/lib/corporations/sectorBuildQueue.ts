@@ -44,7 +44,6 @@ export interface BuildQueueSummary {
   /**
    * Soonest turn any outstanding order next adds capacity. Earlier than
    * `nextOnlineTurn` when a whole-plant order steps a plant in mid-build.
-   * Absent on summaries built before this field existed.
    */
   nextArrivalTurn?: number | null;
   /**

@@ -44,10 +44,7 @@ export default async function WorldPage() {
     ),
   ]);
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
-  // Stage 2: four independent loaders. They used to run one after another (and
-  // `loadLegacyServiceSnapshots` was awaited inside JSX, after everything else),
-  // which put ~14 round trips of latency on a page whose map is already the
-  // client's slowest surface.
+  // Four independent loaders run in parallel; the map is the client's slowest surface, so serialized round trips are costly.
   const [nationSnapshots, worldEntities, blocMapData, legacyFinances] = await Promise.all([
     getNationWorldSnapshots(db, preset),
     loadWorldEntityMapSnapshot(db, preset),

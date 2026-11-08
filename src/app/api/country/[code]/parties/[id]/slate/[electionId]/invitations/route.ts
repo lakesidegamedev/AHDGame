@@ -105,22 +105,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const candidateObjId = new ObjectId(parsed.data.candidateId);
 
-    // Race capacity. A party may hold at most SLATE_ASSIGNMENT_CAP slots on one
-    // race, players and NPPs drawing on the same pool.
+    // Race capacity: a party may hold at most SLATE_ASSIGNMENT_CAP slots on
+    // one race, players and NPPs sharing the pool. The candidate being
+    // assigned is excluded, so an already-slotted candidate falls through to
+    // the "already on the slate" check instead.
     //
-    // The candidate being assigned is excluded from the count, so someone
-    // already on the slate is never turned away by the slot they themselves
-    // hold: that case falls through to the specific "already on the slate"
-    // answer below. The question asked here is whether adding THIS candidate
-    // would exceed the cap.
-    //
-    // This gate is the courteous one, not the authoritative one. Rows carried
-    // forward from the previous cycle only exist once something has
-    // materialized them from the template — the slate GET does, and so does
-    // the turn's own pass — so an assignment POSTed against a race that has
-    // been neither viewed nor turn-processed can still undercount. The turn's
-    // filing pass counts the same way and refuses the overflow there, marking
-    // it `slate_full`, so the ballot itself never exceeds the cap.
+    // Courteous gate, not authoritative: rows carried forward from the
+    // previous cycle only exist once materialized, so this can undercount.
+    // The turn's filing pass enforces the same cap and refuses overflow,
+    // marking it `slate_full`, so the ballot never exceeds the cap.
     const [slateRowsForRace, activeCandidaciesForRace] = await Promise.all([
       db
         .collection<SlateCandidate>("slateCandidates")
@@ -288,9 +281,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await db.collection<SlateCandidate>("slateCandidates").insertOne(candidate.row);
     if (sameStateSlateIds.length > 0) {
-      // #906: tombstone (not delete) the NPP's other same-state slate rows so the
-      // old race's slate stays non-empty and syncPersistentSlateAssignments does
-      // not re-hydrate the NPP back onto it next turn. See matching branch above.
+      // Tombstone (not delete) the NPP's other same-state slate rows so the
+      // old race's slate stays non-empty and syncPersistentSlateAssignments
+      // does not re-hydrate the NPP back onto it.
       await db.collection<SlateCandidate>("slateCandidates").updateMany(
         {
           candidateId: candidateObjId,
@@ -412,9 +405,9 @@ async function buildCharacterSlateCandidate(args: {
     return { error: "Character does not live in the race's state.", status: 400 };
   }
 
-  // Only block if the candidate has an active candidacy in a still-open election
-  // (upcoming / active / completed). Cancelled or resolved races leave behind
-  // `status: "active"` rows that should not stop fresh slating — bug #0550.
+  // Only block if the candidate has an active candidacy in a still-open
+  // election. Cancelled or resolved races leave behind stale active rows that
+  // should not stop fresh slating.
   const blocking = await findBlockingActiveCandidacy(
     args.db,
     args.candidateObjId,

@@ -1,16 +1,14 @@
 /**
  * POST /api/admin/elections/[id]/reinitialize
- * Admin: Full nuclear reset of a presidential election.
+ * Admin: full reset of a presidential election.
  *
- * Deletes all candidates, vote tallies, and campaigns tied to this election,
- * then resets it to a fresh active state with new timers anchored to NOW.
+ * Deletes candidates, vote tallies, and campaigns for this election, then
+ * resets it to an active state with timers anchored to now.
  *
- * The election cycle (and therefore year title) is computed from the current
- * game turn so the election aligns with the correct LARP presidential year:
- *   - If the current game year is a presidential year → use it
- *   - Otherwise → use the next upcoming presidential year
- *
- * Default durations: 72h primary + 48h campaign = 120h total.
+ * The cycle (and year title) is derived from the current game turn so the
+ * election aligns with the correct presidential year: use the current year if
+ * it is presidential, else the next upcoming presidential year. Default
+ * durations: 72h primary + 48h campaign = 120h total.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";

@@ -6,23 +6,21 @@
  * Vacant corps get a caretaker the same way (installCaretakerForVacantCorp).
  */
 /**
- * Caretaker CEO — NPP-autonomy V2.1.
+ * Caretaker CEO: a player corp owner may hand day-to-day operation of their
+ * own corporation to an autonomous NPP caretaker.
  *
- * A player corp owner (the sitting CEO) may hand day-to-day operation of their
- * own corporation to an autonomous NPP "caretaker". The corp then runs through
- * the existing, fully-clamped NPP corp brain (`processNppCorporationDecisions`
- * → `ceoArchetype`) exactly like a spawned NPP corp — same `SAFE_*` bounds, so
- * no autonomous lever can drive the corp into the ground.
+ * The corp runs through the existing, fully-clamped NPP corp brain
+ * (`processNppCorporationDecisions` -> `ceoArchetype`) exactly like a spawned
+ * NPP corp, with the same `SAFE_*` bounds.
  *
- * The defining property (vs. a spawned NPP corp) is that this is **player-
- * appointed and player-revoked**: `corp.userId` deliberately stays the
- * appointing owner, so they keep `requireCeo` authorization and private-data
- * access and can reclaim the seat at any time. We stash the displaced human CEO
- * in `corp.caretakerCeo` so dismissal restores them exactly.
+ * Unlike a spawned NPP corp, this is player-appointed and player-revoked:
+ * `corp.userId` deliberately stays the appointing owner so they keep
+ * `requireCeo` authorization and private-data access and can reclaim the seat
+ * at any time. The displaced human CEO is stashed in `corp.caretakerCeo` so
+ * dismissal restores them exactly.
  *
  * This module is the mechanism only; the feature gate
- * (`nppAutonomyAtLeast(corp.countryId, "v1")` — true for autonomy countries at
- * v1 and player countries at v2) lives at the call site.
+ * (`nppAutonomyAtLeast(corp.countryId, "v1")`) lives at the call site.
  */
 
 import type { Db } from "mongodb";
@@ -51,12 +49,7 @@ export type CaretakerAppointmentError =
   | "no-eligible-npp"
   | "npp-not-eligible";
 
-/**
- * Cooldown, in turns (= real hours), that must elapse after an owner reclaims
- * control before a new caretaker may be installed. 3 days × 24 turns/day = 72.
- * Stops a corp from flipping between owner and caretaker turn-to-turn to game
- * whichever operator is momentarily advantageous.
- */
+/* Cooldown, in turns (= real hours), after an owner reclaims control before a new caretaker may be installed. Prevents flipping between owner and caretaker to game whichever operator is advantageous. */
 export const CARETAKER_REAPPOINT_COOLDOWN_TURNS = 3 * TURNS_PER_DAY;
 
 /**
@@ -138,15 +131,12 @@ export interface AppointCaretakerCeoResult {
 }
 
 /**
- * Install an NPP caretaker as operator of `corp`. The corp keeps its owner
- * (`userId`) and shareholders untouched; only operation moves to the NPP.
- *
- * Steps, mirroring the player CEO-accept/admin-appoint writes:
- *  - close the outgoing human CEO's open tenure, open an `npp` tenure;
- *  - set `ceoType:"npp"` + `ceoId` to the NPP, stash the displaced human in
- *    `caretakerCeo`, and zero `ceoSalary` (an absent human draws no pay, and we
- *    do not gift the player's configured salary to the NPP — salary on
- *    `ceoType:"npp"` corps accrues to NPP funds).
+ * Install an NPP caretaker as operator of `corp`. Owner (`userId`) and
+ * shareholders are untouched; only operation moves to the NPP.
+ *  - close the outgoing human CEO's tenure, open an `npp` tenure;
+ *  - set `ceoType:"npp"` + `ceoId`, stash displaced human in `caretakerCeo`,
+ *    zero `ceoSalary` (absent human draws no pay; NPP salaries accrue to NPP
+ *    funds, not the player's configured salary).
  */
 export async function appointCaretakerCeo(
   db: Db,

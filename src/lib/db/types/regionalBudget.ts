@@ -29,8 +29,7 @@ export interface RegionalBudget {
   /**
    * DE Gewerbesteuer revenue at the Land level. Computed from the per-Land
    * Hebesatz policy (`de_trade_tax`) × Steuermesszahl (0.035) × Land
-   * domestic-corporate-profit base. Added 2026-05-26 with the DE legislation
-   * overhaul (PR1 deferred-item fix).
+   * domestic-corporate-profit base.
    */
   tradeTaxRevenue?: number;
 
@@ -42,14 +41,12 @@ export interface RegionalBudget {
   /**
    * CN Provincial Resource Tax revenue at the region level. Computed from the
    * per-region `cn_provincial_resource_tax` policy rate × regional GDP ×
-   * resource-extraction proxy (3% of GDP). Added 2026-05-27 with the CN
-   * legislation overhaul (PR5 deferred-item fix).
+   * resource-extraction proxy (3% of GDP).
    */
   resourceTaxRevenue?: number;
   /**
-   * CN standing Business Tax (营业税) revenue — the dominant 1991 Chinese local
-   * tax. Computed from regional GDP × consumption ratio × rate. Always
-   * collected (not enactment-gated). Added 2026-06-08 with the CN fiscal rescale.
+   * CN standing Business Tax (营业税) revenue, always collected (not enactment-gated)
+   * and computed from regional GDP x consumption ratio x rate.
    */
   businessTaxRevenue?: number;
 

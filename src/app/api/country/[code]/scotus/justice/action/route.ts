@@ -1,5 +1,5 @@
 // POST /api/country/[code]/scotus/justice/action
-// Auth: requireAuth — must be the seated (character-backed) Justice for the target seat (#3598)
+// Auth: requireAuth: must be the seated (character-backed) Justice for the target seat
 // Errors: 400, 401, 403, 404, 409
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";

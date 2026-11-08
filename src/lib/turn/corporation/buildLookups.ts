@@ -1960,8 +1960,6 @@ export async function buildCorporationLookups(
     // sales operating normally. The old model zeroed a foreign corp's entire
     // domestic production (realizedRevenue -> 0) even when its export exposure
     // was 0, wrongly bankrupting purely-domestic sectors under an import embargo.
-    // The `gameState.embargoTradeExposureEnabled` flag is retained for
-    // provenance but no longer gates behavior.
     embargoTradeExposureEnabled: true,
   };
 }

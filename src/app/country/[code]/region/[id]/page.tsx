@@ -572,12 +572,11 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
 
   const regionUrl = buildRegionUrl(countryId, regionCode);
 
-  // Bug #0668: party sequentialIds collide across countries, so a foreign
-  // viewer's party id can map onto a same-id local party — surfacing the
-  // Contest panel / Quick Actions / budget cards for the wrong country. Treat
-  // the viewer as unaffiliated for this region when they belong to a different
-  // country. (`isSameCountry` resolves a missing country to "US", preserving
-  // legacy US characters.)
+  // Party sequentialIds collide across countries, so a foreign viewer's
+  // party id can map onto a same-id local party. Treat the viewer as
+  // unaffiliated for this region when they belong to a different country.
+  // (`isSameCountry` resolves a missing country to "US", preserving legacy
+  // US characters.)
   const viewerPartyIdForRegion = isSameCountry(userData?.character, { countryId })
     ? (userData?.character?.party ?? null)
     : null;

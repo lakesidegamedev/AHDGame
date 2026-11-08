@@ -878,7 +878,7 @@ export const UK_COMMONS_2020: HistoricalSeat[] = [
   // Con 365, Lab 202, SNP 48, LD 11, DUP 8, SF 7, PC 4, SDLP 2, Green 1,
   // Alliance 1, Speaker 1 = 650. Region totals are the real constituency counts
   // and match ukRegions.houseDistricts exactly, so the seats, the chamber size
-  // and the districts that elect them all agree (S4).
+  // and the districts that elect them all agree.
   //
   // The Speaker sits for Chorley, in the NORTH WEST - not the South East, where
   // the previous roster placed him alongside an independent that the 2019
@@ -4299,7 +4299,7 @@ export function seatGroupsFor(presetId: string): SeatGroups {
  * Throws `SeedContractError` for a preset with no authored roster.
  */
 export function getPresetSeats(presetId: string): HistoricalSeat[] {
-  // Background countries (#5702) seat no NPP politicians: they stay in the
+  // Background countries seat no NPP politicians: they stay in the
   // seat table as authored data, but the seeding path never sees them.
   return Object.entries(seatGroupsFor(presetId))
     .filter(([countryId]) => !isBackgroundInPreset(presetId, countryId))

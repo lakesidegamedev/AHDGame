@@ -7,9 +7,6 @@ import { useState } from "react";
 /**
  * Accept or decline a pending central bank chair appointment.
  *
- * Ticket #1072: the nominee was shown "Awaiting acceptance" with a countdown and
- * no control, so an offer could only ever lapse. The routes already existed.
- *
  * Kept as its own client island rather than making `ChairCard` a client
  * component: that card renders appointment dates, and turning it into a client
  * component makes those dates resolve in the viewer's timezone while the server

@@ -4,9 +4,9 @@ import { useTranslations } from "next-intl";
 import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 
 /**
- * Why part of an output went unsold last turn (#5450). One explicit sentence
- * per reason, so a missing market price can never fall through to the
- * no-buyers sentence.
+ * Why part of an output went unsold last turn. One explicit sentence per
+ * reason, so a missing market price never falls through to the no-buyers
+ * sentence.
  */
 export default function UnsoldNote({
   unsold,

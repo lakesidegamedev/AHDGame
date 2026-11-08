@@ -33,17 +33,11 @@ import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 /**
  * Treasury / Finance-Ministry identity overlay for the National Budget surface.
  *
- * The corp `NATIONAL_IDENTITY` describes the *state enterprise* (CN glyph 国,
- * 经济部 / Economy Ministry). The budget page is the *finance ministry*, so it
- * needs its own text — CN glyph 财, 财政部 / Ministry of Finance, title 国家预算.
- *
- * **Brand colors are NOT duplicated:** `palette` / `accent` / `accentSoft` are
- * pulled from `getNationalIdentity(country)` so the budget and corp surfaces
- * stay color-consistent and there is one source of brand truth. Only the text
- * (glyph, titles, ministry/public seal) is overlaid here.
- *
- * Text values come from the Country Identity Kit in the National Budget design
- * bundle (`docs/superpowers/specs/2026-06-03-national-budget-design/`).
+ * The corp `NATIONAL_IDENTITY` describes the *state enterprise*. The budget
+ * page is the *finance ministry*, so it overlays its own text (glyph, titles,
+ * ministry/public seal). Brand colors are NOT duplicated: `palette` /
+ * `accent` / `accentSoft` are pulled from `getNationalIdentity(country)` so
+ * budget and corp surfaces stay consistent from one source of truth.
  */
 export interface TreasuryIdentity {
   /** Seal-chop glyph — a single CJK character or a short serif monogram. */

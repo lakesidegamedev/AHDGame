@@ -8,14 +8,11 @@ export interface ReleaseCharacterHeldBondsResult {
 
 /**
  * Remove direct bond-holder rows before a character exits the game so issuer
- * ledgers do not retain orphaned `characterId` references — the bond analogue
- * of {@link releaseCharacterHeldSharesToFloat}, itself mirroring
- * {@link releaseCorporationHeldBondsToFloat}'s CAS-on-exact-units pattern.
+ * ledgers do not retain orphaned `characterId` references.
  *
- * Without this, a retiring/deleted character's bond units are never released:
- * the issuer keeps `totalIssued` on its books (real debt drawn down at
- * issuance) with units pointing at a holder that no longer exists — coupons
- * still accrue against them but nothing can ever redeem or trade them.
+ * Without this, a retired or deleted character's bond units are never released:
+ * the issuer keeps `totalIssued` on its books while units point at a holder
+ * that no longer exists, and nothing can redeem or trade them.
  */
 export async function releaseCharacterHeldBondsToFloat(
   db: Db,

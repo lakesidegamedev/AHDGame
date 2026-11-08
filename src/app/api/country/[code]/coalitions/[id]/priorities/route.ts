@@ -158,10 +158,8 @@ export async function POST(
       (priority) => priority.status === "active"
     ).length;
 
-    // For leadership-goal priorities the caller passes an absolute ISO expiry.
-    // Convert that to the equivalent game-clock turn so the server-side expiry
-    // check uses the game clock (durable against drift) — see
-    // docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+    // Caller passes an absolute ISO expiry; convert to a game-clock turn so
+    // the expiry check is durable against clock drift.
     const leadershipExpiresAt =
       parsed.data.type === "leadership_goal" ? new Date(parsed.data.expiresAt) : null;
     const leadershipExpiresOnTurn = leadershipExpiresAt

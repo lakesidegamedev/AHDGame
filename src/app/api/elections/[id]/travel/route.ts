@@ -104,10 +104,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       ? { travelState: candidate.travelState }
       : { travelState: { $exists: false } };
 
-    // Crash-safe money flow (issue #1672): the actions debit is a keyed
-    // idempotent leg and the travel-state write a keyed update, so a crash
-    // between the sequential writes reconciles instead of charging for a
-    // move that never landed.
+    // Crash-safe money flow: the debit is a keyed idempotent leg and the travel-state write a keyed update, so a crash between the sequential writes reconciles instead of charging for a move that never landed.
     const headerKey = request.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");

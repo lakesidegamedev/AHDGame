@@ -2,7 +2,7 @@
  * GET /api/congress/scotus-nominations — Active SCOTUS nominations for Senate voting
  *
  * Mirrors /api/congress/cabinet-nominations so the Senate Bills tab can list
- * Justice confirmations the same way it lists cabinet confirmations (#1050).
+ * Justice confirmations the same way it lists cabinet confirmations.
  */
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";

@@ -58,7 +58,7 @@ export async function loadIndustryBasis(
   countryId: CountryId,
   types: CorporationType[],
   // Retained for call-site compatibility; market share is revenue-basis in every
-  // tier now (ticket #1145), so the tier no longer selects a different basis.
+  // tier now, so the tier no longer selects a different basis.
   _plantsEnabled: boolean = false
 ): Promise<Map<CorporationType, IndustryBasis>> {
   const out = new Map<CorporationType, IndustryBasis>();
@@ -99,10 +99,7 @@ export async function loadIndustryBasis(
   for (const sectorType of types) {
     const typeSectors = sectorsInScope.filter((s) => s.sectorType === sectorType);
 
-    // National market = Σ real revenue produced in this sector across the
-    // country's states (ticket #1145). No unowned pool, no GDP floor, no
-    // capacity-units twin — the denominator is what every producer actually
-    // earns, and a corp's share is its revenue over that total.
+    // National market = sum of real revenue produced across the country's states. No unowned pool, no GDP floor: the denominator is what every producer actually earns.
     const anchorByCorp = new Map<string, number>();
     let totalMarket = 0;
     for (const sec of typeSectors) {

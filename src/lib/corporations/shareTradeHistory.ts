@@ -56,7 +56,7 @@ function buildShareTradeDocument(input: RecordShareTradeInput): Omit<ShareTradeH
   };
 }
 
-/** Convergent-insert outcome for one trade-history row (issue #1672). */
+/** Convergent-insert outcome for one trade-history row. */
 export type RecordShareTradeOutcome = "applied" | "already-applied" | "failed";
 
 function isDuplicateKeyError(error: unknown): boolean {
@@ -66,7 +66,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 /**
  * Insert a trade-history row. Best-effort: logs to Sentry on failure rather
  * than throwing so it can never roll back the share-movement it audits.
- * Accepts a caller-supplied `_id` so keyed flows (issue #1672) can re-insert
+ * Accepts a caller-supplied `_id` so keyed flows can re-insert
  * the same row convergently after a crash: a duplicate `_id` reports
  * `already-applied` instead of logging a Sentry error.
  */

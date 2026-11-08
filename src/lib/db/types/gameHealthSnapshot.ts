@@ -81,10 +81,7 @@ export interface EconomyStats {
       CountryId,
       {
         /**
-         * Annualized real GDP GROWTH (%/yr), not a level. Named `gdp` until
-         * 2026-07-27, which made every run report look like a collapsing
-         * economy: a healthy convergence from 3.8%/yr toward ~2.3% potential
-         * reads as "GDP fell from 3.8 to 2.3" when the field is called `gdp`.
+         * Annualized real GDP GROWTH (%/yr), not a level; distinct from the `gdp` level field. A healthy convergence from 3.8%/yr toward ~2.3% potential reads as a collapse if mistaken for a level.
          */
         gdpGrowth: number;
         /** Real GDP LEVEL — sum of regional `states.gdp` for the country. */

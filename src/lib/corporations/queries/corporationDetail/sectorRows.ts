@@ -129,7 +129,7 @@ export interface SectorModeFlags {
 }
 
 /**
- * Labour/plants mode flags plus the trailing-window realized growth rate (#587).
+ * Labour/plants mode flags plus the trailing-window realized growth rate.
  *
  * Plants tier: sectors are PLANTS, so the row's headline numbers become
  * physical (capacity, output, sales) rather than a growth rate. Below plants
@@ -155,12 +155,10 @@ export async function loadSectorModeFlags(
     .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
-  // #922 — "Growth Rate always 0". Under plants, a sector's `currentGrowthRate`
-  // no longer drives revenue (revenue comes from produced units against plant
-  // capacity), so the field is vestigial and sits at 0 for most corporations.
-  // Averaging it and printing it as the corp's growth rate reported 0.00% for
-  // everyone. Measure the revenue the corp actually booked instead, over a
-  // trailing window wide enough that annualizing does not amplify churn.
+  // Under plants, `currentGrowthRate` is vestigial (always 0) since revenue
+  // comes from produced units against plant capacity. Measure the corp's
+  // realized revenue over a trailing window instead, wide enough that
+  // annualizing does not amplify churn.
   const realizedGrowthRate = plantsMode
     ? computeCorpRealizedGrowthRate(
         (
@@ -256,7 +254,7 @@ export interface PhysicalRollups {
 }
 
 /**
- * Per-sector detail rows plus corp-level financial totals (#587).
+ * Per-sector detail rows plus corp-level financial totals.
  *
  * The row's headline numbers are single-currency: every stored host-currency
  * sector field is restated into the corp's home currency before any math.
@@ -507,10 +505,9 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     // omits the per-metric rationale list, which only the sector sub-page uses.
     const { stateMetricContributions: _stateMetricContributions, ...modsForApi } = mods;
 
-    // Realized revenue for this sector (#3001/#3002). Keep the CEO statement
-    // and settings cap on one basis: exact per-sector realization when present,
-    // otherwise the history-derived corp ratio, plus freight credits. Every
-    // stored sector amount is restated from host to corp currency first.
+    // Keep CEO statement and settings cap on one basis: exact per-sector
+    // realization when present, else the history-derived corp ratio, plus
+    // freight credits. Stored amounts are restated from host to corp currency.
     const revenueBasis = sectorDailyRevenueBasis(
       sector,
       revenueRealizationRatio,
@@ -561,7 +558,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const engineMargin =
       typeof sector.effectiveProfitMargin === "number" ? sector.effectiveProfitMargin : null;
     const effectiveProfitMargin = engineMargin ?? stackMargin;
-    // Ticket 1122: the turn's own lines when the sector has them, restated into
+    // The turn's own lines when the sector has them, restated into
     // the corp's currency. Inverting `effectiveProfitMargin` cannot be right:
     // it is this P&L's capped OUTPUT, so at the cap it recovers a zero
     // operating cost from a negative one (profit == revenue), and in every case
@@ -607,11 +604,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       freightIncome -
       freightCost +
       fundedResultAdjust;
-    // Physical cost decomposition for the margin drilldown (ticket 1072: the
-    // additive modifier list could not explain a physically-derived margin —
-    // base + modifiers summed 40pts above the engine figure with no line
-    // saying why). Percentage points of REALIZED revenue, mirroring the
-    // engine's own cost legs:
+    // Physical cost decomposition for the margin drilldown. Percentage points
+    // of REALIZED revenue, mirroring the engine's own cost legs:
     //  - inputs: recipe rates x realized unit prices (priceRealizationFactor,
     //    the same damped/clamped function computeInputsCost bills through),
     //    on the nameplate basis the recipe is expressed against.
@@ -620,15 +614,14 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     //    financial legs, calibration residual) = the exact remainder, so the
     //    three lines always reconcile to the engine margin.
     // null below plants or when the engine margin / realized revenue are
-    // absent — the drilldown falls back to the additive view there.
+    // absent; the drilldown falls back to the additive view there.
     const physicalCosts = (() => {
       if (!plantsMode || engineMargin == null) return null;
       const realized = sectorRealizedRevenueLocal;
       if (realized == null || !(realized > 0)) return null;
       // Exact when the turn's lines are on the row: no re-derivation of the
-      // input bill, and the policy stack gets its own line instead of hiding
-      // inside "other". This is the same decomposition the sector page's money
-      // chain now shows, so the two surfaces agree line for line (ticket 1122).
+      // input bill, policy stack gets its own line, and both surfaces agree
+      // line for line.
       if (enginePnl && enginePnl.revenue > 0) {
         const pp = (v: number) => Math.round((v / enginePnl.revenue) * 1000) / 10;
         return {

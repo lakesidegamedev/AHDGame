@@ -75,10 +75,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You cannot endorse yourself");
     }
 
-    // Primaries are intra-party contests. The /president/primary/[partyId]
-    // surface only ever offered this control to same-party members, so hold
-    // the API to the same rule (ticket #1179). Cross-party endorsements open
-    // up in the general phase. Turn-first phase check with Date fallback.
+    // Primaries are intra-party contests: only allow same-party endorsements
+    // while the primary phase is open. Cross-party endorsements open in the
+    // general phase.
     const { effectiveNow, currentTurn } = await getGameTime();
     const inPrimary = isPrimaryPhaseOpen(election, { currentTurn, now: effectiveNow });
     if (inPrimary && candidate.party && candidate.party !== character.party) {
@@ -110,13 +109,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     try {
-      // Reverse the Support bump of any endorsement we're about to replace. The
-      // bump is non-idempotent (applyEndorsementSupportBump docstring), and only the
-      // DELETE path previously applied the negative form, so re-POSTing endorse (same
-      // candidate, or flipping A→B→A) stacked +SUPPORT_ENDORSEMENT_BUMP every call
-      // with no reversal, letting a single account pump any candidate to the clamp.
-      // Reverse here so a replacement nets to zero on the old candidate before the new
-      // bump lands. Skip NPP candidates (bump was never applied to them).
+      // Reverse the Support bump of any endorsement being replaced; the bump is
+      // non-idempotent, so re-POSTing would otherwise stack
+      // +SUPPORT_ENDORSEMENT_BUMP with no reversal. Skip NPP candidates (never bumped).
       const priorEndorsements = await db
         .collection<PlayerEndorsement>("playerEndorsements")
         .find({ characterId: character._id, electionId: electionObjectId, isActive: true })

@@ -56,13 +56,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const data = await loadCorporationHistoryComparePoints({ db, corporation });
 
-    // Mirror the /history route (#963): the newest snapshot's market cap freezes
-    // at last turn-processing time and can disagree with the live Overview card
-    // (getRoundedPublicMarketCap, recomputed from the live corp each request).
-    // Overwrite just the latest point's market cap with that live figure and
-    // stamp the corp's current currency (dropping fxRateAtWrite so the client
-    // converts this one live-valued point at the live rate), so the "now" column
-    // agrees with the header. Older points stay frozen snapshots.
+    // The newest snapshot's market cap freezes at last turn processing and
+    // can disagree with the live Overview card, so overwrite just the latest
+    // point with the live figure and stamp its current currency (dropping
+    // fxRateAtWrite so the client converts at the live rate). Older points
+    // stay frozen.
     const latest = data.points[data.points.length - 1];
     if (latest) {
       latest.marketCap = getRoundedPublicMarketCap(corporation, corporation.totalShares ?? 0);

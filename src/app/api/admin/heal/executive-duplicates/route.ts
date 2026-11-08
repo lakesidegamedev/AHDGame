@@ -1,17 +1,12 @@
 /**
  * POST /api/admin/heal/executive-duplicates
  *
- * Fixes duplicate US president/vicePresident records:
- *  1. Finds characters with currentOffice.type = president/vicePresident
- *  2. Checks if they're actually the current holder in electedOfficials
- *  3. Clears currentOffice for those who aren't the actual holder
- *
- * This handles cases where admin appointments created duplicate records
- * or old holders weren't properly cleared.
+ * Clears currentOffice on characters holding president/vicePresident who are
+ * not the actual holder in electedOfficials.
  *
  * NOTE: Scoped to countryId === "US". CN also seats a ceremonial President
- * (auto-populated from CCP.chairId by partyChairHeadOfState) — that's not a US
- * executive duplicate and must not be touched here.
+ * (auto-populated from CCP.chairId by partyChairHeadOfState) and must not be
+ * touched here.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";

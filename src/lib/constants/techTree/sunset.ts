@@ -1,13 +1,10 @@
 /**
- * Production-method sunsets (issue #5705).
+ * Production-method sunsets.
  *
- * A method with `sunsetDecade` retires from that tier on: it is closed to new
- * sites and to retools (see getStrategyAvailability), existing sites keep
- * running but pay a rising operating penalty, and a retool to one of the
- * method's named `successorIds` costs less than a normal retool. Nothing is
- * deleted; an old plant can run on, paying more each year, or convert.
- *
- * Plain data in, plain data out: the year arrives as an argument.
+ * A method with `sunsetDecade` retires from that tier on: closed to new sites
+ * and retools, existing sites keep running but pay a rising operating penalty,
+ * and a retool to a named `successorIds` entry costs less than a normal retool.
+ * Nothing is deleted; an old plant can run on, paying more each year, or convert.
  */
 import type { SectorStrategy } from "../sectorStrategyTypes";
 import { SECTOR_STRATEGIES } from "../sectorStrategyDefinitions";

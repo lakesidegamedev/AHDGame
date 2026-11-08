@@ -309,24 +309,17 @@ export function rescaleBuildQueueForStrategyChange<T extends { unitsOrdered: num
 // ─── Tech output multiplier, expressed in CAPACITY units ─────────────────────
 
 /**
- * The scalar by which a tech tree's per-commodity `outputRateMult` raises the
- * UNITS a given capacity produces.
+ * Scalar by which a tech tree's per-commodity `outputRateMult` raises the
+ * UNITS a capacity produces.
  *
- * `sectorTurn` already applies `outputRateMult` to the supply rates it reports
- * to the commodity ledger (`effectiveSupply`). Under plants that left the tech
- * effect half-wired: the world saw more steel arrive, but the sector's own
- * `producedUnits` — and therefore its derived revenue — never moved, because
- * units come from `capitalStock`, not from the supply rates. This closes it.
- *
- * The honest scalar is the ratio of unit yields under the scaled vs. unscaled
- * mix — exactly what `impliedOutputUnits` would return for the same revenue:
+ * `sectorTurn` applies `outputRateMult` to the supply rates it reports
+ * (`effectiveSupply`), but `producedUnits` comes from `capitalStock`, not
+ * supply rates, so the tech effect must be applied to units here too. The
+ * scalar is the ratio of unit yields under scaled vs. unscaled mix:
  *
  *     mult = Σ(rate_c × m_c / base_c) / Σ(rate_c / base_c)
  *
- * i.e. a commodity-weighted average of the per-commodity multipliers, weighted
- * by each leg's contribution to unit count. Returns exactly 1 for an empty
- * multiplier map (every corp without the tech, and every world with the tech
- * tree off), which is what keeps the flip identity exact.
+ * Returns exactly 1 for an empty multiplier map, keeping the flip identity.
  */
 export function techOutputUnitsMultiplier(
   supply: Partial<Record<CommodityType, number>> | null | undefined,
@@ -350,26 +343,17 @@ export function techOutputUnitsMultiplier(
 // ─── Era columns ────────────────────────────────────────────────────────────
 
 /**
- * PROVISIONAL era price column. Normalized so the 1953 anchor row is exactly
- * 1.0.
+ * PROVISIONAL era price column, normalized so the 1953 anchor is exactly 1.0.
  *
- * The LABOUR era column deliberately has no table here — it is derived live by
- * {@link capacityEraLaborIndex} from the existing `eraLaborMultiplier` curve in
- * `lib/labour/laborCost.ts` (1.35 pre-1953 / 1.25 from 1953 / 1.1 from 1991 /
- * 1.0 from 2007), renormalized to 1.0 at 1953 (i.e. divided by 1.25). That
- * curve is the codebase's existing statement of "older eras take more labour
- * per unit of economic activity", so reusing it keeps capacity staffing
- * consistent with the labour-cost model instead of asserting a second,
- * conflicting productivity history — and a re-tune there propagates here
- * automatically. Copying its numbers into a table below would just create a
- * second thing to desync. Note its tiers (2007, 1991, 1953) do NOT line up
- * with the price spans below; that is intentional, they are different claims.
+ * No LABOUR table: labour is derived live by {@link capacityEraLaborIndex}
+ * from `eraLaborMultiplier` in `lib/labour/laborCost.ts`, renormalized to 1.0
+ * at 1953. Reusing that curve keeps capacity staffing consistent with the
+ * labour-cost model instead of asserting a second, conflicting history. Its
+ * tier years (2007, 1991, 1953) intentionally do not align with the price
+ * spans below; they are different claims.
  *
- * `priceIndex` is a nominal price-level index (a 1953 ₳ builds more capacity
- * than a 1999 ₳). Values are gameplay-rounded against the eras this game
- * models, roughly tracking the cumulative price level of the industrial world
- * across the spans monetaryEra already uses. FLAGGED PROVISIONAL: worldsim will
- * re-tune this column, and nothing in this phase depends on it being right.
+ * `priceIndex` is a nominal price-level index (a 1953 ₳ builds more than a
+ * 1999 ₳). FLAGGED PROVISIONAL: worldsim will re-tune this column.
  */
 const CAPACITY_ERA_PRICE_ANCHORS: ReadonlyArray<{ year: number; priceIndex: number }> = [
   { year: CAPACITY_ANCHOR_YEAR, priceIndex: 1.0 },
@@ -449,22 +433,16 @@ export function capacityPricePerUnit(
 }
 
 /**
- * IDENTITY A — workers needed to staff one unit/day of capacity in
- * `sectorType`, at the world's current `year`, at neutral workforce skill (50).
+ * Workers needed to staff one unit/day of capacity in `sectorType`, at the
+ * world's `year`, at neutral workforce skill (50).
  *
- *     laborIntensity = RPU(type or strategy) / CAPACITY_REVENUE_PER_WORKER × eraLaborIndex(year)
+ *     laborIntensity = RPU / CAPACITY_REVENUE_PER_WORKER × eraLaborIndex(year)
  *
- * At `year = 1953` the era index is 1.0, so a sector staffed from this table
- * carries exactly the headcount `calculateWorkers` gives it today.
- *
- * Pass `strategyId` for a sector that runs (or is being previewed with) a
- * non-default production method: its units earn that method's RPU, so its crew
- * per unit must scale with the same RPU. The build PRICE stays strategy-blind
- * by design (D9), but staffing does not: a heavy-machinery line needs far more
- * workers per unit than a standard factory, and showing the default crew for it
- * understates the jobs by the ratio of the two RPUs. With no strategy, or one
- * whose tables are empty for this sector type, this falls back to the
- * default-strategy RPU above.
+ * Pass `strategyId` for a sector running (or previewed with) a non-default
+ * production method: its units earn that method's RPU, so its crew per unit
+ * must scale with the same RPU. A heavy-machinery line needs far more workers
+ * per unit than a standard factory; showing the default crew understates jobs
+ * by the ratio of the two RPUs. Falls back to the default-strategy RPU.
  */
 export function laborIntensity(
   sectorType: OperatingSectorType,
@@ -496,16 +474,14 @@ export function laborIntensity(
 // ─── Construction time ──────────────────────────────────────────────────────
 
 /**
- * Authored base construction times, in turns. investmentBuildTurns applies
- * the ordinary heavy-build reduction while preserving founding durations.
+ * Authored base construction times, in turns. investmentBuildTurns applies the
+ * ordinary heavy-build reduction while preserving founding durations.
  *
- * There is no observed quantity to calibrate against — the legacy growth path
- * delivers capacity continuously with no build lag at all — so unlike the two
- * anchors above these are authored, not derived. The shape is the only claim
- * being made: heavy, sited, permit-bound industry is slow; asset-light retail
- * and services are fast. Scale reference: 24 turns = one financial day,
- * 48 turns = one game year (see TURNS_PER_DAY / GROWTH_RATE_TURNS_PER_YEAR),
- * so 96 turns ≈ two game years for a refinery-class build.
+ * Authored, not derived: the legacy growth path delivers capacity with no
+ * build lag to calibrate against. Shape only: heavy, sited, permit-bound
+ * industry is slow; asset-light retail and services are fast. Scale: 24 turns
+ * = one financial day, 48 turns = one game year, so 96 turns ~ two game years
+ * for a refinery-class build.
  *
  * FLAGGED PROVISIONAL: worldsim re-tunes this whole table.
  */
@@ -562,14 +538,12 @@ export const CAPACITY_SECTOR_TYPES: ReadonlyArray<OperatingSectorType> = OPERATI
 
 // ─── P3a: build orders, mothballing, idle upkeep ────────────────────────────
 
-/**
- * Share of a cancelled build order's paid cost that is refunded (D10).
- *
- * Deliberately NOT 1.0. A cancelled order has already consumed siting,
- * permitting, engineering and part of the physical build; a full refund would
- * make the queue a free option — order capacity every turn, cancel whatever the
- * market no longer wants, pay nothing. 0.75 leaves a real but non-punitive cost
- * to changing your mind.
+/*
+ * Share of a cancelled build order's paid cost that is refunded.
+ * Deliberately not 1.0: a cancelled order has already consumed siting,
+ * permitting, engineering and part of the build, and a full refund would make
+ * the queue a free option. 0.75 leaves a real but non-punitive cost to changing
+ * your mind.
  */
 export const CAPACITY_BUILD_CANCEL_REFUND = 0.75;
 
@@ -640,9 +614,8 @@ export const PLANT_CREW_SUSTAINED_GLUT_THROTTLE = 0.25;
 
 /**
  * Share of today's idle upkeep still charged on capacity the demand throttle
- * idled (as opposed to capacity the owner idled with the production slider).
- * Not zero, so overbuilding still costs something. Tunable alongside
- * {@link PLANT_CREW_FLOOR_SHARE}.
+ * idled (rather than by the production slider). Not zero, so overbuilding
+ * still costs something. Tunable alongside {@link PLANT_CREW_FLOOR_SHARE}.
  */
 export const THROTTLE_IDLE_UPKEEP_SHARE = 0.33;
 
@@ -655,44 +628,25 @@ function uses1991Construction(year: number, preset?: string): boolean {
 
 /**
  * Share of the capacity taken off a defender that actually arrives at the
- * attacker, under plants (P3b — "attacks are a capacity transfer").
- *
- * Pre-plants an attack moved a ₳ revenue nameplate one-for-one: the defender
- * lost X ₳/day and the attacker gained X ₳/day. Under plants the thing being
- * fought over is physical: plants, contracts, staff and customer relationships
- * in one (state, sectorType). Taking them by force wrecks part of what you
- * take — sites are not transferred intact, crews leave, contracts lapse. So the
- * defender loses `capturedUnits` and the attacker receives only
- * `capturedUnits × ATTACK_CAPTURE_EFFICIENCY`; the remainder is DESTROYED, not
- * banked anywhere. That is deliberate: aggression should shrink the market it
- * is fought in, and it is what makes attacking a strategic choice rather than a
- * strictly cheaper substitute for building.
+ * attacker, under plants. Taking plants, contracts and staff by force wrecks
+ * part of them, so the defender loses `capturedUnits` and the attacker receives
+ * `capturedUnits * ATTACK_CAPTURE_EFFICIENCY`. The remainder is destroyed, not
+ * banked anywhere: aggression shrinks the market it is fought in, so attacking
+ * is not a strictly cheaper substitute for building.
  *
  * FLAGGED PROVISIONAL: worldsim re-tunes.
  */
 export const ATTACK_CAPTURE_EFFICIENCY = 0.6;
 
 /**
- * How much dearer, PER UNIT ACTUALLY RECEIVED, an attack must be than simply
- * building the same capacity (plants only).
+ * How much dearer, per unit actually received, an attack must be than building
+ * the same capacity (plants only).
  *
- * The legacy attack price is a flat fraction of the defender's ₳ revenue
- * (`ATTACK_OWNED_COST_FRACTION`), which has no relationship at all to what
- * capacity costs. Priced against the build table it is far too cheap: the
- * legacy cost per unit received works out at roughly
- * `RPU / (efficiency × captureMultipliers × msShare)` ≈ 1.7-3.3 × RPU, while
- * building one unit uses the preset's capacity-price basis and construction modifiers.
- * Any gap between the two prices can make cheap takeovers bypass construction.
- *
- * So under plants the attack price is floored at the build price of the
- * capacity the attacker actually receives, times this premium. Attacking is
- * then always the dearer way to acquire a plant (as it should be: you get it
- * NOW, you get it in a market you could not otherwise enter, and you take it
- * off a rival), and the destroyed `1 − ATTACK_CAPTURE_EFFICIENCY` share is real
- * damage on top rather than the only thing holding the price up.
- *
- * The floor is a `max` against the legacy cost, so it can never make an attack
- * CHEAPER than it is today.
+ * The legacy attack price (flat fraction of defender revenue) is unrelated to
+ * build cost, so attacking is far cheaper than building and cheap takeovers
+ * could bypass construction. Under plants, price is floored at the build price
+ * of the capacity received times this premium, applied as a `max` against the
+ * legacy cost so an attack is never cheaper than today.
  */
 export const ATTACK_BUILD_PRICE_PREMIUM = 1.15;
 
@@ -710,42 +664,24 @@ export const MAX_BUILD_UNITS_PER_ORDER = 10_000_000;
  * WHY THE BUILD PRICE IS HOST-INDEXED.
  *
  * `capacityPricePerUnit` is a flat ₳ figure. Charged flat, a plant costs the
- * same to build in Lagos as in Zurich, which is both wrong and strategically
- * empty: siting is meant to be a real decision (cheap construction vs. rich
- * market vs. skilled workforce), and with a flat price there is nothing to
- * trade off. This multiplier is that lever.
+ * same in Lagos as in Zurich, so siting is not a real decision. This multiplier
+ * is that lever.
  *
- * ─── SOURCE: the state's `costOfLiving` metric, NOT an exchange rate ────────
- * Choices considered:
+ * SOURCE: the state's `economic.costOfLiving`, NOT an exchange rate.
+ * - CountryConfig.usdExchangeRate is a seed-file denomination normalizer, not a
+ *   price level or FX quote; indexing on it prices builds by authored unit.
+ * - Live exchangeRates are nominal: multiplying an ₳ price by a nominal rate
+ *   makes capacity structurally cheaper in ₳-real terms wherever a currency is
+ *   weak, a pure carry-trade arbitrage. The index must be REAL.
+ * - monetaryEra tables are an ERA axis, already carried by
+ *   `capacityEraPriceIndex`; using them here double-counts time.
+ * - `economic.costOfLiving` is the game's own 100-centered, per-state "how
+ *   expensive is it here", denominated in nothing, so immune to the arbitrage
+ *   above, and already animated off urbanization and cabinet/housing policy.
  *
- *  1. `CountryConfig.usdExchangeRate` — REJECTED, and it is the trap. That field
- *     is not a price level and is not even an FX quote: it is the denomination
- *     normalizer that converts a seed file's authored GDP unit into ₳ (see
- *     `lib/currency/gdpAnchorRate.ts`, which says so at length — UK 2019 is 1.0
- *     while the market rate is 0.75). Indexing on it would price builds by which
- *     unit a seed file happened to be typed in.
- *  2. The live `exchangeRates` market — REJECTED, and this is the carry trade.
- *     Build costs are charged in ₳ (anchor). Multiplying an ₳ price by a NOMINAL
- *     exchange rate makes capacity structurally cheaper in ₳-real terms wherever
- *     a currency is weak, which is a pure arbitrage: incorporate in the weak
- *     host, build there, sell into the strong market. Any nominal-FX index has
- *     this property; that is why the index must be a REAL one.
- *  3. `monetaryEra` tables — REJECTED for this axis: they are an ERA dimension
- *     (which `capacityEraPriceIndex` already carries), not a cross-country one.
- *     Using them here would double-count time and say nothing about place.
- *  4. `economic.costOfLiving` — CHOSEN. It is the game's own 100-centered
- *     statement of "how expensive is it here", per state (so it also captures
- *     within-country variation, which is the right grain for a sited plant), it
- *     is denominated in nothing — it is an index, so it is immune to the
- *     currency arbitrage in (2) — and it already animates off urbanization and
- *     cabinet/housing policy. `expandSector` cost-adjusts by nothing at all
- *     today, so there is no existing precedent to match; this is the first one.
- *
- * HONEST LIMITATION: `costOfLiving` is a consumer basket, not a construction
- * cost index. It is a proxy — the right SHAPE (dense, rich, expensive places
- * cost more to build in) with an unvalidated magnitude. FLAGGED PROVISIONAL:
- * worldsim re-tunes the clamp band, and if construction ever gets its own metric
- * this function is the single place to repoint.
+ * LIMITATION: `costOfLiving` is a consumer basket, not a construction cost
+ * index. Right shape, unvalidated magnitude. PROVISIONAL: if construction ever
+ * gets its own metric, repoint here.
  */
 
 /**
@@ -759,10 +695,9 @@ export const HOST_BUILD_PRICE_INDEX_MIN = 0.6;
 export const HOST_BUILD_PRICE_INDEX_MAX = 1.6;
 
 /**
- * Host price-level multiplier on the build price, from the host state's
- * 100-centered `costOfLiving` index. 1.0 at the neutral 100 — and 1.0 when the
- * metric is absent, so a world with no metrics engine, a legacy state document,
- * or a test fixture prices exactly as it did before this factor existed.
+ * Host price-level multiplier on build price from the host state's 100-centered
+ * `costOfLiving` index. 1.0 at neutral 100, and 1.0 when the metric is absent
+ * (no metrics engine, legacy state, test fixture).
  */
 export function hostBuildPriceIndex(costOfLivingIndex: number | null | undefined): number {
   if (typeof costOfLivingIndex !== "number" || !Number.isFinite(costOfLivingIndex)) return 1;

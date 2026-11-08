@@ -47,12 +47,9 @@ export interface MapOverviewResponse {
  * Countries whose map renders the labelled left/right lean colour scale.
  * Everything else renders neutral grey.
  *
- * This was previously derived from which archetype category id the country
- * used, which is why it names an explicit set now. The set is the behaviour
- * that derivation produced, NG included: NG has no archetype category entry in
- * that old map, so it fell through to the neutral branch. Whether NG should
- * carry the scale is a separate call, not a side effect of removing the
- * archetype lookup.
+ * NG is intentionally excluded: it has no archetype category entry, so this
+ * set matches the behaviour of the previous derivation. Whether NG should
+ * carry the scale is a separate call.
  */
 const LEAN_SCALE_COUNTRIES = new Set<CountryId>(["UK", "DE"]);
 
@@ -75,10 +72,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const [allStates, allDemographics, demographicCategories] = await Promise.all([
       db.collection<State>("states").find({ countryId }).toArray(),
       db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
-      // Load every category and let each region's own `categoryWeights` select
-      // which ones apply (`calculateStateLean`). This route used to name the
-      // per-country archetype category id directly, which meant a country whose
-      // catalog is not in that hardcoded map fell back to a foreign one.
+      // Load every category and let each region's `categoryWeights` select which
+      // apply (`calculateStateLean`), avoiding a hardcoded archetype fallback.
       db.collection<DemographicCategory>("demographicCategories").find({}).toArray(),
     ]);
 

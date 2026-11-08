@@ -109,9 +109,8 @@ export async function POST(
       return NextResponse.json({ success: true, status });
     }
 
-    // A client may retry after the server committed but its response was lost.
-    // Completed application receipts make that retry a successful read of the same
-    // result instead of a misleading "no longer open" conflict.
+    // A client may retry after the server committed but the response was lost.
+    // Completed application receipts make the retry a successful read of the same result.
     if (recognizedAcceptance && offer.application?.phase === "completed") {
       const warResolved = offer.application.resolutionWinner !== null;
       if (warResolved) await flushServerPosthog();

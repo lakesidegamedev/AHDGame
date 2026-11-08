@@ -1,11 +1,10 @@
 /**
  * The dominance margin penalty (pp, negative) a sector pays this turn.
  *
- * Plants worlds used to fade the penalty out completely and charge dominance
- * once, at build time. The running cost keeps a fraction of it for as long as a
- * group holds the market: `runningScale` is that floor on the plants fade. The
- * penalty curve itself already falls to zero at the share threshold, so the
- * cost fades as share falls without any extra mechanism.
+ * `runningScale` is the floor on the plants fade, so a group holding the market
+ * keeps paying a fraction for as long as it holds it. The penalty curve itself
+ * already falls to zero at the share threshold, so the cost fades as share falls
+ * without any extra mechanism.
  */
 import {
   getDominanceMarginPenalty,

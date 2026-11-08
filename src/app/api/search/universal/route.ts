@@ -409,16 +409,13 @@ async function handleGET(request: Request) {
     }
 
     // Search proposable legislation (law types and their policy options), so a
-    // bill nobody has proposed yet is still discoverable by the name players
-    // know it by. The Universal Banking Charter Act, for example, is a policy
-    // option inside the Banking Separation Act type: bill-title search can
-    // never match it until someone proposes one (#1751).
-    // The name match and the scope match are separate $or branches, so they
-    // combine under $and (spreading a second $or would silently overwrite the
-    // first and match every law type in scope). Matching is per-word: the
-    // option players search for ("universal charter") is not a contiguous
-    // substring of its indexed name ("Universal Banking Charter Act"), so a
-    // whole-phrase regex would miss exactly the case this section exists for.
+    // bill nobody has proposed yet is discoverable by the name players know it by.
+    // A bill title search cannot match policy options until someone proposes one.
+    // The name and scope matches are separate $or branches so they combine under
+    // $and; a second spread $or would overwrite the first and match every law type
+    // in scope. Matching is per-word: the option players search for is not a
+    // contiguous substring of its indexed name, so a whole-phrase regex would miss
+    // exactly the case this section exists for.
     const legislationTokens = query
       .split(/\s+/)
       .map((token) => token.trim())

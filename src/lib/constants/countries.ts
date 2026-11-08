@@ -1002,12 +1002,12 @@ export type EraCountryConfigOverride = Partial<
  * States, while Turkey read $0.7B and the UK $14.4B.
  *
  * IT/JP/CN/NG deliberately stay at 1.0: their 1953 regional GDP is authored in
- * **USD millions** (refs #3498 — see the header of each `*Regions1953.ts`), so
+ * **USD millions**, so
  * they are already ₳-denominated and a rate of 1.0 IS their era-correct
  * normalization. Do not "fix" them to 1/INITIAL_RATES_1953 — that would read
  * Italy as a $27M economy.
  *
- * HU/PL/RO/YU/BG/CS now have authored 1953 rates too (refs #3778 §1). They stay
+ * HU/PL/RO/YU/BG/CS now have authored 1953 rates too. They stay
  * OUT of `FOREX_ACTIVE_COUNTRIES` — `seedExchangeRates` still writes no
  * `exchangeRates` row for them and they remain budget-only, non-convertible
  * economies. Only the config-side GDP→₳ normalization is authored, sourced from
@@ -1272,19 +1272,12 @@ export function getPrimaryWinnersForCountry(countryId: CountryId): number {
 /**
  * Resolve the primary-winner cap for a specific (country, electionType).
  *
- * One election-type exception overrides the government-type default:
- * single-winner executive offices ({@link SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES})
- * always advance exactly one candidate per party — a governor/president race
- * fills one seat, so parliamentary/one-party multi-advance would split its vote.
+ * Single-winner executive offices
+ * ({@link SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES}) always advance exactly one
+ * candidate per party: a governor/president race fills one seat, so
+ * multi-advance would split its vote.
  *
- * Otherwise it equals {@link getPrimaryWinnersForCountry}.
- *
- * US House used to advance three per party under the districted-redistricting
- * system so the resolver could split a state's delegation by primary share.
- * That was reverted: a party's own filler NPP survived the primary alongside
- * the player who beat it and then took a proportional slice of the delegation,
- * which is not how a primary is meant to work. US House is back to one nominee
- * per party, like every other US race.
+ * Otherwise equals {@link getPrimaryWinnersForCountry}.
  */
 export function getPrimaryWinnersForElection(countryId: CountryId, electionType: string): number {
   if (SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES.has(electionType)) {
@@ -1363,7 +1356,7 @@ export function getMajorPartiesForRegion(
   // enrichment pass adds `partyAbbr`. The sets below therefore carry BOTH the
   // seed slug (fixtures, seeders) and the abbreviation (live races); match
   // through `partitionMajorParties`, which also falls back to the two largest
-  // parties in the race when neither encoding matches (#811).
+  // parties in the race when neither encoding matches.
   if (countryId === "UK") {
     if (parentRegionId === "SCO") return new Set(["uk_snp", "uk_labour", "SNP", "LAB"]);
     if (parentRegionId === "WAL") return new Set(["uk_labour", "uk_conservative", "LAB", "CON"]);
@@ -1529,15 +1522,10 @@ export function getRegionAppointableSeats(countryId: CountryId): RegionAppointab
 }
 
 /**
- * Election-type keys a Governor's-Office can endorse from within their state:
- * the sub-national legislature plus any elected federal chambers (House/Senate
- * for US, Commons for UK, Bundestag for DE, Shugiin/Sangiin for JP). Appointed
- * chambers (UK Lords, DE Bundesrat) are excluded because they have no
- * elections to endorse in. Also includes the legacy "stateHouse" key for
- * older fixtures.
- *
- * Used to filter `elections.find({ state: regionId, electionType: { $in } })`
- * so a governor sees races in their state at every electable level.
+ * Election-type keys a Governor's Office can endorse within its state: the
+ * sub-national legislature plus elected federal chambers. Appointed chambers
+ * are excluded (no elections to endorse). Includes legacy "stateHouse" for
+ * older fixtures. Used to filter elections by state and type.
  */
 export function getEndorseableElectionTypes(countryId: CountryId): string[] {
   const config = getCountryConfig(countryId);

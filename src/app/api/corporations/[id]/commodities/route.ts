@@ -330,10 +330,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       });
     }
 
-    // Revenue is booked in each sector's HOST currency; every nameplate leg in
-    // the derivation runs in ₳, the basis COMMODITY_BASE_PRICES use. Normalize
-    // here the way the world supply ledger does (commodityPriceTurn) — without
-    // it a franc-denominated sector reports its FX rate as output (#1177).
+    // Revenue is booked in each sector's HOST currency; the derivation
+    // runs in ₳, the basis COMMODITY_BASE_PRICES use. Normalize here like
+    // the world supply ledger does, or a sector reports its FX rate as output.
     const fxByCurrency = new Map<CurrencyCode, number>(
       exchangeRateDocs.map((r) => [r.currencyCode as CurrencyCode, r.rate])
     );

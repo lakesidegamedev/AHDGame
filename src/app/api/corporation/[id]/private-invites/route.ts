@@ -1,17 +1,15 @@
 /**
  * Private share invitation endpoints for close-corporation (e.g. S-Corp) flow.
  *
- * GET  /api/corporation/[id]/private-invites — list pending invites for this corp.
- *      CEO sees all pending invites; everyone else sees only invites addressed
+ * GET  lists pending invites: CEO sees all; others see only invites addressed
  *      to their active character.
- * POST /api/corporation/[id]/private-invites — CEO creates a new invite.
+ * POST CEO creates an invite.
  *
  * Gates:
- *  - The corporation must be private (`isPrivate: true`).
- *  - The corporation's legal structure must declare `maxShareholders > 1`
- *    (e.g. `us_s_corp` = 100).
- *  - The invitee must not already be a shareholder.
- *  - Current shareholder count + outstanding pending invites < maxShareholders.
+ *  - Corporation must be private (`isPrivate: true`).
+ *  - Legal structure must declare `maxShareholders > 1` (e.g. `us_s_corp` = 100).
+ *  - Invitee must not already be a shareholder.
+ *  - Current shareholders + outstanding pending invites < maxShareholders.
  */
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";

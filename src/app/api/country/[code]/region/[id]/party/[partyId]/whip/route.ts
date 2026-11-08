@@ -261,9 +261,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       .collection<ElectedOfficial>("electedOfficials")
       .find({
         isNPP: true,
-        // Country-scope the officials. `state` already implies a country, but
-        // party sequentialIds collide across countries — keep the filter
-        // explicit and uniform with the other whip routes (bug #0699).
+        // Country-scope the officials. `state` already implies a country, but party sequentialIds collide across countries, so keep the filter explicit and uniform with the other whip routes.
         countryId,
         party: partyKey,
         state: stateId,

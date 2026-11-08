@@ -2,12 +2,9 @@
  * GET /api/elections/composition?country=XX
  *
  * Current and projected party seat breakdown for a country's elected chambers,
- * sourced from ElectedOfficial records and live vote tallies.
- *
- * This used to hardcode `countryId: "US"`, and the frontend divided by a
- * hardcoded 435/100, so every non-US country was shown US House and Senate
- * numbers as if they were its own. Chambers, office types and seat totals now
- * all come from the country's own config.
+ * sourced from ElectedOfficial records and live vote tallies. Chambers, office
+ * types and seat totals all come from the country's own config, not hardcoded
+ * constants.
  */
 
 import { NextResponse } from "next/server";

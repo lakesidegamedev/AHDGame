@@ -7,14 +7,13 @@ export const dynamic = "force-dynamic";
 /**
  * The Layer-1 buckets a turnout action can target in this country.
  *
- * Served rather than computed in the browser for two reasons: the bucket set is
- * era-dependent (it comes from the seeded substrate for the game's preset), and
- * the country models are a large server-only module that has no business in a
+ * Served rather than computed in the browser because the bucket set is
+ * era-dependent (from the seeded substrate for the game's preset) and the
+ * country models are a large server-only module that should not ship in a
  * client bundle.
  *
- * Not per-user — the answer depends only on country and preset — but still
- * `no-store`, because the era can roll over mid-game and a stale picker would
- * offer buckets the electorate no longer has.
+ * Not per-user, but still `no-store`, because the era can roll over mid-game
+ * and a stale picker would offer buckets the electorate no longer has.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;

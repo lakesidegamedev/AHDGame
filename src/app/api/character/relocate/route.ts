@@ -3,18 +3,15 @@
  *
  * Relocate character to a new state/region.
  * - Regional political capital (politicalInfluence, donorBaseLevel, groupFavorability) always resets to 0.
- * - nationalInfluence resets on country change; party and partyInfluence also reset
- *   on a confirmed move outside the party's live frontier.
- * - Active candidacies (general/primary, state-party, national-party, committee) are auto-withdrawn.
- * - State/region-bound currentOffice seats auto-resign; country-scoped offices (VP, President,
- *   cabinet, …) only resign on country change. CEO role always resigns (unless NatCorp same-country
- *   / relocate-with-corp). Central-bank chair resigns on country change only.
- * - A "relocated" entry is appended to careerHistory.
+ * - nationalInfluence resets on country change; party/partyInfluence also reset on a move outside the party's live frontier.
+ * - Active candidacies are auto-withdrawn.
+ * - State/region-bound offices auto-resign; country-scoped offices resign only on country change. CEO always resigns (unless NatCorp same-country); central-bank chair resigns on country change only.
+ * - Appends a "relocated" entry to careerHistory.
  *
- * Blocking conditions:
- *   - target must exist and differ from current homeState
- *   - 72-turn (3 real day) cooldown since lastRelocatedTurn / lastRelocatedAt
- *   - destination country must be enabledForPlayers (admins bypass)
+ * Blocked when:
+ *   - target missing or equals current homeState
+ *   - within 72-turn cooldown since lastRelocatedTurn/lastRelocatedAt
+ *   - destination country not enabledForPlayers (admins bypass)
  */
 
 import { NextResponse } from "next/server";

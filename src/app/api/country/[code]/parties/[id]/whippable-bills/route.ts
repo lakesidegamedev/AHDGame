@@ -167,9 +167,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       chamberKeys.map((key) => [key, getOfficeTypeForChamber(countryId, key, undefined, config)])
     );
 
-    // Union of NPP and character officials so we surface bills for either audience.
-    // Country-scoped because party sequentialIds collide across countries and some
-    // office types (e.g. "senate") are shared between countries (bug #0699).
+    // Union of NPP and character officials so bills surface for either audience.
+    // Country-scoped because party sequentialIds collide across countries and
+    // some office types (e.g. "senate") are shared between countries.
     const allOfficials = await db
       .collection<ElectedOfficial>("electedOfficials")
       .find({

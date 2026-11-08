@@ -10,7 +10,7 @@ import {
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 
 /**
- * Suggestion #30: the dominance build toll scales with how contested the market
+ * The dominance build toll scales with how contested the market
  * is. 60% of a two-firm state is not the same achievement as 60% of a five-firm
  * state, and pricing them alike left thin markets unbuilt while demand went
  * unserved.

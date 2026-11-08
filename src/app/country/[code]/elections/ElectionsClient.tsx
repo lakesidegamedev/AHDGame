@@ -20,7 +20,6 @@ import { fetchAllElections } from "@/lib/elections/fetchAllElections";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 import { useCountryManifestos } from "@/hooks/useCountryManifestos";
 import { useElectionActions } from "@/hooks/useElectionActions";
-import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
 import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
@@ -215,13 +214,10 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
     isInAnyRace,
     confirmDialog,
   } = useElectionActions({ character, elections, onSuccess: fetchData });
-  const { liveElectionResultsEnabled } = useWorldFlags();
 
   const allRegions = useMemo(() => [...new Set(elections.map((e) => e.state))].sort(), [elections]);
 
-  // One derivation for both views: `mapGroups` stays country-wide while the list
-  // honors the region filter. Deriving them separately is what previously let the
-  // map read region-filtered data and collapse to a single region.
+  // One derivation for both views: `mapGroups` stays country-wide while the list honors the region filter. Separate derivations let the map read region-filtered data and collapse to one region.
   const { listElections: filtered, mapGroups: groupsAll } = useMemo(
     () =>
       selectElectionGroups(elections, allRegions, {
@@ -387,18 +383,17 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
               />
             )}
 
-            {liveElectionResultsEnabled &&
-              (() => {
-                const anchor = pickElectionNightAnchor(filtered);
-                if (!anchor) return null;
-                return (
-                  <EmbeddedParliamentaryResults
-                    electionId={anchor.id}
-                    electionType={anchor.electionType}
-                    title={electionNightTitle(anchor.electionType)}
-                  />
-                );
-              })()}
+            {(() => {
+              const anchor = pickElectionNightAnchor(filtered);
+              if (!anchor) return null;
+              return (
+                <EmbeddedParliamentaryResults
+                  electionId={anchor.id}
+                  electionType={anchor.electionType}
+                  title={electionNightTitle(anchor.electionType)}
+                />
+              );
+            })()}
 
             {effectiveView === "map" && (
               <div className="rounded-xl border border-card-border bg-card p-5">

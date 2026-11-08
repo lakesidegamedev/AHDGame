@@ -9,12 +9,9 @@ export interface CasinoGameStats {
 }
 
 /**
- * The Discord casino house bank (originally the blackjack prize pool, and
- * still stored under that name). Seeded at 200M, grown by player losses and
- * drawn down by wins. See `src/lib/casino/house.ts`.
- *
- * Solvency is `anchorBalance`. The per-currency buckets and legacy totals
- * predate it and are kept for history only.
+ * The Discord casino house bank, stored as "blackjack_prize_pool". Grown by
+ * player losses, drawn down by wins. Solvency is `anchorBalance`; the
+ * per-currency buckets and legacy totals are kept for history only.
  */
 export interface DiscordBotFund {
   _id: ObjectId;

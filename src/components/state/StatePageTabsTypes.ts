@@ -191,9 +191,3 @@ export interface StatePageTabsProps {
    */
   bucketProfile?: BucketProfileSection[] | null;
 }
-
-// PolicyRecordResponse used to live here as a narrower copy of the canonical
-// shape in @/lib/policy/types — it predated the statute book and lacked
-// metricEffects, the field the effect pills render from. The Laws tab now uses
-// the canonical type directly, so the copy is gone rather than left to rot as a
-// second definition someone could pick up by mistake.

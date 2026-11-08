@@ -1,20 +1,10 @@
 /**
- * The merger-review gate: does this deal need clearance, does it already have
- * it, and if it needs one, open the referral.
- *
- * Two call sites use this, and they use it the same way:
- *  - `executeAgreedAcquisition`, the moment an agreed deal would commit
- *  - the hostile-takeover route, the moment a squeeze-out would commit
- *
- * Both are the instant two corporations become one. Reviewing at share-purchase
- * time would be earlier and wronger: until the absorption the two firms still
- * hold their market positions separately, and the engine measures them
- * separately.
- *
- * A CLEARED review is durable for that (acquirer, target) pair, which is what
- * lets a referred hostile takeover simply be retried once the authority signs
- * off, instead of needing the whole 780-line squeeze-out re-entered from a
- * decision handler.
+ * Merger-review gate: whether a deal needs clearance, whether it has it, and
+ * opening the referral if needed. Runs at the moment two corporations merge,
+ * not at share-purchase time, because the engine still measures the firms
+ * separately until absorption. A CLEARED review is durable for the
+ * (acquirer, target) pair, so a referred hostile takeover can simply be
+ * retried after sign-off.
  */
 
 import { mechanicalLawId } from "@/lib/mechanicalLaws/registry";

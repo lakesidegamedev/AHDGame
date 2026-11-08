@@ -27,28 +27,17 @@ export interface MedianVoter {
 }
 
 /**
- * Compute the turnout-weighted average of group leans across all
- * demographic categories. Returns `{ ep: 0, sp: 0 }` for mirror-
- * symmetric demographics (the abstract-neutrality default), positive
- * values for right-leaning electorates, negative for left-leaning.
+ * Turnout-weighted average of group leans across all demographic categories.
+ * Returns `{ ep: 0, sp: 0 }` for mirror-symmetric demographics, positive for
+ * right-leaning electorates, negative for left-leaning.
  *
- * Args:
- *   - `demographics`: state-level group composition + category weights.
- *     Per-group `economicLean` / `socialLean` are read from
- *     `demographics.groups[g].economicLean / socialLean`, falling back
- *     to the category's `defaultEconomicLean / defaultSocialLean` when
- *     a state-level override isn't present.
- *   - `categories`: the canonical demographic-category list (for group
- *     defaults + ID iteration).
- *   - `liveTurnouts`: optional per-group turnout override map (keyed by
- *     group id) — GOTV / suppression effects shift the median in the
- *     direction of boosted / suppressed groups. When omitted, the
- *     state-level `turnout` field on each group is used, falling back
- *     to the category default.
+ * Per-group leans come from the group, falling back to the category defaults.
+ * `liveTurnouts` overrides per-group turnout (GOTV / suppression shift the
+ * median toward boosted or suppressed groups); when omitted, each group's own
+ * `turnout` is used, falling back to the category default.
  *
- * Edge cases:
- *   - Zero total weight (no groups, no turnout) → returns `{ ep: 0, sp: 0 }`.
- *   - Negative or non-finite intermediate values are clamped defensively.
+ * Zero total weight yields `{ ep: 0, sp: 0 }`; negative or non-finite values
+ * are clamped.
  */
 export function computeMedianVoter(
   demographics: StateDemographics,
@@ -128,28 +117,14 @@ export function usesEvWeightedNationalMedian(electionType: string, countryId: Co
 /**
  * EV-weighted national median voter for US presidential elections.
  *
- * Per-state `computeMedianVoter` results aggregated by electoral-vote
- * weight: a 55-EV state pulls the national signal 55× harder than a
- * 3-EV state. Reflects the campaigning reality — candidates court the
- * EV map, not raw population. Population and turnout are already folded
- * in by `computeMedianVoter` at the per-state level, so we don't double-
- * count them.
+ * Per-state `computeMedianVoter` results are aggregated by electoral-vote
+ * weight, so a 55-EV state pulls the national signal 55x harder than a
+ * 3-EV state. Population and turnout are already folded in per state, so
+ * they are not double-counted here.
  *
- * Args:
- *   - `states`: list of state entries to aggregate over. Each entry
- *     supplies its own `StateDemographics`, the `liveTurnouts` map for
- *     that state (or undefined to fall back to stored turnouts), and the
- *     `ev` count for the EV weight.
- *   - `categories`: shared canonical demographic-category list.
- *
- * Edge cases:
- *   - Empty states or zero total EV → returns `{ ep: 0, sp: 0 }`, matching
- *     the per-state helper's neutral default so the policy-distance
- *     driver falls back cleanly.
- *   - States whose median itself collapses to the `(0, 0)` neutral
- *     (mirror-symmetric demographics) contribute zero shift but still
- *     count toward the denominator — preserves the "EV-weighted average"
- *     framing without inflating other states' pull.
+ * Empty states or zero total EV returns `{ ep: 0, sp: 0 }`. States whose
+ * median collapses to the neutral (0, 0) contribute zero shift but still
+ * count toward the denominator.
  */
 export function computeNationalEvWeightedMedian(
   states: Array<{

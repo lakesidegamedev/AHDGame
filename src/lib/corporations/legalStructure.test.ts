@@ -59,7 +59,7 @@ describe("getLegalStructureForCorp", () => {
     expect(s.isDefault).toBe(true);
   });
   it("falls back to Ltd for a private UK corp with no stored structure", () => {
-    // Ticket #1020: private founding left legalStructure unset, so the hero
+    // Private founding left legalStructure unset, so the hero
     // resolved the public default and showed contradictory "Private" + "PLC".
     const s = getLegalStructureForCorp({ countryId: "UK", isPrivate: true });
     expect(s.id).toBe("uk_ltd");

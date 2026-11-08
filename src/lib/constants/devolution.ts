@@ -16,18 +16,15 @@ import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 export const UK_DEVOLUTION_REGIONS: ReadonlySet<string> = new Set(["SCO", "WAL", "NIR"]);
 
 /**
- * Metrics owned EXCLUSIVELY by a dedicated per-turn drift engine. The generic
- * per-turn writers (metric engine, policy-effects decay) iterate metric
- * DEFINITIONS, so a field that stays registered in `metricDefinitions` for
- * display/scoring would otherwise be co-written every turn and fight the drift
- * engine to a standstill. Those writers must skip anything listed here.
+ * Metrics owned EXCLUSIVELY by a per-turn drift engine. Generic per-turn
+ * writers (metric engine, policy-effects decay) iterate `metricDefinitions`,
+ * so a field left registered for display/scoring would otherwise be co-written
+ * and fight the drift engine. Those writers must skip anything listed here.
  *
  * Keyed as `${categoryId}.${metricId}`.
  *
- * - `governance.independenceDesire` → owned by
- *   `src/lib/turn/independenceDesireDrift.ts`. (The metric-engine node was
- *   removed in the first ownership fix; this set closes the policy-effects
- *   second writer — see docs/design/uk-independence-desire-ownership-fix.md.)
+ * - `governance.independenceDesire` -> owned by
+ *   `src/lib/turn/independenceDesireDrift.ts`.
  */
 export const DRIFT_OWNED_METRICS: ReadonlySet<string> = new Set(["governance.independenceDesire"]);
 

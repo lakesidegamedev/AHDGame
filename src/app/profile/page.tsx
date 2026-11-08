@@ -420,11 +420,8 @@ async function getCharacterData() {
       profileCreatedAt: character.createdAt,
       historyStartedAt: gameState?.singleplayerConfig ? null : gameState?.createdAt,
     }),
-    // Gate on active status exactly as the public profile does
-    // (src/app/character/[id]/page.tsx). Without this the owner keeps their
-    // badge, border and highlight colour after the pledge lapses while every
-    // other player correctly sees none of it — the two pages disagreed about
-    // the same person.
+    // Gate on active status exactly as the public profile does, or the owner
+    // keeps badges and colors after the pledge lapses that others cannot see.
     patreonHighlightColor: supporterActive ? (viewerUser?.patreonHighlightColor ?? null) : null,
     patreonTier: supporterActive ? (viewerUser?.patreonTier ?? null) : null,
     patreonExpiresAt: supporterActive ? (viewerUser?.patreonExpiresAt ?? null) : null,
@@ -776,10 +773,7 @@ export default async function ProfilePage() {
 
   const stateLabel = homeState?.name ?? character.homeState;
 
-  // Office titles are resolved here, where the full country registry is
-  // already loaded, so the career card does not ship the cabinet tables to the
-  // browser. `getOfficeLabel` recomputes what each stored label was meant to
-  // hold, so this is the same text the card used to compute client-side.
+  // Resolved server-side where the country registry is loaded, so the career card does not ship cabinet tables to the browser.
   const careerHistory = (character.careerHistory ?? []).map((event) =>
     event.office
       ? { ...event, officeLabel: getOfficeLabel(event.office, character.countryId) }

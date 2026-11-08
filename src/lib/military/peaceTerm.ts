@@ -7,8 +7,6 @@ import type { CountryId, GovernmentType } from "@/lib/constants/countries";
  * shape is representable at a time, so a settlement carrying two terms cannot be
  * constructed, stored, or hand-rolled over the API. "Pick one" is a schema rule
  * here rather than a convention the UI is trusted to keep.
- *
- * Spec: docs/superpowers/specs/2026-08-27-peace-terms-design.md
  */
 export type PeaceTerm =
   /**
@@ -40,19 +38,17 @@ export type PeaceTerm =
   /**
    * German reunification, on the challenger's terms.
    *
-   * Carries no fields: the settlement crisis already names the two Germanies, and a
-   * term that restated them could disagree with it.
+   * Carries no fields: the settlement crisis names the two Germanies, and a term
+   * that restated them could disagree with it.
    *
-   * Only valid on a war the German Question is riding, and EITHER of the two
-   * founding belligerents may propose it: from the challenger it is a demand, from
-   * the incumbent a capitulation. The outcome is the challenger's either way, which
-   * is why the incumbent's version always has the incumbent withdrawing. The
-   * challenger must be a party to it, and a country that merely joined the war
-   * cannot settle Germany in either direction.
+   * Only valid on a war the German Question is riding, and EITHER founding
+   * belligerent may propose it: from the challenger a demand, from the incumbent a
+   * capitulation. The outcome is the challenger's either way, so the incumbent's
+   * version always has the incumbent withdrawing. A country that merely joined
+   * cannot settle Germany.
    *
-   * Deliberately UNGATED on the front. Every other way to reach this outcome runs
-   * through winning the war; this is the one that can be put on the table while it
-   * is still being fought, which is the point of having it.
+   * Deliberately UNGATED on the front: the one outcome that can be put on the table
+   * while the war is still being fought.
    */
   | { kind: "reunification" };
 
@@ -97,14 +93,13 @@ const GOVERNMENT_SYSTEM_LABELS: Record<GovernmentType, string> = {
 /**
  * A system's player-facing name.
  *
- * Takes a plain `string`, not `GovernmentType`, because most callers are reading
- * the value off a stored document or an API payload where it is typed loosely —
- * and those are exactly the surfaces that were printing the raw key. Narrowing
- * the parameter would push a cast onto every one of them.
+ * Takes a plain `string`, not `GovernmentType`, because callers read the value
+ * off stored documents or API payloads typed loosely. Narrowing the parameter
+ * would push a cast onto every one of them.
  *
  * The fallback is not dead code even with an exhaustive table: a row written
  * before a system was renamed can hold a key the table no longer has. Showing
- * the raw key is a poor label but a better outcome than rendering "undefined".
+ * the raw key beats rendering "undefined".
  */
 export function governmentSystemLabel(system: GovernmentType | string): string {
   return GOVERNMENT_SYSTEM_LABELS[system as GovernmentType] ?? system;

@@ -206,7 +206,7 @@ export async function proposeAcquisitionOffer(
     };
   }
 
-  // AI-run target (#217): no human can accept, so resolve deterministically
+  // AI-run target: no human can accept, so resolve deterministically
   // against the asking price (reference valuation plus the NPP premium).
   const askingPrice = nppAcquisitionMinimumPrice(valuationAnchor);
   if (!meetsNppAcquisitionThreshold(priceAnchor, valuationAnchor)) {

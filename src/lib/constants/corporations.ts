@@ -42,10 +42,9 @@ import {
 export const CORPORATION_FOUNDING_COST = 1_000_000;
 
 /**
- * CEO salary is capped at this multiple of the corporation's gross revenue.
- * Gross revenue = sum of sector revenue only; bond proceeds and bond coupon
- * income are excluded, so issuing bonds can never raise the salary ceiling.
- * At zero gross revenue the cap is $0 (Bug #0728).
+ * CEO salary is capped at this multiple of gross revenue. Gross revenue is
+ * sector revenue only; bond proceeds and coupon income are excluded, so issuing
+ * bonds can never raise the salary ceiling. At zero revenue the cap is $0.
  */
 export const CEO_SALARY_MAX_REVENUE_MULTIPLE = 1.25;
 
@@ -54,11 +53,11 @@ export const CEO_SALARY_MAX_REVENUE_MULTIPLE = 1.25;
  * capped at this multiple of gross revenue. Enforced at set time by
  * `updateCorporationSettings` and at pay time by `sectorCalculations`, on the
  * same gross-revenue basis as the CEO salary cap above. At zero gross revenue
- * the ceiling is $0 (ticket #1237).
+ * the ceiling is $0.
  */
 export const CORP_OVERHEAD_MAX_REVENUE_MULTIPLE = 1.5;
 
-/** Turns a user must wait after their corporation ends before founding another (Bug #0728). */
+/** Turns a user must wait after their corporation ends before founding another. */
 export const CORPORATION_FOUNDING_COOLDOWN_TURNS = 96;
 
 /** Default starting liquid capital for a new corporation */
@@ -182,14 +181,12 @@ export const STOCK_SPLIT_PREV_ANCHOR_MAX_RATIO = 3;
  */
 export const SHARE_EXECUTION_PRICE_BAND_MAX_RATIO = 5;
 
-/**
+/*
  * Maximum single-turn fractional change in a corp's fundamental share price
- * (±35%). Prevents the unbounded knife-edge snap-back that occurs when issued
- * bond debt crosses total assets and equity flips through zero (issue #2888):
- * without this the price could move ~200x in one turn. The move direction is
- * preserved and the price still converges to the true fundamental, just over
- * several turns instead of one snap. NOTE: a judgment-call magnitude — validate
- * with a worldsim A/B before treating as final.
+ * (±35%). Prevents the unbounded snap-back when issued bond debt crosses total
+ * assets and equity flips through zero; without it the price can move ~200x in
+ * one turn. Direction is preserved and the price still converges over several
+ * turns. Magnitude is a judgment call to validate with worldsim A/B.
  */
 export const SHARE_PRICE_MAX_TURN_MOVE = 0.35;
 
@@ -254,15 +251,11 @@ export const DEFAULT_PROFIT_MARGIN = 35;
 export const SECTOR_MARGIN_LEVEL_TRIM_PP = 8;
 
 /**
- * Effective margin was previously clamped with a hard `Math.min(100, ...)`. That
- * made 100% a flat target a player could deliberately pin against by stacking
- * additive modifiers (home-state +10, state-primary spec +10, subsidy, tech
- * marginBonus, export premium, favourable commodity) — every point past the cap
- * was free, so the optimal play was to pile modifiers until the sector ran at
- * zero marginal cost. The soft cap below keeps margin strictly monotonic in the
- * stacked total but bends the top of the curve so the last points cost more and
- * the sector asymptotes toward, without ever reaching, the ceiling. Nothing
- * changes below the knee, so ordinary sectors are byte-identical.
+ * Margin (%) below which no compression happens. Soft cap is used rather than
+ * a hard clamp at the ceiling so a player cannot pin against a flat 100% by
+ * stacking additive modifiers, which made every excess point free. Above the
+ * knee, excess is compressed so margin stays monotonic and asymptotes toward
+ * the ceiling. Below the knee output is unchanged.
  */
 /** Margin (%) below which no compression happens — the linear region. */
 export const MARGIN_SOFT_CAP_KNEE = 80;
@@ -329,19 +322,14 @@ export function calculateWorkers(
 }
 
 // ─── Market Dominance Modifiers ──────────────────────────────────────────────
-// Sectors that exceed DOMINANCE_MARKET_SHARE_THRESHOLD of their (state, sectorType)
-// market face four penalties: more expensive growth, weaker defence against
-// attacks, lower margins, and a passive regulatory burden on revenue. All four
-// start at zero extra cost exactly at the threshold (no cliff) and ramp
-// continuously to their "full" value at 100% market share. The multiplicative
-// penalties (growth cost, attack ease) follow a convex curve via
-// DOMINANCE_RAMP_EXPONENT: gentle through the low-dominance band (~50–66%, where
-// holding a lead stays cash-positive and a slow grind upward is affordable) and
-// increasingly punishing toward monopoly. The additive penalties (margin,
-// regulatory burden) ramp linearly from the threshold. The earlier design used
-// a deliberate discontinuity at 50%; it made dominance feel like a wall —
-// crossing the line instantly flipped growth cash-negative — so the cliff was
-// replaced with this smooth, back-loaded ramp.
+// Sectors above DOMINANCE_MARKET_SHARE_THRESHOLD of their (state, sectorType)
+// market face four penalties: costlier growth, weaker defence, lower margins,
+// and a passive regulatory burden on revenue. All start at zero extra cost
+// exactly at the threshold (no cliff) and ramp to full at 100% share.
+// Multiplicative penalties follow a convex curve via DOMINANCE_RAMP_EXPONENT:
+// gentle through the low-dominance band (~50-66%, holding a lead stays
+// cash-positive) and increasingly punishing toward monopoly. Additive penalties
+// (margin, regulatory burden) ramp linearly.
 
 /** Market-share threshold (%) above which a sector becomes "dominant". */
 export const DOMINANCE_MARKET_SHARE_THRESHOLD = 50;
@@ -653,30 +641,24 @@ export function nextNegativeProductionCounter(
 /**
  * Compute daily growth cost from per-turn growth basis and country prime rate.
  *
- * The base growth cost is:
  *   revenue × (perTurnGrowthRate / 100) × GROWTH_COST_MULTIPLIER × TURNS_PER_DAY
  *
- * `perTurnGrowthRate` is growthRate ÷ GROWTH_RATE_TURNS_PER_YEAR (see sector turn
- * processing). The `× TURNS_PER_DAY` term converts the per-turn charge into the
- * genuine daily figure every caller divides back down by `TURNS_PER_DAY` and
- * every UI labels "/day" — so the number sits in a daily P&L alongside daily
- * revenue and maintenance without restating.
+ * `perTurnGrowthRate` is growthRate ÷ GROWTH_RATE_TURNS_PER_YEAR. The
+ * `× TURNS_PER_DAY` term yields the daily figure every caller divides back down
+ * by `TURNS_PER_DAY` and every UI labels "/day", so it sits in a daily P&L
+ * alongside daily revenue and maintenance without restating.
  *
- * Clock alignment (#3934): this term used to be `GROWTH_RATE_TURNS_PER_YEAR`
- * (48), which billed two financial days of cost for every one game year of
- * growth. A sector therefore paid 6× the revenue it added. Growth accrues on the
- * 48-turn year (`sectorTurn.ts`) while cost is charged on the 24-turn day, so the
- * conversion has to use the same 24 the charge does. The effective price is now
- * GROWTH_COST_MULTIPLIER (3×), which is what the constant always claimed.
+ * Growth accrues on the 48-turn year while cost is charged on the 24-turn day,
+ * so the conversion must use the same 24 the charge does. The effective price
+ * is GROWTH_COST_MULTIPLIER (3x).
  *
- * The prime rate applies a normalized modifier so higher-rate environments are
- * moderately more expensive for growth. Using `1 + primeRate / 10` instead of
- * the raw rate prevents extreme swings: a 3.75% rate yields a 1.375x multiplier
- * rather than a 3.75x one. Floor at 0.5 so zero-rate policies still cost something.
+ * The prime rate applies a normalized modifier: `1 + primeRate / 10` prevents
+ * extreme swings (3.75% yields 1.375x, not 3.75x). Floored at 0.5 so zero-rate
+ * policies still cost something.
  *
- * `marketSharePercent` (0–100) drives the dominance multiplier. Pass 0 (the
- * default) when market share is unknown / not relevant — the multiplier is then
- * 1.0× and the cost matches the legacy formula.
+ * `marketSharePercent` (0-100) drives the dominance multiplier. Pass 0 (default)
+ * when market share is unknown or irrelevant; the multiplier is then 1.0x and
+ * the cost matches the legacy formula.
  */
 /**
  * Business Acumen growth-cost effects. A skilled CEO (a) grows their sectors more
@@ -1310,10 +1292,8 @@ export const INFLATION_LOW_MAX_BONUS = 2;
 export const INFLATION_HIGH_MAX_PENALTY = 8;
 /** Inflation rate at which max penalty is reached */
 export const INFLATION_HIGH_THRESHOLD = 10;
-/** Penalty coefficient for deflation (pp per pp below 0%) — ~2× the inflation penalty rate.
- *  Bounded in practice by the MIN_INFLATION=-2.0 floor (inflation.ts): max deflation
- *  margin penalty = 2 * 2 = -4pp. Raised to 4 alongside removing the floor in commit
- *  05f59109c, which together produced the t1166 unbounded deflation-spiral incident. */
+/** Penalty coefficient for deflation (pp per pp below 0%), ~2x the inflation
+ *  penalty rate. Bounded by MIN_INFLATION=-2.0: max penalty = -4pp. */
 export const DEFLATION_PENALTY_COEFF = 2;
 
 /**
@@ -1546,7 +1526,7 @@ export const RD_MORALE_MAX_SWING = 0.15;
 export const RD_MORALE_SENSITIVITY = 0.5;
 
 /**
- * Worker-morale multiplier on R&D efficiency (#84 — happy workers get more done).
+ * Worker-morale multiplier on R&D efficiency.
  * Driven by the corp's revenue-weighted average sector `wageLevel`: 1.0 (baseline
  * pay) is neutral, paying above baseline lifts R&D output up to +{@link
  * RD_MORALE_MAX_SWING}, paying below drags it down by the same. Clamped to the
@@ -1790,7 +1770,7 @@ export function computeAllMarginModifiers(
    * market dominance, off-type sectors, and logistical sprawl — a NatCorp is a
    * diversified state holding company that holds nationalized sectors and
    * dominates by design. Its state-run inefficiency is modelled by the dedicated
-   * SOE efficiency penalty, not these (Bug #0775).
+   * SOE efficiency penalty, not these.
    */
   stateOwned: boolean = false,
   regionalConditionsModifier: number = 0,

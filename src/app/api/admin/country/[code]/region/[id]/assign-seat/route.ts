@@ -39,11 +39,9 @@ function totalForSpec(
 }
 
 /**
- * After assigning seats to an existing official via $inc, clean up vacant
- * records in that state/officeType. Vacant records (characterId=null,
- * nppId absent) accumulate when officials are removed but their seats
- * are reassigned to someone else — the vacant record's seatsHeld becomes
- * stale. This deletes vacant records that no longer represent real vacancies.
+ * After $inc-ing seats onto an existing official, delete vacant records
+ * (characterId=null, nppId absent) in that state/officeType whose seatsHeld
+ * is now stale and no longer represents a real vacancy.
  */
 async function cleanupVacantRecords(db: Db, stateId: string, officeType: string): Promise<void> {
   await db.collection("electedOfficials").deleteMany({

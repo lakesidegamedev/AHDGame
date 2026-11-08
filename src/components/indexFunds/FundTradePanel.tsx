@@ -172,14 +172,13 @@ export function FundTradePanel({
 
   const redeemEstimate = useMemo(() => {
     if (!parsedUnits || quotedNav <= 0) return null;
-    // Grandfather (#857): a redemption drains legacy units first. Legacy units
-    // (bought before the currency-scale fix) pay out rate-free (× 1); post-fix
+    // Grandfather: a redemption drains legacy units first. Legacy units
+    // (bought before the currency-scale fix) pay out rate-free (x 1); post-fix
     // units pay at the fund's native rate. `legacyAdjustedDisplayUnits` is the
-    // display counterpart of the server's blendedRedeemFxRate - proven equal in
-    // unitAccounting.test - so this quote cannot drift from credited cash, and
-    // the ₳ figure can go through formatFull/formatPrice (wallet preference)
-    // instead of stamping the fund's native symbol on a USD-scale face amount
-    // (ticket #1072: Subscribe showed Marks, Redeem showed dollars).
+    // display counterpart of the server's blendedRedeemFxRate (proven equal in
+    // unitAccounting.test), so this quote cannot drift from credited cash and
+    // the figure can go through formatFull/formatPrice instead of stamping the
+    // fund's native symbol on a USD-scale amount.
     const rate = forexEnabled ? (forexRates?.[fundCurrency] ?? 1) : 1;
     const legacyHeld = Math.min(myUnits, Math.max(0, myLegacyUnits));
     const legacyRedeemed = Math.min(parsedUnits, legacyHeld);

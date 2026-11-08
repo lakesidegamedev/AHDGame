@@ -17,18 +17,10 @@ import type { Corporation } from "@/lib/db/types";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 
 /**
- * Fund stewardship instructions.
- *
- * A unit holder controlling half a fund's units directs how it votes the shares
- * it holds. Without this surface the resolver had no instruction to read, so
- * every fund fell through to mirror-or-abstain and buying units was never a
- * route to corporate influence.
- *
- * GET  lists the funds the caller can direct on this vote, with any instruction
- *      already given.
- * POST records or replaces one instruction.
- * DELETE withdraws it, which returns the fund to mirror-or-abstain rather than
- *      making it vote the other way.
+ * Fund stewardship: a holder controlling half a fund's units directs how it
+ * votes its shares. GET lists directable funds with any instruction given;
+ * POST records or replaces one; DELETE withdraws it, returning the fund to
+ * mirror-or-abstain (it does not flip the vote).
  */
 
 const DirectSchema = z.object({

@@ -6,11 +6,10 @@ import {
 import { loadNationalApproval } from "@/lib/country/nationalApproval";
 import ApprovalClient from "./ApprovalClient";
 
-// Server component: load the national metrics + approval payloads with direct DB
-// calls and hand them to the client as initial props. This removes the old
-// shell → useEffect → fetch → setState round trip (Cloudflare → Railway → Mongo)
-// that every navigation to this page used to pay. The client keeps its fetch
-// path for retries; it just no longer needs it for the first paint.
+// Server component: load the national metrics and approval payloads with
+// direct DB calls and hand them to the client as initial props, avoiding a
+// client fetch round trip on first paint. The client keeps its fetch path
+// for retries.
 export default async function ApprovalPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const rawCode = code?.toUpperCase() ?? "US";

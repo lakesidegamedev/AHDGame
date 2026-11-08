@@ -48,10 +48,8 @@ function noStore(body: EndorsementPromptResponse) {
  *
  * Scoped to the caller's OWN country rather than hard-coded to the US, because
  * that is the rule `POST /api/elections/[id]/endorse` actually enforces
- * (`assertSameCountry`). A US player with a live US presidential race is the
- * case this exists for; gating on the literal string "US" would just mean the
- * card silently fails to appear the first time another presidential republic
- * ships one.
+ * (`assertSameCountry`). Hard-coding "US" would make the card silently vanish
+ * the first time another presidential republic ships one.
  *
  * Every reason the endorse endpoint would reject the player is filtered out
  * here, so the card never offers a button that 400s: ended races, races the

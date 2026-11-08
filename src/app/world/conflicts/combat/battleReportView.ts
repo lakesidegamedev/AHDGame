@@ -5,15 +5,13 @@ import type { BattleReportView } from "./useCombatState";
 /**
  * One battle report, told from one nation's side of it.
  *
- * Extracted from the war room's server component purely so this rule is testable —
- * the perspective it picks is the whole content of the row, and it was wrong for
- * every coalition ally.
+ * Extracted from the war room's server component so this rule is testable: the
+ * perspective it picks is the whole content of the row.
  *
- * The viewer's side used to be `declarerCountry === country`, which is only ever true
- * for the principal. An ally that joined a merged offensive therefore fell through to
- * the DEFENDING branch of every ternary: it was shown losing a battle its side won,
- * against its own coalition leader, with the enemy's casualties printed as its own.
- * Side membership comes off the report's rosters instead.
+ * Side membership comes off the report's rosters, not from `declarerCountry === country`.
+ * Checking only the declarer makes coalition allies fall through to the DEFENDING
+ * branch: shown losing a battle their side won, against their own coalition leader,
+ * with the enemy's casualties printed as their own.
  */
 export function toBattleReportView(
   report: BattleReportDoc,

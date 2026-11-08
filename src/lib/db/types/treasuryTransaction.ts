@@ -20,13 +20,11 @@ export type TreasuryTransactionDirection = "credit" | "debit";
 /**
  * Every treasury-transaction category, as a runtime value.
  *
- * The union below is DERIVED from this tuple rather than declared separately, so
- * consumers that need the list at runtime (the API's accepted-filter list, the
- * treasury log's category dropdown) read the same source the type comes from.
- * They used to keep their own hand-maintained copies, which drifted:
- * `ps_investment` was offered by the log's dropdown but missing from the route's
- * accepted list, and because an unrecognised `category` is dropped rather than
- * rejected, selecting it silently returned every category instead of filtering.
+ * The union below is DERIVED from this tuple, so consumers that need the list
+ * at runtime (the API's accepted-filter list, the treasury log's category
+ * dropdown) read the same source the type comes from. An unrecognised
+ * `category` is dropped rather than rejected, so a missing entry silently
+ * changes filter behaviour.
  *
  * Add a category here and nowhere else.
  */
@@ -72,12 +70,11 @@ export interface TreasuryTransaction {
   /** Currency-units, always positive. Sign is on `direction`. */
   amount: number;
   /**
-   * ISO 4217 code for the `amount` field — always the holder's home currency
-   * post-cf-inconsistency-fix Phase 6 (treasuries became local). Omitted on
-   * pre-2026-05-18 rows, which are denominated in anchor units (₳) and
-   * intentionally NOT backfilled: a blind backfill from `countryId` would
-   * mis-label historical anchor rows as local-currency rows. UI consumers
-   * fall back to ₳ when this field is missing.
+   * ISO 4217 code for the `amount` field, always the holder's home currency now
+   * that treasuries are local. Omitted on older rows denominated in anchor units
+   * (₳), intentionally not backfilled: a blind backfill from `countryId` would
+   * mis-label historical anchor rows as local currency. UI falls back to ₳ when
+   * missing.
    */
   currencyCode?: CurrencyCode;
 

@@ -1,5 +1,5 @@
 /**
- * Cross-state extraction opportunity finder (#3002 sibling / Track 2 signpost).
+ * Cross-state extraction opportunity finder.
  *
  * A capacity-bound extraction sector is limited by the deposits in ITS OWN
  * state — output above the state's per-resource capacity is clamped. Globally

@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { getDb } from "@/lib/mongodb";
+import { errorResponse } from "@/lib/api/errors";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import type { SuspiciousCharacter } from "@/lib/db/types/activityLog";
+import { fetchSuspiciousList } from "@/lib/admin/suspiciousList";
+
+const ALLOWED_SEVERITIES = ["low", "medium", "high"] as const;
+const MAX_LIMIT = 50;
+const DEFAULT_LIMIT = 25;
+
+/** Shared GET body for the admin and moderator suspicious-list routes; callers own auth. */
+export async function getSuspiciousListResponse(request: Request): Promise<Response> {
+  const { searchParams } = new URL(request.url);
+
+  const severityParam = searchParams.get("severity");
+  const countryParam = searchParams.get("country");
+  const dismissedParam = searchParams.get("dismissed");
+  const deletedParam = searchParams.get("deleted");
+  const showResolvedParam = searchParams.get("showResolved");
+  const flagTypeParam = searchParams.get("flagType");
+  const cursorParam = searchParams.get("cursor");
+  const limitParam = searchParams.get("limit");
+
+  const limit = Math.min(
+    MAX_LIMIT,
+    Math.max(1, parseInt(limitParam ?? String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT)
+  );
+
+  if (
+    severityParam &&
+    !ALLOWED_SEVERITIES.includes(severityParam as (typeof ALLOWED_SEVERITIES)[number])
+  ) {
+    return errorResponse(400, "Invalid severity");
+  }
+
+  if (cursorParam && !/^[0-9a-f]{24}$/i.test(cursorParam)) {
+    return errorResponse(400, "Invalid cursor");
+  }
+
+  const db = await getDb();
+
+  let countryId: SuspiciousCharacter["countryId"] | undefined;
+  if (countryParam) {
+    const upper = countryParam.toUpperCase() as CountryId;
+    if (!COUNTRY_CONFIGS[upper]) {
+      return errorResponse(400, "Invalid country");
+    }
+    if (!(await isCountryEnabledForPlayers(db, upper))) {
+      return errorResponse(400, "Country not enabled for players");
+    }
+    countryId = upper as SuspiciousCharacter["countryId"];
+  }
+
+  const page = await fetchSuspiciousList(db, {
+    severity: severityParam ? (severityParam as SuspiciousCharacter["highestSeverity"]) : undefined,
+    countryId,
+    showDismissed: dismissedParam === "true",
+    deleted: deletedParam === "true",
+    showResolved: showResolvedParam === "true",
+    flagType: flagTypeParam ?? undefined,
+    cursor: cursorParam ?? null,
+    limit,
+  });
+
+  return NextResponse.json(page);
+}

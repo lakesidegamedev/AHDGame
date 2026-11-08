@@ -1,16 +1,7 @@
 /**
- * National Agenda banner — appears on 4 surfaces per Phase 3 acceptance:
- *  - National Party Hub
- *  - State Party Hub
- *  - State Politics tab
- *  - Down-Ballot / tier-selector context (Primary + General screens)
- *
- * Chair-set headline + detail. Read-only for non-chair viewers — the
- * `editable` prop controls whether the "Edit" affordance shows up.
- * Per Phase 3 D4: one active agenda at a time; setting a new one
- * supersedes the old.
- *
- * Renders nothing when no agenda is set (`headline === null`).
+ * National Agenda banner: chair-set headline + detail, read-only unless
+ * `editable`. One active agenda at a time; setting a new one supersedes
+ * the old. Renders nothing when `headline === null`.
  */
 export function AgendaBanner({
   headline,

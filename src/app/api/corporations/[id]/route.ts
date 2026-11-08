@@ -4,7 +4,6 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
-import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
@@ -103,7 +102,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       !!authUser &&
       !requireCeo(corporation, authUser.userId) &&
       !(await requireCorporationActionsEnabled(db));
-    const canManageAcquisitions = canManageCorporation && !(await requireCorpDealsEnabled(db));
+    const canManageAcquisitions = canManageCorporation;
     const mediaEditorialEnabled = config?.mediaEditorialEnabled === true;
     const mediaOperatingModelsEnabled = config?.mediaOperatingModelsEnabled === true;
     const mediaProductSlatesEnabled =
@@ -158,10 +157,9 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     (detail.corporation as Record<string, unknown>).openPrivatizationVoteId =
       openPrivatizationVoteId;
 
-    // Wiki-link gate (#2347): the hero links to `/wiki/corp-<sequentialId>`,
-    // but that page only renders PUBLISHED, non-private pages — anything else
-    // is a Not Found. Surface availability so the hero can hide the link (or
-    // offer the CEO the create flow) instead of linking into a 404.
+    // The hero links to `/wiki/corp-<sequentialId>`, but that page only renders
+    // PUBLISHED, non-private pages. Surface availability so the hero can hide
+    // the link or offer a create flow instead of linking into a 404.
     const wikiSlug =
       corporation.sequentialId != null ? corporationWikiSlug(corporation.sequentialId) : null;
     const wikiPagePublished = wikiSlug
@@ -362,25 +360,18 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
           corpObj.liquidCapital = Math.round(corpObj.liquidCapital * factor);
         }
 
-        // Plants tier: the physical figures are financials too. Capacity,
-        // output, sales and construction-in-progress get the same quarterly
-        // perturbation the money lines do — otherwise a rival reads exact
-        // capacity off a corp whose revenue is deliberately blurred, and the
-        // blur is worthless (revenue is derived from capacity under plants).
+        // Plants tier: physical figures are financials too. Capacity, output,
+        // sales and construction-in-progress get the same quarterly perturbation as
+        // money lines, else a rival reads exact capacity while revenue is fogged.
         //
-        // The exact FILL RATE is stripped entirely rather than perturbed. It
-        // is a ratio, so a uniform fog leaves it untouched, and it is the one
-        // number that tells an attacker the incumbent cannot defend. Outsiders
-        // keep only the coarse band.
+        // Fill rate is stripped, not perturbed: it is a ratio, so uniform fog leaves
+        // it exact, and it reveals the incumbent cannot defend. Outsiders keep only
+        // the coarse band.
         //
-        // C3: `buildQueueSummary` is DROPPED rather than perturbed. It carries
-        // the raw `unitsOrdered` for every outstanding order, sitting next to a
-        // fogged corp-level `unitsOnOrder` — so summing the raw per-sector rows
-        // and dividing recovers the fog factor itself, and with it every other
-        // fogged number on the payload. It also publishes exact delivery turns,
-        // which is future capacity intel the money fog has no analogue for.
-        // Insiders (CEO, controlling parent, admin) never reach this branch and
-        // keep the full queue.
+        // buildQueueSummary is dropped, not perturbed: its raw per-order unitsOrdered
+        // sits next to the fogged corp-level unitsOnOrder, so summing rows recovers the
+        // fog factor and every other fogged number. It also leaks exact delivery turns.
+        // Insiders (CEO, controlling parent, admin) skip this branch and keep it.
         const foggedSectors = detail.sectors as Record<string, unknown>[] | undefined;
         if (Array.isArray(foggedSectors)) {
           for (const row of foggedSectors) {

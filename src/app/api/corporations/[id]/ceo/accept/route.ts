@@ -109,13 +109,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const now = new Date();
 
-    // Install new CEO. `ceoType` MUST be stamped, not just left alone: the seat
-    // may previously have been held by an NPP (spawned or caretaker) or an
+    // ceoType MUST be stamped: the seat may have been held by an NPP or
     // imperial character, and corporationDetail resolves the CEO from the
-    // collection named by `ceoType`. A stale "npp" makes the corp page render
-    // "CEO Vacant" while a live character sits in `ceoId`. Any caretaker record
-    // dies with the handover — leaving it would let a later dismissal restore
-    // the old human over the one just seated.
+    // collection named by ceoType. A stale "npp" renders "CEO Vacant"
+    // while a live character sits in ceoId. Caretaker records must die with
+    // the handover, or a later dismissal restores the old human over the new.
     await db.collection<Corporation>("corporations").updateOne(
       { _id: corporation._id },
       {

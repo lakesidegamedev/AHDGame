@@ -441,8 +441,7 @@ export async function proposeNationalBill(
   }
 
   const enabledCountryIds = new Set(await getEnabledCountryIds());
-  const administrationEnabled =
-    gameState?.lawAdministrationEnabled === true && isResetV2Country(countryId);
+  const administrationEnabled = isResetV2Country(countryId);
   const validation = await validateBillProvisions(db, rawProvisions, category, countryId, {
     enabled: administrationEnabled,
   });

@@ -10,9 +10,9 @@ export interface CommodityPriceHistory {
   globalPrice: number;
   globalSupply: number;
   globalDemand: number;
-  /** See CommodityPrice.demandTruncatedUnits (#1460). */
+  /** See CommodityPrice.demandTruncatedUnits. */
   demandTruncatedUnits?: number;
-  /** See CommodityPrice.latentShortageMultiple (#1460). */
+  /** See CommodityPrice.latentShortageMultiple. */
   latentShortageMultiple?: number;
   /** Per-state prices snapshot. Only states with sector activity are included. */
   statePrices?: Record<string, number>;

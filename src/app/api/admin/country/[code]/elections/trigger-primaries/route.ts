@@ -213,10 +213,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       for (const c of activeCandidates)
         partyCounts.set(c.party, (partyCounts.get(c.party) ?? 0) + 1);
 
-      // How many advance per party. This route used to hardcode 1, which
-      // withdrew candidates the turn resolver would have advanced: 3 for
-      // UK/JP/DE legislatures, 7 for one-party states. Mirror
-      // `resolvePrimariesIfNeeded` exactly.
+      // Must match resolvePrimariesIfNeeded: 1 would wrongly withdraw candidates
+      // the resolver advances (3 for UK/JP/DE, 7 for one-party states).
       const maxAdvancing = getPrimaryWinnersForElection(
         electionCountryId as CountryId,
         election.electionType
@@ -236,9 +234,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             const ec = enriched.find((e) => e.candidateId === c._id.toString())!;
             let score: number;
             if (isPresident) {
-              // Party influence (candidate's own party clout), NPPs have none. See #934.
-              // National chairs get +25% on the value used for primary calcs.
-              // State chairs get no boost on the national snapshot (geographic only).
+              // Party influence is the candidate's own party clout; NPPs have none. National chairs get +25% for primary calcs; state chairs get no national-snapshot boost (geographic only).
               const rawPartyInfluence = c.isNPP
                 ? 0
                 : (charMap.get(c.characterId.toString())?.partyInfluence ?? 0);

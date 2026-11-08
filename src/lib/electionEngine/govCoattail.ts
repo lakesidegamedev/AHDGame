@@ -39,16 +39,14 @@ export function isCoattailEligibleRace(args: {
 }
 
 /**
- * True when the race IS the sitting regional executive's own seat — the
- * in-state case `isCoattailEligibleRace` deliberately excludes. Used to feed
- * the governor's approval into the incumbency driver for their own
- * re-election. Single-winner regional executives only; legislatures never
- * qualify.
+ * True when the race IS the sitting regional executive's own seat, the
+ * in-state case `isCoattailEligibleRace` excludes. Feeds the governor's
+ * approval into the incumbency driver for re-election. Single-winner
+ * regional executives only.
  *
- * The head-of-government race (US President) is intentionally NOT covered: the
- * presidential engine already folds approval into a dedicated nominal-share
- * `strengthMultiplier`, so routing it through the incumbency driver too would
- * double-count. See `2026-06-22-incumbency-approval-bonus-design.md`.
+ * The US President is intentionally NOT covered: the presidential engine
+ * already folds approval into a nominal-share strengthMultiplier, so routing
+ * it here too would double-count.
  */
 export function isOwnRegionalExecutiveRace(args: {
   isGeneralElection: boolean;
@@ -66,13 +64,12 @@ export function isOwnRegionalExecutiveRace(args: {
 
 /**
  * Build the per-party coattail multiplier map. Only the executive's party gets
- * an entry, and only when that party actually has a StatePartyOrg row in this
- * state (so a stale `electedOfficials.party` value silently no-ops to neutral).
+ * an entry, and only when it has a StatePartyOrg row in this state (so a stale
+ * `electedOfficials.party` value no-ops to neutral).
  *
- * Magnitude is approval-based (2026-06-02 design): a governor at the neutral
- * approval baseline is 1.0x; above it lifts (up to +COATTAIL_MAX_BONUS at
- * +COATTAIL_APPROVAL_SATURATION points), below it drags (down to
- * 1 - COATTAIL_MAX_BONUS).
+ * Magnitude is approval-based: neutral approval is 1.0x; above it lifts (up to
+ * +COATTAIL_MAX_BONUS at +COATTAIL_APPROVAL_SATURATION points), below it drags
+ * (down to 1 - COATTAIL_MAX_BONUS).
  */
 export function buildGovModifierByParty(
   governor: { partyId: string; approval: number } | null,
@@ -110,11 +107,7 @@ export async function resolveGovExecutiveApproval(
   const exec = await getRegionalExecutive(db, countryId, stateId);
   if (!exec?.partyId) return null;
 
-  // Prefer the stored per-turn snapshot (issue #2891 item 1): the snapshot is
-  // damped at APPROVAL_MAX_STEP_PER_TURN points/turn, so coattail magnitudes
-  // glide instead of jumping when metrics shock. Mirrors the presidential
-  // coattail, which already reads the stored national rating. Falls back to
-  // the live computation when no snapshot exists yet (fresh seed).
+  // Prefer the stored per-turn snapshot, damped at APPROVAL_MAX_STEP_PER_TURN points/turn so coattail magnitudes glide instead of jumping. Falls back to live computation when no snapshot exists yet (fresh seed).
   const snapshot = await db
     .collection<StateApprovalHistory>("stateApprovalHistory")
     .findOne({ _id: stateId.toUpperCase(), countryId }, { projection: { approvalRating: 1 } });

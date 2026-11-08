@@ -10,15 +10,9 @@ export const OWNERSHIP_CYCLE_ERROR =
  * Would `buyer` buying into `target` close an ownership loop (A controls B
  * controls A)?
  *
- * `wouldCreateOwnershipCycle` has existed since the subsidiary work landed but
- * had exactly one call site, `formalizeSubsidiary`. Formalizing is the LAST step
- * of becoming a parent, not the first: a corp could buy its way to majority
- * control of the corp that already controls it and only be stopped when it tried
- * to formalize, by which point the loop already existed in the share graph and
- * every derived-control read had to cope with it.
- *
- * Checked at the point of purchase instead, so the loop never forms. Reads the
- * corp graph once; callers should only invoke it on the corporate-buyer path.
+ * Checked at the point of purchase, not at `formalizeSubsidiary`, so the loop
+ * never forms in the share graph. Reads the corp graph once; call only on the
+ * corporate-buyer path.
  */
 export async function corpPurchaseWouldCycle(
   db: Db,

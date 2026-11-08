@@ -42,9 +42,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const countryId = corporation.countryId;
     const sectorType = getOperatingSectorType(corporation.type, corporation.industryModel);
 
-    // Scope the corps scan by country in the DB — previously we pulled every
-    // corp in the world and filtered in memory. Also share the centralBanks
-    // load with other corp-detail routes via the per-turn cache.
+    // Scope the corps scan by country in the DB rather than filtering in
+    // memory. Share the centralBanks load with other corp-detail routes via
+    // the per-turn cache.
     const [sameCountryCorps, refData] = await Promise.all([
       db
         .collection<Corporation>("corporations")
@@ -76,11 +76,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       centralBanks.find((b) => b.countryId === countryId)?.primeRate ??
       getCountryConfig(countryId).centralBank.defaultPrimeRate;
 
-    // Fog of war: creditCompositeSnapshot is on redactPrivateCorporation's
-    // field list — private for private corps — but this route previously
-    // returned it verbatim to anonymous callers and folded private corps into
-    // the peer averages. `you` only answers for an insider; aggregates count
-    // public corps only.
+    // Fog of war: creditCompositeSnapshot is private on redacted corps, so
+    // do not return it verbatim to anonymous callers, and count only public
+    // corps in peer aggregates. `you` answers only for insiders.
     const redact = await shouldRedactCorporationForViewer(
       db,
       corporation,

@@ -43,9 +43,9 @@ function isCommonsOffice(office: Character["currentOffice"]): office is CommonsO
 }
 
 function isPrimeMinisterOffice(office: Character["currentOffice"]): office is PrimeMinisterOffice {
-  // Prime Minister `state` is optional (OfficeType) and omitted by admin
-  // appointments, so eligibility must not require it (issue #2115). The
-  // claimable region resolves from office.state, else the holder's homeState.
+  // Prime Minister `state` is optional and omitted by admin appointments,
+  // so eligibility must not require it. The claimable region resolves from
+  // office.state, else the holder's homeState.
   return !!office && office.type === "primeMinister";
 }
 

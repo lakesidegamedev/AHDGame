@@ -1,35 +1,21 @@
 /**
  * Per-region, per-cohort referendum affinity: a RELATIVE Yes-lean offset
  * (−50..+50) layered on the region's independence/reunification desire, then
- * re-centered to that desire at campaign open (see cohortEngine). Buckets with
- * no entry default to 0 (neutral). Because the table is relative and the
- * aggregate is re-centered, these numbers carry only the SHAPE of a coalition,
- * never its level — the level is the region's desire.
+ * re-centered to that desire at campaign open. Missing buckets default to 0.
+ * The numbers carry only the SHAPE of a coalition, never its level; the level
+ * is the region's desire.
  *
  * Keys are Layer-1 census buckets in the UK model's vocabulary
- * (`ethnicity / age / education / income / urbanization` — see
- * `src/lib/seeds/international/uk.ts`), the same ids the targeting picker, the
- * GOTV modifiers and the demographics tab use.
+ * (`ethnicity / age / education / income / urbanization`), the same ids the
+ * targeting picker, GOTV modifiers and demographics tab use.
  *
- * WHY THESE ARE HAND-AUTHORED AND NOT PROJECTED
- * ---------------------------------------------
- * The previous table was keyed on the 12 UK voter archetypes, and the obvious
- * migration was to run it through `archetypeValuesToBuckets`. That would have
- * been arithmetically faithful and historically wrong twice over.
- *
- * First, it would have flattened three different questions into one. Scotland,
- * Wales and Northern Ireland shared a single archetype table, and they do not
- * share a coalition: Scottish independence is an age-and-deprivation vote,
- * Welsh independence is an age-and-identity vote with almost no class content,
- * and Irish reunification is a community-background vote that only LOOKS like
- * an age vote because the two are so tightly correlated in the 2021 census.
- * Each region now has its own table.
- *
- * Second, the archetypes encoded the coalition indirectly — "green_activists
- * lean Yes" is a statement about a political disposition, and projecting it
- * onto census buckets turns it into a statement about graduates, which is not
- * the same claim and is weaker than the one the census can support directly.
- * Authoring on buckets says what the evidence says.
+ * Hand-authored on census buckets, not projected through archetypes. Each
+ * region has a distinct coalition: Scottish independence is age-and-
+ * deprivation, Welsh independence is age-and-identity with little class
+ * content, and Irish reunification is community background (which only looks
+ * like an age vote because the two correlate in the census). Authoring on
+ * buckets states the census evidence directly rather than projecting a
+ * political disposition onto graduates.
  */
 
 /**

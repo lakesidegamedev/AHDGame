@@ -50,7 +50,7 @@ export interface TurnLog {
    */
   nppEngineVersion?: string;
   /**
-   * Anti-abuse scans run after the turn commits (#2694): financialSuspectScan,
+   * Anti-abuse scans run after the turn commits: financialSuspectScan,
    * auditAnomalyScan, suspiciousDetection. Absent on off-cadence turns.
    */
   postTurnScans?: {
@@ -723,7 +723,7 @@ export interface TurnLog {
     tradeGrowthMirror?: { countriesUpdated: number } | null;
 
     /**
-     * Bretton Woods exit tracker (issue #7). Runs after inflationRecalc (whose
+     * Bretton Woods exit tracker. Runs after inflationRecalc (whose
      * settled US rate the gold-cover drain reads) and before forexTurn (which
      * applies the persisted regime's band and drift). Zeroes when the gate is
      * off: disabled, full cover, nothing suspended or floated.

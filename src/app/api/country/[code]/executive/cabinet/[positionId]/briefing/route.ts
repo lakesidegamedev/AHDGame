@@ -232,10 +232,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
       singleRegionFocus: mechanics.singleRegionFocus ?? null,
     });
 
-    // `includeActions` is false on a withheld office: the seat and its holder are
-    // public, but how much of their turn a minister has left to spend is not.
-    // UK player holders share one pool across both offices (issue #2049), so
-    // both office pages report the same remaining balance.
+    // `includeActions` is false on a withheld office: the seat and its holder
+    // are public, but a minister's remaining turn actions are not. UK player
+    // holders share one pool across both offices, so both pages report the
+    // same remaining balance.
     const sharedRemaining =
       countryId === COUNTRY_CONFIGS.UK.id && member?.characterId
         ? (holderChar?.sharedMinisterialActions ?? null)
@@ -757,32 +757,24 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const cabinetV2 =
       resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).cabinet === "v2";
-    const generalizedDepartmentFinanceEnabled = gameState?.departmentFinanceEnabled === true;
-    const legacyPublicHealthSliceEnabled =
-      gameState?.departmentProgramSliceEnabled === true &&
-      !generalizedDepartmentFinanceEnabled &&
-      !cabinetV2;
+    // Generalized department finance supersedes the single-program public health
+    // slice, so the slice read model always reports itself as not running.
     const departmentProgram =
       !cabinetV2 && countryId === COUNTRY_CONFIGS.US.id && positionId === "secretary_of_health"
         ? buildPublicHealthProgramReadModel({
-            enabled: legacyPublicHealthSliceEnabled,
+            enabled: false,
             departmentName: resolveDepartment(mechanics, liveYear),
             account: budget?.departmentAccounts?.[US_HEALTH_DEPARTMENT_ID],
-            delivery: await loadPublicHealthDeliveryMultiplier(
-              db,
-              currentTurn,
-              legacyPublicHealthSliceEnabled
-            ),
+            delivery: await loadPublicHealthDeliveryMultiplier(db, currentTurn, false),
           })
         : undefined;
-    const departmentDefinitions =
-      (generalizedDepartmentFinanceEnabled || cabinetV2) && isResetV2Country(countryId)
-        ? getDepartmentDefinitions(
-            countryId as DepartmentCountryId,
-            liveYear,
-            new Set(gameState?.manuallyEnabledSeats ?? [])
-          ).filter((definition) => definition.controllingPositionIds.includes(positionId))
-        : [];
+    const departmentDefinitions = isResetV2Country(countryId)
+      ? getDepartmentDefinitions(
+          countryId as DepartmentCountryId,
+          liveYear,
+          new Set(gameState?.manuallyEnabledSeats ?? [])
+        ).filter((definition) => definition.controllingPositionIds.includes(positionId))
+      : [];
     const [resetAccounts, resetActionState, currentResetLawPrograms] = cabinetV2
       ? await Promise.all([
           db

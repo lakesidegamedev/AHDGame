@@ -91,12 +91,7 @@ export interface GovernmentFormation {
   /** Bounded history for the executive confidence trend chart. */
   confidenceGaugeHistory?: GovernmentConfidencePoint[];
 
-  // Cabinet reshuffle log (epic #856, ticket #859). Additive record of used
-  // once-per-parliament-per-government reshuffle tokens, read by
-  // `canReshuffle` in `src/lib/uk/cabinet/reshuffleLimit.ts`. Election-reset
-  // and vacate paths `$set` specific fields, so entries survive across
-  // parliaments and governments and are told apart by their ids. Runtime —
-  // wiped on world reset with the rest of this collection.
+  // Additive record of once-per-parliament-per-government reshuffle tokens, read by `canReshuffle`. Entries are told apart by id since election-reset and vacate paths only $set specific fields.
   reshuffleLog?: ReshuffleRecord[];
 
   // Snap election tracking — applies to any parliamentary country
@@ -148,7 +143,7 @@ export interface GovernmentFormation {
   fiscalStance?: PersistedFiscalStance | null;
 
   /**
-   * The governing party's electoral mandate (#2321): bounded domain emphasis
+   * The governing party's electoral mandate: bounded domain emphasis
    * derived from its locked manifesto pledges and platform, scaled by its
    * chamber share. Recomputed with the agenda and fed into it, so an
    * autonomous government's priorities follow what its party won on.
@@ -175,7 +170,7 @@ export interface GovernmentFormation {
   governingGoals?: GoverningGoalState | null;
 
   /**
-   * NPP Autonomy reshuffle-guard state (#1994): government-level last
+   * NPP Autonomy reshuffle-guard state: government-level last
    * reshuffle turn, per-portfolio consecutive-replacement history, and the
    * most recent replacement's reason/tenure/shortfall for observability.
    * Written only by `runMinisterialGovernance` on an actual replacement (or
@@ -228,7 +223,7 @@ export interface PMAppointmentVote {
   votes: Record<string, "aye" | "nay">; // keyed by characterId or nppId string
   whippedFromVote?: WhippedFromVoteMap;
 
-  // S#17: true when auto-filed as a post-election confidence motion.
+  // True when auto-filed as a post-election confidence motion.
   // Distinct failure semantics: a failed motion with no alternative
   // seated triggers unformGovernmentAndVacatePM.
   isConfidenceMotion?: boolean;

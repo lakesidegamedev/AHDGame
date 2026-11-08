@@ -24,56 +24,47 @@ export interface FederalRevenue {
   /**
    * DE Solidaritätszuschlag — surcharge on income tax owed. Computed as
    * `incomeTax × solidaritySurcharge / 100`. Other countries: undefined / 0.
-   * Added 2026-05-26 with DE legislation overhaul (PR1).
    */
   solidaritySurcharge?: number;
   /**
    * CN 土地增值税 (Land Value-Added Tax) — capital-gains levy on real-estate
    * transactions. Computed against a real-estate-sector proxy base.
-   * Other countries: undefined / 0. Added 2026-05-27 with CN legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   landValueAddedTax?: number;
   /**
-   * CN 城市维护建设税 (Urban Maintenance & Construction Tax) — surcharge on
-   * VAT receipts funding municipal infrastructure. Computed as
-   * `salesTax × urbanMaintenanceTax / 100`.
-   * Other countries: undefined / 0. Added 2026-05-27 with CN legislation overhaul (PR1).
+   * CN 城市维护建设税 (Urban Maintenance & Construction Tax), a surcharge on
+   * VAT receipts funding municipal infrastructure, computed as
+   * `salesTax × urbanMaintenanceTax / 100`. Other countries: undefined / 0.
    */
   urbanMaintenanceTax?: number;
   /**
    * Stamp Duty — small-rate tax on documented transactions (securities trades,
    * contracts, property transfers). Used by CN 印花税 and IE Stamp Duty.
    * Computed against a GDP-derived documented-transactions proxy.
-   * Other countries: undefined / 0. Added 2026-05-27 with CN legislation overhaul (PR1);
-   * IE adopted the same dial 2026-05-27 with the IE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   stampDuty?: number;
   /**
    * IE Universal Social Charge — separate levy on gross wages above thresholds.
    * Computed as `wagesAndSalaries × universalSocialCharge / 100`.
-   * Other countries: undefined / 0. Added 2026-05-27 with IE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   universalSocialCharge?: number;
   /**
    * IE Capital Gains Tax — 33% statutory rate on realized gains.
    * Computed against a 3%-of-GDP proxy for annual realized capital gains.
-   * Other countries: undefined / 0. Added 2026-05-27 with IE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   capitalGainsTax?: number;
   /**
    * IE Excise Duty — multiplier-framed dial (100 = baseline) for alcohol /
    * tobacco / fuel duties. Computed against a 1.5%-of-GDP calibration base.
-   * Other countries: undefined / 0. Added 2026-05-27 with IE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   exciseDuty?: number;
   /**
-   * IE Local Property Tax (LPT) — Revenue Commissioners-administered annual
-   * property charge, collected at national level. Computed against a
-   * band-averaged residential property base (0.5× GDP) so the statutory
-   * 0.18% mid-band rate yields ~€500M/year.
-   * Other countries: undefined / 0. Distinct from the state-level
-   * StateRevenue.propertyTax used by US/UK/JP state budgets.
-   * Added 2026-05-28 with the IE legislation overhaul audit fix.
+   * IE Local Property Tax: Revenue Commissioners-administered annual charge, collected nationally. Computed against a band-averaged residential base (0.5x GDP) so the 0.18% mid-band rate yields ~EUR 500M/year. Other countries: undefined / 0. Distinct from StateRevenue.propertyTax used by US/UK/JP state budgets.
    */
   propertyTax?: number;
   healthcareIncome: number;
@@ -118,40 +109,39 @@ export interface FederalTaxRates {
   /**
    * DE Solidaritätszuschlag — percentage applied to income tax owed (not income).
    * Stored as a plain percentage (e.g. 5.5 means 5.5% of incomeTax revenue).
-   * Other countries: undefined / 0. Added 2026-05-26 with DE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   solidaritySurcharge?: number;
   /**
    * CN 土地增值税 (Land Value-Added Tax) rate. Stored as a plain percentage.
    * Applied to a real-estate-sector proxy base in `calculateFederalRevenue`.
-   * Other countries: undefined / 0. Added 2026-05-27 with CN legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   landValueAddedTax?: number;
   /**
    * CN 城市维护建设税 (Urban Maintenance & Construction Tax) rate. Stored as a
    * plain percentage applied as a surcharge on the salesTax (VAT) revenue line.
-   * Other countries: undefined / 0. Added 2026-05-27 with CN legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   urbanMaintenanceTax?: number;
   /**
    * CN 印花税 (Stamp Duty) rate. Stored as a plain percentage applied to a
    * GDP-derived documented-transactions proxy.
-   * Other countries: undefined / 0. Added 2026-05-27 with CN legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   stampDuty?: number;
   /**
-   * IE USC rate (percentage applied to wages base).
-   * Other countries: undefined / 0. Added 2026-05-27 with IE legislation overhaul (PR1).
+   * IE USC rate (percentage applied to wages base). Other countries: undefined / 0.
    */
   universalSocialCharge?: number;
   /**
    * IE CGT rate (percentage applied to a 3%-of-GDP realised-gains proxy).
-   * Other countries: undefined / 0. Added 2026-05-27 with IE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   capitalGainsTax?: number;
   /**
    * IE Excise multiplier (100 = baseline calibration; not a true percentage).
-   * Other countries: undefined / 0. Added 2026-05-27 with IE legislation overhaul (PR1).
+   * Other countries: undefined / 0.
    */
   exciseDuty?: number;
   /**
@@ -159,7 +149,7 @@ export interface FederalTaxRates {
    * residential property base: 0.5× GDP, calibrated so the statutory
    * 0.18% mid-band rate yields ~€500M/year). Other countries: undefined / 0.
    * Federal-level only — the state-level StateTaxRates.propertyTax remains
-   * separate. Added 2026-05-28 with the IE legislation overhaul audit fix.
+   * separate.
    */
   propertyTax?: number;
 }
@@ -435,25 +425,15 @@ export interface DefenseAppropriation {
 }
 
 /**
- * A country's intelligence account: funded from the enacted intelligence line, drained by
- * network upkeep and by operations.
+ * A country's intelligence sub-ledger: funded from the enacted intelligence line,
+ * drained by network upkeep and operations. `processTreasuryTurn` already deducts
+ * the annual spending line from `treasuryBalance`, so this is not a second charge.
  *
- * A sub-ledger, like {@link DefenseAppropriation} — `processTreasuryTurn` already deducts the
- * whole annual spending line from `treasuryBalance`, so nothing here is a second charge on
- * the treasury.
+ * Unlike the defence pot: no OVERDRAFT (an unfunded service simply stops operating),
+ * no `arrearsRatio` (nothing is owed), no `encumbered` (operations resolve in-turn).
  *
- * Three things the defence pot carries that this one deliberately does not:
- *
- *  - No OVERDRAFT. An army must be sustained whether or not it is funded; a service that runs
- *    out of money simply stops operating. So no path here can ever reach the treasury.
- *  - No `arrearsRatio`. Nothing is owed to anyone — an unpaid network goes quiet rather than
- *    booking a debt that something later has to collect.
- *  - No `encumbered`. Operations resolve in the turn they are ordered, so there is no forward
- *    contract to reserve money against.
- *
- * Lives on the BUDGET rather than on the agency document because `mergeCountry` purges the
- * intelligence collections on reunification: money held there would be destroyed by a merge,
- * where money held here follows `mergeNationalFisc` like every other national balance.
+ * Lives on the BUDGET, not the agency: `mergeCountry` purges intelligence
+ * collections on reunification, but this follows `mergeNationalFisc`.
  */
 export interface IntelligenceAppropriation {
   /** Absolute local currency. Never negative — there is no overdraft. */
@@ -610,7 +590,7 @@ export interface FederalBudget {
   revenue: FederalRevenue;
   taxRates: FederalTaxRates;
   /**
-   * Ticket #1102: rates an enacted bill is still ramping toward, keyed by tax
+   * Rates an enacted bill is still ramping toward, keyed by tax
    * type. `taxRates` holds what is being charged right now and remains the only
    * figure anything else reads; this is purely the destination.
    *
@@ -646,7 +626,7 @@ export interface FederalBudget {
    */
   unionLawBias?: number;
   /**
-   * Union ban (player suggestion #93): when true, unions are outlawed in this
+   * Union ban: when true, unions are outlawed in this
    * country by an enacted `UnionLawProvision` with `banAction: "ban"`. While
    * banned: NPC unionization decays toward 0 (accelerated), the union wage
    * premium is not applied, strikes can't trigger (active ones end), player
@@ -667,14 +647,10 @@ export interface FederalBudget {
   creditRating: CreditRating;
   sovereignRiskAnchor?: SovereignRiskAnchor;
   /**
-   * Signed national cash position (country-local currency). Positive = accumulated
-   * surplus/savings; negative = a cash hole. Cash only: `debt.principal`
-   * belongs to the sovereign bond ledger (see bonds/sovereignPrincipal.ts) and
-   * is never derived from this field — a country may hold cash assets and bond
-   * debt at the same time (refs #1975).
-   * Always present: seeded at every creation path and backfilled for existing
-   * docs; the turn engine self-heals any straggler null to zero (cash unknown;
-   * the bond stock is untouched).
+   * Signed national cash position (country-local currency). Positive = surplus;
+   * negative = cash hole. Cash only: `debt.principal` is the separate sovereign
+   * bond ledger and is never derived from this. Always present: seeded at every
+   * creation path, backfilled, and self-healed to zero by the turn engine.
    */
   treasuryBalance: number;
   /** Feature-gated spendable native cash. Missing legacy value means zero when enabled. */
@@ -702,7 +678,7 @@ export interface FederalBudget {
   /** Latest ordinary appropriations restored when temporary consolidation expires. */
   financialCrisisAusterityBaseSpending?: FederalSpending;
   /**
-   * Fiscal stabilizer state for AI-run countries (#5703), written at fiscal
+   * Fiscal stabilizer state for AI-run countries, written at fiscal
    * close by `applyFiscalStabilizer`. `categoryScale` is read back by
    * `calculateFederalSpending` on every recompute, so a cut survives the
    * per-turn rebuild from enacted laws. Cleared at fiscal close once players
@@ -794,28 +770,15 @@ export interface FederalBudget {
    */
   programCostScaleByCategoryBaseline?: Record<string, number>;
   /**
-   * Fiscal-divergence guardrail (refs #fiscal-divergence-audit): each tax
-   * base's share of national GDP at the turn this field was first populated
-   * (self-healed once, on this country's first `fiscalBaseGrowth` pass —
-   * mirrors `eraGdpPerCapitaBaseline`'s bootstrap-then-track pattern in
-   * `nationalMetrics.ts`). `growFederalBases` grows each base by its own
-   * wage/trade/GDP rate as before, then pulls it a small fraction of the way
-   * back toward `currentGdp × thisBaseline[key]` every turn.
+   * Each tax base's share of national GDP at bootstrap. `growFederalBases` grows
+   * each base by its own wage/trade/GDP rate, then pulls it a fraction of the
+   * way back toward `currentGdp × thisBaseline[key]` each turn.
    *
-   * Why: `wageGrowth`/`tradeGrowth` (metricEngine/registry/economic.ts) carry
-   * a structural premium over realized `gdpGrowth` with no offsetting term —
-   * wageGrowth adds a persistent labor-market "tightness" bonus
-   * (`(5 - unemployment) * 0.3`) on top of the SAME productivity basis
-   * `gdpGrowth` reverts to, and `tradeGrowth`'s `WORLD_TRADE_BASELINE` (2.5)
-   * alone typically exceeds realized GDP growth. Applied to
-   * `taxBases.wagesAndSalaries`/`taxableIncome`/`importValue` every turn with
-   * no reconciliation, this compounds without bound (measured: US wage
-   * share of GDP drifted 40% → 54% in 13 in-game years on the t650 sandbox
-   * run) — pure "gravity," not a deliberate policy choice, yet it single-
-   * handedly outpaces GDP-anchored spending and retires national debt. The
-   * pull-back is partial (not a hard cap), so sustained deliberate policy
-   * that keeps wage/trade growth elevated for real reasons still moves the
-   * share over time; only the passive, undirected drift is bounded.
+   * Why: `wageGrowth`/`tradeGrowth` carry a structural premium over realized
+   * `gdpGrowth` with no offsetting term, so unbounded compounding drifts wage
+   * share of GDP far above reality. The pull-back is partial, not a hard cap:
+   * sustained policy-driven growth still moves the share; only passive drift
+   * is bounded.
    */
   taxBaseGdpShareBaseline?: Partial<Record<keyof FederalTaxBases, number>>;
 
@@ -831,7 +794,7 @@ export interface FederalBudget {
    * of any economy that grows, and breaks outright when a country's GDP changes
    * discontinuously: DD absorbed West Germany on turn 550, quadrupling its GDP,
    * and its DDM 4.0B non-tax line did not move — 6.4% of the old economy, 1.5% of
-   * the new one, against 11.7-12.7% for every other Warsaw Pact budget (#1323).
+   * the new one, against 11.7-12.7% for every other Warsaw Pact budget.
    *
    * Holding the SHARE rather than the amount keeps the line proportionate to the
    * economy through growth, reunification, secession and rescale alike. Absent ⇒
@@ -1012,10 +975,9 @@ export interface StateRevenue {
   foreignCorporateTax: number;
   propertyTax: number;
   /**
-   * DE Gewerbesteuer revenue at the Land level. Computed as
-   * `domesticCorporateProfits × 0.035 × tradeTax / 100` where tradeTax stores
-   * the Hebesatz (200-600) and 0.035 is the federally-fixed Steuermesszahl.
-   * Other countries: undefined / 0. Added 2026-05-26 with DE legislation overhaul (PR1).
+   * DE Gewerbesteuer revenue at the Land level: `domesticCorporateProfits × 0.035 × tradeTax / 100`,
+   * where tradeTax is the Hebesatz and 0.035 is the federally-fixed Steuermesszahl.
+   * Undefined or 0 for other countries.
    */
   tradeTax?: number;
   federalGrants: number;
@@ -1047,10 +1009,9 @@ export interface StateTaxRates {
   foreignCorporateTax: number;
   propertyTax: number;
   /**
-   * DE Gewerbesteuer-Hebesatz at the Land level (200-600 typical range).
-   * NOT the effective rate — the engine multiplies by 0.035 (Steuermesszahl) to
-   * derive the effective corporate-profits tax rate.
-   * Other countries: undefined / 0. Added 2026-05-26 with DE legislation overhaul (PR1).
+   * DE Gewerbesteuer-Hebesatz at the Land level (200-600 typical).
+   * NOT the effective rate: the engine multiplies by 0.035 (Steuermesszahl).
+   * Undefined or 0 for other countries.
    */
   tradeTax?: number;
 }
@@ -1194,16 +1155,11 @@ export interface EnactedLaw {
   grantDistribution?: Record<string, number>;
   /**
    * Attribution for how this law came to be enacted. Absent/"legislature" for
-   * ordinary bills (the historical default — every pre-existing row predates
-   * this field). "scotus_ruling" marks a diverged Supreme Court case
-   * (#3598/#3581) synthesized via the same `onBillEnacted`/`recordEnactedLaw`
-   * pipeline real bills use, so it can be attributed/filtered in UI without
-   * touching the shared enactment→metric-registry→lean-drift flow.
-   * "scotus_surprise_ruling" (#3607) marks a procedurally-spawned, non-
-   * historical surprise Docket case resolved the same way — kept as a
-   * DISTINCT value rather than reusing "scotus_ruling" so financial/audit
-   * trails and the case-history UI (#3605) can tell curated historical
-   * rulings apart from background-probability flavor content.
+   * ordinary bills. "scotus_ruling" marks a diverged Supreme Court case via the
+   * same `onBillEnacted`/`recordEnactedLaw` pipeline real bills use.
+   * "scotus_surprise_ruling" marks a procedurally-spawned surprise case, kept as
+   * a DISTINCT value so financial/audit trails and the case-history UI can tell
+   * curated historical rulings apart from background-probability flavor content.
    */
   source?:
     "legislature" | "scotus_ruling" | "scotus_surprise_ruling" | "uk_judicial_review_surprise";

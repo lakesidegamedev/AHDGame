@@ -295,10 +295,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const orgBuildingPercent = 0;
     const orgBuildingEstimatedSpend = 0;
     const statePsInvestmentBudget = statePartyOrg?.psInvestmentBudget ?? 0;
-    // Mirror of computePartyPsGain's spend stream: full-rate conversion bounded
-    // by PS_INVESTMENT_MAX_TIERS and the headroom below the hard cap after passive
-    // (soft-cap bands removed 2026-06-28), so the previewed debit matches what the
-    // turn engine will actually charge.
+    // Mirrors computePartyPsGain's spend stream: debits at full rate, bounded by
+    // PS_INVESTMENT_MAX_TIERS and the headroom below the hard cap after passive.
     let estimatedStatePsInvestmentDebit = 0;
     const stateCap = effectiveStatePsCap(characterMembers.length > 0);
     const stateHeadroomAfterPassive = Math.max(

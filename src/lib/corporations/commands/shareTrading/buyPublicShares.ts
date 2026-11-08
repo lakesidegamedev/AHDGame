@@ -349,9 +349,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
           sharesBought: shares,
         });
 
-        // Route the FX spread the corp already paid on a cross-currency share
-        // buy into the CB system (reserve slice → target-currency CB; revenue →
-        // buyer-currency CB). Previously this spread was destroyed.
+        // Route the FX spread the corp already paid on a cross-currency buy into the CB system (reserve slice to target-currency CB, revenue to buyer-currency CB).
         if (buyingCurrency !== targetCurrency) {
           await distributeConversionSpread(
             db,

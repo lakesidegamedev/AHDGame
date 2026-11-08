@@ -61,9 +61,7 @@ export async function GET() {
         const bondPrincipalAnchor = bondPrincipalByFundId.get(fundId) ?? 0;
         const openOrdersEscrowAnchor = openOrdersEscrowByFundId.get(fundId) ?? 0;
         const queuedRedemptionUnits = queuedUnitsByFundId.get(fundId) ?? 0;
-        // Queued units are claims on this backing, not a deduction from it.
-        // Netting them out here showed a solvent fund as under-backed on the
-        // one dashboard an operator reads during an incident.
+        // Queued units are claims on this backing, not a deduction from it. Netting them out understates backing per unit.
         const netBackingAnchor =
           fund.cashAnchor + holdingsValueAnchor + bondPrincipalAnchor + openOrdersEscrowAnchor;
         const totalClaimUnits = fund.unitSupply + queuedRedemptionUnits;

@@ -69,7 +69,7 @@ describe("redactPrivateCorporation", () => {
     expect((redacted as Record<string, unknown>).creditRatingSnapshot).toBe("BBB");
     expect("liquidCapital" in redacted).toBe(false);
     // Public sector profit is denominated in this code; strip it and the UI
-    // treats local yen as anchor (ticket #1612).
+    // treats local yen as anchor.
     expect((redacted as Record<string, unknown>).liquidCurrencyCode).toBe("USD");
     expect("sharePrice" in redacted).toBe(false);
     expect("marketingBudget" in redacted).toBe(false);

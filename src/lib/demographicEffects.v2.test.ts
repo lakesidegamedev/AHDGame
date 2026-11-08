@@ -1254,7 +1254,7 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
     const afterShares = shares(after);
     // Same two candidates, same positions, same census — the ONLY thing that
     // changed is the durable law's accumulated overlay. This is the granular
-    // (`granularElectorateEnabled`) substrate specifically — proving the
+    // substrate specifically — proving the
     // designated-legislation channel reaches an actual vote outcome there,
     // not just a stored archetype field.
     expect(afterShares["rep"]).toBeGreaterThan(beforeShares["rep"]);
@@ -1561,7 +1561,7 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
     // Same two candidates, same positions, same census — the ONLY thing that
     // changed is the durable TURNOUT law's accumulated overlay. This proves
     // the enfranchisement channel reaches an actual vote outcome on the
-    // granular (`granularElectorateEnabled`) substrate, not just a stored
+    // granular substrate, not just a stored
     // archetype field.
     expect(afterShares[favoredId]).toBeGreaterThan(beforeShares[favoredId]);
   });

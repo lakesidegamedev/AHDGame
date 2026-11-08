@@ -64,13 +64,10 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     if (unowned) {
-      // Ticket #1145: the "unowned market per state" list was the split finder —
-      // where to CLAIM an unowned pool. Under plants that mechanic is retired
-      // (you expand by building plants, surfaced on the sector page), and the
-      // pool is no longer claimable market, so this mode returns nothing rather
-      // than advertising a slice that cannot be taken. A real per-state
-      // "where to build" finder is a separate API+bot feature (demand headroom is
-      // national per commodity, so it needs a new shape the bot renders).
+      // The "unowned market per state" list was the split finder, where to CLAIM
+      // an unowned pool. Under plants that mechanic is retired (you expand by
+      // building plants), and the pool is no longer claimable market, so this mode
+      // returns nothing rather than advertising a slice that cannot be taken.
       const { getMarketSystemModeForDb, marketAtLeast } = await import("@/lib/market/featureFlag");
       if (marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
         return NextResponse.json({
@@ -128,9 +125,8 @@ export async function GET(request: Request) {
       const ownerCorpMap = new Map(ownerCorps.map((c) => [c._id.toString(), c]));
 
       // Sum owned revenue per state in ₳ (cross-corp, heterogeneous currencies).
-      // Ticket #1161: `revenue` is denominated in the SECTOR's host currency,
-      // so it converts at the SECTOR's host rate. Using the owner's rate read a
-      // foreign sector's local figure as if it were already the owner's money.
+      // `revenue` is denominated in the SECTOR's host currency, so it converts
+      // at the SECTOR's host rate, not the owner's rate.
       const ownedByState = new Map<string, number>();
       for (const s of ownedSectors) {
         const corp = ownerCorpMap.get(s.corporationId.toString());
@@ -271,12 +267,12 @@ export async function GET(request: Request) {
       });
     }
 
-    // Rank every sector by revenueAnchor (₳-comparable), then paginate.
-    // Ticket #1161: the anchor comes from the SECTOR's host currency, which is
-    // what `revenue` is stored in. Converting at the owner's rate ranked a
-    // foreign sector by its raw local magnitude, so a sector in a weak-currency
-    // country outranked genuinely larger ones. `liquidCurrencyCode` stays the
-    // OWNER's currency — it labels the corp, not the amount.
+    // Rank every sector by revenueAnchor (₳-comparable), then paginate. The
+    // anchor uses the SECTOR's host currency, which is what `revenue` is stored
+    // in; converting at the owner's rate misranks foreign sectors.
+    // `liquidCurrencyCode` stays the OWNER's currency: it labels the corp.
+    // Note: `resolveCorpEconomicAnchor` is not used here, the anchor is computed
+    // per sector.
     const rankedSectors = allSectors
       .map((s) => {
         const corp = corpMap.get(s.corporationId.toString());

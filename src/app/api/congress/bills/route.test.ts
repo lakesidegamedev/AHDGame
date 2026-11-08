@@ -157,9 +157,14 @@ describe("POST /api/congress/bills", () => {
     // Provision validation batches all referenced types into one $in find
     // (query-count guard below); findOne must stay unused.
     db.collectionMocks["legislationTypes"]!.find.mockReturnValue({
-      toArray: vi
-        .fn()
-        .mockResolvedValue([{ _id: "income_tax", name: "Income Tax", policyDomain: "tax" }]),
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: "income_tax",
+          name: "Income Tax",
+          policyDomain: "tax",
+          administration: { defaultJurisdictionMode: "national_direct" },
+        },
+      ]),
     });
 
     const insertedId = new ObjectId();

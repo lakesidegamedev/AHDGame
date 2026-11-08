@@ -2,14 +2,9 @@
  * GET /api/admin/debug/primary-projection?partyId=...
  *
  * Read-only diagnostic for the presidential primary projection pipeline. Returns
- * everything the per-state primary page and overview standings derive from a
- * single canonical source so admins can verify they agree:
- *
- *   - per-state vote source (actual / projected / none)
- *   - per-state vote totals + share + projected delegate allocation
- *   - national vote totals + share (sum across states)
- *   - national delegate totals + share
- *   - candidate roster + key stats used by the projection
+ * everything derived from a single canonical source so admins can verify the
+ * per-state page and overview standings agree: per-state vote source, totals,
+ * share, and delegate allocation; national totals; the candidate roster.
  *
  * Safe to call any time. Does not mutate state.
  */

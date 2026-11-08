@@ -26,17 +26,14 @@ declare global {
 /**
  * Renders a single Google AdSense ad unit.
  *
- * This component is a thin wrapper around the standard AdSense `<ins>` tag.
- * It pushes the unit to `adsbygoogle` exactly once per mounted <ins>: a
- * guard on `data-adsbygoogle-status` prevents double-pushing the same
- * element (which throws "already have ads in it") under React strict-mode
- * double-effects or re-renders. For client-side navigation, remount the
- * component (e.g. `key={pathname}`) so a fresh <ins> gets a fresh push —
- * adsbygoogle has no public destroy API for display units.
+ * Pushes the unit to `adsbygoogle` once per mounted <ins>: a guard on
+ * `data-adsbygoogle-status` prevents double-pushing (which throws "already
+ * have ads in it") under strict-mode double-effects or re-renders. For
+ * client-side navigation, remount (e.g. `key={pathname}`) so a fresh <ins> gets
+ * a fresh push; adsbygoogle has no public destroy API for display units.
  *
- * Returns `null` when `NEXT_PUBLIC_ADSENSE_CLIENT` is not configured or the
- * placement has no numeric slot ID mapped, so it is safe to render
- * unconditionally in layouts without emitting invalid ad code.
+ * Returns `null` when `NEXT_PUBLIC_ADSENSE_CLIENT` is unset or the placement
+ * has no numeric slot ID, so it is safe to render unconditionally.
  */
 export function AdSenseUnit({ slot, format = "auto", className = "", style }: AdSenseUnitProps) {
   const insRef = useRef<HTMLModElement>(null);

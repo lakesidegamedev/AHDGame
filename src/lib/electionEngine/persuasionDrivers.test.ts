@@ -13,7 +13,7 @@ function incPct(pj: string, pi: string, options: DistributeVotesOptions): number
 }
 
 describe("approvalAdjustedIncumbencyBudget", () => {
-  // Pivot recalibrated 50→43 (#2899), then 43→46 (ticket 971): shield above 46,
+  // Pivot recalibrated 50→43, then 43→46: shield above 46,
   // drag below, symmetric ±0.10 caps.
   it("ramps +1pp per point above pivot, capping at +0.10 by approval 56", () => {
     expect(approvalAdjustedIncumbencyBudget(46)).toBeCloseTo(0, 6);

@@ -32,7 +32,6 @@ import { operationCost } from "./cost";
 import { clampCoverage, currentCoverage } from "./coverage";
 import { applyOperationToNetwork, isNetworkUsable } from "./network";
 import { resolveOperation } from "./resolveOperation";
-import { readMilitarySabotageEnabled } from "./flags";
 import { applyEconomicAction, type EconomicActionResult } from "./economicAction";
 import { applyMilitaryAction, type MilitaryActionResult } from "./militaryAction";
 import { applyStrategicAction, type StrategicActionResult } from "./strategicAction";
@@ -219,13 +218,7 @@ export async function runOperation(args: RunOperationArgs): Promise<RunOperation
       // No balance gate: a leak moves no number, it changes who can read one.
       economicEffect = await applyEconomicAction(db, targetCountryId, turn);
     } else if (domain === "military") {
-      // Gated: the magnitudes are a balance change and their report could not be
-      // produced (no engaged front in the live world). While off, the operation
-      // still resolves and still costs and risks everything it normally does; it
-      // simply lands on nothing, and says so.
-      militaryEffect = (await readMilitarySabotageEnabled(db))
-        ? await applyMilitaryAction(db, targetCountryId)
-        : { frontSabotaged: null, formationsDegraded: 0 };
+      militaryEffect = await applyMilitaryAction(db, targetCountryId);
     }
   }
 

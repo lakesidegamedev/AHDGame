@@ -218,10 +218,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(400, "Insufficient treasury funds");
       }
 
-      // The debit has landed and there is no transaction to roll back, so
-      // every exit from here on must either complete the credit or put the
-      // money back. A THROWN credit was previously not compensated at all:
-      // it escaped with the treasury already short.
+      // Debit has landed with no transaction to roll back, so every exit from
+      // here must either complete the credit or refund.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
           const refundResult = await db
@@ -325,10 +323,6 @@ export async function POST(request: Request, { params }: RouteParams) {
         id: targetCharacterOid.toString(),
         label: targetCharacter.name,
       },
-      // This route previously recorded no initiator, so every state party
-      // payout in the ledger reads as system-generated and there is no
-      // way to see who moved the money. The national and caucus send
-      // routes both record it; this one should too.
       initiatedBy: authUser.character
         ? {
             type: "character" as const,

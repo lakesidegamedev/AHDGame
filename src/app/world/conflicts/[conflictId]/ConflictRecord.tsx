@@ -67,10 +67,8 @@ export interface ConflictRecordView {
   /** The zone's drawable regions — geometry only, never ownership. */
   hostRegionCodes: string[];
   /**
-   * Whether anything can actually be drawn for this zone: region shards OR a
-   * static proxy-host shard. False drops the map column and lets the rail flow as
-   * a board; absent means "assume yes", so a payload rendered before this shipped
-   * lays out exactly as it did.
+   * Whether anything can actually be drawn for this zone. False drops the
+   * map column and lets the rail flow as a board; absent means "assume yes".
    */
   hasMap?: boolean;
   /** Whether the host itself fights on either side. */
@@ -93,8 +91,7 @@ export interface ConflictRecordView {
   pending: PendingChip[];
   momentum: MomentumView;
   /** Who is at this war and what put them there — see `belligerentRoll`.
-   *  Optional for the same reason `hostEntities` is: a page rendered before this
-   *  shipped carries no roll, and the record must still render without it. */
+   *  Optional so records saved before this shipped still render. */
   belligerents?: BelligerentsView;
 
   /**
@@ -278,8 +275,6 @@ function Panel({ children }: { children: ReactNode }) {
  * `CONFLICT_ARCHIVE_DELAY_TURNS`) sees both sides' per-engagement rosters. The fog
  * is applied SERVER-SIDE in conflictRecordView — this component
  * only renders what it was given, so nothing here is a client-side secret.
- *
- * Spec: docs/superpowers/specs/2026-07-26-conflict-ids-and-pages-design.md
  */
 /**
  * One line describing what a settlement took.

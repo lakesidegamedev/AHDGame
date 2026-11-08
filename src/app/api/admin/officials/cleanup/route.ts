@@ -1,14 +1,3 @@
-/**
- * POST /api/admin/officials/cleanup
- *
- * Removes stale ElectedOfficial records for multi-seat races (house, stateSenate):
- *  1. Deletes ALL vacant rows (characterId null, nppId null) — vacancies are
- *     now derived from seat totals, not stored as DB rows.
- *  2. Removes duplicate filled rows for the same character/NPP.
- *  3. Clears currentOffice on characters whose official record no longer exists.
- *
- * Idempotent — safe to run multiple times.
- */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";

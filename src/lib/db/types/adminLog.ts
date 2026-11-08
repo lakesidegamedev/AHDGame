@@ -122,13 +122,9 @@ export interface AdminLog {
   createdAt: Date;
   /**
    * Reset-run outcome. Present only on `game_reset` / `game_full_reset` rows.
-   *
    * The row is INSERTED at the START of a reset with `status: "running"` and
-   * updated when the run ends. That ordering is the point: it used to be
-   * written in finalize, so a reset that died in teardown left no trace at all
-   * while leaving the world sealed and half-built.
-   *
-   * Structured rather than stuffed into `details` so it stays queryable.
+   * updated when the run ends, so a reset that dies mid-teardown still leaves
+   * a trace. Structured (not in `details`) so it stays queryable.
    */
   resetRun?: {
     runId: string;

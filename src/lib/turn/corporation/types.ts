@@ -63,9 +63,9 @@ export interface CorporationLookups {
    */
   corporateEmbargoSuppression?: Set<string>;
   /**
-   * Trade-exposure embargo model gate (gameState.embargoTradeExposureEnabled).
-   * When true, a suppressed foreign sector loses only its export-exposed revenue
-   * (domestic host sales continue) instead of a total mothball. Default false.
+   * Trade-exposure embargo model. When true, a suppressed foreign sector loses
+   * only its export-exposed revenue (domestic host sales continue) instead of a
+   * total mothball. Default false.
    */
   embargoTradeExposureEnabled?: boolean;
   /**

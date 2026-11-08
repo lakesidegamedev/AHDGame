@@ -113,9 +113,7 @@ export async function GET() {
       };
     });
 
-    // Return all entries (frontend will sort). Global leaderboard (no per-user
-    // fields); cache at the edge instead of recomputing two full-collection
-    // $group aggregations per request. (#2818)
+    // Global leaderboard (no per-user fields); cache at edge instead of recomputing two full-collection $group aggregations per request.
     return NextResponse.json(
       { entries },
       {

@@ -123,9 +123,8 @@ export default async function GovernorOfficePage({ params }: Props) {
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
   const voteScope = subNationalOffice ? { countryId, officeType: subNationalOffice } : null;
   const allowedRaceTypes = getEndorseableElectionTypes(countryId);
-  // One batch for every independent read on this page. These used to run as a
-  // dozen consecutive waves after the chamber roster resolved, each paying its
-  // own round trip on a page the telemetry ranks in the slowest 20.
+  // One batch for every independent read on this page; fetching them
+  // separately costs many round trips on a slow page.
   const [
     holderChar,
     holderPartyDoc,

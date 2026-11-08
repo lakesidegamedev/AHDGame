@@ -145,11 +145,9 @@ const BARRIER_COLLECTION = "turnWorkerControl";
 const BARRIER_ID = "transactionMajorityBarrier";
 
 /**
- * A transaction reads a majority-committed snapshot. A client that
- * acknowledges writes at w:1 (the turn worker, #4789) can open a transaction
- * before its own previous write is majority-committed, so the snapshot does
- * not contain it: production turn 396 failed when a public-float novation's
- * transaction could not see the reservation written just before it.
+ * A transaction reads a majority-committed snapshot. A client that acknowledges
+ * writes at w:1 can open a transaction before its own previous write is
+ * majority-committed, so the snapshot misses it.
  *
  * One w:majority write first closes that gap. The oplog is ordered, so once
  * this write is majority-acknowledged every earlier write on the node is too.

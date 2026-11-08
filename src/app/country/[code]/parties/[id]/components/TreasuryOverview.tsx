@@ -256,12 +256,10 @@ export function TreasuryOverview({
 
         {party.psInvestmentBudget > 0 &&
           (() => {
-            // Realized PS spend, back-derived from the server-computed net income
-            // (revenue − GOTV − suppression − PS = netIncome). This is $0 when the
-            // party is at its political-strength cap: with no headroom left, the
-            // engine can't convert treasury into PS, so the budget goes unspent
-            // that turn even though it's still allocated. Surfacing that reason
-            // stops the "-$0" reading as a bug (ticket #905).
+            // Realized PS spend, back-derived from net income
+            // (revenue − GOTV − suppression − PS = netIncome). $0 when the party is
+            // at its PS cap: no headroom, so treasury goes unspent that turn even
+            // though it's still allocated. Surface that so "-$0" doesn't read as a bug.
             const psSpend = Math.max(
               0,
               revenue - party.gotvEstimatedSpend - party.suppressionEstimatedSpend - netIncome
