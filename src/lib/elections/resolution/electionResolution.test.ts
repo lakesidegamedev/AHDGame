@@ -8,7 +8,7 @@ import { ObjectId } from "mongodb";
 import type { Election } from "@/lib/db/types";
 import { huRegions1991 } from "@/lib/countries/hu/data/huRegions1991";
 import { resolveGeneralElections } from "./electionResolution";
-import { DEFAULT_DURATIONS } from "./perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
 
 vi.mock("@/lib/countries/ru/councilElectionResult", () => ({
   certifyRussianCouncilElection: vi.fn(),

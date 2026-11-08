@@ -8,7 +8,7 @@ import {
   type CandidateLite,
 } from "@/lib/turn/election/independenceDesireHook";
 import { highDesireElectionBonus } from "@/lib/constants/devolution";
-import { applyFirstMinisterHighDesireBonus } from "@/lib/turn/election/rules/highDesireElectionBonus";
+import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
 
 function cand(party: string): CandidateLite {
   return { _id: new ObjectId(), party };

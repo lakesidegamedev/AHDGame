@@ -4613,182 +4613,182 @@
       "fingerprint": "7fb5671fdde6dc557669e182040d86583c83b1a14964ae90989791e9ff8cc19a"
     },
     {
-      "file": "src/lib/turn/election/presidentialTenureLedger.ts",
+      "file": "src/lib/elections/resolution/presidentialTenureLedger.ts",
       "operation": "findOne",
       "owner": "recordPresidentialTenure",
       "expression": "collection.findOne({ _id: \"current\" }, { projection: { presidentialTenureByCountry: 1 } })",
       "fingerprint": "577b69a6333abf22b89987579851e021902db3ffb84e0641b6d15d73a10e46d3"
     },
     {
-      "file": "src/lib/turn/election/presidentialTenureLedger.ts",
+      "file": "src/lib/elections/resolution/presidentialTenureLedger.ts",
       "operation": "updateOne",
       "owner": "recordPresidentialTenure",
       "expression": "collection.updateOne({ _id: \"current\", [path]: prior ?? { $exists: false } }, { $set: { [path]: next } })",
       "fingerprint": "130fecd76e8fc6a7c0d1b1aaf5a6c9f25b1f1fdc83e9f586969a5257e9372030"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<BgOrdinaryPlanRecord>(BG_ORDINARY_PLANS_COLLECTION) .findOne({ _id: `BG:ordinary:${cycle}` })",
       "fingerprint": "f364fbcf8674347b11e9505ae2fdf66e333c6b412a23dcaa3a004577c004130e"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION) .findOne({ _id: receiptId }, { projection: { electionIds: 1 } })",
       "fingerprint": "2b4d65ab57dedfea01c7332565d2d37a81a339d4f570f1a2e43de75e066531d6"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION) .findOne({ _id: receiptId }, { projection: { officialIds: 1 } })",
       "fingerprint": "d129293de42a2f518b6944524ce97254bd5f7d8ee8316008e5b3322613d6642a"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "find",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<ElectedOfficial>(\"electedOfficials\") .find({ _id: { $in: job.officialIds } }, { projection: { state: 1, characterName: 1, party: 1, isNPP: 1 }, })",
       "fingerprint": "83a4ac204363a53c6c1d6d3d5fa7219e5ceadd48ba1d264834b705f119315627"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION) .findOne({ _id: receiptId })",
       "fingerprint": "4dce5a1e8247dffb8047e7e079d1d3765097387efb19517c8c131bed8600d33e"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION) .findOne({ _id: receiptId }, { projection: { officialIds: 1 } })",
       "fingerprint": "0570eef4587c8c08d5da8c3e5d1df6d5b4014432ec6d65ef60622ac2f56da990"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "find",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<ElectedOfficial>(\"electedOfficials\") .find({ _id: { $in: job.officialIds } }, { projection: { state: 1, characterName: 1, party: 1, isNPP: 1 } })",
       "fingerprint": "da1912405248259bdbe35b6a5aa07f69ccc8603369c750a1227e09ba9a2a2e44"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION) .findOne({ _id: receipt._id })",
       "fingerprint": "200c4546f849393f9b4c461f21962b396fff49ebaeac3d2798f3f1d7001cd622"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION) .findOne({ _id: receipt._id })",
       "fingerprint": "955a1dfcee5e8fb07f14b01a7f4185bfc124cb5267d03d024fc25a6334188298"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "findOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION) .findOne({ _id: receipt._id })",
       "fingerprint": "09bb48c98310557b9d9f2b3dd93fb6b412b96df69569687aced63314527ec8a8"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "updateOne",
       "owner": "resolveGeneralElections",
       "expression": "db .collection<Election>(\"elections\") .updateOne({ _id: election._id, status: \"completed\" }, { $set: { totalSeats: capacity, updatedAt: now } })",
       "fingerprint": "a02a9874e2f0c7d26f9204c63ac9c03c7a8f84814a0e7c9afb3387d0a8e58be9"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "countDocuments",
       "owner": "resolveGeneralElections",
       "expression": "db.collection<Election>(\"elections\").countDocuments({ countryId: \"HU\", electionType: \"nationalAssembly\", cycle, status: { $ne: \"resolved\" }, })",
       "fingerprint": "820d4793e81e0409a430b1e142cf4bba7ace52fe89cfcd370c79d5e6b708cfe2"
     },
     {
-      "file": "src/lib/turn/electionResolution.ts",
+      "file": "src/lib/elections/resolution/electionResolution.ts",
       "operation": "bulkWrite",
       "owner": "resolveGeneralElections",
       "expression": "db.collection<State>(\"states\").bulkWrite(Object.entries(plan.regionCapacity).map(([regionId, houseDistricts]) => ({ updateOne: { filter: { _id: regionId, countryId: \"HU\" as const }, update: { $set: { houseDistricts } }, }, })))",
       "fingerprint": "30b125702cc494b8adf1dc9035c07b3b7f656202f2048c832450edbc3ee8f374"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateMany",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<ElectedOfficial>(\"electedOfficials\").updateMany({ nppId: candidate.nppId, officeType: { $nin: [...getExecutiveOfficeKeys()] }, }, { $set: { nppId: undefined, characterName: undefined, party: undefined, isNPP: false, updatedAt: now, } as Partial<ElectedOfficial>, $unset: { seatsHeld: \"\" }, })",
       "fingerprint": "a4f5b0608d1186a1f4d0437f0bb327c8dd5a44f11204e7959cb7864df0ac5255"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db .collection<NPP>(\"npps\") .updateOne({ _id: candidate.nppId }, { $set: { currentOffice: nppFinalOfficeType, party: candidate.party, updatedAt: now } })",
       "fingerprint": "9b13a49173fc3124f69764f15557e834c4bfb8531e4e936799a9bbbe67e65a86"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateMany",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<ElectedOfficial>(\"electedOfficials\").updateMany({ characterId: candidate.characterId, officeType: { $nin: [...getExecutiveOfficeKeys()] }, }, { $set: { characterId: undefined, characterName: undefined, party: undefined, isNPP: false, updatedAt: now, } as Partial<ElectedOfficial>, $unset: { seatsHeld: \"\" }, })",
       "fingerprint": "6161b3d40287190139bec8028fdb7061d05208a2219d855e6ee8338fa393e945"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<Character>(\"characters\").updateOne({ _id: candidate.characterId }, { $set: { currentOffice: charFinalOfficeType, updatedAt: now }, $push: { careerHistory: careerEvent }, })",
       "fingerprint": "b2653aba949a3221e22795eea547c66ec33f3fc660edf4579f1eeccf6b1550a5"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "deleteMany",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<ElectedOfficial>(\"electedOfficials\").deleteMany(officialFilter)",
       "fingerprint": "13de1de3d1e7d768f6aa82ba234a031ebbb06e219c5df4a30f37fd427950b17c"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "findOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db .collection<ElectedOfficial>(\"electedOfficials\") .findOne(legacyFilter, { sort: { electedAt: 1 } })",
       "fingerprint": "339cdc3a91cf3788b4664d12fcd26669cb2c75dddc9774ad6d108d438ab0a03d"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "deleteOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<ElectedOfficial>(\"electedOfficials\").deleteOne({ _id: legacy._id })",
       "fingerprint": "63e89d43789c6efb87f4224ecb573e429a0b85fa3d2a11f2fa54e7f9e42203f1"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "insertOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<ElectedOfficial>(\"electedOfficials\").insertOne({ _id: new ObjectId(), createdAt: now, ...officialDoc, } as ElectedOfficial)",
       "fingerprint": "290e4bbeba3f25c5322c613c715aebbab87d3f3634ba07f4cfda929e7f7f3a7b"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db .collection<NPP>(\"npps\") .updateOne({ _id: candidate.nppId, ...loserOfficeMatch }, { $set: { currentOffice: null, updatedAt: now } })",
       "fingerprint": "061783f7a6896a3d9ba24072021052fe79038e3462b989831d0be68d71c93975"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db .collection<Character>(\"characters\") .updateOne({ _id: candidate.characterId, ...loserOfficeMatch }, { $set: { currentOffice: null, updatedAt: now } })",
       "fingerprint": "6be603ac637ba61d8c94869b25dcd3321c153c8319ad8ee77823fb9c1e87889b"
     },
     {
-      "file": "src/lib/turn/election/generalResolution.ts",
+      "file": "src/lib/elections/resolution/generalResolution.ts",
       "operation": "updateOne",
       "owner": "resolveOneGeneralElection",
       "expression": "db.collection<Character>(\"characters\").updateOne({ _id: candidate.characterId }, { $push: { careerHistory: { type: \"lost_election\", office: lostOffice, officeLabel: getOfficeLabel(lostOffice, election.countryId), party: candidate.party, partyCountryId: election.countryId, electionId: election._id.toString(), date: now, } as CareerEvent, }, })",
@@ -4851,28 +4851,28 @@
       "fingerprint": "059bbf7e60eb2c208cffacca5b913b0ef3296eb01917c50e58c9b50e86b75f61"
     },
     {
-      "file": "src/lib/turn/election/presidentResolutionMessaging.ts",
+      "file": "src/lib/elections/resolution/presidentResolutionMessaging.ts",
       "operation": "updateOne",
       "owner": "sendPresidentResolutionMessaging",
       "expression": "db.collection<Character>(\"characters\").updateOne({ _id: candidate.characterId }, { $push: { careerHistory: { type: \"lost_election\", office: lostPresidentOffice, officeLabel: lostPresidentLabel, party: candidate.party, partyCountryId: election.countryId, electionId: election._id.toString(), date: now, } satisfies CareerEvent, }, })",
       "fingerprint": "1666a0036e4b865887c6672a078a244eb95dfcb0ba86e6824c3235016666286f"
     },
     {
-      "file": "src/lib/turn/election/presidentResolutionMessaging.ts",
+      "file": "src/lib/elections/resolution/presidentResolutionMessaging.ts",
       "operation": "findOne",
       "owner": "sendPresidentResolutionMessaging",
       "expression": "db .collection<Character>(\"characters\") .findOne({ _id: candidate.characterId }, { projection: { userId: 1 } })",
       "fingerprint": "5b06aea3c1b16af8b93dc9fca352f92daed7ae8b0ae32580f7f1c4c6b5e86daf"
     },
     {
-      "file": "src/lib/turn/election/presidentResolutionMessaging.ts",
+      "file": "src/lib/elections/resolution/presidentResolutionMessaging.ts",
       "operation": "findOne",
       "owner": "sendPresidentialElectionWebhook",
       "expression": "db .collection<Character>(\"characters\") .findOne({ _id: candidate.runningMateId }, { projection: { name: 1 } })",
       "fingerprint": "359a93daaf83be791ad1024da89c22132af5a73c67de7acf8f747910bba842b0"
     },
     {
-      "file": "src/lib/turn/election/loadContingentElectionData.ts",
+      "file": "src/lib/elections/resolution/loadContingentElectionData.ts",
       "operation": "find",
       "owner": "loadContingentElectionData",
       "expression": "db .collection<NPP>(\"npps\") .find({ party: candidate.party, countryId: countryId as CountryId, _id: { $ne: candidate.nppId }, })",
