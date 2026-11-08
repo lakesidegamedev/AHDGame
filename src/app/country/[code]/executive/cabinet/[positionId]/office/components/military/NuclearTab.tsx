@@ -108,7 +108,7 @@ export function NuclearTab({
         <div className="border-b border-card-border px-4 py-2.5">
           <h3 className="text-sm font-semibold text-foreground">Nuclear programme</h3>
           <p className="mt-0.5 text-[11px] text-muted">
-            This programme is closed. Three gates open it; every one must be met.
+            This programme is closed. Two gates open it; both must be met.
           </p>
         </div>
         <div className="space-y-2 px-4 py-3">

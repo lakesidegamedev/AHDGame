@@ -46,7 +46,7 @@ describe("NuclearTab", () => {
   });
 
   // A locked programme must say why, gate by gate, rather than showing a dead tree.
-  it("explains the three entry gates when ineligible", () => {
+  it("explains the two entry gates when ineligible", () => {
     setup({
       status: statusView({
         eligibility: {
@@ -56,9 +56,8 @@ describe("NuclearTab", () => {
         },
       }),
     });
-    expect(screen.getByText(/Three gates open it/)).toBeTruthy();
+    expect(screen.getByText(/Two gates open it/)).toBeTruthy();
     expect(screen.getByText(/Nuclear Delivery/)).toBeTruthy();
-    expect(screen.getByText(/Cold War subsystem/)).toBeTruthy();
     expect(screen.queryByText("Device ladder")).toBeNull();
   });
 
