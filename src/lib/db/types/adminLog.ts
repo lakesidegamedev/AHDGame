@@ -59,8 +59,6 @@ export type AdminLogAction =
   | "singleplayer_entitlement_revoked"
   | "client_access_granted"
   | "moderator_assigned"
-  | "junior_dev_assigned"
-  | "junior_dev_removed"
   | "moderator_removed"
   | "line_of_credit_enabled"
   | "line_of_credit_disabled"

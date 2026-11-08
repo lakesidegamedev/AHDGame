@@ -6,16 +6,18 @@
  * Requires admin auth.
  */
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError } from "@/lib/api/errors";
+import { getAuthAdmin } from "@/lib/auth";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { SENTRY_DEFAULT_ORG } from "@/lib/observability/sentryIngest";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+    const user = await getAuthAdmin();
+    if (!user) {
+      return errorResponse(403, "Admin access required");
+    }
 
     const baseUrl = process.env.SENTRY_API_URL?.replace(/\/+$/, "");
     const orgSlug = process.env.SENTRY_ORG ?? SENTRY_DEFAULT_ORG;

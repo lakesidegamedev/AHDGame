@@ -7,32 +7,24 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { z } from "zod";
 import type { User } from "@/lib/db/types";
-import { GRANTABLE_STAFF_ROLES } from "@/lib/staff/rules";
-import { planGrant, staffRoleLabel } from "@/lib/staff/grantRules";
 
-const assignSchema = z.object({
+const assignModSchema = z.object({
   userId: z.string().length(24),
-  // Defaults to moderator so existing callers keep working.
-  role: z.enum(GRANTABLE_STAFF_ROLES).default("moderator"),
 });
 
-// POST /api/admin/moderators/assign — Grant the moderator or junior dev role to a user.
-// Auth: requireAdmin, and admins only: junior devs and moderators cannot call it.
+// POST /api/admin/moderators/assign — Assign moderator role to a user.
+// Auth: requireAdmin
 // Errors: 400, 403, 404
 export async function POST(request: Request) {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
     const { admin } = auth;
-    // A junior dev passes requireAdmin on reads only, but granting roles is
-    // an admin-only act by definition, so check the principal explicitly.
-    if (admin.isAdmin !== true) return errorResponse(403, "Forbidden");
 
-    const parsed = await parseJsonBody(request, assignSchema);
+    const parsed = await parseJsonBody(request, assignModSchema);
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { role } = parsed.data;
 
     const db = await getDb();
     const objectId = new ObjectId(parsed.data.userId);
@@ -42,35 +34,36 @@ export async function POST(request: Request) {
       return errorResponse(404, "User not found");
     }
 
-    const plan = planGrant(user, role);
-    if (!plan.ok) {
-      return errorResponse(plan.status, plan.error);
+    if (user.role === "admin") {
+      return errorResponse(400, "Cannot assign moderator role to an admin");
     }
 
-    const now = new Date();
+    if (user.role === "moderator") {
+      return errorResponse(400, "User is already a moderator");
+    }
+
     await db.collection<User>("users").updateOne(
       { _id: objectId },
       {
         $set: {
-          role,
-          ...(role === "moderator" ? { moderatorSince: now } : { juniorDevSince: now }),
-          updatedAt: now,
+          role: "moderator",
+          moderatorSince: new Date(),
+          updatedAt: new Date(),
         },
       }
     );
 
-    const label = staffRoleLabel(role);
     await createAdminLog({
       category: "account",
-      action: role === "moderator" ? "moderator_assigned" : "junior_dev_assigned",
+      action: "moderator_assigned",
       username: user.username,
       adminUsername: admin.username,
-      details: `Assigned ${label} role`,
+      details: "Assigned moderator role",
     });
 
     return NextResponse.json({
       success: true,
-      message: `${user.username} is now a ${label}`,
+      message: `${user.username} is now a moderator`,
     });
   } catch (error) {
     return handleRouteError(error);
