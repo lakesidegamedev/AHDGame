@@ -326,7 +326,7 @@ const SIZE_CAP_ALLOWLIST = new Set([
   "src/components/Navbar.tsx",
   "src/app/notifications/notificationConfig.tsx",
   "src/lib/turn/parliamentaryGovernment.ts",
-  "src/lib/constants/commodities.ts",
+  "src/lib/commodities/rules/commodityMarket.ts",
   "src/lib/corporations/queries/corporationDetail.ts",
   "src/lib/turn/suspiciousDetection.ts",
   "src/lib/turn/perpetualElections.ts",
