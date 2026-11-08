@@ -67,9 +67,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    // A financial sector feeds a deposit-taking bank's branch network. Abandoning
-    // one lowers the deposit ceiling (to zero with the last one), so the CEO sees
-    // the impact and confirms it first (ticket 1553).
+    // A financial sector feeds a deposit-taking bank's branch network; abandoning one lowers the deposit ceiling, so the CEO confirms the impact first.
     const preview = await db
       .collection<CorporateSector>("corporateSectors")
       .findOne(
@@ -96,12 +94,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       }
     }
 
-    // Reserve the sector without deleting it. The property marker makes this
-    // the one abandon winner, excludes a concurrent construction claim, and
-    // lets the idempotent pool restore delete only after its credit is durable.
-    // The reservation is one atomic findOneAndUpdate; only the refusal path
-    // pays for a read to say WHY instead of claiming the sector is missing
-    // (#4190).
+    // Reserve the sector without deleting it: the property marker makes this the sole abandon winner, excludes concurrent construction claims, and lets the idempotent pool restore delete only after its credit is durable. One atomic findOneAndUpdate; only refusal path pays a read to explain why.
     const sectorIdHex = new ObjectId(sectorId).toHexString();
     const transitionKey = `restore:${sectorIdHex}`;
     const sectors = db.collection<CorporateSector>("corporateSectors");

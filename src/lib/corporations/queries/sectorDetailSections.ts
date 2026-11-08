@@ -613,18 +613,11 @@ export function buildSectorStrategySection(args: {
         sectorHostFxRate
       );
 
-      // Per-strategy margin + realization projection, for EVERY sector type.
-      //
-      // Strategies carry no direct margin modifier — their whole effect is the
-      // commodity supply/demand mix they impose (see sectorStrategies.ts header).
-      // So the honest projection is to run the engine's own
-      // `computeBlendedMarginModifiers` over each candidate strategy's rates
-      // against today's market, and diff it against the live sector's modifier.
-      //
-      // Before this, the picker showed a name, a description, and (extraction
-      // only) a projected ₳/turn. A player could not weigh "more revenue vs the
-      // loss in profit margin" — the exact complaint in #gameplay-advisors on
-      // 2026-07-29 — because the margin half of the trade was never quantified.
+      // Per-strategy margin + realization projection, for every sector type.
+      // Strategies carry no direct margin modifier: their effect is the commodity
+      // supply/demand mix they impose (see sectorStrategies.ts header). So project
+      // by running computeBlendedMarginModifiers over each candidate strategy's
+      // rates against today's market, then diff against the live sector's modifier.
       const priceRatioMapTyped = new Map<CommodityType, number>(
         commodityPrices
           .filter(

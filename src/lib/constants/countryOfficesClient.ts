@@ -3,19 +3,14 @@
  *
  *   npx tsx scripts/countries/gen-country-client-config.ts
  *
- * The institutional slice of the country registry: chambers, office types,
+ * Institutional slice of the country registry: chambers, office types,
  * government type and the regional executive.
  *
- * The elections list groups races into office sections and builds its race
- * filter from these tables, `officeResolution.ts` maps an election type to the
- * office and chamber it fills, and the state legislature and bill pages need
- * the chamber that signs regional bills and what that office is called.
- * Reading them from `countryClientConfig` shipped that whole 154 KB projection
- * (names, routes, currencies, central banks, election systems, descriptors) to
- * the browser for it; this file carries only the institutions those modules
- * read.
+ * Only the institutions these modules read: the elections list, office
+ * resolution, and the state legislature and bill pages. Reading them from
+ * `countryClientConfig` shipped its whole 154 KB projection to the browser.
  *
- * `countryOfficesClient.test.ts` pins every entry, including the per-era
+ * `countryOfficesClient.test.ts` pins every entry, including per-era
  * overlays, to `COUNTRY_CLIENT_CONFIGS`.
  */
 import type { CountryId, GovernmentType } from "./countriesCore";

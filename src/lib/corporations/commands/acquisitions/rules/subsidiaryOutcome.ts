@@ -2,15 +2,11 @@
  * Portable rules for the "keep the target as a subsidiary" acquisition outcome.
  *
  * Plain data in, plain data out: no database, clock, randomness or environment.
- * The shell (`../subsidiaryOutcome.ts`) loads documents, gathers the facts this
- * module judges, and writes the result back.
  *
- * The relationship itself is never stored as a parent pointer. It is derived
- * from the cap table (a corporate holder with more than 50% of the voting
- * power) plus the formalization marker, exactly as for any other subsidiary, so
- * the outcome only has to produce those two facts and every existing
- * subsidiary surface (group pages, parent powers, tax group, ownership cycle
- * guard) picks the target up unchanged.
+ * The relationship is never stored as a parent pointer; it is derived from the
+ * cap table (a corporate holder with more than 50% of the voting power) plus
+ * the formalization marker, so the outcome only has to produce those two facts
+ * and every existing subsidiary surface picks the target up unchanged.
  */
 
 import type { AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";

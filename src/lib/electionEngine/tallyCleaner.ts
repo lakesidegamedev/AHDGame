@@ -93,7 +93,7 @@ export async function removeWithdrawnCandidateFromTally(
 
   // Presidential maps and EV projections read this granular tally rather than
   // totalVotes. Leaving a withdrawn candidate here let their stale state lead
-  // keep earning EVs with no name or party remaining to render (#1306).
+  // keep earning EVs with no name or party remaining to render.
   for (const unitId of Object.keys(preserveCastVotes ? {} : (tally.totalVotesByUnit ?? {}))) {
     unsetPaths[`totalVotesByUnit.${unitId}.${candidateId}`] = "";
   }

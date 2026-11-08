@@ -16,7 +16,7 @@ interface RouteParams {
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/supply-priority
  * Opt a sector in or out of selling to outside buyers before the company's own
- * plants (suggestion 427). Off removes the field, so the default is unchanged.
+ * plants. Off removes the field, so the default is unchanged.
  * CEO only. Applies from the next turn.
  */
 export async function setSectorSupplyPriority(request: Request, { params }: RouteParams) {

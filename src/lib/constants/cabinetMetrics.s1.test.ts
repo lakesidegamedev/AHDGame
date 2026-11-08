@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getCabinetMetrics } from "./cabinetMetrics";
 
 /**
- * S1 follow-up: the cabinet briefing bar normalizes a metric value over
+ * The cabinet briefing bar normalizes a metric value over
  * `entry.range`. After S1 widened `educationSpending`'s safety bounds to
  * [0, 10_000_000], reusing them as the bar range pinned the fill to ~0% for any
  * realistic spend. The range must come from the metric's realistic THRESHOLDS

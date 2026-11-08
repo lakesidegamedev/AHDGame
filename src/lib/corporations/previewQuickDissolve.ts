@@ -142,10 +142,9 @@ export async function previewQuickDissolve(
     );
   }
 
-  // Cross-corp equity holdings are distributed in-kind on dissolution (NOT
-  // cashed at market price — that was the money-mint), so they no longer
-  // contribute to the cash payout preview. Held bonds (redeemed at face),
-  // liquidCapital, and the operating-sector salvage below form the returned cash.
+  // Cross-corp equity holdings are distributed in-kind on dissolution, not
+  // cashed, so they never enter the cash payout preview. Held bonds, liquid
+  // capital, and sector salvage form the returned cash.
 
   // Operating sectors leave the corporation on dissolution (to NPP successors,
   // or the unowned market), so a salvage fraction of their capitalized NPV is realized as cash — mirrors the
@@ -193,9 +192,8 @@ export async function previewQuickDissolve(
     }
   }
 
-  // Bug #0540 fix: compute the per-shareholder allocation so the preview can
-  // surface what the CEO actually receives (their pro-rata share) rather than
-  // the total pool, plus the corporate and publicFloat slices for context.
+  // Compute the per-shareholder allocation so the preview surfaces what the CEO
+  // actually receives (pro-rata share) rather than the total, plus corp and publicFloat slices.
   const shareholderPoolAnchor = corpLiquidCapitalToAnchor(
     returnedCapitalCorp,
     corporation,

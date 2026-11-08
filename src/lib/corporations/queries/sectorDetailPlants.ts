@@ -471,16 +471,20 @@ export function buildSectorPlantsSection(args: {
       : nonNeg((money.realizedRevenueAnchor * Math.max(0, regulatoryBurdenPp)) / 100);
   // The input bill renders at its real size, and `otherOperating` is the SIGNED
   // remainder that makes the named lines sum back to `maintenanceNet` exactly.
-  // Under plants the derived operating cost can land below the named physical
-  // lines (a negative opex residual, a margin capped at 100), so
-  // `maintenanceNet` goes negative once wages are carved out. That is a credit,
-  // not an absence of costs: clamping it at zero prints a profit the named
-  // lines cannot add up to. Mirrors the corporation page's signed `otherPp`.
+  //
+  // A sector's derived operating cost can land BELOW its named physical lines:
+  // `solveOtherOpexPerUnit` keeps a NEGATIVE residual, and `derivedMarginPct` is
+  // capped at 100. Both reconstruct as a maintenance bill smaller than the wage
+  // bill, so `maintenanceNet` can go negative once wages are carved out. That is
+  // a credit, not an absence of costs; do not clamp it or squeeze the inputs line
+  // to fit, or the lines stop summing to profit.
+  //
+  // This mirrors the corporation page's signed, unclamped `otherPp` residual.
 
-  // All of the above is the FALLBACK. When the turn's own lines are on the row
-  // (`money.enginePnl`) they are used verbatim: the inversion cannot be right at
-  // the margin cap, and the engine path also carries upkeep and compliance,
-  // which the margin's scope excludes and the profit includes.
+  // FALLBACK ONLY: when the turn's own lines are on the row (`money.enginePnl`)
+  // they are used verbatim and nothing is inverted, because the inversion cannot
+  // be right at the margin cap. The engine path also carries upkeep and
+  // compliance, which the margin's scope excludes and the profit includes.
   const engine = money.enginePnl ?? null;
   const inputsAnchor = engine ? engine.inputs : nonNeg(money.inputsAnchor);
   const internalSupplyDiscountAnchor = engine?.internalSupplyDiscountAnchor ?? 0;
@@ -527,13 +531,12 @@ export function buildSectorPlantsSection(args: {
   // ─── Truth headline ───────────────────────────────────────────────────────
   // Everything below is per-PRODUCED-unit on purpose. The stored margin divides
   // by sold revenue, so a sector selling 15% of its output can display a fat
-  // positive margin while the whole operation loses money (77% of live sectors
-  // sell under half their output). The headline instead spreads cost and
-  // revenue over every unit made, which is the basis the player's bank balance
-  // actually moves on.
+  // positive margin while the whole operation loses money. The headline
+  // spreads cost and revenue over every unit made, which is the basis the
+  // player's bank balance actually moves on.
   // One definition: market sales over units made, the same two numbers the
-  // Offered / Sold / Unsold rows print, so the two can never disagree. The engine value is
-  // only the fallback when the unit counts are missing.
+  // Offered / Sold / Unsold rows print. The engine's soldFraction is only the
+  // fallback when the unit counts are missing.
   const soldFraction = fillRate ?? num(sector.soldFraction);
   const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
@@ -554,15 +557,12 @@ export function buildSectorPlantsSection(args: {
     sector.deliveryLimitedFreightClass === "grid"
       ? sector.deliveryLimitedFreightClass
       : null;
-  // Full operating bill: maintenanceNet already carries inputs, upkeep on idle
-  // capacity, compliance and other opex; labour is billed beside it.
-  // Floor the SUM, not each leg: `maintenanceNet` is routinely negative (a
-  // credit) under plants, and flooring it on its own double-counted wages that
-  // the credit had already offset, inflating cost-per-unit.
-  //
-  // With the engine's own lines the bill needs no flooring at all.
-  // A negative total would be a sector paid more to run than it spends, and the
-  // engine can say so; the fallback keeps the floor because an INVERTED total
+  // Full operating bill: maintenanceNet carries inputs, upkeep on idle capacity,
+  // compliance and other opex; labour is billed beside it. Floor the SUM, not
+  // each leg: maintenanceNet is routinely negative (a credit) under plants, and
+  // flooring it alone double-counts wages the credit already offset.
+  // When using the engine's own lines, no flooring is needed: a negative total
+  // is meaningful there. The fallback keeps the floor because an INVERTED total
   // can go negative for reasons that are artefacts of the inversion.
   const {
     engineGrowthAnchor,

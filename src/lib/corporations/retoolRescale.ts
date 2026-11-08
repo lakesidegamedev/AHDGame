@@ -1,12 +1,11 @@
 /**
- * Shared D9 retool rescale: capital stock, in-flight build queue, and the
+ * Shared retool rescale: capital stock, in-flight build queue, and the
  * calibrated physical-opex anchor.
  *
- * The player command (`setSectorStrategy`) has always moved all three so that
- * nameplate stays put while `anchor × units` (the actual ₳ charged) stays
- * put. Automated retool paths used to rescale stock and queue only, which
- * multiplied residual operating cost by the RPU ratio (up to 327x on a
- * coal/rare-earth pair) for no reason a player could name.
+ * All three must move together so that nameplate stays put while
+ * `anchor × units` (the actual ₳ charged) stays put. Rescaling only stock and
+ * queue multiplies residual operating cost by the RPU ratio (up to 327x on a
+ * coal/rare-earth pair).
  *
  * One helper, every path.
  */
@@ -77,26 +76,18 @@ export function retoolRescaleFields(input: RetoolRescaleInput): RetoolRescaleSet
 }
 
 /**
- * One-shot correction for in-flight auto-retools that rescaled `capitalStock`
- * but left `otherOpexPerUnitAnchor` on the old unit basis.
+ * Heals the `otherOpexPerUnitAnchor` of an in-flight auto-retool that rescaled
+ * `capitalStock` but left the anchor on the old unit basis.
  *
  * Discriminator: player `setSectorStrategy` always writes `retoolRescaleApplied`
- * (true or false). Auto paths historically omitted it. Combined with "this is
- * an auto retool" (NPP-run corp, or `autoStrategyAdoptedAtTurn` set; pass 1
- * can convert a player miner), that selects the corrupt in-flight rows without
- * touching a legacy player transition that predates the flag.
+ * (true or false); auto paths omitted it.
  *
- * This heals the anchor ONLY. When the stock itself is still on the source
- * basis (a pre-rescale or pre-plants commitment surfaced under plants, issue
- * #2009), stamping the flag here without converting the stock lets the blend
- * ratio manufacture unsupported capacity. That case belongs to
- * `healRetoolStockBasis` below, which converts stock and anchor together.
+ * Anchors only. If the stock is still on the source basis (`healRetoolStockBasis`
+ * handles that case), stamping the flag alone would let the blend ratio
+ * manufacture unsupported capacity.
  *
- * Returns null when there is nothing to do. The caller stamps the returned
- * fields onto the sector update AND must use the healed anchor for this turn's
- * physical P&L, otherwise the turn still bills the unrebased residual.
- *
- * Does not mutate production data outside the normal sector-turn write.
+ * Returns null when there is nothing to do. Caller must stamp the fields AND use
+ * the healed anchor for this turn's physical P&L.
  */
 export function healAutoRetoolOpexAnchor(args: {
   plantsEnabled: boolean;
@@ -147,30 +138,27 @@ export interface RetoolStockBasisHeal {
 
 /**
  * One-shot basis correction for transitions whose owned stock was never
- * converted to the destination units (issue #2009): pre-rescale commitments,
- * and capital-mode commitments surfacing under plants, both of which carry
- * no (or an explicitly false) rescale flag.
+ * converted to the destination units: pre-rescale commitments, and capital-mode
+ * commitments surfacing under plants, both of which carry no (or an explicitly
+ * false) rescale flag.
  *
- * When `needsRetoolStockCatchup` fires, the stock is provably source-basis,
- * so it is converted here by the same RPU ratio the retool boundary would
- * have applied, and the per-unit opex anchor moves with it (anchor x units
- * stays fixed). The caller must run this turn's capacity advance off the
- * returned stock and stamp every returned leg, otherwise the blend ratio
- * keeps multiplying unconverted stock into unsupported operating capacity
- * (observed: 2,314.82 source units x ~390 blend = 903,166 operating units
- * on an oil_gas to rare_earth_mining retool, four turns in).
+ * When `needsRetoolStockCatchup` fires, the stock is provably source-basis, so
+ * it is converted here by the same RPU ratio the retool boundary would have
+ * applied, and the per-unit opex anchor moves with it (anchor x units stays
+ * fixed). The caller must run this turn's capacity advance off the returned
+ * stock and stamp every returned leg, otherwise the blend ratio keeps
+ * multiplying unconverted stock into unsupported operating capacity.
  *
- * When the transition was committed under plants without a flag (pre-flag
- * writers converted the stock but recorded nothing), the stock is already
- * converted and only the auto anchor heal is ever owed; non-auto rows are
- * left alone. The in-flight build queue is deliberately untouched: the turn
- * never `$set`s it (C4), and a stale-basis order lands once and dilutes
- * rather than compounding.
+ * When the transition was committed under plants without a flag, the stock is
+ * already converted and only the auto anchor heal is ever owed; non-auto rows
+ * are left alone. The in-flight build queue is deliberately untouched: the turn
+ * never `$set`s it, and a stale-basis order lands once and dilutes rather than
+ * compounding.
  *
- * Stock conversion is authorship-blind: basis is a physical fact, and a
- * player capital-mode retool flipped to plants mints exactly like an auto
- * one. The anchor-only fallback keeps the existing auto discriminator so a
- * legacy player transition that predates the flag is never reinterpreted.
+ * Stock conversion is authorship-blind: basis is a physical fact, so a player
+ * capital-mode retool flipped to plants mints exactly like an auto one. The
+ * anchor-only fallback keeps the auto discriminator so a legacy player
+ * transition predating the flag is never reinterpreted.
  */
 export function healRetoolStockBasis(
   input: RetoolStockBasisHealInput

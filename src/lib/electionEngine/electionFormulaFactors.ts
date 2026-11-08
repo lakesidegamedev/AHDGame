@@ -8,20 +8,16 @@
 export const DEFAULT_CANDIDATE_SUPPORT = 50 as const;
 
 /**
- * Per-turn Support decay rate applied while the election is `active`
- * (regression toward the neutral midpoint 50). Values move 0.5 units per
- * turn toward 50 — enough to make actions repeat-able but not so fast
- * that a single-shot rally is wasted on a long primary calendar.
+ * Per-turn Support decay while the election is `active` (regression toward the
+ * neutral midpoint 50). Fast enough that a single rally is not wasted on a
+ * long primary calendar, slow enough to keep actions repeatable.
  */
 export const SUPPORT_DECAY_PER_TURN = 0.5 as const;
 
 // ─── Phase B Support mutation calibration ───────────────────────────────────
 //
 // Constants for the action paths that move `electionCandidates.support`
-// off its 50 baseline. See `2026-05-22-swing-flow-driver-activation.md`
-// §B0 — these values are calibration knobs, not invariants; the [tuning
-// re-pass](docs/plans/archive/2026-05/2026-05-22-driver-tuning-repass.md)
-// will re-examine each after Phase B has live-race data.
+// off its 50 baseline. Calibration knobs, not invariants.
 
 /**
  * Total Support "worth" of one presidential rally event. Per the design doc,
@@ -87,17 +83,12 @@ export const SUPPORT_DEBATE_WIN_BUMP = 4 as const;
  */
 
 /**
- * Org as the party's normalized share of the total state-level Organization.
- *
- * Replaces the legacy `partyOrgScalar(org)` (`1.0–1.6×` multiplier) with a
- * pool-share interpretation — each party gets `org[partyId] / Σorg`. This
- * matches Phase 0.5 §7.3.2's `nominal_share = StatePartyOrg.organization × ...`
- * line and the plan's acceptance criterion "Organization as a normalized
- * 100% pool share in the state / region."
+ * Org as the party's normalized share of the total state-level Organization:
+ * `org[partyId] / Σorg`, matching the plan's normalized 100% pool share.
  *
  * Edge cases:
- *   - Total Org = 0 → return 0 (no party has any presence).
- *   - Single party in state → return 1 (full share).
+ *   - Total Org = 0 → return 0.
+ *   - Single party in state → return 1.
  *   - Party not in map / has 0 Org → return 0.
  *   - Negative Orgs treated as 0 (defensive against bad data).
  *
@@ -161,16 +152,11 @@ export function personalOrgFloor(reach: number, approval: number): number {
 }
 
 /**
- * Minimum vote-weight reach after `normalizeNPI` / presidential-primary reach
- * curves. Equivalent to √(1/100) = PI≈1 on the state sqrt curve.
- *
- * Without this, PI=0 → reach=0 → weight=0 → the candidate accumulates literally
- * zero votes and looks "removed" from the race (ticket #1034). NPPs already
- * floor at PI=10 via `NPP_POLITICAL_INFLUENCE_FLOOR`; players can sit at 0
- * (fresh characters, neglected campaigning). The floor keeps them visible as a
- * steep disadvantage, not an erasure — same "never literally hit zero" intent
- * as {@link personalOrgFloor} / #0671. Downstream zeros (approval=0,
- * regimeMult=0 for banned OPS parties) still erase a candidate.
+ * Minimum vote-weight reach after normalizeNPI / presidential-primary reach
+ * curves. Without this, PI=0 yields reach=0 and the candidate accumulates
+ * zero votes, looking removed from the race. The floor keeps zero-PI players
+ * visible as a steep disadvantage, not an erasure. Downstream zeros
+ * (approval=0, regimeMult=0) still erase a candidate.
  */
 export const VOTE_REACH_FLOOR = Math.sqrt(1 / 100);
 
@@ -180,78 +166,18 @@ export function applyVoteReachFloor(reach: number): number {
 }
 
 /**
- * Personal-stat (politicalInfluence / favorability) tenure fatigue —
- * the nominal-share-side counterpart to the economic referendum's
- * penalty-side term-fatigue multiplier (see `economicReferendum.ts`).
+ * Tenure fatigue for politicalInfluence / favorability: erodes the
+ * tenure-holder's effective stats per consecutive term beyond the first.
  *
- * Root-cause context: politicalInfluence and favorability grow every turn a
- * character/NPP campaigns (Campaign: flat +1%/action; Advertise: +3 base,
- * floored at +1) but only DECAY toward a floor (PI: 0.75% of current per
- * turn) or above a fixed threshold (favorability: only above 60). Neither
- * has the mean-reverting design `electionCandidates.support` already uses
- * (regresses to 50 every active-election turn, cleared on resolution).
- * Net effect: any character who keeps campaigning asymptotically pins near
- * the 100 cap (decay is negligible next to a single action's flat gain, even
- * right at the cap: 0.75 decay vs 1.0 gain), while a non-campaigning rival
- * decays toward the floor — a permanent, non-shrinking separation that
- * re-arms every election because neither stat is per-cycle-reset like
- * Support is. Confirmed on the 654-turn `ahd_sim_grand53fx` world: the
- * recurring president carried a 3.6x politicalInfluence gap (36.1 vs 10) and
- * a +28-point favorability gap over a challenger who never held the office.
+ * Without this, campaigning characters asymptotically pin near 100 while
+ * non-campaigners decay, producing a permanent gap that re-arms every
+ * election. Gated on tracked tenure (US President, Senate, House); absent
+ * tenure data returns exactly 1.0, so single-election balance tests are
+ * unaffected.
  *
- * This channel bypasses the ±10pt `INCUMBENCY_SHIELD_MAX` cap entirely — PI
- * and favorability feed `appealWeight`'s `reach` and `approval` terms
- * directly, with no tenure-awareness of their own. Compressing the terms'
- * CURVES (e.g. giving `approvalScalar` a diminishing-returns shape) was
- * evaluated and rejected: the existing balance tests
- * (`voteDistribution.test.ts` "balance: favorability impacts vote share")
- * deliberately calibrate a large *single-election* favorability or PI gap
- * (60-80 points) to a decisive (~4-9x) advantage, and the real-world gaps
- * measured above (26-28 points) sit BELOW that calibrated range — so any
- * cap loose enough to preserve the calibrated single-election tests is too
- * loose to touch the actual bug, and any cap tight enough to touch the bug
- * breaks the calibrated tests. There is no viable magnitude-based threshold.
- *
- * The actual defect is not "a large gap is unfair" (a genuinely popular
- * first-term candidate SHOULD win decisively) — it's that the SAME party
- * carries the SAME gap into every election for 12 years straight because
- * nothing about the gap is tenure-aware. So — like the economic referendum
- * channel already does on the national-share side — this erodes the
- * tenure-holder's effective PI/favorability per consecutive term beyond the
- * first, gated on tenure data that's only present for races with tracked
- * incumbency: US President via `incumbentConsecutiveTerms`, US Senate via
- * `legislativeIncumbentTenureTerms`, and US House per-candidate via
- * `houseIncumbentTenureTermsByCandidateId`. Absent tenure data (first term,
- * open seat, or a race family with no individual-tenure tracking) this
- * returns exactly 1.0 — a complete no-op, so existing single-election
- * balance tests are unaffected.
- *
- * ── Why this is a RETENTION FRACTION and not a points subtraction ──────────
- *
- * The original form subtracted a flat 10 POINTS per term (to a 100-point cap)
- * from stats whose live values sit around 25-80. That operator is regressive:
- * the same 40-point charge at five terms takes 100% of a PI-26.6 candidate and
- * 0% of a PI-90 one, so it deleted exactly the ordinary officeholders it was
- * least meant to touch. It went live on the 1962 US House: 35 of the 49 active
- * US races carried it (41 of 55 counting every country), and in Florida (turn
- * 522) both returning nominees held five terms, which drove their
- * politicalInfluence to zero (floored at VOTE_REACH_FLOOR) and more than
- * halved their favorability. A first-time nominee for a party holding 1.7% of
- * the state's registration took 87.8% of the vote and all eight seats, where
- * the same engine with no erosion returns a 39/39/22 three-way race.
- *
- * Scaling the stat instead is scale-free: every incumbent keeps the same
- * FRACTION of their standing regardless of its size, no tenure however long
- * can drive a candidate to zero, and the ordering the rest of the engine
- * computes survives. The magnitude is correspondingly much smaller — this is
- * a tilt against entrenchment, not a term limit. The cap binds at six terms
- * held, and from there on every incumbent keeps 85% of their reach and
- * approval no matter how long they stay.
- *
- * Note this leaves the underlying compounding described above unfixed: PI and
- * favorability still have no per-cycle mean reversion the way
- * `electionCandidates.support` does. Correcting that belongs in the stats
- * themselves, not in a vote-time counterweight sized to overpower them.
+ * Returns a retention FRACTION, not a points subtraction: a flat points
+ * charge is regressive against low-stat candidates and can zero out an
+ * ordinary officeholder. Callers scale the stat (stat * retention).
  */
 export const PERSONAL_STAT_TENURE_EROSION_PER_TERM = 0.03;
 export const PERSONAL_STAT_TENURE_EROSION_MAX = 0.15;
@@ -273,46 +199,24 @@ export function personalStatTenureRetention(consecutiveTerms: number | undefined
 }
 
 /**
- * Convert the single-seat legislative lane's term count into the terms-held
- * units {@link personalStatTenureRetention} expects.
- *
- * The three tenure sources disagree. The presidential ledger
- * (`getPresidentialConsecutiveTerms`) and the House map
- * (`resolveHouseIncumbentTenures`) both report terms ALREADY HELD, so a
- * first-termer seeking re-election is 1. The Senate's
- * `computeConsecutiveTermsFromWinners` reports the term being SOUGHT: it seeds
- * at 1 for the current term and then also counts the prior win that seated the
- * incumbent, so the same senator is 2. Fed raw, an identically-served senator
- * ate a full extra term of erosion.
- *
- * Normalized here rather than in the counter itself, because the Senate
- * incumbency shield in `persuasionDrivers.ts` consumes that raw sought-term
- * value and was calibrated against it
- * (`2026-07-15-senate-incumbency-driver-design.md`); moving the counter would
- * silently retune a different driver.
+ * The three tenure sources disagree on units. The presidential ledger and the
+ * House map report terms ALREADY HELD (first-termer = 1). The Senate counter
+ * reports the term being SOUGHT (same senator = 2), so normalize here to avoid
+ * an extra term of erosion. Done here rather than in the counter because the
+ * Senate incumbency shield consumes the raw sought-term value.
  */
 export function legislativeTenureTermsHeld(soughtTerm: number | undefined): number | undefined {
   return soughtTerm == null ? undefined : soughtTerm - 1;
 }
 
 /**
- * Reg as persuasion-resistance multiplier — entrenched voters defend their
- * party against peeling. Higher own-Reg → larger multiplier on this party's
- * weight in the demographic-group split.
+ * Reg as persuasion-resistance multiplier: entrenched voters defend their party against peeling. Multiplies this party's weight in the demographic-group split.
  *
- * Curve: linear `1 + 0.3 × (reg / 100)`, clamped to `[1.0, 1.3]`.
- *   - reg = 0  → 1.0× (no resistance, baseline)
- *   - reg = 50 → 1.15×
- *   - reg = 100 → 1.3× (max resistance)
+ * Linear `1 + 0.3 × (reg / 100)`, clamped to `[1.0, 1.3]`: reg 0 → 1.0×, reg 50 → 1.15×, reg 100 → 1.3×.
  *
- * Backward-compat: undefined / NaN / negative reg returns 1.0× (neutral).
- * This matches the bootstrap-deferred state where most rows have
- * `registration: undefined`.
+ * undefined / NaN / negative reg returns 1.0× (neutral), matching the bootstrap-deferred state where most rows have `registration: undefined`.
  *
- * The bounds are intentionally modest. Reg is "slow partisan baseline" per
- * Phase 0.5 §4.2 — not a wall against persuasion, just a tilt. A much
- * stronger curve (e.g. up to 2× at full Reg) would deny insurgent campaigns
- * the ability to flip a state through cumulative effort.
+ * Bounds are intentionally modest: Reg is a slow partisan baseline, a tilt not a wall, so insurgent campaigns can still flip a state through cumulative effort.
  */
 export const REG_RESISTANCE_MAX_BONUS = 0.3;
 export function regResistanceMultiplier(reg: number | undefined): number {
@@ -322,23 +226,13 @@ export function regResistanceMultiplier(reg: number | undefined): number {
 }
 
 /**
- * Support as candidate-level mood multiplier. Captures short-term momentum
- * — recent debate performance, scandals, endorsements — that boosts or
- * dampens the candidate's appeal independent of the party's Reg / Org.
+ * Support as candidate-level mood multiplier: short-term momentum (debates, scandals, endorsements) independent of the party's Reg / Org.
  *
- * Curve: `0.6 + 0.8 × (support / 100)`, clamped to `[0.6, 1.4]`.
- *   - support = 0   → 0.6× (heavy penalty)
- *   - support = 50  → 1.0× (neutral, default for new candidates)
- *   - support = 100 → 1.4× (peak momentum)
+ * `0.6 + 0.8 × (support / 100)`, clamped to `[0.6, 1.4]`: support 0 → 0.6×, 50 → 1.0× (new-candidate default), 100 → 1.4×.
  *
- * Backward-compat: undefined / NaN support returns 1.0× (neutral) so
- * rows without a Support value are not penalized.
+ * undefined / NaN returns 1.0× so rows without Support are not penalized.
  *
- * The asymmetry — Support penalty (0.4) is half the bonus (0.4) but
- * starting from below baseline — is intentional: scandalous candidates
- * lose votes meaningfully but the formula doesn't zero them out. They
- * still get 0.6× of their appeal-weighted share, leaving room for a
- * comeback within the same election cycle.
+ * Asymmetry is intentional: scandalous candidates lose meaningfully (0.6× of their weighted share) but are not zeroed out, leaving room for a comeback within the cycle.
  */
 export const SUPPORT_MOOD_FLOOR = 0.6;
 export const SUPPORT_MOOD_CEILING = 1.4;
@@ -349,30 +243,21 @@ export function supportMoodMultiplier(support: number | undefined): number {
 }
 
 /**
- * Party-baseline registration multiplier. This is a structural vote-weight
- * scalar, distinct from `regResistanceMultiplier` (which models Reg only as a
- * small 1.0-1.3× persuasion-resistance tilt).
+ * Party-baseline registration multiplier: a structural vote-weight scalar,
+ * distinct from `regResistanceMultiplier` (a 1.0-1.3x persuasion tilt).
  *
- * Motivation (1953 sim forensics): seeded polling entered the vote kernel only
- * through Org's `share^0.2` curve, so a 2.5%-polling party (1951 Liberals) paid
- * a mere ~0.66× penalty vs a ~49% party and landed at ~24% of the vote. This
- * multiplier makes the partisan baseline bite: weight scales by
- * `share^REG_BASELINE_EXPONENT` (concave, sqrt by default), so 2.5%
- * registration ≈ 0.16× while 45-50% registration ≈ 0.67-0.71×; after
- * normalization a 2.5% party lands in single digits, not the twenties.
+ * Without it, seeded polling enters the vote kernel only through Org's
+ * `share^0.2` curve, so a low-polling party pays a small penalty. Weighting
+ * by `share^REG_BASELINE_EXPONENT` (concave, sqrt by default) makes the
+ * partisan baseline bite: 2.5% registration ~ 0.16x, 45-50% ~ 0.67-0.71x.
  *
  * Input is the party's current `statePartyOrg.registration` (0-100). The host
- * decides whether a region uses this baseline. UK regions opt in; other
- * countries remain unchanged so their existing registration resistance and
- * peel curves are not double-counted.
+ * decides whether a region uses this baseline; UK regions opt in, others are
+ * unchanged so existing peel and resistance curves are not double-counted.
  *
  * COMPATIBILITY CONTRACT: returns exactly 1.0 when the baseline lane is not
- * enabled, represented by an undefined or non-finite input. Once a region has
- * current registration data, a party with no row is passed 0 and receives the
- * same minimum-share floor as any registered party at 0.
- *
- * Parties at 0 current registration are floored at `REG_BASELINE_MIN_SHARE`
- * rather than hard-zeroed. The Org gate and appeal still decide the rest.
+ * enabled (undefined or non-finite input). Once a region has registration
+ * data, a party with no row is passed 0 and floored at `REG_BASELINE_MIN_SHARE`.
  */
 export const REG_BASELINE_EXPONENT = 0.5;
 export const REG_BASELINE_MIN_SHARE = 0.005;
@@ -414,19 +299,14 @@ export function buildCurrentRegistrationBaseline(
 
 // ─── §7.3.2 swing-flow curves ───────────────────────────────────────────────
 //
-// T3 calibration (2026-05-23 simulation harness G5 finding): the
-// previous T2 values (transferable floor 0.05, resistance ceiling 0.70)
-// produced ~13× peel-rate falloff between Reg=0 and Reg=100 — strong
-// enough that a high-Reg incumbent could win the electoral count while
-// losing the popular vote in close cycles. Softened to:
+// High-Reg incumbents must not win the electoral count while losing the
+// popular vote in close cycles. Calibrated so:
 //
 //   - Newcomer parties (Reg ≈ 0): ~20% transferable, 0% resistance →
-//     ~20% effective peel (unchanged, newcomers stay highly peelable).
+//     ~20% effective peel.
 //   - Entrenched parties (Reg ≈ 100): ~10% transferable, ~50% resisting
-//     → ~5% effective peel (was 1.5% in T2). High-Reg parties still
-//     have a meaningful structural edge but it's a tilt, not a wall.
-//   - The crossover still happens around Reg=40-60. Quadratic shape
-//     preserved.
+//     → ~5% effective peel. A tilt, not a wall.
+//   - Crossover around Reg=40-60. Quadratic shape preserved.
 //
 // Numbers verifiable in voteDistributionSwingFlow.test.ts under
 // "transferableShare curve" / "persuasionResistance curve".
@@ -455,25 +335,12 @@ export function transferableShare(reg: number | undefined): number {
 }
 
 /**
- * Fraction of the transferable pool that actually resists peeling. Higher
- * own Reg = higher resistance. Net peelable = transferable_share × (1 − persuasionResistance).
- * Quadratic shape, concave up:
- *
- *   persuasionResistance(0)   = 0.00
- *   persuasionResistance(50)  = 0.50 × (50/100)^2 = 0.125
- *   persuasionResistance(100) = 0.50
- *
- * Combined with `transferableShare`, the effective peelable share runs:
- *
- *   eff_peel(0)   = 0.20 × 1.00  = 0.200
- *   eff_peel(50)  ≈ 0.165 × 0.875 ≈ 0.144
- *   eff_peel(100) = 0.10 × 0.50  = 0.050
- *
- * — a smooth ~4× falloff between newcomer and entrenched. Entrenched
- * parties have a structural edge but their lead can be reversed by
- * cumulative campaign pressure (money + support + coattails) over the
- * cycle, matching real-world swing dynamics where even safe states can
- * flip in landslide years.
+ * Fraction of the transferable pool that resists peeling. Higher own Reg means
+ * higher resistance. Net peelable = transferable_share × (1 - persuasionResistance).
+ * Quadratic curve: 0 at Reg 0, 0.125 at Reg 50, 0.5 at Reg 100. Combined with
+ * `transferableShare` this yields a smooth ~4x falloff in effective peelable
+ * share between newcomer and entrenched, so entrenched parties have a
+ * structural edge reversible by cumulative campaign pressure.
  */
 export const PERSUASION_RESISTANCE_NO_REG = 0.0;
 export const PERSUASION_RESISTANCE_FULL_REG = 0.5;
@@ -506,19 +373,7 @@ export function effectivePeelableFraction(reg: number | undefined): number {
   return transferableShare(reg) * (1 - persuasionResistance(reg));
 }
 
-// ─── Money-driver spend stock ────────────────────────────────────────────────
-//
-// Ticket #1261: the money driver used to read raw spend-this-turn, which
-// forgets everything every turn. A steady spender who idles one turn read
-// exactly like a side that never spent at all, and any-spend vs ~nothing
-// saturated the log-ratio bar over pocket change. The driver now reads a
-// decaying stock of recent spend instead: each turn's spend is added in and
-// the carried balance fades. Hoarded treasuries still score zero (the stock
-// only grows through actual spend), steady spending beats one-shot splurges
-// over time, and idle turns fade gradually instead of cliffing to zero —
-// the same fade-not-cliff treatment Support already gets via
-// SUPPORT_DECAY_PER_TURN. Cycle reset is free: campaign rows are deleted on
-// resolution, so no stock carries into the next election.
+// Money-driver spend stock: reads a decaying stock of recent spend, not raw spend-this-turn. Steady spending beats one-shot splurges over time; idle turns fade (like Support's SUPPORT_DECAY_PER_TURN) rather than cliffing; hoarded treasuries score zero since the stock grows only through actual spend. Campaign rows are deleted on resolution, so no stock carries across cycles.
 
 /**
  * Fraction of a campaign's spend stock carried from one turn to the next.

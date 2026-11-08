@@ -123,9 +123,8 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
 
     if (!loadedOrder) return errorResponse(404, "Order not found");
     // Repair a stranded legacy claim and recover the stamped prior attempt
-    // (money first, then audit) before validating: a stuck `filled` order
-    // is fillable again here, and a prior attempt crashed mid-money
-    // converges its balances before this fill reads them.
+    // (money first, then audit) before validating: a stuck `filled` order is
+    // fillable again, and a crashed prior attempt converges balances first.
     const prepared = await prepareShareFillClaim(db, loadedOrder);
     if (prepared.order.lastShareFillKey) {
       await recoverShareFillMoneyByFillKey(db, prepared.order.lastShareFillKey);
@@ -408,11 +407,9 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       }
     }
 
-    // Pin every audit-plan figure before the claim (issue #1672). Seller
-    // proceeds, display names, and the corp-filler FX estimate are pure reads,
-    // so hoisting them ahead of the claim changes no money behavior; the
-    // resume plan then carries the exact first-attempt figures and recovery
-    // never reprices from post-fill state.
+    // Pin audit-plan figures before the claim so the resume plan carries
+    // the exact first-attempt values and recovery never reprices from
+    // post-fill state. These reads are pure, so hoisting changes no money behavior.
     const buyingCurrency = (
       buyingCorpForSellFill
         ? (resolveCorpLiquidCurrencyCode(buyingCorpForSellFill) ?? "USD")
@@ -626,11 +623,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
         // Pinned pre-claim by the audit-plan hoist above (same FX estimate the
         // legacy path computed here).
         const costInBuyerCapital = corpFillCostInBuyerCapital;
-        // All money moves through the keyed share-fill money flow (issue
-        // #1672): corp debit, seller/inventory debit, buyer credit, and
-        // seller proceeds run as compare-and-set steps under the attempt
-        // key, so a crash between any two converges on retry instead of
-        // leaving the filler debited with the seller unpaid.
+        // All money moves through the keyed share-fill money flow as
+        // compare-and-set steps under the attempt key, so a crash between
+        // any two legs converges on retry instead of leaving the filler
+        // debited with the seller unpaid.
         const moneyPlan: ShareFillMoneyPlan = {
           version: 1,
           fillKey,

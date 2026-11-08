@@ -175,17 +175,15 @@ export const TENURE_POINT_CAP = 20;
 /**
  * Skill points a general earns for time served in the corps.
  *
- * Battles were the ONLY source of points, which meant an officer in a nation at
- * peace never developed at all — the complaint that prompted this was that
- * progression "seems slow and people won't be levelled correctly for a while".
- * Command experience accumulates in garrison too; this is that.
+ * Command experience accrues in garrison, not only in battle, so officers in
+ * peaceful nations still progress.
  *
- * Returns null when nothing is owed, so callers can skip the write entirely.
+ * Returns null when nothing is owed so callers can skip the write.
  *
- * Pays EVERY whole interval elapsed and advances the marker by exactly those,
- * never to `now`. A stalled cron or a paused world must not swallow the points it
- * owed, and the catch-up tick must not pay them twice. A general with no marker
- * starts their clock now rather than being back-paid for the whole war.
+ * Pays every whole elapsed interval and advances the marker by exactly those,
+ * never to `now`: a stalled cron or paused world must not swallow owed points
+ * and catch-up must not pay twice. A general with no marker starts their clock
+ * now, with no back-pay.
  */
 export function accrueTenurePoints<T extends General>(
   g: T,

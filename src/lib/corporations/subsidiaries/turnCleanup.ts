@@ -7,13 +7,12 @@ import {
 } from "@/lib/corporations/reservedCorporateHoldings";
 
 /**
- * Derived-model equivalent of "auto-dissolution": for any corp formalized as a
- * subsidiary, if no corporation controls >50% voting power anymore, clear the
- * formalization marker + dividend-floor fields (prevents zombie subsidiaries).
- * Also clears a stale dividend floor whose setter no longer controls >50%.
+ * For any corp formalized as a subsidiary, if no corporation controls >50% voting
+ * power anymore, clear the formalization marker and dividend-floor fields (prevents
+ * zombie subsidiaries). Also clears a stale dividend floor whose setter no longer
+ * controls >50%.
  *
- * Cheap and gated — callers only invoke when the feature flag is on.
- * Returns the number of corporations updated.
+ * Callers gate this on the feature flag. Returns the number of corporations updated.
  */
 export async function cleanupZombieSubsidiaries(
   db: Db,

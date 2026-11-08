@@ -19,23 +19,14 @@
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * The antitrust law whose 0-4 enacted level sets the trip threshold, per
- * country. Countries absent from this map have no antitrust statute and so no
- * merger review — same fail-open contract as `RESERVE_LAW_BY_COUNTRY`.
+ * The antitrust law whose 0-4 enacted level sets the merger trip threshold,
+ * per country. Countries absent here have no antitrust statute and no merger
+ * review (same fail-open contract as `RESERVE_LAW_BY_COUNTRY`).
  *
- * This is each country's EXISTING competition primary, not a new statute. That
- * law already is the antitrust dial: the US "Antitrust and Fair Commerce Act"
- * promises "merger review before the fact" at level 2 and breakups at level 3,
- * and the UK "Restrictive Practices and Competition Act" runs from the
- * Monopolies Commission to divestment powers. Authoring a parallel antitrust
- * secondary would have created two competition dials that could disagree, and
- * would have needed the catalog validator's secondary-pool ceiling (40, and
- * every catalog is at exactly 40) and its 2-3 metric-touch rule loosened to fit.
- *
- * RU and DD map to their own competition primary — the tolerated private and
- * cooperative sector. Merger review is inert there anyway, because both are
- * structurally command economies, but the mapping is uniform rather than a
- * special case.
+ * This is each country's EXISTING competition primary, not a new statute:
+ * that law already is the antitrust dial. RU and DD map to their own
+ * competition primary; merger review is inert there, but the mapping stays
+ * uniform rather than a special case.
  */
 export const ANTITRUST_LAW_BY_COUNTRY: Partial<Record<CountryId, string>> = {
   US: "us.economy.competition.primary",

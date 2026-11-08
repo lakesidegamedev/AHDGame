@@ -126,10 +126,9 @@ export async function openPrivatizationVote(
   // CEO holds 100% — no minority holders to buy out, skip the vote entirely.
   if (nonCeoShares === 0) {
     const now = new Date();
-    // #908: a private corp is single-class. This path never rebuilds the
-    // shareholders array, so strip the CEO's per-holder `superShares` flag and
-    // drop the corp-level dual-class fields, or hasSuperShares() would keep
-    // reporting 10× voting on the now-private corp.
+    // A private corp is single-class. This path does not rebuild shareholders,
+    // so strip superShares and corp-level dual-class fields, or hasSuperShares()
+    // keeps reporting 10x voting.
     const cleanedShareholders = (corporation.shareholders ?? []).map(
       ({ superShares: _superShares, ...rest }) => rest
     );
@@ -187,12 +186,7 @@ export async function openPrivatizationVote(
   // Round to two decimal places to avoid float drift through later arithmetic.
   const marketLockedPrice =
     Math.round(corporation.sharePrice * (1 + PRIVATIZATION_BUYOUT_PREMIUM) * 100) / 100;
-  // Bank-NAV floor (issue #1750): a take-private buys out the minority by force,
-  // exactly like the hostile-takeover squeeze-out, so it shares the same floor.
-  // Without it a CEO could take a bank-heavy corp private at the haircut market
-  // price and capture the bank's realizable net assets for less than they are
-  // worth. Inert for corps without an active charter; a missing floor fails open
-  // to the market locked price, never to zero.
+  // Bank-NAV floor: a take-private forces out the minority like a squeeze-out, so it shares the same floor. Otherwise a CEO could buy a bank-heavy corp at market price and capture the bank's net assets cheaply. Inert without an active charter; missing floor fails open to market locked price, never zero.
   let lockedBuyoutPrice = marketLockedPrice;
   let bankNavFloorApplied = false;
   const activeCharter =

@@ -4,7 +4,7 @@ import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import { computeRealizedPnl, computeRealizedPnlByCorporation } from "./tradeLedger";
 
 /**
- * Suggestion #38: a player's own trade history with real P&L. The FIFO walk is
+ * A player's own trade history with real P&L. The FIFO walk is
  * the part that can silently invent or destroy money, so it is pinned against
  * hand-computed numbers.
  */

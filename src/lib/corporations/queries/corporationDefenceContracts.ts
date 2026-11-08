@@ -174,7 +174,7 @@ export async function loadCorporationDefenceContracts(
       productionCostPaid: c.productionCostPaid ?? 0,
       // The SAME selector the delivery sweep bills through, so the order book states the
       // margin the CEO is actually paid. A pre-#1134 contract shows its old economics because
-      // that is what it will settle at (ticket #1134).
+      // that is what it will settle at.
       unitProductionCost: sector
         ? (contractLotProductionCost(c, sector.strategyId, priceRatios) ?? 0) *
           GRADE_PRICE_SCALE[normalizeGrade(c.gradeCeiling)]
@@ -182,7 +182,7 @@ export async function loadCorporationDefenceContracts(
       encumberedAmount: c.encumberedAmount ?? 0,
       // Carry reasons explain why a LIVE order did not move this turn. Older completed rows
       // can retain a reason stamped before their final delivery, so never present that stale
-      // diagnostic as a current funding failure (ticket #1171).
+      // diagnostic as a current funding failure.
       ...(c.status === "active" && c.carryReason
         ? {
             carryReason: c.carryReason,

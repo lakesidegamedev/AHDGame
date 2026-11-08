@@ -706,11 +706,9 @@ export function nodeStatus(
 }
 
 /**
- * The trait that must be learned before this one, or null when nothing blocks it.
- *
- * A trait path is a strict chain, so exactly one node can be the blocker. Named so
- * the UI can say WHICH trait is required rather than a bare "Earlier trait required",
- * matching what the doctrine tree already tells the Secretary of Defense.
+ * The trait that must be learned before this one, or null when nothing blocks
+ * it. A trait path is a strict chain, so exactly one node can block. Returns
+ * the name so the UI can say WHICH trait is required.
  */
 export function missingTraitPrerequisite(
   learned: string[],

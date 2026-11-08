@@ -99,7 +99,7 @@ export interface SectorPlantsSection {
   fillRate: number | null;
   /** Named reasons behind `idleUnits`. Sums to `idleUnits`. */
   idleCauses: PlantIdleCause[];
-  /** State-scoped output labels: these sell only in this state (ticket 1700). */
+  /** State-scoped output labels: these sell only in this state. */
   localMarketOutputs: string[];
   mothballed: boolean;
   /**
@@ -154,7 +154,6 @@ export interface SectorPlantsSection {
    * capacity is what buyers' room fills first (output can climb by the probe
    * margin each turn while sales keep up), so the room to BUILD reads 0 rather
    * than quoting the market gap beside a plant that is itself held back
-   * (ticket 1370).
    */
   roomHeldByOwnIdle?: boolean;
   /**
@@ -306,11 +305,10 @@ export interface SectorPlantsSection {
     profitPerUnitAnchor: number | null;
   };
   /**
-   * The three-number headline (ticket #1027 family): what the sector page leads
-   * with so a player never again reads "43% margin" and "no money coming in" on
-   * the same screen. Everything here is computed from the same telemetry the
-   * pnl block reads, so the headline can never disagree with the money chain
-   * below it.
+   * The three-number headline: what the sector page leads with so a player
+   * never reads "43% margin" and "no money coming in" on the same screen.
+   * Everything here is computed from the same telemetry the pnl block reads,
+   * so the headline can never disagree with the money chain below it.
    */
   truth: {
     /**

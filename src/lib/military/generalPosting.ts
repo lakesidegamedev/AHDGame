@@ -12,11 +12,8 @@ export interface GeneralForce {
 }
 
 /**
- * A general's real assignment, as opposed to the canned `SPEC_PROFILE` illustration
- * the profile used to render. Every field here is read from live state or is null;
- * nothing is invented. Terrain, weather and air support are deliberately absent —
- * the game models none of them, and showing plausible values for them is what made
- * a two-unit country appear to field twenty formations.
+ * A general's real assignment read from live state or null. Terrain, weather
+ * and air support are deliberately absent: the game models none of them.
  */
 export interface GeneralPosting {
   /** Order of battle, grouped by unit type, descending by count then name. */

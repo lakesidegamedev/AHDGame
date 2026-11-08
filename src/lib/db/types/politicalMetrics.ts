@@ -31,12 +31,7 @@ export interface PoliticalMetricsDoc {
    */
   residuals?: Record<PoliticalMetricId, number>;
   /**
-   * Stamp left by the 1953 playable-region texture backfill (issue #704),
-   * naming the migration id that applied it. The backfill adds a texture
-   * delta to existing residuals, which is only idempotent when a re-run can
-   * tell an already-textured doc apart from one carrying event-driven
-   * residual movement — this stamp is that signal. Written only by the
-   * migration; the seeder and the turn phase never read it.
+   * Stamp naming the migration id that applied the 1953 playable-region texture backfill. Makes the backfill idempotent: a re-run can tell an already-textured doc apart from one with event-driven residual movement. Written only by the migration; never read by the seeder or turn phase.
    */
   playableTexture1953MigrationId?: string;
   /**
@@ -49,9 +44,8 @@ export interface PoliticalMetricsDoc {
    */
   cabinetResiduals?: Record<PoliticalMetricId, number>;
   /**
-   * The same offset split by the channel that produced it (orders, tier
-   * settings, military, estates, energy, infrastructure), ticket #1129. The cap
-   * is applied per channel here, and `cabinetResiduals` above is the sum, so a
+   * The same offset split by the channel that produced it, so the cap is
+   * applied per channel while `cabinetResiduals` above remains the sum: a
    * saturated order book can no longer make a newly built estate worth zero.
    *
    * Absent on docs written before the split: the turn phase seeds it from the
@@ -89,16 +83,14 @@ export interface PoliticalMetricsHistoryDoc {
 /**
  * Per-region trend history: one doc per REGION, a snapshot appended on the same
  * HISTORY_CADENCE_TURNS as the national series and capped at
- * REGION_HISTORY_MAX_ENTRIES. Issue #1322.
+ * REGION_HISTORY_MAX_ENTRIES.
  *
  * One doc per region rather than per country: a country doc holding all 51 US
- * regions at the cap reaches roughly 9.6MB, uncomfortably close to the 16MB
- * BSON ceiling. Per-region docs have no such cliff.
+ * regions at the cap reaches roughly 9.6MB, near the 16MB BSON ceiling.
  *
- * There is NO backfill and there cannot be one — the series has never been
- * recorded, and synthesising it from current values would invent history. The
- * region trend tiles therefore read "series begins this campaign" until a
- * region has two entries, exactly as the national tiles do today.
+ * There is NO backfill and there cannot be one; synthesising history from
+ * current values would invent it. Region trend tiles read "series begins this
+ * campaign" until a region has two entries.
  */
 export interface PoliticalMetricsRegionHistoryDoc {
   /** Region id as seeded in `states` (e.g. US "GA", UK "LON", RU "CEN"). */

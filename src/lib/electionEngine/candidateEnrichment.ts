@@ -30,12 +30,10 @@ import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
  * positions are attached per-candidate.
  *
  * `countryId` scopes the party lookup. Party `sequentialId` is unique only
- * within a country — multiple countries share `sequentialId = 1` for their
- * first-seeded party, so a global lookup keyed solely by sequentialId returns
+ * within a country, so a global lookup keyed solely by sequentialId returns
  * whichever country's party was inserted last. Always pass `countryId` for
- * country-specific contexts (US presidential, UK primary, etc). If `countryId`
- * is omitted, the caller has opted into the legacy global-collision behavior
- * (e.g. in-flight presidential elections pre-dating the 2026-04-22 fix).
+ * country-specific contexts. If omitted, the caller opts into the legacy
+ * global-collision behavior.
  */
 /** The party fields enrichment reads; the shape `loadEnrichmentParties` returns. */
 export interface EnrichmentParty {
@@ -201,7 +199,7 @@ export async function fetchEnrichedCandidates(
     /** Sweep-resolved runtime election config; keeps enrichment read-only. */
     countryConfig?: EnrichmentCountryConfig;
     /**
-     * Caller's Db handle (#2695). Sharing one handle across a phase lets the
+     * Caller's Db handle. Sharing one handle across a phase lets the
      * per-Db country-state cache hit; `getDb()` returns a new handle per call.
      */
     db?: Db;

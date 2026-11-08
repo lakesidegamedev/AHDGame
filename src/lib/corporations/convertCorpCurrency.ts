@@ -223,20 +223,7 @@ export async function convertCorpCurrency(
     listingsCancelled++;
   }
 
-  // 3 + 4. Convert corp-economic money fields AND sector revenue atomically.
-  //    `corp.liquidCurrencyCode` is the "source of truth" for how downstream
-  //    code reads every other money field on the corp and its sectors. Partial
-  //    failure (corp flipped but sectors not, or vice versa) produces drift
-  //    that turn processing can't detect — so we wrap both writes in a single
-  //    MongoDB transaction. On replica-set deployments (Atlas / prod) this is
-  //    a hard atomicity guarantee; on standalone dev mongod (no replica set)
-  //    we fall back to sequential writes and tolerate the existing
-  //    partial-failure risk (consistent with other cross-collection writes
-  //    in the codebase — see CLAUDE.md §Cross-collection consistency).
-  //
-  //    `ceoSalary` is optional on the Corporation type — preserve that: only
-  //    `$set` it when the corp already had a value, otherwise leave the
-  //    field absent (writing 0 is behaviorally equivalent but changes doc shape).
+  // Convert corp money fields and sector revenue atomically. `liquidCurrencyCode` is the source of truth for how downstream code reads money fields, so partial failure drifts undetectably: wrap both writes in one transaction. On standalone mongod, fall back to sequential writes. Preserve `ceoSalary` being optional: only `$set` when already present.
   const round2 = (v: number) => Math.round(v * 100) / 100;
   const round4 = (v: number) => Math.round(v * 10000) / 10000;
   const corpSet: Record<string, unknown> = {
@@ -273,26 +260,20 @@ export async function convertCorpCurrency(
     revertCorpSet.ceoSalary = corp.ceoSalary;
   }
 
-  // ─── WHAT AN FX FLIP MAY AND MAY NOT TOUCH ──────────────────────────────
+  // Fields an FX flip may and may not touch.
   // `revenue` and `currentGrowthCost` are LOCAL-currency fields, so a change of
   // the owner's currency re-denominates them. The capacity fields are not:
-  //   - `capitalStock` is a count of output units/day — currency-free.
+  //   - `capitalStock` is a count of output units/day: currency-free.
   //   - `buildQueue[].costPaidAnchor` and `constructionInProgressAnchor` are
-  //     ₳-ANCHORED by definition (see SectorBuildOrder / CorporateSector), i.e.
-  //     already currency-independent. Rescaling either by the FX cross would
-  //     silently restate cash already spent and inflate every subsequent CIP
-  //     figure and 0.75 cancellation refund by that cross rate. They are
-  //     deliberately absent from this write and must stay absent.
+  //     already currency-independent (see SectorBuildOrder / CorporateSector).
+  //     Rescaling either would silently restate cash already spent and inflate
+  //     every later CIP figure and 0.75 cancellation refund by the cross rate.
+  //     They must stay absent from this write.
   //
-  // Under plants `revenue` is DERIVED (`capitalStock × mixPrice`, restated by
-  // the turn processor each turn in the sector's HOST currency, not the
-  // owner's), so rescaling it here is both pointless and a write to a field the
-  // engine owns. Gated off at that tier; unchanged below it.
-  // PLANTS-GATED: `revenue` is rescaled only BELOW the plants tier. At plants
-  // and above the turn processor restates it every turn from `capitalStock x
-  // mixPrice` in the sector's HOST currency, which the owner's currency change
-  // does not touch, so rescaling here would be both pointless and a write to a
-  // field the engine owns. `currentGrowthCost` is still rescaled in every mode.
+  // PLANTS-GATED: above the plants tier the turn processor restates `revenue`
+  // every turn from `capitalStock x mixPrice` in the sector's HOST currency,
+  // so rescaling here would write a field the engine owns. It is rescaled only
+  // below the plants tier. `currentGrowthCost` is rescaled in every mode.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
   const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = sectors.map((s, index) => ({
     updateOne: {

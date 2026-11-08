@@ -14,20 +14,16 @@ export const ARCHETYPE_COST_GDP_DIVISOR = 387_000;
 
 /**
  * How much of a country's GDP growth flows through into military prices.
- * 0 = prices frozen at the baseline; 1 = pricing off live GDP, the pre-anchor behaviour.
+ * 0 = prices frozen at baseline; 1 = pricing off live GDP.
  *
- * At 1 the model has a perverse property. Price is `gdp × k` and the defence
- * appropriation accrues `line / TURNS_PER_YEAR`, so units-per-year reduces to
- * `defenceBurden / k` — economic size cancels out entirely, and doubling GDP doubles
- * unit prices, so growing the economy buys nothing (and shrinks the army outright if the
- * defence line is a fixed nominal figure). Below 1 the line, which tracks GDP fully,
- * outruns prices and growth converts into force.
+ * At 1, price is `gdp × k` and units-per-year reduces to `defenceBurden / k`:
+ * economic size cancels out, so growing the economy buys nothing. Below 1 the
+ * line outruns prices and growth converts into force.
  *
- * NOT a flat anchor price: `gdp` is stored in LOCAL CURRENCY and cross-country comparison
- * is invalid by deliberate, guard-tested design (`seeds/reference/gdpDenomination.ts`), so
- * a flat figure has no meaning in old francs, and six Eastern Bloc countries have no
- * exchange-rate document at all. Anchoring against each country's OWN GDP keeps the model
- * denomination-agnostic, which is the property the whole pricing design rests on.
+ * Not a flat anchor price: `gdp` is in LOCAL CURRENCY and cross-country comparison
+ * is invalid by design (`seeds/reference/gdpDenomination.ts`), with several
+ * countries having no exchange-rate document. Anchoring on each country's own GDP
+ * keeps the model denomination-agnostic.
  */
 export const MILITARY_PRICE_INDEXATION = 0.5;
 
@@ -54,25 +50,20 @@ export function militaryPriceAnchor(
 }
 
 /**
- * What the defence appropriation pays for one new unit, in the SAME units as the country's
- * `treasuryBalance` — because both derive from the same budget row's `gdp`.
+ * Price of one new unit in the same units as `treasuryBalance` (both derive
+ * from the budget row's `gdp`).
  *
- * Priced as a share of national GDP rather than converted through an exchange
- * rate. The FX route fails three ways: the six Eastern Bloc countries have no
- * rate document at all (budget-only economies, `currencies.ts:441`), several
- * countries have USD-anchored GDP with local currency codes
- * (`GDP_DENOMINATION_1953`), and a converted price is still GDP-blind. A share
- * of GDP is denomination-agnostic by construction.
+ * Priced as a share of national GDP, not via FX: some countries have no rate
+ * doc, some have USD-anchored GDP with local codes, and a converted price is
+ * still GDP-blind. A GDP share is denomination-agnostic.
  *
- * MILITARY_COUNTRY_SCALE is a COST multiplier, not a size multiplier — it
- * already scales upkeep, and applying it here keeps the two symmetric. Force
- * size comes from the authored order of battle, never from it.
+ * MILITARY_COUNTRY_SCALE is a cost multiplier, not size: it scales upkeep,
+ * kept symmetric here. Force size comes from the authored OOB.
  *
- * Returns null when GDP is missing or non-positive. There is deliberately no
- * "assume 1" fallback: that is exactly how a country ends up recruiting free.
+ * Returns null when GDP is missing or non-positive. No "assume 1" fallback,
+ * which is how a country ends up recruiting free.
  *
- * Pure by design: RecruitPanel is a client component and must compute the same
- * price the server charges without pulling `mongodb` into the bundle.
+ * Pure: RecruitPanel must compute the same price without pulling `mongodb`.
  */
 export function unitPurchasePrice(
   archetype: { cost: number },

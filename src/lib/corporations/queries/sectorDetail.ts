@@ -730,7 +730,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // formatAmount so wallet preference still governs final rendering.
         liquidCurrencyCode: corporation.liquidCurrencyCode ?? null,
         // State-owned (NatCorp) sectors can't be attacked, the UI hides Market
-        // Actions accordingly (backend already rejects the attack). Bug #0775.
+        // Actions accordingly (backend already rejects the attack)..
         isStateOwned: isStateOwned(corporation),
         // Drives the Prospect modal's success-odds / yield preview (corp-side
         // prospecting math is a pure function of rdScore).
@@ -796,9 +796,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           : null,
         revenue: Math.round(sectorAmountInCorpCurrency(sector.revenue)),
         // Realized revenue after every realization leg (capacity, clearing,
-        // throughput, capital, strike, embargo). Surfaced so the detail page can
-        // show the gap between nameplate and realized income, e.g. an embargo
-        // haircut, instead of being embargo-blind (ticket 984).
+        // throughput, capital, strike, embargo). Surfaced so the detail page
+        // shows the gap between nameplate and realized income.
         realizedRevenue: Math.round(sectorAmountInCorpCurrency(sectorEconomicRevenue(sector))),
         embargoSuspended: sector.embargoSuspended ?? false,
         // Maintenance shown net of labour; the wage slice is broken out as `laborCost`.

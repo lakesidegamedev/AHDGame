@@ -93,13 +93,10 @@ export async function applyAppropriationSettlement(
 /**
  * Commit the turn settlement and any upkeep overdraft against the same budget
  * document. The overdraft is a cash-only `$inc` on `treasuryBalance`:
- * `debt.principal` belongs to the sovereign bond ledger (see
- * bonds/sovereignPrincipal.ts) and an upkeep shortfall is not a bond issuance,
- * so the cash debit never rewrites the stock (#1975). The treasury and
- * appropriation guards form a compare-and-swap: callers must retry their
- * calculation when another writer changed either balance between the read and
- * this write. The `accruedThroughTurn` guard makes a replayed turn a no-op at
- * the database, so crash/retry replay converges.
+ * `debt.principal` belongs to the sovereign bond ledger, and an upkeep
+ * shortfall is not a bond issuance. The treasury and appropriation guards form
+ * a compare-and-swap: callers must retry when another writer changed either
+ * balance. The `accruedThroughTurn` guard makes a replayed turn a no-op.
  */
 export async function applyAppropriationSettlementWithOverdraft(
   db: Db,
@@ -295,18 +292,15 @@ export async function settleEncumbrance(
 /**
  * Draw a country's commitment down by an amount whose CASH leg has already moved.
  *
- * Split out from `settleEncumbrance` because the cash leg now goes through the shared money
- * primitive (`applyMoneyMove`), which owns the idempotency key and the guarded debit but can
- * only `$inc` one field per leg. The commitment is a MEMO account, not money: nothing enters or
- * leaves the world when it moves, so expressing it as a money leg would mean inventing a mint
- * or burn that lies about the money supply, and the primitive rightly refuses legs that do not
- * net to zero.
+ * Split from `settleEncumbrance` because the cash leg uses `applyMoneyMove`,
+ * which `$inc`s one field per leg. The commitment is a MEMO account, not money:
+ * expressing it as a money leg would invent a mint or burn that lies about the
+ * money supply, and the primitive rightly refuses non-zero-sum legs.
  *
- * Failing here is deliberately the SAFE direction. The cash is gone and the commitment stays
- * high, so the country temporarily believes it has less to spend than it does: it under-spends.
- * The reverse ordering - releasing the commitment and failing to move the cash - would let the
- * same money be committed twice, which is the exploit. Clamped at the amount actually held so a
- * double drawdown cannot drive the commitment negative and mint uncommitted budget.
+ * Failing here is the SAFE direction: cash gone, commitment high, the country
+ * under-spends. The reverse order would let the same money be committed twice.
+ * Clamped so a double drawdown cannot drive the commitment negative and mint
+ * uncommitted budget.
  */
 export async function drawDownEncumbrance(
   db: Db,

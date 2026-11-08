@@ -5,21 +5,20 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import type { FundShareholderPayoutRow } from "@/lib/bonds/corporateBondDefault";
 
 /**
- * Pay index-fund shareholders their ₳ slice of a wound-down corporation's payout
- * pool, and drop each fund's now-stale holding of that (deleted) corp.
+ * Pay index-fund shareholders their ₳ slice of a wound-down corporation's
+ * payout pool, and drop each fund's now-stale holding of that (deleted) corp.
  *
- * Why (#3451): `allocateShareholderPool` counts fund shares in the denominator
- * but, before this, emitted no fund row — so a fund's slice was drained from the
- * payer yet distributed to no one (a conservation leak). This closes it for the
- * two flows that pay out a full shareholder pool and then delete the corp:
- * voluntary dissolution and nationalization's whole-corp payShareholders.
+ * `allocateShareholderPool` counts fund shares in the denominator, so without
+ * this a fund's slice would be drained from the payer yet distributed to no
+ * one. Applies to the two flows that pay out a full shareholder pool and then
+ * delete the corp: voluntary dissolution and nationalization's whole-corp
+ * payShareholders.
  *
- * Pool payouts are already ₳ and fund cash (`cashAnchor`) is ₳, so there is no
- * FX conversion. The fund credit is the real, conserving move; when the caller
- * passes `ledger`, each credit is additionally booked as a fund-subject tx row
- * (#992 tranche 3) using the same flow-appropriate type the other holder
- * buckets emit, so the shadow ledger sees the fund side as a two-sided
- * transfer instead of an uninstrumented inflow.
+ * Pool payouts are already ₳ and fund cash (`cashAnchor`) is ₳, so no FX
+ * conversion is needed. The fund credit is the real, conserving move; when the
+ * caller passes `ledger`, each credit is additionally booked as a fund-subject
+ * tx row using the same flow-appropriate type the other holder buckets emit,
+ * so the shadow ledger sees the fund side as a two-sided transfer.
  */
 export interface FundPayoutLedgerContext {
   turn: number;

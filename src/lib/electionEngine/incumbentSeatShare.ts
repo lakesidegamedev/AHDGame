@@ -1,26 +1,14 @@
-/**
+/*
  * Prior-cycle seat-share lookup for the swing-flow incumbency driver.
  *
- * Implements A1 from `2026-05-22-swing-flow-driver-activation.md` (option δ
- * — share-weighted incumbency). The codebase models proportional-from-
- * vote-share allocation for multi-seat races (US House, UK Regional
- * Council, JP Shugiin/Sangiin, DE Bundestag, etc), so "incumbent" is not
- * a single ID but a per-party seat-share map.
- *
- * Races with their own OFFICEHOLDER incumbency path do NOT use this fallback:
- * `totalVotes` holds raw per-candidate vote counts, so for a single winner the
- * map is just the prior vote split (e.g. 0.52 / 0.45), which the incumbency
- * driver would turn into a meaningless margin-scaled value. Single-winner
- * executives use the approval curve (`incumbentPartyId`) and the US Senate uses
- * the flat shield (`legislativeIncumbentPartyId`); both bypass this map, and
- * both correctly go quiet on a vacant seat.
- *
- * That exclusion is enforced by {@link usesSeatShareIncumbency} inside
- * `getIncumbentSeatShareByParty` itself. It used to live only at the call
- * sites, and only covered the US Senate — so a single-winner EXECUTIVE race
- * whose officeholder path went quiet (a vacant seat) silently fell through to
- * this map. See that helper's doc for the live regression it caused, and for
- * the one case still left on the seat-share path by design.
+ * Multi-seat proportional races model incumbency as a per-party seat-share
+ * map, since "incumbent" is not a single ID. Races with their own officeholder
+ * incumbency path must NOT use this map: single-winner executives use the
+ * approval curve (`incumbentPartyId`) and the US Senate uses the flat shield
+ * (`legislativeIncumbentPartyId`), both of which go quiet on a vacant seat.
+ * Using the vote split there would turn a vacant race into a meaningless
+ * margin-scaled value. The exclusion is enforced inside
+ * `getIncumbentSeatShareByParty` via {@link usesSeatShareIncumbency}.
  */
 
 import type { Db } from "mongodb";
@@ -162,7 +150,7 @@ export async function getIncumbentSeatShareByParty(
 }
 
 /**
- * Incumbent seat share for every election in one pass (#2695).
+ * Incumbent seat share for every election in one pass.
  *
  * Same selection as `getIncumbentSeatShareByParty`: the most recent resolved
  * election in an earlier cycle for the same country, state and canonical seat

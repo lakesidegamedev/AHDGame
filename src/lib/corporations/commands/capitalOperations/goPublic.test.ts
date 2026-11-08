@@ -222,7 +222,7 @@ describe("goPublic command", () => {
     expect(setOps.lastIpoTurn).toBe(1_000);
     expect(incOps.totalShares).toBe(4_285_714);
     expect(incOps.publicFloat).toBe(4_285_714);
-    // Bug #0624: issuance must NOT pre-credit cash or record proceeds. The corp
+    // Issuance must NOT pre-credit cash or record proceeds. The corp
     // realizes both as the float is actually bought (treasury-backed market maker).
     expect(incOps.liquidCapital).toBeUndefined();
     expect(incOps.shareIssuanceProceeds).toBeUndefined();

@@ -2,17 +2,11 @@ import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * UK manifesto model (Cluster A — electoral).
+ * UK manifesto model (electoral).
  *
  * A manifesto is a party's set of pledges for a single election. The leader
- * authors it and it LOCKS at election call (dissolution): immutable through the
- * campaign, judged for delivery at the following election.
- *
- * Design of record: ops-knowledge `uk-rework-design-2026-08-25`; epic #856.
- *
- * Nothing here changes live election behaviour on its own — scoring lives in
- * `src/lib/countries/uk/manifesto/manifestoPopularity.ts` and is only consumed once the
- * vote-model multiplier is switched on (behind review + worldsim calibration).
+ * authors it and it LOCKS at election call (dissolution): immutable through
+ * the campaign, judged for delivery at the following election.
  */
 
 /** How a pledge is judged kept vs broken at the next election. */

@@ -258,14 +258,13 @@ export async function creditNppPickup(
  * Dispose of sectors leaving their owner (abandon, dissolution, restructure
  * liquidation).
  *
- * Before this, every leaving plant returned all of its capacity to the unowned
- * pool. Headroom is bookkeeping, not supply: the plant simply stopped and the
- * market lost that output until someone ordered a build and waited out its
- * window, so one large exit spiked prices across every market it served. Now
- * an NPP operator takes over {@link NPP_PICKUP_SHARE} of each plant's BUILT
- * capacity, system-funded (no cash moves, the leaving owner's refund and payout
- * are unchanged). The remaining share and every undelivered build order return
- * to the pool exactly as before.
+ * Headroom is bookkeeping, not supply: returning a leaving plant's capacity to
+ * the unowned pool means it simply stopped, and the market loses that output
+ * until someone builds and waits out the window, so one large exit can spike
+ * prices across every market it served. An NPP operator instead takes over
+ * {@link NPP_PICKUP_SHARE} of each plant's BUILT capacity, system-funded (no
+ * cash moves, the leaving owner's refund and payout are unchanged). The
+ * remaining share and every undelivered build order return to the pool.
  *
  * Resumable: the receiver is recorded on the leaving row before any capacity
  * moves, credits are guarded by a per-pickup receipt, and the pool restore is

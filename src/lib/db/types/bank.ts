@@ -224,10 +224,9 @@ export interface BankCharter {
   cbMarginDebt?: number;
   /**
    * The part of `cbMarginDebt` that arrived as a central-bank liquidity
-   * injection rather than a draw the bank chose. It is still owed and
-   * repayable, but carries no interest: an injection a bank cannot refuse must
-   * not drain its capital (ticket #1694, banks failed and were revoked under
-   * injected debt they never asked for). Always <= cbMarginDebt.
+   * injection rather than a draw the bank chose. Still owed and repayable, but
+   * carries no interest: an injection a bank cannot refuse must not drain its
+   * capital. Always <= cbMarginDebt.
    */
   cbLiquidityAdvanceDebt?: number;
   /**

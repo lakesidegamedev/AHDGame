@@ -174,7 +174,7 @@ export async function unlockTechNode(
   }
 
   // The cash debit above committed: record the matching finance-history debit
-  // in the same turn and currency (ticket #1998). The strict emit retries
+  // in the same turn and currency. The strict emit retries
   // transient insert failures and adopts an applied-but-unacknowledged row;
   // a persistent failure rolls the unlock back so a successful debit can
   // never be left with no visible entry.

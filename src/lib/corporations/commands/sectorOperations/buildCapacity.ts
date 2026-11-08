@@ -171,26 +171,12 @@ const buildCapacitySchema = z.discriminatedUnion("action", [
  */
 const MAX_OUTSTANDING_BUILD_ORDERS = 20;
 
-/**
+/*
  * Compare-and-swap guard for the inline `buildQueue`.
- *
  * This command writes the queue with a whole-array `$set` from a snapshot.
- * Without a precondition on the write, two lost updates are live: two
- * concurrent cancels of the same index both refund (money printed), and two
- * concurrent builds drop one order while charging for both. Matching the exact
- * array we read makes both of those writes fail instead of clobbering, and
- * `modifiedCount` tells us which happened.
- *
- * C4: a command racing the turn is guarded by comparing the exact queue it read.
- * The turn pulls delivered orders and is the only writer of stored CIP.
- *
- * The CAS is still exactly right for the command-vs-command races, and it is
- * also what makes a command that overlaps a landing turn fail SAFELY: the pull
- * changes the array, this filter matches nothing, and the caller gets a 409
- * with the money handed back rather than a silent loss.
- *
- * `mothball` / `reactivate` need no CAS: they touch a single scalar
- * (`mothballed`) that the turn only reads, never writes.
+ * Matching the exact array we read prevents lost updates (double refunds,
+ * dropped orders) and makes a command racing a landing turn fail safely
+ * with a 409 instead of clobbering.
  */
 function capacityMutationFilter(sector: CorporateSector): Record<string, unknown> {
   return {
@@ -445,11 +431,9 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
           );
       }
 
-      // Return the cancelled units to the unowned pool (#1145). The order-time
-      // drawdown consumed the whole order; only the part that never became
-      // capacity comes back, because the delivered remainder is still owned and
-      // still counts against market share. Same best-effort discipline as the
-      // drawdown itself.
+      // Return cancelled units to the unowned pool. Only the part that never
+      // became capacity comes back, since the delivered remainder is still
+      // owned and counts toward market share. Best-effort like the drawdown.
       const poolCredit = unownedPoolCredit(poolBucket, cancelledUnits, now, eraUnitScale);
       if (poolCredit) {
         await db
@@ -561,19 +545,11 @@ async function loadCapacityContext(
     gameState?.currentYear ??
     STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
 
-  // `countryId` keys the unowned-capacity pool below, the prime rate the build
-  // is financed at and the country stamped on the action log, so it has to be
-  // the country the STATE is in, never the country the corporation is
-  // domiciled in. The old order fell through to `corporation.countryId` and
-  // then to a literal "US", which is how two `unownedSectors` docs came to sit
-  // on Ukrainian states under the United States: unreachable to Ukraine, and
-  // counted as US capacity by every reader (ticket #1271).
-  //
-  // The state is read UNCONDITIONALLY and preferred over the sector's stored
-  // value, which is the precedence `getSectorOperatingCountryId` sets for the
-  // rest of the codebase: a stored `countryId` left stale by a region changing
-  // hands is exactly the case that helper exists for, and taking it first
-  // would reintroduce the bug in its other form.
+  // `countryId` keys the unowned-capacity pool, the build's prime rate and the
+  // action-log country, so it must be the country the STATE is in, never the
+  // corporation's domicile. The state is read UNCONDITIONALLY and preferred over
+  // the sector's stored value, matching `getSectorOperatingCountryId`: a stale
+  // stored `countryId` from a region changing hands is exactly that case.
   const sectorState = await db
     .collection<State>("states")
     .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
@@ -614,12 +590,11 @@ function capacityChangeBlock(
   sector: CorporateSector,
   financedBuild: boolean
 ): { status: number; error: string } | null {
-  // No blanket state-owned block here: the appointed CEO of a National
-  // Corporation legitimately builds, mothballs and manages its capacity
-  // (ticket #1072). `requireCeo` already proved the caller holds THIS corp's
-  // CEO seat, and the sector was fetched constrained to
-  // `corporationId: corporation._id`, so a sector nationalized AWAY from a
-  // former-private CEO no longer matches and cannot reach this handler.
+  // No state-owned block: the appointed CEO of a National Corporation
+  // legitimately manages its capacity. `requireCeo` already proved the caller
+  // holds THIS corp's CEO seat, and the sector was fetched constrained to
+  // `corporationId: corporation._id`, so a sector nationalized away from a
+  // former-private CEO cannot reach this handler.
   if (
     sector.constructionPropertyTransition ||
     ((sector.constructionFinancing?.status === "awaiting_approval" ||
@@ -905,9 +880,7 @@ export async function placeCapacityBuild(
     industryModel: sector.industryModel,
     mediaDiscriminator: sector.mediaDiscriminator,
     units,
-    // Capacity is priced at the product this sector actually makes. Ordering
-    // into a sector already running a high-RPU strategy used to be charged
-    // the sector-type default price, which is the 326.9x rare-earth subsidy.
+    // Price capacity at the product this sector actually makes, not the sector-type default, which would misapply the rare-earth subsidy.
     strategyId: sector.strategyId ?? null,
     year: currentYear,
     preset: resolvePresetIdFromGameState(gameState),
@@ -1209,24 +1182,21 @@ export async function placeCapacityBuild(
   }
   void observe("order", "placed");
 
-  // ─── Draw the ordered capacity DOWN from the unowned pool (#1145) ────────
+  // ─── Draw ordered capacity DOWN from the unowned pool ────────
   //
   // Market share under plants is `owned / (owned + headroomUnits)`. Founding
-  // already consumed headroom (`expandSector`); building on an EXISTING plant
-  // did not, so every post-founding unit counted as owned while leaving the
-  // demand backing it in the pool. The pie therefore read "60% unowned" on a
-  // market the world had already built out, and the expand gate, which reads
-  // a real demand gap, refused to build into it.
+  // consumes headroom (`expandSector`); building on an EXISTING plant must too,
+  // otherwise every post-founding unit counts as owned while its demand
+  // backing stays in the pool, and the expand gate refuses to build into the
+  // apparent gap.
   //
-  // Drawn at ORDER time, not delivery: it is the CLAIM on the market that
-  // consumes headroom, and ordering-time is also what stops two concurrent
-  // builders from each buying the same slice. The cancel path returns the
-  // undelivered remainder, so the two are symmetric.
+  // Drawn at ORDER time, not delivery: that is the CLAIM on the market, and it
+  // stops two concurrent builders from buying the same slice. The cancel path
+  // returns the undelivered remainder, so the two are symmetric.
   //
-  // Post-commit and best-effort, exactly like the capex leg below: the money
-  // and the queue write have already landed, and a pool-write failure must
-  // not 500 the caller into retrying an order that already exists. Failing
-  // here leaves the pre-existing (leaky) behaviour, never a worse one.
+  // Post-commit and best-effort: the money and queue write have already landed,
+  // so a pool-write failure must not 500 the caller into retrying an order that
+  // already exists. Failing here leaves pre-existing behavior, never a worse one.
   const drawdown = unownedPoolDrawdown(poolBucket, units, now, eraUnitScale);
   if (drawdown) {
     await db

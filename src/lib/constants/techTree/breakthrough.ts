@@ -1,19 +1,9 @@
 /**
- * Breakthrough gating for speculative production methods (issue #5705).
+ * Breakthrough gating for speculative production methods.
  *
- * The 2049 methods (commercial fusion, space resources and the rest) open on
- * the calendar AND on research: the world's corporations in the method's
- * sector must together have spent `researchThreshold` rdScore on frontier
- * research before anyone may build it. A sector that researches hard gets
- * its breakthrough at the start of the tier; one that does not gets it late
- * or never.
+ * The 2049 methods open on the calendar AND on research: the world's corporations in the method's sector must together have spent `researchThreshold` rdScore on frontier research before anyone may build it. A sector that researches hard gets its breakthrough at the start of the tier; one that does not gets it late or never.
  *
- * Frontier research is rdScore spent on nodes of the FRONTIER_RESEARCH_FROM
- * tier onward, plus frontier programmes. Each corporation carries its own
- * running total (`frontierResearchSpent`); the world figure is the sum over
- * the sector's corporations.
- *
- * Plain data in, plain data out.
+ * Frontier research is rdScore spent on nodes of the FRONTIER_RESEARCH_FROM tier onward, plus frontier programmes. Each corporation carries its own running total (`frontierResearchSpent`); the world figure is the sum over the sector's corporations.
  */
 import type { SectorStrategy } from "../sectorStrategyTypes";
 import { getDecadeById } from "./decades";

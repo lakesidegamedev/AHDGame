@@ -1,20 +1,16 @@
 /**
- * D13 ROLLBACK SAFETY — capital-mode restore point. Remove this module after
- * the rollback drill passes.
+ * Capital-mode restore point for rollback safety.
  *
- * Flipping `marketSystemMode` from "plants" back down to "capital" is not
+ * Flipping `marketSystemMode` from "plants" back to "capital" is not
  * self-healing. Under plants the turn processor RESTATES `revenue` from plant
- * output every turn instead of compounding it, so on the turn after a rollback
- * the capital-mode chain would pick up whatever the last plants turn happened
- * to derive and compound forward from there — a silent, permanent rebase of
- * every sector's income, in whichever direction the plants restatement had
- * drifted.
+ * output instead of compounding it, so on the turn after a rollback the
+ * capital-mode chain would compound forward from whatever the last plants
+ * turn derived: a silent, permanent rebase of every sector's income.
  *
- * `sectorTurn` therefore writes `legacyRevenueShadow` every plants turn: what
- * the pre-plants chain WOULD have written. This module turns that shadow into
- * the document mutation a rollback needs. It is pure — no db, no io — so the
- * decision of what a rollback does is testable on its own, separate from the
- * script that applies it.
+ * `sectorTurn` writes `legacyRevenueShadow` every plants turn: what the
+ * pre-plants chain WOULD have written. This module turns that shadow into the
+ * document mutation a rollback needs. It is pure, so the rollback decision is
+ * testable apart from the script that applies it.
  */
 import type { CorporateSector } from "@/lib/db/types/corporation";
 
@@ -115,10 +111,7 @@ export const CAPITAL_MODE_ROLLBACK_UNSET_FIELDS = [
   "legacyTargetGrowthRateShadow",
   "buildQueue",
   "constructionInProgressAnchor",
-  // P5 paid basis: a plants-only field, and meaningless below plants (there is
-  // no build path there for the basis to diverge from list price). Leaving it
-  // behind would have a rolled-back sector carrying a book value derived from
-  // builds that mode no longer has.
+  // P5 paid basis is plants-only; below plants it is meaningless and must be cleared on rollback so no stale book value survives.
   "capacityBookAnchor",
   "mothballed",
   "plantsStartTurn",

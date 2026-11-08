@@ -1,18 +1,11 @@
 /**
- * Pinned acquisition payout plan (rules zone: plain data in, plain data out).
- *
- * The plan pins every holder amount and recipient once per offer, before any
- * money moves. A retry replays the pinned legs verbatim instead of recomputing
- * them, so FX drift or roster changes between attempts can never change (or
- * duplicate) a payout. Amount math mirrors `payShareholders` bucket by bucket;
- * only the application is new (stamped single-doc legs, see
- * `acquisitionSettlement.ts`).
- *
- * Deliberately replicates two pre-existing quirks of `allocateShareholderPool`
- * rather than fixing them here: per-row `Math.floor` dust and shareholder rows
- * that match no bucket (e.g. `nppId` holders) are paid to nobody. Fixing the
- * distribution would be a balance change; the settlement accounts for the
- * difference on the compensation path instead.
+ * Pinned acquisition payout plan: plain data in, plain data out. Amounts
+ * and recipients are pinned per offer so retries replay legs verbatim and
+ * FX drift or roster changes cannot change or duplicate a payout. Amount
+ * math mirrors `payShareholders` bucket by bucket; only the stamped
+ * single-doc application is new. Deliberately preserves two quirks of
+ * `allocateShareholderPool`: per-row `Math.floor` dust, and unmatched
+ * shareholder rows paid to nobody. Fixing them would be a balance change.
  */
 
 import type { ShareholderAllocation } from "@/lib/bonds/corporateBondDefault";

@@ -1,39 +1,31 @@
 /**
- * Factor ledger — a read-only, descriptive decomposition of why a
+ * Factor ledger: a read-only, descriptive decomposition of why a
  * presidential candidate is ahead or behind, broken into named factors.
  *
- * WHAT THIS IS (and is not)
- * -------------------------
- * The ledger is teed straight off the values the vote engine has ALREADY
- * computed for a turn (nominal appeal, swing flows, spoiler transfers, the
- * per-unit post-multiplier stages, and the referendum share shift). It never
- * recomputes vote math and it changes no outcome — it is a pure observation of
- * the engine's own locals, aggregated into a small waterfall the UI can render.
+ * It is teed off values the vote engine already computed (nominal appeal,
+ * swing flows, spoiler transfers, post-multiplier stages, referendum share
+ * shift). It never recomputes vote math and changes no outcome.
  *
- * The load-bearing invariant is anti-drift: for every candidate,
+ * Load-bearing invariant (anti-drift), per candidate:
  *
  *     baseline + Σ factor.voteDelta === finalVotes === engine total
  *
- * so the reconstructed waterfall always sums back to the votes the engine
- * actually stored. `uncertainty` is the residual line that absorbs the
- * float→integer rounding the per-unit pipeline does at each stage, so the
- * equality holds exactly regardless of how cleanly the multiplicative stages
+ * `uncertainty` is the residual line absorbing per-unit float→integer
+ * rounding, so the equality holds exactly regardless of how the stages
  * decompose. See {@link assertLedgerReconstructs}.
  *
- * ATTRIBUTION (the code documents these on purpose)
- * -------------------------------------------------
- *  - REACH is name recognition. For the presidential general the engine sets
- *    `includeInfluenceInAppeal = false`, so politicalInfluence / nationalInfluence
- *    feed reach ONLY (via `normalizeNPI` in `appealWeight`), never candidateFit.
- *  - candidateFit is policy alignment (`calcAppeal`'s position + directional
- *    terms) — never influence, never favorability.
- *  - Favorability feeds APPROVAL, which is a structural standing term folded
- *    into `stateBaseline` (alongside org, registration, regime, and the state
- *    partisan-lean multiplier), never candidateFit or reach.
- *  - The demographic axis is the granular (dimension, bucket) census substrate.
- *    `bucketAppeal` aggregates per-cell appeal contributions back to census
- *    buckets via each cell's `bucketWeights`. Archetypes are never read or
- *    emitted here.
+ * ATTRIBUTION:
+ *  - REACH is name recognition. The presidential general sets
+ *    `includeInfluenceInAppeal = false`, so influence feeds reach only (via
+ *    `normalizeNPI`), never candidateFit.
+ *  - candidateFit is policy alignment (position + directional terms), never
+ *    influence, never favorability.
+ *  - Favorability feeds APPROVAL, a structural standing term in
+ *    `stateBaseline` (with org, registration, regime, partisan lean), never
+ *    candidateFit or reach.
+ *  - The demographic axis is the granular (dimension, bucket) census substrate;
+ *    `bucketAppeal` aggregates per-cell contributions via `bucketWeights`.
+ *    Archetypes are never read or emitted here.
  */
 
 export type FactorKey =

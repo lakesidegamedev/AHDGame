@@ -26,7 +26,7 @@ export interface CeoViewFlags {
 }
 
 /**
- * CEO-gated view flags for the corporation detail view (#587).
+ * CEO-gated view flags for the corporation detail view.
  *
  * The self-acquisition window is surfaced to the CEO's own user so the buy
  * modal can show used/remaining/countdown before a capped buy is attempted.

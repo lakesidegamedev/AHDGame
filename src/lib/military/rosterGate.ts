@@ -6,19 +6,13 @@ import { RESERVE_THEATER_ID } from "@/lib/military/theaters";
 /**
  * May this country place forces or command at this conflict?
  *
- * For a `cold_war` conflict: only if it is ALREADY on a roster. A roster is reached
- * only through `joinSide`, and for a proxy war `joinSide` is reached only from a
- * passed Join Conflict bill — so the bloc vote plus the domestic bill become the sole
- * way in, which is the whole point of the design.
+ * For a `cold_war` conflict: only if it is ALREADY on a roster. Rosters are reached
+ * only via `joinSide`, which for a proxy war is reached only from a passed Join
+ * Conflict bill. Without this gate, `sideOf`'s bloc fallback lets any bloc member
+ * post a general and be enrolled with no vote and no bill.
  *
- * Without this, `sideOf`'s bloc fallback is a second door standing wide open: a proxy
- * war sets both backers by construction, so it places any bloc member, and posting a
- * general has no belligerency gate of its own. A defence-seat holder could post,
- * declare, and be enrolled by `joinSide` on the spot — no bloc vote, no bill.
- *
- * Every other conflict type is deliberately unchanged. That same backer fallback is
- * how an ally joins an ongoing interstate war; it is shipped behaviour with its own
- * rationale, and narrowing it is not this design's business.
+ * Other conflict types are unchanged: the backer fallback is how allies join an
+ * ongoing interstate war, shipped behaviour outside this design's scope.
  */
 export function canEnterTheatre(
   country: string,

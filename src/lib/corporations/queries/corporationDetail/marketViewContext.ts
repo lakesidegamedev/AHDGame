@@ -32,7 +32,7 @@ export interface MarketViewInputs {
 }
 
 /**
- * Market-share + commodity-balance context for the corporation detail view (#587).
+ * Market-share + commodity-balance context for the corporation detail view.
  *
  * Builds the per-sector market-share lookup for this corp's buckets (so the
  * dominance margin penalty the turn loop charges on growth-cost math also
@@ -149,7 +149,7 @@ export async function loadMarketViewContext(
     unownedSectors,
     exchangeRatesByCurrency: fxByCurrency,
     // Era-correct GDP→₳ normalization for the GDP-derived market fallback
-    // (refs #3778). `gameState` is already projected with `preset` above.
+    //. `gameState` is already projected with `preset` above.
     preset: resolvePresetIdFromGameState(gameState),
   });
 

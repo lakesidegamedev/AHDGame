@@ -5,29 +5,27 @@ import {
   netStockProceeds,
 } from "@/lib/budget/stockSaleWithholding";
 /**
- * Durable, crash-aware execution of an agreed-acquisition payout (shell: loads
- * documents, calls the pinned plan in `rules/acquisitionPayoutPlan.ts`, writes
- * results).
+ * Durable, crash-aware execution of an agreed-acquisition payout (shell:
+ * loads documents, calls the pinned plan in `rules/acquisitionPayoutPlan.ts`,
+ * writes results).
  *
- * Why this exists: the legacy flow debited the acquirer, then credited holders
- * across several unrecorded writes, then refunded the FULL debit when anything
- * later threw. Paid holders kept their money and the offer reset to `pending`,
- * so a retry double-debited and double-pays. This module replaces that with
- * three properties borrowed from the banking money-move primitive (which is
- * the established answer on a database with no multi-document transactions):
+ * Naive debiting before crediting across multiple writes refunded the full
+ * debit on any throw, so paid holders kept money while the offer reset to
+ * `pending`, double-paying on retry. This module borrows three properties
+ * from the banking money-move primitive (the established answer on a
+ * database with no multi-document transactions):
  *
  * 1. The plan is claimed BEFORE any money moves: one settlement document per
- *    offer (`_id` = offer id, so the claim is an `insertOne` and a retry loses
- *    it with E11000 and resumes from the record instead of recomputing).
+ *    offer (`_id` = offer id), so the claim is an `insertOne` and a retry
+ *    loses it with E11000 and resumes from the record instead of recomputing.
  * 2. Every leg applies as one atomic document write (credit plus idempotency
- *    stamp, guarded on `settledKeys $ne stamp`, the same shape as `applyLeg`).
- *    A replay of a landed leg matches nothing and is read back as applied from
- *    the stamp on the document itself, which closes the crash window between
- *    the money write and the record update.
- * 3. Terminal failure compensates instead of pretending: the refund is exactly
- *    `price - delivered`, stamped like any other leg, with a refund ledger leg
- *    so the log nets truthfully. Paid holder legs are never clawed back (they
- *    cannot be) and the offer goes to `failed`, never back to `pending`.
+ *    stamp, guarded on `settledKeys $ne stamp`, same shape as `applyLeg`).
+ *    A replay of a landed leg matches nothing and reads back as applied from
+ *    the stamp, closing the crash window between write and record update.
+ * 3. Terminal failure compensates: the refund is exactly `price - delivered`,
+ *    stamped like any other leg, with a refund ledger leg so the log nets
+ *    truthfully. Paid holder legs are never clawed back and the offer goes
+ *    to `failed`, never back to `pending`.
  */
 
 import { ObjectId, type Db, type Document, type Filter, type UpdateFilter } from "mongodb";

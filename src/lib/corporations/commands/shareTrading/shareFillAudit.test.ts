@@ -1096,7 +1096,7 @@ describe("orphan scan fairness", () => {
   });
 
   it("reaches committed receipts stranded behind persistent uncommitted ones", async () => {
-    // Starvation regression (issue #1672): uncommitted receipts never settle,
+    // Starvation regression: uncommitted receipts never settle,
     // so a head-of-queue scan burns its whole budget on them and never reaches
     // later receipts. Committed plans are visited first, so one bounded pass
     // still recovers the actionable tail.

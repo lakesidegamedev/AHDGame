@@ -35,22 +35,19 @@ function round1(value: number): number {
 }
 
 /**
- * The original closed-form exhaustion curve, kept as the SEED for the integrator
- * that replaced it. Exhaustion is now carried between wars by
- * `stepWarExhaustion`; this function is what a country already fighting when
- * that shipped starts from, so nothing jumps on the first turn.
+ * The original closed-form exhaustion curve, kept as the SEED for the
+ * integrator that replaced it. Exhaustion is now carried between wars by
+ * `stepWarExhaustion`; this is what a country already fighting starts from.
  *
  * +1 while the war is fresh and the public is behind it, falling one point per
- * in-game year to a floor of -25 after 26 years (about 52 real days, since a
- * turn is an hour of wall clock).
+ * in-game year to a floor of -25 after 26 years.
  *
  * The floor is deliberately far outside the "max +/-2" scale in the
- * approvalModifiers header: a war a nation has carried for twenty-six years is
- * meant to be politically ruinous. This is a settled product decision that has
- * twice been revised down and twice been reinstated — do not "correct" it.
+ * approvalModifiers header: a war carried twenty-six years is meant to be
+ * politically ruinous. Do not "correct" it.
  *
  * Continuous rather than stepped, so the block never moves faster than about
- * 0.02 per turn — which is what lets the block be applied undamped.
+ * 0.02 per turn, which lets it be applied undamped.
  */
 export { WAR_EXHAUSTION_FLOOR, warExhaustion };
 
@@ -103,37 +100,34 @@ export interface WarExhaustionStep {
 /**
  * Step the persisted exhaustion integrator one turn.
  *
- * Exhaustion is the one war term that outlives its war. The rest describe a
- * front that no longer exists the moment the fighting stops, but a public that
- * has carried four years of casualties does not forget the week the treaty is
- * signed — and a government that could end a war and immediately start another
- * with a clean slate had a free hand no cost ever caught up with.
+ * Exhaustion outlives its war: the rest of the war terms describe a front that
+ * disappears when fighting stops, but a public that carried years of casualties
+ * does not forget, and a government that could end a war and immediately start
+ * another with a clean slate would have a free hand no cost ever caught.
  *
  * Four cases, in the order they are checked:
  *
- *  - **Never scored, and at war.** Seed from the original closed-form curve so a
- *    country already fighting when this shipped keeps the exact value it had.
- *    Without this the rally below would fire on an existing war and hand a
- *    nation forty turns deep a fresh +1. Self migrating: no backfill script, and
- *    a country that has never fought simply starts at zero.
+ *  - **Never scored, and at war.** Seed from the original closed-form curve so
+ *    a country already fighting keeps the exact value it had; otherwise the
+ *    rally below would fire on an existing war and hand a nation deep into a
+ *    war a fresh +1. Self migrating: no backfill, never-fought countries start
+ *    at zero.
  *  - **Entering a war from peace.** Rally round the flag: +1 on top of whatever
- *    residue is carried, capped at +1. A clean slate opens at +1 exactly as
- *    before; a country restarting at -3 opens at -2.
+ *    residue is carried, capped at +1. A clean slate opens at +1; a country
+ *    restarting at -3 opens at -2.
  *
  *    The test is "was this country at peace last turn", which is what a null
- *    stored conflict id means — NOT "is this a different war from the stored
- *    one". A country fighting two wars at once whose older war resolves has its
- *    principal conflict change underneath it without the fighting ever stopping,
- *    and paying a fresh rally there would hand out +1 for ending a war while
- *    still at war: a smaller version of the very exploit the cooldown closes.
- *    A country that goes straight from one war into another with no turn of
- *    peace between them likewise gets no rally, which is the harsher reading and
- *    the right one.
+ *    stored conflict id means, NOT "is this a different war from the stored
+ *    one". A country fighting two wars whose older war resolves has its
+ *    principal conflict change without the fighting ever stopping; paying a
+ *    fresh rally there would hand out +1 for ending a war while still at war.
+ *    A country going straight from one war into another with no turn of peace
+ *    likewise gets no rally, which is the harsher and correct reading.
  *  - **Same war, or a new war entered without a break.** Down one point per
  *    in-game year, to the floor.
  *  - **At peace.** One point per in-game year toward zero, from whichever side
- *    it is carried. Peace heals a war's cost and also retires the rally a short
- *    war left behind; it never earns approval of its own in either direction.
+ *    it is carried. Peace heals a war's cost and retires a short war's rally;
+ *    it never earns approval of its own in either direction.
  */
 export function stepWarExhaustion(input: WarExhaustionStep): number {
   const { prev, conflictId, prevConflictId, turnsSinceEntry } = input;
@@ -203,23 +197,21 @@ export interface WarEffortInput {
  * How well a country's war is going, as approval.
  *
  * Two terms. `position` is signed movement of the front from the country's own
- * entry baseline, normalised by the room available in the direction actually
- * travelled. `momentum` is recent displacement expressed as a rate, so it lifts
- * a live advance and fades to nothing when the front stalls — which is what
- * makes the score plateau at whatever the current ground warrants rather than
- * needing a decaying bonus bolted on.
+ * entry baseline, normalised by the room available in the direction travelled.
+ * `momentum` is recent displacement as a rate, so it lifts a live advance and
+ * fades to nothing when the front stalls, letting the score plateau at whatever
+ * the current ground warrants.
  *
- * Both are scored against an EXPECTATION rather than against the side's own
- * pole, and that is the load-bearing idea. Territory alone bounds an attacker
- * to [0, +1] and a defender to [-1, 0], because a single-host `control` track
- * holds one pot of ground and the defender opens holding all of it — so war
- * effort would be a one-way subsidy for aggression, and a government could
- * never gain approval for winning a civil war. Expectation is positive for a
- * side that starts with nothing (it is supposed to advance), negative for one
- * holding everything, and exactly zero at a 50/50 proxy front where stalemate
- * IS the expectation. One continuous formula, no branching on conflict type.
+ * Both are scored against an EXPECTATION, not against the side's own pole.
+ * Territory alone bounds an attacker to [0, +1] and a defender to [-1, 0],
+ * since a single-host `control` track holds one pot of ground and the defender
+ * opens holding all of it; war effort would then be a one-way subsidy for
+ * aggression and a government could never gain approval for winning a civil
+ * war. Expectation is positive for a side that starts with nothing, negative
+ * for one holding everything, and zero at a 50/50 proxy front where stalemate
+ * IS the expectation.
  *
- * Consequently a defender who holds the line scores positive, a stalled
+ * Consequently a defender holding the line scores positive, a stalled
  * invasion scores negative, and a proxy war pays both patrons symmetrically.
  */
 export function warEffort(input: WarEffortInput): number {
@@ -373,25 +365,21 @@ export interface WarModifierInput {
 /**
  * The war block as one chip per term.
  *
- * This was a single chip carrying a damped total, because attributing a damped
- * total back across its parts inverts whenever the total and the raw sum have
- * opposite signs — "the chips do not add up to the number", inside the mechanism
- * meant to prevent exactly that. That objection is now gone rather than
- * overridden: exhaustion is a persisted integrator that cannot move faster than
- * one point per in-game year, and effort and contribution are bounded and
- * recomputed from the live front, so the block has nothing left that can jump
- * and needs no damping. With no damping there is no attribution to invert, and
- * each chip's effect IS its own contribution to the rating. They sum exactly.
+ * A single chip with a damped total could not be attributed back across its
+ * parts, and the chips would not add up to the number. Damping is not
+ * needed: exhaustion is a persisted integrator capped at one point per in-game
+ * year, and effort and contribution are bounded and recomputed from the live
+ * front. With no damping, each chip's effect IS its own contribution to the
+ * rating, and they sum exactly.
  *
- * One chip per term is also what a player needs. A single line reading "War -4"
- * on a war a country is winning is actively misleading: the front is going well
- * and the public is simply tired, and those are opposite facts that a government
- * responds to in opposite ways. Three lines say which is which.
+ * One chip per term also tells the player the right story: a single line
+ * reading "War -4" on a war a country is winning is misleading, because a good
+ * front and a tired public are opposite facts a government responds to in
+ * opposite ways.
  *
  * Every chip declares `marginEffect: 0`. An unregistered id falls through to a
- * 0.75 factor in `marginEffectForModifier`, which would push a deep war penalty
- * into every region's profit margins — and splitting one chip into three
- * multiplies that trap rather than removing it.
+ * 0.75 factor in `marginEffectForModifier`, which would push the war penalty
+ * into every region's profit margins.
  */
 export function buildWarModifiers(input: WarModifierInput): ActiveModifier[] {
   const { exhaustion, effort, contribution, naval, defeat = 0, phase } = input;
@@ -488,18 +476,17 @@ function entryOf(conflict: ConflictDoc, countryId: CountryId): { turn: number; c
 /**
  * The war approval block for one country, stepped and ready to persist.
  *
- * Selects a single conflict — the one this country has personally fought longest,
- * ranked by its own entry turn so the choice agrees with the exhaustion clock.
- * One war per country is deliberate: summing exhaustion across simultaneous wars
- * would run past the settled floor, and duplicate modifier ids would stack in
- * `applyModifiers` and collide on the React key in the chip list.
+ * Selects a single conflict: the one this country has fought longest, ranked by its
+ * own entry turn so the choice agrees with the exhaustion clock. One war per country
+ * is deliberate: summing exhaustion across simultaneous wars would run past the
+ * settled floor, and duplicate modifier ids would stack in `applyModifiers` and
+ * collide on the React chip key.
  *
- * Never throws. It runs inside `runPhase("approvalSnapshot", ...)` for every
- * active country in a single `Promise.all`, so an unguarded failure would take
- * the approval snapshot down for every country rather than one. On failure the
- * stored exhaustion is held exactly as it stands: a transient error must not
- * read as peace and start healing a war that is still being fought, nor as war
- * and accrue exhaustion against a front nobody could read.
+ * Never throws. It runs inside `runPhase("approvalSnapshot", ...)` for every active
+ * country in one `Promise.all`, so an unguarded failure takes down every country's
+ * snapshot. On failure the stored exhaustion is held as-is: a transient error must
+ * not read as peace and start healing a war still being fought, nor as war and
+ * accrue exhaustion against a front nobody could read.
  */
 export async function computeWarApproval(
   db: Db,

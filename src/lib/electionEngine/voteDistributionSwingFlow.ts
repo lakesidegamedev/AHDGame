@@ -7,31 +7,27 @@
  * (25 gives 0.5, 50 gives 0.71, 100 gives 1).
  */
 /**
- * §7.3.2 swing-flow vote distribution for general elections.
+ * Section 7.3.2 swing-flow vote distribution for general elections.
  *
- * Parallel implementation to `distributeVotesByGroupLevelAllocation` —
- * the existing weight-multiplier engine — implementing the two-phase
- * pairwise swing-flow model from
- * `docs/design/political-system-reg-support.md` §7.3.2:
+ * Two-phase pairwise swing-flow model (see
+ * `docs/design/political-system-reg-support.md` section 7.3.2):
  *
- *   nominal_share(P_i) = Org × turnoutBaseline × govModifier × candidate_support_factor
+ *   nominal_share(P_i) = Org x turnoutBaseline x govModifier x candidate_support_factor
  *
- *   swing(P_i → P_j) = transferable_share(P_i.Reg%)
- *                      × persuasion_drivers(P_j vs P_i)
- *                      × (1 − persuasionResistance(P_i.Reg%))
+ *   swing(P_i -> P_j) = transferable_share(P_i.Reg%)
+ *                      x persuasion_drivers(P_j vs P_i)
+ *                      x (1 - persuasionResistance(P_i.Reg%))
  *
  *   final_share(P_i) = nominal_share(P_i)
- *                      − Σ_j swing(P_i → P_j)
- *                      + Σ_j swing(P_j → P_i)
+ *                      - sum_j swing(P_i -> P_j)
+ *                      + sum_j swing(P_j -> P_i)
  *
- * Persuasion drivers live in `persuasionDrivers.ts`. Transferable-share
- * and persuasionResistance curves are calibrated in `electionFormulaFactors.ts`.
+ * Persuasion drivers live in `persuasionDrivers.ts`. Transferable-share and
+ * persuasionResistance curves are calibrated in `electionFormulaFactors.ts`.
  *
  * `govModifier` is the sitting regional executive's down-ballot coattail,
- * supplied per-party via `options.govModifierByParty` (neutral 1.0× when
+ * supplied per-party via `options.govModifierByParty` (neutral 1.0x when
  * absent). See `govCoattail.ts` for how it is built and gated.
- *
- * See `docs/plans/archive/2026-05/2026-05-21-swing-flow-implementation.md`.
  */
 
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
@@ -143,11 +139,10 @@ function appealWeight(
   // floor below still applies on top).
   let org = orgVoteWeight(partyOrgByParty, ec.party);
 
-  // §7.3.2 — personal-reach floor (#0671). A candidate's own pull (reach ×
-  // approval) gives a small floor on effective org, so a genuinely-supported
-  // candidate is never zeroed by 0 party organisation. No-op when the party's
-  // org share already exceeds the floor, and when regimeMult is 0 the banned
-  // candidate is still zeroed downstream.
+  // Personal-reach floor: a candidate's own pull (reach × approval) guarantees
+  // a small floor on effective org, so a genuinely-supported candidate is never
+  // zeroed by 0 party organisation. No-op when party org share already exceeds
+  // the floor; when regimeMult is 0 the banned candidate is still zeroed downstream.
   org = Math.max(org, personalOrgFloor(reach, approval));
 
   const nppPenalty = ec.isNPP && options?.hasPlayerInRace ? NPP_GENERAL_WEIGHT_MULTIPLIER : 1;
@@ -230,7 +225,7 @@ function appealWeight(
     }
   }
 
-  // UK manifesto policy-popularity factor (epic #856). Off by default: absent
+  // UK manifesto policy-popularity factor. Off by default: absent
   // map ⇒ 1.0 (no effect). Mirrors the group-level engine so the two lanes
   // cannot drift.
   const targetedAdMult = 1 + (ec.targetedAdBonuses?.[groupId] ?? 0);
@@ -350,15 +345,14 @@ export function distributeVotesBySwingFlow(
       const groupShare = groupContribution / totalPool;
       const groupPool = effectiveTurnPool * groupShare;
 
-      // Slate-nested split (#1048): the group pool is divided between PARTIES
-      // (slate weight = mean of its candidates' appeal weights), then within a
-      // party between its own candidates. Byte-identical for the
-      // one-candidate-per-party FPTP families; stops a multi-seat party from
-      // buying nominal share with extra ballot slots. See slateAllocation.ts.
+      // Slate-nested split: the group pool is divided between PARTIES (slate
+      // weight = mean of its candidates' appeal weights), then within a party
+      // between its own candidates. Byte-identical for one-candidate-per-party
+      // FPTP; stops a multi-seat party from buying nominal share with extra
+      // ballot slots. See slateAllocation.ts.
       //
-      // The ledger sink (when present) captures the trace multiplicands here so
-      // it can decompose each cell's nominal votes. `appealWeight`'s return —
-      // the actual slate weight — is unchanged whether or not a trace is passed.
+      // The ledger sink captures the trace multiplicands to decompose each
+      // cell's nominal votes. `appealWeight`'s return is unaffected by tracing.
       const traces = sink ? new Map<string, AppealWeightTrace>() : undefined;
       const groupSplit = splitGroupPoolBySlate(
         groupPool,

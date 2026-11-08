@@ -128,25 +128,16 @@ export async function normalizeAndMergeCorporateSectors(
           )
         : (keeper.negativeProductionSustainedTurns ?? 0);
 
-    // PLANTS-GATED: the duplicate-row heal is a MERGE — the losing rows are
-    // deleted immediately below — so under plants their plant state
-    // (`capitalStock`, `buildQueue`, `constructionInProgressAnchor`,
-    // `mothballed`, `plantsStartTurn`) must be folded into the keeper first.
-    // Without the fold the heal silently destroys built capacity and the ₳
-    // sitting in in-flight build orders. Revenue is still combined for the
-    // legacy readers; under plants `sectorTurn` restates it from the folded
-    // capacity on the next tick.
+    // PLANTS-GATED: the duplicate-row heal is a MERGE, and losing rows are
+    // deleted below, so under plants their plant state (`capitalStock`,
+    // `buildQueue`, `constructionInProgressAnchor`, `mothballed`,
+    // `plantsStartTurn`) must be folded into the keeper first. Without the fold
+    // the heal destroys built capacity and in-flight ₳.
     //
-    // The fold is GATED, not unconditional. An earlier revision of this fix
-    // claimed folding was "a no-op below plants, where none of these fields are
-    // populated" — that is wrong. Under CAPITAL mode `sectorTurn` writes a
-    // non-zero `capitalStock` and re-derives it from revenue every turn, so
-    // summing it here would double a quantity capital mode owns; and spreading
-    // the fold would additionally stamp `buildQueue: []`,
-    // `constructionInProgressAnchor: 0`, `mothballed: false` and
-    // `plantsStartTurn: null` onto rows that legitimately carry none of them —
-    // waking a mothballed sector in the process. Below plants this heal must
-    // stay byte-identical to what it has always done.
+    // The fold is GATED: under CAPITAL mode `sectorTurn` owns `capitalStock`
+    // and re-derives it, so summing here would double it, and folding would
+    // stamp plant-only fields onto rows that carry none, waking mothballed
+    // sectors. Below plants this heal must stay byte-identical.
     const mergedPlantFields: SectorPlantFieldsUpdate | null = plantsEnabled
       ? group
           .filter((sector) => !sector._id.equals(keeper._id))

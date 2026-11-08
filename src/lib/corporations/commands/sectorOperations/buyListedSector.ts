@@ -1,20 +1,17 @@
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 /**
- * POST /api/corporations/[id]/sectors/[sectorId]/buy
  * Buy a sector that the seller corp has listed for sale.
  *
  * Body: { buyerCorporationId: string }
  *
- * - Buyer's CEO (logged-in user) authorizes the purchase. The buyer corp's
- *   `liquidCapital` is debited in its home currency; the seller corp's
- *   `liquidCapital` is credited in its home currency. Both conversions go
- *   through ₳ at current FX rates.
- * - Sector ownership is transferred to the buyer corp. Sector revenue and
- *   currentGrowthCost are stored in the sector's HOST-state currency, which is
- *   invariant to ownership, so they carry over unchanged (no re-denomination).
+ * - Buyer corp's `liquidCapital` is debited and the seller's credited, each in
+ *   its home currency, converted through ₳ at current FX rates.
+ * - Sector ownership transfers to the buyer. Revenue and currentGrowthCost are
+ *   stored in the HOST-state currency, invariant to ownership, so they carry
+ *   over unchanged (no re-denomination).
  * - If the buyer already operates that sector type in that state, the purchased
- *   sector is merged into the existing one: revenue and workers are summed,
- *   profit margin is revenue-weighted, then the purchased sector doc is deleted.
+ *   sector is merged in: revenue and workers summed, profit margin
+ *   revenue-weighted, then the purchased doc is deleted.
  */
 import { NextResponse } from "next/server";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
@@ -185,9 +182,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     }
 
     // Keyed on the SECTOR's country, not the buyer's: a foreign private corp
-    // must not acquire production inside a planned economy either. `expandSector`
-    // was gated by #676 and this was not, leaving the secondary market as an
-    // unguarded route to the same outcome.
+    // must not acquire production inside a planned economy either.
     const sectorCountryId = sector.countryId ?? seller.countryId;
     if (await isPrivateEnterpriseBlocked(db, sectorCountryId)) {
       return errorResponse(
@@ -341,22 +336,13 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
               )
             : (existingBuyerSector.negativeProductionSustainedTurns ?? 0);
 
-        // The purchased doc is deleted on the next line, so its plant state
-        // must be folded into the survivor first: capacity, the outstanding
-        // build queue, and the ₳ of construction-in-progress the buyer just
-        // paid for as part of the listing price. Pre-fix the merge path
-        // destroyed all three — the buyer paid a price that included
-        // in-flight construction and received nothing, and the CIP simply
-        // left the world's balance sheet. `constructionInProgressAnchor` and
-        // each order's `costPaidAnchor` are ₳ and are summed, NOT re-converted
-        // through either corp's currency (see sectorTransferCapex).
-        //
-        // Gated on the tier, like every other plant-state writer (see
-        // privatizeAsset and moveSectorToCorp). Spreading it unconditionally
-        // stamped `buildQueue: []`, `constructionInProgressAnchor: 0`,
-        // `mothballed: false` and `plantsStartTurn: null` onto rows in modes
-        // that have no such concepts, and — worse — SUMMED `capitalStock`, a
-        // field capital mode owns and re-derives from revenue every turn.
+        // The purchased doc is deleted next, so fold its plant state into the
+        // survivor first: capacity, build queue, and construction-in-progress the
+        // buyer just paid for. `constructionInProgressAnchor` and each order's
+        // `costPaidAnchor` are an absolute currency amount and are summed, NOT
+        // re-converted through either corp's currency. Gated on plants mode, like
+        // every other plant-state writer; unconditional spreading also SUMMED
+        // `capitalStock`, a field capital mode re-derives each turn.
         const mergedPlant = plantsEnabled
           ? mergeSectorPlantFields(existingBuyerSector, sector)
           : {};
