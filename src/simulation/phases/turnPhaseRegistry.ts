@@ -136,11 +136,9 @@ import { processExpiredBannedShareholders } from "@/lib/account/processExpiredBa
 import { processInactiveShareholderShares } from "@/lib/account/processInactiveShareholderShares";
 import { processInactiveCeoCorpShares } from "@/lib/account/processInactiveCeoCorpShares";
 import { processPartyInfluenceTurn } from "@/lib/turn/partyInfluenceTurn";
-import { processPresidentialSuccession } from "@/lib/turn/presidentialSuccession";
-import { fillUncontestedByElections } from "@/lib/elections/resolution/byElectionFill";
-import { processExecutiveSuccession } from "@/lib/elections/resolution/executiveSuccession";
+import { processSuccessions } from "@/lib/elections/resolution/executiveSuccession";
 import { processImpeachmentLifecycle } from "@/lib/turn/impeachmentLifecycle";
-import { processByElectionWatcher } from "@/lib/turn/byElections";
+import { processByElectionsWithFill } from "@/lib/elections/resolution/byElectionFill";
 import { processCommonsByElectionWatcher } from "@/lib/turn/commonsByElections";
 import { detectPreIterationComplete } from "@/lib/turn/preIterationLifecycle";
 import { processActivityLogging } from "@/lib/turn/activityLogging";
@@ -1542,11 +1540,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // of the regular schedule). Suppressed during founding, every seat is
         // being elected, so there are no "mid-term" vacancies to backfill.
         if (!foundingActive) {
-          await runtime.runPhase("byElectionWatcher", async () => {
-            const spawned = await processByElectionWatcher(db, newTurn, gameNow);
-            await fillUncontestedByElections(db, newTurn, gameNow);
-            return spawned;
-          });
+          await runtime.runPhase("byElectionWatcher", () =>
+            processByElectionsWithFill(db, newTurn, gameNow)
+          );
           // Immediately after the governor watcher: same settled seat state,
           // separate country scope (UK Commons), separate election type.
           phaseResults.commonsByElectionWatcher = await runtime.runPhase(
@@ -1589,10 +1585,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         await runtime.runPhase("impeachmentLifecycle", () =>
           processImpeachmentLifecycle(db, newTurn, gameNow)
         );
-        await runtime.runPhase("presidentialSuccession", async () => {
-          await processPresidentialSuccession(db);
-          await processExecutiveSuccession(db, newTurn, gameNow);
-        });
+        await runtime.runPhase("presidentialSuccession", () =>
+          processSuccessions(db, newTurn, gameNow)
+        );
       },
     },
     {

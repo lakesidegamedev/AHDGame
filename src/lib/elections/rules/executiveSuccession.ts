@@ -75,7 +75,7 @@ const FORMATION = {
   fillWithinTurns: 96,
 } as const;
 
-type RuleInput = Omit<SuccessionRule, "actingOffice" | "actingLabel"> &
+type RuleInput = Omit<SuccessionRule, "office" | "actingOffice" | "actingLabel"> &
   Partial<Pick<SuccessionRule, "actingOffice" | "actingLabel">>;
 
 function rule(office: string, input: RuleInput): SuccessionRule {

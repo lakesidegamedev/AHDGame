@@ -25,7 +25,8 @@ import {
 } from "@/lib/elections/rules/byElectionFill";
 import { openNppCreationBatch } from "@/lib/npp/generator";
 import { buildNppElectionEligiblePartyKeys } from "@/lib/parties/antiAbuseGuards";
-import { getChallengerSupplyPolicy } from "@/lib/turn/rules/challengerSupply";
+import { getChallengerSupplyPolicy } from "@/lib/turn/npp/rules/challengerSupply";
+import { processByElectionWatcher } from "@/lib/turn/byElections";
 
 const SPECIAL_COMMONS = "special_commons";
 const SPECIAL_GOVERNOR = "special_governor";
@@ -173,4 +174,15 @@ export async function fillUncontestedByElections(
   }
   if (filed > 0) console.log(`[Turn] Filed ${filed} fallback by-election candidate(s)`);
   return filed;
+}
+
+/** Governor by-election watcher followed by the fill guarantee for every live by-election. */
+export async function processByElectionsWithFill(
+  db: Db,
+  currentTurn: number,
+  now: Date
+): Promise<{ spawned: number }> {
+  const result = await processByElectionWatcher(db, currentTurn, now);
+  await fillUncontestedByElections(db, currentTurn, now);
+  return result;
 }

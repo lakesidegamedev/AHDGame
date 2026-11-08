@@ -130,3 +130,9 @@ async function isExecutiveVacant(
   if (!row) return null;
   return row.characterId == null && row.nppId == null;
 }
+
+/** US presidential succession followed by the succession watcher for every other country. */
+export async function processSuccessions(db: Db, currentTurn: number, now: Date): Promise<void> {
+  await processPresidentialSuccession(db);
+  await processExecutiveSuccession(db, currentTurn, now);
+}
