@@ -356,7 +356,7 @@ export function computeSectorMarginSection(args: {
     stateMetrics,
     countryId: sectorCountryId,
     // Live year for the era existence gate; null while the flag is off.
-    year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+    year: gameState ? resolveGameYear(gameState) : null,
     // SP4 §4a: political margin overlay for playable regions.
     politicalBaseModifiers: args.politicalBaseModifiers ?? null,
   });
@@ -365,7 +365,7 @@ export function computeSectorMarginSection(args: {
         preset: gameState?.preset,
         countryId: stateMetrics.countryId,
         // Live year for era-aware margins; null while the flag is off.
-        year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+        year: gameState ? resolveGameYear(gameState) : null,
       })
         .filter((m) => m.marginEffect !== 0 && m.marginEffect !== undefined)
         .map((m) => ({

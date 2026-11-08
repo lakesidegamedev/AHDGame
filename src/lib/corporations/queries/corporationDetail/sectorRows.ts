@@ -442,14 +442,14 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       politicalBaseModifiers: politicalBaseModifiersByState.get(sector.stateId) ?? null,
       countryId: sectorCountryId,
       // Live year for the era existence gate; null while the flag is off.
-      year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+      year: gameState ? resolveGameYear(gameState) : null,
     });
     const regionalConditionsModifiers = metrics.fullMetrics
       ? evaluateModifiers(buildFlatMetrics(metrics.fullMetrics), {
           preset: gameState?.preset,
           countryId: metrics.fullMetrics?.countryId ?? sectorCountryId,
           // Live year for era-aware margins; null while the flag is off.
-          year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+          year: gameState ? resolveGameYear(gameState) : null,
         }).map((m) => ({
           id: m.id,
           label: m.label,

@@ -120,11 +120,11 @@ export async function applyEnergyEffects(
     await getGameStateCollection(db)
   ).findOne(
     { _id: "current" as GameState["_id"] },
-    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1, eraSystemEnabled: 1 } }
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
   );
   const era = {
     countryId,
-    year: eraGameState?.eraSystemEnabled ? (resolveGameYear(eraGameState) ?? null) : null,
+    year: eraGameState ? (resolveGameYear(eraGameState) ?? null) : null,
   };
 
   for (const [regionId, regionPlants] of byRegion) {

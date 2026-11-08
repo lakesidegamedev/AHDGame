@@ -37,9 +37,8 @@ export type { BandAnchor, IncomeStartVintage, IncomeVintageStamps, MetricBandCur
  * eras and countries. Holds declarative tables (existence windows, band
  * curves, era display names) plus era envelopes, with pure resolvers.
  *
- * Inert while `eraSystemEnabled` is off: resolvers treat a null year as
- * "legacy" (all metrics active, no bands, no envelopes), so flag-off behavior
- * is byte-identical.
+ * Resolvers treat a null year as "legacy" (all metrics active, no bands, no
+ * envelopes).
  */
 
 export interface EraNews {

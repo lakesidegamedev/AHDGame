@@ -44,7 +44,7 @@ export async function loadVentureContext(db: Db, corporation: Corporation) {
   ]);
   const eligibility = {
     currentYear: gameState?.currentYear,
-    techTreesEnabled: gameState?.sectorTechTreesEnabled === true,
+    techTreesEnabled: true,
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };

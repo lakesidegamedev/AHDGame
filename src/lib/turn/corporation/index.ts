@@ -49,7 +49,6 @@ import { loadUndergroundStrengthByCountrySector } from "@/lib/unions/underground
 import { loadCollectiveAgreementEffects } from "@/lib/unions/collectiveAgreementEffects";
 import { loadIndustrialActionOutputFactors } from "@/lib/unions/industrialActionEffects";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { getGameState } from "@/lib/gameState";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
@@ -97,10 +96,9 @@ export async function processCorporationTurn(
   // instead of ~7 serial ones. marketGovernorConfig must be read here, before
   // the lookup build: the market-share basis below needs the mode and the mode
   // lives in this same document, so we resolve it exactly once per turn.
-  const [forexEnabled, techTreesEnabled, thresholds, marketGovernorConfig, gameState, labourMode] =
-    await Promise.all([
+  const [forexEnabled, thresholds, marketGovernorConfig, gameState, labourMode] = await Promise.all(
+    [
       isForexEnabled(),
-      isSectorTechTreesEnabled(),
       loadTxThresholds(db),
       db.collection<GameConfig>("gameConfig").findOne(
         { _id: "default" },
@@ -110,7 +108,8 @@ export async function processCorporationTurn(
       ),
       getGameState(),
       getLabourSystemMode(),
-    ]);
+    ]
+  );
   mark("preamble");
   if (marketGovernorConfig?.privateBankingEnabled === true) {
     await resumeFoundingUnderwritingPlans(db, now);
@@ -705,7 +704,7 @@ export async function processCorporationTurn(
         lookups,
         currentTurn: producerTurn,
         currentYear,
-        techTreesEnabled,
+        techTreesEnabled: true,
         labour,
         wageIndexByState: new Map(),
         automationIndexByState: new Map(),
@@ -762,7 +761,7 @@ export async function processCorporationTurn(
     lookups,
     turn,
     now,
-    techTreesEnabled,
+    true,
     currentYear,
     labour,
     market,
@@ -785,7 +784,7 @@ export async function processCorporationTurn(
     sectorTurnEnv,
     sectorOps,
     now,
-    techTreesEnabled,
+    techTreesEnabled: true,
     groupMembership,
     corpSnapshots,
     treasuryCashLedgerEnabled,

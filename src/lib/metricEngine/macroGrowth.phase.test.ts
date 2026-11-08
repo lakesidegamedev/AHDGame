@@ -19,9 +19,7 @@ function seedWorld(db: MockDb, usGdp = 5_000_000): void {
   };
 
   db.collection("gameState");
-  db.collectionMocks.gameState!.findOne = vi
-    .fn()
-    .mockResolvedValue({ _id: "current", eraSystemEnabled: false });
+  db.collectionMocks.gameState!.findOne = vi.fn().mockResolvedValue(null);
 
   // US region (rich → the frontier) + CN region (poor). Same fx (exchangeRates
   // empty ⇒ fx 1) so anchor pc == local pc.

@@ -85,8 +85,6 @@ const covert = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const GATES = { coldWarEnabled: true };
-
 describe("applyCovertNuclearTurn", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -102,7 +100,7 @@ describe("applyCovertNuclearTurn", () => {
       covertWrites: [],
       approvalIncs: [],
     };
-    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42, GATES);
+    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r).toEqual({ spent: 260, discovered: false });
     expect(w.appropriation.balance).toBe(9_740);
     // Steady: +2 progress, +0.5 suspicion.
@@ -116,22 +114,10 @@ describe("applyCovertNuclearTurn", () => {
       covertWrites: [],
       approvalIncs: [],
     };
-    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42, GATES);
+    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r).toEqual({ spent: 0, discovered: false });
     expect(w.covertWrites).toHaveLength(0);
     expect(w.appropriation.balance).toBe(10_000);
-  });
-
-  it("does nothing while the Cold War subsystem is off", async () => {
-    const w: World = {
-      covert: covert(),
-      appropriation: { balance: 10_000 },
-      covertWrites: [],
-      approvalIncs: [],
-    };
-    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42, { coldWarEnabled: false });
-    expect(r).toEqual({ spent: 0, discovered: false });
-    expect(w.covertWrites).toHaveLength(0);
   });
 
   it("cools instead of progressing when the budget cannot cover the funding level", async () => {
@@ -141,7 +127,7 @@ describe("applyCovertNuclearTurn", () => {
       covertWrites: [],
       approvalIncs: [],
     };
-    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42, GATES);
+    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r).toEqual({ spent: 0, discovered: false });
     expect(w.appropriation.balance).toBe(100);
     // An unfunded turn cools by the idle rate and moves nothing else.
@@ -155,7 +141,7 @@ describe("applyCovertNuclearTurn", () => {
       covertWrites: [],
       approvalIncs: [],
     };
-    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42, GATES);
+    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     // 100 uncommitted cannot cover steady's 260; the turn is unfunded.
     expect(r).toEqual({ spent: 0, discovered: false });
     expect(w.appropriation.balance).toBe(400);
@@ -169,7 +155,7 @@ describe("applyCovertNuclearTurn", () => {
       covertWrites: [],
       approvalIncs: [],
     };
-    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42, GATES);
+    const r = await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(r.discovered).toBe(true);
     // The crackdown costs a stage and the one in progress, and kills funding.
     expect(w.covertWrites[0]).toMatchObject({
@@ -202,7 +188,7 @@ describe("applyCovertNuclearTurn", () => {
       covertWrites: [],
       approvalIncs: [],
     };
-    await applyCovertNuclearTurn(stubDb(w), "DD", 42, GATES);
+    await applyCovertNuclearTurn(stubDb(w), "DD", 42);
     expect(applyTensionEvent).not.toHaveBeenCalled();
     expect(createSystemNewsPost).not.toHaveBeenCalled();
     expect(w.approvalIncs).toHaveLength(0);

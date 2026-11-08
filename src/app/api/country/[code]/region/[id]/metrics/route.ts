@@ -108,7 +108,7 @@ export async function GET(
     const currentTurn = gameStateDoc?.currentTurn ?? 0;
     const preset = gameStateDoc?.preset ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
-    const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
+    const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
     const addressModifiers = await getActiveAddressApprovalModifiers(
       db,
       resolvedCountryId,

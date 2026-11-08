@@ -31,7 +31,7 @@ export interface SectorTechContext {
 export async function loadSectorTechContext(
   db: Db,
   input: {
-    gameState: Pick<GameState, "sectorTechTreesEnabled" | "currentYear" | "currentTurn"> | null;
+    gameState: Pick<GameState, "currentYear" | "currentTurn"> | null;
     corporation: Pick<
       Corporation,
       | "type"
@@ -49,7 +49,7 @@ export async function loadSectorTechContext(
 ): Promise<SectorTechContext> {
   const { gameState, corporation } = input;
   const currentTurn = gameState?.currentTurn ?? 0;
-  const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
+  const techTreesEnabled = true;
   const techCurrentYear =
     gameState?.currentYear ??
     STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);

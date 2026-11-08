@@ -17,7 +17,7 @@ import {
   STAGE_PROGRESS,
   discoveryChance,
 } from "@/lib/military/covertNuclear";
-import { loadGameStateSlice, requireDefenceHolder, type NuclearRouteParams } from "../shared";
+import { requireDefenceHolder, type NuclearRouteParams } from "../shared";
 
 export async function GET(request: Request, { params }: NuclearRouteParams) {
   try {
@@ -26,8 +26,7 @@ export async function GET(request: Request, { params }: NuclearRouteParams) {
     if ("error" in guard) return guard.error;
     const { db, countryId } = guard;
 
-    const gs = await loadGameStateSlice(db);
-    if (!COVERT_CAPABLE.includes(countryId) || gs?.coldWarEnabled !== true) {
+    if (!COVERT_CAPABLE.includes(countryId)) {
       // Nothing to see: no state, no stages, no hint the surface exists.
       return statusResponse(404, { eligible: false });
     }

@@ -149,7 +149,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         getEraUnitScale(gameState?.preset)
       ),
     }));
-    const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
+    const techTreesEnabled = true;
     const eligibilityOptions = {
       currentYear: gameState?.currentYear,
       techTreesEnabled,

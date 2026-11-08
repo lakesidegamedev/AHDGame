@@ -90,7 +90,6 @@ export function loadElectionDemographicsGameState(db: Db): Promise<GameState | n
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
         votingAgeEligible: 1,
         votingAgeEligibleByCountry: 1,
         resetWorldId: 1,

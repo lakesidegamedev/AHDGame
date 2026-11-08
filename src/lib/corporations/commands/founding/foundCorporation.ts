@@ -427,7 +427,7 @@ export async function foundCorporation({
   // unlock nodes that gate production methods. No lane commitment is recorded for
   // past decades since both lanes are granted; the current decade is chosen normally.
   const techGrant: Partial<Corporation> = {};
-  if (foundingGameState?.sectorTechTreesEnabled === true) {
+  {
     const yearAtFounding =
       foundingGameState?.currentYear ??
       (foundingGameState?.startingYear ?? STARTING_YEAR) +

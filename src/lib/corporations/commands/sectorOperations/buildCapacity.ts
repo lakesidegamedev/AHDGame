@@ -36,7 +36,6 @@ import { unownedPoolCredit, unownedPoolDrawdown } from "@/lib/market/unownedPool
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
   anchorToCorpLiquidCapital,
@@ -841,14 +840,12 @@ export async function placeCapacityBuild(
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const techBuildEffects = (await isSectorTechTreesEnabled())
-    ? getSectorTechEffects(
-        techView,
-        sector.sectorType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
-    : null;
+  const techBuildEffects = getSectorTechEffects(
+    techView,
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
   const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
   // Strength upkeep: from its shield stage the dominance shield counts only
   // current and previous decade techs and is capped at 50%.

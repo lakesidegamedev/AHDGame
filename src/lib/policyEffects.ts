@@ -504,7 +504,7 @@ export async function processStatePolicyEffects(
   const currentTurn = gameState?.currentTurn ?? 0;
   // Era gate year (reuses the already-fetched gameState — no extra read). Null
   // when the flag is off, so every isMetricActive check below returns true.
-  const eraYear = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+  const eraYear = gameState ? resolveGameYear(gameState) : null;
 
   // Bulk-fetch ALL data upfront in parallel (eliminates per-state queries)
   const [states, allStatePolicies, allLegTypes, allStateMetrics, allStateBaselines] =

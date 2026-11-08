@@ -19,17 +19,10 @@ async function backfillSpinOffTechBaselines(
   const gameState = await db.collection<GameState>("gameState").findOne(
     { _id: "current" },
     {
-      projection: { currentYear: 1, currentTurn: 1, startingYear: 1, sectorTechTreesEnabled: 1 },
+      projection: { currentYear: 1, currentTurn: 1, startingYear: 1 },
     }
   );
-  if (gameState?.sectorTechTreesEnabled !== true) {
-    return {
-      documentsScanned: 0,
-      documentsUpdated: 0,
-      notes: ["Sector tech trees are off; nothing to grant."],
-    };
-  }
-  const currentYear = resolveGameYear(gameState) ?? STARTING_YEAR;
+  const currentYear = resolveGameYear(gameState ?? {}) ?? STARTING_YEAR;
   const corporations = await db
     .collection<SpinOffTechRow>("corporations")
     .find({ isSpinOff: true })

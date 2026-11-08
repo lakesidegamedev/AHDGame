@@ -124,7 +124,7 @@ export async function loadResetApprovalModifiers(
   const context = {
     countryId,
     preset: gameState?.preset,
-    year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+    year: gameState ? resolveGameYear(gameState) : null,
   };
   const modifiersByRegion = new Map<string, ActiveModifier[]>();
   const cabinetEffects =

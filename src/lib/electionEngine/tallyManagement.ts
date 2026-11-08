@@ -253,7 +253,6 @@ export async function accumulateVoteTurn(
     eraYear = eraYearContextFromGameState({
       currentYear: options.preload.currentYear,
       startingYear: options.preload.startingYear,
-      eraSystemEnabled: options.preload.eraSystemEnabled,
     });
     regionDemographics = options.preload.regionDemographicsByState?.get(stateId) ?? null;
     demographicsV2Active =
@@ -288,7 +287,6 @@ export async function accumulateVoteTurn(
             currentYear: 1,
             currentTurn: 1,
             startingYear: 1,
-            eraSystemEnabled: 1,
             votingAgeEligible: 1,
             votingAgeEligibleByCountry: 1,
             resetWorldId: 1,

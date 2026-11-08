@@ -922,7 +922,6 @@ export async function accumulateGeneralElectionVotes(
           preset: gsPreset?.preset,
           currentYear: gsPreset?.currentYear,
           startingYear: gsPreset?.startingYear,
-          eraSystemEnabled: gsPreset?.eraSystemEnabled === true,
           partyRenewalEnabled: gsPreset?.nppPartyRenewalEnabled === true,
           categories,
           stateMap,

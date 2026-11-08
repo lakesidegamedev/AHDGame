@@ -553,8 +553,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         bondsByCorpId.set(corpKey, corpBonds);
       }
 
-      // Live era year for the metric existence gate on margin signals; null
-      // while eraSystemEnabled is off (legacy behavior). Fetched AFTER the main
+      // Live era year for the metric existence gate on margin signals. Fetched AFTER the main
       // corp/sector fetches so call-order-sensitive test harnesses keep their
       // queued collection mocks aligned.
       const eraGameState = await database
@@ -566,11 +565,10 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               currentYear: 1,
               currentTurn: 1,
               startingYear: 1,
-              eraSystemEnabled: 1,
             },
           }
         );
-      const eraYear = eraGameState?.eraSystemEnabled ? resolveGameYear(eraGameState) : null;
+      const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
 
       // FX rates — needed for anchor-normalizing cross-currency bond cash flows below.
       // Loaded once, reused by the coupon-income accumulation, the per-corp interest

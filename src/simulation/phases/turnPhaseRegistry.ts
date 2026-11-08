@@ -256,8 +256,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // Global cold-war tension relaxes toward its standing-pressure floor.
         // Deliberately OUTSIDE the corpActionsPaused gate: tension is world
         // politics, not a corporation action, and pausing the economy should
-        // not freeze the temperature of the Cold War. Gated internally on
-        // gameState.coldWarEnabled; a world with the subsystem off is a no-op.
+        // not freeze the temperature of the Cold War.
         await runtime.runPhase("coldWarTension", () =>
           processColdWarTensionTurn(context.db, newTurn, gameState)
         );
@@ -503,11 +502,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // unless prospectingEnabled. Emits notifications only; the survey cost
         // was charged at launch.
         if (await isProspectingEnabled(config)) {
-          // getEraContext, NOT gameState.currentYear: currentYear is set on every
-          // world regardless of `eraSystemEnabled`, so passing it directly
-          // applied era scaling in worlds with the era clock OFF, and left
-          // duration (which DOES go through getEraContext at launch) gated
-          // differently from success and yield.
+          // getEraContext, NOT gameState.currentYear: duration goes through
+          // getEraContext at launch, so success and yield use the same year.
           const prospectEraYear = (await getEraContext(context.db)).year;
           const prospectResult = await runtime.runPhase("prospectingResolution", () =>
             resolveProspects(context.db, newTurn, context.realNow, undefined, prospectEraYear)
