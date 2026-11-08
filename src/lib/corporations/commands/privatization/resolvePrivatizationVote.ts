@@ -203,11 +203,22 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     input.fxByCurrency ??
     (hasFundHolder || input.stockTaxActive ? await loadFxRatesByCurrency(db) : null);
 
+  const grossLocal =
+    nonCeoHolders.reduce((acc, h) => acc + Math.round(h.shares * vote.lockedBuyoutPrice), 0) +
+    Math.round(publicFloat * vote.lockedBuyoutPrice);
+  // Shares can move into the cap table after the vote opened (IPO placements
+  // are excluded from the reserve at open). Scale payouts to what was actually
+  // reserved rather than minting the difference, and refund any remainder
+  // below so undershoot does not destroy cash either.
+  const reserveScale =
+    grossLocal > vote.totalReservedCash ? vote.totalReservedCash / grossLocal : 1;
   let totalCharCorpPaid = 0;
+  let totalPaidLocal = 0;
   const personalPayoutOps: AnyBulkWriteOperation<Character>[] = [];
   let totalFundPaidAnchor = 0;
   for (const holder of nonCeoHolders) {
-    const payout = Math.round(holder.shares * vote.lockedBuyoutPrice);
+    const payout = Math.round(holder.shares * vote.lockedBuyoutPrice * reserveScale);
+    totalPaidLocal += payout;
     if (holder.characterId) {
       const rate = fxByCurrency?.get(vote.lockedBuyoutCurrency as CurrencyCode) ?? 1;
       const stockTax = input.stockTaxActive
@@ -279,7 +290,8 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
 
   // The float belongs to the equity market pool, not the issuer being taken private.
-  const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice);
+  const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice * reserveScale);
+  totalPaidLocal += floatPayout;
   if (floatPayout > 0) {
     await creditEquityPool(
       db,
@@ -287,6 +299,17 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       floatPayout,
       "purchasesIn",
       now
+    );
+  }
+
+  const reserveRemainder = vote.totalReservedCash - totalPaidLocal;
+  if (reserveRemainder > 0) {
+    await refundCharacterCash(
+      db,
+      vote.openedByCharacterId,
+      vote.reservedCashCurrency,
+      reserveRemainder,
+      forexEnabled
     );
   }
 

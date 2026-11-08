@@ -2,7 +2,7 @@
 
 import { poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
+import type { Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { issuanceDilutionFactorExpr } from "@/lib/corporations/shareConsolidation";
@@ -284,6 +284,16 @@ export async function placePendingShareIssuances(
     )
     .sort({ "pendingShareIssuance.createdAtTurn": 1 })
     .toArray();
+  // Shares placed while a privatization vote is open were never counted in the
+  // CEO's buyout reserve but would be paid out at resolve.
+  const openVoteCorpIds = new Set(
+    (
+      await db
+        .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
+        .find({ status: "open" }, { projection: { corporationId: 1 } })
+        .toArray()
+    ).map((v) => v.corporationId.toHexString())
+  );
   const result = { corporationsTouched: 0, sharesPlaced: 0, paidLocal: 0 };
   const budgetByCurrency = new Map<CurrencyCode, number>();
   const bankIds = [
@@ -323,6 +333,7 @@ export async function placePendingShareIssuances(
       : null;
 
   for (const corporation of corporations) {
+    if (openVoteCorpIds.has(corporation._id.toHexString())) continue;
     const pending = corporation.pendingShareIssuance;
     if (!pending || pending.remainingShares <= 0) continue;
     // Upfront IPO shares already sit in the float, so the pool can only buy
