@@ -5,6 +5,7 @@ import type { State } from "@/lib/db/types/state";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
 import { aggregateNationalGdp } from "@/lib/utils/nationalGdp";
+import { flowToRatioGdp, resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { getIncomeStartVintage, getStartingIncomeAnchor } from "@/lib/era/metricCatalog";
 import {
   aggregateNationalLabourDemand,
@@ -209,13 +210,13 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
     if (Object.keys(setOps).length === 0 && Object.keys(unsetOps).length === 0) continue;
 
     const budget = budgetByCountry.get(countryId);
-    if (budget?.gdp && budget.gdp > 0) {
+    if (budget && resolveRatioGdp(budget) > 0) {
       const surplus =
         typeof budget.surplus === "number"
           ? budget.surplus
           : (budget.revenue?.total ?? 0) - (budget.spending?.total ?? 0);
       setOps["governance.budgetBalance"] = {
-        value: Math.round((surplus / budget.gdp) * 100 * 1000) / 1000,
+        value: Math.round((flowToRatioGdp(surplus, budget) ?? 0) * 100 * 1000) / 1000,
       };
 
       if (typeof budget.debtToGdpRatio === "number") {

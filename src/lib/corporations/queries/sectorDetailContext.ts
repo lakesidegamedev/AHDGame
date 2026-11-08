@@ -1,4 +1,5 @@
 /** Loads the world and sibling-sector context the sector detail view is computed from. */
+import { flowToRatioGdp } from "@/lib/budget/gdpDenominator";
 import type {
   Corporation,
   CorporateSector,
@@ -288,6 +289,7 @@ export async function loadSectorDetailContext({
             debtToGdpRatio: 1,
             surplus: 1,
             gdp: 1,
+            gdpSmoothed: 1,
             unionsBanned: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
@@ -359,7 +361,7 @@ export async function loadSectorDetailContext({
   const macroEcon: MacroEconomicValues = {
     inflationRate: federalBudget?.economicFactors?.inflationRate ?? null,
     debtToGdpRatio: federalBudget?.debtToGdpRatio ?? null,
-    surplusToGdpRatio: federalBudget?.gdp ? (federalBudget.surplus ?? 0) / federalBudget.gdp : null,
+    surplusToGdpRatio: federalBudget ? flowToRatioGdp(federalBudget.surplus, federalBudget) : null,
   };
 
   // Load tariff policy and market context together; these reads are independent.
