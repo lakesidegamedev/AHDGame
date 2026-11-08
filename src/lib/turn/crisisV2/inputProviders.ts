@@ -70,7 +70,10 @@ export const bankStressProvider: CrisisInputProvider = {
     const banks = await ctx.db
       .collection<Corporation>("corporations")
       .find(
-        { bankCharter: { $exists: true }, countryId: { $in: [...ctx.countryIds] } },
+        {
+          bankCharter: { $exists: true },
+          countryId: { $in: [...ctx.countryIds] as Corporation["countryId"][] },
+        },
         {
           projection: {
             countryId: 1,
