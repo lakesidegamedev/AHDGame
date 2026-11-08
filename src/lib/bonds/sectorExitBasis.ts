@@ -6,11 +6,11 @@
  * per-unit cost the build path charges, plus construction in flight). Book caps
  * exit at build cost, closing the build-then-exit mint.
  *
- * Shared so preview and executor cannot drift: a mismatch here previously let a
+ * Shared so preview and executor cannot drift: a mismatch here lets a
  * CEO choose dissolve against an NPV figure and get paid book. Both call the
  * same function with the same mode.
  *
- * Every value returned is in the base currency.
+ * Every value returned is in ₳.
  */
 import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
