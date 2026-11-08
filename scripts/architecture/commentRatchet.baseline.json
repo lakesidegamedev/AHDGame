@@ -4185,10 +4185,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/budget/gdpDenominator.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/budget/inflation.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
@@ -4677,10 +4673,6 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/constants/commandEconomy.ts": {
-      "longBlocks": 9,
-      "narrativeLines": 2
-    },
     "src/lib/constants/commandEconomyOffices.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -4704,10 +4696,6 @@
     "src/lib/constants/commodityDemandCalibration.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/corporations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
     },
     "src/lib/constants/countries.ts": {
       "longBlocks": 3,
@@ -6162,10 +6150,6 @@
       "narrativeLines": 2
     },
     "src/lib/countries/jp/elections/billLifecycle.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/elections/perpetual.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7965,6 +7949,26 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/lib/elections/presidential/nigeriaPresidentialElectionEngine.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/presidential/presidentialElectionEngine.leanMultiplier.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/presidential/presidentialElectionEngine.registration.test.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/presidential/presidentialElectionEngine.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/presidential/presidentialElectionEngine.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 3
+    },
     "src/lib/elections/presidentialGeneralRules.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -8001,6 +8005,98 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/elections/resolution/betaParliamentResolution.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/blocListAllocation.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/resolution/commonsByElections.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/commonsByElections.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/resolution/conventionResolution.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/resolution/deSeatAccounting.test.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 6
+    },
+    "src/lib/elections/resolution/electionSpawning.apportionment.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/resolution/electionSpawning.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/generalResolution.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/generalResolutionExecutiveEligibility.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/generalResolutionHelpers.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 3
+    },
+    "src/lib/elections/resolution/germanyAMS.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/resolution/independenceDesireHook.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/largestRemainderSeats.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/ngPresidentAccumulation.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/resolution/presidentExecutiveSeating.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/presidentExecutiveSeatingDualOffice.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/presidentResolution.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/seatAllocation.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/resolution/snapElection.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/snapElection.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/specialCommonsResolution.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolution/ticketSplitCrossover.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 3
+    },
     "src/lib/elections/resolvedSeatsEstimate.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -8024,6 +8120,22 @@
     "src/lib/elections/runningMateEligibility.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
+    },
+    "src/lib/elections/scheduling/countries/betaParliaments.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/scheduling/countries/easternBloc.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/scheduling/engine.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/scheduling/shared.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 2
     },
     "src/lib/elections/snapShift.ts": {
       "longBlocks": 2,
@@ -9785,10 +9897,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/elections/presidential/nigeriaPresidentialElectionEngine.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/npp/actionAi.ts": {
       "longBlocks": 2,
       "narrativeLines": 1
@@ -10556,22 +10664,6 @@
     "src/lib/presidentialBalanceDiagnostic.test.ts": {
       "longBlocks": 2,
       "narrativeLines": 5
-    },
-    "src/lib/elections/presidential/presidentialElectionEngine.leanMultiplier.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/presidential/presidentialElectionEngine.registration.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/presidential/presidentialElectionEngine.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/presidential/presidentialElectionEngine.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 3
     },
     "src/lib/primaryProjection.test.ts": {
       "longBlocks": 0,
@@ -12105,14 +12197,6 @@
       "longBlocks": 1,
       "narrativeLines": 7
     },
-    "src/lib/elections/resolution/commonsByElections.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/commonsByElections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/turn/corpLevelDailyCosts.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -12428,82 +12512,6 @@
     "src/lib/turn/economyPause.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/elections/resolution/betaParliamentResolution.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/blocListAllocation.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/resolution/conventionResolution.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/resolution/deSeatAccounting.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 6
-    },
-    "src/lib/elections/resolution/electionSpawning.apportionment.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/resolution/electionSpawning.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/generalResolution.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/generalResolutionExecutiveEligibility.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/generalResolutionHelpers.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/elections/resolution/germanyAMS.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/resolution/independenceDesireHook.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/largestRemainderSeats.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/ngPresidentAccumulation.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/resolution/presidentExecutiveSeating.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/presidentExecutiveSeatingDualOffice.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/presidentResolution.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/seatAllocation.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/resolution/specialCommonsResolution.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/ticketSplitCrossover.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 3
     },
     "src/lib/turn/electionCalculations.ts": {
       "longBlocks": 1,
@@ -12969,22 +12977,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/elections/scheduling/countries/betaParliaments.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/scheduling/countries/easternBloc.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/scheduling/engine.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/scheduling/shared.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
     "src/lib/turn/pmVacancyDeadline.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -13115,11 +13107,11 @@
     },
     "src/lib/turn/scotusSurpriseCaseTurn.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/turn/scotusSurpriseCaseTurn.ts": {
       "longBlocks": 1,
-      "narrativeLines": 1
+      "narrativeLines": 0
     },
     "src/lib/turn/scotusTenureTurn.test.ts": {
       "longBlocks": 0,
@@ -13144,14 +13136,6 @@
     "src/lib/turn/shutdownHandler.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/elections/resolution/snapElection.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolution/snapElection.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
     },
     "src/lib/turn/socialAxisDrift.ts": {
       "longBlocks": 1,
