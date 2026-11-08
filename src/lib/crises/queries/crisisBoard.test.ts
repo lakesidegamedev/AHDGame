@@ -93,7 +93,8 @@ describe("viewerCanActOnCrisis", () => {
           description: "",
           effects: [],
           durationReductionTurns: 2,
-        } as CrisisDecisionNode["options"] extends (infer O)[] | undefined ? O : never,
+          nextNodeId: "end",
+        },
       ],
     });
     const converted = crisis({ v2: { definitionId: "legacy:recession" } as Crisis["v2"] });

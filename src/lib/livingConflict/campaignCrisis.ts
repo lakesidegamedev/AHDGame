@@ -6,6 +6,7 @@ import {
   registerCrisisEffectModule,
   registerCrisisInputProvider,
 } from "@/lib/turn/crisisV2/registry";
+import { getConflictsCollection } from "@/lib/db/collections/conflicts";
 import { logger } from "@/lib/observability/logger";
 import type { ConflictParticipants } from "./driver";
 import { nationsForRoles } from "./driver";
@@ -59,7 +60,7 @@ export function ensureCampaignCrisisContent(): void {
         ctx.db
           .collection<{ _id: string; value?: number }>("coldWarTension")
           .findOne({ _id: "current" }),
-        ctx.db.collection("conflicts").find({ status: "active" }).toArray(),
+        getConflictsCollection(ctx.db).find({ status: "active" }).toArray(),
       ]);
       const pressure = vietnamWorldPressure(
         tension?.value ?? 0,

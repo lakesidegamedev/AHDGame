@@ -15,6 +15,7 @@ import {
   crisisDecisionRegion,
   describeRoleRequirement,
 } from "@/lib/crises/rules/authorization";
+import { spilloverSpreadLinks } from "@/lib/crises/v2/spillover";
 import {
   boardGroup,
   buildSpreadLinks,

@@ -8,7 +8,7 @@ interface Fake {
 }
 
 function makeDb(fake: Fake) {
-  const bulkWrite = vi.fn(async () => ({}));
+  const bulkWrite = vi.fn(async (_ops: unknown[]) => ({}));
   const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
   const db = {
     collection(name: string) {

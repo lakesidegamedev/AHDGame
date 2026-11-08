@@ -16,6 +16,7 @@ const lever = (overrides: Partial<CrisisV2Lever> = {}): CrisisV2Lever => ({
   cooldownTurns: 3,
   viaBill: false,
   needsCorporation: false,
+  actionCost: 0,
   ...overrides,
 });
 

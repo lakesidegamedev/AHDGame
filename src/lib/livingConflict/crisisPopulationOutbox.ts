@@ -3,7 +3,7 @@
  * Kept apart from the writer so the conflict materializers can complete them
  * without importing the writer's dependencies.
  */
-import { ObjectId, type Db } from "mongodb";
+import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { ConflictCivilianLossOrder } from "./rules/civilianLoss";
 import type { RefugeeReceptionOrder } from "./rules/refugeeReception";
@@ -45,25 +45,26 @@ export async function completeCrisisPopulationOrders(
     reception: readonly { _id: string; crisisId: string }[];
   }
 ): Promise<void> {
+  const ops: AnyBulkWriteOperation<Crisis>[] = [
+    ...done.civilianLoss.map((order): AnyBulkWriteOperation<Crisis> => ({
+      updateOne: {
+        filter: { _id: new ObjectId(order.crisisId) },
+        update: { $set: { "populationOrders.civilianLoss.$[order].status": "complete" } },
+        arrayFilters: [{ "order._id": order._id }],
+      },
+    })),
+    ...done.reception.map((order): AnyBulkWriteOperation<Crisis> => ({
+      updateOne: {
+        filter: { _id: new ObjectId(order.crisisId) },
+        update: { $set: { "populationOrders.reception.$[order].status": "complete" } },
+        arrayFilters: [{ "order._id": order._id }],
+      },
+    })),
+  ];
+  if (ops.length === 0) return;
   const crises = db.collection<Crisis>("crises");
-  const touched = new Set<string>();
-  for (const order of done.civilianLoss) {
-    await crises.updateOne(
-      { _id: new ObjectId(order.crisisId) },
-      { $set: { "populationOrders.civilianLoss.$[order].status": "complete" } },
-      { arrayFilters: [{ "order._id": order._id }] }
-    );
-    touched.add(order.crisisId);
-  }
-  for (const order of done.reception) {
-    await crises.updateOne(
-      { _id: new ObjectId(order.crisisId) },
-      { $set: { "populationOrders.reception.$[order].status": "complete" } },
-      { arrayFilters: [{ "order._id": order._id }] }
-    );
-    touched.add(order.crisisId);
-  }
-  if (touched.size === 0) return;
+  await crises.bulkWrite(ops, { ordered: true });
+  const touched = new Set([...done.civilianLoss, ...done.reception].map((order) => order.crisisId));
   await crises.updateMany(
     {
       _id: { $in: [...touched].map((id) => new ObjectId(id)) },

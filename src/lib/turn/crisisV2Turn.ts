@@ -643,7 +643,9 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
                 v2: next,
                 ...(v2Output ? { v2Output } : {}),
                 ...(laid.length > 0 ? { scarsHealUntil: scarHorizon(next.scars) } : {}),
-                ...(closesHere ? { status: "resolved", endTurn: turn, resolvedAt: new Date() } : {}),
+                ...(closesHere
+                  ? { status: "resolved", endTurn: turn, resolvedAt: new Date() }
+                  : {}),
               },
             },
           },

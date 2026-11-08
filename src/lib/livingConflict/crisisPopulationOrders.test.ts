@@ -37,18 +37,18 @@ function makeDb() {
       find: vi.fn(() => ({ toArray: async () => [{ countryId: "DE", gdp: 5_000_000_000 }] })),
     },
     crises: {
-      updateOne: vi.fn(async (filter: Doc, update: Doc) => {
-        const push = update.$push as Doc | undefined;
-        const order = push ? (Object.values(push)[0] as { _id: string }) : null;
-        if (order) {
-          if (existing.has(order._id)) return { modifiedCount: 0 };
+      bulkWrite: vi.fn(async (ops: { updateOne: { filter: Doc; update: Doc } }[]) => {
+        let modifiedCount = 0;
+        for (const { updateOne } of ops) {
+          const push = updateOne.update.$push as Doc;
+          const order = Object.values(push)[0] as { _id: string };
+          if (existing.has(order._id)) continue;
           existing.add(order._id);
-          pushed.push({ filter, update });
+          pushed.push(updateOne);
+          modifiedCount += 1;
         }
-        return { modifiedCount: 1 };
+        return { modifiedCount };
       }),
-      updateMany: vi.fn(async () => ({})),
-      find: vi.fn(),
     },
   };
   return {
@@ -65,8 +65,8 @@ describe("raiseCrisisPopulationOrders", () => {
     const request = { losses: [{ countryId: "US", fraction: 0.0005 }], receptions: [] };
     const first = await raiseCrisisPopulationOrders(db, crisisId, 10, request);
     const second = await raiseCrisisPopulationOrders(db, crisisId, 10, request);
-    expect(first.civilianLoss).toBe(1);
-    expect(second.civilianLoss).toBe(0);
+    expect(first).toBe(1);
+    expect(second).toBe(0);
     const order = (pushed[0].update.$push as Record<string, Doc>)["populationOrders.civilianLoss"];
     expect(order.requestedPeople).toBeCloseTo(1000);
     expect(order.effectiveTurn).toBe(11);
@@ -94,7 +94,7 @@ describe("raiseCrisisPopulationOrders", () => {
         { originCountryId: "YU", destinationCountryId: "US", fraction: 0.003 },
       ],
     });
-    expect(result.reception).toBe(1);
+    expect(result).toBe(1);
     const order = (pushed[0].update.$push as Record<string, Doc>)["populationOrders.reception"];
     expect(order.destinationCountryId).toBe("DE");
     expect(order.requestedPeople).toBeCloseTo(1500);
@@ -125,15 +125,15 @@ describe("crisis population outbox", () => {
   });
 
   it("completes orders on the crisis and clears the pending flag", async () => {
-    const updateOne = vi.fn(async () => ({}));
+    const bulkWrite = vi.fn(async () => ({}));
     const updateMany = vi.fn(async () => ({}));
-    const db = { collection: () => ({ updateOne, updateMany }) } as never;
+    const db = { collection: () => ({ bulkWrite, updateMany }) } as never;
     const crisisId = new ObjectId().toHexString();
     await completeCrisisPopulationOrders(db, {
       civilianLoss: [{ _id: "a", crisisId }],
       reception: [{ _id: "r", crisisId }],
     });
-    expect(updateOne).toHaveBeenCalledTimes(2);
+    expect((bulkWrite.mock.calls[0] as unknown[][])[0]).toHaveLength(2);
     expect(updateMany).toHaveBeenCalledTimes(1);
   });
 });

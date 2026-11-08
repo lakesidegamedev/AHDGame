@@ -3,12 +3,12 @@
  * document and are consumed by the demographics phase through the same planners
  * as conflict outcomes, so deaths and arrivals keep their cohort accounting.
  */
-import { ObjectId, type Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Crisis } from "@/lib/db/types/crisis";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { ensureDemographicWorldEpoch } from "@/lib/demographics/worldEpoch";
 import type { ConflictCivilianLossOrder } from "./rules/civilianLoss";
 import { loadRefugeeAdmissionAuthorization } from "./refugeeReception";
@@ -40,7 +40,8 @@ function clamp(value: number, max: number): number {
 }
 
 async function orderClock(db: Db) {
-  const world = await db.collection<GameState>("gameState").findOne(
+  const collection = await getGameStateCollection(db);
+  const world = await collection.findOne(
     { _id: "current" },
     {
       projection: {
@@ -91,12 +92,12 @@ export async function raiseCrisisPopulationOrders(
   crisisId: ObjectId,
   turn: number,
   request: { losses: readonly PopulationLossRequest[]; receptions: readonly ReceptionRequest[] }
-): Promise<{ civilianLoss: number; reception: number }> {
+): Promise<number> {
   if (request.losses.length === 0 && request.receptions.length === 0) {
-    return { civilianLoss: 0, reception: 0 };
+    return 0;
   }
   const clock = await orderClock(db);
-  if (!clock) return { civilianLoss: 0, reception: 0 };
+  if (!clock) return 0;
   const { epochId, effectiveTurn } = clock;
   const crisisKey = crisisId.toHexString();
 
@@ -134,8 +135,9 @@ export async function raiseCrisisPopulationOrders(
     (entry) => entry.originCountryId !== entry.destinationCountryId
   );
   if (receptionRequests.length > 0) {
-    const budgets = await db
-      .collection<FederalBudget>("federalBudget")
+    const budgets = await (
+      await getFederalBudgetCollection(db)
+    )
       .find(
         {
           countryId: {
@@ -184,27 +186,27 @@ export async function raiseCrisisPopulationOrders(
     }
   }
 
-  const crises = db.collection<Crisis>("crises");
-  const raised = { civilianLoss: 0, reception: 0 };
-  for (const order of civilianLoss) {
-    const pushed = await crises.updateOne(
-      { _id: crisisId, "populationOrders.civilianLoss._id": { $ne: order._id } },
-      {
-        $push: { "populationOrders.civilianLoss": order },
-        $set: { "populationOrders.epochId": epochId, "populationOrders.pending": true },
-      }
-    );
-    raised.civilianLoss += pushed.modifiedCount;
-  }
-  for (const order of reception) {
-    const pushed = await crises.updateOne(
-      { _id: crisisId, "populationOrders.reception._id": { $ne: order._id } },
-      {
-        $push: { "populationOrders.reception": order },
-        $set: { "populationOrders.epochId": epochId, "populationOrders.pending": true },
-      }
-    );
-    raised.reception += pushed.modifiedCount;
-  }
-  return raised;
+  const ops: AnyBulkWriteOperation<Crisis>[] = [
+    ...civilianLoss.map((order): AnyBulkWriteOperation<Crisis> => ({
+      updateOne: {
+        filter: { _id: crisisId, "populationOrders.civilianLoss._id": { $ne: order._id } },
+        update: {
+          $push: { "populationOrders.civilianLoss": order },
+          $set: { "populationOrders.epochId": epochId, "populationOrders.pending": true },
+        },
+      },
+    })),
+    ...reception.map((order): AnyBulkWriteOperation<Crisis> => ({
+      updateOne: {
+        filter: { _id: crisisId, "populationOrders.reception._id": { $ne: order._id } },
+        update: {
+          $push: { "populationOrders.reception": order },
+          $set: { "populationOrders.epochId": epochId, "populationOrders.pending": true },
+        },
+      },
+    })),
+  ];
+  if (ops.length === 0) return 0;
+  const written = await db.collection<Crisis>("crises").bulkWrite(ops, { ordered: true });
+  return written.modifiedCount;
 }

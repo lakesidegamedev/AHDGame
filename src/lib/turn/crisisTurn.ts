@@ -284,7 +284,7 @@ export async function finalizeResolvedCrises(
       ? toResolve.filter((crisis) => crisis.chain?.family !== "vietnam")
       : toResolve,
     turn,
-    options.year
+    options.year ?? undefined
   );
 }
 
