@@ -304,61 +304,67 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     void emitTxBulk(db, refundTxEntries, thresholds);
   }
 
-  // Return reserved shares to sellers
+  // Return reserved shares to sellers. The listings are already claimed
+  // cancelled, so one failed return is logged and the rest still go back.
   for (const listing of claimedListings) {
     if (listing.sharesRemaining <= 0) continue;
-    if (listing.sellerCorporationId) {
-      const targetCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: listing.corporationId, "shareholders.corporationId": listing.sellerCorporationId },
+    try {
+      if (listing.sellerCorporationId) {
+        const targetCorp = await db.collection<Corporation>("corporations").findOne(
+          {
+            _id: listing.corporationId,
+            "shareholders.corporationId": listing.sellerCorporationId,
+          },
           { projection: { "shareholders.$": 1 } }
         );
-      const existingAvg =
-        targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
-      await creditSharesToCorp(
-        db,
-        listing.corporationId,
-        listing.sellerCorporationId,
-        listing.sharesRemaining,
-        existingAvg,
-        { $set: { updatedAt: now } }
-      );
-    } else {
-      if (listing.holdingTerms) {
-        const restored = await creditShares(
+        const existingAvg =
+          targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
+        await creditSharesToCorp(
+          db,
+          listing.corporationId,
+          listing.sellerCorporationId,
+          listing.sharesRemaining,
+          existingAvg,
+          { $set: { updatedAt: now } }
+        );
+      } else {
+        if (listing.holdingTerms) {
+          const restored = await creditShares(
+            db,
+            listing.corporationId,
+            listing.sellerCharacterId,
+            listing.sharesRemaining,
+            { $set: { updatedAt: now } },
+            {
+              holdingChange: {
+                turn: currentTurn,
+                restore: listing.holdingTerms,
+                trackingEnabled: true,
+              },
+            }
+          );
+          if (!restored) throw new Error("Expired stock holding could not be restored");
+          continue;
+        }
+        const targetCorp = await db
+          .collection<Corporation>("corporations")
+          .findOne(
+            { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
+            { projection: { "shareholders.$": 1 } }
+          );
+        const returnPrice =
+          targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
+        await creditShares(
           db,
           listing.corporationId,
           listing.sellerCharacterId,
           listing.sharesRemaining,
           { $set: { updatedAt: now } },
-          {
-            holdingChange: {
-              turn: currentTurn,
-              restore: listing.holdingTerms,
-              trackingEnabled: true,
-            },
-          }
+          { pricePerShare: returnPrice }
         );
-        if (!restored) throw new Error("Expired stock holding could not be restored");
-        continue;
       }
-      const targetCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
-          { projection: { "shareholders.$": 1 } }
-        );
-      const returnPrice =
-        targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
-      await creditShares(
-        db,
-        listing.corporationId,
-        listing.sellerCharacterId,
-        listing.sharesRemaining,
-        { $set: { updatedAt: now } },
-        { pricePerShare: returnPrice }
-      );
+    } catch (error) {
+      console.error(`[shareListings] could not return shares for listing ${listing._id}:`, error);
     }
   }
 

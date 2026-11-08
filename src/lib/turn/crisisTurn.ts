@@ -212,13 +212,27 @@ export async function processCrisisTurn(
     }
   }
 
+  // Shared response windows derive and apply their aggregate outcome before
+  // the generic lifecycle close. The resolver is idempotent on replay, so a
+  // crisis whose resolver throws stays active and retries alone next turn
+  // instead of holding every other expiring crisis open with it.
+  const resolvable: Crisis[] = [];
+  for (const crisis of toResolve) {
+    if (crisis.globalResponse) {
+      try {
+        await resolveGlobalResponse(db, crisis._id);
+      } catch (error) {
+        console.error(`[crisisTurn] global response for crisis ${crisis._id} failed:`, error);
+        continue;
+      }
+    }
+    resolvable.push(crisis);
+  }
+  toResolve.length = 0;
+  toResolve.push(...resolvable);
+
   // Batch-resolve expired crises
   if (toResolve.length > 0) {
-    // Shared response windows derive and apply their aggregate outcome before
-    // the generic lifecycle close. The resolver is idempotent on replay.
-    for (const crisis of toResolve) {
-      if (crisis.globalResponse) await resolveGlobalResponse(db, crisis._id);
-    }
     const ids = toResolve.map((c) => c._id);
     await db
       .collection<Crisis>("crises")
@@ -266,7 +280,11 @@ export async function processCrisisTurn(
 
   const expiredInteractions = await getExpiredInteractions(db);
   for (const interaction of expiredInteractions) {
-    await autoResolveCrisisInteraction(db, interaction._id);
+    try {
+      await autoResolveCrisisInteraction(db, interaction._id);
+    } catch (error) {
+      console.error(`[crisisTurn] auto-resolve of interaction ${interaction._id} failed:`, error);
+    }
   }
 
   return crises.length;

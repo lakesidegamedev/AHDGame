@@ -551,6 +551,17 @@ describe("autoResolveCrisisInteraction", () => {
     expect(setArg.$set.resolutionPath).toEqual(["decline", "terminal"]);
   });
 
+  it("closes an interaction whose current node is missing from its tree", async () => {
+    const interaction = makeInteraction({ currentNodeId: "gone" });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+
+    await autoResolveCrisisInteraction(mdb(), interaction._id);
+
+    const [filter, update] = db.collectionMocks["crisisInteractions"]!.updateOne.mock.calls.at(-1)!;
+    expect(filter).toEqual({ _id: interaction._id, resolvedAt: null });
+    expect(update.$set).toMatchObject({ currentNodeId: null, resolutionOutcome: "auto" });
+  });
+
   it("closes an unanswered domestic bank window without funding an intervention", async () => {
     const { getBankFailureResponseTemplate } = await import("./bankFailureResponseWindow");
     const template = getBankFailureResponseTemplate();

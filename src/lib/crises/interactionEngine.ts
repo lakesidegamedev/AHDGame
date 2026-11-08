@@ -867,7 +867,23 @@ export async function autoResolveCrisisInteraction(db: Db, interactionId: Object
   if (!interaction || interaction.resolvedAt) return;
 
   const currentNode = interaction.decisionTree.find((n) => n.nodeId === interaction.currentNodeId);
-  if (!currentNode) return;
+  if (!currentNode) {
+    // A node id the tree no longer has can never be answered; close it rather
+    // than re-select it every turn.
+    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+      { _id: interactionId, resolvedAt: null },
+      {
+        $set: {
+          currentNodeId: null,
+          decisionDeadline: null,
+          resolvedAt: new Date(),
+          resolutionOutcome: "auto",
+          updatedAt: new Date(),
+        },
+      }
+    );
+    return;
+  }
 
   // Multi-responder (global) nodes self-serve per country: each leader already
   // applied their own effects, and non-responders simply took no action. Closing
