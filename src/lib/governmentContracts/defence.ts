@@ -133,9 +133,9 @@ export async function activateDefenceBid(
   // A resumed award can outlive its winner. Reopen the tender rather than
   // convert the reservation into a contract for a company that is gone.
   if (
-    !(await db
-      .collection("corporations")
-      .countDocuments({ _id: prepared.corporationId }, { limit: 1 }))
+    !(await (
+      await getCorporationsCollection(db)
+    ).countDocuments({ _id: prepared.corporationId }, { limit: 1 }))
   ) {
     await releaseContractPlant(db, sectorId, t._id, t.awardLeaseKey ?? t._id);
     await resetUnconvertedAward(db, t);
