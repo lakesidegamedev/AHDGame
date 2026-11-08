@@ -78,9 +78,9 @@ function optionLever(
   };
 }
 
-function pooledRole(node: CrisisDecisionNode): CrisisRole {
+function pooledRole(node: CrisisDecisionNode): CrisisRole | null {
   if (node.type === "aid") return "headOfState";
-  return node.requiredRoles.flatMap((r) => NODE_ROLE_TO_CRISIS_ROLE[r] ?? [])[0] ?? "headOfState";
+  return node.requiredRoles.flatMap((r) => NODE_ROLE_TO_CRISIS_ROLE[r] ?? [])[0] ?? null;
 }
 
 /** Aid nodes get one pledge lever; each collective option that does something gets its own. */
@@ -97,11 +97,15 @@ function pooledLevers(node: CrisisDecisionNode): CrisisLeverDef[] {
       },
     ];
   }
+  // Public appeals open to any player have no single office, so they stay on
+  // the decision path where every resident can still contribute.
+  const role = pooledRole(node);
+  if (!role) return [];
   return (node.options ?? [])
     .filter((option) => (option.collectiveContribution ?? 0) > 0 || !isDoNothing(option))
     .map((option) => ({
       id: `pool.${node.nodeId}.${option.optionId}`,
-      role: pooledRole(node),
+      role,
       label: option.label,
       mitigation: POOLED_LEVER_MITIGATION,
       cost: {},
