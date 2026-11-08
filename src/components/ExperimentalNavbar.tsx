@@ -503,15 +503,13 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     unionsEnabled,
   });
 
-  const staffSubItems =
-    user?.isAdmin || user?.isModerator || user?.isJuniorDev
-      ? visibleStaffNavItems({
-          isAdmin: !!user?.isAdmin,
-          isModerator: !!user?.isModerator,
-          isJuniorDev: !!user?.isJuniorDev,
-          isSingleplayerOwner: viewerIsSingleplayerOwner(user),
-        })
-      : [];
+  // Empty for non-staff: every staff item is gated on a staff role.
+  const staffSubItems = visibleStaffNavItems({
+    isAdmin: !!user?.isAdmin,
+    isModerator: !!user?.isModerator,
+    isJuniorDev: !!user?.isJuniorDev,
+    isSingleplayerOwner: viewerIsSingleplayerOwner(user),
+  });
 
   // ── Dropdown panels ────────────────────────────────────────────────────────
   const worldMenu = (
