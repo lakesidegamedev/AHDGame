@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
 import type { BoardCrisis } from "@/lib/crises/queries/crisisBoard";
 import type { CrisisBoardGroup } from "@/lib/crises/rules/boardView";
 import {
@@ -33,10 +34,12 @@ export function BoardCard({
   crisis,
   selected,
   onFocus,
+  onPulled,
 }: {
   crisis: BoardCrisis;
   selected: boolean;
   onFocus?: (id: string) => void;
+  onPulled?: () => void;
 }) {
   const resolved = crisis.status === "resolved";
   const deadline = formatDeadline(crisis.decisionDeadline);
@@ -71,6 +74,11 @@ export function BoardCard({
           </span>
         )}
       </div>
+      {crisis.v2 && !resolved && (
+        <div className="mt-2">
+          <CrisisV2Strip crisisId={crisis.id} v2={crisis.v2} onPulled={onPulled} />
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span>{resolved ? "Resolved" : formatTurnsLeft(crisis.turnsLeft)}</span>
         {crisis.whoCanAct && <span>Acts: {crisis.whoCanAct}</span>}

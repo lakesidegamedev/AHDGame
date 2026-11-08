@@ -5,13 +5,14 @@ import { errorResponse, handleRouteError } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { proposeEmergencyBill } from "@/lib/crises/levers/emergencyBill";
-import { pullLever } from "@/lib/crises/levers/leverCommand";
+import { pullLeverWithDecision } from "@/lib/crises/levers/legacyLever";
 import { getDb } from "@/lib/mongodb";
 
 const leverSchema = z.object({
   leverId: z.string().min(1).max(80),
   intensity: z.number().min(0).max(1).optional(),
   corporationId: z.string().optional(),
+  pctGdp: z.number().positive().max(1).optional(),
 });
 
 /**
@@ -29,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!ObjectId.isValid(id)) return errorResponse(400, "Invalid crisis ID");
     const parsed = await parseJsonBody(request, leverSchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
-    const { leverId, intensity, corporationId } = parsed.data;
+    const { leverId, intensity, corporationId, pctGdp } = parsed.data;
     if (corporationId !== undefined && !ObjectId.isValid(corporationId)) {
       return errorResponse(400, "Invalid corporation ID");
     }
@@ -40,9 +41,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       leverId,
       characterId: auth.user.character._id,
     };
-    const pulled = await pullLever(db, {
+    const pulled = await pullLeverWithDecision(db, {
       ...input,
       intensity,
+      pctGdp,
       corporationId: corporationId ? new ObjectId(corporationId) : undefined,
     });
     if (pulled.ok) {

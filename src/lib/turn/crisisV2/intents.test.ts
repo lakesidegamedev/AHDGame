@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const applyCrisisEffects = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/crises/applyEffects", () => ({ applyCrisisEffects }));
+vi.mock("@/lib/livingConflict/capacityDestruction", () => ({
+  applyCapacityDestructionSpec: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/livingConflict/crisisPopulationOrders", () => ({
+  raiseCrisisPopulationOrders: vi.fn(async () => ({})),
+}));
 
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { routeEffectIntents, type IntentTargets } from "./intents";
@@ -37,6 +43,19 @@ const targets = (extra: Partial<IntentTargets> = {}): IntentTargets => ({
 
 describe("routeEffectIntents", () => {
   beforeEach(() => applyCrisisEffects.mockReset());
+
+  it("hands population, capital, trade and refugee intents to their writers", async () => {
+    const { db } = makeDb();
+    const intents: EffectIntent[] = [
+      { kind: "populationLoss", fraction: 0.0001, countryId: "US" },
+      { kind: "capitalStock", fraction: 0.01, regionId: "US_OH" },
+      { kind: "tradeRestriction", commodity: "oil", targetRole: "belligerent", durationTurns: 5 },
+      { kind: "migration", fraction: 0.001, fromCountryId: "YU" },
+    ];
+    const result = await routeEffectIntents(db, intents, targets());
+    expect(result.unsupported).toEqual({});
+    expect(applyCrisisEffects).not.toHaveBeenCalled();
+  });
 
   it("records plant output cuts on the crisis, including commodity supply cuts", async () => {
     const { db } = makeDb();

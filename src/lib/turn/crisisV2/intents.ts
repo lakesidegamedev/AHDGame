@@ -15,6 +15,7 @@ import {
   SOVEREIGN_CONFIDENCE_PREMIUM_MAX,
 } from "@/lib/nationalization/constants";
 import { defaultMarginEffectForApproval } from "@/lib/states/conditions/marginEffects";
+import { routeWorldIntents, type WorldIntentBatch } from "./worldIntents";
 
 export interface IntentTargets {
   stateIds: string[];
@@ -22,6 +23,8 @@ export interface IntentTargets {
   /** Names the crisis whose demand modifiers are written. */
   crisisId?: ObjectId;
   turn?: number;
+  /** Response role per country, for restrictions that name a target role. */
+  rolesByCountry?: Readonly<Record<string, string>>;
 }
 
 export interface IntentRouting {
@@ -278,10 +281,12 @@ async function applyBondPressure(
 /**
  * Sends a crisis's intents to the system that owns each write: plant output via
  * `v2Output`, demand via expiring modifiers, migration via regional metrics,
- * bank panic, investor confidence, and government approval. Callers claim the
- * turn first; routing itself is not idempotent, and the output cuts are returned
- * for the caller to persist. Kinds with no handler are
- * counted so a definition using one is visible.
+ * bank panic, investor confidence, government approval, population orders,
+ * capital destruction and trade embargoes through their owning writers. Callers
+ * claim the turn first; the order, capital and embargo writers also key on the
+ * crisis and turn, so a replay adds nothing. The output cuts are returned for the
+ * caller to persist. Kinds with no handler are counted so a definition using one
+ * is visible.
  */
 export async function routeEffectIntents(
   db: Db,
@@ -293,6 +298,12 @@ export async function routeEffectIntents(
   const cutPoints = new Map<string | null, number>();
   const demandPct = new Map<string, number>();
   const migration: Extract<EffectIntent, { kind: "migration" }>[] = [];
+  const world: WorldIntentBatch = {
+    populationLoss: [],
+    capitalStock: [],
+    tradeRestriction: [],
+    reception: [],
+  };
   let bankDelta = 0;
   let bondBps = 0;
   let approvalDelta = 0;
@@ -324,7 +335,17 @@ export async function routeEffectIntents(
         break;
       }
       case "migration":
-        migration.push(intent);
+        if (intent.fromCountryId) world.reception.push(intent);
+        else migration.push(intent);
+        break;
+      case "populationLoss":
+        world.populationLoss.push(intent);
+        break;
+      case "capitalStock":
+        world.capitalStock.push(intent);
+        break;
+      case "tradeRestriction":
+        world.tradeRestriction.push(intent);
         break;
       case "bankStress":
         bankDelta += intent.delta;
@@ -363,6 +384,7 @@ export async function routeEffectIntents(
   if (gdpFractions.length > 0) await applyGdpLoss(db, targets.stateIds, gdpFractions);
   if (demandPct.size > 0) await writeDemandShifts(db, demandPct, targets);
   if (migration.length > 0) await applyMigration(db, migration, targets);
+  const worldHandled = await routeWorldIntents(db, world, targets);
   if (bankDelta > 0) await applyBankStress(db, bankDelta, targets.countryIds);
   if (bondBps !== 0) await applyBondPressure(db, bondBps, targets.countryIds, targets.turn);
 
@@ -372,6 +394,7 @@ export async function routeEffectIntents(
     cutPoints.size +
     demandPct.size +
     migration.length +
+    worldHandled +
     (bankDelta > 0 ? 1 : 0) +
     (bondBps !== 0 ? 1 : 0);
   return { applied: handled, unsupported, v2Output };

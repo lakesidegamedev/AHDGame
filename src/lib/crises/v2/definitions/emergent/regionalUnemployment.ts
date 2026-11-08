@@ -66,7 +66,17 @@ export const regionalUnemploymentDefinition: CrisisDefinition = {
     { moduleId: "rotdm.approval", params: { max: 0.15 } },
     { moduleId: "rotdm.electionSwing", params: { maxPoints: 0.15 } },
   ],
-  spillover: [],
+  spillover: [
+    {
+      id: "slump-spreads",
+      channel: "trade",
+      targetDefinitionId: "emergent-recession",
+      minSeverity: 80,
+      minStage: "peak",
+      transmission: 0.15,
+      delayTurns: 3,
+    },
+  ],
   scarRules: [
     {
       id: "hollowed-out-region",

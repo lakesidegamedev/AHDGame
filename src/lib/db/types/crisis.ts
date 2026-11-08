@@ -501,6 +501,16 @@ export interface Crisis {
    * crisis runs. `routedTurn` is the turn the cuts were computed for.
    */
   v2Output?: CrisisV2Output;
+  /** Population orders raised by Crisis v2 effects; the demographics phase consumes them. */
+  populationOrders?: CrisisPopulationOrders;
+}
+
+export interface CrisisPopulationOrders {
+  epochId: string;
+  /** True while any order below is still pending, so the phase reads only live crises. */
+  pending: boolean;
+  civilianLoss: ConflictCivilianLossOrder[];
+  reception: RefugeeReceptionOrder[];
 }
 
 export interface CrisisV2Output {
@@ -553,6 +563,34 @@ export interface CrisisLeverUse {
   createdAt: Date;
 }
 
+/**
+ * A lever use waiting to be counted by the Crisis v2 turn phase. The phase
+ * consumes a row by stamping `appliedTurn`; rows with a null stamp are pending.
+ */
+export interface CrisisLeverUse {
+  _id: ObjectId;
+  crisisId: ObjectId;
+  leverId: string;
+  holderId: string;
+  /** Share of full effect, 0..1. Absent = 1. */
+  intensity?: number;
+  submittedTurn: number;
+  appliedTurn: number | null;
+  /**
+   * `pending` from the moment the pull claims its unique slot until its cost has
+   * landed; the turn phase skips pending rows. Absent on rows written before
+   * costs existed, which count as charged.
+   */
+  chargeState?: "pending" | "charged";
+  /** Cost actually debited, after scaling by intensity. */
+  cost?: import("@/lib/crises/v2/types").LeverCost;
+  /** Corporation whose cash paid, for corporate levers. */
+  corporationId?: ObjectId;
+  /** Emergency bill that authorised the use, for legislature levers. */
+  billId?: ObjectId;
+  createdAt: Date;
+}
+
 /** One row per (auto-crisis template, scope key) tracking the last turn it
  *  spawned, so the spawner can enforce per-template cooldowns. `scopeKey` is a
  *  countryId for national/regional crises or "GLOBAL" for world-scoped ones. */
@@ -568,11 +606,7 @@ export interface CrisisAutoCooldown {
    * on legacy rows, which are read as armed.
    */
   armed?: boolean;
-  /**
-   * Turn a random-tier spawn was won but held back by the severe-crisis
-   * stacking guard. A deferred spawn lands, without re-rolling, as soon as the
-   * country has a free slot. Cleared when the crisis spawns.
-   */
+  /** Retired deferral marker; the next spawn clears it from rows that still carry one. */
   deferredTurn?: number;
   updatedAt: Date;
 }

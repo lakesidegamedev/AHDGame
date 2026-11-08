@@ -124,13 +124,15 @@ export function CrisisBoardMap({
             const my = Math.min(a.y, b.y) - Math.hypot(a.x - b.x, a.y - b.y) * 0.18;
             return (
               <path
-                key={`${l.fromId}-${l.toId}`}
+                key={`${l.via}-${l.fromId}-${l.toId}`}
                 d={`M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`}
                 fill="none"
                 stroke={l.via === "campaign" ? KIND_COLOR.war : "currentColor"}
                 strokeOpacity={0.55}
                 strokeWidth={1.2}
-                strokeDasharray={l.via === "chain" ? "4 3" : undefined}
+                strokeDasharray={
+                  l.via === "chain" ? "4 3" : l.via === "spillover" ? "1 4" : undefined
+                }
                 className="text-muted"
               />
             );

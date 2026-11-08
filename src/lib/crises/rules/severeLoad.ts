@@ -1,16 +1,10 @@
 /**
- * Cross-system stacking guard: at most two severe crises may hold a country at
- * once, counting crisis templates and living conflicts together. A third is
- * deferred, not dropped: the spawner leaves it pending and it lands once one of
- * the two ends.
+ * Severe load per country, counting crisis templates and living conflicts
+ * together. Living-conflict families read it to respect their own stacking limit.
  *
  * Plain data in, plain data out. The shell reads active crises and living
  * conflict memberships and passes them here.
  */
-import { SEVERE_CONFLICT_LIMIT, stackingAllows } from "@/lib/livingConflict/rules/futureConflicts";
-
-/** The same limit the living-conflict families already respect. */
-export const SEVERE_CRISIS_LIMIT = SEVERE_CONFLICT_LIMIT;
 
 /** The fields of an active crisis the guard reads. */
 export interface SevereCrisisRow {
@@ -61,14 +55,4 @@ export function mergeSevereLoads(
   const out = new Map(a);
   for (const [countryId, count] of b) out.set(countryId, (out.get(countryId) ?? 0) + count);
   return out;
-}
-
-/** True when a country has room for one more severe crisis. */
-export function severeSlotFree(countryId: string, load: ReadonlyMap<string, number>): boolean {
-  return stackingAllows(countryId, load);
-}
-
-/** Record a newly spawned severe crisis so later spawns in the same turn see it. */
-export function occupySevereSlot(countryId: string, load: Map<string, number>): void {
-  load.set(countryId, (load.get(countryId) ?? 0) + 1);
 }

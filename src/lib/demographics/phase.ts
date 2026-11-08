@@ -6,6 +6,7 @@
 import { loadPandemicSignal } from "@/lib/livingConflict/pandemicSignal";
 import { loadPendingRefugeeReceptions } from "@/lib/livingConflict/refugeeReception";
 import { loadPendingConflictCivilianLosses } from "@/lib/livingConflict/civilianLoss";
+import { loadPendingCrisisPopulationOrders } from "@/lib/livingConflict/crisisPopulationOutbox";
 import { planConflictCivilianLosses } from "@/lib/livingConflict/rules/civilianLoss";
 import {
   planRefugeeReceptions,
@@ -290,7 +291,7 @@ export async function runDemographicFlows(
     ]);
 
   const pandemic = await loadPandemicSignal(db, gameState?.livingConflictsEnabled === true);
-  const [receptionOrders, civilianLossOrders] = await Promise.all([
+  const [conflictReceptions, conflictLosses, crisisOrders] = await Promise.all([
     loadPendingRefugeeReceptions(
       db,
       worldEpochId,
@@ -303,7 +304,10 @@ export async function runDemographicFlows(
       turn,
       gameState?.livingConflictsEnabled === true
     ),
+    loadPendingCrisisPopulationOrders(db, worldEpochId, turn),
   ]);
+  const receptionOrders = [...conflictReceptions, ...crisisOrders.reception];
+  const civilianLossOrders = [...conflictLosses, ...crisisOrders.civilianLoss];
 
   // Configurable age thresholds (defaults 18 / 18 / 64; future laws write gameState).
   // Voting age is resolved per country because electoral-law enactment writes the

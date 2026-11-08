@@ -7,6 +7,11 @@ import { prepareRefugeeReceptionOrder } from "@/lib/livingConflict/refugeeRecept
 import { applyLivingConflictFallback } from "@/lib/livingConflict/fallbackTrajectory";
 import { canCharacterInteract, canRespondToCrisis } from "./rules/authorization";
 import { collectiveDurationReduction } from "./rules/collectiveReduction";
+import {
+  isLegacyDefinitionId,
+  leversFromDecisionTree,
+  optionAnsweredByLever,
+} from "./v2/legacyConvert";
 export { canCharacterInteract } from "./rules/authorization";
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
 import type {
@@ -459,6 +464,33 @@ function deadlineForNode(node: CrisisDecisionNode | null): Date | null {
  * Submit a decision choice for a crisis interaction.
  * Returns the updated interaction and the next node (null once resolved).
  */
+/**
+ * A converted crisis answers covered options, pledges and contributions through
+ * its levers, never both. An aid node's decline stays on the decision.
+ */
+export function decisionAnsweredByLever(
+  crisis: Pick<Crisis, "v2">,
+  tree: readonly CrisisDecisionNode[],
+  node: CrisisDecisionNode,
+  optionId?: string
+): boolean {
+  if (!crisis.v2 || !isLegacyDefinitionId(crisis.v2.definitionId)) return false;
+  if (node.type === "aid") {
+    return (
+      !optionId && leversFromDecisionTree(tree).some((lever) => lever.id === `pool.${node.nodeId}`)
+    );
+  }
+  if (node.type !== "choice" && node.type !== "collective") return false;
+  if (optionId) return optionAnsweredByLever(tree, node.nodeId, optionId);
+  return (node.options ?? []).some((option) =>
+    optionAnsweredByLever(tree, node.nodeId, option.optionId)
+  );
+}
+
+/**
+ * Submit a decision choice for a crisis interaction.
+ * Returns the updated interaction and the next node (null once resolved).
+ */
 export async function submitCrisisDecision(
   db: Db,
   interactionId: ObjectId,
@@ -487,237 +519,282 @@ export async function submitCrisisDecision(
   }
 
   const crisis = await db.collection<Crisis>("crises").findOne({ _id: interaction.crisisId });
+  if (crisis && decisionAnsweredByLever(crisis, interaction.decisionTree, currentNode, optionId)) {
+    throw conflict("This crisis is answered through its levers");
+  }
   if (crisis && !canRespondToCrisis(crisis, currentNode, countryId, regionId)) {
     throw forbidden("You are not authorized to make this decision for this country or region");
   }
 
-  // ── Multi-responder (global) choice nodes: each country's head of state
-  //    answers for their own nation. The chosen option's effects are applied
-  //    scoped to the responder's country, the response is recorded, and the
-  //    interaction stays open on the same node so other leaders can still
-  //    respond — it does not resolve on a single decision. ──
+  const context: DecisionContext = {
+    db,
+    interactionId,
+    interaction,
+    currentNode,
+    crisis,
+    optionId,
+    characterId,
+    countryId,
+  };
   if (crisis && isMultiResponderNode(crisis, currentNode)) {
-    // A country with no role sees an empty option list, which would otherwise
-    // surface as "Invalid option" — the option is fine, the nation simply is
-    // not party to this response. Say so instead.
-    if (crisis.globalResponse && !globalResponseRoleFor(crisis, countryId)) {
-      throw forbidden("Your country is not one of the governments called to respond");
-    }
-    const responseOptions = crisis.globalResponse
-      ? optionsForGlobalResponder(crisis, currentNode, countryId)
-      : (currentNode.options ?? []);
-    const option = responseOptions.find((o) => o.optionId === optionId);
-    if (!option) throw badRequest("Invalid option");
+    return answerMultiResponderNode({ ...context, crisis });
+  }
+  if (currentNode.type === "collective") return answerCollectiveNode(context);
+  return answerChoiceNode(context);
+}
 
-    const already = (interaction.leaderResponses ?? []).some((r) => r.countryId === countryId);
-    if (already) throw conflict("Your country has already responded to this crisis");
-    const preparedGlobalResponse = crisis.globalResponse
-      ? await prepareGlobalResponseOption(db, crisis, countryId, option)
-      : undefined;
-    const capabilitySnapshot = preparedGlobalResponse?.capability;
-    const refugeeReceptionOrder = await prepareRefugeeReceptionOrder(
+export interface DecisionContext {
+  db: Db;
+  interactionId: ObjectId;
+  interaction: CrisisInteraction;
+  currentNode: CrisisDecisionNode;
+  crisis: Crisis | null;
+  optionId: string;
+  characterId: ObjectId;
+  countryId: string;
+  /** The option's budget was already charged by the caller (a lever pull). */
+  budgetPaid?: boolean;
+}
+
+export interface DecisionResult {
+  interaction: CrisisInteraction;
+  nextNode: CrisisDecisionNode | null;
+  appliedEffects: CrisisEffect[];
+}
+
+/**
+ * Per-country answer to a multi-responder node: claims the country's one
+ * response before any money or effect moves, then applies the option scoped to
+ * that country and runs its action hook.
+ */
+export async function answerMultiResponderNode(
+  context: DecisionContext & { crisis: Crisis }
+): Promise<DecisionResult> {
+  const { db, interactionId, interaction, currentNode, crisis, optionId, characterId, countryId } =
+    context;
+  const budgetPaid = context.budgetPaid === true;
+  // A country with no role sees an empty option list, which would otherwise
+  // surface as "Invalid option" — the option is fine, the nation simply is
+  // not party to this response. Say so instead.
+  if (crisis.globalResponse && !globalResponseRoleFor(crisis, countryId)) {
+    throw forbidden("Your country is not one of the governments called to respond");
+  }
+  const responseOptions = crisis.globalResponse
+    ? optionsForGlobalResponder(crisis, currentNode, countryId)
+    : (currentNode.options ?? []);
+  const option = responseOptions.find((o) => o.optionId === optionId);
+  if (!option) throw badRequest("Invalid option");
+
+  const already = (interaction.leaderResponses ?? []).some((r) => r.countryId === countryId);
+  if (already) throw conflict("Your country has already responded to this crisis");
+  const preparedGlobalResponse = crisis.globalResponse
+    ? await prepareGlobalResponseOption(db, crisis, countryId, option)
+    : undefined;
+  const capabilitySnapshot = preparedGlobalResponse?.capability;
+  const refugeeReceptionOrder = await prepareRefugeeReceptionOrder(
+    db,
+    crisis,
+    interaction,
+    countryId,
+    option,
+    currentNode.nodeId
+  );
+
+  if (option.requiredBudget && !budgetPaid) {
+    const treasury = await getTreasuryBalance(db, countryId);
+    if (treasury < option.requiredBudget) {
+      throw badRequest(
+        `Insufficient funds. Required: ${option.requiredBudget}, Available: ${treasury}`
+      );
+    }
+  }
+
+  const character = await db
+    .collection<{ name?: string }>("characters")
+    .findOne({ _id: characterId }, { projection: { name: 1 } });
+
+  const response = {
+    countryId,
+    characterId,
+    characterName: character?.name ?? "Unknown leader",
+    nodeId: currentNode.nodeId,
+    optionId,
+    optionLabel: option.label,
+    responseRole: globalResponseRoleFor(crisis, countryId) ?? undefined,
+    effects: option.effects,
+    responseScores: option.responseScores,
+    capabilitySnapshot,
+    campaignCommitment: option.campaignCommitment,
+    visibility: option.responseVisibility ?? "public",
+    respondedAt: new Date(),
+    ...(refugeeReceptionOrder ? { refugeeReceptionOrder } : {}),
+  };
+  interaction.updatedAt = new Date();
+
+  // Claim the country's one response before any money or effects move. The
+  // guarded write makes a double-click or concurrent request idempotent.
+  const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    {
+      _id: interactionId,
+      resolvedAt: null,
+      "leaderResponses.countryId": { $ne: countryId },
+    },
+    {
+      $push: { leaderResponses: response },
+      $set: {
+        updatedAt: interaction.updatedAt,
+        ...(refugeeReceptionOrder
+          ? {
+              populationOrderEpochId: refugeeReceptionOrder.worldEpochId,
+              populationOrdersPending: true,
+            }
+          : {}),
+      },
+    }
+  );
+  if (claimed.modifiedCount === 0) {
+    throw conflict("Your country has already responded to this crisis");
+  }
+  interaction.leaderResponses = [...(interaction.leaderResponses ?? []), response];
+
+  if (option.requiredBudget && !budgetPaid) {
+    await debitTreasury(
+      db,
+      countryId,
+      option.requiredBudget,
+      `crisis-budget:${interactionId.toString()}:${countryId}:${optionId}`
+    );
+  }
+  await spendGlobalResponseCost(
+    db,
+    countryId,
+    option,
+    `global-response:${interactionId.toString()}:${countryId}:${optionId}`
+  );
+
+  if (option.effects.length > 0) {
+    await applyEffectsForCountry(db, countryId, option.effects);
+  }
+
+  // Multi-responder options get the same real-subsystem action hook as
+  // single-responder ones. Without this a per-country choice could only ever
+  // nudge metrics, which is precisely the cosmetic-crisis problem the hook
+  // exists to solve.
+  const gameState = option.action || option.campaignCommitment ? await getGameState(db) : null;
+  if (option.action) {
+    await runCrisisOptionAction({
       db,
       crisis,
       interaction,
-      countryId,
       option,
-      currentNode.nodeId
+      characterId,
+      countryId,
+      currentTurn: gameState?.currentTurn ?? crisis.startTurn,
+      treasuryCashLedgerEnabled: preparedGlobalResponse?.treasuryCashLedgerEnabled,
+    });
+  }
+  if (option.campaignCommitment) {
+    await recordGlobalResponseCommitment(
+      db,
+      crisis,
+      countryId,
+      gameState?.currentTurn ?? crisis.startTurn,
+      option
     );
+  }
 
-    if (option.requiredBudget) {
-      const treasury = await getTreasuryBalance(db, countryId);
-      if (treasury < option.requiredBudget) {
-        throw badRequest(
-          `Insufficient funds. Required: ${option.requiredBudget}, Available: ${treasury}`
-        );
-      }
+  return { interaction, nextNode: currentNode, appliedEffects: option.effects };
+}
+
+/** Contribution to a collective node: claims the slot, spends, and rolls back if the spend fails. */
+export async function answerCollectiveNode(context: DecisionContext): Promise<DecisionResult> {
+  const { db, interactionId, interaction, currentNode, optionId, characterId, countryId } = context;
+  const option = currentNode.options?.find((o) => o.optionId === optionId);
+  if (!option) throw badRequest("Invalid option");
+
+  const interactions = db.collection<CrisisInteraction>("crisisInteractions");
+  const contribution = option.collectiveContribution ?? 0;
+  const now = new Date();
+  const entry = {
+    countryId,
+    amount: contribution,
+    characterId,
+    contributedAt: now,
+  };
+
+  if (contribution > 0) {
+    const already = interaction.contributors.some(
+      (c) => c.characterId.toString() === characterId.toString()
+    );
+    if (already) throw conflict("You have already contributed to this crisis");
+
+    const treasury = await getTreasuryBalance(db, countryId);
+    if (treasury < contribution) {
+      throw badRequest(
+        `Insufficient treasury funds. Required: ${contribution}, Available: ${treasury}`
+      );
     }
 
-    const character = await db
-      .collection<{ name?: string }>("characters")
-      .findOne({ _id: characterId }, { projection: { name: 1 } });
-
-    const response = {
-      countryId,
-      characterId,
-      characterName: character?.name ?? "Unknown leader",
-      nodeId: currentNode.nodeId,
-      optionId,
-      optionLabel: option.label,
-      responseRole: globalResponseRoleFor(crisis, countryId) ?? undefined,
-      effects: option.effects,
-      responseScores: option.responseScores,
-      capabilitySnapshot,
-      campaignCommitment: option.campaignCommitment,
-      visibility: option.responseVisibility ?? "public",
-      respondedAt: new Date(),
-      ...(refugeeReceptionOrder ? { refugeeReceptionOrder } : {}),
-    };
-    interaction.updatedAt = new Date();
-
-    // Claim the country's one response before any money or effects move. The
-    // guarded write makes a double-click or concurrent request idempotent.
-    const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    // Claim the contribution slot before any money moves; $push/$inc keep
+    // concurrent contributions from different countries from overwriting
+    // each other.
+    const claimed = await interactions.updateOne(
       {
         _id: interactionId,
         resolvedAt: null,
-        "leaderResponses.countryId": { $ne: countryId },
+        currentNodeId: currentNode.nodeId,
+        "contributors.characterId": { $ne: characterId },
       },
       {
-        $push: { leaderResponses: response },
-        $set: {
-          updatedAt: interaction.updatedAt,
-          ...(refugeeReceptionOrder
-            ? {
-                populationOrderEpochId: refugeeReceptionOrder.worldEpochId,
-                populationOrdersPending: true,
-              }
-            : {}),
-        },
+        $push: { contributors: entry },
+        $inc: { collectiveCurrent: contribution },
+        $set: { updatedAt: now },
       }
     );
-    if (claimed.modifiedCount === 0) {
-      throw conflict("Your country has already responded to this crisis");
+    if (claimed.matchedCount === 0) {
+      throw conflict("You have already contributed to this crisis");
     }
-    interaction.leaderResponses = [...(interaction.leaderResponses ?? []), response];
-
-    if (option.requiredBudget) {
-      await debitTreasury(
-        db,
-        countryId,
-        option.requiredBudget,
-        `crisis-budget:${interactionId.toString()}:${countryId}:${optionId}`
-      );
-    }
-    await spendGlobalResponseCost(
-      db,
-      countryId,
-      option,
-      `global-response:${interactionId.toString()}:${countryId}:${optionId}`
-    );
-
-    if (option.effects.length > 0) {
-      await applyEffectsForCountry(db, countryId, option.effects);
-    }
-
-    // Multi-responder options get the same real-subsystem action hook as
-    // single-responder ones. Without this a per-country choice could only ever
-    // nudge metrics, which is precisely the cosmetic-crisis problem the hook
-    // exists to solve.
-    const gameState = option.action || option.campaignCommitment ? await getGameState(db) : null;
-    if (option.action) {
-      await runCrisisOptionAction({
-        db,
-        crisis,
-        interaction,
-        option,
-        characterId,
-        countryId,
-        currentTurn: gameState?.currentTurn ?? crisis.startTurn,
-        treasuryCashLedgerEnabled: preparedGlobalResponse?.treasuryCashLedgerEnabled,
+    try {
+      await spendFromTreasury(db, countryId, contribution, {
+        resyncDerived: true,
+        witness: {
+          flow: "crisis_response",
+          key: `crisis-collective:${interaction._id.toString()}:${characterId.toString()}:${optionId}`,
+          site: "crises/interactionEngine",
+        },
       });
-    }
-    if (option.campaignCommitment) {
-      await recordGlobalResponseCommitment(
-        db,
-        crisis,
-        countryId,
-        gameState?.currentTurn ?? crisis.startTurn,
-        option
-      );
+    } catch (err) {
+      await interactions.updateOne({ _id: interactionId }, {
+        $pull: { contributors: { characterId, contributedAt: now } },
+        $inc: { collectiveCurrent: -contribution },
+        $set: { updatedAt: new Date() },
+      } as unknown as UpdateFilter<CrisisInteraction>);
+      throw err;
     }
 
-    return { interaction, nextNode: currentNode, appliedEffects: option.effects };
+    interaction.contributors.push(entry);
+    interaction.collectiveCurrent += contribution;
+  }
+  await interactions.updateOne(
+    { _id: interactionId },
+    { $push: { resolutionPath: optionId }, $set: { updatedAt: now } }
+  );
+
+  if (option.effects.length > 0) {
+    await applyEffectsForCrisis(db, interaction.crisisId, option.effects);
   }
 
-  // ── Collective nodes: contributions accumulate in place; the node resolves
-  //    on its deadline via autoResolveCrisisInteraction, not on each submit. ──
-  if (currentNode.type === "collective") {
-    const option = currentNode.options?.find((o) => o.optionId === optionId);
-    if (!option) throw badRequest("Invalid option");
+  interaction.resolutionPath.push(optionId);
+  interaction.updatedAt = now;
 
-    const interactions = db.collection<CrisisInteraction>("crisisInteractions");
-    const contribution = option.collectiveContribution ?? 0;
-    const now = new Date();
-    const entry = {
-      countryId,
-      amount: contribution,
-      characterId,
-      contributedAt: now,
-    };
+  return { interaction, nextNode: currentNode, appliedEffects: option.effects };
+}
 
-    if (contribution > 0) {
-      const already = interaction.contributors.some(
-        (c) => c.characterId.toString() === characterId.toString()
-      );
-      if (already) throw conflict("You have already contributed to this crisis");
-
-      const treasury = await getTreasuryBalance(db, countryId);
-      if (treasury < contribution) {
-        throw badRequest(
-          `Insufficient treasury funds. Required: ${contribution}, Available: ${treasury}`
-        );
-      }
-
-      // Claim the contribution slot before any money moves; $push/$inc keep
-      // concurrent contributions from different countries from overwriting
-      // each other.
-      const claimed = await interactions.updateOne(
-        {
-          _id: interactionId,
-          resolvedAt: null,
-          currentNodeId: currentNode.nodeId,
-          "contributors.characterId": { $ne: characterId },
-        },
-        {
-          $push: { contributors: entry },
-          $inc: { collectiveCurrent: contribution },
-          $set: { updatedAt: now },
-        }
-      );
-      if (claimed.matchedCount === 0) {
-        throw conflict("You have already contributed to this crisis");
-      }
-      try {
-        await spendFromTreasury(db, countryId, contribution, {
-          resyncDerived: true,
-          witness: {
-            flow: "crisis_response",
-            key: `crisis-collective:${interaction._id.toString()}:${characterId.toString()}:${optionId}`,
-            site: "crises/interactionEngine",
-          },
-        });
-      } catch (err) {
-        await interactions.updateOne({ _id: interactionId }, {
-          $pull: { contributors: { characterId, contributedAt: now } },
-          $inc: { collectiveCurrent: -contribution },
-          $set: { updatedAt: new Date() },
-        } as unknown as UpdateFilter<CrisisInteraction>);
-        throw err;
-      }
-
-      interaction.contributors.push(entry);
-      interaction.collectiveCurrent += contribution;
-    }
-    await interactions.updateOne(
-      { _id: interactionId },
-      { $push: { resolutionPath: optionId }, $set: { updatedAt: now } }
-    );
-
-    if (option.effects.length > 0) {
-      await applyEffectsForCrisis(db, interaction.crisisId, option.effects);
-    }
-
-    interaction.resolutionPath.push(optionId);
-    interaction.updatedAt = now;
-
-    return { interaction, nextNode: currentNode, appliedEffects: option.effects };
-  }
-
-  // ── Choice / Aid nodes: select a predefined option ──
-  // Aid nodes share the same option-selection and advancement logic as choice
-  // nodes. The "Decline / No Aid" path routes here; the pledge path uses a
-  // separate command and never calls submitCrisisDecision.
+/** Single-responder choice or aid decline: claim, charge, effects, action hook, advance the node. */
+export async function answerChoiceNode(context: DecisionContext): Promise<DecisionResult> {
+  const { db, interactionId, interaction, currentNode, crisis, optionId, characterId, countryId } =
+    context;
+  const budgetPaid = context.budgetPaid === true;
   let appliedEffects: CrisisEffect[] = [];
   let nextNodeId: string | null = null;
 
@@ -739,7 +816,7 @@ export async function submitCrisisDecision(
       }
     }
 
-    if (option.requiredBudget) {
+    if (option.requiredBudget && !budgetPaid) {
       const treasury = await getTreasuryBalance(db, countryId);
       if (treasury < option.requiredBudget) {
         throw badRequest(
@@ -765,7 +842,7 @@ export async function submitCrisisDecision(
     }
     interaction.updatedAt = claimedAt;
 
-    if (option.requiredBudget) {
+    if (option.requiredBudget && !budgetPaid) {
       await debitTreasury(
         db,
         countryId,

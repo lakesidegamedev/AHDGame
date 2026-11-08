@@ -3,6 +3,7 @@ import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-ba
 import { migration as crisisV2Indexes } from "./entries/2026-11-08-crisis-v2-indexes";
 import { migration as crisisV2LeverIndexes } from "./entries/2026-11-09-crisis-v2-lever-indexes";
 import { migration as crisisV2ConsequenceIndexes } from "./entries/2026-11-10-crisis-v2-consequence-indexes";
+import { migration as crisisV2PopulationOrderIndexes } from "./entries/2026-11-11-crisis-v2-population-order-indexes";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
 import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as playerReadIndexes } from "./entries/2026-10-27-player-read-indexes";
@@ -134,6 +135,7 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   crisisV2Indexes,
   crisisV2LeverIndexes,
   crisisV2ConsequenceIndexes,
+  crisisV2PopulationOrderIndexes,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {

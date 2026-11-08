@@ -31,6 +31,7 @@ import {
 import { getGameState } from "@/lib/gameState";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
 import { resolveGlobalResponse } from "@/lib/livingConflict/globalResponse";
+import { isCampaignCrisis } from "@/lib/livingConflict/campaignCrisis";
 import { processLivingConflictsTurn } from "@/lib/livingConflict/processTurn";
 import {
   livingVietnamAsLegacyState,
@@ -123,79 +124,53 @@ export async function processCrisisTurn(
   for (const crisis of crises) {
     const targetStateIds = resolveScope(crisis, allStateIds, statesByCountry);
 
-    // Check for interaction-based duration reduction
+    // Crisis v2 documents take their effects and their end from the v2 phase;
+    // this loop only announces them.
+    // legacy-engine: the rest of the body is for documents without `v2`, removable once none are live.
     let effectiveDuration = crisis.durationTurns;
-    if (crisis.interactionDefinition) {
-      const interaction = await db
-        .collection<CrisisInteraction>("crisisInteractions")
-        .findOne({ crisisId: crisis._id });
-      if (interaction && effectiveDuration !== null) {
-        // Two independent ways to shorten a crisis: funding a shared aid tally,
-        // and taking a decisive response. A crisis carrying both earns both.
-        const reduction =
-          calculateCollectiveReduction(interaction, effectiveDuration) +
-          calculateDecisionDurationReduction(interaction);
-        effectiveDuration = Math.max(1, effectiveDuration - reduction);
+    if (!crisis.v2) {
+      // Check for interaction-based duration reduction
+      if (crisis.interactionDefinition) {
+        const interaction = await db
+          .collection<CrisisInteraction>("crisisInteractions")
+          .findOne({ crisisId: crisis._id });
+        if (interaction && effectiveDuration !== null) {
+          // Two independent ways to shorten a crisis: funding a shared aid tally,
+          // and taking a decisive response. A crisis carrying both earns both.
+          const reduction =
+            calculateCollectiveReduction(interaction, effectiveDuration) +
+            calculateDecisionDurationReduction(interaction);
+          effectiveDuration = Math.max(1, effectiveDuration - reduction);
+        }
       }
-    }
 
-    // Per-turn effects ramp DOWN linearly from full strength at onset to zero at
-    // expiry (so a 24-turn crisis is at 50% by turn 12). One-time `flat`/`gdpLoss`
-    // effects are not scaled — they fire once, at onset.
-    const tickScale = tickDecayFactor(turn, crisis.startTurn, effectiveDuration);
-    const effectsToApply = crisis.effects
-      .filter(
-        (e) => e.effectType === "tick" || (e.effectType === "flat" && turn === crisis.startTurn)
-      )
-      .map((e) => (e.effectType === "tick" ? { ...e, value: e.value * tickScale } : e));
+      // Per-turn effects ramp DOWN linearly from full strength at onset to zero at
+      // expiry (so a 24-turn crisis is at 50% by turn 12). One-time `flat`/`gdpLoss`
+      // effects are not scaled — they fire once, at onset.
+      const tickScale = tickDecayFactor(turn, crisis.startTurn, effectiveDuration);
+      const effectsToApply = crisis.effects
+        .filter(
+          (e) => e.effectType === "tick" || (e.effectType === "flat" && turn === crisis.startTurn)
+        )
+        .map((e) => (e.effectType === "tick" ? { ...e, value: e.value * tickScale } : e));
 
-    if (effectsToApply.length > 0 && targetStateIds.length > 0) {
-      await applyMetricEffects(
-        db,
-        targetStateIds,
-        effectsToApply.filter((e) => e.targetType === "metric")
-      );
-      await applyApprovalEffects(
-        db,
-        crisis,
-        targetStateIds,
-        countryByState,
-        statesByCountry,
-        effectsToApply.filter((e) => e.targetType === "approval")
-      );
-      await applyProfitMarginEffects(
-        db,
-        targetStateIds,
-        effectsToApply.filter((e) => e.targetType === "profitMargin")
-      );
-      await applyInflationEffects(
-        db,
-        crisis,
-        targetStateIds,
-        countryByState,
-        statesByCountry,
-        effectsToApply.filter((e) => e.targetType === "inflation")
-      );
-      await applyGdpLossEffects(
-        db,
-        targetStateIds,
-        effectsToApply.filter((e) => e.targetType === "gdpLoss")
-      );
-      await applyStatEffects(
-        db,
-        crisis,
-        targetStateIds,
-        countryByState,
-        statesByCountry,
-        effectsToApply.filter((e) => e.targetType === "stat")
-      );
+      if (effectsToApply.length > 0 && targetStateIds.length > 0) {
+        await applyCrisisTurnEffects(
+          db,
+          crisis,
+          effectsToApply,
+          targetStateIds,
+          countryByState,
+          statesByCountry
+        );
+      }
     }
 
     // Activation turn only: announce to the wire + inbox, and materialize the
     // decision interaction. Admin-created crises run the same announcement at
     // creation time (see announceCrisisStart) since they never pass through this
     // `turn === startTurn` branch.
-    if (turn === crisis.startTurn) {
+    if (turn === crisis.startTurn && !isCampaignCrisis(crisis)) {
       await announceCrisisStart(db, crisis, targetStateIds);
 
       if (crisis.interactionDefinition) {
@@ -204,11 +179,50 @@ export async function processCrisisTurn(
     }
 
     // Expiry check: durationTurns null = indefinite; use effectiveDuration
-    if (effectiveDuration !== null && turn >= crisis.startTurn + effectiveDuration) {
+    if (!crisis.v2 && effectiveDuration !== null && turn >= crisis.startTurn + effectiveDuration) {
       toResolve.push(crisis);
     }
   }
 
+  await finalizeResolvedCrises(db, toResolve, turn, {
+    year: effectiveYear,
+    livingEnabled,
+    allStateIds,
+    statesByCountry,
+  });
+
+  const expiredInteractions = await getExpiredInteractions(db);
+  for (const interaction of expiredInteractions) {
+    try {
+      await autoResolveCrisisInteraction(db, interaction._id);
+    } catch (error) {
+      console.error(`[crisisTurn] auto-resolve of interaction ${interaction._id} failed:`, error);
+    }
+  }
+
+  return crises.length;
+}
+
+export interface FinalizeOptions {
+  year?: number | null;
+  livingEnabled: boolean;
+  allStateIds: string[];
+  statesByCountry: Map<string, string[]>;
+}
+
+/**
+ * Closes crises whose time is up: resolves shared response windows, flips the
+ * lifecycle flag, closes open interactions, announces the end and advances any
+ * chained family. Shared by the legacy loop and the Crisis v2 phase so a crisis
+ * ends the same way whichever engine ran it. Idempotent on replay.
+ */
+export async function finalizeResolvedCrises(
+  db: Db,
+  crisesToResolve: Crisis[],
+  turn: number,
+  options: FinalizeOptions
+): Promise<void> {
+  let toResolve = crisesToResolve;
   // Shared response windows derive and apply their aggregate outcome before
   // the generic lifecycle close. The resolver is idempotent on replay, so a
   // crisis whose resolver throws stays active and retries alone next turn
@@ -225,66 +239,103 @@ export async function processCrisisTurn(
     }
     resolvable.push(crisis);
   }
-  toResolve.length = 0;
-  toResolve.push(...resolvable);
-
-  // Batch-resolve expired crises
-  if (toResolve.length > 0) {
-    const ids = toResolve.map((c) => c._id);
-    await db
-      .collection<Crisis>("crises")
-      .updateMany(
-        { _id: { $in: ids } },
-        { $set: { status: "resolved", endTurn: turn, resolvedAt: new Date() } }
-      );
-    // Close any still-open interactions for the resolved crises. Multi-responder
-    // global crises carry no decision deadline, so they never auto-resolve on a
-    // timer — without this they'd linger "open" after the crisis itself ended.
-    // Each leader's effects were already applied at response time; this only
-    // flips the lifecycle flag so the panel reads as resolved.
-    await db.collection<CrisisInteraction>("crisisInteractions").updateMany(
-      { crisisId: { $in: ids }, resolvedAt: null },
-      {
-        $set: {
-          currentNodeId: null,
-          decisionDeadline: null,
-          resolvedAt: new Date(),
-          resolutionOutcome: "completed",
-          updatedAt: new Date(),
-        },
-      }
+  toResolve = resolvable;
+  if (toResolve.length === 0) return;
+  const ids = toResolve.map((c) => c._id);
+  await db
+    .collection<Crisis>("crises")
+    .updateMany(
+      { _id: { $in: ids } },
+      { $set: { status: "resolved", endTurn: turn, resolvedAt: new Date() } }
     );
-    for (const crisis of toResolve) {
-      if (crisis.wireMessageOnEnd) {
-        await logWireEvent("crisis_end", crisis.wireMessageOnEnd, {
-          href: `/world/crises/${crisis._id.toString()}`,
-        });
-      }
-      // Notify affected players of resolution
-      const targetStateIds = resolveScope(crisis, allStateIds, statesByCountry);
-      await notifyAffectedPlayers(db, crisis, targetStateIds, "crisis_end");
+  // Close any still-open interactions for the resolved crises. Multi-responder
+  // global crises carry no decision deadline, so they never auto-resolve on a
+  // timer; without this they would linger "open" after the crisis itself ended.
+  // Each leader's effects were already applied at response time; this only
+  // flips the lifecycle flag so the panel reads as resolved.
+  await db.collection<CrisisInteraction>("crisisInteractions").updateMany(
+    { crisisId: { $in: ids }, resolvedAt: null },
+    {
+      $set: {
+        currentNodeId: null,
+        decisionDeadline: null,
+        resolvedAt: new Date(),
+        resolutionOutcome: "completed",
+        updatedAt: new Date(),
+      },
     }
-
-    // A rung of a chained family ending is what advances the chain. The family's
-    // own state decides what comes next, including nothing at all.
-    await processCrisisChain(
-      db,
-      livingEnabled ? toResolve.filter((crisis) => crisis.chain?.family !== "vietnam") : toResolve,
-      turn,
-      effectiveYear
-    );
+  );
+  for (const crisis of toResolve) {
+    if (crisis.wireMessageOnEnd) {
+      await logWireEvent("crisis_end", crisis.wireMessageOnEnd, {
+        href: `/world/crises/${crisis._id.toString()}`,
+      });
+    }
+    // Notify affected players of resolution
+    const targetStateIds = resolveScope(crisis, options.allStateIds, options.statesByCountry);
+    await notifyAffectedPlayers(db, crisis, targetStateIds, "crisis_end");
   }
 
-  const expiredInteractions = await getExpiredInteractions(db);
-  for (const interaction of expiredInteractions) {
-    try {
-      await autoResolveCrisisInteraction(db, interaction._id);
-    } catch (error) {
-      console.error(`[crisisTurn] auto-resolve of interaction ${interaction._id} failed:`, error);
-    }
-  }
+  // A rung of a chained family ending is what advances the chain. The family's
+  // own state decides what comes next, including nothing at all.
+  await processCrisisChain(
+    db,
+    options.livingEnabled
+      ? toResolve.filter((crisis) => crisis.chain?.family !== "vietnam")
+      : toResolve,
+    turn,
+    options.year ?? undefined
+  );
+}
 
-  return crises.length;
+/** Applies a turn's metric, approval, margin, inflation, GDP and stat effects to a crisis's scope. */
+export async function applyCrisisTurnEffects(
+  db: Db,
+  crisis: Crisis,
+  effects: CrisisEffect[],
+  targetStateIds: string[],
+  countryByState: Map<string, string>,
+  statesByCountry: Map<string, string[]>
+): Promise<void> {
+  await applyMetricEffects(
+    db,
+    targetStateIds,
+    effects.filter((e) => e.targetType === "metric")
+  );
+  await applyApprovalEffects(
+    db,
+    crisis,
+    targetStateIds,
+    countryByState,
+    statesByCountry,
+    effects.filter((e) => e.targetType === "approval")
+  );
+  await applyProfitMarginEffects(
+    db,
+    targetStateIds,
+    effects.filter((e) => e.targetType === "profitMargin")
+  );
+  await applyInflationEffects(
+    db,
+    crisis,
+    targetStateIds,
+    countryByState,
+    statesByCountry,
+    effects.filter((e) => e.targetType === "inflation")
+  );
+  await applyGdpLossEffects(
+    db,
+    targetStateIds,
+    effects.filter((e) => e.targetType === "gdpLoss")
+  );
+  await applyStatEffects(
+    db,
+    crisis,
+    targetStateIds,
+    countryByState,
+    statesByCountry,
+    effects.filter((e) => e.targetType === "stat")
+  );
 }
 
 /** Wire copy for a change in the Vietnam front's lifecycle. Silent on no change. */

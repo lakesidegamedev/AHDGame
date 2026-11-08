@@ -5,6 +5,7 @@ import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import type { Character } from "@/lib/db/types";
 import {
   canCharacterInteract,
+  decisionAnsweredByLever,
   getCrisisInteractionsByCrisisId,
   isMultiResponderNode,
   resolveCharacterRoles,
@@ -14,6 +15,7 @@ import {
   crisisDecisionRegion,
   describeRoleRequirement,
 } from "@/lib/crises/rules/authorization";
+import { spilloverSpreadLinks } from "@/lib/crises/v2/spillover";
 import {
   boardGroup,
   buildSpreadLinks,
@@ -30,6 +32,8 @@ import {
 import { crisisSeverity, type CrisisSeverity } from "@/lib/crises/severity";
 import { globalResponseRoleFor } from "@/lib/livingConflict/globalResponse";
 import { listCrises } from "@/lib/crises/queries/crisisQueries";
+import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
+import { getAvailableLevers } from "@/lib/crises/levers/queries";
 
 /** Resolved crises older than this many turns drop off the board's history. */
 const HISTORY_TURNS = 48;
@@ -65,6 +69,8 @@ export interface BoardCrisis {
   exposure: ExposureReason[];
   chainFamily: string | null;
   campaignKey: string | null;
+  /** Stage, severity trend, forecast and the viewer's levers. Null for crises outside v2. */
+  v2: CrisisV2Summary | null;
   /** First few effect labels, for dense cards. */
   effectLabels: string[];
   href: string;
@@ -98,6 +104,8 @@ export function viewerCanActOnCrisis(
     crisis.scope === "global" ||
     (crisis.scope === "country" && !!countryId && crisis.countryIds.includes(countryId)) ||
     (crisis.scope === "region" && !!stateId && crisis.regionIds.includes(stateId));
+
+  if (decisionAnsweredByLever(crisis, interaction.decisionTree, node)) return false;
 
   // Pooled aid is open to the whole world; it is an offer, not a lever, so it
   // only counts for crises that reach the viewer and that they have not given to.
@@ -145,24 +153,34 @@ export async function viewerFromCharacter(
 }
 
 /**
- * Badge count: active crises the viewer can answer now. One cheap existence
- * read short-circuits the common no-open-decision case.
+ * Badge count: active crises the viewer can answer now, either through an open
+ * decision or a Crisis v2 lever. One cheap existence read short-circuits the
+ * common no-open-decision case; the lever lookup reads only live v2 crises.
  */
 export async function countViewerCrisisActions(db: Db, characterId: ObjectId): Promise<number> {
-  const withDecision = await db
-    .collection<Crisis>("crises")
-    .find({ status: "active", interactionDefinition: { $exists: true } })
-    .toArray();
-  if (withDecision.length === 0) return 0;
-  const viewer = await loadBoardViewer(db, characterId);
-  if (!viewer) return 0;
-  const interactions = await getCrisisInteractionsByCrisisId(
-    db,
-    withDecision.map((c) => c._id)
-  );
-  return withDecision.filter((c) =>
-    viewerCanActOnCrisis(c, interactions.get(c._id.toString()), viewer)
-  ).length;
+  const [withDecision, withLevers] = await Promise.all([
+    db
+      .collection<Crisis>("crises")
+      .find({ status: "active", interactionDefinition: { $exists: true } })
+      .toArray(),
+    getAvailableLevers(db, characterId),
+  ]);
+  const actionable = new Set(withLevers.map((entry) => entry.crisisId));
+  if (withDecision.length > 0) {
+    const viewer = await loadBoardViewer(db, characterId);
+    if (viewer) {
+      const interactions = await getCrisisInteractionsByCrisisId(
+        db,
+        withDecision.map((c) => c._id)
+      );
+      for (const c of withDecision) {
+        if (viewerCanActOnCrisis(c, interactions.get(c._id.toString()), viewer)) {
+          actionable.add(c._id.toString());
+        }
+      }
+    }
+  }
+  return actionable.size;
 }
 
 async function loadExposureContext(db: Db, viewer: BoardViewer): Promise<ViewerExposureContext> {
@@ -201,12 +219,13 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
     (c) => c.status === "active" || (c.endTurn ?? c.startTurn) >= currentTurn - HISTORY_TURNS
   );
   const active = visible.filter((c) => c.status === "active");
-  const [interactions, context] = await Promise.all([
+  const [interactions, context, v2Summaries] = await Promise.all([
     getCrisisInteractionsByCrisisId(
       db,
       active.filter((c) => c.interactionDefinition).map((c) => c._id)
     ),
     viewer ? loadExposureContext(db, viewer) : Promise.resolve(null),
+    loadCrisisV2Summaries(db, active, viewer?.characterId ?? null),
   ]);
 
   const rows: BoardCrisis[] = visible.map((crisis) => {
@@ -216,8 +235,10 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
         ? interaction.decisionTree.find((n) => n.nodeId === interaction.currentNodeId)
         : undefined;
     const decisionOpen = !!node && node.type !== "terminal";
+    const v2 = v2Summaries.get(crisis._id.toString()) ?? null;
     const viewerCanAct =
-      crisis.status === "active" && viewerCanActOnCrisis(crisis, interaction, viewer);
+      crisis.status === "active" &&
+      (viewerCanActOnCrisis(crisis, interaction, viewer) || (v2?.levers.length ?? 0) > 0);
     const exposure = context ? exposureReasons(crisis, context, viewerCanAct) : [];
     return {
       id: crisis._id.toString(),
@@ -241,6 +262,7 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       exposure,
       chainFamily: crisis.chain?.family ?? null,
       campaignKey: crisis.globalResponse?.conflictKey ?? null,
+      v2,
       effectLabels: crisis.effects.slice(0, 3).map((e) => e.label),
       href: `/world/crises/${crisis._id.toString()}`,
     };
@@ -254,16 +276,24 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
     preIterationActive: list.preIterationActive,
     regionNames: list.regionNames,
     crises: rows,
-    links: buildSpreadLinks(
-      rows
-        .filter((r) => r.status === "active")
-        .map((r) => ({
-          id: r.id,
-          startTurn: r.startTurn,
-          chainFamily: r.chainFamily ?? undefined,
-          campaignKey: r.campaignKey ?? undefined,
+    links: [
+      ...buildSpreadLinks(
+        rows
+          .filter((r) => r.status === "active")
+          .map((r) => ({
+            id: r.id,
+            startTurn: r.startTurn,
+            chainFamily: r.chainFamily ?? undefined,
+            campaignKey: r.campaignKey ?? undefined,
+          }))
+      ),
+      ...spilloverSpreadLinks(
+        active.map((crisis) => ({
+          id: crisis._id.toString(),
+          parents: crisis.v2?.parents ?? [],
         }))
-    ),
+      ),
+    ],
     actionCount: rows.filter((r) => r.viewerCanAct).length,
     authenticated: viewer != null,
   };

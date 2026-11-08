@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { evaluateEffectModules, createEffectRegistry, type EffectContext } from "./effectModule";
+import type { EffectModuleRef } from "./types";
 import { EMERGENT_CRISIS_DEFINITIONS } from "./definitions/emergent";
 import { validateCrisisDefinition } from "./definition";
 import { ROTDM_EFFECT_MODULES, crisisPressure } from "./rotdmModules";
-import type { EffectModuleRef } from "./types";
 
 function context(overrides: Partial<EffectContext> = {}): EffectContext {
   return {

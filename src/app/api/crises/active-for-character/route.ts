@@ -23,6 +23,7 @@ import {
   optionsForGlobalResponder,
   visibleGlobalResponses,
 } from "@/lib/livingConflict/globalResponse";
+import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import type { CampaignRequirementResult } from "@/lib/livingConflict/campaign";
 import type { CampaignCapabilitySnapshot } from "@/lib/db/types/livingConflictCampaign";
 
@@ -40,6 +41,8 @@ export interface ActiveCrisisForCharacter {
    * it. Without this the card offers options the command path must refuse.
    */
   optionAvailability: Record<string, CampaignRequirementResult> | null;
+  /** Stage, severity, forecast and the character's levers. Null for crises outside v2. */
+  v2: CrisisV2Summary | null;
 }
 
 export async function GET(request: Request) {
@@ -94,6 +97,8 @@ export async function GET(request: Request) {
       db,
       crises.filter((crisis) => crisis.interactionDefinition).map((crisis) => crisis._id)
     );
+
+    const v2ByCrisisId = await loadCrisisV2Summaries(db, crises, character._id);
 
     // Enrich with interaction data
     const enriched: ActiveCrisisForCharacter[] = await Promise.all(
@@ -181,6 +186,7 @@ export async function GET(request: Request) {
           timeRemainingMinutes,
           hasContributed,
           optionAvailability,
+          v2: v2ByCrisisId.get(crisis._id.toString()) ?? null,
         };
       })
     );

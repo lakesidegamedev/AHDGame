@@ -39,6 +39,7 @@ export type LeverErrorCode =
   | "insufficient_funds"
   | "insufficient_actions"
   | "needs_emergency"
+  | "rejected"
   | "charge_failed";
 
 const STATUS: Record<LeverErrorCode, number> = {
@@ -54,6 +55,7 @@ const STATUS: Record<LeverErrorCode, number> = {
   insufficient_funds: 409,
   insufficient_actions: 409,
   needs_emergency: 409,
+  rejected: 409,
   charge_failed: 500,
 };
 
@@ -82,6 +84,8 @@ export interface LeverUseSummary {
   cost: LeverCost;
   /** Action points taken from the holder's per-turn budget. */
   actionsSpent: number;
+  /** Refunds the charge and frees the slot, for a pull whose follow-up work lost its claim. */
+  undo: () => Promise<void>;
 }
 
 type LiveCrisis = Pick<Crisis, "_id" | "scope" | "countryIds" | "regionIds"> &
@@ -320,11 +324,23 @@ export async function commitLeverUse(
     return fail("charge_failed", "Could not complete this response");
   }
 
+  const undo = async () => {
+    for (const charge of [...applied].reverse()) {
+      await charge
+        .undo()
+        .catch((error) =>
+          logger.error(COMPONENT, "lever refund failed", error, { useId: row._id.toString() })
+        );
+    }
+    await uses.deleteOne({ _id: row._id });
+  };
+
   return {
     ok: true,
     useId: row._id,
     cost,
     actionsSpent,
+    undo,
   };
 }
 
@@ -372,8 +388,10 @@ export async function checkLeverEligibility(
   const roles = await resolveLeverRoles(db, actor, countryIds);
   if (!roles.has(lever.role))
     return fail("wrong_role", "You do not hold the office for this response");
+  const pooled = lever.legacy !== undefined && lever.legacy.kind !== "option";
   if (
     countryIds &&
+    !pooled &&
     lever.role !== "corpCeo" &&
     (!actor.countryId || !countryIds.includes(actor.countryId))
   ) {

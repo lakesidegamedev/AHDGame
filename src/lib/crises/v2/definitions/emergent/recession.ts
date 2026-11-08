@@ -94,6 +94,15 @@ export const recessionDefinition: CrisisDefinition = {
       transmission: 0.3,
       delayTurns: 2,
     },
+    {
+      id: "unrest-from-slump",
+      channel: "trade",
+      targetDefinitionId: "emergent-unrest-wave",
+      minSeverity: 70,
+      minStage: "peak",
+      transmission: 0.2,
+      delayTurns: 3,
+    },
   ],
   scarRules: [
     {
