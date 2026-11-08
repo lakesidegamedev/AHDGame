@@ -1,5 +1,7 @@
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import { getDb } from "@/lib/mongodb";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Election, ElectionStatus, State } from "@/lib/db/types";
 import { seatsForRegion, type ChamberSpec } from "./chamberSpec";
 import {
@@ -34,14 +36,15 @@ export async function ensureChamberElections(
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
   const { countryId, electionType } = spec;
-  const elections = db.collection<Election>("elections");
+  const elections = await getElectionsCollection(db);
 
   const regions: { id: string; seats: number }[] = [];
   if (spec.constituencies === "regions") {
     const projection: Record<string, 1> = { _id: 1 };
     if (spec.seats.kind === "stateField") projection[spec.seats.field] = 1;
-    const states = await db
-      .collection<State>("states")
+    const states = await (
+      await getStatesCollection(db)
+    )
       .find({ countryId }, { projection })
       .toArray();
     for (const state of states) {
