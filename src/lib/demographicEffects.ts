@@ -262,7 +262,7 @@ function computeShiftsByTarget(
  * ("permanent") law's ongoing per-turn pull should count as counter-pressure
  * against an era checkpoint (or vice versa) exactly like an ordinary one
  * does; `calculateDurableDemographicShiftsByTarget` below is the narrower
- * view used to route the durable subset to the non-decaying channel.
+ * view that routes the durable subset to the non-decaying channel.
  * @param policies - Array of active policies with scope multipliers
  * @param legTypeMap - Pre-fetched map of legislation type IDs to documents
  */
