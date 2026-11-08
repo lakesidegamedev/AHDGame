@@ -18,7 +18,9 @@ import { getAvailableLevers } from "./queries";
 const characterId = new ObjectId();
 const crisisId = new ObjectId();
 
-function makeDb(opts: { stage?: "onset" | "resolved"; pulls?: unknown[]; country?: string } = {}) {
+function makeDb(
+  opts: { stage?: "onset" | "resolved"; pulls?: unknown[]; country?: string; aidNode?: object } = {}
+) {
   const instance = {
     ...createCrisisInstance(makeDefinition(), 0),
     stage: opts.stage ?? "onset",
@@ -36,12 +38,15 @@ function makeDb(opts: { stage?: "onset" | "resolved"; pulls?: unknown[]; country
         corporations: [],
         crisisLeverUses: opts.pulls ?? [],
         congressLeaders: [],
+        crisisInteractions: [{ crisisId, decisionTree: [opts.aidNode ?? { type: "aid" }] }],
       };
       return {
         findOne: async () =>
           name === "characters"
             ? { _id: characterId, countryId: opts.country ?? "US", currentOffice: null }
-            : null,
+            : name === "federalBudget"
+              ? { gdp: 900, gdpSmoothed: 1_000, currencyCode: "USD" }
+              : null,
         find: () => ({ toArray: async () => rows[name] ?? [] }),
       };
     },
@@ -104,5 +109,30 @@ describe("getAvailableLevers", () => {
     await getAvailableLevers(db, characterId);
     expect(reads.filter((name) => name === "crises")).toHaveLength(1);
     expect(reads.filter((name) => name === "crisisLeverUses")).toHaveLength(1);
+  });
+
+  it("carries the node's pledge bounds and the sender's GDP on an aid lever", async () => {
+    const definition = makeDefinition();
+    registerCrisisDefinition({
+      ...definition,
+      levers: [
+        ...definition.levers,
+        {
+          ...definition.levers[0],
+          id: "pool.aid",
+          legacy: { kind: "aid", nodeId: "aid" },
+        },
+      ],
+    });
+    const { db } = makeDb({ aidNode: { type: "aid", aidMaxPctGdp: 0.01, aidDefaultPctGdp: 0.02 } });
+    const result = await getAvailableLevers(db, characterId);
+    const aid = result[0].levers.find((lever) => lever.id === "pool.aid");
+    expect(aid?.aid).toEqual({
+      defaultPctGdp: 0.01,
+      maxPctGdp: 0.01,
+      senderGdp: 1_000,
+      currencyCode: "USD",
+    });
+    expect(result[0].levers.find((lever) => lever.id === "stimulus")?.aid).toBeUndefined();
   });
 });

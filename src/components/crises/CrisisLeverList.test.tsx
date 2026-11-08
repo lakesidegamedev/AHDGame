@@ -151,4 +151,51 @@ describe("crisisV2Format", () => {
     expect(sparklinePoints([0, 100], 0, 2, 100, 20)).toBe("0.0,20.0 100.0,0.0");
     expect(sparklinePoints([], 0, 0)).toBe("");
   });
+
+  it("sizes an aid pledge and posts the chosen share", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ success: true }) }));
+    vi.stubGlobal("fetch", fetchMock);
+    const aid = {
+      defaultPctGdp: 0.005,
+      maxPctGdp: 0.02,
+      senderGdp: 1_000_000,
+      currencyCode: "USD",
+    };
+    render(
+      <CrisisLeverList crisisId="c1" levers={[lever({ id: "aid", aid })]} corporations={[]} />
+    );
+    expect(screen.getByText(/0\.50% of GDP, USD 5,000/)).toBeTruthy();
+    const slider = screen.getByLabelText("Pledge size") as HTMLInputElement;
+    expect(slider.max).toBe("0.02");
+    fireEvent.change(slider, { target: { value: "0.01" } });
+    expect(screen.getByText(/1\.00% of GDP, USD 10,000/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "/api/crises/c1/levers",
+      expect.objectContaining({ body: JSON.stringify({ leverId: "aid", pctGdp: 0.01 }) }),
+    ]);
+  });
+
+  it("sends the default share when the slider is untouched", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ success: true }) }));
+    vi.stubGlobal("fetch", fetchMock);
+    const aid = {
+      defaultPctGdp: 0.005,
+      maxPctGdp: 0.02,
+      senderGdp: 1_000_000,
+      currencyCode: "USD",
+    };
+    render(
+      <CrisisLeverList crisisId="c1" levers={[lever({ id: "aid", aid })]} corporations={[]} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "/api/crises/c1/levers",
+      expect.objectContaining({ body: JSON.stringify({ leverId: "aid", pctGdp: 0.005 }) }),
+    ]);
+  });
 });

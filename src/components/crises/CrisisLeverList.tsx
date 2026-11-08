@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { ROLE_LABEL } from "@/lib/crises/v2/ledgerView";
+import type { AidPledgeRange } from "@/lib/crises/levers/queries";
 import type { CrisisV2Lever } from "@/lib/crises/queries/crisisV2View";
 import { leverCooldownText, leverCostLines } from "./crisisV2Format";
 
@@ -29,6 +30,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
   // on screen to carry the confirmation.
   const [pulledLevers, setPulledLevers] = useState<CrisisV2Lever[]>([]);
   const [corporationId, setCorporationId] = useState<string>(corporations[0]?.id ?? "");
+  const [pledgePct, setPledgePct] = useState<Record<string, number>>({});
   const [error, setError] = useState<{ leverId: string; message: string } | null>(null);
 
   const shown = [...levers, ...pulledLevers.filter((p) => !levers.some((l) => l.id === p.id))];
@@ -44,6 +46,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
         body: JSON.stringify({
           leverId: lever.id,
           ...(lever.needsCorporation ? { corporationId } : {}),
+          ...(lever.aid ? { pctGdp: pledgePct[lever.id] ?? lever.aid.defaultPctGdp } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -144,6 +147,14 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                   </label>
                 )
               ))}
+            {lever.aid && !state && (
+              <PledgeSize
+                aid={lever.aid}
+                value={pledgePct[lever.id] ?? lever.aid.defaultPctGdp}
+                disabled={isPending}
+                onChange={(pct) => setPledgePct((prev) => ({ ...prev, [lever.id]: pct }))}
+              />
+            )}
             {confirming === lever.id && !state && (
               <p className="mt-1 text-xs text-warning">
                 Confirm to spend this now. It cannot be undone.
@@ -158,5 +169,40 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
         );
       })}
     </ul>
+  );
+}
+
+function PledgeSize({
+  aid,
+  value,
+  disabled,
+  onChange,
+}: {
+  aid: AidPledgeRange;
+  value: number;
+  disabled: boolean;
+  onChange: (pct: number) => void;
+}) {
+  const amount = Math.round(value * aid.senderGdp);
+  return (
+    <label className="mt-1 block text-xs text-muted">
+      <span className="flex items-center justify-between">
+        <span>Pledge size</span>
+        <span className="tabular-nums font-medium text-foreground">
+          {(value * 100).toFixed(2)}% of GDP, {aid.currencyCode} {amount.toLocaleString("en-US")}
+        </span>
+      </span>
+      <input
+        type="range"
+        aria-label="Pledge size"
+        min={aid.maxPctGdp / 100}
+        max={aid.maxPctGdp}
+        step={aid.maxPctGdp / 100}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-primary"
+      />
+    </label>
   );
 }
