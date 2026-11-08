@@ -38,7 +38,7 @@ export const AREAS: readonly AreaDef[] = [
   { id: "diagnostics", label: "Diagnostics" },
 ];
 
-/** Where a tool used to live in the retired admin or moderator panel. */
+/** A tool's location in the retired admin or moderator panel. */
 export interface LegacyRef {
   tab: string;
   sub?: string;

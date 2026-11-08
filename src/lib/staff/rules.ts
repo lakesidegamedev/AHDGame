@@ -1,16 +1,11 @@
 /**
  * Staff roles and what each may do in the control panel and its APIs.
  *
- * Pure data in, pure data out: no database, clock or request access, so the
- * same rules can run in route guards, page loaders, the nav and tests.
- *
  *   admin       everything
  *   moderator   the moderator-tier tools, reads and writes
  *   junior_dev  read-only view of everything admins see, including
  *               diagnostics, debug and logs. Never any state change.
- *
- * Authority comes from the account record's `role` / `isAdmin`, never from a
- * token claim.
+ * Authority comes from the account record, never a token claim.
  */
 
 export const STAFF_ROLES = ["admin", "moderator", "junior_dev"] as const;

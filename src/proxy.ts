@@ -256,7 +256,7 @@ export async function proxy(request: NextRequest) {
   // routes precisely because a two-hop navigation paid for a full server
   // render before the hop.
   // The admin and moderator panels were replaced by /control. Old bookmarks,
-  // notification links and ticket links keep working: tab/sub and the
+  // notification and support links keep working: tab/sub and the
   // standalone pages map to the same tool, other query params carry over.
   // Temporary (307) so a rollback does not leave browsers pinned to /control.
   const legacyPanel =
