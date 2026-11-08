@@ -3,10 +3,10 @@ import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { COUNTRY_REGIONS } from "@/lib/world/worldEntityManifest";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import type { Bond } from "@/lib/db/types/bond";
-import type { Corporation } from "@/lib/db/types";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
-import type { State } from "@/lib/db/types/state";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import { MACRO_COUNTRIES_COLLECTION } from "@/lib/db/collections/macroCountries";
 import { decideOpenings, type DirectorActiveCrisis } from "@/lib/crises/v2/director";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
@@ -113,8 +113,9 @@ async function loadFinanceWeights(db: Db): Promise<ChannelWeights> {
     }
   }
   if (corporationIds.size === 0) return new Map();
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { _id: { $in: [...corporationIds].map((id) => new ObjectId(id)) } },
       { projection: { countryId: 1 } }
@@ -222,8 +223,9 @@ export async function resolveCrisisCountries(
   }
   const countryByState = new Map<string, string>();
   if (regionIds.size > 0) {
-    const states = await db
-      .collection<State>("states")
+    const states = await (
+      await getStatesCollection(db)
+    )
       .find({ _id: { $in: [...regionIds] } }, { projection: { countryId: 1 } })
       .toArray();
     for (const state of states) countryByState.set(state._id, state.countryId);

@@ -12,9 +12,9 @@ import type { CrisisRole } from "@/lib/crises/v2/types";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import type { CrisisLeverUse } from "@/lib/db/types/crisis";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { NPP } from "@/lib/db/types/npp";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 import { logger } from "@/lib/observability/logger";
 import { officeHolderProvider } from "./holderProviders";
 import { getCrisisDefinition } from "./registry";
@@ -48,8 +48,9 @@ async function loadGovernments(
     if (head) headByCountry.set(String(formation._id), head);
   }
   if (headByCountry.size === 0) return new Map();
-  const heads = await db
-    .collection<NPP>("npps")
+  const heads = await (
+    await getNppsCollection(db)
+  )
     .find({ _id: { $in: [...headByCountry.values()] } }, { projection: { personality: 1 } })
     .toArray();
   const personality = new Map(heads.map((npp) => [npp._id.toString(), npp.personality]));
@@ -72,8 +73,7 @@ interface Purse {
 
 async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<string, Purse>> {
   const [budgets, approvals] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    (await getFederalBudgetCollection(db))
       .find(
         { countryId: { $in: [...countryIds] as CountryId[] } },
         { projection: { countryId: 1, treasuryBalance: 1, gdp: 1 } }
@@ -81,10 +81,7 @@ async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<st
       .toArray(),
     db
       .collection<GovernmentApproval>("governmentApprovals")
-      .find(
-        { _id: { $in: [...countryIds] as unknown as ObjectId[] } },
-        { projection: { approvalRating: 1 } }
-      )
+      .find({ _id: { $in: [...countryIds] as CountryId[] } }, { projection: { approvalRating: 1 } })
       .toArray(),
   ]);
   const approvalOf = new Map(approvals.map((row) => [String(row._id), row.approvalRating]));
