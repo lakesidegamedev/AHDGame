@@ -9,6 +9,7 @@ import { selfDealingDisclosure } from "@/lib/military/defenceSelfDealing";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { assignedFactoriesForSector } from "@/lib/db/collections/defenceContracts";
 import {
   awardFactoryAllocation,
@@ -128,6 +129,17 @@ export async function activateDefenceBid(
       await resetUnconvertedAward(db, t);
       throw e;
     }
+  }
+  // A resumed award can outlive its winner. Reopen the tender rather than
+  // convert the reservation into a contract for a company that is gone.
+  if (
+    !(await (
+      await getCorporationsCollection(db)
+    ).countDocuments({ _id: prepared.corporationId }, { limit: 1 }))
+  ) {
+    await releaseContractPlant(db, sectorId, t._id, t.awardLeaseKey ?? t._id);
+    await resetUnconvertedAward(db, t);
+    throw new ContractError("The winning corporation no longer exists. The tender is open again.");
   }
   if (
     !(await convertDefenceReservation(

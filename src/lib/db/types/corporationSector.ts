@@ -846,6 +846,20 @@ export interface CorporateSector {
     formerCapitalStock?: number;
     /** Turn the taking occurred. */
     takenAtTurn: number;
+    /** What the treasury paid the former owner, in ₳, until a reversal recovers it. */
+    compensationAnchor?: number;
+    /** The country whose treasury paid the compensation. */
+    compensationCountryId?: string;
+    /**
+     * Set when the taking was folded into a holding the state already had: the
+     * row then mixes earlier holdings with this taking, and a reversal returns
+     * only the folded amounts below.
+     */
+    mergedIntoExisting?: boolean;
+    foldedRevenue?: number;
+    foldedWorkers?: number;
+    foldedGrowthCost?: number;
+    foldedCapitalStock?: number;
   };
   /**
    * Turn this sector was nationalized, anchor for the transition productivity
