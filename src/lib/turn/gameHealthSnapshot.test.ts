@@ -224,6 +224,14 @@ describe("processGameHealthSnapshot", () => {
       false,
       ["nppBehavior: 3 NPPs skipped entry", "billLifecycle: timeout on bill #42"],
       {
+        treasuryTurn: {
+          status: "notReached",
+          startedAt: null,
+          completedAt: now,
+          updatedAt: now,
+          reason: "upstreamAbort",
+          message: "Blocked by the failed market",
+        },
         nppBehavior: {
           status: "failed",
           startedAt: now,

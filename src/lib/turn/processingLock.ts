@@ -41,6 +41,11 @@ export function resolvePhaseTimeoutMs(
 
 export const PHASE_TIMEOUT_MS = resolvePhaseTimeoutMs();
 
+/** Corporate settlement has a five-minute window; other phases retain their configured limit. */
+export function phaseTimeoutMs(phase: string): number {
+  return phase === "corporationTurn" ? 5 * 60 * 1000 : PHASE_TIMEOUT_MS;
+}
+
 export type ProcessingLockSnapshot = Pick<
   GameState,
   | "isProcessing"

@@ -591,6 +591,41 @@ describe("processTurn() — full turn flow", () => {
     expect(processFundGeneration).toHaveBeenCalledTimes(1);
   });
 
+  it("finishes independent electoral work after a retryable market stop without advancing an unpaid economy", async () => {
+    const corporation = await import("@/lib/turn/corporationTurn");
+    const { TurnMustStopError } = await import("@/lib/turn/turnMustStop");
+    const spy = vi
+      .spyOn(corporation, "processCorporationTurn")
+      .mockRejectedValueOnce(
+        new TurnMustStopError("corporationTurn", new Error("market execution deadline"))
+      );
+    try {
+      const { processTurn } = await import("@/lib/turnSystem");
+      const result = await processTurn();
+      expect(result.success).toBe(false);
+      const { processCampaignTurn } = await import("@/lib/turn/campaignTurn");
+      const { advanceElectionTimers } = await import("@/lib/turn/perpetualElections");
+      const { processBillLifecycle } = await import("@/lib/billLifecycle");
+      const { processLineOfCreditTurn } = await import("@/lib/turn/lineOfCreditTurn");
+      expect(processCampaignTurn).toHaveBeenCalledOnce();
+      expect(advanceElectionTimers).toHaveBeenCalledOnce();
+      expect(processBillLifecycle).not.toHaveBeenCalled();
+      expect(processLineOfCreditTurn).not.toHaveBeenCalled();
+      const statuses = db.collectionMocks.turnLogs.insertOne.mock.calls.at(-1)?.[0].phaseStatuses;
+      expect(statuses.corporationTurn.status).toBe("failed");
+      expect(statuses.campaignTurn.status).toBe("completed");
+      expect(statuses.electionTimers.status).toBe("completed");
+      expect(statuses.billLifecycle.status).toBe("notReached");
+      expect(
+        db.collectionMocks.gameState.updateOne.mock.calls.some(
+          ([, update]) => update.$set?.currentTurn === mockGameState.currentTurn + 1
+        )
+      ).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("calls advanceElectionTimers and ensurePerpetualElections", async () => {
     const { processTurn } = await import("@/lib/turnSystem");
     await processTurn();

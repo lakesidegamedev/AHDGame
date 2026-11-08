@@ -21,8 +21,8 @@ import {
 export const LIVE_PLANNING_PASSES = 64;
 /** Cooperative budget includes market preparation; final clearing still completes. */
 export const LIVE_PLANNING_BUDGET_MS = 30_000;
-/** Leave the rest of the 20-minute corporation phase for durable settlement and other work. */
-export const LIVE_MARKET_EXECUTION_BUDGET_MS = 180_000;
+/** Reserve the last minute of the five-minute corporation phase for settlement and other work. */
+export const LIVE_MARKET_EXECUTION_BUDGET_MS = 240_000;
 
 export { producerWalletId, type ProducerWalletScope };
 

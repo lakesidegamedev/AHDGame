@@ -93,6 +93,7 @@ import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
 import { processAutoSectorSeed } from "@/lib/turn/autoSectorSeed";
 import { processExtractionAutoStrategy } from "@/lib/turn/extractionAutoStrategy";
 import { processCorporationTurn } from "@/lib/turn/corporationTurn";
+
 import { processOffTypeHandover } from "@/lib/corporations/offTypeHandover";
 import { processUnionsTurn } from "@/lib/turn/unions";
 import { processNppUnionBehavior } from "@/lib/turn/unions/nppUnionBehavior";
@@ -155,6 +156,13 @@ import { processCorporationTurnV2 } from "@/simulation/engine/v2/corporationTurn
 import { processBankingTurnV2 } from "@/simulation/engine/v2/bankingTurn";
 import { runIndexFundCronV2 } from "@/simulation/engine/v2/indexFunds";
 import type { TurnPhaseAdapter } from "@/simulation/engine/types";
+
+/** Registered election spawners have no dependency on corporate settlement. */
+export function independentCountryElectionPhases(): ReadonlySet<string> {
+  return new Set(
+    Object.values(COUNTRY_ELECTION_PHASES).flatMap((entries) => (entries ?? []).map((e) => e.name))
+  );
+}
 
 export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
   return [
@@ -281,7 +289,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         );
         (phaseResults as Record<string, unknown>).extractionAutoStrategy =
           extractionAutoStrategyResult;
-        const [, fundGenResults, corpTurnResults] = await Promise.all([
+        const financeWork = [
           runtime.runPhase("actionRefresh", () =>
             processActionRefresh(characters, config, gameNow)
           ),
@@ -297,7 +305,17 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
                   v2: () => processCorporationTurnV2(newTurn),
                 })
               ),
-        ]);
+        ] as const;
+        let financeResults;
+        try {
+          financeResults = await Promise.all(financeWork);
+        } catch (error) {
+          // Promise.all rejects before a sibling necessarily stops writing.
+          // Independent recovery must not race fund generation or action refresh.
+          await Promise.allSettled(financeWork);
+          throw error;
+        }
+        const [, fundGenResults, corpTurnResults] = financeResults;
 
         if (corpActionsPaused) {
           await runtime.markPhaseSkipped(

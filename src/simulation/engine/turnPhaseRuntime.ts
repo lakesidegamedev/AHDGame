@@ -25,7 +25,7 @@ import {
 } from "@/lib/observability/phaseSubsteps";
 import { withSpan } from "@/lib/observability/spans";
 import type { CompletedTurnPhaseObservation, TurnPhaseRuntime } from "@/simulation/engine/types";
-import { TURN_LOCK_HEARTBEAT_MS, PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
+import { TURN_LOCK_HEARTBEAT_MS, phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { runInAuditContext, turnPhaseTraceId } from "@/lib/observability/context";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
@@ -133,6 +133,8 @@ export function createTurnPhaseRuntime(input: {
    * eligibility condition rejected the phase.
    */
   shouldRunPhase?: (phaseName: string) => boolean;
+  /** Recovery-only boundary: defer work whose prerequisites have not settled. */
+  blockedByFailure?: (phaseName: string) => boolean;
   /**
    * The turn number being processed (`context.newTurn` in `turnSystem.ts`) —
    * used to build the `"turn:<n>:<phase>"` audit traceId (forensics plan
@@ -295,6 +297,7 @@ export function createTurnPhaseRuntime(input: {
   }
 
   async function runPhase<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
+    const timeoutMs = phaseTimeoutMs(name);
     if (stopError) throw stopError;
     // A combined predicate can reject an ordinary cadence or singleplayer
     // phase as well as a simulation profile. Record the known conditional
@@ -366,6 +369,13 @@ export function createTurnPhaseRuntime(input: {
       });
       return restored;
     }
+    if (input.blockedByFailure?.(name)) {
+      await setPhaseStatus(name, "notReached", {
+        reason: "upstreamAbort",
+        message: "Deferred until the failed market and its prerequisites complete.",
+      });
+      return null;
+    }
     await waitForDrainingPhases();
     if (stopError) throw stopError;
     const invocationId = ++nextInvocationId;
@@ -380,8 +390,8 @@ export function createTurnPhaseRuntime(input: {
         // Registered synchronously, before the rejection reaches any awaiting
         // caller, so no other lane can start a phase in between.
         drained = beginDrain();
-        reject(new Error(`Phase "${name}" timed out after ${PHASE_TIMEOUT_MS / 1000}s`));
-      }, PHASE_TIMEOUT_MS);
+        reject(new Error(`Phase "${name}" timed out after ${timeoutMs / 1000}s`));
+      }, timeoutMs);
     });
     let heartbeatTimer = setInterval(() => {
       // Heartbeats renew the lock only. An in-flight heartbeat may finish after
