@@ -29,7 +29,6 @@ import type {
   Election,
   ElectionCandidate,
   Character,
-  NPP,
   PoliticalParty,
   State,
   StatePartyOrg,
@@ -166,28 +165,19 @@ export const POST = withAdminRoute(async (_auth) => {
 
       const partyOrgByStateParty = new Map<string, number>();
       let charMap = new Map<string, Character>();
-      let _nppMap = new Map<string, NPP>();
       let partyChairMaps = buildPartyChairMaps(parties, []);
       if (isPresident) {
         const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
-        const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
-        const [chars, npps, statePartyOrgs] = await Promise.all([
+        const [chars, statePartyOrgs] = await Promise.all([
           characterIds.length > 0
             ? db
                 .collection<Character>("characters")
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : [],
-          nppIds.length > 0
-            ? db
-                .collection<NPP>("npps")
-                .find({ _id: { $in: nppIds } })
-                .toArray()
-            : [],
           db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
         ]);
         charMap = new Map(chars.map((c) => [c._id.toString(), c]));
-        _nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
         partyChairMaps = buildPartyChairMaps(parties, statePartyOrgs);
         for (const po of statePartyOrgs) {
           partyOrgByStateParty.set(`${po.stateId}_${po.partyId}`, po.organization ?? 0);

@@ -148,19 +148,13 @@ export async function GET(request: Request) {
     }
 
     if (countryId === COUNTRY_CONFIGS.UK.id) {
-      const [partyOrg, commons, approvalRaw, lean, sectorSpecializations] = await Promise.all([
+      const [partyOrg, commons, approval, lean, sectorSpecializations] = await Promise.all([
         computePartyOrgMap(db, "UK"),
         computeHouseMap(db, "UK"),
         computeApprovalMap(db, "UK"),
         computeLeanMap(db, "UK"),
         computeSectorSpecializationMap(db, "UK"),
       ]);
-
-      // UK approval needs region ID remapping
-      const approval: Record<string, MapApprovalState> = {};
-      for (const [stateId, v] of Object.entries(approvalRaw)) {
-        approval[stateId] = v;
-      }
 
       return NextResponse.json({
         partyOrg,

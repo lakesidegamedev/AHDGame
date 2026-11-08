@@ -681,12 +681,7 @@ async function handleGoogleLink(
       }
     );
   } catch {
-    return linkRedirect(
-      new URL(
-        `/auth/google/result?status=error&reason=exchange_failed&next=${encodeURIComponent("/settings")}`,
-        baseUrl
-      )
-    );
+    return linkError("exchange_failed");
   } finally {
     // A concurrent read may have repopulated the cache while the write was
     // pending; evict again after the settled write. A write can commit
@@ -695,22 +690,12 @@ async function handleGoogleLink(
     invalidateCachedUser(cacheKey);
   }
   if (write.acknowledged !== true) {
-    return linkRedirect(
-      new URL(
-        `/auth/google/result?status=error&reason=exchange_failed&next=${encodeURIComponent("/settings")}`,
-        baseUrl
-      )
-    );
+    return linkError("exchange_failed");
   }
   if (write.matchedCount !== 1) {
     // A concurrent provider, password, ban, or revocation write won the
     // snapshot race. Never report success without a confirmed write.
-    return linkRedirect(
-      new URL(
-        `/auth/google/result?status=error&reason=session_expired&next=${encodeURIComponent("/settings")}`,
-        baseUrl
-      )
-    );
+    return linkError("session_expired");
   }
 
   return linkRedirect(
