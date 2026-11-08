@@ -1050,16 +1050,15 @@ export async function mergePartyInto(
 
       // 9b. Close the absorbed party's in-flight internal races, which would
       //     otherwise seat a chair or committee of a party that no longer exists.
-      await Promise.all(
-        ["nationalPartyElections", "nationalCommitteeElections"].map((name) =>
-          db
-            .collection(name)
-            .updateMany(
-              applyOptionalCountryScope({ partyId: proposingStrId, status: "voting" }, countryId),
-              { $set: { status: "cancelled", updatedAt: now } }
-            )
-        )
+      const openRaces = applyOptionalCountryScope(
+        { partyId: proposingStrId, status: "voting" },
+        countryId
       );
+      const cancelRace = { $set: { status: "cancelled", updatedAt: now } };
+      await Promise.all([
+        db.collection("nationalPartyElections").updateMany(openRaces, cancelRace),
+        db.collection("nationalCommitteeElections").updateMany(openRaces, cancelRace),
+      ]);
 
       // 10. Update target party member count
       await db

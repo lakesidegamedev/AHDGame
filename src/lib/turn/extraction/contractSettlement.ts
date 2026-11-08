@@ -336,6 +336,7 @@ export async function settleExtractionContracts(
 
   const notifications: NotificationInput[] = [];
   const txEntries: Parameters<typeof emitTxBulk>[1] = [];
+  const orphanedContractIds: ObjectId[] = [];
 
   for (const contract of activeContracts) {
     // Term expiry takes precedence — an expiring contract is not charged.
@@ -382,11 +383,7 @@ export async function settleExtractionContracts(
     // an active contract keeps counting against the state's contract cap and
     // reserving deposit capacity. Close it once its holder is gone.
     if (!corpById.has(contract.corporationId.toString())) {
-      await contractsCol.updateOne(
-        { _id: contract._id, revokedTurn: { $exists: false } },
-        { $set: { status: "expired", revokedTurn: turn, updatedAt: now } }
-      );
-      result.contractsExpired += 1;
+      orphanedContractIds.push(contract._id);
       continue;
     }
 
@@ -804,6 +801,14 @@ export async function settleExtractionContracts(
     result.royaltiesPaid += 1;
     result.totalRoyaltyAnchor += dueAnchor;
     result.contractsSettled += 1;
+  }
+
+  if (orphanedContractIds.length > 0) {
+    const closed = await contractsCol.updateMany(
+      { _id: { $in: orphanedContractIds }, revokedTurn: { $exists: false } },
+      { $set: { status: "expired", revokedTurn: turn, updatedAt: now } }
+    );
+    result.contractsExpired += closed.modifiedCount;
   }
 
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, thresholds);

@@ -280,14 +280,18 @@ describe("settleExtractionContracts", () => {
     setContractQueries(db, [], [contract]);
     seedCommon(db);
     setFind(db, "corporations", []);
+    db.collectionMocks["extractionContracts"]!.updateMany.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
 
     const settle = await loadFn();
     const result = await settle(db as unknown as Db, 13, NOW);
 
     expect(result.contractsExpired).toBe(1);
     expect(result.royaltiesPaid).toBe(0);
-    expect(db.collectionMocks["extractionContracts"]!.updateOne).toHaveBeenCalledWith(
-      { _id: contract._id, revokedTurn: { $exists: false } },
+    expect(db.collectionMocks["extractionContracts"]!.updateMany).toHaveBeenCalledWith(
+      { _id: { $in: [contract._id] }, revokedTurn: { $exists: false } },
       { $set: { status: "expired", revokedTurn: 13, updatedAt: NOW } }
     );
   });
