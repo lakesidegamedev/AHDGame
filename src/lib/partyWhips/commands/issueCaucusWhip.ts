@@ -211,7 +211,6 @@ export async function issueCaucusWhip({
   const { targetType, targetId, chamber, direction, mode, candidacyId, audience } = input;
   const partyIdStr = String(party.sequentialId);
   const isChair = caucus.chairId?.equals(character._id) ?? false;
-  const isAdmin = Boolean(isAdmin);
   const chamberLeaderRole = await getChamberLeaderRole(db, character._id, chamber, partyIdStr);
   const issuerRole: WhipIssuerRole =
     chamberLeaderRole ?? (isChair ? "chair" : isAdmin ? "admin" : "chair");

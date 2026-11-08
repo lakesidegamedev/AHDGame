@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { badRequest, forbidden, errorResponse } from "@/lib/api/errors";
