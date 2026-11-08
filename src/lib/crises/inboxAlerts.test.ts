@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
-import { alertAudience, alertKindForChange, crisisAlertSignature } from "./rules/alertRules";
+import {
+  alertAudience,
+  alertKindForChange,
+  crisisAlertSignature,
+  type AlertCrisis,
+} from "./rules/alertRules";
 
 const sent = vi.hoisted(() => ({ calls: [] as unknown[][] }));
 const interactions = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
@@ -39,7 +44,7 @@ describe("alert rules", () => {
       countryIds: ["US"],
       regionIds: ["US_OH"],
       status: "active",
-    } as const;
+    } as AlertCrisis;
     const people = [
       { userId: "u1", countryId: "US", homeState: "US_OH" },
       { userId: "u1", countryId: "US", homeState: "US_OH" },
@@ -48,7 +53,7 @@ describe("alert rules", () => {
     ];
     expect(alertAudience(regional, people)).toEqual(["u1"]);
     // Country-wide moves reach officeholders only, not every resident.
-    const national = { ...regional, scope: "country" } as const;
+    const national: AlertCrisis = { ...regional, scope: "country" };
     expect(alertAudience(national, people)).toEqual(["u2"]);
   });
 });

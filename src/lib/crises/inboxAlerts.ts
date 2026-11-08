@@ -1,3 +1,5 @@
+import type { Character } from "@/lib/db/types";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { createNotifications } from "@/lib/notifications";
@@ -97,17 +99,15 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
     reach.countryIds.forEach((c) => countryIds.add(c));
     reach.regionIds.forEach((r) => regionIds.add(r));
   }
-  const rows = await db
-    .collection<{
-      userId?: ObjectId;
-      countryId?: string;
-      homeState?: string;
-      currentOffice?: unknown;
-    }>("characters")
+  const characters = await getCharactersCollection(db);
+  const rows = await characters
     .find(
       {
         active: { $ne: false },
-        $or: [{ countryId: { $in: [...countryIds] } }, { homeState: { $in: [...regionIds] } }],
+        $or: [
+          { countryId: { $in: [...countryIds] as Character["countryId"][] } },
+          { homeState: { $in: [...regionIds] } },
+        ],
       },
       { projection: { userId: 1, countryId: 1, homeState: 1, currentOffice: 1 } }
     )
@@ -115,7 +115,7 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
   const candidates: AlertRecipient[] = rows
     .filter((r) => r.userId)
     .map((r) => ({
-      userId: r.userId!.toString(),
+      userId: String(r.userId),
       countryId: r.countryId,
       homeState: r.homeState,
       holdsOffice: !!r.currentOffice,

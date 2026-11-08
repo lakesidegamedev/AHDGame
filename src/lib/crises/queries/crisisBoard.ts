@@ -1,3 +1,5 @@
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import type { Character } from "@/lib/db/types";
@@ -120,12 +122,11 @@ export function viewerCanActOnCrisis(
 type ViewerCharacter = Pick<Character, "_id" | "countryId" | "homeState" | "currentOffice">;
 
 export async function loadBoardViewer(db: Db, characterId: ObjectId): Promise<BoardViewer | null> {
-  const character = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: characterId },
-      { projection: { _id: 1, countryId: 1, homeState: 1, currentOffice: 1 } }
-    );
+  const characters = await getCharactersCollection(db);
+  const character = await characters.findOne(
+    { _id: characterId },
+    { projection: { _id: 1, countryId: 1, homeState: 1, currentOffice: 1 } }
+  );
   if (!character) return null;
   return viewerFromCharacter(db, character as ViewerCharacter);
 }
@@ -165,8 +166,8 @@ export async function countViewerCrisisActions(db: Db, characterId: ObjectId): P
 }
 
 async function loadExposureContext(db: Db, viewer: BoardViewer): Promise<ViewerExposureContext> {
-  const corps = await db
-    .collection<{ type?: string; countryId?: string; ceoId?: ObjectId }>("corporations")
+  const corporations = await getCorporationsCollection(db);
+  const corps = await corporations
     .find(
       {
         $or: [{ ceoId: viewer.characterId }, { "shareholders.characterId": viewer.characterId }],
