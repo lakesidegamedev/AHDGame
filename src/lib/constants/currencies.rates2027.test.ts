@@ -10,6 +10,7 @@ import {
   eraRateForCurrency,
   getInitialRates,
   getSeedCurrencyCode,
+  getRuntimeInitialRates,
 } from "./currencies";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 
@@ -58,7 +59,7 @@ describe("2027 exchange rates", () => {
     expect(INITIAL_RATES.UK).toBe(0.75);
     expect(getInitialRates("2019-default").SE).toBe(4.29);
     expect(getInitialRates("2019-default").TR).toBe(34.5);
-    expect(getInitialRates("2023-default").JP).toBe(106);
+    expect(getRuntimeInitialRates("2023-default").JP).toBe(106);
   });
 });
 

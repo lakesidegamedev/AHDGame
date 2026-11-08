@@ -75,12 +75,18 @@ const ALLOWED_AUTONOMY = NPP_AUTONOMY_LEVELS;
 export const ALLOWED_FEATURE_FLAGS = Object.entries(DEFAULT_GAME_STATE_FLAGS)
   .filter(([key, value]) => typeof value === "boolean" && key !== "nppAutonomyEnabled")
   .map(([key]) => key);
-const featureFlagsSchema = z.record(z.string(), z.boolean()).superRefine((flags, context) => {
-  for (const key of Object.keys(flags)) {
-    if (!ALLOWED_FEATURE_FLAGS.includes(key))
-      context.addIssue({ code: "custom", message: "Unknown feature flag" });
-  }
-});
+/** Upper bound on submitted flag keys, so an unknown-key payload stays small. */
+const MAX_FEATURE_FLAG_KEYS = 200;
+/**
+ * Unknown keys are dropped rather than rejected: older clients still report
+ * flags that have since been retired, and only allowlisted flags are recorded.
+ */
+const featureFlagsSchema = z
+  .record(z.string().max(80), z.boolean())
+  .refine((flags) => Object.keys(flags).length <= MAX_FEATURE_FLAG_KEYS)
+  .transform((flags) =>
+    Object.fromEntries(Object.entries(flags).filter(([key]) => ALLOWED_FEATURE_FLAGS.includes(key)))
+  );
 
 const setupSchema = z.strictObject({
   era: z.enum(ALLOWED_ERAS),

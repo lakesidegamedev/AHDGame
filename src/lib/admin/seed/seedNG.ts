@@ -37,27 +37,9 @@ export async function seedNGRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "NG" });
   }
-  const { ngRegions } = await import("@/lib/seeds/ng/ngRegions");
-  const { ngRegions1953 } = await import("@/lib/seeds/ng/ngRegions1953");
-  const { ngRegions1979 } = await import("@/lib/seeds/ng/ngRegions1979");
-  const { ngRegions1991 } = await import("@/lib/seeds/ng/ngRegions1991");
-  const { ngRegions1999 } = await import("@/lib/seeds/ng/ngRegions1999");
-  const { ngRegions2007 } = await import("@/lib/seeds/ng/ngRegions2007");
-  const { ngRegions2023 } = await import("@/lib/seeds/ng/ngRegions2023");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "1953-default": ngRegions1953,
-      "2019-default": ngRegions,
-      "1979-default": ngRegions1979,
-      "1991-default": ngRegions1991,
-      "1999-default": ngRegions1999,
-      "2007-default": ngRegions2007,
-      "2023-default": ngRegions2023,
-    },
-    "seedNG:ngRegions1953"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("NG"), "regions:NG");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

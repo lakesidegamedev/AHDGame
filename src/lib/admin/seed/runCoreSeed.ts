@@ -1,11 +1,6 @@
 import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
-import {
-  selectPresetBundle,
-  eraForPreset,
-  getPresetFallbacks,
-  resetPresetFallbacks,
-} from "@/lib/seeds/presetSelector";
+import { selectPresetBundle, eraForPreset } from "@/lib/seeds/presetSelector";
 import { selectStatesBundleForPreset } from "./seedStates";
 import { policies } from "@/lib/seeds/reference/policies";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
@@ -248,10 +243,6 @@ export async function runSeed(
     includeBudgets = true,
     log = console.log,
   } = options;
-
-  // Fresh record per run — the module-level list would otherwise accumulate
-  // across runs in a long-lived process and report another run's gaps.
-  resetPresetFallbacks();
 
   // Build US state-party-org rows scaled to the preset's presidential-margin
   // baseline (2019 → 2020 results, 1991 → 1988 results). `seedRegistrationLanes`
@@ -795,18 +786,6 @@ export async function runSeed(
     .createIndex({ stateId: 1 })
     .catch(() => {});
   log("Indexes ensured");
-
-  // Which seed lanes had no bundle for this era and silently took 2019 data.
-  // Reported as one list at the end rather than a line beside each call: the
-  // useful artifact is the SHAPE of the gap for this preset, which is what
-  // decides whether a lane is worth authoring next.
-  const fallbacks = getPresetFallbacks();
-  if (fallbacks.length > 0) {
-    const lanes = [...new Set(fallbacks.map((f) => f.label))].sort();
-    log(
-      `⚠ ${lanes.length} seed lane(s) had no "${preset}" bundle and used 2019 data: ${lanes.join(", ")}`
-    );
-  }
 
   return {
     seeded: true,

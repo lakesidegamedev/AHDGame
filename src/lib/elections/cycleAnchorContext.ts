@@ -12,6 +12,8 @@
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/calendar";
 import type { GameState } from "@/lib/db/types/gameState";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
+import { dataPresetFor } from "@/lib/seeds/presetSelector";
 
 export interface CycleAnchorContext {
   /** Calendar year of turn 1 — `GameState.startingYear`. */
@@ -589,9 +591,8 @@ function week27(realYear: number, startingYear: number, offset = 0): number {
  * years after the pre-iteration date-pin lifts.
  */
 export function getCycleAnchors(ctx: CycleAnchorContext): CycleAnchors {
-  const years =
-    CANONICAL_REAL_ELECTION_YEARS_BY_PRESET[ctx.preset] ??
-    CANONICAL_REAL_ELECTION_YEARS_BY_PRESET["2019-default"];
+  const years = CANONICAL_REAL_ELECTION_YEARS_BY_PRESET[dataPresetFor(ctx.preset)];
+  if (!years) throw missingPresetEntry(ctx.preset, "electionAnchors");
   const sy = ctx.startingYear;
   const off = ctx.preIterationTurns ?? 0;
   return {

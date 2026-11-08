@@ -33,20 +33,9 @@ export async function seedITRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "IT" });
   }
-  const { itRegions } = await import("@/lib/seeds/it/itRegions");
-  const { itRegions1953 } = await import("@/lib/seeds/it/itRegions1953");
-  const { itRegions1991 } = await import("@/lib/countries/it/data/itRegions1991");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "2019-default": itRegions,
-      "1953-default": itRegions1953,
-      "1979-default": itRegions,
-      "1991-default": itRegions1991,
-    },
-    "seedIT:itRegions"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("IT"), "regions:IT");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

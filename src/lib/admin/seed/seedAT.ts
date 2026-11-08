@@ -24,20 +24,9 @@ export async function seedATRegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "AT" });
   }
-  const { atRegions } = await import("@/lib/seeds/at/atRegions");
-  const { atRegions1953 } = await import("@/lib/seeds/at/atRegions1953");
-  const { atRegions1991 } = await import("@/lib/countries/at/data/atRegions1991");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "2019-default": atRegions,
-      "1953-default": atRegions1953,
-      "1979-default": atRegions,
-      "1991-default": atRegions1991,
-    },
-    "seedAT:atRegions"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("AT"), "regions:AT");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };

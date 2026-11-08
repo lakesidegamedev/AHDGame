@@ -1,4 +1,5 @@
-import { beforeEach, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
+import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 import {
   eraForPreset,
   isKnownPreset,
@@ -6,8 +7,6 @@ import {
   SEED_ERA_IDS,
   selectPresetBundle,
   selectPresetBundleOptional,
-  getPresetFallbacks,
-  resetPresetFallbacks,
   type EraId,
 } from "./presetSelector";
 import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
@@ -69,83 +68,32 @@ describe("selectPresetBundle", () => {
     expect(selectPresetBundle("1991-default", bundles, "test")).toBe("b");
   });
 
-  it("falls back to 2019-default when preset is missing", () => {
-    const bundles = {
-      "2019-default": "fallback",
-    };
-    expect(selectPresetBundle("unknown", bundles, "test")).toBe("fallback");
+  it("throws a SeedContractError instead of falling back to 2019-default", () => {
+    expect(() => selectPresetBundle("1999-default", { "2019-default": "x" }, "test")).toThrow(
+      SeedContractError
+    );
   });
 
-  it("throws when no fallback exists", () => {
-    expect(() => selectPresetBundle("x", {}, "test")).toThrow();
+  it("throws when no bundle exists at all", () => {
+    expect(() => selectPresetBundle("x", {}, "test")).toThrow(SeedContractError);
+  });
+
+  it("reads the 2019 bundle for the 2019 world's variants", () => {
+    for (const preset of ["2019-default", "empty", "2019-no-parties"]) {
+      expect(selectPresetBundle(preset, { "2019-default": "modern" }, "test")).toBe("modern");
+    }
   });
 });
 
 describe("selectPresetBundleOptional", () => {
   it("returns the requested bundle when present", () => {
-    expect(selectPresetBundleOptional("1991-default", { "1991-default": "b" }, "test")).toBe("b");
+    expect(selectPresetBundleOptional("1991-default", { "1991-default": "b" })).toBe("b");
   });
 
-  it("falls back to 2019-default when preset is missing", () => {
-    expect(selectPresetBundleOptional("unknown", { "2019-default": "fallback" }, "test")).toBe(
-      "fallback"
-    );
-  });
-
-  it("returns undefined (does NOT throw) when neither preset nor 2019-default exists", () => {
-    // Mirrors FR/IT/ES/RU/DD/NG census in a 1991 world: render paths must
-    // degrade to no-data, not crash the page.
+  it("returns undefined rather than another preset's bundle", () => {
+    expect(selectPresetBundleOptional("unknown", { "2019-default": "fallback" })).toBeUndefined();
     expect(
-      selectPresetBundleOptional(
-        "1991-default",
-        { "1953-default": "x", "1979-default": "y" },
-        "test"
-      )
+      selectPresetBundleOptional("1991-default", { "1953-default": "x", "1979-default": "y" })
     ).toBeUndefined();
-  });
-});
-
-describe("preset fallback recording", () => {
-  beforeEach(() => resetPresetFallbacks());
-
-  it("records the lane and preset when an era has no bundle", () => {
-    // The whole point of step 7: a world set in another decade must not receive
-    // 2019 data with nothing to notice.
-    selectPresetBundle("1991-default", { "2019-default": "modern" }, "seedXX:xxRegions");
-    expect(getPresetFallbacks()).toEqual([{ label: "seedXX:xxRegions", preset: "1991-default" }]);
-  });
-
-  it("records nothing when the era has its own bundle", () => {
-    selectPresetBundle(
-      "1991-default",
-      { "2019-default": "modern", "1991-default": "authored" },
-      "seedXX:xxRegions"
-    );
-    expect(getPresetFallbacks()).toEqual([]);
-  });
-
-  it("does NOT record an explicit mapping to the modern bundle", () => {
-    // `"1979-default": trRegions` is an authoring DECISION — the era genuinely
-    // uses the modern data. Recording it would bury the real gaps in noise.
-    selectPresetBundle(
-      "1979-default",
-      { "2019-default": "modern", "1979-default": "modern" },
-      "seedTR:trRegions"
-    );
-    expect(getPresetFallbacks()).toEqual([]);
-  });
-
-  it("does NOT record the 2019-era aliases — they ARE that era", () => {
-    for (const preset of ["2019-default", "empty", "2019-no-parties"]) {
-      selectPresetBundle(preset, { "2019-default": "modern" }, "seedXX:xxRegions");
-    }
-    expect(getPresetFallbacks()).toEqual([]);
-  });
-
-  it("records for the optional variant only when given a label", () => {
-    selectPresetBundleOptional("1953-default", { "2019-default": "modern" });
-    expect(getPresetFallbacks()).toEqual([]);
-    selectPresetBundleOptional("1953-default", { "2019-default": "modern" }, "page:regionMetrics");
-    expect(getPresetFallbacks()).toEqual([{ label: "page:regionMetrics", preset: "1953-default" }]);
   });
 });

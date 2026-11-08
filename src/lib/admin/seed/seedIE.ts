@@ -27,27 +27,9 @@ export async function seedIERegions(
   if (reset) {
     await db.collection("states").deleteMany({ countryId: "IE" });
   }
-  const { ieRegions } = await import("@/lib/seeds/ie/ieRegions");
-  const { ieRegions1953 } = await import("@/lib/seeds/ie/ieRegions1953");
-  const { ieRegions1979 } = await import("@/lib/seeds/ie/ieRegions1979");
-  const { ieRegions1991 } = await import("@/lib/seeds/ie/ieRegions1991");
-  const { ieRegions1999 } = await import("@/lib/seeds/ie/ieRegions1999");
-  const { ieRegions2007 } = await import("@/lib/seeds/ie/ieRegions2007");
-  const { ieRegions2023 } = await import("@/lib/seeds/ie/ieRegions2023");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "1953-default": ieRegions1953,
-      "2019-default": ieRegions,
-      "1979-default": ieRegions1979,
-      "1991-default": ieRegions1991,
-      "1999-default": ieRegions1999,
-      "2007-default": ieRegions2007,
-      "2023-default": ieRegions2023,
-    },
-    "seedIE:ieRegions1953"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("IE"), "regions:IE");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
