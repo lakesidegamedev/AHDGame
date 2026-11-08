@@ -43,11 +43,13 @@ describe("alert rules", () => {
     const people = [
       { userId: "u1", countryId: "US", homeState: "US_OH" },
       { userId: "u1", countryId: "US", homeState: "US_OH" },
-      { userId: "u2", countryId: "US", homeState: "US_TX" },
+      { userId: "u2", countryId: "US", homeState: "US_TX", holdsOffice: true },
+      { userId: "u3", countryId: "US", homeState: "US_TX" },
     ];
     expect(alertAudience(regional, people)).toEqual(["u1"]);
+    // Country-wide moves reach officeholders only, not every resident.
     const national = { ...regional, scope: "country" } as const;
-    expect(alertAudience(national, people).sort()).toEqual(["u1", "u2"]);
+    expect(alertAudience(national, people)).toEqual(["u2"]);
   });
 });
 
@@ -85,7 +87,7 @@ describe("notifyCrisisChanges", () => {
         ),
     });
     db.collection("characters").find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([{ userId, countryId: "US" }]),
+      toArray: vi.fn().mockResolvedValue([{ userId, countryId: "US", currentOffice: "governor" }]),
     });
     return { db: db as unknown as Db, states };
   }
