@@ -251,8 +251,9 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
 });
 
 /**
- * Server-side modules that client code must not import by value: each pulls
- * hundreds of kilobytes of seed or rule data into the browser. Their light parts now live in the CLIENT_SAFE_SPLITS above. A
+ * Server-side modules that client code could reach through a single shared
+ * helper, each pulling hundreds of kilobytes of seed or rule data into the
+ * browser. Their light parts now live in the CLIENT_SAFE_SPLITS above. A
  * dynamic `import()` is allowed: it loads a separate chunk only when used.
  */
 const SERVER_HEAVY_MODULES = [

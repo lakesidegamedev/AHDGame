@@ -4187,14 +4187,13 @@ const SEAT_GROUPS_2019: SeatGroups = mergeGroups(SEAT_GROUPS_2020, {
 });
 
 /**
- * The 2027 preset, re-expressed in the country-owned grouping.
+ * The 2027 preset in the country-owned grouping.
  *
- * Existing major-country rosters retain their prior arrays. BR and IE add only
- * the modeled aggregate regional offices. The US executive is the January 2027
- * ticket (`US_EXECUTIVE_2027`) with fixed fictional identities; a presidential
- * player country with no president is a broken world (`eraContract.test.ts` S5).
- * US Congress, governors and state senates come from `usCongressResult2027.ts`
- * and `usStateOffices2027.ts`.
+ * Major-country rosters keep their arrays; BR and IE add only the modeled
+ * aggregate regional offices. The US executive is the January 2027 ticket with
+ * fixed fictional identities (a presidential player country with no president
+ * is a broken world). US Congress, governors and state senates come from the
+ * November 2026 results (`usCongressResult2027.ts`, `usStateOffices2027.ts`).
  */
 const SEAT_GROUPS_2027: SeatGroups = {
   US: [
