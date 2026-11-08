@@ -42,7 +42,7 @@ export interface DirectorActiveCrisis {
 }
 
 export interface DirectorCandidate {
-  /** Stable key for the opening: orders ties and labels decisions. */
+  /** Stable key for the opening, which orders ties and labels decisions. */
   key: string;
   definitionId: string;
   scope: CrisisScope;

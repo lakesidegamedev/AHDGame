@@ -34,7 +34,6 @@ function makeDb(data: FakeData) {
     bulkWrite: vi.fn(async () => ({})),
     insertMany: vi.fn(async () => ({})),
     leverUpdateMany: vi.fn(async () => ({})),
-    claim: vi.fn(async () => ({ matchedCount: 1 })),
     collectionsRead: [] as string[],
     leverFilter: undefined as unknown,
   };
@@ -54,7 +53,6 @@ function makeDb(data: FakeData) {
         bulkWrite: calls.bulkWrite,
         insertMany: calls.insertMany,
         updateMany: name === "crisisLeverUses" ? calls.leverUpdateMany : vi.fn(),
-        updateOne: calls.claim,
       };
     },
   };
@@ -217,48 +215,6 @@ describe("processCrisisV2Turn", () => {
     }[];
     expect(ops[0].updateOne.update.$set).toMatchObject({ status: "resolved", endTurn: 10 });
     expect(logWireEvent).toHaveBeenCalledWith("crisis_end", "Over.", expect.anything());
-  });
-});
-
-describe("turn claim", () => {
-  it("claims the turn before routing effects and records it on the instance", async () => {
-    const order: string[] = [];
-    applyCrisisEffects.mockImplementation(async () => void order.push("effects"));
-    registerCrisisEffectModule({ id: "legacy", evaluate: () => [{ kind: "approval", delta: -1 }] });
-    const data = baseData();
-    data.crises = [liveCrisis()];
-    const { db, calls } = makeDb(data);
-    calls.claim.mockImplementation(async () => {
-      order.push("claim");
-      return { matchedCount: 1 };
-    });
-    await processCrisisV2Turn(db, 10);
-    expect(order).toEqual(["claim", "effects"]);
-    expect(calls.claim).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "active" }),
-      { $set: { "v2.lastEvaluatedTurn": 10 } }
-    );
-    expect(writtenInstances(calls)[0].lastEvaluatedTurn).toBe(10);
-  });
-
-  it("does not re-apply effects when the claim was already taken", async () => {
-    registerCrisisEffectModule({ id: "legacy", evaluate: () => [{ kind: "approval", delta: -1 }] });
-    const data = baseData();
-    data.crises = [liveCrisis()];
-    const { db, calls } = makeDb(data);
-    calls.claim.mockResolvedValue({ matchedCount: 0 });
-    await processCrisisV2Turn(db, 10);
-    expect(applyCrisisEffects).not.toHaveBeenCalled();
-    expect(calls.bulkWrite).not.toHaveBeenCalled();
-  });
-
-  it("skips a crisis whose instance already records this turn as evaluated", async () => {
-    const data = baseData();
-    data.crises = [liveCrisis({ lastEvaluatedTurn: 10 })];
-    const { db, calls } = makeDb(data);
-    await processCrisisV2Turn(db, 10);
-    expect(calls.claim).not.toHaveBeenCalled();
-    expect(calls.bulkWrite).not.toHaveBeenCalled();
   });
 });
 

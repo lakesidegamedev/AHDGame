@@ -1,4 +1,4 @@
-import type { CountryId } from "@/lib/constants/countries";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import type { Corporation } from "@/lib/db/types";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import {
@@ -68,10 +68,13 @@ export const bankStressProvider: CrisisInputProvider = {
   input: "bankStress",
   async load(ctx) {
     if (ctx.countryIds.size === 0) return new Map();
-    const banks = await ctx.db
-      .collection<Corporation>("corporations")
+    const corporations = await getCorporationsCollection(ctx.db);
+    const banks = await corporations
       .find(
-        { bankCharter: { $exists: true }, countryId: { $in: [...ctx.countryIds] as CountryId[] } },
+        {
+          bankCharter: { $exists: true },
+          countryId: { $in: [...ctx.countryIds] as Corporation["countryId"][] },
+        },
         {
           projection: {
             countryId: 1,

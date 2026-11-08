@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eraFromYear } from "./era";
+import { ERA_DOMAIN, eraFromYear } from "./era";
 import { getEraBand } from "./metricCatalog";
 import { METRIC_BAND_CURVES } from "./metricBandCurves";
 import { getDecadeForYear, TECH_DECADES } from "@/lib/constants/techTree/decades";
@@ -7,6 +7,9 @@ import { getActiveTechDecadeIds } from "@/lib/constants/techTree/selectors";
 import { doctrineEraForYear } from "@/lib/military/doctrineTree";
 import { prospectEraScaling } from "@/lib/constants/prospecting";
 import { pickNextCanonicalCycle } from "@/lib/elections/canonicalCycle";
+import { getCycleAnchors } from "@/lib/elections/cycleAnchorContext";
+import { eraIdForYear, resolveEraBlend } from "@/lib/seeds/eraInterpolation";
+import { photoYearFromUrl, portraitsForYear } from "@/lib/npp/generator";
 
 const YEARS = Array.from({ length: 2060 - 2027 + 1 }, (_, i) => 2027 + i);
 const LAST_TIER = TECH_DECADES[TECH_DECADES.length - 1];
@@ -130,5 +133,35 @@ describe("score bands are authored to 2050", () => {
     expect(getEraBand("housingAffordability", undefined, 2050)).toEqual(
       getEraBand("housingAffordability", undefined, 2019)
     );
+  });
+});
+
+describe("late-game boundaries", () => {
+  it("keeps the era domain past the last authored decade", () => {
+    expect(ERA_DOMAIN.max).toBeGreaterThanOrEqual(2099);
+    expect(eraFromYear(2099).id).toBe("2090s");
+  });
+
+  it("holds the newest era bundle for every year after its anchor", () => {
+    for (const y of YEARS) {
+      const blend = resolveEraBlend(y);
+      expect(blend.lo).toBe("2027");
+      expect(blend.hi).toBe("2027");
+      expect(blend.t).toBe(0);
+      expect(eraIdForYear(y)).toBe("2027");
+    }
+  });
+
+  it("throws on a preset with no election anchors instead of using 2019 years", () => {
+    expect(() => getCycleAnchors({ startingYear: 2027, preset: "2061-default" })).toThrow();
+  });
+
+  it("reads photo years into the 2090s and keeps late photos usable", () => {
+    for (const y of [2030, 2045, 2050, 2099]) {
+      expect(photoYearFromUrl(`https://example.test/photo_${y}_x.jpg`)).toBe(y);
+    }
+    const pool = [{ photoYear: 2031 }, { photoYear: 2075 }, { photoYear: null }];
+    expect(portraitsForYear(pool, 2055)).toEqual(pool);
+    expect(portraitsForYear(pool, 2030)).toEqual([{ photoYear: 2031 }, { photoYear: null }]);
   });
 });
