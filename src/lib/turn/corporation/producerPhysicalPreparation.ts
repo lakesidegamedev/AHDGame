@@ -465,6 +465,10 @@ export function prepareProducerPhysicalSector(input: {
   if (pricing?.transferPricing && pricing.transferPricing !== "free") {
     plan.internalTransferPricing = { mode: pricing.transferPricing, discount: pricing.discount };
   }
+  // captiveMarketValue only values opted-in accounts. Everything except Free
+  // opts in; explicitly-priced accounts are filtered out at booking and keep
+  // their own entries.
+  if (pricing?.transferPricing !== "free") plan.ownSiteMarketValue = true;
   if (sector.sellOutsideFirst === true) plan.sellOutsideFirst = true;
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
