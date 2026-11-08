@@ -53,7 +53,7 @@ const ACTIONABLE_BILL_STATUSES = new Set([
   "active",
   "active_other",
   // Both chambers are voting, so both are whippable. ⚠️ The whip WRITERS
-  // (applyPlayerWhip / applyWhipVotes) must already route per member before this is
+  // (applyWhipVotes) must already route per member before this is
   // opened — otherwise a whipped upper-chamber member's vote and weight land in the
   // lower tally and the bill can pass on the other house's votes.
   "active_both",
@@ -183,7 +183,7 @@ export async function buildBillWhipPanelData(
         chamberKey: chamber.key,
         chamberLabel: chamber.shortName,
         playerWhip: buildSummary(
-          chamberWhips.filter((whip) => whip.audience === "character"),
+          chamberWhips.filter((whip) => whip.audience === "character" && whip.mode === "soft"),
           1,
           party
         ),

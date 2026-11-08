@@ -82,7 +82,43 @@ describe("Supreme Court nomination whip controls", () => {
           direction: "against",
           audience,
         });
+        expect(JSON.parse(String(call?.[1]?.body)).mode ?? "hard").toBe(
+          audience === "character" ? "soft" : "hard"
+        );
       });
     }
   );
+});
+
+describe("player bill whips", () => {
+  it("sends only advisory directives and offers no hard bill action", async () => {
+    vi.mocked(fetch).mockImplementation((_url, options) =>
+      Promise.resolve({
+        ok: true,
+        json: async () =>
+          options?.method === "POST"
+            ? { message: "Whip issued" }
+            : {
+                senate: [
+                  {
+                    bill: { id: "0123456789abcdef01234567", title: "Test Bill", status: "active" },
+                    playerWhip: { existingWhips: [], canWhip: true },
+                  },
+                ],
+              },
+      } as Response)
+    );
+    render(<PlayerWhipPanel partyId="1" partyColor="#123456" countryId="US" />);
+    await screen.findByRole("link", { name: "Test Bill" });
+    fireEvent.click(screen.getByRole("button", { name: "Whip FOR" }));
+    await waitFor(() => {
+      const call = vi.mocked(fetch).mock.calls.find(([, options]) => options?.method === "POST");
+      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+        audience: "character",
+        targetType: "bill",
+        mode: "soft",
+      });
+    });
+    expect(screen.queryByRole("tab", { name: "Hard" })).toBeNull();
+  });
 });
