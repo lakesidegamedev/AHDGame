@@ -68,6 +68,34 @@ export interface SectorBuildOrder {
   constructionClaimId?: string;
 }
 
+/** One recorded taking of a sector, kept so a court reversal can undo it. */
+export interface NationalizationTaking {
+  /** The corporation that held this sector immediately before the taking. */
+  formerCorporationId: ObjectId;
+  /** The sector's home country before the taking (usually the taking country). */
+  formerCountryId?: string;
+  /** Revenue (donor currency) before the transition haircut. */
+  formerRevenue?: number;
+  /** Capital stock before the transition haircut (plants mode). */
+  formerCapitalStock?: number;
+  /** Turn the taking occurred. */
+  takenAtTurn: number;
+  /** What the treasury paid the former owner, in ₳, until a reversal recovers it. */
+  compensationAnchor?: number;
+  /** The country whose treasury paid the compensation. */
+  compensationCountryId?: string;
+  /**
+   * Set when the taking was folded into a holding the state already had: the
+   * row then mixes earlier holdings with this taking, and a reversal returns
+   * only the folded amounts below.
+   */
+  mergedIntoExisting?: boolean;
+  foldedRevenue?: number;
+  foldedWorkers?: number;
+  foldedGrowthCost?: number;
+  foldedCapitalStock?: number;
+}
+
 export interface CorporateSector {
   /** Unified producer market: written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
@@ -835,31 +863,9 @@ export interface CorporateSector {
    * Absent on seeded sectors and takings that predate this field. On a NatCorp
    * merge this reflects the most recent taking folded into the surviving row.
    */
-  nationalizationProvenance?: {
-    /** The corporation that held this sector immediately before the taking. */
-    formerCorporationId: ObjectId;
-    /** The sector's home country before the taking (usually the taking country). */
-    formerCountryId?: string;
-    /** Revenue (donor currency) before the transition haircut. */
-    formerRevenue?: number;
-    /** Capital stock before the transition haircut (plants mode). */
-    formerCapitalStock?: number;
-    /** Turn the taking occurred. */
-    takenAtTurn: number;
-    /** What the treasury paid the former owner, in ₳, until a reversal recovers it. */
-    compensationAnchor?: number;
-    /** The country whose treasury paid the compensation. */
-    compensationCountryId?: string;
-    /**
-     * Set when the taking was folded into a holding the state already had: the
-     * row then mixes earlier holdings with this taking, and a reversal returns
-     * only the folded amounts below.
-     */
-    mergedIntoExisting?: boolean;
-    foldedRevenue?: number;
-    foldedWorkers?: number;
-    foldedGrowthCost?: number;
-    foldedCapitalStock?: number;
+  nationalizationProvenance?: NationalizationTaking & {
+    /** Takings this row was folded onto before the latest one, oldest first. */
+    earlierTakings?: NationalizationTaking[];
   };
   /**
    * Turn this sector was nationalized, anchor for the transition productivity

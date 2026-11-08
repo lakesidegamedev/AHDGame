@@ -307,11 +307,14 @@ export async function runStatehoodAdmission(
 
   const preset = gameState?.preset;
   const candidateIds = TERRITORY_ADMISSIONS.map((t) => t.stateId);
-  const existing = (await (
+  const existing = await (
     await getStatesCollection(db)
   )
-    .find({ _id: { $in: candidateIds } }, { projection: { _id: 1, admittedYear: 1 } })
-    .toArray()) as unknown as Array<{ _id: string; admittedYear?: number }>;
+    .find<{ _id: string; admittedYear?: number }>(
+      { _id: { $in: candidateIds } },
+      { projection: { _id: 1, admittedYear: 1 } }
+    )
+    .toArray();
   const alreadyAdmitted = new Set(
     existing.filter((s) => typeof s.admittedYear === "number").map((s) => s._id)
   );

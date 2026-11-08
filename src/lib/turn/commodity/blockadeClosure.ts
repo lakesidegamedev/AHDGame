@@ -16,15 +16,15 @@ import { FIGHTING_CONFLICT_STATUSES } from "@/lib/military/conflictLifecycle";
 export async function loadBlockadeClosure(db: Db): Promise<Map<string, number>> {
   // Projection passed as a find option rather than via the cursor's .project(), which is
   // this codebase's house style and does not require a cursor implementation of it.
-  const conflicts = (await getConflictsCollection(db)
-    .find(
+  const conflicts = await getConflictsCollection(db)
+    .find<{
+      sideA?: { countries?: string[] };
+      sideB?: { countries?: string[] };
+    }>(
       { status: { $in: [...FIGHTING_CONFLICT_STATUSES] } },
       { projection: { "sideA.countries": 1, "sideB.countries": 1 } }
     )
-    .toArray()) as unknown as Array<{
-    sideA?: { countries?: string[] };
-    sideB?: { countries?: string[] };
-  }>;
+    .toArray();
   if (!conflicts.length) return new Map();
 
   const hostility = new Map<string, Set<string>>();
@@ -41,9 +41,9 @@ export async function loadBlockadeClosure(db: Db): Promise<Map<string, number>> 
     }
   }
 
-  const navalUnits = (await getMilitaryUnitsCollection(db)
-    .find({ domain: "naval" })
-    .toArray()) as unknown as NavairUnit[];
+  const navalUnits = await getMilitaryUnitsCollection(db)
+    .find<NavairUnit>({ domain: "naval" })
+    .toArray();
   if (!navalUnits.length) return new Map();
 
   return blockadeClosureByCountry(navalUnits, hostility);

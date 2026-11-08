@@ -24,6 +24,22 @@ export function selfHeldBondUnits(bond: Pick<Bond, "corporationId" | "holders">)
   return units;
 }
 
+/**
+ * Bank treasuries buy only sovereign bonds, so a bank holder on a corporate bond
+ * means a new purchase path appeared. Default, restructure and refinance would
+ * pay it nothing, so they refuse rather than drop the claim.
+ */
+export function assertNoBankTreasuryHolders(
+  bonds: ReadonlyArray<Pick<Bond, "_id" | "holders">>
+): void {
+  for (const bond of bonds) {
+    if ((bond.holders ?? []).some((h) => h.bankId))
+      throw new Error(
+        `Corporate bond ${String(bond._id)} has a bank treasury holder; the default paths do not pay banks`
+      );
+  }
+}
+
 /** Add a fund or NPP holder's ₳ amount; returns false for every other holder kind. */
 export function addInstitutionalBondPayout(
   payouts: InstitutionalBondPayouts,

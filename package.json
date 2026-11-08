@@ -93,6 +93,8 @@
     "country-branches:lower": "tsx scripts/architecture/countryBranchRatchet.cli.ts lower",
     "data-access:ratchet": "tsx scripts/architecture/dataAccessRatchet.cli.ts check",
     "data-access:lower": "tsx scripts/architecture/dataAccessRatchet.cli.ts lower",
+    "double-casts": "tsx scripts/architecture/doubleCastRatchet.cli.ts check",
+    "double-casts:lower": "tsx scripts/architecture/doubleCastRatchet.cli.ts lower",
     "architecture:contracts": "vitest run scripts/architecture src/lib/admin/seed/seedManifest.test.ts src/lib/admin/seed/seedManifestDiscovery.test.ts src/lib/admin/resetGameWorld.test.ts src/lib/admin/bootstrapContract.test.ts src/lib/admin/resetAndBootstrapFailure.test.ts src/lib/admin/seed/indexes/resetRuntimeCoverage.test.ts src/simulation/engine/turnReadProjections.test.ts --maxWorkers=1",
     "build:clean-cache": "node scripts/clear-railway-build-cache.mjs"
   },

@@ -209,7 +209,10 @@ async function registerNewUser(
   // of the test secret, which only the email form can carry.
   const gameConfig = await db
     .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { maintenanceMode: 1, testMode: 1 } });
+    .findOne(
+      { _id: "default" },
+      { projection: { maintenanceMode: 1, testMode: 1, ipDetectionEnabled: 1 } }
+    );
   if (normalizeMaintenanceMode(gameConfig?.maintenanceMode) !== "off") {
     return adapter.resultRedirect("error", "/maintenance", "maintenance");
   }

@@ -512,6 +512,22 @@ export interface Corporation {
   /** Latest turn that added a tax payable for each country. */
   federalTaxArrearsLastTurnByCountry?: Partial<Record<CountryId, number>>;
   /**
+   * Court-ordered compensation recoveries this corporation owes, keyed by
+   * `<sectorId>_<takenAtTurn>`, until each one is fully settled.
+   */
+  pendingCompensationRecoveries?: Record<
+    string,
+    {
+      sectorId: ObjectId;
+      takenAtTurn: number;
+      countryId: string;
+      anchor: number;
+      /** `debited` once the cash has left the corporation and awaits the treasury credit. */
+      stage: "pending" | "debited";
+      paidAnchor?: number;
+    }
+  >;
+  /**
    * Currency denomination of liquidCapital.
    * Set during forex migration to the corp's home currency.
    * Absent on pre-forex corps, treat as USD.

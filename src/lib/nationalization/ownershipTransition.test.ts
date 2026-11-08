@@ -916,6 +916,76 @@ describe("nationalizeWholeCorp", () => {
     expect(blindReparent).toBeUndefined();
   });
 
+  it("keeps the earlier taking on the holding it merges a second taking into", async () => {
+    const firstOwnerId = new ObjectId();
+    const primaryId = new ObjectId();
+    const targetId = new ObjectId();
+    const donorSectorId = new ObjectId();
+    const existingNatSectorId = new ObjectId();
+    await setupTarget({ primaryId, targetId });
+
+    db.collectionMocks.corporateSectors.find.mockReturnValue(
+      findCursor([
+        {
+          _id: donorSectorId,
+          corporationId: targetId,
+          countryId: "CN",
+          stateId: "CN-HD",
+          sectorType: "energy",
+          revenue: 6_000_000,
+          workers: 500,
+          currentGrowthCost: 100,
+          profitMargin: 35,
+        },
+      ])
+    );
+    db.collectionMocks.bonds.find.mockReturnValue(findCursor([]));
+    // The NatCorp ALREADY holds energy @ CN-HD — the merge-check finds it.
+    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
+      _id: existingNatSectorId,
+      corporationId: primaryId,
+      countryId: "CN",
+      stateId: "CN-HD",
+      sectorType: "energy",
+      revenue: 1_000_000,
+      workers: 100,
+      currentGrowthCost: 50,
+      nationalizationProvenance: {
+        formerCorporationId: firstOwnerId,
+        takenAtTurn: 0,
+        compensationAnchor: 400,
+        compensationCountryId: "CN",
+      },
+    });
+    const { resolveNationalCorporationForSector } = await import("./nationalCorporation");
+    vi.mocked(resolveNationalCorporationForSector).mockResolvedValue({ _id: primaryId } as never);
+
+    const { nationalizeWholeCorp } = await import("./ownershipTransition");
+    await nationalizeWholeCorp(db as unknown as Db, {
+      countryId: "CN",
+      corporationId: targetId,
+      tier: "seizure",
+      consequence: CONSEQ,
+    });
+
+    // The donor's capacity is folded into the EXISTING NatCorp sector ($inc)…
+    const merge = db.collectionMocks.corporateSectors.updateOne.mock.calls.find((c) =>
+      (c[0]?._id as ObjectId)?.equals?.(existingNatSectorId)
+    );
+    expect(merge).toBeTruthy();
+    // Folded-in chunk takes the 15% transition haircut (6M × 0.85).
+    expect(merge![1].$inc.revenue).toBe(5_100_000);
+    expect(merge![1].$set.nationalizedAtTurn).toBe(1);
+    expect(merge![1].$inc.workers).toBe(500);
+    const stamped = merge![1].$set.nationalizationProvenance;
+    expect(stamped.mergedIntoExisting).toBe(true);
+    expect(stamped.foldedRevenue).toBe(5_100_000);
+    expect(stamped.earlierTakings).toEqual([
+      expect.objectContaining({ formerCorporationId: firstOwnerId, compensationAnchor: 400 }),
+    ]);
+    expect(stamped.earlierTakings[0].earlierTakings).toBeUndefined();
+  });
+
   it("blocks nationalizing a state-owned corporation", async () => {
     const targetId = new ObjectId();
     db.collectionMocks.corporations.findOne.mockResolvedValue({

@@ -17,6 +17,8 @@ import type {
   CorporateSector,
   State,
 } from "@/lib/db/types";
+import type { NationalizationTaking } from "@/lib/db/types/corporationSector";
+import { splitCompensationBySector } from "./compensationSplit";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -175,7 +177,7 @@ async function absorbSectorIntoNatCorp(
   const sectors = db.collection<CorporateSector>("corporateSectors");
   // Prior-owner provenance — captured from the donor row BEFORE it is re-parented
   // or folded, so an emergency taking can be reversed (SCOTUS strike-down). On a
-  // merge this overwrites the survivor's provenance with the latest taking.
+  // merge the survivor's earlier takings are kept beside the latest one.
   const provenance = {
     formerCorporationId: sector.corporationId,
     ...(sector.countryId ? { formerCountryId: sector.countryId } : {}),
@@ -246,6 +248,11 @@ async function absorbSectorIntoNatCorp(
           capacityBookAnchor: haircutBook,
         })
       : null;
+    const { earlierTakings: olderTakings = [], ...latestTaking } =
+      existing.nationalizationProvenance ?? {};
+    const earlierTakings = existing.nationalizationProvenance
+      ? [...olderTakings, latestTaking as NationalizationTaking]
+      : [];
     const merge = await sectors.updateOne(
       { _id: existing._id, ...mergeSurvivorConstructionFilter(existing) },
       {
@@ -270,6 +277,7 @@ async function absorbSectorIntoNatCorp(
           // how much of the row this taking added.
           nationalizationProvenance: {
             ...provenance,
+            ...(earlierTakings.length > 0 ? { earlierTakings } : {}),
             mergedIntoExisting: true,
             foldedRevenue: transferRevenue,
             foldedWorkers: sector.workers ?? 0,
@@ -1323,6 +1331,10 @@ export async function nationalizeWholeCorp(
     await readStateOwnershipConcentration(db, params.countryId)
   );
 
+  // The buyout paid for the whole corporation, shared out over the sectors the
+  // state keeps (by revenue) so a court reversal can recover each one's part.
+  const compensationBySectorId = splitCompensationBySector(domesticSectors, payoutPoolAnchor);
+
   const destByType = new Map<string, ObjectId>();
   for (const s of domesticSectors) {
     const modelKey = `${s.sectorType}:${s.industryModel ?? ""}:${s.mediaDiscriminator ?? ""}`;
@@ -1351,7 +1363,11 @@ export async function nationalizeWholeCorp(
       corpPlantsEnabled,
       transitionKeyBySectorId.get(s._id.toHexString())!,
       undefined,
-      constructionTransfers
+      constructionTransfers,
+      {
+        countryId: params.countryId,
+        anchor: compensationBySectorId.get(s._id.toHexString()) ?? 0,
+      }
     );
   }
   await settleConstructionBorrowerTransfers(db, constructionTransfers);
