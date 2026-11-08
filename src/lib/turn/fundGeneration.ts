@@ -10,6 +10,10 @@ import type {
 } from "@/lib/db/types";
 import { projectCharacterGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
+import {
+  nationalGdpPerCapitaIndex,
+  requireNationalGdpPerCapita,
+} from "@/lib/campaigns/rules/gdpBaseline";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { AnyBulkWriteOperation } from "mongodb";
@@ -69,6 +73,8 @@ export async function processFundGeneration(
         preloadedStateMap ??
         new Map((await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s]));
 
+      const nationalGdpIndex = nationalGdpPerCapitaIndex(stateMap.values());
+
       // Use composite keys to avoid cross-country sequential ID collisions
       const parties = await db
         .collection<PoliticalPartyType>("politicalParties")
@@ -116,6 +122,10 @@ export async function processFundGeneration(
           politicalInfluence: character.politicalInfluence ?? 0,
           preset,
           priceLevel,
+          nationalGdpPerCapita: requireNationalGdpPerCapita(
+            nationalGdpIndex,
+            character.countryId ?? "US"
+          ),
         });
         const totalFundGeneration = campaignAnchorToLocal(
           totalFundGenerationAnchor,

@@ -1,6 +1,9 @@
 import { loadEuropeanTreatyContext } from "@/lib/internationalOrganizations/europeanIntegration/service";
 import { canRatifyMaastricht } from "@/lib/internationalOrganizations/europeanIntegration/rules";
-import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
+import {
+  loadCampaignPriceLevel,
+  loadNationalGdpPerCapitaIndex,
+} from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { GameState } from "@/lib/db/types";
@@ -84,6 +87,7 @@ export async function GET() {
     {
       preset: gs?.preset ?? DEFAULT_SEED_PRESET,
       campaignPriceLevel: await loadCampaignPriceLevel(db),
+      nationalGdpPerCapita: Object.fromEntries(await loadNationalGdpPerCapitaIndex(db)),
       eurozoneEnabled: euroState.eurozoneEnabled,
       euroMemberCurrencies: euroMemberCurrencies(euroState),
       euroMonetaryUnion: gs?.euroMonetaryUnion,

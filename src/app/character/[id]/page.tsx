@@ -1,4 +1,5 @@
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
   loadCampaignPriceLevel,
@@ -415,7 +416,10 @@ export default async function CharacterPage({ params }: PageProps) {
     character.countryId,
     character.politicalInfluence ?? 0,
     gamePreset,
-    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gamePreset)
+    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gamePreset),
+    homeState?.gdp === undefined
+      ? undefined
+      : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
   );
   const populationTier = getPopulationTier(statePopulation);
 

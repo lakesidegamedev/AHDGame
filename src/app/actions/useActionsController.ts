@@ -362,6 +362,8 @@ export function useActionsController({
           // Same era baseline the server executes with (see executeAction):
           // without this a 1953-world card would quote modern-era costs.
           preset: worldFlags.preset,
+          // Live national figure the server prices against; absent until flags load.
+          nationalGdpPerCapita: worldFlags.nationalGdpPerCapita[character.countryId ?? "US"],
         }
       : undefined;
     // Same rules quotes the server executes. When a quote rejects (maxed stat,
@@ -416,6 +418,7 @@ export function useActionsController({
     campaignRates,
     worldFlags.preset,
     worldFlags.campaignPriceLevel,
+    worldFlags.nationalGdpPerCapita,
   ]);
 
   const forexEnabled = !!character?.currencyBalances;

@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
@@ -600,7 +601,10 @@ export async function GET(request: Request) {
       character.countryId,
       character.politicalInfluence ?? 0,
       preset,
-      resolveCampaignPriceLevel(gameConfigDoc?.campaignEraPriceLevelEnabled, preset)
+      resolveCampaignPriceLevel(gameConfigDoc?.campaignEraPriceLevelEnabled, preset),
+      homeState?.gdp === undefined
+        ? undefined
+        : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
     );
     const populationTier = getPopulationTier(statePopulation);
     // fundDistribution is anchor; campaign funds display in LOCAL at the frozen

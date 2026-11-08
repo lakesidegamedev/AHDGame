@@ -13,6 +13,7 @@ import { localCampaignBalance } from "@/lib/currency/campaignBalance";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getMediaFavPerTurn } from "@/lib/campaigns/opsEffects";
 import { quoteAdvertiseAction, quoteCampaignAction } from "@/lib/actions/rules";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } from "./rules";
@@ -141,6 +142,7 @@ async function getSimpleInfluencePrices(
     population: state.population,
     countryId: targetCountryId,
     preset,
+    nationalGdpPerCapita: await loadNationalGdpPerCapita(db, targetCountryId),
   };
   // Quote against the target's own stats and home economy so a low-stat booster
   // cannot discount the action. NPPs and pre-stat characters use neutral stats.

@@ -15,7 +15,10 @@
  * touch live forex).
  */
 
-import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
+import {
+  loadCampaignCurrencyRates,
+  loadNationalGdpPerCapita,
+} from "@/lib/campaigns/campaignCurrency";
 
 import { ObjectId, type Db, type Filter } from "mongodb";
 import { randomUUID } from "node:crypto";
@@ -195,6 +198,10 @@ async function executeCharacterActionImpl(
   const needsHomeState =
     !action.requiresState &&
     (actionType === "campaign" || actionType === "advertise" || actionType === "buildDonorBase");
+  // GDP-scaled costs measure the home region against the live national figure.
+  const nationalGdpPerCapita = needsHomeState
+    ? await loadNationalGdpPerCapita(db, character.countryId ?? "US")
+    : undefined;
 
   const stateId = action.requiresState ? targetState : needsHomeState ? character.homeState : null;
 
@@ -247,6 +254,7 @@ async function executeCharacterActionImpl(
       homeFxRate: campaignRate,
       preset: gameState?.preset,
       priceLevel,
+      nationalGdpPerCapita,
     });
     if (!validation.canPerform) {
       if (completed > 0) {
@@ -340,6 +348,7 @@ async function executeCharacterActionImpl(
         // historical worlds price in their own denomination.
         preset: gameState?.preset,
         priceLevel,
+        nationalGdpPerCapita,
       });
     }
 

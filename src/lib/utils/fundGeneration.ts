@@ -5,7 +5,7 @@
  */
 
 import type { OfficeType } from "@/lib/db/types";
-import { gdpBaselinePerCapita } from "@/lib/campaigns/rules/gdpBaseline";
+import { effectiveGdpBaseline } from "@/lib/campaigns/rules/gdpBaseline";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
 // Population tier thresholds
@@ -126,8 +126,12 @@ function getOfficeFundBonus(currentOffice: OfficeType | null): number {
  * Throws for countries without an explicit baseline, by design, so an unknown
  * country cannot silently inherit a mismatched US denomination.
  */
-export function getGdpBaseline(countryId: string, preset?: string): number {
-  return gdpBaselinePerCapita(countryId, preset);
+export function getGdpBaseline(
+  countryId: string,
+  preset?: string,
+  nationalGdpPerCapita?: number
+): number {
+  return effectiveGdpBaseline(countryId, preset, nationalGdpPerCapita);
 }
 
 /**
@@ -146,9 +150,10 @@ export function getIncomeGdpScalar(
   gdpMillions: number,
   population: number,
   countryId = "US",
-  preset?: string
+  preset?: string,
+  nationalGdpPerCapita?: number
 ): number {
-  const baseline = getGdpBaseline(countryId, preset);
+  const baseline = getGdpBaseline(countryId, preset, nationalGdpPerCapita);
   const gdpPerCapita = (gdpMillions * 1_000_000) / population;
   return Math.max(0.9, Math.min(1.5, gdpPerCapita / baseline));
 }
@@ -171,11 +176,12 @@ export function getTotalFundGeneration(
   countryId = "US",
   stateInfluence?: number,
   preset?: string,
-  priceLevel = 1
+  priceLevel = 1,
+  nationalGdpPerCapita?: number
 ): number {
   const gdpScalar =
     stateGdpMillions !== undefined
-      ? getIncomeGdpScalar(stateGdpMillions, population, countryId, preset)
+      ? getIncomeGdpScalar(stateGdpMillions, population, countryId, preset, nationalGdpPerCapita)
       : 1.0;
   const baseRate = getFundGenerationRate(population);
   const donorBonus = getDonorBaseBonus(donorBaseLevel, population, stateInfluence);
@@ -257,11 +263,18 @@ export function calculateFullFundDistribution(
   countryId = "US",
   stateInfluence?: number,
   preset?: string,
-  priceLevel = 1
+  priceLevel = 1,
+  nationalGdpPerCapita?: number
 ): FundDistribution {
   const gdpScalar =
     stateGdpMillions !== undefined
-      ? getIncomeGdpScalar(stateGdpMillions, statePopulation, countryId, preset)
+      ? getIncomeGdpScalar(
+          stateGdpMillions,
+          statePopulation,
+          countryId,
+          preset,
+          nationalGdpPerCapita
+        )
       : 1.0;
   const baseGeneration = Math.round(
     getFundGenerationRate(statePopulation) * gdpScalar * priceLevel
@@ -357,6 +370,8 @@ export function projectCharacterGeneration(args: {
    * phase passes `resolveCampaignPriceLevel(...)`.
    */
   priceLevel?: number;
+  /** Live national GDP per capita (see `loadNationalGdpPerCapita`); omitted = era table. */
+  nationalGdpPerCapita?: number;
 }): number {
   return getTotalFundGeneration(
     args.population,
@@ -366,7 +381,8 @@ export function projectCharacterGeneration(args: {
     args.countryId ?? "US",
     args.politicalInfluence ?? 0,
     args.preset ?? DEFAULT_SEED_PRESET,
-    args.priceLevel ?? 1
+    args.priceLevel ?? 1,
+    args.nationalGdpPerCapita
   );
 }
 

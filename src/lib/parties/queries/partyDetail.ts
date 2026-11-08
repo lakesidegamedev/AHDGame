@@ -1,5 +1,8 @@
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
-import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
+import {
+  loadCampaignCurrencyRates,
+  loadNationalGdpPerCapita,
+} from "@/lib/campaigns/campaignCurrency";
 import { ObjectId, type Db } from "mongodb";
 import { getPartyBudgetCollection } from "@/lib/db/collections";
 import type { Character, GameConfig, NPP, PoliticalParty, State, User } from "@/lib/db/types";
@@ -246,6 +249,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
       scope: "national",
     }),
   ]);
+  const nationalGdpPerCapita = await loadNationalGdpPerCapita(db, partyCountry);
   const statePopMap = new Map(states.map((state) => [state._id, state.population]));
   // Pass raw state.gdp (undefined when absent → country-average scalar 1.0,
   // matching the turn processor; do NOT coalesce to 0, which clamps to 0.9).
@@ -274,6 +278,7 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
       countryId: member.countryId,
       politicalInfluence: member.politicalInfluence ?? 0,
       preset,
+      nationalGdpPerCapita,
     });
     expectedHourlyIncome += calculateTaxAmount(toLocal(totalFundRate), nationalTaxRate);
   }

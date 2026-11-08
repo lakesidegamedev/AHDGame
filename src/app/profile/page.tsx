@@ -1,4 +1,5 @@
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
@@ -269,7 +270,10 @@ async function getCharacterData() {
     character.countryId,
     character.politicalInfluence ?? 0,
     gameState?.preset,
-    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gameState?.preset)
+    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gameState?.preset),
+    homeState?.gdp === undefined
+      ? undefined
+      : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
   );
 
   // Determine character's country for country-specific NPI rankings
