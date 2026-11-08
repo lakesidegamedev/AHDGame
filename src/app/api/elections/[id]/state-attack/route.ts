@@ -14,8 +14,7 @@ import { getElectoralVoteUnits } from "@/lib/constants/states";
 import { randomUUID } from "node:crypto";
 import { applyStateAttackSpend } from "@/lib/elections/stateAttackSpend";
 import { getOpsBranchMagnitude } from "@/lib/campaigns/upgradeCosts";
-import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
-import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { liveActionFilter } from "@/lib/elections/primaryStateActions";
 import { emitStateAttackWire } from "@/lib/elections/raceWireEmit";
 import {
@@ -177,11 +176,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // The constant is anchor-denominated and the war chest is in the campaign's
     // own currency, so the price is converted before it is compared, exactly as
     // the Presence build route does.
-    const forexEnabled = await isForexEnabled();
-    const { rate } = forexEnabled
-      ? await loadCharacterFxRate(db, getHomeCurrency(character))
-      : { rate: 1 };
-    const costFundsLocal = terms.costFunds * rate;
+    const costFundsLocal = terms.costFunds * (await loadCampaignFxRate(db, character));
     if ((campaign.funds ?? 0) < costFundsLocal) {
       return errorResponse(
         400,

@@ -25,6 +25,10 @@ vi.mock("@/lib/currency/characterFunds", async () => {
   };
 });
 
+vi.mock("@/lib/currency/campaignFxRate", () => ({
+  loadCampaignFxRate: vi.fn().mockResolvedValue(1),
+}));
+
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(false),
 }));
@@ -308,12 +312,9 @@ describe("POST /api/political-operations/state-org/build", () => {
     vi.mocked(runWithOptionalTransaction).mockImplementationOnce(async (tx, withoutTransaction) =>
       fallback ? withoutTransaction() : tx({} as never)
     );
-    vi.mocked((await import("@/lib/currency/featureFlag")).isForexEnabled).mockResolvedValueOnce(
-      true
-    );
     vi.mocked(
-      (await import("@/lib/currency/characterFunds")).loadCharacterFxRate
-    ).mockResolvedValueOnce({ rate, ok: true });
+      (await import("@/lib/currency/campaignFxRate")).loadCampaignFxRate
+    ).mockResolvedValueOnce(rate);
     const orgFindOneAndUpdate = vi.fn().mockResolvedValue({
       _id: new ObjectId(),
       characterId: mockCharacterId,

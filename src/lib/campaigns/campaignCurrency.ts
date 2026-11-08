@@ -7,10 +7,9 @@
 import { resolveCampaignPriceLevel } from "./rules/priceLevel";
 import type { Db } from "mongodb";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { CurrencyCode } from "@/lib/constants/currencies";
 
 export { campaignAnchorToLocal, campaignLocalRate, getCampaignCurrency } from "./rules/currency";
-import { getCampaignCurrency, type CampaignCurrencyRates } from "./rules/currency";
+import type { CampaignCurrencyRates } from "./rules/currency";
 export type { CampaignCurrencyRates } from "./rules/currency";
 
 export async function loadCampaignCurrencyRates(db: Db): Promise<CampaignCurrencyRates> {
@@ -29,26 +28,6 @@ export async function loadCampaignCurrencyRates(db: Db): Promise<CampaignCurrenc
 /** Convert an anchor amount to local currency, rounded to a whole unit. */
 export function anchorToLocal(anchor: number, rate: number): number {
   return Math.round(anchor * rate);
-}
-
-/**
- * Resolve a campaign country's local currency + FX rate. Falls back to rate 1.0
- * (anchor == local) when forex is disabled or no rate doc exists, so callers
- * never divide by an undefined rate.
- */
-export async function loadCampaignFxRate(
-  db: Db,
-  countryId: string,
-  preset?: string
-): Promise<{ rate: number; currencyCode: CurrencyCode }> {
-  const currencyCode = getCampaignCurrency(countryId, preset);
-  const rateDoc = await db
-    .collection<ExchangeRate>("exchangeRates")
-    .findOne({ currencyCode }, { projection: { rate: 1 } });
-  if (!rateDoc || !Number.isFinite(rateDoc.rate) || rateDoc.rate <= 0) {
-    return { rate: 1.0, currencyCode };
-  }
-  return { rate: rateDoc.rate, currencyCode };
 }
 
 /** Load the world's campaign price basis once at the shell boundary. */

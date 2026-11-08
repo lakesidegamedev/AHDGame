@@ -14,6 +14,9 @@ vi.mock("@/lib/api/rateLimit", () => ({
 vi.mock("@/lib/elections/electionParamResolution", () => ({
   resolveElectionRouteParam: vi.fn(),
 }));
+vi.mock("@/lib/currency/campaignFxRate", () => ({
+  loadCampaignFxRate: vi.fn().mockResolvedValue(1),
+}));
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/elections/raceWireEmit", () => ({ emitStateAttackWire: vi.fn() }));
 // The real helper opens a Mongo session against a client this test does not
@@ -176,6 +179,15 @@ describe("POST /api/elections/[id]/state-attack", () => {
     expect(inserted.magnitude).toBe(10);
     const [, update] = db.collectionMocks.campaigns!.updateOne.mock.calls[0];
     expect(update.$inc.funds).toBe(-70_000);
+  });
+
+  it("charges the price at the campaign's frozen rate, like campaign income", async () => {
+    const { loadCampaignFxRate } = await import("@/lib/currency/campaignFxRate");
+    vi.mocked(loadCampaignFxRate).mockResolvedValueOnce(2);
+    const res = await callRoute(body({ kind: "voteSuppression" }));
+    expect(res.status).toBe(200);
+    const [, update] = db.collectionMocks.campaigns!.updateOne.mock.calls[0];
+    expect(update.$inc.funds).toBe(-140_000);
   });
 
   it("lets the kinds run at once on the same rival in the same state", async () => {

@@ -12,12 +12,12 @@ import type { ElectionCandidate } from "@/lib/db/types/election";
 import type { EventEffect } from "@/lib/db/types/events";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
+import { anchorToLocal, campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import {
-  anchorToLocal,
-  campaignAnchorToLocal,
-  loadCampaignFxRate,
-} from "@/lib/campaigns/campaignCurrency";
-import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
+  buildPersonalBalanceInc,
+  getHomeCurrency,
+  loadCharacterFxRate,
+} from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -556,7 +556,7 @@ export async function applyDeclarativeEffects(
         politicalInfluence = Math.max(0, politicalInfluence + effect.delta);
         break;
       case "personalWealth": {
-        const { rate } = await loadCampaignFxRate(ctx.db, character.countryId, ctx.preset);
+        const { rate } = await loadCharacterFxRate(ctx.db, homeCurrency);
         const localAmount = forexEnabled
           ? anchorToLocal(effect.deltaAnchor, rate)
           : effect.deltaAnchor;

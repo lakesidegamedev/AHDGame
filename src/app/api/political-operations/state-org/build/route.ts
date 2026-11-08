@@ -11,8 +11,7 @@ import {
   STATE_ORG_PER_STATE_TURN_CAP,
   stateOrgLevelCost,
 } from "@/lib/electionEngine/constants";
-import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
-import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
@@ -179,12 +178,9 @@ export async function POST(request: Request) {
     const currentLevel = existing?.level ?? 0;
     const costFundsAnchor = stateOrgLevelCost(currentLevel);
 
-    const forexEnabled = await isForexEnabled();
-    const { rate: homeFxRate } = forexEnabled
-      ? await loadCharacterFxRate(db, getHomeCurrency(freshChar))
-      : { rate: 1 };
-    // Anchor-denominated cost → the campaign treasury's own currency.
-    const costFundsLocal = forexEnabled ? costFundsAnchor * homeFxRate : costFundsAnchor;
+    // Anchor-denominated cost → the campaign treasury's own currency, at the
+    // same frozen basis campaign income uses.
+    const costFundsLocal = costFundsAnchor * (await loadCampaignFxRate(db, freshChar));
     if ((campaign.funds ?? 0) < costFundsLocal) {
       return NextResponse.json(
         badRequest(

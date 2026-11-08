@@ -48,6 +48,7 @@ export interface WorldOpts {
   acquirerCash?: number;
   /** Active bank charter on the target plus one satellite row per re-key set. */
   charter?: boolean;
+  extractionContracts?: boolean;
   /** Acquirer starts with its own active charter (conflict path). */
   acquirerCharter?: boolean;
   sectorCount?: number;
@@ -143,6 +144,21 @@ export function buildAcquisitionWorld(opts: WorldOpts = {}): AcquisitionWorld {
         revenue: 100,
         workers: 10,
         currentGrowthCost: 5,
+      },
+    ]);
+  }
+
+  if (opts.extractionContracts) {
+    memory.seed("extractionContracts", [
+      { _id: new ObjectId(), corporationId: tgt, stateId: "ST0", resource: "oil", share: 0.3 },
+      {
+        _id: new ObjectId(),
+        corporationId: tgt,
+        stateId: "ST0",
+        resource: "oil",
+        share: 0.1,
+        status: "expired",
+        revokedTurn: 90,
       },
     ]);
   }

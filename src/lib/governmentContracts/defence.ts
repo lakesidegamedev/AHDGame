@@ -129,6 +129,17 @@ export async function activateDefenceBid(
       throw e;
     }
   }
+  // A resumed award can outlive its winner. Reopen the tender rather than
+  // convert the reservation into a contract for a company that is gone.
+  if (
+    !(await db
+      .collection("corporations")
+      .countDocuments({ _id: prepared.corporationId }, { limit: 1 }))
+  ) {
+    await releaseContractPlant(db, sectorId, t._id, t.awardLeaseKey ?? t._id);
+    await resetUnconvertedAward(db, t);
+    throw new ContractError("The winning corporation no longer exists. The tender is open again.");
+  }
   if (
     !(await convertDefenceReservation(
       db,

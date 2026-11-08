@@ -169,7 +169,8 @@ async function absorbSectorIntoNatCorp(
   plantsEnabled: boolean,
   transitionKey?: string,
   fundedOperationKey?: string,
-  constructionTransfers?: ConstructionBorrowerTransferPlan
+  constructionTransfers?: ConstructionBorrowerTransferPlan,
+  compensation?: { countryId: string; anchor: number }
 ): Promise<ObjectId> {
   const sectors = db.collection<CorporateSector>("corporateSectors");
   // Prior-owner provenance — captured from the donor row BEFORE it is re-parented
@@ -183,6 +184,13 @@ async function absorbSectorIntoNatCorp(
       ? { formerCapitalStock: sector.capitalStock }
       : {}),
     takenAtTurn: absorbedAtTurn,
+    // What the treasury paid for this taking, so a court reversal can recover it.
+    ...(compensation && compensation.anchor > 0
+      ? {
+          compensationAnchor: compensation.anchor,
+          compensationCountryId: compensation.countryId,
+        }
+      : {}),
   };
   // Transition revenue haircut: the state acquires a disrupted asset worth 15%
   // less than what the former owner held (compensation is paid on the full value
@@ -258,7 +266,16 @@ async function absorbSectorIntoNatCorp(
           absorbedAtTurn,
           nationalizedAtTurn: absorbedAtTurn,
           nationalizationTransitionMultiplier: transitionMultiplier,
-          nationalizationProvenance: provenance,
+          // The survivor keeps its own earlier holdings, so a reversal has to know
+          // how much of the row this taking added.
+          nationalizationProvenance: {
+            ...provenance,
+            mergedIntoExisting: true,
+            foldedRevenue: transferRevenue,
+            foldedWorkers: sector.workers ?? 0,
+            foldedGrowthCost: sector.currentGrowthCost ?? 0,
+            ...(plantsEnabled ? { foldedCapitalStock: haircutStock } : {}),
+          },
           updatedAt: now,
         },
       }
@@ -841,7 +858,8 @@ export async function nationalizeSector(
       plantsEnabled,
       compensationLedger?.context?.treasuryCashLedgerEnabled ? compensationKey : undefined,
       compensationLedger?.context?.treasuryCashLedgerEnabled ? compensationKey : undefined,
-      constructionTransfers
+      constructionTransfers,
+      { countryId: params.countryId, anchor: effectivePayoutAnchor }
     );
     await settleConstructionBorrowerTransfers(db, constructionTransfers);
 

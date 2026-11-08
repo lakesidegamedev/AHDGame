@@ -1,3 +1,4 @@
+import { assumeExtractionContracts } from "@/lib/extraction/assumeExtractionContracts";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { referenceValuation } from "../acquisitions/referenceValuation";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
@@ -998,6 +999,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           fromId: target._id,
           toId: parent._id,
         });
+        await assumeExtractionContracts(db, { fromId: target._id, toId: parent._id, now });
 
         // Stamp tx history before deleting the absorbed corp so any
         // financial-ledger rows referencing the merged target (corp_dividend

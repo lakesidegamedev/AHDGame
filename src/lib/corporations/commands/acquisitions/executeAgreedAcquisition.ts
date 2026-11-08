@@ -1,3 +1,4 @@
+import { assumeExtractionContracts } from "@/lib/extraction/assumeExtractionContracts";
 import { referenceValuation } from "./referenceValuation";
 import { controllerTransferBarrierError } from "./controllerTransferBarrier";
 import type { Db } from "mongodb";
@@ -723,6 +724,7 @@ async function runAgreedAcquisition(
     // every step that can fail and before the delete, so a retry still finds
     // any that are left on the target.
     await assumeCorporateLoans(db, { fromId: target._id, toId: acquirer._id });
+    await assumeExtractionContracts(db, { fromId: target._id, toId: acquirer._id, now });
 
     // 8. Tear down the target shell.
     const forexEnabledNow = await isForexEnabled();

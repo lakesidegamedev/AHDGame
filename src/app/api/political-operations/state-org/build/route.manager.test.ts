@@ -17,6 +17,10 @@ vi.mock("@/lib/currency/characterFunds", async () => {
     getHomeCurrency: vi.fn().mockReturnValue("USD"),
   };
 });
+vi.mock("@/lib/currency/campaignFxRate", () => ({
+  loadCampaignFxRate: vi.fn().mockResolvedValue(1),
+}));
+
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(false),
 }));
@@ -203,18 +207,17 @@ describe("POST /api/political-operations/state-org/build with a campaignId", () 
     });
   });
 
-  it("converts the cost with the candidate's home currency", async () => {
-    const { isForexEnabled } = await import("@/lib/currency/featureFlag");
-    vi.mocked(isForexEnabled).mockResolvedValue(true);
-    const funds = await import("@/lib/currency/characterFunds");
-    vi.mocked(funds.loadCharacterFxRate).mockResolvedValue({ rate: 2, ok: true });
+  it("converts the cost at the candidate's campaign rate", async () => {
+    const fx = await import("@/lib/currency/campaignFxRate");
+    vi.mocked(fx.loadCampaignFxRate).mockResolvedValueOnce(2);
     const { campaignsUpdateOne } = await setupDb({
       candidate: { _id: candidateId, countryId: "US", party: "1" },
     });
 
     const response = await post();
     expect(response.status).toBe(200);
-    expect(vi.mocked(funds.getHomeCurrency)).toHaveBeenCalledWith(
+    expect(vi.mocked(fx.loadCampaignFxRate)).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ countryId: "US", _id: candidateId })
     );
     expect(campaignsUpdateOne.mock.calls[0][1].$inc.funds).toBe(-stateOrgLevelCost(0) * 2);
