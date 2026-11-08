@@ -56,13 +56,16 @@ import { certifyRussianDumaElection } from "@/lib/countries/ru/dumaElectionResul
 import type { Election, ElectionVoteTally, State } from "@/lib/db/types";
 import { generateElectionNews } from "@/lib/news";
 import { HOUSE_SEATS, UK_COMMONS_SEATS } from "@/lib/constants";
-import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
+import {
+  spawnHouseElection,
+  spawnCommonsElection,
+} from "@/lib/elections/resolution/electionSpawning";
 import {
   sendBatchedElectionResults,
   type ElectionNewsOutcome,
-} from "@/lib/turn/election/electionNotifications";
-import { resolveOneGeneralElection } from "@/lib/turn/election/generalResolution";
-import { loadFirstMinisterBonusContexts } from "@/lib/turn/election/independenceDesireHook";
+} from "@/lib/elections/resolution/electionNotifications";
+import { resolveOneGeneralElection } from "@/lib/elections/resolution/generalResolution";
+import { loadFirstMinisterBonusContexts } from "@/lib/elections/resolution/independenceDesireHook";
 import { logger } from "@/lib/observability/logger";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
@@ -72,7 +75,7 @@ import {
   BG_ORDINARY_PLANS_COLLECTION,
   readBgOrdinaryElectionPlan,
   type BgOrdinaryPlanRecord,
-} from "@/lib/turn/election/bgOrdinaryEligibility";
+} from "@/lib/elections/resolution/bgOrdinaryEligibility";
 import { seatBgOrdinaryAssembly } from "@/lib/countries/bg/ordinaryAssemblySeating";
 import type { BgOrdinaryElectionPlan } from "@/lib/countries/bg/rules/ordinaryElectionPlan";
 import { readHuMixedElectionPlan } from "@/lib/countries/hu/readMixedElectionPlan";

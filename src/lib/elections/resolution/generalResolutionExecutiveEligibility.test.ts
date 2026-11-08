@@ -23,10 +23,10 @@ vi.mock("@/lib/wiki/updatePoliticianPageOnElection", () => ({
 vi.mock("@/lib/congress/leadershipElections", () => ({
   triggerLeadershipElectionsAfterChamberVote: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/turn/election/presidentResolution", () => ({
+vi.mock("@/lib/elections/resolution/presidentResolution", () => ({
   resolvePresidentElection: vi.fn().mockResolvedValue(true),
 }));
-vi.mock("@/lib/turn/election/electionSpawning", () => ({
+vi.mock("@/lib/elections/resolution/electionSpawning", () => ({
   spawnHouseElection: vi.fn().mockResolvedValue(undefined),
   spawnCommonsElection: vi.fn().mockResolvedValue(undefined),
 }));

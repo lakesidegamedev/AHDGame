@@ -19,7 +19,7 @@ import type {
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { DISCORD_COLORS, sendCountryGameEvent } from "@/lib/discordWebhooks";
 import type { ContingentElectionResult } from "@/lib/elections/contingentElection";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import { isNppContingentId, toCharacterObjectId, toNppObjectId } from "./contingentPersonIds";
 import { notifyHouseVoteOpened } from "./contingentHouseVoteNotices";
 import { logger } from "@/lib/observability/logger";

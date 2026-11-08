@@ -4,8 +4,8 @@ import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/ty
 import {
   resolveContingentElection,
   type ContingentElectionResult,
-} from "@/lib/turn/election/contingentElection";
-import { loadContingentElectionData } from "@/lib/turn/election/loadContingentElectionData";
+} from "@/lib/elections/resolution/contingentElection";
+import { loadContingentElectionData } from "@/lib/elections/resolution/loadContingentElectionData";
 
 export async function runPresidentialContingentBallot(
   db: Db,

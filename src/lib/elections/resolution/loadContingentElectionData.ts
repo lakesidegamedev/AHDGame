@@ -19,7 +19,7 @@ import {
   type ContingentHouseDelegation,
   type ContingentVoterProfile,
   type ResolveContingentElectionInput,
-} from "@/lib/turn/election/contingentElection";
+} from "@/lib/elections/resolution/contingentElection";
 
 function partyKey(countryId: string, partyId: string): string {
   return `${countryId}:${partyId}`;

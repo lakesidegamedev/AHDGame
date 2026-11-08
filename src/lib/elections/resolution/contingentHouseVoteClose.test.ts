@@ -8,16 +8,16 @@ const standingsMock = vi.fn();
 const notify = vi.fn();
 const noticeClosed = vi.fn();
 const noticeReminder = vi.fn();
-vi.mock("@/lib/turn/election/presidentExecutiveSeating", () => ({
+vi.mock("@/lib/elections/resolution/presidentExecutiveSeating", () => ({
   seatPresidentialExecutive: (...args: unknown[]) => seat(...args),
 }));
-vi.mock("@/lib/turn/election/presidentialTenureLedger", () => ({
+vi.mock("@/lib/elections/resolution/presidentialTenureLedger", () => ({
   recordPresidentialTenure: (...args: unknown[]) => tenure(...args),
 }));
-vi.mock("@/lib/turn/election/contingentHouseVoteStandings", () => ({
+vi.mock("@/lib/elections/resolution/contingentHouseVoteStandings", () => ({
   loadHouseVoteStandings: (...args: unknown[]) => standingsMock(...args),
 }));
-vi.mock("@/lib/turn/election/contingentHouseVoteNotices", () => ({
+vi.mock("@/lib/elections/resolution/contingentHouseVoteNotices", () => ({
   notifyHouseVoteClosed: (...args: unknown[]) => noticeClosed(...args),
   notifyHouseVoteReminder: (...args: unknown[]) => noticeReminder(...args),
 }));

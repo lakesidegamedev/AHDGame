@@ -25,14 +25,17 @@ import {
   officeKeyForElectionType,
 } from "@/lib/utils/electionLabels";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
-import { resolvePresidentElection } from "@/lib/turn/election/presidentResolution";
-import { resolveNGPresidentElection } from "@/lib/turn/election/ngPresidentResolution";
+import { resolvePresidentElection } from "@/lib/elections/resolution/presidentResolution";
+import { resolveNGPresidentElection } from "@/lib/elections/resolution/ngPresidentResolution";
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
-import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
+import {
+  spawnHouseElection,
+  spawnCommonsElection,
+} from "@/lib/elections/resolution/electionSpawning";
 import { validateRankedBallots } from "@/lib/elections/rules/prStv";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
-import { type FirstMinisterBonusContext } from "@/lib/turn/election/independenceDesireHook";
+import { type FirstMinisterBonusContext } from "@/lib/elections/resolution/independenceDesireHook";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { getElectionMethod } from "@/lib/elections/electionMethod";
 import type { ElectionNewsOutcome } from "./electionNotifications";

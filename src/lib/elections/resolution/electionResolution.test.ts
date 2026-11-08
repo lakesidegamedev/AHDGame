@@ -24,7 +24,7 @@ vi.mock("@/lib/mongodb", () => ({
 vi.mock("@/lib/audit/recordAudit", () => ({
   recordAuditBulk: vi.fn(),
 }));
-vi.mock("@/lib/turn/election/generalResolution", () => ({
+vi.mock("@/lib/elections/resolution/generalResolution", () => ({
   resolveOneGeneralElection: vi.fn(),
 }));
 vi.mock("@/lib/analytics/electionAnalytics", () => ({
@@ -33,7 +33,7 @@ vi.mock("@/lib/analytics/electionAnalytics", () => ({
 vi.mock("@/lib/news", () => ({
   generateElectionNews: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/turn/election/electionNotifications", () => ({
+vi.mock("@/lib/elections/resolution/electionNotifications", () => ({
   sendBatchedElectionResults: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -65,7 +65,8 @@ describe("electionResolution", () => {
       };
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       vi.mocked(resolveOneGeneralElection).mockResolvedValue({ resolved: true, newsOutcomes: [] });
       // Keep the existing game result/count unchanged, even though one claim skipped.
       await expect(resolveGeneralElections(new Date())).resolves.toBe(2);
@@ -114,7 +115,8 @@ describe("electionResolution", () => {
           return { find: () => ({ toArray: async () => [] }) };
         },
       } as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       vi.mocked(resolveOneGeneralElection).mockResolvedValue({ resolved: true, newsOutcomes: [] });
       await resolveGeneralElections(new Date());
       const { captureElectionResolved } = await import("@/lib/analytics/electionAnalytics");
@@ -145,7 +147,8 @@ describe("electionResolution", () => {
           return { find: () => ({ toArray: async () => [] }) };
         },
       } as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       vi.mocked(resolveOneGeneralElection).mockResolvedValue({ resolved: true, newsOutcomes: [] });
       await expect(resolveGeneralElections(new Date())).resolves.toBe(1);
       const { captureElectionResolved } = await import("@/lib/analytics/electionAnalytics");
@@ -172,7 +175,8 @@ describe("electionResolution", () => {
           return { find: () => ({ toArray: async () => [] }) };
         },
       } as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       vi.mocked(resolveOneGeneralElection).mockResolvedValue({ resolved: false, newsOutcomes: [] });
       await expect(resolveGeneralElections(new Date())).resolves.toBe(0);
       const { captureElectionResolved } = await import("@/lib/analytics/electionAnalytics");
@@ -488,7 +492,8 @@ describe("electionResolution", () => {
       };
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       vi.mocked(resolveOneGeneralElection).mockResolvedValue({ resolved: true, newsOutcomes: [] });
 
       const { resolveGeneralElections } = await import("./electionResolution");
@@ -567,7 +572,8 @@ describe("electionResolution", () => {
       };
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       vi.mocked(resolveOneGeneralElection).mockResolvedValue({ resolved: true, newsOutcomes: [] });
 
       const { resolveGeneralElections } = await import("./electionResolution");
@@ -628,7 +634,8 @@ describe("electionResolution", () => {
       };
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as never);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       const { resolveGeneralElections } = await import("./electionResolution");
       expect(await resolveGeneralElections(new Date("2026-01-01T00:00:00Z"))).toBe(0);
       expect(resolveOneGeneralElection).not.toHaveBeenCalled();
@@ -721,7 +728,8 @@ describe("Duma cohort resolution dispatch", () => {
       turn: 141,
       now,
     });
-    const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+    const { resolveOneGeneralElection } =
+      await import("@/lib/elections/resolution/generalResolution");
     expect(resolveOneGeneralElection).not.toHaveBeenCalled();
   });
   it("defers a partial cohort instead of resolving the completed districts separately", async () => {
@@ -730,7 +738,8 @@ describe("Duma cohort resolution dispatch", () => {
     expect(await resolveGeneralElections(now)).toBe(0);
     const { certifyRussianDumaElection } = await import("@/lib/countries/ru/dumaElectionResult");
     expect(certifyRussianDumaElection).not.toHaveBeenCalled();
-    const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+    const { resolveOneGeneralElection } =
+      await import("@/lib/elections/resolution/generalResolution");
     expect(resolveOneGeneralElection).not.toHaveBeenCalled();
   });
   it("leaves a failed certification for retry and never falls back to district seating", async () => {
@@ -739,7 +748,8 @@ describe("Duma cohort resolution dispatch", () => {
     vi.mocked(certifyRussianDumaElection).mockRejectedValue(new Error("late transaction failure"));
     const { resolveGeneralElections } = await import("./electionResolution");
     expect(await resolveGeneralElections(now)).toBe(0);
-    const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+    const { resolveOneGeneralElection } =
+      await import("@/lib/elections/resolution/generalResolution");
     expect(resolveOneGeneralElection).not.toHaveBeenCalled();
   });
   it.each(["complete", "partial", "failed"])(
@@ -781,7 +791,8 @@ describe("Duma cohort resolution dispatch", () => {
       ).toHaveLength(1);
       const { certifyRussianDumaElection } = await import("@/lib/countries/ru/dumaElectionResult");
       expect(certifyRussianDumaElection).not.toHaveBeenCalled();
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       expect(resolveOneGeneralElection).not.toHaveBeenCalled();
     }
   );
@@ -851,7 +862,8 @@ describe("Native Council cohort dispatch", () => {
           turn: 141,
           now,
         });
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       expect(resolveOneGeneralElection).not.toHaveBeenCalled();
     }
   );
@@ -893,7 +905,8 @@ describe("Native Council cohort dispatch", () => {
       expect(
         db.collection.mock.calls.filter(([name]) => name === "russianCouncilElectionOpenings")
       ).toHaveLength(1);
-      const { resolveOneGeneralElection } = await import("@/lib/turn/election/generalResolution");
+      const { resolveOneGeneralElection } =
+        await import("@/lib/elections/resolution/generalResolution");
       expect(resolveOneGeneralElection).not.toHaveBeenCalled();
     }
   );

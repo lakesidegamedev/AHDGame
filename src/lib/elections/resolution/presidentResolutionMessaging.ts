@@ -14,8 +14,8 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { sendCountryGameEvent, DISCORD_COLORS, type DiscordEmbed } from "@/lib/discordWebhooks";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { getGameStateCollection } from "@/lib/db/collections";
-import { isNppContingentId } from "@/lib/turn/election/contingentPersonIds";
-import type { ContingentElectionResult } from "@/lib/turn/election/contingentElection";
+import { isNppContingentId } from "@/lib/elections/resolution/contingentPersonIds";
+import type { ContingentElectionResult } from "@/lib/elections/resolution/contingentElection";
 import { logger } from "@/lib/observability/logger";
 
 export type PresidentialResolutionMode = "majority" | "contingent" | "contingent_deadlock";

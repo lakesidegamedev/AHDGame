@@ -16,7 +16,10 @@ import {
 } from "@/lib/utils/electionLabels";
 import { reopenCommonsVacanciesForRetry } from "@/lib/countries/uk/elections/commonsVacancyShell";
 import { triggerLeadershipElectionsAfterChamberVote } from "@/lib/congress/leadershipElections";
-import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
+import {
+  spawnHouseElection,
+  spawnCommonsElection,
+} from "@/lib/elections/resolution/electionSpawning";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";

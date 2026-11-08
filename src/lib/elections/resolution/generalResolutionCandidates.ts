@@ -10,7 +10,7 @@ import { type Db, ObjectId } from "mongodb";
 import {
   type FirstMinisterBonusContext,
   maybeApplyIndependenceDesireHook,
-} from "@/lib/turn/election/independenceDesireHook";
+} from "@/lib/elections/resolution/independenceDesireHook";
 import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
 import {
   isPresidentialGovernmentType,

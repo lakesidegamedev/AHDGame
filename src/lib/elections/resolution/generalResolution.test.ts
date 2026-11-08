@@ -30,10 +30,10 @@ vi.mock("@/lib/wiki/updatePoliticianPageOnElection", () => ({
 vi.mock("@/lib/congress/leadershipElections", () => ({
   triggerLeadershipElectionsAfterChamberVote: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/turn/election/presidentResolution", () => ({
+vi.mock("@/lib/elections/resolution/presidentResolution", () => ({
   resolvePresidentElection: vi.fn().mockResolvedValue(true),
 }));
-vi.mock("@/lib/turn/election/electionSpawning", () => ({
+vi.mock("@/lib/elections/resolution/electionSpawning", () => ({
   spawnHouseElection: vi.fn().mockResolvedValue(undefined),
   spawnCommonsElection: vi.fn().mockResolvedValue(undefined),
 }));
@@ -763,7 +763,7 @@ describe("resolveOneGeneralElection", () => {
 
     await resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
 
-    const { spawnHouseElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnHouseElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnHouseElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -773,7 +773,7 @@ describe("resolveOneGeneralElection", () => {
 
     await resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
 
-    const { spawnCommonsElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnCommonsElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnCommonsElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -787,7 +787,7 @@ describe("resolveOneGeneralElection", () => {
 
     await resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
 
-    const { spawnCommonsElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnCommonsElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnCommonsElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -830,7 +830,7 @@ describe("resolveOneGeneralElection", () => {
       expect.objectContaining({ officeType: "commons", state: "Bristol West" })
     );
 
-    const { spawnCommonsElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnCommonsElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnCommonsElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -839,7 +839,7 @@ describe("resolveOneGeneralElection", () => {
 
     await resolveOneGeneralElection(db as unknown as Db, election, null, CURRENT_TURN, NOW);
 
-    const { spawnHouseElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnHouseElection } = await import("@/lib/elections/resolution/electionSpawning");
     const { triggerLeadershipElectionsAfterChamberVote } =
       await import("@/lib/congress/leadershipElections");
     expect(spawnHouseElection).toHaveBeenCalledWith(db, election, NOW);
@@ -894,7 +894,7 @@ describe("resolveOneGeneralElection", () => {
 
     await resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
 
-    const { spawnHouseElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnHouseElection } = await import("@/lib/elections/resolution/electionSpawning");
     const { triggerLeadershipElectionsAfterChamberVote } =
       await import("@/lib/congress/leadershipElections");
     expect(spawnHouseElection).toHaveBeenCalledWith(db, election, NOW);
@@ -920,7 +920,7 @@ describe("resolveOneGeneralElection", () => {
 
     await resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
 
-    const { spawnHouseElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnHouseElection } = await import("@/lib/elections/resolution/electionSpawning");
     const { triggerLeadershipElectionsAfterChamberVote } =
       await import("@/lib/congress/leadershipElections");
     expect(spawnHouseElection).toHaveBeenCalledWith(db, election, NOW);
@@ -1661,7 +1661,7 @@ describe("resolveOneGeneralElection", () => {
     expect(triggerLeadershipElectionsAfterChamberVote).toHaveBeenCalledWith(db, "house", NOW);
 
     // Next cycle spawned
-    const { spawnHouseElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnHouseElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnHouseElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -1895,7 +1895,8 @@ describe("resolveOneGeneralElection", () => {
       NOW
     );
 
-    const { resolvePresidentElection } = await import("@/lib/turn/election/presidentResolution");
+    const { resolvePresidentElection } =
+      await import("@/lib/elections/resolution/presidentResolution");
     expect(resolvePresidentElection).toHaveBeenCalledWith(db, election, tally, NOW, CURRENT_TURN);
     expect(result.resolved).toBe(true);
 
@@ -1913,7 +1914,8 @@ describe("resolveOneGeneralElection", () => {
     const election = makeElection({ electionType: "president", state: "US" });
     const tally = makeTally(election._id, { [new ObjectId().toString()]: 1000 });
 
-    const { resolvePresidentElection } = await import("@/lib/turn/election/presidentResolution");
+    const { resolvePresidentElection } =
+      await import("@/lib/elections/resolution/presidentResolution");
     vi.mocked(resolvePresidentElection).mockResolvedValueOnce(false);
 
     const result = await resolveOneGeneralElection(
@@ -1985,7 +1987,7 @@ describe("resolveOneGeneralElection", () => {
     expect(sweepCall).toBeDefined();
 
     // Next cycle spawned
-    const { spawnCommonsElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnCommonsElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnCommonsElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -2067,7 +2069,7 @@ describe("resolveOneGeneralElection", () => {
     );
     expect(winnerUpdate).toBeDefined();
 
-    const { spawnCommonsElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnCommonsElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnCommonsElection).toHaveBeenCalledWith(db, election, NOW);
   });
 
@@ -2091,7 +2093,7 @@ describe("resolveOneGeneralElection", () => {
     const deleteWithSnap = deleteCalls.find((c) => c[0]?.officeType === "snap_commons");
     expect(deleteWithSnap).toBeUndefined();
 
-    const { spawnCommonsElection } = await import("@/lib/turn/election/electionSpawning");
+    const { spawnCommonsElection } = await import("@/lib/elections/resolution/electionSpawning");
     expect(spawnCommonsElection).toHaveBeenCalledWith(db, election, NOW);
   });
 

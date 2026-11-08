@@ -13,7 +13,7 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally, Campaign } from "@/lib/db/types";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import {
   resolveNigeriaPresidentialResult,
   NG_ZONES,

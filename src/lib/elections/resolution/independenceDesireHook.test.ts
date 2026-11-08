@@ -6,7 +6,7 @@ import {
   loadFirstMinisterBonusContexts,
   maybeApplyIndependenceDesireHook,
   type CandidateLite,
-} from "@/lib/turn/election/independenceDesireHook";
+} from "@/lib/elections/resolution/independenceDesireHook";
 import { highDesireElectionBonus } from "@/lib/constants/devolution";
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
 

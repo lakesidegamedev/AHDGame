@@ -8,12 +8,15 @@ import type {
   ElectionStatus,
 } from "@/lib/db/types";
 import { getElectionMethod } from "@/lib/elections/electionMethod";
-import { maybeReconcileBundestag } from "@/lib/turn/election/germanyAMS";
+import { maybeReconcileBundestag } from "@/lib/elections/resolution/germanyAMS";
 import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
 import { updatePartyPresence } from "@/lib/turn/partyOrg";
 import { updatePoliticianPagesAfterElection } from "@/lib/wiki/updatePoliticianPageOnElection";
 import { logger } from "@/lib/observability/logger";
-import { spawnHouseElection, spawnCommonsElection } from "@/lib/turn/election/electionSpawning";
+import {
+  spawnHouseElection,
+  spawnCommonsElection,
+} from "@/lib/elections/resolution/electionSpawning";
 import { triggerLeadershipElectionsAfterChamberVote } from "@/lib/congress/leadershipElections";
 import {
   MULTI_SEAT_TYPES,

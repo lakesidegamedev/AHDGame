@@ -28,7 +28,7 @@ import {
   buildJapanMixedRegionalList,
 } from "@/lib/countries/jp/rules/mixedShugiinCount";
 import { applyLegacySeatFloor } from "./conversionTerms";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import type { WithId } from "mongodb";
 import type { SurvivingPartyResolver } from "@/lib/parties/survivingParty";
 

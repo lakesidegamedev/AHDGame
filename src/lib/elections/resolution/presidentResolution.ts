@@ -14,27 +14,27 @@ import {
   allocateElectoralVotes,
   determinePresidentialWinner,
 } from "@/lib/turn/electionCalculations";
-import type { ContingentElectionResult } from "@/lib/turn/election/contingentElection";
+import type { ContingentElectionResult } from "@/lib/elections/resolution/contingentElection";
 import {
   announceActingPresidency,
   needsActingPresidency,
   seatActingPresidencyForHouseVote,
-} from "@/lib/turn/election/contingentActingPresidency";
+} from "@/lib/elections/resolution/contingentActingPresidency";
 import {
   markContingentResolutionPending,
   runPresidentialContingentBallot,
-} from "@/lib/turn/election/presidentContingentBallot";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
-import { recordPresidentialTenure } from "@/lib/turn/election/presidentialTenureLedger";
+} from "@/lib/elections/resolution/presidentContingentBallot";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
+import { recordPresidentialTenure } from "@/lib/elections/resolution/presidentialTenureLedger";
 import {
   sendPresidentResolutionMessaging,
   type PresidentialResolutionMode,
-} from "@/lib/turn/election/presidentResolutionMessaging";
+} from "@/lib/elections/resolution/presidentResolutionMessaging";
 import {
   isNppContingentId,
   toCharacterObjectId,
   toNppObjectId,
-} from "@/lib/turn/election/contingentPersonIds";
+} from "@/lib/elections/resolution/contingentPersonIds";
 import {
   resolvePresidentialWinnerCandidateId,
   electoralMajorityFor,

@@ -18,7 +18,7 @@ import {
   computeHouseVoteStandings,
   type HouseVoteStandings,
 } from "@/lib/elections/contingentHouseStandings";
-import { loadContingentElectionData } from "@/lib/turn/election/loadContingentElectionData";
+import { loadContingentElectionData } from "@/lib/elections/resolution/loadContingentElectionData";
 
 export type ContingentHouseVoteRecord = NonNullable<ElectionVoteTally["contingentHouseVote"]>;
 

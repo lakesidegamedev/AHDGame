@@ -20,21 +20,21 @@ import type {
   NPP,
 } from "@/lib/db/types";
 import { createNotifications } from "@/lib/notifications";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
-import { recordPresidentialTenure } from "@/lib/turn/election/presidentialTenureLedger";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
+import { recordPresidentialTenure } from "@/lib/elections/resolution/presidentialTenureLedger";
 import {
   loadHouseVoteStandings,
   type LiveHouseVoteStandings,
-} from "@/lib/turn/election/contingentHouseVoteStandings";
+} from "@/lib/elections/resolution/contingentHouseVoteStandings";
 import {
   notifyHouseVoteClosed,
   notifyHouseVoteReminder,
-} from "@/lib/turn/election/contingentHouseVoteNotices";
+} from "@/lib/elections/resolution/contingentHouseVoteNotices";
 import {
   isNppContingentId,
   toCharacterObjectId,
   toNppObjectId,
-} from "@/lib/turn/election/contingentPersonIds";
+} from "@/lib/elections/resolution/contingentPersonIds";
 import { logger } from "@/lib/observability/logger";
 
 type TallyWithVote = ElectionVoteTally & {

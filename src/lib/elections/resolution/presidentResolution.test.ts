@@ -32,10 +32,10 @@ vi.mock("@/lib/turn/electionCalculations", () => ({
 vi.mock("@/lib/elections/apportionment", () => ({
   loadApportionment: vi.fn().mockResolvedValue({ electoralVoteUnits: [] }),
 }));
-vi.mock("@/lib/turn/election/loadContingentElectionData", () => ({
+vi.mock("@/lib/elections/resolution/loadContingentElectionData", () => ({
   loadContingentElectionData: vi.fn(),
 }));
-vi.mock("@/lib/turn/election/contingentElection", async (importOriginal) => {
+vi.mock("@/lib/elections/resolution/contingentElection", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./contingentElection")>();
   return {
     ...actual,

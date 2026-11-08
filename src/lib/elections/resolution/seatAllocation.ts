@@ -236,7 +236,7 @@ export function allocateSeats(
    * Bloc-list quota (party sequentialId to share) for National Front chambers.
    * When supplied on a multi-seat race the party split comes from the quota
    * instead of the vote, and only the split INSIDE each party's block is
-   * decided by votes. See `@/lib/turn/election/blocListAllocation`. Undefined
+   * decided by votes. See `@/lib/elections/resolution/blocListAllocation`. Undefined
    * (every country but the DDR today) leaves the proportional path untouched.
    */
   blocListShares?: Readonly<Record<string, number>>,
