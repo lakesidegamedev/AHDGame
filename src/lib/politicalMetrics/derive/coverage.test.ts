@@ -67,13 +67,13 @@ describe("non-playable derivation coverage", () => {
 
 /**
  * Gate on the EMITTED artifact, not just the derivation. `seedPoliticalMetrics`
- * reads nonPlayableBoards.ts directly, so a country dropped from the defense
+ * reads non-playable-boards.json directly, so a country dropped from the defense
  * table (or a regeneration run before the table was complete) would ship an
  * incomplete board without the derivation tests noticing — they only sample JP.
  */
 describe("emitted non-playable board file", () => {
   it("gives every REGION all 63 families, finite and in 0-100", async () => {
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     const presets = Object.keys(NON_PLAYABLE_BOARDS);
     expect(presets.length).toBeGreaterThanOrEqual(1);
     let regionCount = 0;
@@ -101,7 +101,7 @@ describe("emitted non-playable board file", () => {
   it("preserves per-region variation instead of copying one national board", async () => {
     // The Phase 0 guarantee. If a regeneration ever collapses back to a single
     // board per country, every non-playable region silently loses its character.
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     const de = NON_PLAYABLE_BOARDS["1953-default"].DE;
     const regionIds = Object.keys(de);
     expect(regionIds.length).toBeGreaterThan(1);
@@ -115,7 +115,7 @@ describe("emitted non-playable board file", () => {
   it("keeps the defense block identical across a country's regions", async () => {
     // Defense posture is a national property — the tier-4 table is authored per
     // country, so regional divergence here would mean the derivation leaked.
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     for (const [presetId, byCountry] of Object.entries(NON_PLAYABLE_BOARDS)) {
       for (const [countryId, byRegion] of Object.entries(byCountry)) {
         const regionIds = Object.keys(byRegion);
@@ -132,7 +132,7 @@ describe("emitted non-playable board file", () => {
   });
 
   it("excludes playable countries, which seed from anchors instead", async () => {
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     for (const byCountry of Object.values(NON_PLAYABLE_BOARDS)) {
       for (const playable of ["US", "UK", "RU", "DD"]) {
         expect(byCountry[playable], playable).toBeUndefined();

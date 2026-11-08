@@ -265,7 +265,7 @@ const SERVER_HEAVY_MODULES = [
   "src/lib/corporations/strengthUpkeep.ts",
   // Every country's name pools: loaded on demand by the character creator.
   "src/lib/npp/nameGenerator.ts",
-  // Non-playable country metric boards, the largest data file in the repo.
+  // Reads the non-playable metric boards, the largest data file in the repo, from disk.
   "src/lib/politicalMetrics/seeds/nonPlayableBoards.ts",
 ];
 
