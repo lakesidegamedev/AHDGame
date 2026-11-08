@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import { splitCompensationBySector } from "./ownershipTransition";
+import { splitCompensationBySector } from "./compensationSplit";
 
 describe("splitCompensationBySector", () => {
   it("shares the buyout by revenue and the parts add up to the total", () => {

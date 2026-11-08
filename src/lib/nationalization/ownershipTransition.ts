@@ -18,6 +18,7 @@ import type {
   State,
 } from "@/lib/db/types";
 import type { NationalizationTaking } from "@/lib/db/types/corporationSector";
+import { splitCompensationBySector } from "./compensationSplit";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -348,28 +349,6 @@ async function absorbSectorIntoNatCorp(
       throw badRequest("The sector became secured during the nationalization");
     return sector._id;
   }
-}
-
-/** Share a buyout over sectors by revenue (evenly when none has revenue); the parts sum to the total. */
-export function splitCompensationBySector(
-  sectors: ReadonlyArray<Pick<CorporateSector, "_id" | "revenue">>,
-  totalAnchor: number
-): Map<string, number> {
-  const shares = new Map<string, number>();
-  if (!(totalAnchor > 0) || sectors.length === 0) return shares;
-  const totalRevenue = sectors.reduce((sum, s) => sum + Math.max(0, s.revenue ?? 0), 0);
-  let allocated = 0;
-  sectors.forEach((s, index) => {
-    const weight =
-      totalRevenue > 0 ? Math.max(0, s.revenue ?? 0) / totalRevenue : 1 / sectors.length;
-    const share =
-      index === sectors.length - 1
-        ? Math.max(0, totalAnchor - allocated)
-        : Math.round(totalAnchor * weight * 100) / 100;
-    allocated += share;
-    shares.set(s._id.toHexString(), share);
-  });
-  return shares;
 }
 
 /**
