@@ -17,6 +17,12 @@ import { apiErrorText } from "@/lib/errors/catalog";
 const UK_REGION_IDS = UK_REGIONS.map((r) => r.id);
 const JP_REGION_IDS = JP_REGIONS.map((r) => r.id);
 const DE_LAND_IDS = deRegions.map((r) => r._id);
+const REGION_GROUPS: ReadonlyArray<readonly [string, string, readonly string[]]> = [
+  ["US", "US states", US_STATES],
+  ["UK", "UK regions", UK_REGION_IDS],
+  ["JP", "JP regions", JP_REGION_IDS],
+  ["DE", "DE Länder", DE_LAND_IDS],
+];
 
 type CountryScope = CountryId | "all";
 
@@ -480,85 +486,28 @@ export function NPPManagement() {
           )}
           {showStateSelector && (
             <div className="mt-3 space-y-3">
-              {(countryScope === "US" || countryScope === "all") && (
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted">US states</p>
-                  <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-card-border bg-background p-3 sm:grid-cols-4 md:grid-cols-6">
-                    {US_STATES.map((state) => (
-                      <button
-                        key={state}
-                        onClick={() => toggleState(state)}
-                        className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                          selectedStates.includes(state)
-                            ? "bg-primary text-primary-foreground"
-                            : "border border-card-border bg-card text-muted hover:text-foreground"
-                        }`}
-                      >
-                        {state}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(countryScope === "UK" || countryScope === "all") && (
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted">UK regions</p>
-                  <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-card-border bg-background p-3 sm:grid-cols-4 md:grid-cols-6">
-                    {UK_REGION_IDS.map((state) => (
-                      <button
-                        key={state}
-                        onClick={() => toggleState(state)}
-                        className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                          selectedStates.includes(state)
-                            ? "bg-primary text-primary-foreground"
-                            : "border border-card-border bg-card text-muted hover:text-foreground"
-                        }`}
-                      >
-                        {state}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(countryScope === "JP" || countryScope === "all") && (
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted">JP regions</p>
-                  <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-card-border bg-background p-3 sm:grid-cols-4 md:grid-cols-6">
-                    {JP_REGION_IDS.map((state) => (
-                      <button
-                        key={state}
-                        onClick={() => toggleState(state)}
-                        className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                          selectedStates.includes(state)
-                            ? "bg-primary text-primary-foreground"
-                            : "border border-card-border bg-card text-muted hover:text-foreground"
-                        }`}
-                      >
-                        {state}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(countryScope === "DE" || countryScope === "all") && (
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted">DE Länder</p>
-                  <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-card-border bg-background p-3 sm:grid-cols-4 md:grid-cols-6">
-                    {DE_LAND_IDS.map((state) => (
-                      <button
-                        key={state}
-                        onClick={() => toggleState(state)}
-                        className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                          selectedStates.includes(state)
-                            ? "bg-primary text-primary-foreground"
-                            : "border border-card-border bg-card text-muted hover:text-foreground"
-                        }`}
-                      >
-                        {state}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {REGION_GROUPS.map(
+                ([country, label, ids]) =>
+                  (countryScope === country || countryScope === "all") && (
+                    <div key={country}>
+                      <p className="mb-1.5 text-xs font-medium text-muted">{label}</p>
+                      <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-card-border bg-background p-3 sm:grid-cols-4 md:grid-cols-6">
+                        {ids.map((state) => (
+                          <button
+                            key={state}
+                            onClick={() => toggleState(state)}
+                            className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                              selectedStates.includes(state)
+                                ? "bg-primary text-primary-foreground"
+                                : "border border-card-border bg-card text-muted hover:text-foreground"
+                            }`}
+                          >
+                            {state}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
               )}
             </div>
           )}

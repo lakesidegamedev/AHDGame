@@ -211,10 +211,6 @@ export function NationalPartyInfluencePanel({
       setError("Please select an election and candidate");
       return;
     }
-    if (selectedAction === "relocate_state" && !selectedTargetState) {
-      setError(`Please select a target ${regionLabelLower}`);
-      return;
-    }
 
     addToQueue({
       nppId: selectedNPP,
@@ -459,11 +455,11 @@ export function NationalPartyInfluencePanel({
       : selectedActionConfig?.baseFundCost || 0;
   const estimatedChance = selectedNPPData?.estimatedChance ?? 0;
   const successLabel =
-    selectedAction === "boost_favorability" || selectedAction === "boost_influence"
+    selectedAction === "boost_favorability" ||
+    selectedAction === "boost_influence" ||
+    estimatedChance >= 50
       ? "Likely to Accept"
-      : estimatedChance >= 50
-        ? "Likely to Accept"
-        : "Likely to Decline";
+      : "Likely to Decline";
 
   const totalNPPs = Object.values(data.nppsByState).reduce((sum, npps) => sum + npps.length, 0);
   const queueTotalCost = getTotalCost();

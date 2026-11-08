@@ -129,6 +129,11 @@ export default function CeoBudgetPanel({
         ? money.fmt(-scale(daily))
         : `(${money.fmt(scale(daily))})`;
 
+  const costLine = (label: string, value: number) =>
+    value > 0 ? (
+      <StatementLine indent label={label} amount={cost(value)} pct={pctOfRevenue(value)} />
+    ) : null;
+
   const daily: Record<BudgetKey, number> = {
     marketing: Math.max(0, Number(editMarketingBudget) || 0),
     logistics: Math.max(0, Number(editLogisticsBudget) || 0),
@@ -302,30 +307,9 @@ export default function CeoBudgetPanel({
           amountClass={financials.maintenanceCosts < 0 ? "text-success" : "text-foreground"}
           pct={pctOfRevenue(financials.maintenanceCosts)}
         />
-        {financials.laborCosts > 0 && (
-          <StatementLine
-            indent
-            label="Wages"
-            amount={cost(financials.laborCosts)}
-            pct={pctOfRevenue(financials.laborCosts)}
-          />
-        )}
-        {financials.growthCosts > 0 && (
-          <StatementLine
-            indent
-            label="Growth investment"
-            amount={cost(financials.growthCosts)}
-            pct={pctOfRevenue(financials.growthCosts)}
-          />
-        )}
-        {(financials.freightCosts ?? 0) > 0 && (
-          <StatementLine
-            indent
-            label="Freight charges"
-            amount={cost(financials.freightCosts ?? 0)}
-            pct={pctOfRevenue(financials.freightCosts ?? 0)}
-          />
-        )}
+        {costLine("Wages", financials.laborCosts)}
+        {costLine("Growth investment", financials.growthCosts)}
+        {costLine("Freight charges", financials.freightCosts ?? 0)}
         <StatementLine
           label="Gross profit"
           amount={money.fmtSigned(scale(grossProfit))}
@@ -482,30 +466,9 @@ export default function CeoBudgetPanel({
           </td>
         </tr>
 
-        {financials.regulatoryBurden > 0 && (
-          <StatementLine
-            indent
-            label="Regulatory compliance"
-            amount={cost(financials.regulatoryBurden)}
-            pct={pctOfRevenue(financials.regulatoryBurden)}
-          />
-        )}
-        {financials.pensionContributionCost > 0 && (
-          <StatementLine
-            indent
-            label="Pension contributions"
-            amount={cost(financials.pensionContributionCost)}
-            pct={pctOfRevenue(financials.pensionContributionCost)}
-          />
-        )}
-        {financials.pensionTopUpCost > 0 && (
-          <StatementLine
-            indent
-            label="Pension deficit top-up"
-            amount={cost(financials.pensionTopUpCost)}
-            pct={pctOfRevenue(financials.pensionTopUpCost)}
-          />
-        )}
+        {costLine("Regulatory compliance", financials.regulatoryBurden)}
+        {costLine("Pension contributions", financials.pensionContributionCost)}
+        {costLine("Pension deficit top-up", financials.pensionTopUpCost)}
         <StatementLine
           label="Operating income"
           amount={money.fmtSigned(scale(financials.operatingIncome))}
