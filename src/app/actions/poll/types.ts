@@ -3,37 +3,6 @@ import type { GranularPollPayload } from "@/lib/actions/granularPollPayload";
 
 export type { LastElectionPartySummary };
 
-export interface GroupResult {
-  id: string;
-  name: string;
-  populationPct: number;
-  economicLean: number;
-  socialLean: number;
-  turnoutPct: number;
-  influencePct: number;
-  groupPop: number;
-  turnoutPop: number;
-  reachedPop: number;
-  appeal: number;
-  rawPotential: number;
-  weightedPotential: number;
-  categoryName: string;
-  categoryId: string;
-  categoryWeight: number;
-  /** When in an active general election: estimated share of this group (0–100%) */
-  estimatedSharePct?: number;
-}
-
-export interface CategoryResult {
-  id: string;
-  name: string;
-  weight: number;
-  categoryTurnoutPop: number;
-  totalRawPotential: number;
-  totalPotentialVoters: number;
-  groups: GroupResult[];
-}
-
 export interface InRaceVoteShare {
   myVotes: number;
   opponentVotes: Record<string, number>;
@@ -44,13 +13,10 @@ export interface StoredPoll {
   overallAppeal: number;
   totalEstimatedVoters: number;
   totalPotentialVoters: number;
-  topGroups: GroupResult[];
-  bottomGroups: GroupResult[];
-  categories?: CategoryResult[];
   /** When poll was taken during an active general election: vote totals from group-level allocation */
   inRaceVoteShare?: InRaceVoteShare;
-  /** Additive granular electorate breakdown; present only when the flag is enabled. */
-  granular?: GranularPollPayload;
+  /** The granular electorate breakdown: the poll itself. */
+  granular: GranularPollPayload;
 }
 
 export interface OpponentSummary {
@@ -62,8 +28,6 @@ export interface OpponentSummary {
   socialPosition: number;
   favorability: number;
   politicalInfluence: number;
-  /** When present, used for in-race poll weighting (matches Character/NPP). */
-  archetypeApprovals?: Record<string, number>;
   overallAppeal: number;
   totalPotentialVoters: number;
   totalEstimatedVoters: number;

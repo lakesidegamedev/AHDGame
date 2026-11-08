@@ -185,6 +185,123 @@ function prettifyDimName(key: string): string {
     .join(" ");
 }
 
+/** Granular electorate without candidate shares. */
+export interface GranularElectorate {
+  dims: string[];
+  dimLabels: Record<string, string>;
+  cells: GenericGranularCell[];
+}
+
+function buildUsGranularCells({
+  config,
+  era,
+  stateId,
+  turnoutRates,
+  positionsOverride,
+}: Pick<
+  GranularPollBuilderInput,
+  "config" | "era" | "stateId" | "turnoutRates" | "positionsOverride"
+>): GranularElectorate {
+  const positions = positionsOverride ?? resolveGranularPositions(config, era ?? "2019", stateId);
+  const usCells = deriveGranularCells(config, positions, turnoutRates);
+  const cells: GenericGranularCell[] = usCells.map((cell) => ({
+    id: cell.id,
+    buckets: {
+      race: cell.race,
+      age: cell.age,
+      education: cell.education,
+      wealth: cell.wealth,
+    },
+    share: cell.share,
+    economicLean: cell.economicLean,
+    socialLean: cell.socialLean,
+    turnout: cell.turnout,
+  }));
+  const dims = [...GRANULAR_DIMENSIONS];
+  return {
+    dims,
+    dimLabels: Object.fromEntries(dims.map((d) => [d, prettifyDimName(d)])),
+    cells,
+  };
+}
+
+/**
+ * The state's Layer-1 electorate cells, the substrate the vote engines count.
+ * Throws when the country has no census model for the state.
+ */
+export function buildGranularElectorateForState({
+  countryId,
+  stateId,
+  preset,
+  era,
+  year,
+  startingYear,
+}: Pick<
+  GranularPollForStateInput,
+  "countryId" | "stateId" | "preset" | "era" | "year" | "startingYear"
+>): GranularElectorate {
+  const resolvedEra =
+    era ?? (year != null ? eraIdForYear(year) : eraForPreset(preset ?? DEFAULT_SEED_PRESET));
+
+  // eslint-disable-next-line local/no-country-literals -- US census path is separate from international models
+  if (countryId === "US") {
+    // Year-driven when the era clock is live. A poll that reported a different
+    // electorate from the one the vote engines are counting would be worse
+    // than no poll, it would be a lie the player can act on.
+    const yearSubstrate =
+      year != null
+        ? getUsSubstrateForYear(stateId, year, { startingYear: startingYear ?? null })
+        : null;
+    const censusConfig = yearSubstrate?.config ?? getRegionCensusData("US", stateId, preset);
+    if (!censusConfig || !("race" in censusConfig)) {
+      throw new Error(`US census config not found for state ${stateId}`);
+    }
+    return buildUsGranularCells({
+      config: censusConfig as Layer1Config,
+      era: resolvedEra,
+      stateId,
+      turnoutRates:
+        year != null
+          ? getUsTurnoutRatesForYear(stateId, year, { startingYear: startingYear ?? null })
+          : DEMOGRAPHIC_TURNOUT_RATES,
+      positionsOverride: yearSubstrate?.positions,
+    });
+  }
+
+  const yearModel = year != null ? getCountrySubstrateForYear(countryId, stateId, year) : null;
+  const model = yearModel ? null : getCountryLayer1Model(countryId, resolvedEra);
+  if (!yearModel && !model) {
+    throw new Error(`No Layer-1 model for country ${countryId}`);
+  }
+
+  const regionCensus = yearModel?.marginals ?? model?.census[stateId];
+  if (!regionCensus) {
+    throw new Error(`No census data for ${countryId}.${stateId}`);
+  }
+
+  const dimNames = yearModel?.dims ?? model?.dims ?? [];
+  const modelPositions = yearModel?.positions ?? model?.positions ?? {};
+  const modelTurnout = yearModel?.turnoutRates ?? model?.turnoutRates ?? {};
+  const dims: GenericGranularDimInput[] = dimNames.map((name) => ({
+    name,
+    marginals: regionCensus[name],
+    positions: modelPositions[name],
+    turnoutRates: modelTurnout[name],
+  }));
+
+  const cells = deriveGranularCellsGeneric({
+    dims,
+    priors: COUNTRY_PRIORS[countryId] ?? {},
+    opts: { pruneFloor: 0.001 },
+  });
+
+  return {
+    dims: [...dimNames],
+    dimLabels: Object.fromEntries(dimNames.map((d) => [d, prettifyDimName(d)])),
+    cells,
+  };
+}
+
 /** Shared candidate-share projection for any set of granular cells. */
 function computeCandidateShares(
   cells: GenericGranularCell[],
@@ -303,25 +420,13 @@ export function buildGranularPollPayload({
   turnoutRates,
   positionsOverride,
 }: GranularPollBuilderInput): GranularPollPayload {
-  const positions = positionsOverride ?? resolveGranularPositions(config, era, stateId);
-  const usCells = deriveGranularCells(config, positions, turnoutRates);
-
-  const cells: GenericGranularCell[] = usCells.map((cell) => ({
-    id: cell.id,
-    buckets: {
-      race: cell.race,
-      age: cell.age,
-      education: cell.education,
-      wealth: cell.wealth,
-    },
-    share: cell.share,
-    economicLean: cell.economicLean,
-    socialLean: cell.socialLean,
-    turnout: cell.turnout,
-  }));
-
-  const dims = [...GRANULAR_DIMENSIONS];
-  const dimLabels = Object.fromEntries(dims.map((d) => [d, prettifyDimName(d)]));
+  const { dims, dimLabels, cells } = buildUsGranularCells({
+    config,
+    era,
+    stateId,
+    turnoutRates,
+    positionsOverride,
+  });
   const candidateShares = computeCandidateShares(
     cells,
     character,
@@ -372,66 +477,14 @@ export function buildGranularPollPayloadForState({
       ),
     };
   }
-  const resolvedEra =
-    era ?? (year != null ? eraIdForYear(year) : eraForPreset(preset ?? DEFAULT_SEED_PRESET));
-
-  // eslint-disable-next-line local/no-country-literals -- US census path is separate from international models
-  if (countryId === "US") {
-    // Year-driven when the era clock is live. A poll that reported a different
-    // electorate from the one the vote engines are counting would be worse
-    // than no poll — it would be a lie the player can act on.
-    const yearSubstrate =
-      year != null
-        ? getUsSubstrateForYear(stateId, year, { startingYear: startingYear ?? null })
-        : null;
-    const censusConfig = yearSubstrate?.config ?? getRegionCensusData("US", stateId, preset);
-    if (!censusConfig || !("race" in censusConfig)) {
-      throw new Error(`US census config not found for state ${stateId}`);
-    }
-    return buildGranularPollPayload({
-      config: censusConfig as Layer1Config,
-      era: resolvedEra,
-      stateId,
-      character,
-      opponents,
-      incumbency,
-      useNationalInfluenceForReach,
-      turnoutRates:
-        year != null
-          ? getUsTurnoutRatesForYear(stateId, year, { startingYear: startingYear ?? null })
-          : DEMOGRAPHIC_TURNOUT_RATES,
-      positionsOverride: yearSubstrate?.positions,
-    });
-  }
-
-  const yearModel = year != null ? getCountrySubstrateForYear(countryId, stateId, year) : null;
-  const model = yearModel ? null : getCountryLayer1Model(countryId, resolvedEra);
-  if (!yearModel && !model) {
-    throw new Error(`No Layer-1 model for country ${countryId}`);
-  }
-
-  const regionCensus = yearModel?.marginals ?? model?.census[stateId];
-  if (!regionCensus) {
-    throw new Error(`No census data for ${countryId}.${stateId}`);
-  }
-
-  const dimNames = yearModel?.dims ?? model?.dims ?? [];
-  const modelPositions = yearModel?.positions ?? model?.positions ?? {};
-  const modelTurnout = yearModel?.turnoutRates ?? model?.turnoutRates ?? {};
-  const dims: GenericGranularDimInput[] = dimNames.map((name) => ({
-    name,
-    marginals: regionCensus[name],
-    positions: modelPositions[name],
-    turnoutRates: modelTurnout[name],
-  }));
-
-  const cells = deriveGranularCellsGeneric({
-    dims,
-    priors: COUNTRY_PRIORS[countryId] ?? {},
-    opts: { pruneFloor: 0.001 },
+  const { dims, dimLabels, cells } = buildGranularElectorateForState({
+    countryId,
+    stateId,
+    preset,
+    era,
+    year,
+    startingYear,
   });
-
-  const dimLabels = Object.fromEntries(dimNames.map((d) => [d, prettifyDimName(d)]));
   const candidateShares = computeCandidateShares(
     cells,
     character,
@@ -442,5 +495,5 @@ export function buildGranularPollPayloadForState({
     useNationalInfluenceForReach
   );
 
-  return { dims: [...dimNames], dimLabels, cells, candidateShares };
+  return { dims, dimLabels, cells, candidateShares };
 }

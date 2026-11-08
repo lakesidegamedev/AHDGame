@@ -78,9 +78,6 @@ function buildUsMockPoll(): StoredPoll {
     overallAppeal: 25,
     totalEstimatedVoters: 1_000_000,
     totalPotentialVoters: 1_200_000,
-    topGroups: [],
-    bottomGroups: [],
-    categories: [],
     granular,
   };
 }
@@ -104,9 +101,6 @@ function buildDdMockPoll(): StoredPoll {
     overallAppeal: 25,
     totalEstimatedVoters: 3_310_000,
     totalPotentialVoters: 3_500_000,
-    topGroups: [],
-    bottomGroups: [],
-    categories: [],
     granular,
   };
 }
@@ -139,9 +133,6 @@ function buildDeMockPoll(): StoredPoll {
     overallAppeal: 25,
     totalEstimatedVoters: 1_000_000,
     totalPotentialVoters: 1_200_000,
-    topGroups: [],
-    bottomGroups: [],
-    categories: [],
     granular,
   };
 }

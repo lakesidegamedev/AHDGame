@@ -94,8 +94,6 @@ describe("StatCards", () => {
       overallAppeal: 36.2,
       totalEstimatedVoters: 200_000,
       totalPotentialVoters: 50_000,
-      topGroups: [],
-      bottomGroups: [],
     } as StoredPoll;
     render(<StatCards poll={poll} />);
     expect(screen.getByText("36.2")).toBeTruthy();

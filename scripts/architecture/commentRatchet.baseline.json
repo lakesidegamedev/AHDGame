@@ -3177,10 +3177,6 @@
       "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/actions/pollCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/actions/prevElectionPartyShares.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
