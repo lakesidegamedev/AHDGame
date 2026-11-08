@@ -39,6 +39,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
     "One document per country, read in one bounded $in by the renewal phase and by country _id in the party frontier; history lives inside it.",
   marketAdjustmentSignals:
     "One document per country, upserted and read by its country _id; the 12-point history lives inside it.",
+  crisisAlertState:
+    "One document per active crisis, read in one bounded $in by crisis id and upserted by that _id once a turn; no secondary scans.",
 };
 
 export function missingCollectionIndexPolicies(

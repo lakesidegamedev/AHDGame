@@ -30,7 +30,7 @@ describe("nav link inventory parity", () => {
 
     expect(hrefs).not.toContain("/world/legacy");
     expect(hrefs).toContain("/world/trade");
-    expect(hrefs).toContain("/world/conflicts");
+    expect(hrefs).toContain("/world/crises?view=conflicts");
     expect(hrefs).toContain("/unions");
     expect(hrefs).toContain("/unions/u1");
     expect(hrefs).toContain("/corporation/1");

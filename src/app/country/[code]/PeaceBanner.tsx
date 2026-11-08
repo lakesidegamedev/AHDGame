@@ -47,7 +47,7 @@ function describe(
     const href =
       notice.conflictNumber !== null
         ? `/world/conflicts/${notice.conflictNumber}`
-        : "/world/conflicts";
+        : "/world/crises?view=conflicts";
     return {
       href,
       label: "Name your terms",

@@ -148,7 +148,7 @@ describe("phone navigation dock", () => {
         "/world",
         "/market",
         "/world/trade",
-        "/world/conflicts",
+        "/world/crises?view=conflicts",
         "/unions",
         "/unions/union",
         "/corporation/7/group",
