@@ -30,7 +30,7 @@ import {
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { foundCorporation } from "./foundCorporation";
 
-function makeDb(insertOne: ReturnType<typeof vi.fn>) {
+function makeDb(insertOne: (doc: unknown) => Promise<unknown>) {
   const writes: string[] = [];
   const corporations = {
     findOne: vi.fn().mockResolvedValue(null),
@@ -112,7 +112,7 @@ describe("foundCorporation", () => {
 
   it("debits the founder, inserts a private corporation and returns 201", async () => {
     const insertedId = new ObjectId();
-    const { db, writes, corporations } = makeDb(vi.fn().mockResolvedValue({ insertedId }));
+    const { db, writes, corporations } = makeDb(async () => ({ insertedId }));
     const character = makeCharacter();
     const userId = new ObjectId().toString();
 
@@ -164,7 +164,9 @@ describe("foundCorporation", () => {
     const duplicate = Object.assign(new Error("E11000 duplicate key tickerSymbol_1"), {
       code: 11000,
     });
-    const { db, writes } = makeDb(vi.fn().mockRejectedValue(duplicate));
+    const { db, writes } = makeDb(async () => {
+      throw duplicate;
+    });
     const character = makeCharacter();
 
     const result = await foundCorporation({
@@ -192,7 +194,7 @@ describe("foundCorporation", () => {
 
   it("removes the corporation, refunds and rethrows when a later write fails", async () => {
     const insertedId = new ObjectId();
-    const { db, writes, ceoVotes } = makeDb(vi.fn().mockResolvedValue({ insertedId }));
+    const { db, writes, ceoVotes } = makeDb(async () => ({ insertedId }));
     ceoVotes.insertOne.mockRejectedValueOnce(new Error("vote write failed"));
     const character = makeCharacter();
 
@@ -212,7 +214,7 @@ describe("foundCorporation", () => {
 
   it("does not insert when the atomic debit fails", async () => {
     vi.mocked(atomicallyDebitCharacterCash).mockResolvedValue({ ok: false } as never);
-    const { db, writes } = makeDb(vi.fn());
+    const { db, writes } = makeDb(async () => ({}));
 
     const result = await foundCorporation({
       db: db as never,
@@ -228,7 +230,7 @@ describe("foundCorporation", () => {
   });
 
   it("rejects a secondary sector equal to the primary before any write", async () => {
-    const { db, writes } = makeDb(vi.fn());
+    const { db, writes } = makeDb(async () => ({}));
 
     const result = await foundCorporation({
       db: db as never,
