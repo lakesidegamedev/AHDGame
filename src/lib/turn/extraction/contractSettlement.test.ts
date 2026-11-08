@@ -275,6 +275,23 @@ describe("settleExtractionContracts", () => {
     expect(notif[0].type).toBe("contract_expired");
   });
 
+  it("closes a contract whose corporation no longer exists", async () => {
+    const contract = makeContract();
+    setContractQueries(db, [], [contract]);
+    seedCommon(db);
+    setFind(db, "corporations", []);
+
+    const settle = await loadFn();
+    const result = await settle(db as unknown as Db, 13, NOW);
+
+    expect(result.contractsExpired).toBe(1);
+    expect(result.royaltiesPaid).toBe(0);
+    expect(db.collectionMocks["extractionContracts"]!.updateOne).toHaveBeenCalledWith(
+      { _id: contract._id, revokedTurn: { $exists: false } },
+      { $set: { status: "expired", revokedTurn: 13, updatedAt: NOW } }
+    );
+  });
+
   it("falls back to the national treasury when the state budget doc is missing", async () => {
     setContractQueries(db, [], [makeContract({ grantedByLevel: "state" })]);
     seedCommon(db);

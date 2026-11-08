@@ -378,6 +378,18 @@ export async function settleExtractionContracts(
       continue;
     }
 
+    // A dissolved or absorbed contractor can never pay or extract again, but
+    // an active contract keeps counting against the state's contract cap and
+    // reserving deposit capacity. Close it once its holder is gone.
+    if (!corpById.has(contract.corporationId.toString())) {
+      await contractsCol.updateOne(
+        { _id: contract._id, revokedTurn: { $exists: false } },
+        { $set: { status: "expired", revokedTurn: turn, updatedAt: now } }
+      );
+      result.contractsExpired += 1;
+      continue;
+    }
+
     // Idempotency: a retried phase run must not double-charge. lastRoyaltyTurn
     // is stamped with every settlement outcome (paid AND missed) below.
     if (contract.lastRoyaltyTurn != null && contract.lastRoyaltyTurn >= turn) {
@@ -445,22 +457,7 @@ export async function settleExtractionContracts(
     }
 
     const corp = corpById.get(contract.corporationId.toString());
-    if (!corp) {
-      // Corp vanished (dissolved); leave the contract for revoke/cleanup elsewhere.
-      if (fundedNational) {
-        await contractsCol.updateOne(
-          {
-            _id: contract._id,
-            status: "active",
-            revokedTurn: { $exists: false },
-            $or: [{ lastRoyaltyTurn: { $lt: turn } }, { lastRoyaltyTurn: { $exists: false } }],
-          },
-          { $set: { lastRoyaltyTurn: turn, updatedAt: now } }
-        );
-      }
-      result.contractsSettled += 1;
-      continue;
-    }
+    if (!corp) continue;
 
     const corpCode = resolveCorpLiquidCurrencyCode(corp);
     const corpFxRate = corpCode

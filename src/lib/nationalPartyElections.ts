@@ -88,7 +88,8 @@ export async function createMissingNationalElections(
     return createMissingFoundingLeadershipElections(db, currentTurn, now, countryId);
   }
 
-  const scopedPartiesQuery = applyOptionalCountryScope({}, countryId);
+  // A merged or folded party has no members left to elect anyone.
+  const scopedPartiesQuery = applyOptionalCountryScope({ isDefunct: { $ne: true } }, countryId);
   const scopedActiveElectionQuery = applyOptionalCountryScope({ status: "voting" }, countryId);
   // Positions whose most recent election was quorum-accelerated and resolved
   // early still owe the remainder of their natural cycle. Until the original
@@ -311,7 +312,8 @@ async function createMissingFoundingLeadershipElections(
   now: Date,
   countryId?: CountryId
 ): Promise<number> {
-  const scopedPartiesQuery = applyOptionalCountryScope({}, countryId);
+  // A merged or folded party has no members left to elect anyone.
+  const scopedPartiesQuery = applyOptionalCountryScope({ isDefunct: { $ne: true } }, countryId);
   const scopedActiveElectionQuery = applyOptionalCountryScope({ status: "voting" }, countryId);
 
   const [parties, activeElections] = await Promise.all([

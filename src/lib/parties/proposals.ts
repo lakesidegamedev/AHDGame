@@ -25,6 +25,7 @@ import { selectMergeNppCull } from "@/lib/npp/mergeNppCap";
 import { selectNationalMergeNppCull } from "@/lib/npp/rules/mergeNationalCap";
 import { getPartyNppCapacity } from "@/lib/npp/partyCapacity";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
+import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
 import {
   deriveOrganizationShares,
   resolveOrganizationUnits,
@@ -1045,6 +1046,19 @@ export async function mergePartyInto(
             updatedAt: now,
           },
         }
+      );
+
+      // 9b. Close the absorbed party's in-flight internal races, which would
+      //     otherwise seat a chair or committee of a party that no longer exists.
+      await Promise.all(
+        ["nationalPartyElections", "nationalCommitteeElections"].map((name) =>
+          db
+            .collection(name)
+            .updateMany(
+              applyOptionalCountryScope({ partyId: proposingStrId, status: "voting" }, countryId),
+              { $set: { status: "cancelled", updatedAt: now } }
+            )
+        )
       );
 
       // 10. Update target party member count

@@ -446,6 +446,20 @@ export async function retireCharacter(
     );
   await db.collection("nationalCommitteeVotes").deleteMany({ voterId: characterId });
 
+  // A nomination still naming a deleted character would confirm a ghost into
+  // the cabinet, the court or the central bank board.
+  await Promise.all(
+    ["cabinetNominations", "scotusNominations", "fomcNominations"].map((name) =>
+      db.collection(name).updateMany(
+        {
+          nomineeCharacterId: characterId,
+          status: { $in: ["proposed", "active", "awaiting_choice"] },
+        },
+        { $set: { status: "withdrawn", updatedAt: now } }
+      )
+    )
+  );
+
   await db.collection("congressLeaders").deleteMany({ characterId });
   await db.collection("statePartyCandidates").deleteMany({ characterId });
   await db.collection("statePartyVotes").deleteMany({ voterId: characterId });
