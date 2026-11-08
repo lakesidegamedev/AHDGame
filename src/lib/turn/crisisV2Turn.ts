@@ -43,6 +43,8 @@ import { processCrisisEmergencyBills } from "@/lib/crises/levers/emergencyBill";
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { ensureBuiltinCrisisInputProviders } from "./crisisV2/inputProviders";
 import { routeEffectIntents } from "./crisisV2/intents";
+import { runNppCrisisResponse } from "./crisisV2/nppResponse";
+import { runCrisisSpillover } from "./crisisV2/spillover";
 import {
   getCrisisDefinition,
   getCrisisEffectRegistry,
@@ -398,6 +400,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   ensureCampaignCrisisContent();
   ensureBuiltinCrisisInputProviders();
   ensureBuiltinCrisisHolderProviders();
+  if (crises.length > 0) await runNppCrisisResponse(db, turn);
   const world = await loadWorld(db);
   const result: CrisisV2TurnResult = { processed: 0, failed: 0, resolved: 0, opened: 0 };
   const stillActive: DirectorActiveCrisis[] = [];
@@ -622,5 +625,6 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   }
 
   result.opened = await openNewCrises(db, turn, stillActive);
+  result.opened += (await runCrisisSpillover(db, turn)).opened;
   return result;
 }
