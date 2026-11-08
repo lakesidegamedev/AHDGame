@@ -1,4 +1,5 @@
-import { loadCampaignPriceLevel, loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
+import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { ObjectId } from "mongodb";

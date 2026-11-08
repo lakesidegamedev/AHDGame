@@ -86,7 +86,9 @@ describe("processCaucusTax", () => {
     setupCollection("caucusMemberships", [membership]);
     setupCollection("characters", [character]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 100_000, gdp: 1_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000); // LOCAL USD
 
     const result = await processCaucusTax(true, 100);
@@ -147,7 +149,9 @@ describe("processCaucusTax", () => {
     setupCollection("caucusMemberships", [membership]);
     setupCollection("characters", [character]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "NG-SW", population: 17_000_000, gdp: 74_000_000 }]);
+    setupCollection("states", [
+      { _id: "NG-SW", countryId: "NG", population: 17_000_000, gdp: 74_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000); // anchor
 
     const result = await processCaucusTax(true, 100);
@@ -197,7 +201,9 @@ describe("processCaucusTax", () => {
     setupCollection("caucusMemberships", [membership]);
     setupCollection("characters", [character]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 100_000, gdp: 1_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000);
 
     const result = await processCaucusTax(true, 100);
@@ -245,7 +251,9 @@ describe("processCaucusTax", () => {
     setupCollection("caucusMemberships", [membership]);
     setupCollection("characters", [character]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 100_000, gdp: 1_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000);
 
     // The $gte-guarded debit fails to match (balance drained concurrently).
@@ -302,7 +310,9 @@ describe("processCaucusTax", () => {
     setupCollection("caucusMemberships", [membership]);
     setupCollection("characters", [character]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 100_000, gdp: 1_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000); // tax = 1_000 > funds
 
     const result = await processCaucusTax(false, 100);
@@ -348,7 +358,9 @@ describe("processCaucusTax", () => {
     setupCollection("caucusMemberships", [membership]);
     setupCollection("characters", [character]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 100_000, gdp: 1_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000); // tax = 1_000
 
     const result = await processCaucusTax(false, 100);
@@ -403,7 +415,9 @@ describe("processCaucusTax", () => {
         funds: 1_000_000,
       },
     ]);
-    setupCollection("states", [{ _id: "US-CA", population: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 1_000_000, gdp: 1_000_000 },
+    ]);
     db.collection("gameConfig");
     vi.mocked(projectNppGeneration).mockReturnValue(1_000);
 
@@ -454,7 +468,9 @@ describe("processCaucusTax", () => {
       },
     ]);
     setupCollection("npps", []);
-    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    setupCollection("states", [
+      { _id: "US-CA", countryId: "US", population: 100_000, gdp: 1_000_000 },
+    ]);
     vi.mocked(projectCharacterGeneration).mockReturnValue(10_000);
     db.collectionMocks.caucuses!.updateOne.mockRejectedValueOnce(new Error("write failed"));
 

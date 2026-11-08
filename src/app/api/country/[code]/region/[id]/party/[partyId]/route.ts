@@ -1,8 +1,6 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
-import {
-  loadCampaignCurrencyRates,
-  loadNationalGdpPerCapita,
-} from "@/lib/campaigns/campaignCurrency";
+import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";

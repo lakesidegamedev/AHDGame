@@ -5,8 +5,6 @@
  */
 
 import { resolveCampaignPriceLevel } from "./rules/priceLevel";
-import { nationalGdpPerCapitaIndex, requireNationalGdpPerCapita } from "./rules/gdpBaseline";
-import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Db } from "mongodb";
 import type { ExchangeRate } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -64,34 +62,4 @@ export async function loadCampaignPriceLevel(db: Db): Promise<number> {
       .findOne({ _id: "current" }, { projection: { preset: 1 } }),
   ]);
   return resolveCampaignPriceLevel(config?.campaignEraPriceLevelEnabled, state?.preset);
-}
-
-/**
- * Load live national GDP per capita for every country in one grouped read.
- * Campaign income and cost scalars measure a region against this figure, so
- * they follow the economy instead of a start-of-world number. Countries with
- * no usable regional GDP are absent from the map.
- */
-export async function loadNationalGdpPerCapitaIndex(db: Db): Promise<Map<string, number>> {
-  const rows = await (
-    await getStatesCollection(db)
-  )
-    .aggregate<{ _id: string | null; gdp: number; population: number }>([
-      {
-        $group: {
-          _id: "$countryId",
-          gdp: { $sum: { $ifNull: ["$gdp", 0] } },
-          population: { $sum: "$population" },
-        },
-      },
-    ])
-    .toArray();
-  return nationalGdpPerCapitaIndex(
-    rows.map((r) => ({ countryId: r._id ?? "US", gdp: r.gdp, population: r.population }))
-  );
-}
-
-/** One country's live national GDP per capita; throws when it has no regional GDP. */
-export async function loadNationalGdpPerCapita(db: Db, countryId: string): Promise<number> {
-  return requireNationalGdpPerCapita(await loadNationalGdpPerCapitaIndex(db), countryId);
 }

@@ -1,4 +1,4 @@
-import { loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";

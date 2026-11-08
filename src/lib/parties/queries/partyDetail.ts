@@ -1,8 +1,6 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
-import {
-  loadCampaignCurrencyRates,
-  loadNationalGdpPerCapita,
-} from "@/lib/campaigns/campaignCurrency";
+import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { ObjectId, type Db } from "mongodb";
 import { getPartyBudgetCollection } from "@/lib/db/collections";
 import type { Character, GameConfig, NPP, PoliticalParty, State, User } from "@/lib/db/types";

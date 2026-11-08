@@ -19,6 +19,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { projectCharacterGeneration, projectNppGeneration } from "@/lib/utils/fundGeneration";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { campaignAnchorToLocal, campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import {
@@ -63,8 +64,9 @@ export async function processCaucusTax(
   // worlds tax against their own denomination (issue #798).
   const preset = await getGameStatePresetOrDefault(db);
   const nationalGdpIndex = nationalGdpPerCapitaIndex(
-    await db
-      .collection<State>("states")
+    await (
+      await getStatesCollection(db)
+    )
       .find({}, { projection: { countryId: 1, gdp: 1, population: 1 } })
       .toArray()
   );

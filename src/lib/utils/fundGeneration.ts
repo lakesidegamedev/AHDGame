@@ -370,7 +370,7 @@ export function projectCharacterGeneration(args: {
    * phase passes `resolveCampaignPriceLevel(...)`.
    */
   priceLevel?: number;
-  /** Live national GDP per capita (see `loadNationalGdpPerCapita`); omitted = era table. */
+  /** Live national GDP per capita (see `nationalGdpBasis`); omitted = era table. */
   nationalGdpPerCapita?: number;
 }): number {
   return getTotalFundGeneration(

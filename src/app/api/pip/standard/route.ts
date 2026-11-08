@@ -1,4 +1,5 @@
-import { loadCampaignPriceLevel, loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
+import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 // GET /api/pip/standard — Returns decay projections, income summary, and recent notifications for the Standard PiP view.
 // Auth: requireAuth

@@ -1,9 +1,7 @@
+import { loadNationalGdpPerCapitaIndex } from "@/lib/campaigns/nationalGdpBasis";
 import { loadEuropeanTreatyContext } from "@/lib/internationalOrganizations/europeanIntegration/service";
 import { canRatifyMaastricht } from "@/lib/internationalOrganizations/europeanIntegration/rules";
-import {
-  loadCampaignPriceLevel,
-  loadNationalGdpPerCapitaIndex,
-} from "@/lib/campaigns/campaignCurrency";
+import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { GameState } from "@/lib/db/types";

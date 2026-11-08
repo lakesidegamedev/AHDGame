@@ -15,10 +15,8 @@
  * touch live forex).
  */
 
-import {
-  loadCampaignCurrencyRates,
-  loadNationalGdpPerCapita,
-} from "@/lib/campaigns/campaignCurrency";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
+import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 
 import { ObjectId, type Db, type Filter } from "mongodb";
 import { randomUUID } from "node:crypto";

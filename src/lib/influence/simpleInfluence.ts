@@ -3,6 +3,7 @@
  * Costs use the actor's equivalent self-action quotes with a premium; see executeSimpleInfluence.
  */
 
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { ObjectId, Db } from "mongodb";
 import type { Campaign, Character, Election, GameConfig, NPP, State } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
@@ -13,7 +14,6 @@ import { localCampaignBalance } from "@/lib/currency/campaignBalance";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getMediaFavPerTurn } from "@/lib/campaigns/opsEffects";
 import { quoteAdvertiseAction, quoteCampaignAction } from "@/lib/actions/rules";
-import { loadNationalGdpPerCapita } from "@/lib/campaigns/campaignCurrency";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } from "./rules";
