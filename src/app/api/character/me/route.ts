@@ -24,7 +24,6 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { reconcileUnionLeaderCache } from "@/lib/unions/unionReconciliation";
 import { TRACKED_ONBOARDING_STEP_IDS } from "@/lib/onboarding/checklist";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { listCharacterPositions, listFundsByIds } from "@/lib/indexFunds/fundQueries";
@@ -350,10 +349,8 @@ export async function PATCH(request: Request) {
         .updateOne(ownCharacterFilter, { $set: { ...updates, updatedAt: now } });
     }
 
-    if (onboardingStep !== undefined && (await isOnboardingChecklistEnabled())) {
-      // Flag-gated so flag-off worlds truly take zero onboarding writes (the
-      // tracker never renders there, but the invariant shouldn't rely on the
-      // client). First visit wins: never overwrite an existing timestamp.
+    if (onboardingStep !== undefined) {
+      // First visit wins: never overwrite an existing timestamp.
       await db
         .collection<Character>("characters")
         .updateOne(

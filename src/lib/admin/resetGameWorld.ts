@@ -36,7 +36,6 @@ import { buildSeasonRecaps } from "@/lib/recap/buildSeasonRecaps";
 import type { CharacterRecap } from "@/lib/recap/types";
 import type { GameIteration } from "@/lib/db/types/gameState";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
 import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
@@ -97,10 +96,6 @@ const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
 const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "playerRandomEventsEnabledBy",
   "playerRandomEventsEnabledAt",
-  "worldEventsEnabledBy",
-  "worldEventsEnabledAt",
-  "crisisInteractionEnabledBy",
-  "crisisInteractionEnabledAt",
   "autoDisastersEnabledBy",
   "autoDisastersEnabledAt",
   "nppAutonomyEnabledBy",
@@ -109,8 +104,6 @@ const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "nppForeignPolicyModeAt",
   "nppForeignPolicyStageBy",
   "nppForeignPolicyStageAt",
-  "crisisAidBillsEnabledBy",
-  "crisisAidBillsEnabledAt",
   "demographicsLayer1PositionsEnabledBy",
   "demographicsLayer1PositionsEnabledAt",
   "conflictsEnabledBy",
@@ -123,8 +116,6 @@ const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "coldWarEnabledAt",
   "rpgStatsEnabledBy",
   "rpgStatsEnabledAt",
-  "autoSectorSeedEnabledBy",
-  "autoSectorSeedEnabledAt",
   "nppEntryViabilityModeBy",
   "nppEntryViabilityModeAt",
   "frontierEntryExperimentEnabledBy",
@@ -137,8 +128,6 @@ const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "sectorTechTreesEnabledAt",
   "subsidiaryCorporationsEnabledBy",
   "subsidiaryCorporationsEnabledAt",
-  "legislationDemographicEffectsV2EnabledBy",
-  "legislationDemographicEffectsV2EnabledAt",
   "metricsSystemVersionBy",
   "metricsSystemVersionAt",
   "legislationSystemVersionBy",
@@ -147,18 +136,10 @@ const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "cabinetSystemVersionAt",
   "demographicsSystemVersionBy",
   "demographicsSystemVersionAt",
-  "onboardingChecklistEnabledBy",
-  "onboardingChecklistEnabledAt",
-  "seasonRecapEnabledBy",
-  "seasonRecapEnabledAt",
   "intOrgAlignmentEnabledBy",
   "intOrgAlignmentEnabledAt",
-  "settlementCrisisEnabledBy",
-  "settlementCrisisEnabledAt",
   "eraSystemEnabledBy",
   "eraSystemEnabledAt",
-  "macroGrowthV1By",
-  "macroGrowthV1At",
 ] as const;
 
 /**
@@ -395,7 +376,7 @@ export async function resetGameWorld(
   // destroys actionLogs/bills/ranking snapshots (they're gone by the deleteMany
   // block that starts a few lines down). Held in memory and stamped onto each
   // RetiredCharacter as the retire loop runs. Skipped on a full reset (the
-  // retiredCharacters archive is discarded anyway) and when the gate is off.
+  // retiredCharacters archive is discarded anyway).
   // The recap season is the OUTGOING gameState.iteration, still valid here — it
   // isn't advanced until the gameState update near the end of this function.
   let seasonRecaps: Map<string, CharacterRecap> | null = null;
@@ -403,12 +384,9 @@ export async function resetGameWorld(
   if (!options.deleteProfiles) {
     const gsForRecap = await db
       .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { iteration: 1, currentTurn: 1, seasonRecapEnabled: 1 } }
-      );
-    if (isSeasonRecapEnabled(gsForRecap)) {
-      recapIteration = gsForRecap?.iteration;
+      .findOne({ _id: "current" }, { projection: { iteration: 1, currentTurn: 1 } });
+    if (gsForRecap) {
+      recapIteration = gsForRecap.iteration;
       // A recap is a keepsake, not a precondition: if the build fails the reset
       // proceeds and characters retire without one.
       try {
@@ -417,7 +395,7 @@ export async function resetGameWorld(
         seasonRecaps = await buildSeasonRecaps(
           db,
           charsForRecap,
-          { iteration: recapIteration, currentTurn: gsForRecap?.currentTurn ?? 1 },
+          { iteration: recapIteration, currentTurn: gsForRecap.currentTurn ?? 1 },
           { log, requireComplete: true }
         );
         log(`built ${seasonRecaps.size} season recaps`);

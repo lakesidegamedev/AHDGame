@@ -135,10 +135,7 @@ async function main(): Promise<void> {
       const year = 2027 + Math.floor((turn - 1248) / 48);
       await db
         .collection("gameState")
-        .updateOne(
-          { _id: "current" as never },
-          { $set: { currentTurn: turn, currentYear: year, crisisInteractionEnabled: true } }
-        );
+        .updateOne({ _id: "current" as never }, { $set: { currentTurn: turn, currentYear: year } });
       const expiring = await db
         .collection<Crisis>("crises")
         .find({ status: "active", livingConflictEventId: { $exists: true } })
@@ -224,7 +221,6 @@ async function main(): Promise<void> {
       currentTurn: 1249,
       currentYear: 2027,
       startingYear: 2027,
-      crisisInteractionEnabled: true,
     });
     const usLeader = {
       _id: new ObjectId("000000000000000000002027"),

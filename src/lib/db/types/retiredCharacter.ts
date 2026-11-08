@@ -64,7 +64,7 @@ export interface RetiredCharacter {
   snapshot: RetiredCharacterSnapshot;
   /** Season this life belonged to (outgoing iteration at retirement). */
   iteration?: GameIteration;
-  /** Frozen Season Recap ("Wrapped") payload — present when seasonRecapEnabled. */
+  /** Frozen Season Recap ("Wrapped") payload. */
   recap?: CharacterRecap;
   /**
    * One-time "seen" stamp for the post-reset recap gate. Absent = unviewed

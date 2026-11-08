@@ -2,7 +2,7 @@
  * World Events v1 Phase 1: the scheduler's turn-phase producer. Registered
  * near `processPlayerRandomEventsTurn` in `turnPhaseRegistry.ts`. Unlike
  * Phase 0 (admin-trigger-only), this offers scheduled country-scope events
- * automatically each turn once `worldEventsEnabled` is on.
+ * automatically each turn.
  *
  * News-spam cap (plan §7, "≤1 world-event offer per country per turn"): the
  * per-country loop below stops after the first successful offer, and the
@@ -20,7 +20,6 @@ import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import { getEventCooldownLedgerCollection } from "@/lib/db/collections/eventCooldownLedger";
 import { getEventDefinitionsCollection } from "@/lib/db/collections/eventDefinitions";
-import { isWorldEventsEnabled } from "@/lib/events/featureFlag";
 import {
   ActiveEventConflictError,
   computeExpiresAtRealtimeMs,
@@ -330,23 +329,17 @@ async function worldEventCountries(db: Db): Promise<CountryId[]> {
 
 /**
  * Per-turn producer for scheduled World Events (Phase 1). Registered
- * alongside `worldEventsMaintenance` in `turnPhaseRegistry.ts`. No-op when
- * `worldEventsEnabled` is off (default) or no schedule-bearing definitions
- * are approved yet.
+ * alongside `worldEventsMaintenance` in `turnPhaseRegistry.ts`. No-op when no
+ * schedule-bearing definitions are approved yet.
  */
 export async function processWorldEventsTurn(
   db: Db,
   currentTurn: number,
   preloaded?: {
-    worldEventsEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
   }
 ): Promise<WorldEventsTurnResult> {
-  const enabled = await isWorldEventsEnabled(preloaded);
-  if (!enabled) {
-    return { offered: 0, skipped: 0, globalHostEventsOffered: 0 };
-  }
   const currentYear = preloaded?.currentYear;
 
   // Phase 3: global-host flavor events (Olympics / World's Fair) run first

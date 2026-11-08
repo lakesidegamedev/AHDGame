@@ -104,7 +104,7 @@ export interface State {
   sectorRevenueEma?: number;
   sectorRevenueSnapshots?: Array<{ turn: number; value: number }>;
   /**
-   * O1c (design §5, macroGrowthV1): the paid corporate growth cost (₳, per turn)
+   * O1c (design §5): the paid corporate growth cost (₳, per turn)
    * summed over this region's sectors, written by the corp turn. The metric
    * engine converts it to local-millions, caps it at 5% of region GDP/yr, and
    * feeds it to the capital stock — but ONLY when `corpGrowthInvestmentTurn`

@@ -43,13 +43,9 @@ export const FRESH_WORLD_FLAG_EXCLUSIONS = {
 export const DEFAULT_GAME_STATE_FLAGS = {
   forexEnabled: true,
   playerRandomEventsEnabled: true,
-  crisisInteractionEnabled: true,
   autoDisastersEnabled: true,
-  crisisAidBillsEnabled: true,
   rpgStatsEnabled: true,
-  autoSectorSeedEnabled: true,
   sectorTechTreesEnabled: true,
-  onboardingChecklistEnabled: true,
   nppAutonomyLevel: FRESH_WORLD_FLAG_EXCLUSIONS.nppAutonomyLevel.value,
   // Kept in sync with nppAutonomyLevel for legacy readers.
   nppAutonomyEnabled: true,
@@ -59,25 +55,20 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   nppPartyRenewalEnabled: true,
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
-  worldEventsEnabled: true,
-  legislationDemographicEffectsV2Enabled: true,
   // The reset-era systems are staged independently. These are version
-  // selectors, not the older legislation-demographics subfeature above.
+  // selectors.
   metricsSystemVersion: "v1",
   legislationSystemVersion: "v1",
   cabinetSystemVersion: "v1",
   eraSystemEnabled: true,
-  macroGrowthV1: true,
   conflictsEnabled: true,
   livingConflictsEnabled: true,
   demographicsLayer1PositionsEnabled: true,
   coldWarEnabled: true,
-  settlementCrisisEnabled: true,
   redistrictingEnabled: true,
   subsidiaryCorporationsEnabled: true,
   nppEntryViabilityMode: "enforce",
   frontierEntryExperimentEnabled: true,
-  seasonRecapEnabled: true,
   intOrgAlignmentEnabled: true,
   nppCorpStrategyEnabled: true,
   // Macro demand reads state GDP in anchor terms. Fresh worlds only: existing

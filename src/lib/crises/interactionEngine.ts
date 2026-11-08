@@ -27,7 +27,6 @@ import { logWireEvent } from "@/lib/wireEvent";
 import { applyCrisisEffects } from "./applyEffects";
 import { runCrisisOptionAction, type CrisisActionResult } from "./optionActions";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
-import { isCrisisAidBillsEnabled } from "./featureFlag";
 import { AID_MAX_PCT_GDP, AID_DEFAULT_PCT_GDP } from "@/lib/constants/crises";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -367,45 +366,36 @@ export async function createCrisisInteraction(
     .findOne({ crisisId: crisis._id });
   if (existing) return existing;
 
-  // ── Aid-node transform (flag-gated) ──────────────────────────────────────
-  // When crisisAidBillsEnabled is ON, any choice node with an `aid_contribute`
-  // option is transformed into an `aid` node so the panel renders the slider
-  // flow and the decline path routes through submitCrisisDecision.
-  // The template tree is NEVER mutated — we deep-clone before modifying.
-  const aidEnabled = await isCrisisAidBillsEnabled();
-  let workingTree: CrisisDecisionNode[];
-  if (aidEnabled) {
-    workingTree = JSON.parse(
-      JSON.stringify(crisis.interactionDefinition.decisionTree)
-    ) as CrisisDecisionNode[];
-    for (const node of workingTree) {
-      if (node.type === "choice" && node.options?.some((o) => o.optionId === "aid_contribute")) {
-        // Promote to aid node
-        node.type = "aid";
-        node.requiredRoles = ["headOfState"];
-        node.aidMaxPctGdp = AID_MAX_PCT_GDP;
-        node.aidDefaultPctGdp = AID_DEFAULT_PCT_GDP;
+  // Any choice node with an `aid_contribute` option becomes an `aid` node so
+  // the panel renders the slider flow and the decline path routes through
+  // submitCrisisDecision. The template tree is never mutated: deep-clone first.
+  const workingTree = JSON.parse(
+    JSON.stringify(crisis.interactionDefinition.decisionTree)
+  ) as CrisisDecisionNode[];
+  for (const node of workingTree) {
+    if (node.type === "choice" && node.options?.some((o) => o.optionId === "aid_contribute")) {
+      // Promote to aid node
+      node.type = "aid";
+      node.requiredRoles = ["headOfState"];
+      node.aidMaxPctGdp = AID_MAX_PCT_GDP;
+      node.aidDefaultPctGdp = AID_DEFAULT_PCT_GDP;
 
-        // Reorder options: the no-aid/skip option must be first so the panel's
-        // "Decline" button and auto-resolve both default to it.
-        const skipIdx = node.options!.findIndex((o) => o.optionId === "aid_skip");
-        if (skipIdx > 0) {
-          const [skipOption] = node.options!.splice(skipIdx, 1);
-          node.options!.unshift(skipOption);
-        } else if (skipIdx === -1) {
-          // Fall back: move the non-aid_contribute option (first non-contribute) to front
-          const fallbackIdx = node.options!.findIndex((o) => o.optionId !== "aid_contribute");
-          if (fallbackIdx > 0) {
-            const [fallbackOption] = node.options!.splice(fallbackIdx, 1);
-            node.options!.unshift(fallbackOption);
-          }
+      // Reorder options: the no-aid/skip option must be first so the panel's
+      // "Decline" button and auto-resolve both default to it.
+      const skipIdx = node.options!.findIndex((o) => o.optionId === "aid_skip");
+      if (skipIdx > 0) {
+        const [skipOption] = node.options!.splice(skipIdx, 1);
+        node.options!.unshift(skipOption);
+      } else if (skipIdx === -1) {
+        // Fall back: move the non-aid_contribute option (first non-contribute) to front
+        const fallbackIdx = node.options!.findIndex((o) => o.optionId !== "aid_contribute");
+        if (fallbackIdx > 0) {
+          const [fallbackOption] = node.options!.splice(fallbackIdx, 1);
+          node.options!.unshift(fallbackOption);
         }
       }
     }
-  } else {
-    workingTree = crisis.interactionDefinition.decisionTree;
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   const now = new Date();
   const firstNode = workingTree[0];

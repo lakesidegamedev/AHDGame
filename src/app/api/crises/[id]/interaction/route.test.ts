@@ -1,11 +1,6 @@
 /**
- * Ticket #1183 (audit) — the two crisis surfaces must agree on whether a node
- * can be acted on. createCrisisInteraction promotes a choice node to an `aid`
- * node only while crisisAidBillsEnabled is on, but the promoted tree is stored
- * on the interaction. With the flag later off, this route still reported
- * canInteract: true while the panel renders neither the aid slider (it needs
- * aidContext, which the flag gates) nor the option grid (hidden for aid nodes),
- * leaving a decision prompt with no controls.
+ * An `aid` node is interactable for the head of state of a responding country,
+ * so the panel and this route agree that the decision prompt has controls.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
@@ -14,10 +9,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
-vi.mock("@/lib/crises/featureFlag", () => ({
-  isCrisisInteractionEnabled: vi.fn().mockResolvedValue(true),
-  isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false),
-}));
 
 let db: MockDb;
 
@@ -111,18 +102,8 @@ beforeEach(async () => {
   } as unknown as Awaited<ReturnType<typeof requireAuthWithCharacter>>);
 });
 
-describe("GET /api/crises/[id]/interaction — aid nodes follow the aid-bills flag", () => {
-  it("reports the node as not interactable while aid bills are off", async () => {
-    const res = await get();
-    const body = (await res.json()) as { canInteract: boolean };
-
-    expect(body.canInteract).toBe(false);
-  });
-
-  it("reports the node as interactable once aid bills are on", async () => {
-    const { isCrisisAidBillsEnabled } = await import("@/lib/crises/featureFlag");
-    vi.mocked(isCrisisAidBillsEnabled).mockResolvedValue(true);
-
+describe("GET /api/crises/[id]/interaction — aid nodes", () => {
+  it("reports the node as interactable", async () => {
     const res = await get();
     const body = (await res.json()) as { canInteract: boolean };
 

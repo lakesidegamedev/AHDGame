@@ -103,7 +103,7 @@ describe("mediaPullForState", () => {
 
 describe("buildDemographicUpdates with a media pull", () => {
   it("adds the step to every group on that axis and leaves other axes alone", () => {
-    const updates = buildDemographicUpdates(demographics(), EMPTY_SHIFTS, BASELINES, true, {
+    const updates = buildDemographicUpdates(demographics(), EMPTY_SHIFTS, BASELINES, {
       economic: 0.005,
       social: 0,
     });
@@ -113,7 +113,7 @@ describe("buildDemographicUpdates with a media pull", () => {
   });
 
   it("is a no-op without a pull, and keeps baseline mean reversion running", () => {
-    const off = buildDemographicUpdates(demographics(), EMPTY_SHIFTS, BASELINES, true, null);
+    const off = buildDemographicUpdates(demographics(), EMPTY_SHIFTS, BASELINES, null);
     expect(off).toEqual({});
     const drifted = demographics({
       groups: {
@@ -121,8 +121,8 @@ describe("buildDemographicUpdates with a media pull", () => {
         b: { population: 20, economicLean: 3, socialLean: 1, turnout: 60 },
       },
     });
-    const reverting = buildDemographicUpdates(drifted, EMPTY_SHIFTS, BASELINES, true, null);
-    const withPull = buildDemographicUpdates(drifted, EMPTY_SHIFTS, BASELINES, true, {
+    const reverting = buildDemographicUpdates(drifted, EMPTY_SHIFTS, BASELINES, null);
+    const withPull = buildDemographicUpdates(drifted, EMPTY_SHIFTS, BASELINES, {
       economic: 0.005,
       social: 0,
     });
@@ -198,10 +198,7 @@ describe("processAllStateDemographics media pull", () => {
         demographics({ cachedEconomicLean: 0, cachedSocialLean: 0, mediaOpinionPull: opts.stored }),
       ])
     );
-    db.collectionMocks.gameState!.findOne.mockResolvedValue({
-      _id: "current",
-      legislationDemographicEffectsV2Enabled: true,
-    });
+    db.collectionMocks.gameState!.findOne.mockResolvedValue({ _id: "current" });
     db.collectionMocks.gameConfig!.findOne.mockResolvedValue({ mediaEditorialEnabled: opts.flag });
     db.collectionMocks.demographicCategories!.find.mockReturnValue(cursorOf([CATEGORY]));
     db.collectionMocks.demographicDefaults!.find.mockReturnValue(cursorOf([demographics()]));

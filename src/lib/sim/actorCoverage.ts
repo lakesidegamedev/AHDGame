@@ -227,7 +227,7 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     requires: "a player choosing decision-tree options on a crisis interaction",
     seams: [
       seam("src/lib/crises/interactionEngine.ts", "resolutionPath"),
-      seam("src/lib/crises/featureFlag.ts", "decision trees, collective"),
+      seam("src/app/api/crises/[id]/interact/route.ts", "submitCrisisDecision"),
     ],
     pureNpp: {
       status: "partial",

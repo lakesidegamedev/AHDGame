@@ -150,7 +150,6 @@ async function main() {
         {
           $set: {
             livingConflictsEnabled: combined,
-            crisisInteractionEnabled: true,
             currentTurn: 2000,
             currentYear: 2027,
             householdConsumptionEnabled: true,

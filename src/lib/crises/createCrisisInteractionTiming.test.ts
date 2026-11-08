@@ -6,7 +6,6 @@ import { createCrisisFromTemplate } from "./createCrisisFromTemplate";
 
 const createCrisisInteraction = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
-vi.mock("./featureFlag", () => ({ isCrisisInteractionEnabled: vi.fn().mockResolvedValue(true) }));
 vi.mock("./interactionEngine", () => ({ createCrisisInteraction }));
 vi.mock("./crisisLocation", () => ({
   resolveCrisisLocationName: vi.fn().mockResolvedValue("Testland"),

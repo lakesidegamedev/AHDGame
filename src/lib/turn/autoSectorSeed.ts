@@ -84,11 +84,8 @@ async function loadOwnedCapacityByBucket(db: Db): Promise<Map<string, number>> {
 export async function processAutoSectorSeed(
   db: Db,
   currentTurn: number,
-  preloadedGameState?: { autoSectorSeedEnabled?: boolean; lastAutoSeedTurn?: number }
+  preloadedGameState?: { lastAutoSeedTurn?: number }
 ): Promise<{ seeded: boolean; sectorsUpdated: number }> {
-  if (!preloadedGameState?.autoSectorSeedEnabled) {
-    return { seeded: false, sectorsUpdated: 0 };
-  }
   const lastSeedTurn = preloadedGameState?.lastAutoSeedTurn ?? 0;
   if (currentTurn - lastSeedTurn < TURNS_PER_YEAR) {
     return { seeded: false, sectorsUpdated: 0 };

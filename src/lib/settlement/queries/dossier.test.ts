@@ -126,13 +126,6 @@ describe("loadGermanQuestionDossier", () => {
     vi.mocked(resolveSeatOffices).mockResolvedValue(seatOffices() as never);
   });
 
-  it("returns null when the feature gate is off", async () => {
-    const { loadSettlementActorContext } = await import("../actorContext");
-    vi.mocked(loadSettlementActorContext).mockResolvedValue(null);
-    const { loadGermanQuestionDossier } = await import("./dossier");
-    await expect(loadGermanQuestionDossier(db as unknown as Db, characterId)).resolves.toBeNull();
-  });
-
   it("returns null when no crisis is open", async () => {
     const { loadSettlementActorContext } = await import("../actorContext");
     vi.mocked(loadSettlementActorContext).mockResolvedValue({

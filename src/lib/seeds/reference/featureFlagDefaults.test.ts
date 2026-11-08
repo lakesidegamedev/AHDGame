@@ -84,7 +84,7 @@ describe("fresh-world flag policy", () => {
 
   it("reads the flag fields from the type sources", () => {
     expect(flagFieldsOf("gameState.ts", "GameState")).toEqual(
-      expect.arrayContaining(["forexEnabled", "nppAutonomyLevel", "macroGrowthV1"])
+      expect.arrayContaining(["forexEnabled", "nppAutonomyLevel", "eraSystemEnabled"])
     );
     expect(flagFieldsOf("gameConfig.ts", "GameConfig")).toEqual(
       expect.arrayContaining(["treasuryCashLedgerEnabled", "marketSystemMode", "maintenanceMode"])

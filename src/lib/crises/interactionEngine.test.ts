@@ -18,7 +18,6 @@ import { YUGOSLAV_REFUGEE_RECEPTION } from "@/lib/livingConflict/rules/refugeeRe
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("./featureFlag", () => ({ isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false) }));
 
 let db: MockDb;
 
@@ -929,11 +928,8 @@ describe("submitCrisisDecision — aid node (decline path)", () => {
   });
 });
 
-describe("createCrisisInteraction — aid node transform (flag ON)", () => {
-  it("transforms a choice node with aid_contribute option into an aid node when flag is enabled", async () => {
-    const { isCrisisAidBillsEnabled } = await import("./featureFlag");
-    vi.mocked(isCrisisAidBillsEnabled).mockResolvedValueOnce(true);
-
+describe("createCrisisInteraction — aid node transform", () => {
+  it("transforms a choice node with aid_contribute option into an aid node", async () => {
     const templateTree: CrisisDecisionNode[] = [
       {
         nodeId: "response",
@@ -1029,72 +1025,6 @@ describe("createCrisisInteraction — aid node transform (flag ON)", () => {
     // The original template tree must NOT be mutated
     const originalAidNode = templateTree.find((n) => n.nodeId === "intl_aid");
     expect(originalAidNode!.type).toBe("choice");
-  });
-
-  it("leaves the tree unchanged when the flag is OFF", async () => {
-    // isCrisisAidBillsEnabled is mocked to return false by default
-    const templateTree: CrisisDecisionNode[] = [
-      {
-        nodeId: "aid_choice",
-        type: "choice",
-        title: "Aid",
-        description: "",
-        requiredRoles: ["any"],
-        timeLimitMinutes: null,
-        options: [
-          {
-            optionId: "aid_contribute",
-            label: "Send Aid",
-            description: "",
-            nextNodeId: "terminal",
-            effects: [],
-          },
-          {
-            optionId: "aid_skip",
-            label: "No Aid",
-            description: "",
-            nextNodeId: "terminal",
-            effects: [],
-          },
-        ],
-      },
-      {
-        nodeId: "terminal",
-        type: "terminal",
-        title: "Done",
-        description: "",
-        outcomeEffects: [],
-        outcomeMessage: "Done.",
-        requiredRoles: ["any"],
-        timeLimitMinutes: null,
-      },
-    ];
-
-    const crisis: Crisis = {
-      _id: new ObjectId(),
-      name: "Test",
-      description: "Test",
-      scope: "country",
-      countryIds: ["US"],
-      regionIds: [],
-      durationTurns: 6,
-      effects: [],
-      status: "active",
-      createdBy: new ObjectId(),
-      createdAt: new Date(),
-      resolvedAt: null,
-      startTurn: 1,
-      endTurn: null,
-      wireMessageOnStart: "start",
-      wireMessageOnEnd: "end",
-      interactionDefinition: { decisionTree: templateTree, autoResolveOnExpiry: true },
-    };
-
-    const result = await createCrisisInteraction(mdb(), crisis);
-
-    // Node should remain as "choice" type (not transformed)
-    const aidNode = result!.decisionTree.find((n) => n.nodeId === "aid_choice");
-    expect(aidNode!.type).toBe("choice");
   });
 });
 

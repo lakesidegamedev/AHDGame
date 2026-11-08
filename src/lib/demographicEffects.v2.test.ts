@@ -28,7 +28,6 @@ import {
   applyBaselineDecay,
   buildDemographicUpdates,
   buildGroupBaselineMap,
-  isLegislationDemographicEffectsV2Enabled,
   processAllStateDemographics,
   type DemographicGroupBaselines,
 } from "./demographicEffects";
@@ -108,25 +107,6 @@ const VOTER_GROUPS_CATEGORY: DemographicCategory = {
     },
   ],
 };
-
-// ─── Flag helper ────────────────────────────────────────────────────────────
-
-describe("isLegislationDemographicEffectsV2Enabled", () => {
-  it("is fail-closed: absent flag / null gameState reads as false", () => {
-    expect(isLegislationDemographicEffectsV2Enabled(null)).toBe(false);
-    expect(isLegislationDemographicEffectsV2Enabled(undefined)).toBe(false);
-    expect(isLegislationDemographicEffectsV2Enabled({})).toBe(false);
-    expect(
-      isLegislationDemographicEffectsV2Enabled({ legislationDemographicEffectsV2Enabled: false })
-    ).toBe(false);
-  });
-
-  it("only an explicit true enables", () => {
-    expect(
-      isLegislationDemographicEffectsV2Enabled({ legislationDemographicEffectsV2Enabled: true })
-    ).toBe(true);
-  });
-});
 
 // ─── Magnitude clamp ────────────────────────────────────────────────────────
 
@@ -407,34 +387,19 @@ describe("buildDemographicUpdates", () => {
     turnout: { union_trades: TURNOUT_SHIFT_RATE_PER_TURN },
   });
 
-  it("flag OFF: lean/turnout shifts are ignored entirely", () => {
-    const updates = buildDemographicUpdates(
-      makeDemographics(),
-      leanShifts(),
-      makeBaselines(),
-      false
-    );
-    expect(updates).toEqual({});
-  });
-
-  it("flag OFF: population shifts still apply (legacy channel is ungated)", () => {
+  it("without baselines: population shifts still apply", () => {
     const shifts = {
       population: { union_trades: 0.1 },
       economicLean: {},
       socialLean: {},
       turnout: {},
     };
-    const updates = buildDemographicUpdates(makeDemographics(), shifts, null, false);
+    const updates = buildDemographicUpdates(makeDemographics(), shifts, null);
     expect(updates).toEqual({ "groups.union_trades.population": 20.1 });
   });
 
-  it("flag ON: applies lean and turnout shifts from stored values", () => {
-    const updates = buildDemographicUpdates(
-      makeDemographics(),
-      leanShifts(),
-      makeBaselines(),
-      true
-    );
+  it("applies lean and turnout shifts from stored values", () => {
+    const updates = buildDemographicUpdates(makeDemographics(), leanShifts(), makeBaselines());
     expect(updates["groups.union_trades.economicLean"]).toBeCloseTo(
       -3 + LEAN_SHIFT_RATE_PER_TURN,
       9
@@ -444,14 +409,14 @@ describe("buildDemographicUpdates", () => {
     expect(updates["groups.small_business.economicLean"]).toBeUndefined();
   });
 
-  it("flag ON: a group+axis with no active shift decays toward baseline", () => {
+  it("a group+axis with no active shift decays toward baseline", () => {
     const demographics = makeDemographics({
       groups: {
         union_trades: { population: 20, economicLean: -1.5, socialLean: -0.5, turnout: 70 },
       },
     });
     const noShifts = { population: {}, economicLean: {}, socialLean: {}, turnout: {} };
-    const updates = buildDemographicUpdates(demographics, noShifts, makeBaselines(), true);
+    const updates = buildDemographicUpdates(demographics, noShifts, makeBaselines());
     // economicLean −1.5 decays toward baseline −3; turnout 70 decays toward 63
     expect(updates["groups.union_trades.economicLean"]).toBeCloseTo(
       -1.5 - 1.5 * LEAN_TURNOUT_DECAY_RATE_PER_TURN,
@@ -465,7 +430,7 @@ describe("buildDemographicUpdates", () => {
     expect(updates["groups.union_trades.socialLean"]).toBeUndefined();
   });
 
-  it("flag ON: an active shift suppresses decay for that group+axis only", () => {
+  it("an active shift suppresses decay for that group+axis only", () => {
     const demographics = makeDemographics({
       groups: {
         union_trades: { population: 20, economicLean: -2, socialLean: 0.5, turnout: 63 },
@@ -477,7 +442,7 @@ describe("buildDemographicUpdates", () => {
       socialLean: {},
       turnout: {},
     };
-    const updates = buildDemographicUpdates(demographics, shifts, makeBaselines(), true);
+    const updates = buildDemographicUpdates(demographics, shifts, makeBaselines());
     // economicLean gets the shift (no decay applied on top)
     expect(updates["groups.union_trades.economicLean"]).toBeCloseTo(
       -2 + LEAN_SHIFT_RATE_PER_TURN,
@@ -490,7 +455,7 @@ describe("buildDemographicUpdates", () => {
     );
   });
 
-  it("flag ON: a group without a baseline is never touched by v2 channels", () => {
+  it("a group without a baseline is never touched by v2 channels", () => {
     const demographics = makeDemographics({
       groups: { mystery_group: { population: 5, economicLean: 2, socialLean: 2, turnout: 50 } },
     });
@@ -500,11 +465,11 @@ describe("buildDemographicUpdates", () => {
       socialLean: {},
       turnout: {},
     };
-    const updates = buildDemographicUpdates(demographics, shifts, makeBaselines(), true);
+    const updates = buildDemographicUpdates(demographics, shifts, makeBaselines());
     expect(updates).toEqual({});
   });
 
-  it("flag ON: an unset stored lean starts from baseline when shifted", () => {
+  it("an unset stored lean starts from baseline when shifted", () => {
     const demographics = makeDemographics({
       groups: {
         union_trades: {
@@ -521,7 +486,7 @@ describe("buildDemographicUpdates", () => {
       socialLean: {},
       turnout: {},
     };
-    const updates = buildDemographicUpdates(demographics, shifts, makeBaselines(), true);
+    const updates = buildDemographicUpdates(demographics, shifts, makeBaselines());
     expect(updates["groups.union_trades.economicLean"]).toBeCloseTo(
       -3 + LEAN_SHIFT_RATE_PER_TURN,
       9
@@ -532,7 +497,7 @@ describe("buildDemographicUpdates", () => {
     let demographics = makeDemographics();
     const baselines = makeBaselines();
     for (let turn = 0; turn < 120; turn++) {
-      const updates = buildDemographicUpdates(demographics, leanShifts(), baselines, true);
+      const updates = buildDemographicUpdates(demographics, leanShifts(), baselines);
       const nextLean = updates["groups.union_trades.economicLean"];
       const nextTurnout = updates["groups.union_trades.turnout"];
       demographics = makeDemographics({
@@ -558,7 +523,7 @@ describe("buildDemographicUpdates", () => {
 
 // ─── Turn phase (processAllStateDemographics) with MockDb ───────────────────
 
-describe("processAllStateDemographics (turn phase, flag gating)", () => {
+describe("processAllStateDemographics (turn phase)", () => {
   let db: MockDb;
 
   const cursorOf = (docs: unknown[]) => ({
@@ -582,15 +547,12 @@ describe("processAllStateDemographics (turn phase, flag gating)", () => {
     demographicEffects: [{ groupId: "union_trades", direction: 1 }],
   };
 
-  function seedCollections(opts: { flagOn: boolean; legTypes: unknown[]; policies: unknown[] }) {
+  function seedCollections(opts: { legTypes: unknown[]; policies: unknown[] }) {
     db.collectionMocks.states!.find.mockReturnValue(cursorOf([{ _id: "PA", countryId: "US" }]));
     db.collectionMocks.statePolicies!.find.mockReturnValue(cursorOf(opts.policies));
     db.collectionMocks.legislationTypes!.find.mockReturnValue(cursorOf(opts.legTypes));
     db.collectionMocks.stateDemographics!.find.mockReturnValue(cursorOf([makeDemographics()]));
-    db.collectionMocks.gameState!.findOne.mockResolvedValue({
-      _id: "current",
-      legislationDemographicEffectsV2Enabled: opts.flagOn,
-    });
+    db.collectionMocks.gameState!.findOne.mockResolvedValue({ _id: "current" });
     db.collectionMocks.demographicCategories!.find.mockReturnValue(
       cursorOf([VOTER_GROUPS_CATEGORY])
     );
@@ -627,8 +589,8 @@ describe("processAllStateDemographics (turn phase, flag gating)", () => {
     enactedTurn: 1,
   };
 
-  it("flag ON: applies lean/turnout shifts and refreshes the cached leans", async () => {
-    seedCollections({ flagOn: true, legTypes: [leanLaw], policies: [paPolicy] });
+  it("applies lean/turnout shifts and refreshes the cached leans", async () => {
+    seedCollections({ legTypes: [leanLaw], policies: [paPolicy] });
 
     const updated = await processAllStateDemographics(db as unknown as Db);
 
@@ -649,22 +611,8 @@ describe("processAllStateDemographics (turn phase, flag gating)", () => {
     expect(db.collectionMocks.states!.bulkWrite).toHaveBeenCalledTimes(1);
   });
 
-  it("flag OFF: lean/turnout targets do nothing (no writes at all for a lean-only law)", async () => {
-    seedCollections({ flagOn: false, legTypes: [leanLaw], policies: [paPolicy] });
-
-    const updated = await processAllStateDemographics(db as unknown as Db);
-
-    expect(updated).toBe(0);
-    expect(db.collectionMocks.stateDemographics!.bulkWrite).not.toHaveBeenCalled();
-    expect(db.collectionMocks.states!.bulkWrite).not.toHaveBeenCalled();
-    // v2 data sources are not even queried when the flag is off
-    expect(db.collectionMocks.demographicCategories!.find).not.toHaveBeenCalled();
-    expect(db.collectionMocks.demographicDefaults!.find).not.toHaveBeenCalled();
-  });
-
-  it("flag OFF: legacy population effects still apply exactly as before", async () => {
+  it("legacy population effects still apply", async () => {
     seedCollections({
-      flagOn: false,
       legTypes: [populationLaw],
       policies: [{ ...paPolicy, legislationTypeId: "us_education" }],
     });
@@ -677,14 +625,10 @@ describe("processAllStateDemographics (turn phase, flag gating)", () => {
     }>;
     const set = ops[0].updateOne.update.$set;
     expect(set["groups.union_trades.population"]).toBeCloseTo(20 + SHIFT_RATE_PER_TURN, 9);
-    // No lean/turnout keys and no cache rewrite with the flag off
-    expect(
-      Object.keys(set).filter((k) => k.includes("Lean") || k.includes("turnout"))
-    ).toHaveLength(0);
   });
 
-  it("flag ON: policy-less states still decay lean deviations toward baseline", async () => {
-    seedCollections({ flagOn: true, legTypes: [], policies: [] });
+  it("policy-less states still decay lean deviations toward baseline", async () => {
+    seedCollections({ legTypes: [], policies: [] });
     // State has a deviated lean but no active policies
     db.collectionMocks.stateDemographics!.find.mockReturnValue(
       cursorOf([
@@ -882,7 +826,7 @@ function createPersistingFakeDb(fixtures: {
   stateDemographics: StateDemographics[];
   demographicCategories: DemographicCategory[];
   demographicDefaults: StateDemographics[];
-  gameState: { _id: string; legislationDemographicEffectsV2Enabled?: boolean };
+  gameState: { _id: string };
 }) {
   const stores = {
     states: new Map(fixtures.states.map((d) => [d._id, d as Record<string, unknown>])),
@@ -1006,7 +950,7 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
       stateDemographics: [alDemographics()],
       demographicCategories: [RURAL_CATEGORY],
       demographicDefaults: [alDemographics()],
-      gameState: { _id: "current", legislationDemographicEffectsV2Enabled: true },
+      gameState: { _id: "current" },
     });
   }
 
@@ -1084,7 +1028,7 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
       stateDemographics: stateIds.map((s) => ({ ...alDemographics(), _id: s })),
       demographicCategories: [RURAL_CATEGORY],
       demographicDefaults: stateIds.map((s) => ({ ...alDemographics(), _id: s })),
-      gameState: { _id: "current", legislationDemographicEffectsV2Enabled: true },
+      gameState: { _id: "current" },
     });
 
     for (let turn = 0; turn < 300; turn++) {
@@ -1144,7 +1088,7 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
       stateDemographics: [alDemographics()],
       demographicCategories: [RURAL_CATEGORY],
       demographicDefaults: [alDemographics()],
-      gameState: { _id: "current", legislationDemographicEffectsV2Enabled: true },
+      gameState: { _id: "current" },
     });
 
     for (let turn = 0; turn < 60; turn++) {
@@ -1339,7 +1283,7 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
       stateDemographics: [alTurnoutDemographics()],
       demographicCategories: [UNION_TRADES_CATEGORY],
       demographicDefaults: [alTurnoutDemographics()],
-      gameState: { _id: "current", legislationDemographicEffectsV2Enabled: true },
+      gameState: { _id: "current" },
     });
   }
 
@@ -1406,7 +1350,7 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
       stateDemographics: [alTurnoutDemographics()],
       demographicCategories: [UNION_TRADES_CATEGORY],
       demographicDefaults: [alTurnoutDemographics()],
-      gameState: { _id: "current", legislationDemographicEffectsV2Enabled: true },
+      gameState: { _id: "current" },
     });
 
     for (let turn = 0; turn < 60; turn++) {
@@ -1467,7 +1411,7 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
       stateDemographics: [alTurnoutDemographics()],
       demographicCategories: [UNION_TRADES_CATEGORY],
       demographicDefaults: [alTurnoutDemographics()],
-      gameState: { _id: "current", legislationDemographicEffectsV2Enabled: true },
+      gameState: { _id: "current" },
     });
 
     for (let turn = 0; turn < 150; turn++) {

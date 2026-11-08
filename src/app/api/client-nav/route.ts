@@ -45,7 +45,6 @@ import type {
   User,
 } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
-import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 
 /**
@@ -129,14 +128,11 @@ export async function GET() {
         { projection: { _id: 1, seatId: 1 } }
       );
     /**
-     * Is there a settlement crisis to LOOK at — the subsystem flag AND a live
-     * crisis? The German Question is admin-started and can be closed again, so
-     * the flag alone would leave the nav link standing over an empty board.
-     * Short-circuited on the flag, so a world with the feature off pays nothing
-     * and every other world pays one indexed lookup over a handful of rows.
+     * Is there a settlement crisis to LOOK at? The German Question is
+     * admin-started and can be closed again, so the nav link only stands over a
+     * live board. One indexed lookup over a handful of rows.
      */
-    const isSettlementCrisisLive = async (enabled: boolean | undefined) =>
-      enabled === true &&
+    const isSettlementCrisisLive = async () =>
       (await db
         .collection("settlementCrises")
         .findOne({ status: { $in: ["open", "frozen"] } }, { projection: { _id: 1 } })) != null;
@@ -151,8 +147,6 @@ export async function GET() {
             singleplayerConfig: 1,
             rpgStatsEnabled: 1,
             conflictsEnabled: 1,
-            settlementCrisisEnabled: 1,
-            seasonRecapEnabled: 1,
           },
         }
       )
@@ -192,7 +186,7 @@ export async function GET() {
           isImperialMode: false,
           wikiDisabled: !!gameState?.wikiDisabled,
           conflictsEnabled: !!gameState?.conflictsEnabled,
-          settlementCrisisLive: await isSettlementCrisisLive(gameState?.settlementCrisisEnabled),
+          settlementCrisisLive: await isSettlementCrisisLive(),
           unionsEnabled: false,
           pendingCharterCount: 0,
           pendingSeasonRecapId: null,
@@ -253,7 +247,7 @@ export async function GET() {
     const wikiDisabled = !!gameState?.wikiDisabled;
     const rpgStatsEnabled = !!gameState?.rpgStatsEnabled;
     const conflictsEnabled = !!gameState?.conflictsEnabled;
-    const settlementCrisisLive = await isSettlementCrisisLive(gameState?.settlementCrisisEnabled);
+    const settlementCrisisLive = await isSettlementCrisisLive();
 
     if (!user) {
       if (rawToken) {
@@ -706,11 +700,11 @@ export async function GET() {
 
     // Post-reset / post-retirement Season Recap ("Wrapped"): surface the newest
     // unviewed recap for character-less sessions (the state right after a reset
-    // or a retirement). Gated on the flag AND only queried when the viewer has
-    // no active character, keeping this hot path cheap for the ~99% who do.
+    // or a retirement). Only queried when the viewer has no active character,
+    // keeping this hot path cheap for the ~99% who do.
     // Re-viewing older recaps happens in character history, not here.
     let pendingSeasonRecapId: string | null = null;
-    if (isSeasonRecapEnabled(gameState) && !character) {
+    if (!character) {
       const pendingRecap = await db
         .collection<RetiredCharacter>("retiredCharacters")
         .findOne(

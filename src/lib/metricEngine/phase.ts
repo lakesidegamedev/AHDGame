@@ -51,11 +51,7 @@ import {
   type OutputTrendState,
 } from "./outputTrend";
 import { applySectorBlend, convergenceBonus } from "./convergence";
-import {
-  buildMacroGrowthInputs,
-  type CountryMacroRaw,
-  type MacroGrowthInputs,
-} from "./macroGrowthInputs";
+import { buildMacroGrowthInputs, type CountryMacroRaw } from "./macroGrowthInputs";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
 import {
@@ -277,7 +273,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         currentTurn: 1,
         startingYear: 1,
         eraSystemEnabled: 1,
-        macroGrowthV1: 1,
         preset: 1,
         livingConflictsEnabled: 1,
         resetWorldId: 1,
@@ -289,8 +284,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     }
   );
   const eraYear = eraGameState?.eraSystemEnabled ? resolveGameYear(eraGameState) : null;
-  // Macro-growth v1 (design §4): O2 convergence + O3 sector blend on potential.
-  const macroGrowthEnabled = eraGameState?.macroGrowthV1 === true;
   const armedConflicts = eraGameState?.livingConflictsEnabled
     ? await db
         .collection<LivingConflictState>("livingConflicts")
@@ -595,109 +588,104 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
 
   // ── Macro-growth v1 (design §4): per-country convergence + openness inputs ──
   // Computed once per turn, applied to every region's potential in the loop.
-  // Empty/inert when the flag is off (byte-identical legacy).
-  let macroInputs: MacroGrowthInputs = { byCountry: new Map(), frontierPcAnchor: 0 };
-  // Shared by O2 (per-capita anchor normalization) and O1c (₳→local corp
-  // investment). Empty when the flag is off (the loop guards on macroGrowthEnabled).
-  let fxByCurrency = new Map<import("@/lib/constants/currencies").CurrencyCode, number>();
-  if (macroGrowthEnabled) {
-    fxByCurrency = await loadValuationFxRates(db);
-    // National state-ownership concentration (SOCI) per country — lagged command signal.
-    const sociByCountry = new Map<string, number>();
-    const budgets = await db
-      .collection<{ _id: string; countryId?: string; stateOwnershipConcentration?: number }>(
-        "federalBudget"
-      )
-      .find({}, { projection: { countryId: 1, stateOwnershipConcentration: 1 } })
-      .toArray();
-    for (const b of budgets) {
-      const cid = b.countryId || (b._id === "federal" ? "US" : b._id);
-      if (typeof b.stateOwnershipConcentration === "number") {
-        sociByCountry.set(cid, b.stateOwnershipConcentration);
-      }
+  // fxByCurrency is shared by O2 (per-capita anchor normalization) and O1c
+  // (₳→local corp investment).
+  const fxByCurrency = await loadValuationFxRates(db);
+  // National state-ownership concentration (SOCI) per country — lagged command signal.
+  const sociByCountry = new Map<string, number>();
+  const budgets = await db
+    .collection<{ _id: string; countryId?: string; stateOwnershipConcentration?: number }>(
+      "federalBudget"
+    )
+    .find({}, { projection: { countryId: 1, stateOwnershipConcentration: 1 } })
+    .toArray();
+  for (const b of budgets) {
+    const cid = b.countryId || (b._id === "federal" ? "US" : b._id);
+    if (typeof b.stateOwnershipConcentration === "number") {
+      sociByCountry.set(cid, b.stateOwnershipConcentration);
     }
-    // Σ GDP + population per country from the states already loaded.
-    const gdpByCountry = new Map<string, number>();
-    const popByCountry = new Map<string, number>();
-    for (const s of realStates) {
-      gdpByCountry.set(s.countryId, (gdpByCountry.get(s.countryId) ?? 0) + (s.gdp ?? 0));
-      popByCountry.set(s.countryId, (popByCountry.get(s.countryId) ?? 0) + (s.population ?? 0));
-    }
-    const rows: CountryMacroRaw[] = [];
-    const activeCountryIds = new Set(countryGameStates.map((row) => row._id));
-    const developmentTotals = new Map<
-      string,
-      Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
-    >();
-    const developmentCounts = new Map<
-      string,
-      Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
-    >();
-    const developmentPaths = {
-      industrialPolicyExecution: "economic.industrialPolicyExecution",
-      workforceSkill: "education.workforceSkill",
-      transportEfficiency: "infrastructure.transportEfficiency",
-    } as const;
-    const publicCapitalByCountry = new Map<string, number>();
-    for (const state of realStates) {
-      const totals = developmentTotals.get(state.countryId) ?? {
-        industrialPolicyExecution: 0,
-        workforceSkill: 0,
-        transportEfficiency: 0,
-      };
-      const counts = developmentCounts.get(state.countryId) ?? {
-        industrialPolicyExecution: 0,
-        workforceSkill: 0,
-        transportEfficiency: 0,
-      };
-      const prevDoc = prevDocById.get(state._id);
-      for (const [key, path] of Object.entries(developmentPaths) as Array<
-        [keyof typeof developmentPaths, string]
-      >) {
-        const value =
-          politicalInputs.legacyUnit(state._id, path) ?? readMetricPath(prevDoc, path, "value");
-        if (value === undefined) continue;
-        totals[key] += value;
-        counts[key] += 1;
-      }
-      developmentTotals.set(state.countryId, totals);
-      developmentCounts.set(state.countryId, counts);
-      publicCapitalByCountry.set(
-        state.countryId,
-        (publicCapitalByCountry.get(state.countryId) ?? 0) +
-          (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
-      );
-    }
-    for (const countryId of gdpByCountry.keys()) {
-      const nationalDocId = getNationalDocId(countryId as CountryId);
-      // The active-country filter is applied by the pure precompute below.
-      // Older worlds with an empty registry retain the national-doc fallback.
-      if (!nationalDocId) continue;
-      const natDoc = prevDocById.get(nationalDocId);
-      const totals = developmentTotals.get(countryId);
-      const counts = developmentCounts.get(countryId);
-      const average = (key: keyof typeof developmentPaths): number | undefined =>
-        totals && counts && counts[key] > 0 ? totals[key] / counts[key] : undefined;
-      rows.push({
-        countryId,
-        gdpLocalMillions: gdpByCountry.get(countryId) ?? 0,
-        population: popByCountry.get(countryId) ?? 0,
-        soci: sociByCountry.get(countryId),
-        // Lagged national gate metrics (prev-turn national doc — the C3 lag).
-        tradeGrowth: readMetricPath(natDoc, "economic.tradeGrowth", "value"),
-        economicFreedom: readMetricPath(natDoc, "economic.economicFreedom", "value"),
-        industrialPolicyExecution: average("industrialPolicyExecution"),
-        workforceSkill: average("workforceSkill"),
-        transportEfficiency: average("transportEfficiency"),
-        publicInvestmentEffort: Math.min(
-          1,
-          (publicCapitalByCountry.get(countryId) ?? 0) /
-            Math.max(1, (gdpByCountry.get(countryId) ?? 0) * 0.05)
-        ),
-      });
-    }
-    macroInputs = buildMacroGrowthInputs(rows, eraGameState?.preset, activeCountryIds);
   }
+  // Σ GDP + population per country from the states already loaded.
+  const gdpByCountry = new Map<string, number>();
+  const popByCountry = new Map<string, number>();
+  for (const s of realStates) {
+    gdpByCountry.set(s.countryId, (gdpByCountry.get(s.countryId) ?? 0) + (s.gdp ?? 0));
+    popByCountry.set(s.countryId, (popByCountry.get(s.countryId) ?? 0) + (s.population ?? 0));
+  }
+  const rows: CountryMacroRaw[] = [];
+  const activeCountryIds = new Set(countryGameStates.map((row) => row._id));
+  const developmentTotals = new Map<
+    string,
+    Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
+  >();
+  const developmentCounts = new Map<
+    string,
+    Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
+  >();
+  const developmentPaths = {
+    industrialPolicyExecution: "economic.industrialPolicyExecution",
+    workforceSkill: "education.workforceSkill",
+    transportEfficiency: "infrastructure.transportEfficiency",
+  } as const;
+  const publicCapitalByCountry = new Map<string, number>();
+  for (const state of realStates) {
+    const totals = developmentTotals.get(state.countryId) ?? {
+      industrialPolicyExecution: 0,
+      workforceSkill: 0,
+      transportEfficiency: 0,
+    };
+    const counts = developmentCounts.get(state.countryId) ?? {
+      industrialPolicyExecution: 0,
+      workforceSkill: 0,
+      transportEfficiency: 0,
+    };
+    const prevDoc = prevDocById.get(state._id);
+    for (const [key, path] of Object.entries(developmentPaths) as Array<
+      [keyof typeof developmentPaths, string]
+    >) {
+      const value =
+        politicalInputs.legacyUnit(state._id, path) ?? readMetricPath(prevDoc, path, "value");
+      if (value === undefined) continue;
+      totals[key] += value;
+      counts[key] += 1;
+    }
+    developmentTotals.set(state.countryId, totals);
+    developmentCounts.set(state.countryId, counts);
+    publicCapitalByCountry.set(
+      state.countryId,
+      (publicCapitalByCountry.get(state.countryId) ?? 0) +
+        (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
+    );
+  }
+  for (const countryId of gdpByCountry.keys()) {
+    const nationalDocId = getNationalDocId(countryId as CountryId);
+    // The active-country filter is applied by the pure precompute below.
+    // Older worlds with an empty registry retain the national-doc fallback.
+    if (!nationalDocId) continue;
+    const natDoc = prevDocById.get(nationalDocId);
+    const totals = developmentTotals.get(countryId);
+    const counts = developmentCounts.get(countryId);
+    const average = (key: keyof typeof developmentPaths): number | undefined =>
+      totals && counts && counts[key] > 0 ? totals[key] / counts[key] : undefined;
+    rows.push({
+      countryId,
+      gdpLocalMillions: gdpByCountry.get(countryId) ?? 0,
+      population: popByCountry.get(countryId) ?? 0,
+      soci: sociByCountry.get(countryId),
+      // Lagged national gate metrics (prev-turn national doc — the C3 lag).
+      tradeGrowth: readMetricPath(natDoc, "economic.tradeGrowth", "value"),
+      economicFreedom: readMetricPath(natDoc, "economic.economicFreedom", "value"),
+      industrialPolicyExecution: average("industrialPolicyExecution"),
+      workforceSkill: average("workforceSkill"),
+      transportEfficiency: average("transportEfficiency"),
+      publicInvestmentEffort: Math.min(
+        1,
+        (publicCapitalByCountry.get(countryId) ?? 0) /
+          Math.max(1, (gdpByCountry.get(countryId) ?? 0) * 0.05)
+      ),
+    });
+  }
+  const macroInputs = buildMacroGrowthInputs(rows, eraGameState?.preset, activeCountryIds);
 
   // Per-country memos: synergy nudges and era envelopes depend only on the
   // country (model, directives, era year), not the state, so compute each
@@ -780,28 +768,26 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     const output = state.gdp ?? 0;
     const capital = state.capitalStock ?? seedCapitalStock(output);
     // O1c (design §5): fold THIS turn's paid corp growth cost into investment,
-    // capped at 5% of region GDP/yr. Only when the flag is on AND the write is
-    // from this turn (fresh-or-zero). ₳ → local-millions via the country's FX.
+    // capped at 5% of region GDP/yr. Only when the write is from this turn
+    // (fresh-or-zero). ₳ → local-millions via the country's FX.
     let corpInvestPerTurn = 0;
-    if (macroGrowthEnabled && state.corpGrowthInvestmentTurn === turn) {
+    if (state.corpGrowthInvestmentTurn === turn) {
       const anchor = state.corpGrowthInvestmentAnchor ?? 0;
       const currency = COUNTRY_CURRENCY_MAP[countryId as keyof typeof COUNTRY_CURRENCY_MAP];
       const fx = currency ? (fxByCurrency.get(currency) ?? 1) : 1;
       const localMillions = (anchor * fx) / 1_000_000;
       corpInvestPerTurn = Math.max(0, localMillions);
     }
-    const additionalCapitalPerTurn = macroGrowthEnabled
-      ? combineAdditionalCapitalInvestment({
-          outputAnnualLocalMillions: output,
-          publicCapitalBudgetAnnualLocalMillions: countryMacro
-            ? (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
-            : 0,
-          corporateInvestmentPerTurnLocalMillions: corpInvestPerTurn,
-          ownPcAnchor: countryMacro?.ownPcAnchor ?? 0,
-          frontierPcAnchor: macroInputs.frontierPcAnchor,
-          turnsPerYear: TURNS_PER_YEAR,
-        })
-      : 0;
+    const additionalCapitalPerTurn = combineAdditionalCapitalInvestment({
+      outputAnnualLocalMillions: output,
+      publicCapitalBudgetAnnualLocalMillions: countryMacro
+        ? (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
+        : 0,
+      corporateInvestmentPerTurnLocalMillions: corpInvestPerTurn,
+      ownPcAnchor: countryMacro?.ownPcAnchor ?? 0,
+      frontierPcAnchor: macroInputs.frontierPcAnchor,
+      turnsPerYear: TURNS_PER_YEAR,
+    });
     const capStep = advanceCapitalStock(
       capital,
       output,
@@ -884,24 +870,22 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       potentialGrowth(gL, capStep.annualizedGrowth, tfp) +
       cabinetProductionPressure(cabinetEffects);
     // Macro-growth v1 (design §4): add the convergence bonus (O2) OUTSIDE the TFP
-    // clamp, then blend the LAGGED sector signal (O3). Flag off ⇒ potential ===
-    // basePotential (byte-identical). frontierPc = live max across countries.
+    // clamp, then blend the LAGGED sector signal (O3). frontierPc = live max
+    // across countries.
     let potential = basePotential;
-    if (macroGrowthEnabled) {
-      // Playable economies only (cm present ⇒ has a national doc + gdp/pop). O2
-      // then O3, both scoped the same way so a latent region gets neither.
-      if (countryMacro) {
-        potential =
-          basePotential +
-          convergenceBonus(
-            countryMacro.ownPcAnchor,
-            macroInputs.frontierPcAnchor,
-            countryMacro.openness
-          );
-        const sectorLagged = prevSectorValue.get(state._id);
-        if (sectorLagged !== undefined) {
-          potential = applySectorBlend(potential, sectorLagged);
-        }
+    // Playable economies only (cm present ⇒ has a national doc + gdp/pop). O2
+    // then O3, both scoped the same way so a latent region gets neither.
+    if (countryMacro) {
+      potential =
+        basePotential +
+        convergenceBonus(
+          countryMacro.ownPcAnchor,
+          macroInputs.frontierPcAnchor,
+          countryMacro.openness
+        );
+      const sectorLagged = prevSectorValue.get(state._id);
+      if (sectorLagged !== undefined) {
+        potential = applySectorBlend(potential, sectorLagged);
       }
     }
     // Institutional failure lowers the economy's annual supply-side growth

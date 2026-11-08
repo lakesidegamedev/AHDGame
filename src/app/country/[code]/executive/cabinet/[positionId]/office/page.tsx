@@ -52,7 +52,6 @@ import { CardSkeleton, Skeleton } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import { DepartmentProgramPanel } from "./components/DepartmentProgramPanel";
 import { ResetCabinetActionPanel } from "./components/ResetCabinetActionPanel";
 
 // Only the Overview tab is open on arrival. Every other tab, and the panels that
@@ -437,12 +436,6 @@ export default function CabinetOfficePage() {
               )}
               {activeTab === "overview" && (
                 <>
-                  {data.departmentProgram && (
-                    <DepartmentProgramPanel
-                      program={data.departmentProgram}
-                      currencySymbol={currencySymbol}
-                    />
-                  )}
                   {mechanics.tierSetting && (
                     <TierSettingPanel
                       config={mechanics.tierSetting}

@@ -239,7 +239,6 @@ describe("resetGameWorld", () => {
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      seasonRecapEnabled: true,
       iteration: 4,
       currentTurn: 100,
       startingYear: 1991,
@@ -294,7 +293,6 @@ describe("resetGameWorld", () => {
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      seasonRecapEnabled: true,
       iteration: { type: "Iteration", number: 4 },
       currentTurn: 100,
       startingYear: 1991,
@@ -408,8 +406,8 @@ describe("resetGameWorld", () => {
       currentYear: 1995,
       iteration: 1,
       nppAutonomyLevel: "v5",
-      autoSectorSeedEnabled: false,
-      settlementCrisisEnabled: false,
+      rpgStatsEnabled: false,
+      intOrgAlignmentEnabled: false,
     });
     await resetGameWorld(db as never, {
       deleteProfiles: true,
@@ -419,8 +417,8 @@ describe("resetGameWorld", () => {
     assertSetFields(db.collectionMocks.gameState.updateOne, { ...DEFAULT_GAME_STATE_FLAGS });
     assertSetFields(db.collectionMocks.gameState.updateOne, {
       nppAutonomyLevel: "v4",
-      autoSectorSeedEnabled: true,
-      settlementCrisisEnabled: true,
+      rpgStatsEnabled: true,
+      intOrgAlignmentEnabled: true,
     });
     assertSetFields(db.collectionMocks.gameConfig.updateOne, {
       treasuryCashLedgerEnabled: true,
