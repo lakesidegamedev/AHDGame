@@ -23,6 +23,8 @@ export interface WorldNavItem {
    * and hiding the parent does not hide it.
    */
   parentId?: string;
+  /** Count shown beside the label; hidden when zero or absent. */
+  badge?: number;
 }
 
 export interface WorldNavOpts {
@@ -38,6 +40,8 @@ export interface WorldNavOpts {
    * feature is enabled.
    */
   settlementCrisisLive?: boolean;
+  /** Crises where the viewer has an action available now. */
+  crisisActionCount?: number;
 }
 
 /**
@@ -51,6 +55,7 @@ export function buildWorldNavItems({
   myUnionId = null,
   unionsEnabled = false,
   settlementCrisisLive = false,
+  crisisActionCount = 0,
 }: WorldNavOpts): WorldNavItem[] {
   const country = countryId.toLowerCase();
 
@@ -107,6 +112,7 @@ export function buildWorldNavItems({
       href: "/world/crises",
       section: "main",
       show: true,
+      badge: crisisActionCount,
     },
     {
       // Nested under Crises: it IS a crisis, not a sibling of the crisis board.
@@ -125,7 +131,7 @@ export function buildWorldNavItems({
       id: "conflicts",
       label: "Conflicts",
       labelKey: "menus.world.conflicts",
-      href: "/world/conflicts",
+      href: "/world/crises?view=conflicts",
       section: "main",
       show: true,
     },

@@ -25,6 +25,7 @@ import {
   type JusticeOfficeNavEntry,
 } from "@/lib/navigation/justiceOfficeNavEntry";
 import { resolveMySubsidiaryGroupNav } from "@/lib/navigation/resolveMySubsidiaryGroupNav";
+import { countViewerCrisisActions } from "@/lib/crises/queries/crisisBoard";
 import { resolveMyUnionNav } from "@/lib/navigation/resolveMyUnionNav";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import type { CountryId } from "@/lib/constants/countries";
@@ -706,6 +707,12 @@ export async function GET() {
       pendingSeasonRecapId = pendingRecap?._id.toString() ?? null;
     }
 
+    // Best effort: a failed count must never take the navbar down with it.
+    const crisisActionCount =
+      character && !isImperialMode
+        ? await countViewerCrisisActions(db, character._id).catch(() => 0)
+        : 0;
+
     const response = NextResponse.json(
       {
         user: {
@@ -791,8 +798,10 @@ export async function GET() {
         unionsEnabled,
         pendingCharterCount,
         pendingSeasonRecapId,
+        crisisActionCount,
       },
-      { headers: { "Cache-Control": "private, max-age=5, no-transform" } }
+      // Per-user and changes the moment a crisis moves: never stored anywhere.
+      { headers: { "Cache-Control": "private, no-store, no-transform" } }
     );
     // Mirror the opt-in onto the cookie the root template reads. Running here,
     // on every app load, is what carries a toggle made on another device to

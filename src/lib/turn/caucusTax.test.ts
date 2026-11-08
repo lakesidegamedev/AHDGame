@@ -417,4 +417,60 @@ describe("processCaucusTax", () => {
     expect(filter).toMatchObject({ _id: nppId, funds: { $gte: 100 } });
     expect(update.$inc).toEqual({ funds: -100 });
   });
+
+  it("refunds landed debits when the caucus credit fails", async () => {
+    const charId = new ObjectId();
+    const caucusId = new ObjectId();
+    setupCollection("caucuses", [
+      {
+        _id: caucusId,
+        name: "C",
+        countryId: "US",
+        partyId: "1",
+        disbandedAt: null,
+        taxRate: 10,
+        treasury: 0,
+      },
+    ]);
+    setupCollection("caucusMemberships", [
+      {
+        _id: new ObjectId(),
+        caucusId,
+        memberType: "character",
+        memberId: charId,
+        status: "active",
+      },
+    ]);
+    setupCollection("characters", [
+      {
+        _id: charId,
+        name: "A",
+        countryId: "US",
+        homeState: "US-CA",
+        donorBaseLevel: 0,
+        currentOffice: null,
+        politicalInfluence: 0,
+        currencyBalances: { campaign: 50_000, personal: { USD: 0 } },
+      },
+    ]);
+    setupCollection("npps", []);
+    setupCollection("states", [{ _id: "US-CA", population: 100_000, gdp: 1_000_000 }]);
+    vi.mocked(projectCharacterGeneration).mockReturnValue(10_000);
+    db.collectionMocks.caucuses!.updateOne.mockRejectedValueOnce(new Error("write failed"));
+
+    const result = await processCaucusTax(true, 100);
+
+    expect(result).toMatchObject({ membersTaxed: 0, totalTaxed: 0 });
+    const debit = db.collectionMocks.characters!.updateOne.mock.calls[0] as [
+      Record<string, unknown>,
+      { $inc: Record<string, number> },
+    ];
+    expect(debit[1].$inc).toEqual({ "currencyBalances.campaign": -1_000 });
+    const refund = db.collectionMocks.characters!.bulkWrite.mock.calls[0]![0] as {
+      updateOne: { update: { $inc: Record<string, number> } };
+    }[];
+    expect(refund).toHaveLength(1);
+    expect(refund[0].updateOne.update.$inc).toEqual({ "currencyBalances.campaign": 1_000 });
+    expect(emitTxBulk).not.toHaveBeenCalled();
+  });
 });
