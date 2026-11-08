@@ -6,6 +6,11 @@ import { createMockDb } from "@/lib/test-utils/mockDb";
 
 const roles = vi.hoisted(() => ({ value: ["headOfState"] as string[] }));
 const interactions = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
+const levers = vi.hoisted(() => ({ value: [] as Array<{ crisisId: string }> }));
+
+vi.mock("@/lib/crises/levers/queries", () => ({
+  getAvailableLevers: vi.fn(async () => levers.value),
+}));
 
 vi.mock("@/lib/crises/interactionEngine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/crises/interactionEngine")>()),
@@ -103,6 +108,29 @@ describe("viewerCanActOnCrisis", () => {
 });
 
 describe("countViewerCrisisActions", () => {
+  it("counts a crisis with an available v2 lever and no open decision", async () => {
+    levers.value = [{ crisisId: "lever-crisis" }];
+    const db = createMockDb();
+    db.collection("crises").find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+    expect(await countViewerCrisisActions(db as unknown as Db, characterId)).toBe(1);
+    levers.value = [];
+  });
+
+  it("counts a crisis once when it has both a decision and a lever", async () => {
+    const mine = crisis();
+    levers.value = [{ crisisId: mine._id.toString() }, { crisisId: "other" }];
+    interactions.map = new Map([[mine._id.toString(), interaction(mine, node())]]);
+    const db = createMockDb();
+    db.collection("crises").find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([mine]) });
+    db.collection("characters").findOne.mockResolvedValue({
+      _id: characterId,
+      countryId: "US",
+      homeState: "US_OH",
+    });
+    expect(await countViewerCrisisActions(db as unknown as Db, characterId)).toBe(2);
+    levers.value = [];
+  });
+
   it("is zero without a read of characters when no crisis has a decision", async () => {
     const db = createMockDb();
     db.collectionMocks.crises = undefined as never;

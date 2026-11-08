@@ -25,6 +25,7 @@ import { processRURegionalBudgets } from "@/lib/turn/ruRegionalBudget";
 import { processPoliticalMetricsDynamics } from "@/lib/turn/politicalMetricsDynamics";
 import { syncAllPartyChairHeadsOfState } from "@/lib/turn/partyChairHeadOfState";
 import { processCrisisTurn } from "@/lib/turn/crisisTurn";
+import { notifyCrisisChanges } from "@/lib/crises/inboxAlerts";
 import { processCrisisV2Turn } from "@/lib/turn/crisisV2Turn";
 import { notifyCrisisChanges } from "@/lib/crises/inboxAlerts";
 import { processMinisterialOrders } from "@/lib/turn/ministerialOrderProcessing";
