@@ -34,7 +34,7 @@ export interface CampaignActionInputs {
 }
 
 /**
- * Single source of the per-turn accrual rule, shared by the turn engine and
+ * The whole per-turn accrual rule, in one place, shared by the turn engine and
  * the campaign desk so they cannot disagree. Sources are summed BEFORE the
  * square root: the curve makes stacking endorsements yield less each time, so
  * applying it per source would reward spreading them around.
