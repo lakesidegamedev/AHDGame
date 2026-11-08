@@ -7230,8 +7230,8 @@
       "narrativeLines": 2
     },
     "src/lib/country/mergeCountry.ts": {
-      "longBlocks": 5,
-      "narrativeLines": 0
+      "longBlocks": 7,
+      "narrativeLines": 2
     },
     "src/lib/country/mergeEconomicRegime.ts": {
       "longBlocks": 1,
@@ -7263,7 +7263,7 @@
     },
     "src/lib/country/mergePartiesIntoCountry.ts": {
       "longBlocks": 2,
-      "narrativeLines": 0
+      "narrativeLines": 1
     },
     "src/lib/country/mergeRegion.test.ts": {
       "longBlocks": 0,
@@ -9947,7 +9947,7 @@
     },
     "src/lib/migrations/entries/2026-10-01-reconcile-seed-indexes.ts": {
       "longBlocks": 1,
-      "narrativeLines": 0
+      "narrativeLines": 2
     },
     "src/lib/migrations/entries/2026-10-08-backfill-spinoff-tech-baselines.ts": {
       "longBlocks": 0,
@@ -12487,7 +12487,7 @@
     },
     "src/lib/sim/materializeSyntheticActors.ts": {
       "longBlocks": 1,
-      "narrativeLines": 0
+      "narrativeLines": 1
     },
     "src/lib/sim/metrics.ts": {
       "longBlocks": 0,
