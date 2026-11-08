@@ -1,9 +1,8 @@
 import type { CrisisScope, CrisisStage } from "./types";
 
 /**
- * Budgets concurrent crisis load by scope so the world sees many small crises,
- * the occasional national one and a rare global one, rather than whatever the
- * detectors happen to fire at once. Pure: the shell supplies the live load and
+ * Budgets concurrent crisis load by scope: many small crises, the occasional
+ * national one and a rare global one. Pure: the shell supplies the live load and
  * the candidates, and opens whatever this approves.
  */
 export interface DirectorBudget {
@@ -42,7 +41,7 @@ export interface DirectorActiveCrisis {
 }
 
 export interface DirectorCandidate {
-  /** Stable key for the opening, used to order ties and report decisions. */
+  /** Stable key for the opening; orders ties and names decisions. */
   key: string;
   definitionId: string;
   scope: CrisisScope;

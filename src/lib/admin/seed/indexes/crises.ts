@@ -10,6 +10,7 @@ import { ensureIndex } from "./helpers";
  *     a v2 instance. Partial on the instance, so it stays empty until content uses
  *     v2 and the phase's read touches nothing.
  *   - `crisisLeverUses` — pending lever uses per crisis, read each turn.
+ *   - `crisisDetectorStreaks` — each detector reads its own streaks every turn.
  */
 export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
   log("Crisis indexes:");
@@ -38,6 +39,14 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     "crisisLeverUses",
     { crisisId: 1, appliedTurn: 1 },
     { name: "crisis_lever_uses_pending" },
+    log
+  );
+
+  await ensureIndex(
+    db,
+    "crisisDetectorStreaks",
+    { detectorId: 1 },
+    { name: "crisis_detector_streaks_detector" },
     log
   );
 

@@ -272,20 +272,11 @@ async function applyBondPressure(
 }
 
 /**
- * Sends a crisis's intents to the systems that own them, each through that
- * system's own writer:
- *
- * - plant output: the crisis's `v2Output`, which the plants tier reads
- * - commodity supply: the same output cut on the producing sector
- * - commodity demand: expiring sector output-demand modifiers
- * - migration: regional unemployment and growth, which drive the flows
- * - bank stress: bank panic turns
- * - bond yield: investor confidence, which prices the sovereign premium
- * - approval and election swing: government approval
- *
- * With `crisisId` and `turn` a receipt on the crisis makes a repeat call for the
- * same turn a no-op. Kinds with no handler are counted and reported so a
- * definition using one is visible rather than silently inert.
+ * Sends a crisis's intents to the system that owns each write: plant output via
+ * `v2Output`, demand via expiring modifiers, migration via regional metrics,
+ * bank panic, investor confidence, and government approval. With `crisisId`
+ * and `turn`, a receipt on the crisis makes a repeat call a no-op. Kinds with
+ * no handler are counted so a definition using one is visible.
  */
 export async function routeEffectIntents(
   db: Db,

@@ -18,6 +18,11 @@ const INDEXES: IndexPlan[] = [
     keys: { crisisId: 1, appliedTurn: 1 },
     options: { name: "crisis_lever_uses_pending" },
   },
+  {
+    collection: "crisisDetectorStreaks",
+    keys: { detectorId: 1 },
+    options: { name: "crisis_detector_streaks_detector" },
+  },
 ];
 
 export const migration: Migration = {
