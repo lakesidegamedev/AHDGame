@@ -8553,10 +8553,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/env.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/equities/blockPacing.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
