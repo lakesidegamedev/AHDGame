@@ -25,7 +25,7 @@ import {
 interface FakeData {
   crises: Record<string, unknown>[];
   states: { _id: string; countryId: string }[];
-  stateMetrics: Record<string, unknown>[];
+  macroMetrics: Record<string, unknown>[];
   leverUses: Record<string, unknown>[];
 }
 
@@ -44,13 +44,15 @@ function makeDb(data: FakeData) {
           calls.collectionsRead.push(name);
           if (name === "crises") return cursor(data.crises);
           if (name === "states") return cursor(data.states);
-          if (name === "stateMetrics") return cursor(data.stateMetrics);
+          if (name === "macroMetrics") return cursor(data.macroMetrics);
           if (name === "crisisLeverUses") return cursor(data.leverUses);
           return cursor([]);
         },
         bulkWrite: calls.bulkWrite,
         insertMany: calls.insertMany,
         updateMany: name === "crisisLeverUses" ? calls.leverUpdateMany : vi.fn(),
+        updateOne: vi.fn(async () => ({ modifiedCount: 1 })),
+        findOne: vi.fn(async () => null),
       };
     },
   };
@@ -83,7 +85,7 @@ const baseData = (): FakeData => ({
     { _id: "s1", countryId: "US" },
     { _id: "s2", countryId: "US" },
   ],
-  stateMetrics: [],
+  macroMetrics: [],
   leverUses: [],
 });
 
@@ -121,7 +123,7 @@ describe("processCrisisV2Turn", () => {
     );
     const data = baseData();
     data.crises = [liveCrisis()];
-    data.stateMetrics = [
+    data.macroMetrics = [
       { _id: "s1", economic: { unemploymentRate: { value: 4 } } },
       { _id: "s2", economic: { unemploymentRate: { value: 6 } } },
     ];
@@ -228,7 +230,7 @@ describe("effect routing", () => {
   });
 
   it("logs unsupported intent kinds instead of dropping them silently", async () => {
-    registerCrisisEffectModule(moduleOf([{ kind: "bankStress", delta: 5 }]));
+    registerCrisisEffectModule(moduleOf([{ kind: "stat", statKey: "charisma", delta: 1 }]));
     const data = baseData();
     data.crises = [liveCrisis()];
     const { db } = makeDb(data);
@@ -236,7 +238,7 @@ describe("effect routing", () => {
     expect(result.processed).toBe(1);
     expect(applyCrisisEffects).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith("crisisV2Turn", "unsupported intent kinds dropped", {
-      bankStress: 1,
+      stat: 1,
     });
   });
 });

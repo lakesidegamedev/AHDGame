@@ -24,7 +24,7 @@ import type {
   CrisisScope,
   LeverUse,
 } from "@/lib/crises/v2/types";
-import { ensureBuiltinCrisisInputProviders } from "./crisisV2/inputProviders";
+import { ensureBuiltinCrisisV2Content } from "./crisisV2/builtins";
 import { routeEffectIntents } from "./crisisV2/intents";
 import {
   getCrisisDefinition,
@@ -118,20 +118,14 @@ async function loadInputs(
     for (const driver of def.severity.drivers) wanted.add(driver.input);
   }
   const loaded = new Map<string, Map<string, number>>();
+  // One context for every provider, so inputs that share a read load it once.
+  const inputContext = { db, turn, countryIds, stateIdsByCountry: world.stateIdsByCountry };
   await Promise.all(
     [...wanted].map(async (input) => {
       const provider = getCrisisInputProvider(input);
       if (!provider) return;
       try {
-        loaded.set(
-          input,
-          await provider.load({
-            db,
-            turn,
-            countryIds,
-            stateIdsByCountry: world.stateIdsByCountry,
-          })
-        );
+        loaded.set(input, await provider.load(inputContext));
       } catch (error) {
         logger.error(COMPONENT, "input provider failed; reading as 0", error, { input });
       }
@@ -260,9 +254,11 @@ async function openNewCrises(
  * effect intents to the owning systems and writes the instance back in one bulk
  * write. A crisis that throws is skipped and the rest still run.
  *
- * Does nothing, beyond one indexed read, while no crisis carries a `v2` instance.
+ * While no crisis carries a `v2` instance and emergent detection is off, this costs
+ * one indexed read, one config read and one projected read of the states.
  */
 export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV2TurnResult> {
+  ensureBuiltinCrisisV2Content();
   const crises = (await db
     .collection<Crisis>("crises")
     .find(
@@ -273,8 +269,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
-  ensureBuiltinCrisisInputProviders();
-  const world = await loadWorld(db);
+  const world: World =
+    crises.length > 0
+      ? await loadWorld(db)
+      : { allStateIds: [], stateIdsByCountry: new Map(), countryByState: new Map() };
   const result: CrisisV2TurnResult = { processed: 0, failed: 0, resolved: 0, opened: 0 };
   const stillActive: DirectorActiveCrisis[] = [];
 
@@ -372,6 +370,8 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
           const routing = await routeEffectIntents(db, evaluation.intents, {
             stateIds: crisisStateIds(crisis, world),
             countryIds: crisisCountries,
+            crisisId: crisis._id,
+            turn,
           });
           for (const [kind, count] of Object.entries(routing.unsupported)) {
             unsupportedTotals[kind] = (unsupportedTotals[kind] ?? 0) + count;

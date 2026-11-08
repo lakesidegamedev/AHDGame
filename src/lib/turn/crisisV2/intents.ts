@@ -1,54 +1,118 @@
-import type { Db } from "mongodb";
+import { createHash } from "node:crypto";
+import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
-import type { CrisisEffect } from "@/lib/db/types/crisis";
+import type { CommodityType } from "@/lib/constants/commodities";
+import { getCountryModifiersCollection } from "@/lib/db/collections/countryModifiers";
+import type { CrisisEffect, CrisisV2Output } from "@/lib/db/types/crisis";
+import type { CountryModifier } from "@/lib/db/types/events";
+import type { Crisis } from "@/lib/db/types/crisis";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
+import {
+  INVESTOR_CONFIDENCE_BASELINE,
+  SOVEREIGN_CONFIDENCE_PREMIUM_MAX,
+} from "@/lib/nationalization/constants";
+import { defaultMarginEffectForApproval } from "@/lib/states/conditions/marginEffects";
 
 export interface IntentTargets {
   stateIds: string[];
   countryIds: string[];
+  /** With `turn`, makes routing apply at most once per crisis per turn. */
+  crisisId?: ObjectId;
+  turn?: number;
 }
 
 export interface IntentRouting {
   applied: number;
   /** Intent kinds with no handler yet, with how many were dropped. */
   unsupported: Record<string, number>;
+  /** True when this crisis's effects for the turn had already been applied. */
+  alreadyRouted?: boolean;
 }
 
-function legacyEffect(
-  partial: Pick<CrisisEffect, "targetType" | "value"> & Partial<CrisisEffect>
-): CrisisEffect {
+/** Sector whose plants make each commodity. Commodities with no entry cannot be shocked yet. */
+const PRODUCER_SECTOR: Partial<Record<CommodityType, string>> = {
+  energy: "energy",
+  oil: "extraction",
+  coal: "extraction",
+  iron: "extraction",
+  rare_earth: "extraction",
+  natural_gas: "extraction",
+  timber: "extraction",
+  food: "agriculture",
+  fertilizers: "agriculture",
+  steel: "manufacturing",
+  electronics: "manufacturing",
+  plastics: "manufacturing",
+  ordnance: "manufacturing",
+  chemicals: "chemical_industries",
+  pharmaceuticals: "chemical_industries",
+  vehicles: "manufacturing_vehicles",
+  freight: "logistics",
+};
+
+/** Unemployment points added per unit of migration fraction in the regions people leave. */
+const MIGRATION_PUSH_POINTS = 100;
+/** Growth points added per unit of migration fraction in the regions people go to. */
+const MIGRATION_PULL_POINTS = 50;
+/** A group is a share of the electorate, so its approval moves the national figure by about this much. */
+const GROUP_APPROVAL_SHARE = 0.5;
+/** Regional sector demand modifiers are summed and capped at this size elsewhere. */
+const DEMAND_MODIFIER_LIMIT_PCT = 20;
+/** Demand modifiers last this many turns, so one that is not renewed lapses on its own. */
+const DEMAND_MODIFIER_TURNS = 2;
+/** Vote-share points a point of approval is worth, from the regional-condition margin rule. */
+const MARGIN_PER_APPROVAL_POINT = defaultMarginEffectForApproval(100) / 100;
+const MAX_PANIC_TURNS = 4;
+/** Confidence points that equal one basis point of sovereign premium. */
+const CONFIDENCE_POINTS_PER_BPS =
+  INVESTOR_CONFIDENCE_BASELINE / (SOVEREIGN_CONFIDENCE_PREMIUM_MAX * 10_000);
+
+function metricEffect(category: string, field: string, value: number): CrisisEffect {
   return {
     effectType: "tick",
+    targetType: "metric",
+    metricCategory: category,
+    metricField: field,
+    sectorType: null,
+    strategyId: null,
+    value,
+    label: "Crisis",
+  };
+}
+
+function approvalEffect(value: number): CrisisEffect {
+  return {
+    effectType: "tick",
+    targetType: "approval",
     metricCategory: null,
     metricField: null,
     sectorType: null,
     strategyId: null,
+    value,
     label: "Crisis",
-    ...partial,
   };
 }
 
-/** The old writers understand these kinds; everything else needs its own handler. */
-function toLegacyEffect(intent: EffectIntent): CrisisEffect | null {
+function legacyEffect(intent: EffectIntent): CrisisEffect | null {
   switch (intent.kind) {
     case "metric":
-      return legacyEffect({
-        targetType: "metric",
-        metricCategory: intent.category,
-        metricField: intent.field,
-        value: intent.delta,
-      });
-    case "approval":
-      return legacyEffect({ targetType: "approval", value: intent.delta });
+      return metricEffect(intent.category, intent.field, intent.delta);
     case "profitMargin":
-      return legacyEffect({
+      return {
+        ...metricEffect("", "", intent.points),
         targetType: "profitMargin",
+        metricCategory: null,
+        metricField: null,
         sectorType: intent.sectorType,
-        value: intent.points,
         physicality: intent.physical ? "physical" : "financial",
-      });
+      };
     case "inflation":
-      return legacyEffect({ targetType: "inflation", value: intent.delta });
+      return {
+        ...metricEffect("", "", intent.delta),
+        targetType: "inflation",
+        metricCategory: null,
+        metricField: null,
+      };
     default:
       return null;
   }
@@ -64,10 +128,164 @@ async function applyGdpLoss(db: Db, stateIds: string[], fractions: number[]): Pr
   });
 }
 
+function stableModifierId(crisisId: ObjectId, turn: number, countryId: string, sector: string) {
+  const digest = createHash("sha256")
+    .update(`${crisisId.toHexString()}:${turn}:demand:${countryId}:${sector}`)
+    .digest("hex");
+  return new ObjectId(digest.slice(0, 24));
+}
+
+/** Writes commodity demand shifts as expiring sector output-demand modifiers. */
+async function writeDemandShifts(
+  db: Db,
+  pctBySector: ReadonlyMap<string, number>,
+  targets: IntentTargets
+): Promise<void> {
+  if (!targets.crisisId || targets.turn === undefined || targets.countryIds.length === 0) return;
+  const { crisisId, turn } = targets;
+  const ops: AnyBulkWriteOperation<CountryModifier>[] = [];
+  for (const [sectorType, rawPct] of pctBySector) {
+    const pct = Math.max(-DEMAND_MODIFIER_LIMIT_PCT, Math.min(DEMAND_MODIFIER_LIMIT_PCT, rawPct));
+    if (pct === 0) continue;
+    for (const countryId of targets.countryIds) {
+      const doc: CountryModifier = {
+        _id: stableModifierId(crisisId, turn, countryId, sectorType),
+        countryId,
+        kind: "sectorOutputDemandModifier",
+        sectorType,
+        pct,
+        appliedAtTurn: turn,
+        expiresAtTurn: turn + DEMAND_MODIFIER_TURNS,
+        sourceInstanceId: crisisId,
+        createdAt: new Date(),
+      };
+      ops.push({
+        updateOne: { filter: { _id: doc._id }, update: { $setOnInsert: doc }, upsert: true },
+      });
+    }
+  }
+  if (ops.length > 0) await getCountryModifiersCollection(db).bulkWrite(ops, { ordered: false });
+}
+
+async function applyMigration(
+  db: Db,
+  intents: readonly Extract<EffectIntent, { kind: "migration" }>[],
+  targets: IntentTargets
+): Promise<void> {
+  const pushByRegion = new Map<string, number>();
+  const pullByRegion = new Map<string, number>();
+  let wide = 0;
+  for (const intent of intents) {
+    if (intent.fromRegionId) {
+      pushByRegion.set(
+        intent.fromRegionId,
+        (pushByRegion.get(intent.fromRegionId) ?? 0) + intent.fraction
+      );
+    } else if (!intent.toRegionId) {
+      wide += intent.fraction;
+    }
+    if (intent.toRegionId) {
+      pullByRegion.set(
+        intent.toRegionId,
+        (pullByRegion.get(intent.toRegionId) ?? 0) + intent.fraction
+      );
+    }
+  }
+  // Internal migration follows regional unemployment and growth, so the push
+  // and pull are applied to those metrics and the demographic flows move people.
+  const writes: Promise<void>[] = [];
+  if (wide > 0) {
+    writes.push(
+      applyCrisisEffects(
+        db,
+        [metricEffect("economic", "unemploymentRate", wide * MIGRATION_PUSH_POINTS)],
+        targets.stateIds,
+        targets.countryIds
+      )
+    );
+  }
+  for (const [regionId, fraction] of pushByRegion) {
+    writes.push(
+      applyCrisisEffects(
+        db,
+        [metricEffect("economic", "unemploymentRate", fraction * MIGRATION_PUSH_POINTS)],
+        [regionId],
+        targets.countryIds
+      )
+    );
+  }
+  for (const [regionId, fraction] of pullByRegion) {
+    writes.push(
+      applyCrisisEffects(
+        db,
+        [metricEffect("economic", "gdpGrowth", fraction * MIGRATION_PULL_POINTS)],
+        [regionId],
+        targets.countryIds
+      )
+    );
+  }
+  await Promise.all(writes);
+}
+
+/** Starts a panic of the given length in every active bank in the countries. */
+async function applyBankStress(db: Db, delta: number, countryIds: string[]): Promise<void> {
+  const panicTurns = Math.min(MAX_PANIC_TURNS, Math.ceil(delta));
+  if (panicTurns <= 0 || countryIds.length === 0) return;
+  await db
+    .collection("corporations")
+    .updateMany(
+      { "bankCharter.status": "active", countryId: { $in: countryIds } },
+      { $max: { "bankCharter.panicTurns": panicTurns } }
+    );
+}
+
+/** Lowers investor confidence, which is what prices the sovereign borrowing premium. */
+async function applyBondPressure(
+  db: Db,
+  deltaBps: number,
+  countryIds: string[],
+  turn: number | undefined
+): Promise<void> {
+  const points = deltaBps * CONFIDENCE_POINTS_PER_BPS;
+  if (points === 0 || countryIds.length === 0) return;
+  const next = {
+    $max: [
+      0,
+      {
+        $min: [
+          100,
+          {
+            $subtract: [{ $ifNull: ["$investorConfidence", INVESTOR_CONFIDENCE_BASELINE] }, points],
+          },
+        ],
+      },
+    ],
+  };
+  await db.collection("federalBudget").updateMany({ countryId: { $in: countryIds } }, [
+    {
+      $set: {
+        investorConfidence: next,
+        ...(turn === undefined ? {} : { investorConfidenceUpdatedAtTurn: turn }),
+      },
+    },
+  ]);
+}
+
 /**
- * Sends a crisis's intents to the systems that own them. Legacy kinds go
- * through the existing effect writers; any other kind is counted and reported
- * as unsupported so a definition using it is visible rather than silently inert.
+ * Sends a crisis's intents to the systems that own them, each through that
+ * system's own writer:
+ *
+ * - plant output: the crisis's `v2Output`, which the plants tier reads
+ * - commodity supply: the same output cut on the producing sector
+ * - commodity demand: expiring sector output-demand modifiers
+ * - migration: regional unemployment and growth, which drive the flows
+ * - bank stress: bank panic turns
+ * - bond yield: investor confidence, which prices the sovereign premium
+ * - approval and election swing: government approval
+ *
+ * With `crisisId` and `turn` a receipt on the crisis makes a repeat call for the
+ * same turn a no-op. Kinds with no handler are counted and reported so a
+ * definition using one is visible rather than silently inert.
  */
 export async function routeEffectIntents(
   db: Db,
@@ -76,22 +294,95 @@ export async function routeEffectIntents(
 ): Promise<IntentRouting> {
   const legacy: CrisisEffect[] = [];
   const gdpFractions: number[] = [];
+  const cutPoints = new Map<string | null, number>();
+  const demandPct = new Map<string, number>();
+  const migration: Extract<EffectIntent, { kind: "migration" }>[] = [];
+  let bankDelta = 0;
+  let bondBps = 0;
+  let approvalDelta = 0;
   const unsupported: Record<string, number> = {};
+  const drop = (kind: string) => {
+    unsupported[kind] = (unsupported[kind] ?? 0) + 1;
+  };
 
   for (const intent of intents) {
-    if (intent.kind === "gdpLoss") {
-      gdpFractions.push(intent.fraction);
-      continue;
+    switch (intent.kind) {
+      case "gdpLoss":
+        gdpFractions.push(intent.fraction);
+        break;
+      case "plantCapacity": {
+        const sector = intent.sectorType ?? null;
+        cutPoints.set(sector, (cutPoints.get(sector) ?? 0) + intent.factor * 100);
+        break;
+      }
+      case "commoditySupply": {
+        const sector = PRODUCER_SECTOR[intent.commodity];
+        if (!sector) drop(intent.kind);
+        else cutPoints.set(sector, (cutPoints.get(sector) ?? 0) + intent.factor * 100);
+        break;
+      }
+      case "commodityDemand": {
+        const sector = PRODUCER_SECTOR[intent.commodity];
+        if (!sector) drop(intent.kind);
+        else demandPct.set(sector, (demandPct.get(sector) ?? 0) + intent.factor * 100);
+        break;
+      }
+      case "migration":
+        migration.push(intent);
+        break;
+      case "bankStress":
+        bankDelta += intent.delta;
+        break;
+      case "bondYield":
+        bondBps += intent.deltaBps;
+        break;
+      case "approval":
+        approvalDelta += intent.group ? intent.delta * GROUP_APPROVAL_SHARE : intent.delta;
+        break;
+      case "electionSwing":
+        approvalDelta -= intent.deltaPoints / MARGIN_PER_APPROVAL_POINT;
+        break;
+      default: {
+        const effect = legacyEffect(intent);
+        if (effect) legacy.push(effect);
+        else drop(intent.kind);
+      }
     }
-    const effect = toLegacyEffect(intent);
-    if (effect) legacy.push(effect);
-    else unsupported[intent.kind] = (unsupported[intent.kind] ?? 0) + 1;
   }
 
+  if (targets.crisisId && targets.turn !== undefined) {
+    const output: CrisisV2Output = {
+      routedTurn: targets.turn,
+      productionCuts: [...cutPoints]
+        .filter(([, points]) => points !== 0)
+        .map(([sectorType, points]) => ({ sectorType, points: Math.max(-100, points) })),
+    };
+    const claim = await db
+      .collection<Crisis>("crises")
+      .updateOne(
+        { _id: targets.crisisId, "v2Output.routedTurn": { $ne: targets.turn } },
+        { $set: { v2Output: output } }
+      );
+    if (claim.modifiedCount === 0) return { applied: 0, unsupported: {}, alreadyRouted: true };
+  }
+
+  if (approvalDelta !== 0) legacy.push(approvalEffect(approvalDelta));
   if (targets.stateIds.length > 0 && legacy.length > 0) {
     await applyCrisisEffects(db, legacy, targets.stateIds, targets.countryIds);
   }
   if (gdpFractions.length > 0) await applyGdpLoss(db, targets.stateIds, gdpFractions);
+  if (demandPct.size > 0) await writeDemandShifts(db, demandPct, targets);
+  if (migration.length > 0) await applyMigration(db, migration, targets);
+  if (bankDelta > 0) await applyBankStress(db, bankDelta, targets.countryIds);
+  if (bondBps !== 0) await applyBondPressure(db, bondBps, targets.countryIds, targets.turn);
 
-  return { applied: legacy.length + gdpFractions.length, unsupported };
+  const handled =
+    legacy.length +
+    gdpFractions.length +
+    cutPoints.size +
+    demandPct.size +
+    migration.length +
+    (bankDelta > 0 ? 1 : 0) +
+    (bondBps !== 0 ? 1 : 0);
+  return { applied: handled, unsupported };
 }

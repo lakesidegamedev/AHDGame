@@ -494,6 +494,18 @@ export interface Crisis {
   livingConflictEventId?: string;
   /** Crisis v2 stage, severity and accountability state. Absent on crises that predate v2. */
   v2?: CrisisInstance;
+  /**
+   * What a v2 crisis currently does to plant output, rewritten each turn the
+   * crisis runs. `routedTurn` is the receipt that keeps a turn's effects from
+   * being applied twice.
+   */
+  v2Output?: CrisisV2Output;
+}
+
+export interface CrisisV2Output {
+  routedTurn: number;
+  /** Physical output cuts in margin points (<= 0); `null` sector = every sector. */
+  productionCuts: { sectorType: string | null; points: number }[];
 }
 
 /**
