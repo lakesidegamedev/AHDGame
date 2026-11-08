@@ -31,6 +31,7 @@ import {
 import { getGameState } from "@/lib/gameState";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
 import { resolveGlobalResponse } from "@/lib/livingConflict/globalResponse";
+import { isCampaignCrisis } from "@/lib/livingConflict/campaignCrisis";
 import { processLivingConflictsTurn } from "@/lib/livingConflict/processTurn";
 import {
   livingVietnamAsLegacyState,
@@ -169,7 +170,7 @@ export async function processCrisisTurn(
     // decision interaction. Admin-created crises run the same announcement at
     // creation time (see announceCrisisStart) since they never pass through this
     // `turn === startTurn` branch.
-    if (turn === crisis.startTurn) {
+    if (turn === crisis.startTurn && !isCampaignCrisis(crisis)) {
       await announceCrisisStart(db, crisis, targetStateIds);
 
       if (crisis.interactionDefinition) {

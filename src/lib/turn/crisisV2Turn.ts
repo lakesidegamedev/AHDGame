@@ -26,6 +26,7 @@ import {
 } from "@/lib/crises/interactionEngine";
 import { applyCrisisTurnEffects, finalizeResolvedCrises } from "./crisisTurn";
 import { ensureLegacyCrisisContent } from "./crisisV2/legacyContent";
+import { ensureCampaignCrisisContent } from "@/lib/livingConflict/campaignCrisis";
 import { getGameState } from "@/lib/gameState";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
 import { applySeverityStep, computeSeverityStep } from "@/lib/crises/v2/severity";
@@ -394,6 +395,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
   ensureLegacyCrisisContent();
+  ensureCampaignCrisisContent();
   ensureBuiltinCrisisInputProviders();
   ensureBuiltinCrisisHolderProviders();
   const world = await loadWorld(db);

@@ -16,7 +16,13 @@ export type EffectIntent =
   | { kind: "commoditySupply"; commodity: CommodityType; factor: number }
   | { kind: "commodityDemand"; commodity: CommodityType; factor: number }
   /** Share of population moving; `toRegionId` absent = out of the affected area. */
-  | { kind: "migration"; fraction: number; fromRegionId?: string; toRegionId?: string }
+  | {
+      kind: "migration";
+      fraction: number;
+      fromRegionId?: string;
+      fromCountryId?: string;
+      toRegionId?: string;
+    }
   | { kind: "bankStress"; delta: number }
   | { kind: "bondYield"; deltaBps: number }
   /** Points of approval, narrowed to a demographic group when named. */

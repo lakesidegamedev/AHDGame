@@ -35,6 +35,7 @@ import { GLOBAL_FINANCIAL_CRISIS_KEY, loadFinancialCrisisSignal } from "./financ
 import { isFutureConflictFamily, planFutureConflictTurn } from "./futureConflicts";
 import { severeConflictLoad, type SevereMembership } from "./rules/futureConflicts";
 import { loadActiveSevereCrisisRows } from "@/lib/crises/severeCrisisLoad";
+import { syncCampaignCrises, type CampaignTurnState } from "./campaignCrisis";
 import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severeLoad";
 
 function roleMapForEvent(
@@ -226,6 +227,7 @@ export async function processLivingConflictsTurn(
   // two severe crises is not hit by a new conflict wave either. Read once, only
   // when a wave family is reached.
   let crisisLoad: Map<string, number> | null = null;
+  const campaigns: CampaignTurnState[] = [];
   for (const def of defs) {
     if (def.key === "northern_ireland") {
       const reunified = await db.collection<Referendum>("referendums").findOne(
@@ -302,6 +304,7 @@ export async function processLivingConflictsTurn(
       openingTrackDeltas,
       observedTrackValues
     );
+    campaigns.push({ def, state: result.state, participants });
     if (result.state.hasOpened && result.state.status === "active") {
       severe.push({
         defKey: def.key,
@@ -336,5 +339,6 @@ export async function processLivingConflictsTurn(
       await saveConflictState(db, { ...result.state, emitPhaseEntryNextTurn: true });
     }
   }
+  await syncCampaignCrises(db, currentTurn, campaigns);
   return { conflictsProcessed, eventsOpened };
 }
