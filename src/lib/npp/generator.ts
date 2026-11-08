@@ -77,7 +77,7 @@ let politicianImageCache: PoliticianImage[] | null = null;
  * Deliberately conservative. An unparsed URL yields null, and null means
  * "unknown", not "old": an undated portrait stays eligible everywhere.
  */
-function photoYearFromUrl(url: string): number | null {
+export function photoYearFromUrl(url: string): number | null {
   const m = /(1[89]\d\d|20\d\d)/.exec(url);
   if (!m) return null;
   const year = Number(m[1]);
