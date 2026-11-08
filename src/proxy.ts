@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { REQUEST_METHOD_HEADER } from "@/lib/staff/rules";
 import type { NextRequest } from "next/server";
 import { SignJWT } from "jose";
 import { getCachedMaintenanceStatus, isMaintenanceBypassPath } from "@/lib/maintenanceStatus";
@@ -58,6 +59,17 @@ async function requestIsAdmin(request: NextRequest): Promise<boolean> {
 }
 
 /**
+ * Forward an API request with the real HTTP method stamped into a header the
+ * route guards read. The header is always overwritten here, so a client cannot
+ * supply it; the read-only staff role is denied whenever it is missing.
+ */
+function apiPassthrough(request: NextRequest): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_METHOD_HEADER, request.method.toUpperCase());
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+/**
  * Read-gate for internal API routes. When "public viewing mode" is off, anonymous
  * GET/HEAD requests to internal routes are rejected so scrapers can't treat the
  * page-serving JSON endpoints as a free, unauthenticated API. Writes keep their
@@ -66,7 +78,7 @@ async function requestIsAdmin(request: NextRequest): Promise<boolean> {
 async function handleApiReadGate(request: NextRequest): Promise<NextResponse> {
   const method = request.method.toUpperCase();
   // Only reads are gated here — mutating routes already enforce their own auth.
-  if (method !== "GET" && method !== "HEAD") return NextResponse.next();
+  if (method !== "GET" && method !== "HEAD") return apiPassthrough(request);
 
   // Default-on flag: a DB blip fails open (never 401 every read on a hiccup).
   let publicViewing = true;
@@ -74,19 +86,19 @@ async function handleApiReadGate(request: NextRequest): Promise<NextResponse> {
     publicViewing = await getCachedPublicViewingMode();
   } catch (err) {
     console.warn("[proxy] public-viewing lookup failed; allowing read", err);
-    return NextResponse.next();
+    return apiPassthrough(request);
   }
-  if (publicViewing) return NextResponse.next();
+  if (publicViewing) return apiPassthrough(request);
 
   const { pathname } = request.nextUrl;
   // Self-protected (own key/token/signature) or pre-login/asset namespaces.
-  if (isPublicApiReadBypassPath(pathname)) return NextResponse.next();
+  if (isPublicApiReadBypassPath(pathname)) return apiPassthrough(request);
 
   // Any current-account session may read. Deleted, banned, or revoked
   // sessions resolve to null and stay denied. A dependency failure fails
   // closed with 503 and never clears cookies.
   try {
-    if (await getSessionUser(request)) return NextResponse.next();
+    if (await getSessionUser(request)) return apiPassthrough(request);
   } catch {
     console.warn("[proxy] session lookup failed; failing closed");
     return errorResponse(503, "Authentication service unavailable. Try again.", {

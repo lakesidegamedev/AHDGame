@@ -144,6 +144,20 @@ describe("proxy() — behaviors preserved from the deleted root middleware.ts", 
     expect(res.headers.get("location")).toBeNull();
     expect(res.headers.get("x-middleware-rewrite")).toBeNull();
   });
+
+  it("stamps the real method on /api/* requests and overrides a client-supplied value", async () => {
+    // Read-only staff are allowed through the admin guards on this header, so
+    // a client must never be able to send its own.
+    const req = new NextRequest(new URL("https://ahousedividedgame.com/api/admin/users"), {
+      method: "POST",
+      headers: new Headers({
+        host: "ahousedividedgame.com",
+        "x-ahd-request-method": "GET",
+      }),
+    });
+    const res = await proxy(req);
+    expect(res.headers.get("x-middleware-request-x-ahd-request-method")).toBe("POST");
+  });
 });
 
 describe("proxy() — tri-state maintenance gating", () => {
