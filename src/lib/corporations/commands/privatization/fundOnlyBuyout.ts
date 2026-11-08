@@ -67,10 +67,22 @@ export async function executeFundOnlyBuyout(
   if (transferRestriction) return { ok: false, error: transferRestriction, status: 403 };
   const ceoIdStr = corporation.ceoId.toString();
   const fundHolders = (corporation.shareholders ?? []).filter(
-    (s) => s.fundId && !s.characterId && !s.corporationId
+    (s) => s.fundId && !s.characterId && !s.corporationId && !s.nppId
   );
   if (fundHolders.length === 0) {
     return { ok: false, error: "No index-fund holders to buy out", status: 400 };
+  }
+
+  const ceoHolds = (s: { characterId?: unknown }) => String(s.characterId) === ceoIdStr;
+  const strangers = (corporation.shareholders ?? []).filter(
+    (s) => !ceoHolds(s) && !(s.fundId && !s.characterId && !s.corporationId && !s.nppId)
+  );
+  if (strangers.length > 0) {
+    return {
+      ok: false,
+      error: "Non-fund minority holders remain; this corporation needs a privatization vote.",
+      status: 409,
+    };
   }
 
   const currency = corporation.liquidCurrencyCode ?? "USD";

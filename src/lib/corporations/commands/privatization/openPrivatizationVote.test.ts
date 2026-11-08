@@ -263,6 +263,37 @@ describe("openPrivatizationVote — atomic open", () => {
     expect(insertOne).toHaveBeenCalledTimes(1); // vote row created instead
   });
 
+  it("opens a vote instead of a fund buyout when an NPP also holds shares", async () => {
+    const ceoId = new ObjectId();
+    const corp = makeCorp({
+      ceoId,
+      publicFloat: 0,
+      shareholders: [
+        { characterId: ceoId, shares: 9_980_000 },
+        { nppId: new ObjectId(), shares: 10_000 },
+        { fundId: new ObjectId(), shares: 10_000 },
+      ],
+    });
+    const character = makeCharacter(ceoId);
+    const { db, insertOne } = makeDb({});
+    const buyoutMock = await import("./fundOnlyBuyout");
+    const cashMock = await import("@/lib/financialTxLog/atomicCashGuard");
+    vi.mocked(cashMock.atomicallyDebitCharacterCash).mockResolvedValue({ ok: true, newBalance: 0 });
+    vi.mocked(buyoutMock.executeFundOnlyBuyout).mockClear();
+
+    const result = await openPrivatizationVote({
+      db,
+      corporation: corp as never,
+      character: character as never,
+      currentTurn: 1000,
+      forexEnabled: false,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(buyoutMock.executeFundOnlyBuyout)).not.toHaveBeenCalled();
+    expect(insertOne).toHaveBeenCalledTimes(1);
+  });
+
   it("on success: returns voteId, lockedBuyoutPrice, totalReservedCash", async () => {
     const corp = makeCorp({ sharePrice: 2.0 }); // 1.5M non-CEO shares × 2.20 = 3.3M reserved
     const character = makeCharacter(corp.ceoId);
