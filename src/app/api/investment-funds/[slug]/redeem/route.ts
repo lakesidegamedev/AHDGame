@@ -37,6 +37,7 @@ import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedempti
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import type { IndexFund } from "@/lib/db/types/indexFund";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { logIndexFundRedeemActivity } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -118,6 +119,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       if (fund.status === "delisted") {
         return errorResponse(400, "Fund is delisted");
       }
+
+      // A national fund is re-marked each tick, so its writes are conditional on
+      // the NAV the units were quoted at.
+      const quotedNavGuard = fund.nationalIndex ? { quotedNav: fund.quotedNav } : {};
+      const navMoved = async (s?: { session?: import("mongodb").ClientSession }) => {
+        if (!fund.nationalIndex) return false;
+        const current = await db
+          .collection<IndexFund>("indexFunds")
+          .findOne({ _id: fund._id }, { projection: { quotedNav: 1 }, ...s });
+        return !!current && current.quotedNav !== fund.quotedNav;
+      };
 
       const position = await getPosition(db, fund._id, "character", { characterId });
       if (
@@ -254,7 +266,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             {
               _id: fund._id,
               unitSupply: { $gte: units },
-              ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
+              ...quotedNavGuard,
             },
             {
               $inc: { unitSupply: -units },
@@ -265,12 +277,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           if (supplyBurn.matchedCount === 0) {
             // A national fund is re-marked each tick; the quote was read at the
             // old NAV, so a moved NAV must not take this redemption.
-            if (fund.nationalIndex) {
-              const current = await db
-                .collection("indexFunds")
-                .findOne({ _id: fund._id }, { projection: { quotedNav: 1 }, ...s });
-              if (current && current.quotedNav !== fund.quotedNav) throw new FundQuoteMovedError();
-            }
+            if (await navMoved(s)) throw new FundQuoteMovedError();
             throw new Error("Fund unit supply changed during redemption; please retry.");
           }
           if (compensate) {
@@ -322,7 +329,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
               {
                 _id: fundState!._id,
                 cashAnchor: { $gte: quote.paidAmountAnchor },
-                ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
+                ...quotedNavGuard,
               },
               {
                 $inc: {
@@ -333,14 +340,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
               s
             );
             if (cashDebit.matchedCount === 0) {
-              if (fund.nationalIndex) {
-                const current = await db
-                  .collection("indexFunds")
-                  .findOne({ _id: fundState!._id }, { projection: { quotedNav: 1 }, ...s });
-                if (current && current.quotedNav !== fund.quotedNav) {
-                  throw new FundQuoteMovedError();
-                }
-              }
+              if (await navMoved(s)) throw new FundQuoteMovedError();
               throw new Error("FUND_CASH_RACE");
             }
             // Undo for this leg's cash debit, unwound by the outer stack if a
