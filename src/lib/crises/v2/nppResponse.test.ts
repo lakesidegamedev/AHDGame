@@ -37,12 +37,23 @@ describe("NPP lever policy", () => {
     expect(new Set(roles).size).toBe(roles.length);
   });
 
+  it("never takes a lever paid from an action budget, which an NPP does not have", () => {
+    const base = makeDefinition();
+    const def = {
+      ...base,
+      levers: base.levers.map((lever) => ({
+        ...lever,
+        cost: { ...lever.cost, politicalCapital: 2 },
+      })),
+    };
+    expect(chooseNppLevers(input({ def }))).toEqual([]);
+  });
+
   it("skips levers the treasury cannot bear", () => {
     const picks = chooseNppLevers(
       input({ budget: { treasuryBalance: 50, approval: 60 }, severity: 90 })
     );
     expect(picks.map((pick) => pick.lever.id)).not.toContain("stimulus");
-    expect(picks.map((pick) => pick.lever.id)).toContain("rate-cut");
   });
 
   it("will not spend approval below the floor", () => {

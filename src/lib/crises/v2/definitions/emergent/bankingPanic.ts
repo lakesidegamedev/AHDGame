@@ -85,6 +85,15 @@ export const bankingPanicDefinition: CrisisDefinition = {
       transmission: 0.35,
       delayTurns: 1,
     },
+    {
+      id: "credit-crunch",
+      channel: "finance",
+      targetDefinitionId: "emergent-recession",
+      minSeverity: 60,
+      minStage: "peak",
+      transmission: 0.3,
+      delayTurns: 2,
+    },
   ],
   scarRules: [
     {

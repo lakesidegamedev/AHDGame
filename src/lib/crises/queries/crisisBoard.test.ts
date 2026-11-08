@@ -84,6 +84,24 @@ describe("viewerCanActOnCrisis", () => {
     expect(viewerCanActOnCrisis(c, interaction(c, node()), null)).toBe(false);
   });
 
+  it("leaves a lever-answered decision to the levers on a converted crisis", () => {
+    const answered = node({
+      options: [
+        {
+          optionId: "act",
+          label: "Act",
+          description: "",
+          effects: [],
+          durationReductionTurns: 2,
+        } as CrisisDecisionNode["options"] extends (infer O)[] | undefined ? O : never,
+      ],
+    });
+    const converted = crisis({ v2: { definitionId: "legacy:recession" } as Crisis["v2"] });
+    expect(viewerCanActOnCrisis(converted, interaction(converted, answered), viewer)).toBe(false);
+    const plain = crisis();
+    expect(viewerCanActOnCrisis(plain, interaction(plain, answered), viewer)).toBe(true);
+  });
+
   it("counts pooled aid only for reached crises the viewer has not given to", () => {
     const c = crisis();
     const aid = node({ type: "collective", requiredRoles: ["any"] });

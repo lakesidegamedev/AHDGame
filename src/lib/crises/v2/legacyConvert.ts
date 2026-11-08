@@ -4,6 +4,7 @@ import type {
   CrisisTemplate,
 } from "@/lib/db/types/crisis";
 import { LEGACY_STORED_EFFECTS_MODULE_ID } from "./effectModule";
+import { LEGACY_SPILLOVER } from "./legacySpillover";
 import { SCRIPTED_REFERENCE_SEVERITY, scriptedStageRules } from "./scriptedPacing";
 import type { CrisisDefinition, CrisisLeverDef, CrisisRole, CrisisScope } from "./types";
 
@@ -161,7 +162,10 @@ export function convertLegacyTemplate(input: ConvertTemplateInput): CrisisDefini
         params: { referenceSeverity: SCRIPTED_REFERENCE_SEVERITY },
       },
     ],
-    spillover: [],
+    spillover: (LEGACY_SPILLOVER[key] ?? []).map(({ targetKey, ...rest }) => ({
+      ...rest,
+      targetDefinitionId: legacyDefinitionId(targetKey),
+    })),
     scarRules: [],
     forcedEvents: [],
     pacing: { kind: "scripted", durationTurns },

@@ -269,6 +269,32 @@ export function shareWeights(
 }
 
 /**
+ * Finance weights from sovereign debt held abroad, sized against the holder's
+ * own economy. `exposure` and `gdp` are in one common currency, so a holder
+ * whose book in another country's debt reaches `fullShare` of its GDP counts as
+ * full weight no matter how its portfolio is split.
+ */
+export function gdpShareWeights(
+  exposure: ReadonlyMap<string, ReadonlyMap<string, number>>,
+  gdp: ReadonlyMap<string, number>,
+  fullShare: number
+): Map<string, Map<string, number>> {
+  const result = new Map<string, Map<string, number>>();
+  for (const [holder, byIssuer] of exposure) {
+    const holderGdp = gdp.get(holder) ?? 0;
+    if (!(holderGdp > 0) || !(fullShare > 0)) continue;
+    for (const [issuer, value] of byIssuer) {
+      if (issuer === holder || value <= 0) continue;
+      // spill runs from the issuer onto the holder that lent to it
+      const row = result.get(issuer) ?? new Map<string, number>();
+      row.set(holder, Math.max(row.get(holder) ?? 0, clamp(value / (holderGdp * fullShare), 0, 1)));
+      result.set(issuer, row);
+    }
+  }
+  return result;
+}
+
+/**
  * Trade weights from cleared bilateral flow. A source passes a shock on to a
  * country in proportion to the share of that country's total trade it supplies
  * or buys. `scale` makes a partner worth a fifth of trade count as full weight.

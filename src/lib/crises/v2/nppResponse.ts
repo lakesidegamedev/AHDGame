@@ -90,8 +90,9 @@ export function nppWillRespond(input: NppResponseInput): boolean {
  * levers that remove the most severity per unit of cost, never takes a role it
  * does not hold, never spends past what the treasury and its share of output
  * allow, never drops approval under the floor, and pulls at most one lever per
- * role. Cost components the game cannot charge an NPP (corporate cash,
- * political capital) are skipped rather than ignored.
+ * role. Cost components the game cannot charge an NPP are skipped rather than
+ * ignored: corporate cash, and political capital because it is paid from a
+ * character's action budget and an NPP has none.
  */
 export function chooseNppLevers(input: NppResponseInput): NppLeverPick[] {
   if (!nppWillRespond(input)) return [];
@@ -107,6 +108,7 @@ export function chooseNppLevers(input: NppResponseInput): NppLeverPick[] {
         input.roles.has(lever.role) &&
         !input.blockedLeverIds.has(lever.id) &&
         !lever.cost.corpCash &&
+        !lever.cost.politicalCapital &&
         (!lever.stages || lever.stages.includes(input.stage)) &&
         lever.role !== "legislature" &&
         lever.role !== "corpCeo"

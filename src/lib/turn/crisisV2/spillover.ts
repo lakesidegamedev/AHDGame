@@ -4,6 +4,10 @@ import { COUNTRY_REGIONS } from "@/lib/world/worldEntityManifest";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import type { Bond } from "@/lib/db/types/bond";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
+import type { CountryId } from "@/lib/constants/countries";
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { getStatesCollection } from "@/lib/db/collections/states";
@@ -14,7 +18,7 @@ import {
   allianceWeights,
   evaluateSpillover,
   regionWeights,
-  shareWeights,
+  gdpShareWeights,
   tradeWeights,
   type ChannelWeights,
   type SpilloverAction,
@@ -40,8 +44,8 @@ const COMPONENT = "crisisV2Spillover";
 const CLIMATE_SAME_REGION = 1;
 const MIGRATION_SAME_REGION = 0.6;
 const MIGRATION_OTHER_REGION = 0.1;
-/** A source holding a fifth or more of a holder's sovereign book counts as full weight. */
-const FINANCE_SCALE = 5;
+/** Foreign sovereign debt worth this share of the holder's GDP counts as full weight. */
+const FINANCE_FULL_GDP_SHARE = 0.05;
 const BOND_UNIT_FACE = 1000;
 
 export interface SpilloverCrisisDoc {
@@ -88,8 +92,9 @@ async function loadAllianceWeights(db: Db): Promise<ChannelWeights> {
 }
 
 /**
- * Finance: how concentrated each holder country's sovereign book is in another
- * country's debt, valued at market, held through corporations.
+ * Finance: sovereign debt each holder country carries through its corporations,
+ * valued at market in the issuer's currency, converted to the common unit and
+ * sized against the holder's GDP.
  */
 async function loadFinanceWeights(db: Db): Promise<ChannelWeights> {
   const bonds = await db
@@ -113,14 +118,25 @@ async function loadFinanceWeights(db: Db): Promise<ChannelWeights> {
     }
   }
   if (corporationIds.size === 0) return new Map();
-  const corporations = await (
-    await getCorporationsCollection(db)
-  )
-    .find(
-      { _id: { $in: [...corporationIds].map((id) => new ObjectId(id)) } },
-      { projection: { countryId: 1 } }
-    )
-    .toArray();
+  const [corporations, rates, budgets] = await Promise.all([
+    getCorporationsCollection(db).then((collection) =>
+      collection
+        .find(
+          { _id: { $in: [...corporationIds].map((id) => new ObjectId(id)) } },
+          { projection: { countryId: 1 } }
+        )
+        .toArray()
+    ),
+    loadValuationFxRates(db),
+    getFederalBudgetCollection(db).then((collection) =>
+      collection.find({}, { projection: { countryId: 1, gdp: 1, gdpSmoothed: 1 } }).toArray()
+    ),
+  ]);
+  const toCommon = (amount: number, countryId: string): number => {
+    const code = COUNTRY_CURRENCY_MAP[countryId as CountryId];
+    const rate = code ? rates.get(code) : undefined;
+    return rate && rate > 0 ? amount / rate : amount;
+  };
   const countryOfCorp = new Map(corporations.map((corp) => [corp._id.toString(), corp.countryId]));
   const exposure = new Map<string, Map<string, number>>();
   for (const bond of bonds) {
@@ -131,14 +147,17 @@ async function loadFinanceWeights(db: Db): Promise<ChannelWeights> {
         : undefined;
       if (!holderCountry) continue;
       const row = exposure.get(holderCountry) ?? new Map<string, number>();
-      row.set(
-        bond.countryId,
-        (row.get(bond.countryId) ?? 0) + holder.units * BOND_UNIT_FACE * (bond.marketPrice ?? 1)
-      );
+      const value = holder.units * BOND_UNIT_FACE * (bond.marketPrice ?? 1);
+      row.set(bond.countryId, (row.get(bond.countryId) ?? 0) + toCommon(value, bond.countryId));
       exposure.set(holderCountry, row);
     }
   }
-  return shareWeights(exposure, FINANCE_SCALE);
+  const gdp = new Map<string, number>();
+  for (const budget of budgets) {
+    const local = budget.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : budget.gdp;
+    if (local > 0) gdp.set(budget.countryId, toCommon(local, budget.countryId));
+  }
+  return gdpShareWeights(exposure, gdp, FINANCE_FULL_GDP_SHARE);
 }
 
 function loadRegionChannel(

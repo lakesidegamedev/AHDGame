@@ -144,8 +144,11 @@ export function exposureReasons(
 export interface SpreadLink {
   fromId: string;
   toId: string;
-  /** "chain" = rungs of one event family, "campaign" = same living conflict. */
-  via: "chain" | "campaign";
+  /**
+   * "chain" = rungs of one event family, "campaign" = same living conflict,
+   * "spillover" = one crisis caused the other through trade, finance or ties.
+   */
+  via: "chain" | "campaign" | "spillover";
 }
 
 interface LinkableCrisis {

@@ -5,6 +5,7 @@ import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import type { Character } from "@/lib/db/types";
 import {
   canCharacterInteract,
+  decisionAnsweredByLever,
   getCrisisInteractionsByCrisisId,
   isMultiResponderNode,
   resolveCharacterRoles,
@@ -112,6 +113,7 @@ export function viewerCanActOnCrisis(
     );
   }
 
+  if (decisionAnsweredByLever(crisis, interaction.decisionTree, node)) return false;
   if (!canCharacterInteract(node, roles, countryId, stateId)) return false;
   if (!canRespondToCrisis(crisis, node, countryId, stateId)) return false;
   if (crisis.globalResponse && !(countryId && globalResponseRoleFor(crisis, countryId))) {
@@ -272,16 +274,24 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
     preIterationActive: list.preIterationActive,
     regionNames: list.regionNames,
     crises: rows,
-    links: buildSpreadLinks(
-      rows
-        .filter((r) => r.status === "active")
-        .map((r) => ({
-          id: r.id,
-          startTurn: r.startTurn,
-          chainFamily: r.chainFamily ?? undefined,
-          campaignKey: r.campaignKey ?? undefined,
+    links: [
+      ...buildSpreadLinks(
+        rows
+          .filter((r) => r.status === "active")
+          .map((r) => ({
+            id: r.id,
+            startTurn: r.startTurn,
+            chainFamily: r.chainFamily ?? undefined,
+            campaignKey: r.campaignKey ?? undefined,
+          }))
+      ),
+      ...spilloverSpreadLinks(
+        active.map((crisis) => ({
+          id: crisis._id.toString(),
+          parents: crisis.v2?.parents ?? [],
         }))
-    ),
+      ),
+    ],
     actionCount: rows.filter((r) => r.viewerCanAct).length,
     authenticated: viewer != null,
   };

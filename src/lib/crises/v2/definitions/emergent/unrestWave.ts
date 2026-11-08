@@ -83,7 +83,17 @@ export const unrestWaveDefinition: CrisisDefinition = {
     { moduleId: "rotdm.approval", params: { max: 0.3 } },
     { moduleId: "rotdm.electionSwing", params: { maxPoints: 0.3 } },
   ],
-  spillover: [],
+  spillover: [
+    {
+      id: "copycat-unrest",
+      channel: "alliance",
+      targetDefinitionId: "emergent-unrest-wave",
+      minSeverity: 65,
+      minStage: "peak",
+      transmission: 0.25,
+      delayTurns: 2,
+    },
+  ],
   scarRules: [
     {
       id: "lost-trust",

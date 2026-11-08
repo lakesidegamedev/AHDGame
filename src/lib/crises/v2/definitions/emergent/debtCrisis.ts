@@ -84,6 +84,15 @@ export const debtCrisisDefinition: CrisisDefinition = {
       transmission: 0.25,
       delayTurns: 2,
     },
+    {
+      id: "bank-holdings",
+      channel: "finance",
+      targetDefinitionId: "emergent-banking-panic",
+      minSeverity: 65,
+      minStage: "peak",
+      transmission: 0.3,
+      delayTurns: 2,
+    },
   ],
   scarRules: [
     {

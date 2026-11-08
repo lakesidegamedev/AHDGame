@@ -88,6 +88,15 @@ export const energyShortageDefinition: CrisisDefinition = {
       transmission: 0.3,
       delayTurns: 2,
     },
+    {
+      id: "price-shock",
+      channel: "trade",
+      targetDefinitionId: "emergent-recession",
+      minSeverity: 65,
+      minStage: "peak",
+      transmission: 0.25,
+      delayTurns: 2,
+    },
   ],
   scarRules: [
     {
