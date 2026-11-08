@@ -9,7 +9,9 @@ import { ensureIndex } from "./helpers";
  *   - `crises_v2_active` — the Crisis v2 turn phase loads active crises that carry
  *     a v2 instance. Partial on the instance, so it stays empty until content uses
  *     v2 and the phase's read touches nothing.
- *   - `crisisLeverUses` — pending lever uses per crisis, read each turn.
+ *   - `crisisLeverUses` — pending lever uses per crisis, read each turn, and the unique
+ *     claim that makes a double pull impossible.
+ *   - `bills_crisis_emergency` — emergency bills awaiting their outcome.
  */
 export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
   log("Crisis indexes:");
@@ -38,6 +40,27 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
     "crisisLeverUses",
     { crisisId: 1, appliedTurn: 1 },
     { name: "crisis_lever_uses_pending" },
+    log
+  );
+
+  // The claim behind a lever pull: one use per holder, lever and turn.
+  await ensureIndex(
+    db,
+    "crisisLeverUses",
+    { crisisId: 1, leverId: 1, holderId: 1, submittedTurn: 1 },
+    { name: "crisis_lever_uses_claim", unique: true },
+    log
+  );
+
+  // Emergency bills awaiting their outcome; empty for ordinary bills.
+  await ensureIndex(
+    db,
+    "bills",
+    { "crisisEmergency.crisisId": 1 },
+    {
+      name: "bills_crisis_emergency",
+      partialFilterExpression: { "crisisEmergency.crisisId": { $exists: true } },
+    },
     log
   );
 

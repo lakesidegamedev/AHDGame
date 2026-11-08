@@ -24,6 +24,7 @@ import type {
   CrisisScope,
   LeverUse,
 } from "@/lib/crises/v2/types";
+import { processCrisisEmergencyBills } from "@/lib/crises/levers/emergencyBill";
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { ensureBuiltinCrisisInputProviders } from "./crisisV2/inputProviders";
 import { routeEffectIntents } from "./crisisV2/intents";
@@ -284,13 +285,20 @@ async function openNewCrises(
  * Does nothing, beyond one indexed read, while no crisis carries a `v2` instance.
  */
 export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV2TurnResult> {
-  const crises = (await db
-    .collection<Crisis>("crises")
-    .find(
-      { status: "active", "v2.definitionId": { $exists: true } },
-      { projection: LIVE_PROJECTION }
-    )
-    .toArray()) as unknown as LiveCrisis[];
+  const loadLive = async () =>
+    (await db
+      .collection<Crisis>("crises")
+      .find(
+        { status: "active", "v2.definitionId": { $exists: true } },
+        { projection: LIVE_PROJECTION }
+      )
+      .toArray()) as unknown as LiveCrisis[];
+  let crises = await loadLive();
+  if (crises.length > 0) {
+    // outcomes land on the instance before it is read for stepping
+    const bills = await processCrisisEmergencyBills(db, turn);
+    if (bills.failed > 0) crises = await loadLive();
+  }
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
@@ -339,7 +347,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
       loadInputs(db, turn, defs, countryIds, world),
       db
         .collection<CrisisLeverUse>("crisisLeverUses")
-        .find({ crisisId: { $in: ids }, appliedTurn: null })
+        .find({ crisisId: { $in: ids }, appliedTurn: null, chargeState: { $ne: "pending" } })
         .toArray(),
       needsHolders ? loadHolders(db, turn, countryIds) : Promise.resolve([]),
     ]);
