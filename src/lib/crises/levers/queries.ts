@@ -7,10 +7,10 @@ import type { ActiveCrisisStage, CrisisRole, LeverCost } from "@/lib/crises/v2/t
 import { AID_DEFAULT_PCT_GDP, AID_MAX_PCT_GDP } from "@/lib/constants/crises";
 import type { Crisis, CrisisInteraction, CrisisLeverUse } from "@/lib/db/types/crisis";
 import { getGameState } from "@/lib/gameState";
-import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
+import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { leverActionCost } from "@/lib/crises/v2/leverActions";
 import { leverBlock } from "./availability";
-import { governsAffectedState } from "./jurisdiction";
+import { governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles } from "./roles";
 
 /** Size bounds for an aid pledge, as shares of the sender's GDP. */
@@ -83,13 +83,17 @@ async function countriesOf(db: Db, crises: LiveCrisis[]): Promise<Map<string, st
  * roles, and that character's recent pulls, so it is cheap enough for a nav
  * badge as well as the crises page.
  */
-async function loadAidRanges(
+async function loadLegacyNodes(
   db: Db,
   crisisIds: ObjectId[],
   countryId: string | undefined
-): Promise<Map<string, AidPledgeRange>> {
+): Promise<{
+  ranges: Map<string, AidPledgeRange>;
+  nodeCountries: Map<string, Map<string, readonly string[]>>;
+}> {
   const ranges = new Map<string, AidPledgeRange>();
-  if (crisisIds.length === 0 || !countryId) return ranges;
+  const nodeCountries = new Map<string, Map<string, readonly string[]>>();
+  if (crisisIds.length === 0 || !countryId) return { ranges, nodeCountries };
   const [interactions, budget] = await Promise.all([
     db
       .collection<CrisisInteraction>("crisisInteractions")
@@ -100,6 +104,7 @@ async function loadAidRanges(
             crisisId: 1,
             "decisionTree.nodeId": 1,
             "decisionTree.type": 1,
+            "decisionTree.requiredCountryIds": 1,
             "decisionTree.aidMaxPctGdp": 1,
             "decisionTree.aidDefaultPctGdp": 1,
           },
@@ -111,6 +116,11 @@ async function loadAidRanges(
   const senderGdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   for (const interaction of interactions) {
+    const gates = new Map<string, readonly string[]>();
+    for (const n of interaction.decisionTree) {
+      if (n.requiredCountryIds?.length) gates.set(n.nodeId, n.requiredCountryIds);
+    }
+    nodeCountries.set(interaction.crisisId.toString(), gates);
     const node = interaction.decisionTree.find((n) => n.type === "aid");
     const maxPctGdp = node?.aidMaxPctGdp ?? AID_MAX_PCT_GDP;
     ranges.set(interaction.crisisId.toString(), {
@@ -120,7 +130,7 @@ async function loadAidRanges(
       currencyCode: budget?.currencyCode ?? "USD",
     });
   }
-  return ranges;
+  return { ranges, nodeCountries };
 }
 
 export async function getAvailableLevers(
@@ -169,11 +179,11 @@ export async function getAvailableLevers(
     lastPulled.set(key, Math.max(lastPulled.get(key) ?? -Infinity, pull.submittedTurn));
   }
 
-  const aidRanges = await loadAidRanges(
+  const { ranges: aidRanges, nodeCountries } = await loadLegacyNodes(
     db,
     crises
       .filter((c) =>
-        getCrisisDefinition(c.v2.definitionId)?.levers.some((l) => l.legacy?.kind === "aid")
+        resolveCrisisDefinition(c.v2.definitionId)?.levers.some((l) => l.legacy !== undefined)
       )
       .map((c) => c._id),
     actor.countryId
@@ -181,20 +191,24 @@ export async function getAvailableLevers(
 
   const result: AvailableCrisisLevers[] = [];
   for (const crisis of crises) {
-    const def = getCrisisDefinition(crisis.v2.definitionId);
+    const def = resolveCrisisDefinition(crisis.v2.definitionId);
     if (!def || crisis.v2.stage === "resolved") continue;
     const crisisCountries = countries.get(crisis._id.toString()) ?? null;
-    const inCountry = (id: string | undefined) =>
-      crisisCountries === null || (!!id && crisisCountries.includes(id));
 
     const levers: AvailableLever[] = [];
     for (const lever of def.levers) {
       if (!roles.has(lever.role)) continue;
-      const inScope =
-        lever.role === "corpCeo"
-          ? crisisCountries === null || crisisCountries.some((id) => corpCountries.has(id))
-          : inCountry(actor.countryId);
-      if (!inScope) continue;
+      if (
+        lever.role === "corpCeo" &&
+        crisisCountries !== null &&
+        !crisisCountries.some((id) => corpCountries.has(id))
+      )
+        continue;
+      if (!leverInActorJurisdiction(lever, crisisCountries, actor.countryId)) continue;
+      const gate = lever.legacy
+        ? nodeCountries.get(crisis._id.toString())?.get(lever.legacy.nodeId)
+        : undefined;
+      if (gate && (!actor.countryId || !gate.includes(actor.countryId))) continue;
       if (lever.role === "stateGovernor" && !governsAffectedState(actor, crisis)) continue;
       const block = leverBlock(
         crisis.v2,

@@ -29,3 +29,19 @@ export function governsAffectedState(
   const state = office?.state?.toUpperCase();
   return state !== undefined && crisis.regionIds.some((id) => id.toUpperCase() === state);
 }
+
+/**
+ * Whether the actor's own country puts a lever within reach. Pooled authored
+ * decisions (aid, collective contributions) are open to foreign leaders; every
+ * other lever answers only to the countries the crisis reaches, and a
+ * corporate lever is bounded by the corporation, not the actor's country.
+ */
+export function leverInActorJurisdiction(
+  lever: { role: string; legacy?: { kind: string } },
+  crisisCountries: readonly string[] | null,
+  actorCountryId: string | undefined
+): boolean {
+  if (crisisCountries === null || lever.role === "corpCeo") return true;
+  if (lever.legacy !== undefined && lever.legacy.kind !== "option") return true;
+  return !!actorCountryId && crisisCountries.includes(actorCountryId);
+}

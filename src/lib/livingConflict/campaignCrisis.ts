@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
 import {
+  getCrisisDefinition,
   registerCrisisDefinition,
   registerCrisisEffectModule,
   registerCrisisInputProvider,
@@ -23,8 +24,6 @@ import { vietnamWorldPressure, type ActiveWarSnapshot } from "./worldPressure";
 
 const COMPONENT = "livingConflictCampaign";
 
-let registered = false;
-
 /** Whether a crisis document mirrors a campaign rather than being an event of its own. */
 export function isCampaignCrisis(crisis: { v2?: { definitionId: string } }): boolean {
   return crisis.v2?.definitionId.startsWith(CAMPAIGN_DEFINITION_PREFIX) === true;
@@ -36,9 +35,10 @@ export function isCampaignCrisis(crisis: { v2?: { definitionId: string } }): boo
  * crisis without knowing anything about conflicts. Idempotent.
  */
 export function ensureCampaignCrisisContent(): void {
-  if (registered) return;
+  const defs = allLivingConflictDefs();
+  if (defs.length === 0 || getCrisisDefinition(campaignDefinitionId(defs[0].key))) return;
   for (const mod of CAMPAIGN_EFFECT_MODULES) registerCrisisEffectModule(mod);
-  for (const def of allLivingConflictDefs()) {
+  for (const def of defs) {
     registerCrisisDefinition(convertLivingConflictDef(def));
     registerCrisisInputProvider({
       input: campaignIntensityInput(def.key),
@@ -69,13 +69,10 @@ export function ensureCampaignCrisisContent(): void {
       return new Map([...ctx.countryIds].map((id) => [id, pressure]));
     },
   });
-  registered = true;
 }
 
 /** Test seam. */
-export function resetCampaignCrisisContentForTests(): void {
-  registered = false;
-}
+export function resetCampaignCrisisContentForTests(): void {}
 
 export interface CampaignTurnState {
   def: LivingConflictDef;

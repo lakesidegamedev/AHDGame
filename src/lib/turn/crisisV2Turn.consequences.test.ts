@@ -294,3 +294,29 @@ describe("blame follows exposure", () => {
     ).toEqual(["gov-oh", "gov-tx", "leader"]);
   });
 });
+
+describe("delivery that fails after the crisis is saved", () => {
+  it("keeps fallout pending and retries it next turn", async () => {
+    registerCrisisDefinition(makeDefinition());
+    settleCrisisConsequences.mockRejectedValueOnce(new Error("temporary database failure"));
+    const first = makeDb([liveCrisis({ stage: "aftermath", stageStartTurn: 4, severity: 40 })]);
+    await processCrisisV2Turn(first.db, 10);
+    const saved = writtenSet(first.bulkWrite)[0].v2;
+    expect(saved.pendingDelivery?.consequences).toBe(true);
+    const second = makeDb([liveCrisis(saved)]);
+    await processCrisisV2Turn(second.db, 11);
+    expect(settleCrisisConsequences).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not deliver again once delivery succeeded", async () => {
+    registerCrisisDefinition(makeDefinition());
+    const first = makeDb([liveCrisis({ stage: "aftermath", stageStartTurn: 4, severity: 40 })]);
+    await processCrisisV2Turn(first.db, 10);
+    expect(settleCrisisConsequences).toHaveBeenCalledTimes(1);
+    const saved = { ...writtenSet(first.bulkWrite)[0].v2 };
+    delete saved.pendingDelivery;
+    const second = makeDb([liveCrisis(saved)]);
+    await processCrisisV2Turn(second.db, 11);
+    expect(settleCrisisConsequences).toHaveBeenCalledTimes(1);
+  });
+});

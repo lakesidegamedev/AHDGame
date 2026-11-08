@@ -28,6 +28,12 @@ export interface ConsequenceTargets {
   regionIds: readonly string[];
 }
 
+/** Writes already made on an earlier attempt, and a way to record each new one. */
+export interface WriteReceipts {
+  done: ReadonlySet<string>;
+  mark(key: string): void;
+}
+
 export interface ConsequenceResult {
   approvalWrites: number;
   electionShifts: number;
@@ -56,14 +62,16 @@ function shiftId(crisisId: ObjectId, countryId: string, partyId: string, region:
  * Turns the accountability ledger into approval changes for the offices that
  * carry one (national approval for the head of state, state approval for a
  * governor) and into a bounded, expiring vote-share shift for each holder's
- * party in the places the crisis reached. Runs once per crisis; the shift ids
+ * party in the places the crisis reached. Approval is additive, so each write
+ * is keyed and skipped on a retry once its receipt is recorded; the shift ids
  * are stable so a repeat run overwrites nothing new.
  */
 export async function settleCrisisConsequences(
   db: Db,
   instance: Pick<CrisisInstance, "ledger">,
   targets: ConsequenceTargets,
-  turn: number
+  turn: number,
+  receipts?: WriteReceipts
 ): Promise<ConsequenceResult> {
   const verdicts = judgeHolders(instance.ledger);
   const result: ConsequenceResult = { approvalWrites: 0, electionShifts: 0 };
@@ -111,37 +119,30 @@ export async function settleCrisisConsequences(
     }
   }
 
-  const nationalOps: AnyBulkWriteOperation<GovernmentApproval>[] = [];
+  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
   for (const [countryId, delta] of nationalApproval) {
     if (Math.abs(delta) < 0.01) continue;
-    nationalOps.push({
-      updateOne: {
-        filter: { _id: countryId as GovernmentApproval["_id"] },
-        update: clampedApproval(delta),
-      },
-    });
+    const key = `national:${countryId}`;
+    if (receipts?.done.has(key)) continue;
+    await approvals.updateOne(
+      { _id: countryId as GovernmentApproval["_id"] },
+      clampedApproval(delta)
+    );
+    receipts?.mark(key);
+    result.approvalWrites += 1;
   }
-  if (nationalOps.length > 0) {
-    await db
-      .collection<GovernmentApproval>("governmentApprovals")
-      .bulkWrite(nationalOps, { ordered: false });
-  }
-  const stateOps: AnyBulkWriteOperation<StateApprovalHistory>[] = [];
+  const stateApprovals = db.collection<StateApprovalHistory>("stateApprovalHistory");
   for (const [stateId, { countryId, delta }] of stateApproval) {
     if (Math.abs(delta) < 0.01) continue;
-    stateOps.push({
-      updateOne: {
-        filter: { _id: stateId, countryId: countryId as StateApprovalHistory["countryId"] },
-        update: clampedApproval(delta),
-      },
-    });
+    const key = `state:${stateId}`;
+    if (receipts?.done.has(key)) continue;
+    await stateApprovals.updateOne(
+      { _id: stateId, countryId: countryId as StateApprovalHistory["countryId"] },
+      clampedApproval(delta)
+    );
+    receipts?.mark(key);
+    result.approvalWrites += 1;
   }
-  if (stateOps.length > 0) {
-    await db
-      .collection<StateApprovalHistory>("stateApprovalHistory")
-      .bulkWrite(stateOps, { ordered: false });
-  }
-  result.approvalWrites = nationalOps.length + stateOps.length;
 
   const regionIds =
     targets.scope === "local" || targets.scope === "state" ? [...targets.regionIds] : [];

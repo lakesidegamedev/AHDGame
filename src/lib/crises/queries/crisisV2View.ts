@@ -4,7 +4,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { getGameState } from "@/lib/gameState";
-import { getCrisisDefinition } from "@/lib/turn/crisisV2/registry";
+import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { forecastDoNothing, severityTrend, type SeverityTrend } from "@/lib/crises/v2/forecast";
 import { ledgerView, type LedgerRowView } from "@/lib/crises/v2/ledgerView";
 import { SEVERITY_HISTORY_LIMIT } from "@/lib/crises/v2/severity";
@@ -73,7 +73,7 @@ function summarize(
   available: AvailableCrisisLevers | undefined,
   corporations: Array<{ id: string; name: string; countryId: string }>
 ): CrisisV2Summary | null {
-  const def = getCrisisDefinition(crisis.v2.definitionId);
+  const def = resolveCrisisDefinition(crisis.v2.definitionId);
   if (!def || crisis.v2.stage === "resolved") return null;
   const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => s.severity);
   const levers = (available?.levers ?? []).map(withCorporationFlag);
@@ -181,7 +181,7 @@ export async function loadCrisisV2Detail(
   viewerId: ObjectId | null
 ): Promise<CrisisV2Detail | null> {
   if (!crisis.v2) return null;
-  const def = getCrisisDefinition(crisis.v2.definitionId);
+  const def = resolveCrisisDefinition(crisis.v2.definitionId);
   const turn = (await getGameState(db))?.currentTurn ?? 0;
   const live = hasLiveV2(crisis);
   const summary = live
