@@ -362,6 +362,27 @@ function findSizeViolations() {
 }
 
 // ---------------------------------------------------------------------------
+// Fat route rule
+// ---------------------------------------------------------------------------
+// A route handler should authenticate, parse and delegate. Workflow composed
+// inside `route.ts` can only be tested over HTTP; move it into a lib command
+// module (model: src/lib/corporations/commands/founding/foundCorporation.ts).
+
+const ROUTE_WARN_LOC = 300;
+
+function findFatRoutes() {
+  const root = path.resolve(process.cwd(), "src", "app");
+  /** @type {{ file: string, loc: number }[]} */
+  const fat = [];
+  for (const file of walkDir(root)) {
+    if (!/[\\/]route\.tsx?$/.test(file)) continue;
+    const loc = fs.readFileSync(file, "utf8").split(/\r?\n/).length;
+    if (loc > ROUTE_WARN_LOC) fat.push({ file, loc });
+  }
+  return fat.sort((a, b) => b.loc - a.loc);
+}
+
+// ---------------------------------------------------------------------------
 // useState count rule
 // ---------------------------------------------------------------------------
 // Components with very high useState counts are unmaintainable; project
@@ -899,6 +920,21 @@ function main() {
     warningCount += sizeFindings.warn.length;
   } else {
     console.log(`PASS file size <= ${SIZE_WARN_LOC} LOC`);
+  }
+
+  const fatRoutes = findFatRoutes();
+  if (fatRoutes.length > 0) {
+    console.log(`WARN route.ts > ${ROUTE_WARN_LOC} LOC (${fatRoutes.length})`);
+    console.log(
+      "   Keep the route to auth, parse and delegate; move the workflow into a lib command module."
+    );
+    for (const { file, loc } of fatRoutes) {
+      console.log(`   ${path.relative(process.cwd(), file)} (${loc} LOC)`);
+    }
+    console.log();
+    warningCount += fatRoutes.length;
+  } else {
+    console.log(`PASS route.ts <= ${ROUTE_WARN_LOC} LOC`);
   }
 
   // ---- portable rules core ---------------------------------------------

@@ -1621,10 +1621,6 @@
       "longBlocks": 0,
       "narrativeLines": 4
     },
-    "src/app/api/corporations/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/app/api/country/[code]/budget/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 3
