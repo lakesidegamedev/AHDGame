@@ -27,6 +27,28 @@ const PREVIEW_CURRENCIES: CurrencyCode[] = ["USD", "GBP", "JPY", "EUR", "IEP"];
 // Per-grant cap on cash-on-hand additions to limit accidental over-grants.
 const MAX_CASH_GRANT = 10_000_000;
 
+function PresetButtons({
+  presets,
+  onPick,
+}: {
+  presets: [number, string][];
+  onPick: (value: number) => void;
+}) {
+  return (
+    <div className="flex gap-1">
+      {presets.map(([value, label]) => (
+        <button
+          key={value}
+          onClick={() => onPick(value)}
+          className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ResourceGrantManager({ context = "admin" }: ResourceGrantManagerProps) {
   const apiBase = context === "moderator" ? "/api/moderator" : "/api/admin";
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
@@ -243,26 +265,14 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 placeholder="0"
                 className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
               />
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setActionsAmount(25)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +25
-                </button>
-                <button
-                  onClick={() => setActionsAmount(50)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +50
-                </button>
-                <button
-                  onClick={() => setActionsAmount(100)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +100
-                </button>
-              </div>
+              <PresetButtons
+                onPick={setActionsAmount}
+                presets={[
+                  [25, "+25"],
+                  [50, "+50"],
+                  [100, "+100"],
+                ]}
+              />
             </div>
             <p className="mt-1 text-xs text-muted">Use negative values to remove actions</p>
           </div>
@@ -277,26 +287,14 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 placeholder="0"
                 className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
               />
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setFundsAmount(100000)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +100K
-                </button>
-                <button
-                  onClick={() => setFundsAmount(500000)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +500K
-                </button>
-                <button
-                  onClick={() => setFundsAmount(1000000)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +1M
-                </button>
-              </div>
+              <PresetButtons
+                onPick={setFundsAmount}
+                presets={[
+                  [100000, "+100K"],
+                  [500000, "+500K"],
+                  [1000000, "+1M"],
+                ]}
+              />
             </div>
             <p className="mt-1 text-xs text-muted">
               Credited to <code>currencyBalances.campaign</code> in the player&apos;s home currency.
@@ -320,20 +318,13 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 max={MAX_CASH_GRANT}
                 className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
               />
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setCashOnHandAmount(100000)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +100K
-                </button>
-                <button
-                  onClick={() => setCashOnHandAmount(1000000)}
-                  className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
-                >
-                  +1M
-                </button>
-              </div>
+              <PresetButtons
+                onPick={setCashOnHandAmount}
+                presets={[
+                  [100000, "+100K"],
+                  [1000000, "+1M"],
+                ]}
+              />
             </div>
             <p className="mt-1 text-xs text-muted">
               Auto-converted to each player&apos;s home currency at live FX rate.

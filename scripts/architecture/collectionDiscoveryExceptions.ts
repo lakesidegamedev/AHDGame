@@ -80,6 +80,22 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     reason: "The admin route selects from the repository-owned election or index configuration.",
   },
   {
+    file: "src/lib/admin/resetContract/applyPreservedFieldContracts.ts",
+    owner: "applyPreservedFieldContracts",
+    argument: "name",
+    scopeHash: "8a2121fca29330f95b1e2701f72e1ae2f99d7bad589b140fc1f469f9c8a03fdd",
+    count: 1,
+    reason: "Reset iterates the preserved-field contract, which mirrors the seed manifest.",
+  },
+  {
+    file: "src/lib/admin/resetContract/residueScan.ts",
+    owner: "runResidueScan",
+    argument: "collection",
+    scopeHash: "dfab9a79599a5145c979b8a83fd6efa20ce4a4d4907e7229fab48a397e40e06e",
+    count: 3,
+    reason: "The residue scan reads the manifest categories and its own fixed turn-stamp list.",
+  },
+  {
     file: "src/lib/admin/resetGameWorld.ts",
     owner: "<anonymous-function>",
     argument: "name",

@@ -33,6 +33,11 @@ export interface GameConfig {
     phaseReached?: string;
     at: Date;
     by?: string;
+    /**
+     * Old-world residue the post-reset scan found. Above zero, the turn system
+     * refuses to start or process a turn until a clean reset replaces this record.
+     */
+    residueViolations?: number;
   };
   /**
    * This world's OWN seed-roster upkeep denominators, captured at bootstrap.

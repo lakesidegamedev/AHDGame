@@ -71,6 +71,8 @@ import { resetPoliticalMetricsRuntimeState } from "@/lib/admin/seed/resetPolitic
 import { resetMacroMetricsRuntimeState } from "@/lib/admin/seed/resetMacroMetricsRuntimeState";
 import { resetStateRuntimeFields } from "@/lib/admin/seed/resetStateRuntimeFields";
 import { clearReferenceForRebuild } from "@/lib/admin/seed/referenceRebuildClear";
+import { runResidueScan } from "@/lib/admin/resetContract/residueScan";
+import { formatResidueViolation } from "@/lib/admin/resetContract/rules/residueScan";
 
 export interface ResetAndBootstrapOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -135,6 +137,8 @@ export interface ResetSeedReadiness {
   status: "healthy" | "blocked" | "not-checked";
   criticalChecks: SeedDiagnosticCheck[];
   baselineCaptured: boolean;
+  /** Old-world state the post-reset residue scan found; the world stays paused. */
+  residueViolations: string[];
   error?: string;
 }
 
@@ -295,7 +299,10 @@ export async function resetAndBootstrapGameWorld(
     status: "not-checked",
     criticalChecks: [],
     baselineCaptured: false,
+    residueViolations: [],
   };
+  // Every document a reset keeps must predate this; every one it writes cannot.
+  const resetStartedAt = new Date();
   let finalized: Awaited<ReturnType<typeof finalizeResetGameWorld>> | null = null;
   const recordRunLog = options.recordRunLog !== false;
   if (recordRunLog) await openResetRunLog(db, run, { preset, mode, adminUsername });
@@ -625,6 +632,33 @@ export async function resetAndBootstrapGameWorld(
       }
     }
 
+    // Residue scan, before the world can run a turn and before any baseline is
+    // captured. A violation keeps the run partial and the turn system refuses to
+    // start until a clean reset replaces gameConfig.lastReset.
+    phaseReached = "residue scan";
+    try {
+      const violations = await runResidueScan(db, {
+        resetStartedAt,
+        expectedTurn: reset.world?.currentTurn ?? 1,
+        resetWorldId: reset.world?.resetWorldId ?? null,
+        referenceReplaced: resetReference,
+      });
+      for (const violation of violations) {
+        const line = formatResidueViolation(violation);
+        readiness.residueViolations.push(line);
+        run.recordFailure("residue", violation.check, line);
+      }
+      collect(
+        violations.length === 0
+          ? "Residue scan: nothing from the previous world remains"
+          : `Residue scan: ${violations.length} violation(s); the world stays paused`
+      );
+    } catch (err) {
+      const line = `residue scan failed: ${err instanceof Error ? err.message : String(err)}`;
+      readiness.residueViolations.push(line);
+      run.recordFailure("residue", "residueScan", line);
+    }
+
     // 4) Seal the freshly-reset world behind maintenance mode, then run the
     //    seed conformance diagnostic while sealed. Diagnostic failure must NEVER
     //    abort the reset — wrap in try/catch and surface diagnostic_error.
@@ -730,6 +764,7 @@ export async function resetAndBootstrapGameWorld(
         logs,
         deleteProfiles,
         adminUsername,
+        residueViolations: readiness.residueViolations.length,
       });
   }
 }
