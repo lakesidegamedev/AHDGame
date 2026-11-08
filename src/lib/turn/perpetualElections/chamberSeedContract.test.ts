@@ -3,6 +3,16 @@
  * find a seat value on every region each era preset seeds. A gap fails here, in
  * authored data, instead of throwing inside a live turn.
  */
+import {
+  AT_LOWER_CHAMBER_SPEC,
+  ES_LOWER_CHAMBER_SPEC,
+  FI_LOWER_CHAMBER_SPEC,
+  FR_LOWER_CHAMBER_SPEC,
+  GR_LOWER_CHAMBER_SPEC,
+  IT_LOWER_CHAMBER_SPEC,
+  SE_LOWER_CHAMBER_SPEC,
+  TR_LOWER_CHAMBER_SPEC,
+} from "./countries/betaParliamentSpecs";
 import { describe, expect, it } from "vitest";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
@@ -12,14 +22,6 @@ import { IE_CHAMBER_SPECS } from "@/lib/countries/ie/elections/chamberSpecs";
 import { NG_CHAMBER_SPECS } from "@/lib/countries/ng/elections/chamberSpecs";
 import { CN_CHAMBER_SPECS } from "@/lib/countries/cn/elections/chamberSpecs";
 import { BR_CHAMBER_SPECS } from "@/lib/countries/br/elections/chamberSpecs";
-import { AT_LOWER_CHAMBER_SPEC } from "@/lib/countries/at/elections/chamberSpecs";
-import { ES_LOWER_CHAMBER_SPEC } from "@/lib/countries/es/elections/chamberSpecs";
-import { FI_LOWER_CHAMBER_SPEC } from "@/lib/countries/fi/elections/chamberSpecs";
-import { FR_LOWER_CHAMBER_SPEC } from "@/lib/countries/fr/elections/chamberSpecs";
-import { GR_LOWER_CHAMBER_SPEC } from "@/lib/countries/gr/elections/chamberSpecs";
-import { IT_LOWER_CHAMBER_SPEC } from "@/lib/countries/it/elections/chamberSpecs";
-import { SE_LOWER_CHAMBER_SPEC } from "@/lib/countries/se/elections/chamberSpecs";
-import { TR_LOWER_CHAMBER_SPEC } from "@/lib/countries/tr/elections/chamberSpecs";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
 
 const SPECS: readonly ChamberSpec[] = [
