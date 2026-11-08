@@ -40,16 +40,6 @@ vi.mock("@/lib/actions/granularPollPayload", () => ({
 vi.mock("@/lib/achievements/triggers", () => ({ checkActionAchievements: vi.fn() }));
 vi.mock("@/lib/actions/electionOpponents", () => ({ getElectionOpponents: vi.fn() }));
 vi.mock("@/lib/campaignTargeting/poll", () => ({ projectCampaignPoll: vi.fn() }));
-vi.mock("@/lib/actions/pollCalculations", () => ({
-  computePollData: async () => ({
-    overallAppeal: 50,
-    totalEstimatedVoters: 500,
-    totalPotentialVoters: 250,
-    topGroups: [],
-    bottomGroups: [],
-    categories: [],
-  }),
-}));
 
 const request = () =>
   new NextRequest("http://localhost/api/actions/poll", {
@@ -223,11 +213,26 @@ describe("commissioning a campaign-aware poll", () => {
     );
   });
 
-  it("leaves a poll without new campaign rules on its previous calculation", async () => {
+  it("derives a poll without campaign rules from the granular electorate", async () => {
     vi.mocked(getElectionOpponents).mockResolvedValue(null);
+    vi.mocked(buildGranularPollPayloadForState).mockReturnValueOnce({
+      dims: ["age"],
+      dimLabels: { age: "Age" },
+      cells: [
+        {
+          id: "age:young",
+          buckets: { age: "young" },
+          share: 0.5,
+          economicLean: 0,
+          socialLean: 0,
+          turnout: 50,
+        },
+      ],
+      candidateShares: {},
+    });
     const response = await POST(request());
     expect(response.status).toBe(200);
-    expect((await response.json()).pollSnapshot.totalEstimatedVoters).toBe(500);
+    expect((await response.json()).pollSnapshot.totalEstimatedVoters).toBe(250_000);
     expect(projectCampaignPoll).not.toHaveBeenCalled();
   });
 

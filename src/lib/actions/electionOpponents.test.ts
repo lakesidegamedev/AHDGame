@@ -7,23 +7,13 @@ import { getDb } from "@/lib/mongodb";
 import { getElectionOpponents } from "./electionOpponents";
 import * as singleSeatIncumbency from "@/lib/electionEngine/singleSeatIncumbency";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/demographics/categoryCatalog", () => ({
-  loadDemographicCategories: async () => [],
-}));
-vi.mock("@/lib/seeds/stateDemographics", () => ({ computeLiveGroupTurnouts: async () => ({}) }));
 vi.mock("@/lib/time/gameTime", () => ({
   getGameTime: async () => ({ currentTurn: 10, effectiveNow: new Date(0) }),
 }));
 vi.mock("@/lib/actions/prevElectionPartyShares", () => ({
   getLastElectionPartyShares: async () => null,
 }));
-vi.mock("@/lib/actions/pollCalculations", () => ({
-  computePollData: async () => ({
-    overallAppeal: 50,
-    totalPotentialVoters: 100,
-    totalEstimatedVoters: 60,
-  }),
-}));
+vi.mock("@/lib/gameState", () => ({ getGameState: async () => ({ currentTurn: 10 }) }));
 beforeEach(() => vi.clearAllMocks());
 it.each([false, true])(
   "prefers the next local race in either database order (%s)",

@@ -26,9 +26,7 @@ export interface StoredPoll {
   overallAppeal: number;
   totalEstimatedVoters: number;
   totalPotentialVoters: number;
-  topGroups: unknown[];
-  bottomGroups: unknown[];
-  categories?: unknown[];
+  granular?: unknown;
 }
 
 export interface PolicyPositions {

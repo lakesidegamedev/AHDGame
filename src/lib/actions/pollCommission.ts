@@ -3,9 +3,7 @@ import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 import { projectCampaignPoll } from "@/lib/campaignTargeting/poll";
 import { NextResponse } from "next/server";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { ObjectId } from "mongodb";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { canPerformAction } from "@/lib/actions";
@@ -19,29 +17,29 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { localCampaignBalance } from "@/lib/currency/campaignBalance";
 import { campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import { getGameState } from "@/lib/gameState";
-import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
-import { getCountryLayer1Model } from "@/lib/seeds/international";
+import {
+  buildGranularPollPayloadForState,
+  type GranularPollPayload,
+} from "@/lib/actions/granularPollPayload";
+import {
+  computeInRaceVotes,
+  computePollHeadline,
+  projectCandidateApprovalBuckets,
+} from "@/lib/actions/granularPollPayload/rules";
+import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { clampPercentStat } from "@/lib/numeric/rules";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import type {
   Character,
   State,
-  StateDemographics,
   StatePartyOrg,
   StateDemographicTurnout,
   ActionLog,
   User,
 } from "@/lib/db/types";
 import { computeStateDemographicTurnout } from "@/lib/seeds/stateDemographics";
-import { computePollData, type OpponentForShare } from "@/lib/actions/pollCalculations";
-import {
-  shiftDemographicsForPrimary,
-  applyPrimaryTurnoutRetention,
-} from "@/lib/campaigns/shiftPrimaryElectorate";
-import type { PoliticalParty } from "@/lib/db/types";
 import { getElectionOpponents } from "@/lib/actions/electionOpponents";
 import { loadPollPartyColors } from "@/lib/actions/pollPartyColors";
-import { buildLiveTurnouts } from "@/lib/electionEngine/resolvedTurnout";
-import { getAllVoterArchetypeIds } from "@/lib/demographics/countryDemographics";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PersonalStatTenureContext } from "@/lib/electionEngine/rules/tenureRetention";
@@ -78,27 +76,22 @@ export async function buildPollOverview({
     return errorResponse(404, "Character not found");
   }
 
-  const [state, demographics, categories, statePartyOrgs, turnoutDoc, forexEnabled] =
-    await Promise.all([
-      db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
-      loadDemographicCategories(db),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .find({ countryId: character.countryId, stateId: character.homeState })
-        .toArray(),
-      db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
-      isForexEnabled(),
-    ]);
+  const [state, statePartyOrgs, turnoutDoc, forexEnabled] = await Promise.all([
+    db
+      .collection<State>("states")
+      .findOne({ _id: character.homeState, countryId: character.countryId }),
+    db
+      .collection<StatePartyOrg>("statePartyOrg")
+      .find({ countryId: character.countryId, stateId: character.homeState })
+      .toArray(),
+    db
+      .collection<StateDemographicTurnout>("stateDemographicTurnout")
+      .findOne({ _id: character.homeState, countryId: character.countryId }),
+    isForexEnabled(),
+  ]);
 
-  if (!demographics || !state) {
-    return errorResponse(404, "State or demographics not found");
+  if (!state) {
+    return errorResponse(404, "State not found");
   }
 
   const userEP = character.policies.economic;
@@ -140,63 +133,13 @@ export async function buildPollOverview({
         overallAppeal: number;
         totalEstimatedVoters: number;
         totalPotentialVoters: number;
-        topGroups: unknown[];
-        bottomGroups: unknown[];
-        categories?: Array<{ id: string; name: string; groups?: unknown[] }>;
+        granular?: unknown;
       }
     | undefined;
 
-  // Invalidate stored poll if schema mismatch (e.g. old 6 categories vs new 12 voter
-  // groups). The valid-id set spans every country's current voter archetypes (US 12
-  // + the six seeded countries) so a player's own valid groups are never flagged stale.
-  const VALID_VOTER_GROUP_IDS = getAllVoterArchetypeIds();
-  const currentCategoryIds = new Set(categories.map((c) => c._id as string));
-  const voterGroupsSchema = currentCategoryIds.has("voterGroups");
-  const oldSchema = ["race", "gender", "education", "wealth", "age", "ideology"].some((id) =>
-    currentCategoryIds.has(id)
-  );
-
-  const hasLegacyGroups = (groups: unknown[] | undefined) => {
-    if (!groups?.length) return false;
-    return groups.some((g) => {
-      const id = (g as { id?: string })?.id;
-      return id && !VALID_VOTER_GROUP_IDS.has(id);
-    });
-  };
-
-  let shouldInvalidate = false;
-
-  // Full Poll: invalidate when categories schema mismatch or group IDs are stale
-  if (storedPoll?.categories?.length) {
-    const storedCategories = storedPoll.categories as Array<{
-      id: string;
-      groups?: Array<{ id?: string }>;
-    }>;
-    const storedIds = new Set(storedCategories.map((c) => c.id));
-    const storedHasVoterGroups = storedIds.has("voterGroups");
-    const storedHasOld = ["race", "gender", "education", "wealth", "age", "ideology"].some((id) =>
-      storedIds.has(id)
-    );
-    if ((voterGroupsSchema && storedHasOld) || (oldSchema && storedHasVoterGroups)) {
-      shouldInvalidate = true;
-    }
-    // Also invalidate if any stored group ID is no longer valid (e.g. UK archetype rename)
-    if (!shouldInvalidate) {
-      const hasStaleGroups = storedCategories.some((cat) =>
-        (cat.groups ?? []).some((g) => g.id && !VALID_VOTER_GROUP_IDS.has(g.id))
-      );
-      if (hasStaleGroups) shouldInvalidate = true;
-    }
-  }
-
-  // Quick Poll (no categories): invalidate when topGroups/bottomGroups have legacy group IDs
-  if (storedPoll && !storedPoll.categories?.length) {
-    if (hasLegacyGroups(storedPoll.topGroups) || hasLegacyGroups(storedPoll.bottomGroups)) {
-      shouldInvalidate = true;
-    }
-  }
-
-  if (shouldInvalidate) {
+  // The granular electorate is the only poll shape. A stored snapshot without
+  // it predates the bucket model and cannot be displayed.
+  if (storedPoll && !storedPoll.granular) {
     await db
       .collection<Character>("characters")
       .updateOne({ _id: character._id }, { $unset: { [storedPollKey]: 1 } });
@@ -328,14 +271,10 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
   }
 
   // Compute the poll results now so we can persist them
-  const [state, demographics, categories, statePartyOrgs, turnoutDoc] = await Promise.all([
+  const [state, statePartyOrgs, turnoutDoc] = await Promise.all([
     db
       .collection<State>("states")
       .findOne({ _id: character.homeState, countryId: character.countryId }),
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .findOne({ _id: character.homeState, countryId: character.countryId }),
-    loadDemographicCategories(db),
     db
       .collection<StatePartyOrg>("statePartyOrg")
       .find({ countryId: character.countryId, stateId: character.homeState })
@@ -350,18 +289,6 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
   if (!state) {
     return errorResponse(404, `State not found for ${character.homeState}. Contact support.`);
   }
-  if (!demographics) {
-    return errorResponse(
-      400,
-      "Demographic data not found for your state. Run Admin → Demographics → Reseed Demographics, then try again."
-    );
-  }
-  // No hard gate on a `voterGroups` archetype category existing: a poll runs
-  // off the granular electorate, and a world with a Layer-1 substrate and no
-  // archetype catalog is a valid world. The `demographics` check above is the
-  // one that matters.
-
-  let pollSnapshot: Record<string, unknown> | null = null;
   const electionContext = await getElectionOpponents(character);
   const campaignProjection = electionContext
     ? await projectCampaignPoll(
@@ -373,173 +300,115 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
         electionContext.inPrimary
       )
     : null;
-  {
-    const opponentsForShare: OpponentForShare[] | undefined = electionContext?.opponents?.map(
-      (o) => ({
-        candidateId: o.candidateId,
-        name: o.name,
-        economicPosition: o.economicPosition,
-        socialPosition: o.socialPosition,
-        favorability: o.favorability,
-        politicalInfluence: o.politicalInfluence,
-        party: o.party,
-        ...(o.archetypeApprovals && { archetypeApprovals: o.archetypeApprovals }),
-        ...(o.infamy != null && { infamy: o.infamy }),
-      })
-    );
 
-    // Use shared turnout resolver (same as elections) for consistent GOTV/canvassing effects
-    const gsPreset = gameState?.preset;
-    let liveTurnouts = buildLiveTurnouts(
-      demographics,
-      categories,
-      turnoutForElection(turnoutDoc, electionContext ?? {}),
-      {
-        preset: gsPreset,
-      }
+  // The granular electorate is the poll: it is the substrate the vote engines
+  // count. Built before charging so a world with no census model never debits.
+  let granularPayload: GranularPollPayload;
+  try {
+    const countryId = state.countryId ?? "US";
+    const isPresidentialGeneral =
+      electionContext != null &&
+      !electionContext.inPrimary &&
+      isHeadOfGovernmentRace(electionContext.electionType, countryId as CountryId);
+    const presidentialIncumbent = isPresidentialGeneral
+      ? await resolvePresidentApproval(db, countryId as CountryId)
+      : null;
+    const executiveConsecutiveTerms = isPresidentialGeneral
+      ? getPresidentialConsecutiveTerms(
+          gameState,
+          countryId as CountryId,
+          presidentialIncumbent?.partyId
+        )
+      : 0;
+    const incumbency: PersonalStatTenureContext | undefined =
+      electionContext?.incumbency || presidentialIncumbent
+        ? {
+            ...electionContext?.incumbency,
+            ...(presidentialIncumbent
+              ? {
+                  executivePartyId: presidentialIncumbent.partyId,
+                  executiveConsecutiveTerms,
+                }
+              : {}),
+          }
+        : undefined;
+    const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
+    // Live era clock: the poll must describe the SAME electorate the vote
+    // engines are counting, so it reads the year through the same gate.
+    const pollEraYear = eraYearContextFromGameState(gameState);
+    granularPayload = buildGranularPollPayloadForState({
+      campaign: campaignProjection ?? undefined,
+      countryId,
+      stateId: state._id as string,
+      preset,
+      era: pollEraYear.year != null ? undefined : eraForPreset(preset),
+      year: pollEraYear.year,
+      startingYear: pollEraYear.startingYear,
+      character: {
+        candidateId: electionContext?.candidateId,
+        party: character.party,
+        economicPosition: character.policies.economic,
+        socialPosition: character.policies.social,
+        favorability: character.favorability,
+        archetypeApprovals: character.archetypeApprovals,
+        politicalInfluence: character.politicalInfluence ?? 0,
+        nationalInfluence: character.nationalInfluence,
+      },
+      opponents:
+        electionContext?.opponents?.map((o) => ({
+          candidateId: o.candidateId,
+          name: o.name ?? o.candidateId,
+          party: o.party,
+          economicPosition: o.economicPosition,
+          socialPosition: o.socialPosition,
+          favorability: o.favorability,
+          archetypeApprovals: o.archetypeApprovals,
+          isNPP: o.isNPP,
+          politicalInfluence: o.politicalInfluence,
+          nationalInfluence: o.nationalInfluence,
+        })) ?? [],
+      incumbency,
+      useNationalInfluenceForReach: isPresidentialGeneral,
+    });
+  } catch (err) {
+    console.error("[poll] granular payload failed:", err);
+    return errorResponse(
+      400,
+      "Polling is not available for your state yet: no electorate data was found."
     );
+  }
 
-    // Primary-phase polls see a shifted electorate: Dem primary voters are
-    // more liberal than the general Dem-leaning electorate, GOP primary voters
-    // are more conservative than the general. Retention must be applied to the
-    // liveTurnouts map itself: buildLiveTurnouts for US states rebuilds from
-    // Layer-1 baselines and would otherwise wipe a demographics-only shift,
-    // desyncing polls from projectPrimaryByState / stagger results.
-    let effectiveDemographics = demographics;
-    if (
-      electionContext?.inPrimary &&
-      electionContext?.electionType === "president" &&
-      character.party
-    ) {
-      const pollPartyDoc = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne(
-          { countryId: character.countryId ?? "US", sequentialId: Number(character.party) },
-          { projection: { economicPosition: 1, socialPosition: 1 } }
-        );
-      if (pollPartyDoc) {
-        const partyPosition = {
-          economicPosition: pollPartyDoc.economicPosition,
-          socialPosition: pollPartyDoc.socialPosition,
-        };
-        effectiveDemographics = shiftDemographicsForPrimary(demographics, partyPosition);
-        liveTurnouts = applyPrimaryTurnoutRetention(liveTurnouts, demographics, partyPosition);
-      }
-    }
-
-    const pd = await computePollData(
-      character,
-      state,
-      effectiveDemographics,
-      categories,
-      statePartyOrgs,
-      opponentsForShare,
-      liveTurnouts,
-      state.votingSystem ?? "fptp"
-    );
-    if (campaignProjection) {
-      pd.totalEstimatedVoters = campaignProjection.totalPool;
-      pd.inRaceVoteShare = {
+  const statePopulation = state.votingEligiblePopulation ?? state.population;
+  const headline = computePollHeadline(granularPayload.cells, statePopulation, {
+    economicPosition: character.policies.economic,
+    socialPosition: character.policies.social,
+    favorability: character.favorability,
+    politicalInfluence: clampPercentStat(character.politicalInfluence ?? 0),
+    approvalBuckets: projectCandidateApprovalBuckets(
+      character.archetypeApprovals,
+      state.countryId ?? "US"
+    ),
+  });
+  const inRaceVoteShare = campaignProjection
+    ? {
         myVotes: campaignProjection.votes[campaignProjection.myCandidateId] ?? 0,
         opponentVotes: Object.fromEntries(
           Object.entries(campaignProjection.votes).filter(
             ([id]) => id !== campaignProjection.myCandidateId
           )
         ),
-      };
-    }
-    pollSnapshot = {
-      takenAt: new Date(),
-      overallAppeal: pd.overallAppeal,
-      totalEstimatedVoters: pd.totalEstimatedVoters,
-      totalPotentialVoters: pd.totalPotentialVoters,
-      topGroups: pd.topGroups,
-      bottomGroups: pd.bottomGroups,
-      ...(pd.inRaceVoteShare && { inRaceVoteShare: pd.inRaceVoteShare }),
-      ...(pollType === "large" ? { categories: pd.results } : {}),
-    };
-  }
-
-  // Additive granular electorate breakdown, available for the US and for any
-  // country with a CountryLayer1Model, and wrapped so any failure here never
-  // breaks the poll commission.
-  if (pollSnapshot) {
-    try {
-      const countryId = state.countryId ?? "US";
-      const isPresidentialGeneral =
-        electionContext != null &&
-        !electionContext.inPrimary &&
-        isHeadOfGovernmentRace(electionContext.electionType, countryId as CountryId);
-      const presidentialIncumbent = isPresidentialGeneral
-        ? await resolvePresidentApproval(db, countryId as CountryId)
-        : null;
-      const executiveConsecutiveTerms = isPresidentialGeneral
-        ? getPresidentialConsecutiveTerms(
-            gameState,
-            countryId as CountryId,
-            presidentialIncumbent?.partyId
-          )
-        : 0;
-      const incumbency: PersonalStatTenureContext | undefined =
-        electionContext?.incumbency || presidentialIncumbent
-          ? {
-              ...electionContext?.incumbency,
-              ...(presidentialIncumbent
-                ? {
-                    executivePartyId: presidentialIncumbent.partyId,
-                    executiveConsecutiveTerms,
-                  }
-                : {}),
-            }
-          : undefined;
-      const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
-      const era = eraForPreset(preset);
-      // Live era clock: the poll must describe the SAME electorate the vote
-      // engines are counting, so it reads the year through the same gate.
-      const pollEraYear = eraYearContextFromGameState(gameState);
-      const model = getCountryLayer1Model(countryId, era);
-      // eslint-disable-next-line local/no-country-literals -- US Layer-1 model lives outside getCountryLayer1Model
-      if (model || countryId === "US") {
-        const granularPayload = buildGranularPollPayloadForState({
-          campaign: campaignProjection ?? undefined,
-          countryId,
-          stateId: state._id as string,
-          preset,
-          era: pollEraYear.year != null ? undefined : era,
-          year: pollEraYear.year,
-          startingYear: pollEraYear.startingYear,
-          character: {
-            candidateId: electionContext?.candidateId,
-            party: character.party,
-            economicPosition: character.policies.economic,
-            socialPosition: character.policies.social,
-            favorability: character.favorability,
-            archetypeApprovals: character.archetypeApprovals,
-            politicalInfluence: character.politicalInfluence ?? 0,
-            nationalInfluence: character.nationalInfluence,
-          },
-          opponents:
-            electionContext?.opponents?.map((o) => ({
-              candidateId: o.candidateId,
-              name: o.name ?? o.candidateId,
-              party: o.party,
-              economicPosition: o.economicPosition,
-              socialPosition: o.socialPosition,
-              favorability: o.favorability,
-              archetypeApprovals: o.archetypeApprovals,
-              isNPP: o.isNPP,
-              politicalInfluence: o.politicalInfluence,
-              nationalInfluence: o.nationalInfluence,
-            })) ?? [],
-          incumbency,
-          useNationalInfluenceForReach: isPresidentialGeneral,
-        });
-        pollSnapshot.granular = granularPayload;
       }
-    } catch (err) {
-      console.error("[poll] granular payload failed:", err);
-    }
-  }
+    : electionContext?.opponents.length
+      ? computeInRaceVotes(granularPayload.cells, granularPayload.candidateShares, statePopulation)
+      : undefined;
+  const pollSnapshot: Record<string, unknown> = {
+    takenAt: new Date(),
+    overallAppeal: headline.overallAppeal,
+    totalEstimatedVoters: campaignProjection?.totalPool ?? headline.totalEstimatedVoters,
+    totalPotentialVoters: headline.totalPotentialVoters,
+    ...(inRaceVoteShare && { inRaceVoteShare }),
+    granular: granularPayload,
+  };
 
   const storedPollKey = pollType === "large" ? "lastPollLarge" : "lastPoll";
 
