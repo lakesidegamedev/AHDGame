@@ -41,7 +41,7 @@ type Expectation = "sector" | "null-greenfield" | "null-derived";
  *                       units and their price disagree.
  */
 const REGISTRY: Record<string, { count: number; expect: Expectation; why: string }> = {
-  "src/lib/constants/capacityEconomy.ts": {
+  "src/lib/corporations/rules/capacityEconomy.ts": {
     count: 1,
     expect: "sector",
     why: "computeBuildCost forwards its own required strategyId to capacityPricePerUnit.",
