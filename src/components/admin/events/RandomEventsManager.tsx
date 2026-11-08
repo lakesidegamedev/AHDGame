@@ -302,11 +302,7 @@ export function RandomEventsManager() {
               <h3 className="text-sm font-bold text-foreground">Player random events</h3>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  flagEnabled === null
-                    ? "bg-muted/15 text-muted"
-                    : flagEnabled
-                      ? "bg-amber-500/15 text-amber-500"
-                      : "bg-muted/15 text-muted"
+                  flagEnabled ? "bg-amber-500/15 text-amber-500" : "bg-muted/15 text-muted"
                 }`}
               >
                 {flagEnabled === null ? "…" : flagEnabled ? "Enabled" : "Disabled"}

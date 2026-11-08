@@ -132,6 +132,14 @@ export function ResourceCapacityAdminPanel() {
     return next;
   };
 
+  const resetRow = (stateId: string) => {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[stateId];
+      return next;
+    });
+  };
+
   const saveRow = async (row: CapacityRow) => {
     if (savingStateId) return;
     setSavingStateId(row.stateId);
@@ -149,25 +157,13 @@ export function ResourceCapacityAdminPanel() {
         body: JSON.stringify({ resources: cleaned }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setDrafts((prev) => {
-        const next = { ...prev };
-        delete next[row.stateId];
-        return next;
-      });
+      resetRow(row.stateId);
       await fetchAll();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSavingStateId(null);
     }
-  };
-
-  const resetRow = (stateId: string) => {
-    setDrafts((prev) => {
-      const next = { ...prev };
-      delete next[stateId];
-      return next;
-    });
   };
 
   const totalsByResource = useMemo(() => {

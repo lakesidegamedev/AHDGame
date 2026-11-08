@@ -379,23 +379,20 @@ function ElectionPanel({
                           {election.totalVotes > 0 ? `${pct}%` : "—"}
                         </div>
                       </div>
-                      {isVoting && canVote && !isMyVote && (
+                      {isVoting && canVote && (
                         <button
                           onClick={() => handleVote(cand.characterId)}
                           disabled={actionLoading}
-                          className="rounded-lg border border-card-border bg-background px-2.5 py-1 text-xs hover:border-primary hover:text-primary disabled:opacity-40"
+                          className={`rounded-lg border border-card-border bg-background px-2.5 py-1 text-xs disabled:opacity-40 ${
+                            isMyVote
+                              ? "text-muted hover:border-error hover:text-error"
+                              : "hover:border-primary hover:text-primary"
+                          }`}
+                          title={
+                            isMyVote ? "Click another candidate to change your vote" : undefined
+                          }
                         >
-                          Vote
-                        </button>
-                      )}
-                      {isVoting && canVote && isMyVote && (
-                        <button
-                          onClick={() => handleVote(cand.characterId)}
-                          disabled={actionLoading}
-                          className="rounded-lg border border-card-border bg-background px-2.5 py-1 text-xs text-muted hover:border-error hover:text-error disabled:opacity-40"
-                          title="Click another candidate to change your vote"
-                        >
-                          Voted
+                          {isMyVote ? "Voted" : "Vote"}
                         </button>
                       )}
                     </div>

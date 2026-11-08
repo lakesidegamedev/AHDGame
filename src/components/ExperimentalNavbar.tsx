@@ -1498,13 +1498,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                       });
                       if (navigationVariant === "a")
                         void captureProductEvent("navigation_menu_opened", { variant: "control" });
-                      if (navigationVariant === "b") {
-                        setMobileProfileOpen((value) => !value);
-                        setMobileMenuOpen(false);
-                      } else {
-                        setMobileProfileOpen((value) => !value);
-                        setMobileMenuOpen(true);
-                      }
+                      setMobileProfileOpen((value) => !value);
+                      setMobileMenuOpen(navigationVariant !== "b");
                     }}
                     aria-label={t("common.profile")}
                     aria-expanded={navigationVariant === "b" ? mobileProfileOpen : mobileMenuOpen}
