@@ -435,11 +435,11 @@ describe("submitCrisisDecision", () => {
     expect(result.interaction.collectiveCurrent).toBe(5_000_000);
     expect(result.interaction.resolvedAt).toBeNull();
     expect(result.interaction.currentNodeId).toBe("fund");
-    // Treasury was debited via spendFromTreasury (uses $set, not $inc).
+    // Treasury was debited via spendFromTreasury (atomic $inc of the delta).
     const debit = db.collectionMocks["federalBudget"]!.updateOne.mock.calls.at(-1);
     expect(debit?.[0]).toEqual({ countryId: "US" });
-    expect((debit?.[1] as { $set: { treasuryBalance: number } }).$set.treasuryBalance).toBe(
-      95_000_000
+    expect((debit?.[1] as { $inc: { treasuryBalance: number } }).$inc.treasuryBalance).toBe(
+      -5_000_000
     );
   });
 
