@@ -51,6 +51,7 @@ import type { UkCommonsVacancy } from "@/lib/db/types/ukByElection";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { processYearOneByElections } from "./yearOneByElections";
 
 export const SPECIAL_COMMONS_ELECTION_TYPE = "special_commons";
 
@@ -204,6 +205,12 @@ export async function processCommonsByElectionWatcher(
 
   const gameState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
   const seatMap = getUkCommonsSeats(gameState?.preset);
+
+  await processYearOneByElections(db, currentTurn, now, {
+    preset: gameState?.preset,
+    preIterationActive: gameState?.preIteration?.active,
+    preIterationTurns: gameState?.preIterationTurns,
+  });
 
   // ── 1. Backstop: every holder-less `commons` row needs a live vacancy. ──
   // Death, bans, and admin removals tombstone the row without recording a
