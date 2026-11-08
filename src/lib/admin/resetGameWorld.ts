@@ -89,7 +89,7 @@ export { PRESERVED_ACTIVITY_LOG_TYPES };
  */
 const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
   isAdmin: { $ne: true },
-  role: { $nin: ["admin", "moderator"] },
+  role: { $nin: ["admin", "moderator", "junior_dev"] },
   isBanned: { $ne: true },
 });
 
