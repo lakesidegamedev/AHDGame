@@ -115,11 +115,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       : PRIMARY_HOME_SURGE_COST_FUNDS;
     const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
 
-    // Crash-safe money flow (issue #1672): the combined actions+funds
-    // debit is one keyed leg (same-document writes must share a leg — two
-    // legs on one document under one key collide on the key guard) and the
-    // surge flag a keyed update, so a crash between the sequential writes
-    // reconciles instead of charging for a surge that never landed.
+    // Crash-safe money flow: the combined actions+funds debit is one keyed leg
+    // (same-document writes must share a leg, or two legs on one document under
+    // one key collide on the key guard) and the surge flag a keyed update, so a
+    // crash between sequential writes reconciles instead of charging for a
+    // surge that never landed.
     const headerKey = request.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");

@@ -49,9 +49,8 @@ interface TreasuryPanelProps {
    */
   canManageTreasury: boolean;
   /**
-   * Treasurer + admin can edit the Treasury Plan. Chair/VC see the plan
-   * read-only (per the 2026-05-23 spec) — the card itself is rendered
-   * whenever `canManageTreasury` and `canEdit` toggles the input state.
+   * Treasurer + admin can edit the Treasury Plan. Chair/VC see it read-only;
+   * `canEdit` toggles the input state within `canManageTreasury`.
    */
   canManageTreasuryPlan: boolean;
   /**

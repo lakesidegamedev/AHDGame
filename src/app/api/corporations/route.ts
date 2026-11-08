@@ -297,10 +297,9 @@ export async function POST(request: Request) {
     const turnGuard = await rejectDuringTurn(db);
     if (turnGuard) return turnGuard;
     // Founding is intentionally exempt from BOTH pause signals:
-    // - `isActive === false` (turns paused for registration / settling) — players
-    //   must still be able to found during that window (ticket #1009; #1004
-    //   wrongly gated this and blocked the iter-4 settle period).
-    // - `corporationActionsPaused` — that flag only freezes existing CEOs'
+    // - `isActive === false` (turns paused for registration / settling): players
+    //   must still be able to found during that window.
+    // - `corporationActionsPaused`: that flag only freezes existing CEOs'
     //   dividend/share/IPO/sector mutations via `requireCorporationActionsEnabled`
     //   on `src/app/api/corporations/[id]/**` (and expand).
 

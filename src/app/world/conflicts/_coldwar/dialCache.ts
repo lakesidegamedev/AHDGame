@@ -2,21 +2,16 @@ import { writePersistedNumber } from "./persisted";
 import type { ColdWarDials } from "@/lib/coldwar/dials";
 
 /**
- * The localStorage keys the Cold War console's boards read their dials from, and
+ * localStorage keys the Cold War console's boards read their dials from, and
  * the one writer that fills them from the server.
  *
- * These are the console's own keys, already read by every board: `ahd_defcon` by
- * the DEFCON readout, the detente board's stand-down gate and the whole home
- * front metric computation; the two cohesion keys by the proxy-war supply model
- * and the crisis board's credibility multiplier. Writing them is therefore not
- * decoration. A war on the ladder really does drop readiness, really does change
- * what a bloc can supply, really does harden the home front and really does close
- * off the stand-down the detente board offers.
+ * These keys are consumed by the DEFCON readout, the detente board's stand-down
+ * gate, the home front metric computation, the proxy-war supply model and the
+ * crisis board's credibility multiplier, so writing them is not decoration.
  *
- * They are a CACHE. The server reading is the source of truth and overwrites them
- * on every load of the section (see ColdWarDialHydrator). A board's own in-session
- * adjustment survives until the next load, which is the existing behaviour and not
- * something this changes.
+ * They are a CACHE: the server reading is the source of truth and overwrites
+ * them on every section load (see ColdWarDialHydrator). A board's in-session
+ * adjustment survives until the next load.
  */
 export const CW_DIAL_KEYS = {
   defcon: "ahd_defcon",

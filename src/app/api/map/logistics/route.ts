@@ -2,8 +2,8 @@
 // Per-state freight capacity + projected interstate haul load for the Logistics
 // map choropleth. Haul TEUs come from `sourcingNetworkLoad` (record-only
 // landed-price sourcing pass). Capacity comes from CommodityPrice.stateSupply
-// for freight — the TEU logistics sectors actually clear against. Haul alone
-// is not the market size (ticket #1039).
+// for freight - the TEU logistics sectors actually clear against. Haul alone
+// is not the market size.
 
 import { NextResponse } from "next/server";
 import { z } from "zod";

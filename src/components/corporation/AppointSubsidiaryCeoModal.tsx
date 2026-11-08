@@ -13,10 +13,9 @@ interface AppointSubsidiaryCeoModalProps {
 }
 
 /**
- * Parent CEO reseats a subsidiary's CEO — either a human character (chosen by
- * name search) or an NPP caretaker. Ineligible humans (the parent owner / CEO /
- * a sibling subsidiary's operator) are rejected server-side by the one-person
- * rule, and the error is surfaced inline if the chosen player isn't allowed.
+ * Parent CEO appoints a subsidiary CEO: human (name search) or NPP
+ * caretaker. Ineligible humans are rejected server-side by the
+ * one-person rule; the error surfaces inline.
  */
 export function AppointSubsidiaryCeoModal({
   corporationId,

@@ -19,12 +19,8 @@ interface ChangelogPostCardProps {
 
 /**
  * One release in the feed: headline, date, summary, labels, and a link out.
- *
- * This used to expand the whole release body inline. With entries running to a
- * couple of hundred lines that turned the feed into a wall of accordions where
- * nothing was scannable and nothing was linkable. The body now lives at
- * /changelog/[slug]; the card's only job is to make you decide whether to open
- * it.
+ * The card only helps decide whether to open the full release at
+ * /changelog/[slug].
  */
 export function ChangelogPostCard({
   post,

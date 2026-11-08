@@ -77,11 +77,9 @@ export async function POST(request: Request, context: RouteContext) {
     // Validate target character
     const targetId = new ObjectId(parsed.data.characterId);
 
-    // Crash-safe spend (issue #1672): the action debit is a keyed idempotent
-    // leg and the nomination push a terminal keyed write, so a crash between
-    // the sequential writes reconciles instead of charging for a nomination
-    // that never landed. `Idempotency-Key` replays the stored outcome
-    // without charging again.
+    // Crash-safe spend: the debit is a keyed idempotent leg and the
+    // nomination push a terminal keyed write, so a crash between them
+    // reconciles on replay instead of charging for nothing.
     const headerKey = request.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");

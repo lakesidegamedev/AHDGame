@@ -50,9 +50,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    // Cross-country guard (Bug #0668): party sequentialId is unique per
-    // country, so a foreign actor's party id collides onto the same-id local
-    // party. Block cross-country actors (admins included).
+    // Party sequentialId is unique per country, so a foreign actor's party id can collide onto the same-id local party. Block cross-country actors (admins included).
     const crossCountry = crossCountryActionGuard(authResult.user.character, countryId);
     if (crossCountry) return crossCountry;
 
@@ -146,9 +144,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    // Cross-country guard (Bug #0668): party sequentialId is unique per
-    // country, so a foreign actor's party id collides onto the same-id local
-    // party. Block cross-country actors (admins included).
+    // Party sequentialId is unique per country, so a foreign actor's party id can collide onto the same-id local party. Block cross-country actors (admins included).
     const crossCountry = crossCountryActionGuard(authResult.user.character, countryId);
     if (crossCountry) return crossCountry;
 

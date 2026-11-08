@@ -1,6 +1,4 @@
-// GET — Fetches a single retired character by _id for the account owner
-// Auth: requireBasicAuth (verify userId matches authenticated user)
-// Errors: 401, 404
+// GET retired character by _id for the owner. Auth: requireBasicAuth, userId must match. Errors: 401, 404.
 
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";

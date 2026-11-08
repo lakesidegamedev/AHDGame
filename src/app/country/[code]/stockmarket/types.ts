@@ -36,10 +36,9 @@ export interface StockListing {
   /** Shares available in the public float (0 = no shares on market) */
   publicFloat: number;
   /**
-   * Canonical tradability flag (#2033), persisted on the snapshot listing.
-   * Absent on pre-#2033 snapshots; readers fall back to the canonical
-   * `isTradableListing` predicate. False rows render a non-tradable state,
-   * never a return badge.
+   * Canonical tradability flag, persisted on the snapshot listing. Absent on
+   * legacy snapshots; readers fall back to `isTradableListing`. False rows
+   * render a non-tradable state, never a return badge.
    */
   isTradable?: boolean;
   /**
@@ -114,10 +113,10 @@ export interface CommodityData {
   nationalDemand?: Record<string, number>;
   nationalPrices?: Record<string, number>;
   /**
-   * Per-country reachable market book (scope=full only) — drives the Reachable
+   * Per-country reachable market book (scope=full only). Drives the Reachable
    * lens, which is the one a build decision should use. `demand` is what this
    * country's sellers can actually reach; `blockedSupply`/`untradedSupply` are
-   * disclosure only and must never enter a ratio (ticket #1077).
+   * disclosure only and must never enter a ratio.
    */
   reachableBooks?: Record<
     string,

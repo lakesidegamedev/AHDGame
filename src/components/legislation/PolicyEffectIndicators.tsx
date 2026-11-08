@@ -241,8 +241,8 @@ export function computeMetricEffects({
   // directions aren't resolvable, currentDir falls back to 0 (center), so this
   // degrades to the proposed option's absolute direction.
   if (effectTargetsWeighted?.length) {
-    // Graded option intensity (Bug #0962): a same-side change of intensity
-    // (Moderate → Maximum) now yields a non-zero delta, so the chip is shown.
+    // Graded option intensity: a same-side change of intensity
+    // (Moderate -> Maximum) yields a non-zero delta, so the chip is shown.
     // Falls back to the effectDirection sign when options/indices are unavailable.
     const proposedIntensity =
       proposedPolicyIndex !== undefined && policyOptions?.length

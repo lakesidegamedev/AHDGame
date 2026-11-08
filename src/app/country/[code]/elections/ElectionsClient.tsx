@@ -219,9 +219,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
 
   const allRegions = useMemo(() => [...new Set(elections.map((e) => e.state))].sort(), [elections]);
 
-  // One derivation for both views: `mapGroups` stays country-wide while the list
-  // honors the region filter. Deriving them separately is what previously let the
-  // map read region-filtered data and collapse to a single region.
+  // One derivation for both views: `mapGroups` stays country-wide while the list honors the region filter. Separate derivations let the map read region-filtered data and collapse to one region.
   const { listElections: filtered, mapGroups: groupsAll } = useMemo(
     () =>
       selectElectionGroups(elections, allRegions, {

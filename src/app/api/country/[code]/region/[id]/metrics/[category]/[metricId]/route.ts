@@ -118,9 +118,7 @@ export async function GET(
     // National scope IDs (federal, uk_national, jp_national, …) are lowercase by convention
     const idLower = id.toLowerCase();
     const stateId = NATIONAL_SCOPE[idLower] ? idLower : id;
-    // Direction of "improvement" depends on the metric: for lower-is-better
-    // metrics an improving policy moves the value DOWN. Used to keep the
-    // affecting-policy "Pushing up/down" badge consistent with the tick rate.
+    // Lower-is-better metrics improve by moving DOWN; keep policy push badge consistent.
     const isHigherBetter =
       getMetricDefinition(category as MetricCategoryId, metricId)?.isHigherBetter ?? true;
 

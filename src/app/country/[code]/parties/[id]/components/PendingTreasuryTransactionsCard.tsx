@@ -10,14 +10,11 @@ import { Skeleton } from "@/components/ui";
  *
  * Shows in-flight two-person-approval rows for Send-to-Member and
  * Transfer-to-State-Party actions. The proposer's slot is pre-filled
- * (✅) at propose-time. The other slot shows an explicit Approve
- * button visible only to the eligible role-holder. Proposer also sees
- * a Cancel button while the row is open.
+ * at propose-time; the other slot shows an Approve button only to the
+ * eligible role-holder. The proposer also sees Cancel while open.
  *
- * Empty state: "No pending transactions."
- *
- * Refreshes on Approve/Cancel via the parent's `onActed` callback when
- * provided; otherwise re-fetches in place.
+ * Refreshes via the parent's `onActed` callback when provided; otherwise
+ * re-fetches in place.
  */
 
 interface PendingApprovalSlot {

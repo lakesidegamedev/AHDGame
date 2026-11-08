@@ -208,9 +208,7 @@ export const POST = withAdminRoute(async (_auth) => {
             if (!ec) return { candidateId: c._id.toString(), score: 0 };
             let score: number;
             if (isPresident) {
-              // Party influence (candidate's own party clout), NPPs have none. See #934.
-              // National chairs get +25% on the value used for primary calcs.
-              // State chairs get no boost on the national snapshot (geographic only).
+              // Party influence is the candidate's own party clout; NPPs have none. National chairs get +25% for primary calcs; state chairs get no national-snapshot boost (geographic only).
               const rawPartyInfluence = c.isNPP
                 ? 0
                 : (charMap.get(c.characterId.toString())?.partyInfluence ?? 0);

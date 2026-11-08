@@ -3,23 +3,19 @@ import { FINGERPRINT_COMMONNESS_CEILING } from "@/lib/utils/degenerateFingerprin
 import type { DuplicateGroup, GroupMember, MatchReason, UserData } from "./types";
 
 /**
- * Build duplicate groups from shared IPs, tracking cookies, device keys and
- * exact fingerprints — both the accounts' CURRENT values and the values they
- * were seen on within the last 90 days (`historicalIps` /
- * `historicalFingerprints`, from `identityObservations`). Historical matches
- * are reported as their own `*-past` reasons, never folded into the current
- * ones. Without them, rotating a fingerprint removed an account from the panel
- * entirely while the scoring engine still scored the link at 0.95.
+ * Build duplicate groups from shared IPs, cookies, device keys and fingerprints,
+ * using both current values and values seen in the last 90 days
+ * (`historicalIps` / `historicalFingerprints`). Historical matches get their own
+ * `*-past` reasons. Without them, rotating a fingerprint hides an account from
+ * the panel while scoring still links it.
  *
- * Eligibility is decided SERVER-SIDE (`eligibleIdentitySignals`) and arrives on
- * `UserData.signalEligibility`. This function must not re-derive it: the
- * moderator endpoint emits sha256 hashes, so neither the Cloudflare-edge CIDR
- * check nor the sentinel-string check is possible here — a hash never equals
- * "unknown", which is how every account with an unresolvable IP previously got
- * welded into a single component.
+ * Eligibility is decided server-side (`eligibleIdentitySignals`) and arrives on
+ * `UserData.signalEligibility`. Do not re-derive it here: the moderator
+ * endpoint emits sha256 hashes, so neither the CIDR nor the sentinel-string
+ * check is possible, and a hash never equals "unknown".
  *
- * A user with no annotation contributes no signals. That is deliberate: a stale
- * client bundle degrades to "no groups" rather than to "group on everything".
+ * A user with no annotation contributes no signals, so a stale client bundle
+ * degrades to "no groups" rather than "group on everything".
  */
 export const getDuplicateGroups = (users: UserData[]): DuplicateGroup[] => {
   // Signal name -> the value fields that carry it. The moderator endpoint sends

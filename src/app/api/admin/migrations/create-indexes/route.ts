@@ -45,8 +45,8 @@ export const INDEX_DEFINITIONS: [string, IndexSpecification, CreateIndexesOption
   ...ALL_WRITE_GUARD_INDEXES,
   // At most one ACTIVE nomination per (role, nominee) — backstops the idempotent
   // incumbent auto-nomination against the non-transactional multi-call-site race
-  // that produced duplicate nominations (ticket #959). Partial so the many
-  // historical failed/confirmed duplicates don't block the build.
+  // that can produce duplicate nominations. Partial so historical
+  // failed/confirmed duplicates don't block the build.
   [
     "houseLeadershipNominations",
     { role: 1, nomineeId: 1 },
@@ -84,9 +84,7 @@ export const INDEX_DEFINITIONS: [string, IndexSpecification, CreateIndexesOption
     },
   ],
 
-  // Personal trade history (suggestion #38). The per-owner lookups the
-  // /api/portfolio/trade-history route runs; the collection is append-only and
-  // grows without bound, so an unindexed scan here would get worse every turn.
+  // Personal trade history lookups. Collection is append-only and unbounded, so scans would degrade over time.
   ["shareTradeHistory", { "from.characterId": 1, turn: 1 }],
   ["shareTradeHistory", { "to.characterId": 1, turn: 1 }],
   ["shareTradeHistory", { "from.corporationId": 1, turn: 1 }],

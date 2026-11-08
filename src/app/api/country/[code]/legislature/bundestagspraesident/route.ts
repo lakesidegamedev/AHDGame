@@ -60,10 +60,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const bundestag = await getBundestagComposition(db, partyMap);
     const authUser = await getAuthUser().catch(() => null);
 
-    // Look up the viewer's character — votes are stored keyed by `character._id`
-    // (see actions.ts), so we need the character's id to read back myVote. Also
-    // used to surface viewerCharacterId / viewerParty / viewerIsSittingMdB to the
-    // panel so the panel doesn't have to call /api/auth/me separately.
+    // Votes are keyed by `character._id`, so we need the character id to read
+    // back myVote. Also surfaced to the panel so it can skip a separate /api/auth/me call.
     let myCharacterId: string | null = null;
     let myParty: string | null = null;
     let isSittingMdB = false;

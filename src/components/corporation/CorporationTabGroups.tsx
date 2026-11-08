@@ -11,15 +11,9 @@ import {
 /**
  * Corporation page tab grouping.
  *
- * The corporation page used to render every destination as one top-level tab
- * (12 for a CEO, plus the CEO Office's own inner sub-tabs), which overflowed
- * into a horizontally scrolling row — players had to scroll sideways to reach
- * the tabs on the right. This groups them the same way the state/region page
- * was grouped: a handful of super-tabs, each with its own sub-tab row, driven
- * by the shared `SuperTabNav`.
- *
- * Every previous destination still exists; only its address changed, and the
- * old `?tab=<id>` deep links keep working through `CORP_LEGACY_TAB_MAP`.
+ * Groups destinations into super-tabs with sub-tab rows, driven by the shared
+ * `SuperTabNav`. Every previous destination still exists; old `?tab=<id>`
+ * deep links keep working through `CORP_LEGACY_TAB_MAP`.
  */
 
 export type CorpGroupId = "overview" | "finance" | "operations" | "ownership" | "ceo";

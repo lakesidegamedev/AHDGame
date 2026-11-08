@@ -55,10 +55,9 @@ export async function POST(
       return errorResponse(parsed.status, parsed.error);
     }
 
-    // The target must be a bucket THIS country's electorate actually has.
-    // Validated here rather than in the schema because the valid set depends on
-    // the game's preset. A stale or foreign bucket used to be accepted, charged,
-    // and then applied to no voters at all.
+    // Target must be a bucket this country's electorate has. Valid set
+    // depends on game preset, so checked here not in the schema. Otherwise
+    // a stale bucket is accepted, charged, and applied to no voters.
     const targetId = parsed.data.targetDemographicGroupId;
     if (targetId) {
       const gs = await db

@@ -430,10 +430,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // A sitting Commons MP already holds a seat that is not on the ballot in a
-    // by-election (#860): the race fills only vacated seats, and seating a
-    // holder would double-seat them (additive resolution never sweeps).
-    // Resign the seat first, then stand as a challenger.
+    // A sitting Commons MP in this state already holds a seat not on the by-election ballot; seating them would double-seat them (additive resolution never sweeps). The race fills only vacated seats.
     if (
       election.electionType === "special_commons" &&
       heldOffice?.type === "commons" &&
@@ -477,9 +474,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           existingCandidate.electionId,
           existingCandidate._id.toString()
         );
-        // The candidate is still in the race under the new party: carry the
-        // campaign across with its funds/levels instead of leaving it filed
-        // under the old party (ticket #1313).
+        // Party switch mid-race: carry the campaign and its funds/levels to the new party.
         await db.collection("campaigns").updateOne(
           {
             electionId: electionObjectId,
@@ -494,9 +489,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    // Withdrawing bars re-entry into the same election (ticket #1391). The
-    // Hungarian and Bulgarian district filings are exempt: they reactivate the
-    // withdrawn row so a candidate can refile until filing closes.
+    // Withdrawing bars re-entry, except HU/BG district filings which reactivate the withdrawn row.
     if (!existingCandidate && !hu1991 && !bgFounding) {
       const withdrew = await findVoluntaryWithdrawals(db, character._id, [electionObjectId]);
       if (withdrew.size > 0) {
@@ -518,13 +511,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Carry over per-cycle throttle / one-shot gates from a prior candidacy in this
-    // same election. Withdrawing and re-entering used to insert a fresh row with
-    // these unset, which reset the one-rally-per-turn throttle (`lastRallyTurn`) and
-    // the one-per-cycle home-state surge gate (`primarySurgeUsed`/`primarySurgeBoost`)
-    // — letting a candidate re-fire a rally and re-trigger the surge every cycle. The
-    // turn processor clears these at primary resolution, so carrying them forward only
-    // affects a withdraw/re-enter within the same live primary.
+    // Carry per-cycle gates (lastRallyTurn, primarySurgeUsed/Boost) from a prior candidacy so withdraw/re-enter cannot re-fire a rally or re-trigger the surge. Cleared at primary resolution.
     const priorCandidacy = await db
       .collection<ElectionCandidate>("electionCandidates")
       .find({ electionId: electionObjectId, characterId: character._id })

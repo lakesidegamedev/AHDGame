@@ -8,13 +8,9 @@ import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus"
 /**
  * Which ways of signing up actually work on THIS deployment.
  *
- * The register page used to render "Register with Discord" and "Register with
- * Google" unconditionally under copy promising an instant account. On a server
- * with no OAuth credentials, or with test mode on (which hard-blocks new
- * Discord registrations with no test-secret escape hatch), both buttons were
- * dead: one bounced to a login page, the other to an error result. Asking the
- * server up front lets the page disable what does not work and say why, instead
- * of sending the player through a redirect to find out.
+ * OAuth buttons and test mode can make a signup method unusable. The server
+ * reports availability up front so the page can disable what does not work and
+ * say why, instead of sending the player through a redirect to find out.
  */
 export interface SignupMethods {
   testMode: boolean;

@@ -1,20 +1,10 @@
 "use client";
 
 /**
- * Battleground map — emphasizes margin tiers + the 5-closest filter as
- * a unified shell for general-election margin display. Pure wrapper
- * around `USAMapPaths`; takes margin data from the `generalViewModel`
- * and computes per-state shading using the same 4-tier band the
- * existing PresidentialMapWithStateDetail uses for popular-vote shading.
- *
- * Per Phase 5b D5: independent of the presidential-specific map so it
- * can be reused on other surfaces. The existing PresidentialMapWithStateDetail
- * remains the primary EV map; BattlegroundMap is the margin-emphasis sibling.
- *
- * Click-through dispatches `onSelectState` so the parent can sync the
- * RegistrationInfluenceCard + PersuasionDrivers selection with map clicks.
- *
- * See plan §"Phase 5b — Tasks" 5b.4 + D5.
+ * Margin-emphasis sibling of the presidential EV map. Pure wrapper around
+ * `USAMapPaths`: takes margin data from `generalViewModel` and shades
+ * per-state using the four-tier band. Click-through dispatches
+ * `onSelectState` so the parent can sync its state selection.
  */
 
 import { useTranslations } from "next-intl";

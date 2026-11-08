@@ -375,10 +375,8 @@ export function NppWhipPanel({
     try {
       const config = getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId);
       const chamber = chamberOverride ?? config.legislature.lowerChamber.key;
-      // A state party panel must post to its own region route. This handler
-      // previously always resolved the national URL, which was harmless while
-      // it only served PM and no-confidence votes (never shown on a state
-      // panel) but breaks a governor impeachment, which is.
+      // A state party panel must post to its own region route; the national
+      // URL breaks governor impeachment.
       const url = endpointConfig?.whipUrl
         ? endpointConfig.whipUrl
         : isNational

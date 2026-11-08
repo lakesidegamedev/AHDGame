@@ -4,10 +4,9 @@ import { sectorPlantCount } from "@/lib/constants/facilityQuantum";
 
 /**
  * The revenue basis every player-facing sector surface must use: realized
- * revenue when the turn processor has persisted it, nameplate otherwise. This
- * mirrors SectorRow's `displayRevenue` (#3001/#3002). Totals and sorting used
- * raw nameplate `revenue` while the rows rendered realized, so the Total line
- * disagreed with the column above it (ticket #1122).
+ * revenue when the turn processor has persisted it, nameplate otherwise.
+ * Totals and sorting must match SectorRow's display so the Total line agrees
+ * with the column above it.
  *
  * Redacted private-corp rows carry null revenue; those contribute 0.
  */

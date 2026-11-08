@@ -213,9 +213,8 @@ const learnLinks = (t: TFunc) =>
   ] as const;
 
 /**
- * Era-neutral tile copy. Anything an era does not override falls back to these,
- * so a new preset can never inherit another decade's politics by accident (a
- * 1953 world used to advertise "the post-Watergate trust deficit").
+ * Era-neutral tile copy. Eras fall back to these when they don't override,
+ * so a preset can't inherit another decade's politics by accident.
  */
 const defaultTileBodies = (t: TFunc): Record<EraTileKey, string> => ({
   stateMetrics: t("landing.tiles.stateMetricsBody"),

@@ -14,15 +14,11 @@ import {
 } from "@/lib/onboarding/tutorialPlan";
 
 /**
- * The welcome flow: the two questions that shape everything the tutorial does.
- *
- * Panel 1 asks how well the player knows the game, panel 2 asks what they came
- * here to do. Interests are multi-select, with an "All of it" card that toggles
- * every one, because most new players want the full game and the ones who do
- * not usually want two things rather than one.
- *
- * Full screen on purpose. This used to be a two-button row at the bottom of an
- * already long character-creation form, where nobody read it.
+ * The welcome flow: two questions that shape the tutorial.
+ * Panel 1: how well the player knows the game. Panel 2: what they came
+ * to do. Interests are multi-select with an "All of it" card because most
+ * new players want everything and the rest usually want two things, not one.
+ * Full screen on purpose: new players skim past inline prompts.
  */
 
 /**

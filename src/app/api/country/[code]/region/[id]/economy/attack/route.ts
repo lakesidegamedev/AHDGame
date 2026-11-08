@@ -234,20 +234,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       const fx = fxByOwnerCorpId.get(s.corporationId.toString());
       return sum + readCorpEconomicAnchor(s.revenue, fx?.code, fx?.rate ?? 1);
     }, 0);
-    // Market tier: at >= "plants" the unowned pool's AUTHORITATIVE quantity is
-    // `headroomUnits` (units of unmet demand), and its `revenue` is the derived
-    // ₳ view of that — the mirror of the owned side, where `capitalStock` is
-    // authoritative and revenue is restated from it each turn. The capture math
-    // below is left in ₳ untouched; only the size it reads and the pool
-    // drawdown it writes move onto the unit basis.
-    // PLANTS-GATED: under plants a split draws `headroomUnits` out of the unowned
-    // pool and grants the attacker `capitalStock`; the pool's `revenue` is re-derived
-    // from the units that remain. The corporateSectors revenue writes are
-    // ternary-gated and run only below plants.
-    // NOTE: always false now — the guard above returns 403 under plants, so
-    // every `plantsEnabled ?` branch below this line is unreachable. Left in
-    // place rather than unpicked here: this route moves money, and stripping
-    // the dead branches out of it deserves its own reviewed pass.
+    // Market tier: at >= "plants" the unowned pool's authoritative quantity is
+    // `headroomUnits` (units of unmet demand), and `revenue` is the derived view
+    // of that. The capture math below stays in currency; only the size it reads
+    // and the pool drawdown it writes move onto the unit basis.
+    // NOTE: always false now. The guard above returns 403 under plants, so every
+    // `plantsEnabled ?` branch below is unreachable. Left in place until a
+    // reviewed pass can strip them safely.
     const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
     const unitsPerAnchor = unownedHeadroomUnitsPerAnchor(
       sectorType,

@@ -2,45 +2,26 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/elections/recalibrate-timers
  *
- * Recalculates primaryEndTime and endTime for every active/upcoming election
- * so they match the canonical LARP schedule, correcting drift caused by
- * batch/manual turn firing.
+ * Recalculates primaryEndTime and endTime for every active/upcoming election so
+ * they match the canonical LARP schedule, correcting drift caused by batch/manual
+ * turn firing.
  *
- * Root cause: election timestamps are wall-clock absolute dates (now + Nh),
- * but batch turns advance currentTurn instantly without advancing the clock.
- * After firing 150 turns in seconds, a House cycle-1 election created at
- * game start still has endTime = "game_start + 96h" (far in the future on
- * the clock) even though LARP turn 96 passed long ago.
+ * Why drift happens: election timestamps are wall-clock absolute dates (now + Nh)
+ * but batch turns advance currentTurn instantly without advancing the clock, so a
+ * cycle-1 election created at game start keeps an endTime far in the future even
+ * though its LARP turn passed long ago.
  *
- * Canonical schedule (1 turn = 1 real hour, 48 turns = 1 LARP year):
- *   House  cycle 1       → endTurn = 144  (bootstrap ends 2022; 48h general)
- *   House  cycle N≥2     → endTurn = 144 + (N−1) × 96  (2024, 2026, …; 48h general)
- *   Senate class C cycle 1 → endTurn = SENATE_CYCLE1_END_TURN[C] (C2=336, C3=144, C1=240)
- *   Senate class C cycle N≥2 → endTurn = SENATE_CYCLE1_END_TURN[C] + (N−1) × 288
- *   Governor  cycle 1    → endTurn = 240  (bootstrap ends 2024)
- *   Governor  cycle N≥2  → endTurn = 240 + (N−1) × 192
- *   StateSenate cycle 1  → endTurn = 240  (bootstrap ends 2024)
- *   StateSenate cycle N≥2 → endTurn = 240 + (N−1) × 192
- *   President cycle 1    → endTurn = 240  (bootstrap ends 2024; 24h general)
- *   President cycle N≥2  → endTurn = 240 + (N−1) × 192
- *   UK Commons cycle 1   → endTurn = 219  (bootstrap: July 2024 general election)
- *   UK Commons cycle N≥2 → if a snap_commons (or regular commons) has resolved for
- *                          the region, endTurn = priorEndTurn + 240; otherwise
- *                          219 + (N−1) × 240.
- *   UK RegionalCouncil   → five annual cohorts; each region retains a 5-year term
- *   JP Shugiin cycle 1   → endTurn = 240  (bootstrap ends 2024)
- *   JP Shugiin cycle N≥2 → if a snap_shugiin (or regular shugiin) has resolved for
- *                          the region, endTurn = priorEndTurn + 192; otherwise
- *                          240 + (N−1) × 192.
- *   JP Sangiin class C cycle 1 → endTurn = JP_SANGIIN_CYCLE1_END_TURN[C] (C1=123 Jul 2022, C2=267 Jul 2025)
- *   JP Sangiin class C cycle N≥2 → endTurn = JP_SANGIIN_CYCLE1_END_TURN[C] + (N−1) × 288  (6-year term per class; stagger between classes is 144)
- *   JP Governor           → same formula as US Governor
+ * Canonical schedule: 1 turn = 1 real hour, 48 turns = 1 LARP year. Each office's
+ * endTurn is computed from its cycle-1 end turn plus term length per cycle, with
+ * UK Commons and JP Shugiin using the prior resolved endTurn + term after a snap
+ * or regular election has resolved. Per-office constants and cycle-1 turns live
+ * alongside the recalibration logic below.
  *
- *   primaryEndTurn = endTurn − generalDurationHours
- *   startTime is always in the past (zero-gap: primaries open immediately)
+ * primaryEndTurn = endTurn - generalDurationHours. startTime is always in the past
+ * (zero-gap: primaries open immediately).
  *
- * Elections whose canonical endTurn ≤ currentTurn are already past due:
- * their endTime is set to now−1s so the next turn completes them and the
+ * Elections whose canonical endTurn <= currentTurn are already past due: their
+ * endTime is set to now-1s so the next turn completes them and the
  * perpetual-election system can spawn the next cycle.
  */
 
@@ -158,19 +139,16 @@ function seatKeyFor(election: Election): string {
 }
 
 /**
- * Decide whether Step 0 should reactivate a `completed`/`resolved` election
- * back to `active` because its canonical endTurn is still in the future.
+ * Decide whether Step 0 should reactivate a `completed`/`resolved` election to
+ * `active` because its canonical endTurn is still in the future.
  *
- * Reactivates only when the election is *premature without* having actually
- * been resolved. Signals that resolution already ran:
- *   - the seat has a non-vacant `electedOfficials` row (`seatedSet`)
- *   - the vote tally is finalized (`finalizedSet`)
- *
- * If either is true, leave the election alone and let the perpetual-election
- * spawn helpers create a fresh next cycle. Reactivating in that case wipes
- * the apparent withdrawal of every player whose candidacy was withdrawn during
- * the prior resolution — see healRecalibrateWithdrawals.ts for the heal that
- * recovered victims of the prior unguarded behavior.
+ * Reactivate only when the election is premature without having been resolved.
+ * Signals that resolution already ran: the seat has a non-vacant
+ * `electedOfficials` row (`seatedSet`) or the vote tally is finalized
+ * (`finalizedSet`). If either is true, leave the election alone and let the
+ * perpetual-election spawn helpers create a fresh next cycle. Reactivating
+ * would wipe the apparent withdrawal of every player withdrawn during the prior
+ * resolution.
  */
 export function shouldReactivatePrematureElection(
   election: Election,
@@ -233,20 +211,16 @@ export const POST = withAdminRoute(async (_auth) => {
   let renumbered = 0;
 
   // ── Step 0: Reactivate prematurely completed elections ─────────────────
-  // If a completed election's canonical endTurn is still in the future,
-  // it was closed too early. Only check recent completions (last 500) to
-  // avoid scanning thousands of old elections on live servers.
+  // A completed election whose canonical endTurn is still in the future was
+  // closed too early. Only check the recent 500 to avoid scanning old
+  // elections on live servers.
   //
-  // A finalized vote tally (or any non-vacant electedOfficial seated at the
-  // election's resolution time) means resolution actually ran — winner
-  // seated, candidates marked withdrawn, careerHistory written. Reactivating
-  // such an election just leaves it in a corrupted "active but already
-  // decided" state where the seat is held but the candidates are missing,
-  // so we skip those and let `ensurePerpetualElections` spawn a fresh next
-  // cycle instead. See healRecalibrateWithdrawals.ts for the data heal that
-  // recovers victims of the prior unguarded behavior.
+  // Skip elections whose resolution already ran (finalized tally or a seated
+  // electedOfficial): reactivating leaves a corrupted "active but decided"
+  // state where the seat is held but candidates are gone. Let
+  // `ensurePerpetualElections` spawn a fresh cycle instead.
   //
-  // Wrapped in try-catch so failures here don't block the core recalibration.
+  // Wrapped in try-catch so failures here don't block core recalibration.
   try {
     const recentCompleted = await db
       .collection<Election>("elections")

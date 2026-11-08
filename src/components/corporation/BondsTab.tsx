@@ -262,12 +262,10 @@ export default function BondsTab({
             !isNaN(parsedFaceValue) && parsedFaceValue >= (bondInfo.minIssuance ?? 100_000);
           const couponRate = couponFor(bondIssueMaturity);
           if (couponRate == null) return null;
-          // Debt headroom and the issuance ceiling both come from the
-          // server, which is the only place all three rules live
-          // (per-issuance cap, 2x going-concern equity, 1x exit equity).
-          // Re-deriving one of them here is what let the quoted ceiling
-          // drift from the enforced one in ticket #1198. The local
-          // fallbacks only cover a response from an older deploy.
+          // Headroom and the issuance ceiling both come from the server, the only
+          // place all three rules live (per-issuance cap, 2x going-concern equity,
+          // 1x exit equity). Re-deriving one here lets the quoted ceiling drift
+          // from the enforced one. Fallbacks cover an older deploy's response.
           const toBondUnits = (v: number) => Math.max(0, Math.floor(v / 1_000) * 1_000);
           const maxIssuableDebt =
             bondInfo.debtHeadroom !== undefined
@@ -291,9 +289,9 @@ export default function BondsTab({
                 ? Math.min(perIssuanceCap, maxIssuableDebt)
                 : perIssuanceCap;
           const limitedByExitEquity = bondInfo.issuanceLimitedBy === "exitEquity";
-          // Minimum is clamped to the corp's own ceiling server-side, so a
-          // small corp can issue below ₳100,000 rather than being locked out
-          // (ticket #1083). `bondsAvailable` is false below the dust floor.
+          // Server clamps the minimum to the corp's own ceiling, so a small corp
+          // can issue below ₳100,000 rather than being locked out. `bondsAvailable`
+          // is false below the dust floor.
           const effectiveMin = bondInfo.minIssuance ?? 100_000;
           const bondsUnavailable = bondInfo.bondsAvailable === false;
           const cooldown = bondInfo.cooldownTurnsRemaining;

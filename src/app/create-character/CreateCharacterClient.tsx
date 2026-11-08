@@ -186,10 +186,7 @@ export default function CreateCharacterClient() {
   // RPG stat allocation: opens with every stat on the floor, 21 points to spend.
   const [stats, setStats] = useState(defaultStatBuild());
 
-  // Steps 4 and 5 both open on a legal default (dead centre of the compass,
-  // Independent). They used to be badged complete before the player had looked
-  // at them, which let someone sail past the party step into a character who
-  // cannot stand for most offices. Neither counts as answered until touched.
+  // Steps 4 and 5 open on a legal default (compass centre, Independent); neither counts as answered until touched, so the player cannot skip past the party step into an unviable character.
   const [compassTouched, setCompassTouched] = useState(false);
   const [partyTouched, setPartyTouched] = useState(false);
   // Gated behind the RPG-stats feature flag (from /api/auth/me).
@@ -473,9 +470,7 @@ export default function CreateCharacterClient() {
 
   /**
    * Randomize picks the country first, then draws the name from that
-   * country's NPP pool — the same pools the game names every NPP from. The
-   * randomizer used to carry its own thirty US first names and thirty US
-   * surnames, so rolling Japan or Turkey handed you an American name.
+   * country's NPP pool so names match the chosen country.
    */
   const handleRandomize = useCallback(async () => {
     if (!countryOptions || countryOptions.length === 0) return;

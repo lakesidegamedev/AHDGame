@@ -27,31 +27,22 @@ interface MarketMoneyPanelProps {
   financials: Financials | null;
   corporation: CorporationRef;
   /**
-   * How many different things the sector makes. Above one, the average sale
-   * price blends products that can be priced far apart, so it is labelled as
-   * covering all of them (ticket 1507).
+   * Number of distinct outputs. Above one, the average sale price blends
+   * products that can be priced far apart and is labelled as covering all.
    */
   outputCount?: number;
 }
 
 /**
- * Market and money. Replaces the financials panel under plants.
+ * Market and money panel.
  *
- * The chain reads top to bottom with nothing skipped:
- *   offered → sold → unsold → revenue → each physical cost → profit
+ * Chain: offered -> sold -> unsold -> revenue -> each physical cost -> profit.
+ * Every cost line comes from the SAME operating bill the turn engine charged,
+ * so `revenue - sum(lines) = profit` holds exactly. "Other running costs" is
+ * the residual by construction.
  *
- * Every cost line comes out of the SAME operating bill the turn engine charged,
- * so `revenue − Σ(lines) = profit` holds on screen exactly. "Other running
- * costs" is the residual by construction, which is what makes the identity
- * exact rather than approximately right.
- *
- * That residual is SIGNED. Subsidies, policy support and a negative calibration
- * anchor can push a sector's operating bill below the sum of its named physical
- * costs, and when that happens the residual line is money handed back, not money
- * spent. It renders as a credit with a "+", the way the corporation page's
- * margin drilldown has always rendered the same number (ticket 1122). Rendering
- * it as a clamped "− $0" is what made a newsroom show $322K of revenue, $70.6K
- * of wages, every other cost line at zero, and $285K of profit underneath.
+ * The residual is SIGNED: subsidies and negative calibration can push the
+ * operating bill below named costs, so it renders as a credit with "+".
  */
 export default function MarketMoneyPanel({
   plants,
@@ -98,13 +89,11 @@ export default function MarketMoneyPanel({
     : "Add logistics capacity in this state, or site production nearer buyers.";
 
   // The whole policy/tech modifier stack as ONE signed money line, with the
-  // itemized drilldown below it (ticket 1122). Under plants every modifier a
-  // player can influence (subsidies, tariffs, tech, state metrics, regional
-  // conditions, a live crisis) reaches profit through this single credit and
-  // nothing else. Before this it was folded into "other running costs", so a
-  // subsidy the player fought for showed up nowhere on the page that reports
-  // their money. Absent (0) on a sector whose row predates the persisted P&L,
-  // where the credit genuinely cannot be separated out.
+  // itemized drilldown below it. Under plants every modifier a player can
+  // influence (subsidies, tariffs, tech, state metrics, regional conditions,
+  // a live crisis) reaches profit through this single credit and nothing else.
+  // Absent (0) on sectors whose row predates the persisted P&L, where the
+  // credit genuinely cannot be separated out.
   const policyAnchor = pnl.policyAnchor ?? 0;
   const policyStack = plants.policyStack ?? [];
   const hasPolicy = policyAnchor !== 0;

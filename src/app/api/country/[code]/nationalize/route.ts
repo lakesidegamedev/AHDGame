@@ -140,10 +140,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "That corporation is not headquartered in your country.");
     }
 
-    // Owner classification + eligibility (shared with the eligible-targets route
-    // via resolveCorpEligibility so the two never drift). The executive-reach rule
-    // below is unchanged; eligibility only makes `elig.triggers` accurate so the
-    // consequence framing reflects WHY the corp is eligible.
+    // Shared with the eligible-targets route via resolveCorpEligibility so the two
+    // never drift; `elig.triggers` drives the consequence framing.
     const { ownerKind, result: elig } = await resolveCorpEligibility(
       db,
       countryId,

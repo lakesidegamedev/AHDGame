@@ -169,11 +169,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       );
     } else {
       if (lastPrimarySnapshot) {
-        // Snapshots record standings, not outcomes, so the winners have to be
-        // derived. This used to hardcode `i === 0`, which showed the 2nd and
-        // 3rd nominees of a multi-winner race (UK/JP/DE legislatures,
-        // one-party states) as primary losers even though they contested the
-        // general.
+        // Snapshots record standings, not outcomes, so winners must be derived.
+        // Advancing count is per country and election type: multi-winner races
+        // (UK/JP/DE legislatures, one-party states) advance more than one.
         const maxAdvancing = getPrimaryWinnersForElection(
           (election.countryId ?? "US") as CountryId,
           election.electionType

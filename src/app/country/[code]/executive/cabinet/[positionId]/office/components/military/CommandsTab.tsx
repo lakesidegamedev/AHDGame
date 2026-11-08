@@ -13,9 +13,9 @@ import type { CorpsMember } from "@/lib/db/collections/characterGenerals";
  * (create commands, assign regions/commanders/forces), inline. Persistence and pure
  * logic live in the shared military state; this tab is the cabinet-styled home for it.
  *
- * The tab opens with the Naval and air command door (ticket #1243): support's own
- * navigation names this tab as where fleet orders live, so the way in has to be
- * here, not only on the country lander's directory.
+ * The Naval and air command door opens here too: support's navigation names this tab
+ * as where fleet orders live, so the way in has to be here, not only on the country
+ * lander's directory.
  */
 export function CommandsTab({
   canAct,

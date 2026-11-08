@@ -239,9 +239,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
     let winnerId: string | null = null;
     const tooltip: string[] = [];
     if (hasVoted) {
-      // Scope to live candidates for the same reason the per-state page does
-      // (#974): the tally keeps rows for withdrawn candidates, which otherwise
-      // surface as an "Unknown — x%" line and skew every other share.
+      // Scope to live candidates: the tally keeps rows for withdrawn candidates, which surface as Unknown and skew every other share.
       const ranked = Object.entries(stateVotes)
         .filter(([cid, v]) => v > 0 && candidateMap.has(cid))
         .sort(([, a], [, b]) => b - a);

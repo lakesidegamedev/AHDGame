@@ -68,17 +68,11 @@ interface PlantPanelProps {
 
 /**
  * The plant panel. Replaces the capital panel under `marketSystemMode >=
- * "plants"`, where capacity is not a haircut on a revenue nameplate but THE
- * thing the sector is.
+ * "plants"`, where capacity is THE thing the sector is, not a haircut on a
+ * revenue nameplate.
  *
- * Design plan (two-pass, per the design-system skill):
- *   Palette   dominant card neutrals; `primary` spent in exactly one place (the
- *             Build CTA). success/warning/muted carry the run meter.
- *   Type      one display-scale number: the plant count. Everything else
- *             is body scale. The number IS the game object.
- *   Layout    hero number + run meter across the full width, then a 2-column
- *             grid of workforce / depreciation / queue.
- *   Signature the run meter with named idle causes.
+ * Signature: the run meter with named idle causes. Exactly one primary accent
+ * (the Build CTA); the plant count is the single display-scale number.
  */
 export default function PlantPanel({
   plants,
@@ -439,10 +433,9 @@ export default function PlantPanel({
           <ul className="space-y-2">
             {plants.buildQueue.map((o) => {
               // Smooth orders deliver capacity every turn across
-              // [startTurn, onlineTurn] (buildDelivery.ts). Show the rate so the
-              // queue reads as a ramp, not a binary wait. A whole-plant order
-              // that lands in steps has no rate (ticket 1753); it names the turn
-              // its next plant lands instead.
+              // [startTurn, onlineTurn] (buildDelivery.ts), so show the rate and
+              // the queue reads as a ramp. A whole-plant order that lands in
+              // steps has no rate; it names the turn its next plant lands.
               const unitsPerTurn = o.unitsPerTurn > 0 ? o.unitsPerTurn : null;
               // Everything a player orders is a FACILITY. Capacity units are the
               // engine's internal measure of what a facility produces, and

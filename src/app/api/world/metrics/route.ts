@@ -31,38 +31,6 @@ const ALL_CATEGORIES: MetricCategoryId[] = [
   "mediaInformation",
 ];
 
-/**
- * GET /api/world/metrics
- *
- * Returns national-level aggregated metrics for every country that has data.
- * Response is keyed by ISO numeric code (matching the world map's country IDs).
- *
- * Query params:
- *   category  – optional MetricCategoryId to filter to a single category
- *   metric    – optional metricId within that category (requires category)
- *
- * Shape:
- * {
- *   countries: {
- *     "840": {
- *       countryId: "US",
- *       name: "United States",
- *       hasData: true,
- *       categories: {
- *         economic: {
- *           unemploymentRate: { value: 4.5, score: 81 },
- *           ...
- *         },
- *         ...
- *       },
- *       categoryScores: { economic: 72, education: 65, ... },
- *       overallScore: 68
- *     }
- *   },
- *   availableCategories: ["economic", ...],
- *   availableMetrics: { economic: ["unemploymentRate", ...], ... }
- * }
- */
 // GET /api/world/metrics — Returns national-level aggregated metrics for every country, optionally filtered by category and metric.
 // Auth: public
 // Errors: 400

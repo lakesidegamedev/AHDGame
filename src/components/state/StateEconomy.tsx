@@ -1391,12 +1391,9 @@ function splitNppOwners(owners: SectorOwner[]): {
 /**
  * Leading corporation's share of a sector, or null when nobody operates there.
  *
- * Replaces `100 - unownedPercent`, which under plants is always 100: ticket
- * #1145 took the unowned pool out of the market-share denominator, so
- * `unownedPercent` is hardcoded to 0 for every sector and the derived "market
- * control" read as total control everywhere. On prod that was all 867 US
- * (state, sector) cells, including the 546 with no corporation in them at all
- * (ticket #1162), which players correctly read as "this market is closed to me".
+ * Do not derive this from `unownedPercent`: it is hardcoded to 0 under plants,
+ * so 100 - unownedPercent reads as total control in every sector, including
+ * empty ones.
  */
 /** Tooltip for the plants-tier room-to-build figure. */
 function roomToBuildNote(scope: "state" | "country" | null | undefined): string {

@@ -4,15 +4,12 @@
  * POST /api/admin/country/[code]/parties/[partyId]/regime-status
  * Body: { newStatus: "ruling" | "approved" | "banned" | null, reason: string }
  *
- * Routes to:
- *   - banned   -> processBanPartyEffects (vacates officials, flips status)
- *   - approved -> processUnbanPartyEffects when previous was banned,
- *                 otherwise a simple status update
- *   - ruling   -> atomic two-step: demote current ruling party to
- *                 "approved", promote target to "ruling"
- *   - null     -> allowed only when country is not a one-party state
+ * - banned   -> processBanPartyEffects
+ * - approved -> processUnbanPartyEffects if previously banned, else status update
+ * - ruling   -> atomic demote current ruling party to "approved", promote target
+ * - null     -> only when country is not a one-party state
  *
- * Country must exist. The party must belong to the country.
+ * Country must exist. Party must belong to the country.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";

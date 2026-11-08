@@ -191,24 +191,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
           attackerNation: w.sideA.countries[0] ?? null,
           defenderNation: w.sideB.countries[0] ?? null,
           declaredByBillId: w.declaredByBillId ?? null,
-          // Only countries that can actually be offered terms: the opposing roster,
-          // which is empty for a generated force and correctly offers nobody.
-          //
-          // Each carries the withdrawal gate's verdict, so the form can say why a
-          // country cannot simply be asked to leave BEFORE a player composes an offer
-          // the route would refuse. Computed by the same `withdrawalGate` the POST
-          // runs, so the two cannot drift; the server stays the authority.
-          // What OUR own departure would do, for the same reason: the panel must say
-          // whether leaving ends the war rather than claiming the fighting always
-          // carries on without us.
-          // Which way a reunification runs, when this war is carrying the question.
-          // The incumbent is always the side that withdraws, so the challenger asks
-          // THEM to leave and the incumbent offers to leave itself. Null when the
-          // term is not available on this war at all.
-          //
-          // Server-decided: the form would otherwise have to know which war carries
-          // the crisis and who its challenger is, both settlement facts rather than
-          // war ones.
+          // Only countries that can be offered terms; empty for generated forces.
+          // Carries the withdrawalGate verdict so the form can explain refusals
+          // before composing an offer the POST would reject. Same gate as POST.
+          // reunificationLeaver: which side withdraws under a reunification on
+          // this war, or null if not applicable. Server-decided so the form does
+          // not need to know settlement facts.
           reunificationLeaver: !challengerByWar.has(w._id)
             ? null
             : challengerByWar.get(w._id) === countryId

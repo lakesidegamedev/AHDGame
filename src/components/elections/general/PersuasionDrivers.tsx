@@ -1,19 +1,16 @@
 "use client";
 
 /**
- * Persuasion-driver card — an interactive head-to-head explorer. The viewer
- * picks a Focus candidate and an Opponent candidate; the five signed driver
- * bars (Candidate Support, Policy alignment, Coattails, Money, Incumbency)
- * recompute for that pair via the engine's `getPersuasionDriverBreakdown`
- * (through `computePairwiseDriverDisplay`). Positive bars push toward Focus
- * (Focus party color); negative bars push away (drag red).
+ * Persuasion-driver card: interactive head-to-head explorer. The viewer picks a
+ * Focus and Opponent candidate; the five signed driver bars (Candidate Support,
+ * Policy alignment, Coattails, Money, Incumbency) recompute for that pair via
+ * `computePairwiseDriverDisplay`. Positive bars push toward Focus (Focus party
+ * color); negative bars push away (drag red).
  *
- * Default selection is the popular-vote leader vs. the top cross-party rival,
- * preserving the prior fixed view while making it labeled and changeable.
- *
- * All inputs are already client-side in the election DTO, so no server round-
- * trip is needed on selection change. Fog-of-war is unchanged: `support` is
- * stripped server-side for non-privileged viewers and defaults to neutral.
+ * Default selection is the popular-vote leader vs. the top cross-party rival.
+ * All inputs are already client-side, so selection changes need no server
+ * round-trip. Fog-of-war: `support` is stripped server-side for non-privileged
+ * viewers and defaults to neutral.
  */
 
 import { useMemo, useState } from "react";

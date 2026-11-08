@@ -1,17 +1,14 @@
 "use client";
 
 /**
- * ExperimentalNavbar — the redesigned primary navigation, imported from the
- * "AHD Navbar" Claude Design doc. This is now the DEFAULT navbar, selected in
- * NavbarWrapper; the classic {@link Navbar} is used when a player selects the
- * classic interface in Settings → Appearance. The name is kept for continuity.
+ * ExperimentalNavbar: the default primary navigation. The classic {@link Navbar}
+ * is used when a player selects the classic interface in Settings → Appearance.
+ * The name is kept for continuity.
  *
- * Visuals use the app's themed Tailwind tokens (foreground/muted/card/primary…)
- * so it inherits all 11 themes. The desktop bar mirrors the classic {@link Navbar}
- * organization — logo left; text-forward tabs + icon cluster hug the right; a thin
- * underline for the active tab; an inline expanding search — with the top tabs in
- * the production order (Actions · State · Nation · World · Help · Staff). Keeps this
- * redesign's avatar/profile dropdown (notifications folded in) and the improved
+ * Visuals use themed Tailwind tokens so it inherits all 11 themes. Desktop bar:
+ * logo left; text tabs + icon cluster right; underline on active tab; inline
+ * expanding search, with tabs in production order (Actions · State · Nation ·
+ * World · Help · Staff). Includes the avatar/profile dropdown and improved
  * mobile collapsed bar + slide-down menu.
  */
 

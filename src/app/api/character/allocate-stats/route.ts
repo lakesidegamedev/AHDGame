@@ -51,8 +51,8 @@ async function buildSuggestion(
   return suggestStatBuild(input);
 }
 
-// GET /api/character/allocate-stats — Returns a suggested 28-point build for the
-// active character (used to pre-fill the grandfather allocation modal).
+// GET /api/character/allocate-stats: suggested 28-point build for the
+// active character; pre-fills the grandfather allocation modal.
 // Auth: requireHumanSession. Errors: 401, 403, 404, 409.
 async function handleGET(request: Request) {
   try {

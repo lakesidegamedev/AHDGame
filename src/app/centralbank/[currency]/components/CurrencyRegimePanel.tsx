@@ -13,14 +13,11 @@ import type { DefencePreviewContext } from "@/lib/currency/intervention/rules/pr
  *
  * The regime is a declared commitment (float, band, or peg) plus a capital
  * account stance, and the impossible trinity prices the combination: a stable
- * rate with an open capital account costs the policy rate. The panel shows
- * the standing declaration and what it gives up, and lets the seated chair
- * change it. Country-scoped only: an intorg bank has no single chair-declared
- * regime, and the API path this posts to is country-scoped.
+ * rate with an open capital account costs the policy rate.
  *
- * Authorization mirrors the route exactly: only the seated chair may post.
- * Admins can see the state here but change it through the same seat everyone
- * else does.
+ * Country-scoped only: an intorg bank has no single chair-declared regime,
+ * and the API path this posts to is country-scoped. Only the seated chair
+ * may post; admins change it through the same seat.
  */
 
 type FxRegime = "float" | "band" | "peg";

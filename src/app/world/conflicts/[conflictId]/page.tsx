@@ -180,10 +180,7 @@ export default async function ConflictRecordPage({
       getMilitaryCommands(db, viewerCountry),
       loadGeneralsById(db, viewerCountry),
     ]);
-    // Postings held by someone the country's roster no longer contains are not real
-    // postings: they cannot fight, the assignments PUT drops them on the next save,
-    // and counting them here would have the page name a Theater Commander it then
-    // could not list. Filtered once so every reader below agrees.
+    // Postings held by someone not on the country's roster are not real: they cannot fight, the assignments PUT drops them, and counting them would name a Theater Commander the page then could not list. Filter once so every reader agrees.
     const liveAssignments = org.conflictAssignments.filter(
       (a) => generalsById[a.generalCharacterId]
     );
@@ -333,16 +330,9 @@ export default async function ConflictRecordPage({
           .sort((a, b) => Number(b.inCharge) - Number(a.inCharge) || a.name.localeCompare(b.name))
       : null;
 
-  // The opposing side's state members are the only legal targets here; the declare
-  // route re-checks side membership against the same rosters, so this only shapes the
-  // picker. (It used to re-check a global bloc table, which is what let an East German
-  // player be offered NATO targets here and then refused by the route.)
-  //
-  // The enemy FACTION is a legal target too, and in a proxy war it is the ONLY one:
-  // those rosters start empty and a faction is never enrolled into one, so building
-  // the picker from `countries` alone leaves a player who joined the war with
-  // nothing to attack — while the declare route would have accepted the faction
-  // perfectly well.
+  // The enemy faction is a legal target and in a proxy war the only one:
+  // its roster starts empty and it is never enrolled in one, so building from
+  // `countries` alone leaves the player nothing to attack.
   const enemySide = ownSide === "A" ? doc.sideB : doc.sideA;
   const enemyCountries = [
     ...enemySide.countries,

@@ -165,10 +165,7 @@ export default function CeoBudgetPanel({
   const msEquilibrium = marketingStrengthEquilibrium(anchor(daily.marketing), msDecayRate);
   const currentLs = corporation.logisticsStrength ?? 0;
   const lsNet = calcLogisticsGrowth(anchor(daily.logistics)) - currentLs * LOGISTICS_DECAY_RATE;
-  // #1669: a group leader pays its formalized subsidiaries part of the strength
-  // they gain, which comes off this corporation's own total. The figure above
-  // counts only the budget's growth and the decay, so say so rather than
-  // promising a rise the turn will not deliver.
+  // A group leader pays its formalized subsidiaries part of the strength they gain, taken off this corporation's own total. The figure above counts only the budget's growth and decay, so it may not match the turn's result.
   const groupTransfer = corporation.groupStrengthTransfer ?? null;
   const lsEquilibrium =
     daily.logistics > 0 ? calcLogisticsGrowth(anchor(daily.logistics)) / LOGISTICS_DECAY_RATE : 0;

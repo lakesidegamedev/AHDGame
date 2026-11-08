@@ -8,11 +8,9 @@ import type { OpenVote } from "@/components/corporation/overview/VoteDocket";
 /**
  * Data the corporation page body needs from its own endpoints.
  *
- * Both requests used to be issued by the components that render the answer,
- * which only mount once the corporation payload has arrived: the status strip
- * and the vote docket therefore landed a full round trip after the page did. The
- * page knows the corporation id from the route, so it asks at mount, in parallel
- * with the payload, and hands the answers down.
+ * The page knows the corporation id from the route, so it issues both requests
+ * at mount, in parallel with the payload, and hands the answers down instead of
+ * letting late-mounting children fetch them a round trip behind the page.
  */
 export function useCorporationPageData(
   corpId: string,

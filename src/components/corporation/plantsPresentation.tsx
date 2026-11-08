@@ -3,18 +3,14 @@
 /**
  * Shared plants-tier presentation.
  *
- * Under `marketSystemMode >= "plants"` a sector is a set of PLANTS: capacity is
- * the thing you buy, output is the thing you make, and revenue is DERIVED from
- * the two. Six surfaces have to say that in the same vocabulary — the sectors
- * table, the CEO build summary, the national CEO panel, the expand-market
- * flow, the untapped-market card and the sector page. The formatting and the
- * colour bands live here so they cannot drift apart, which is what happened to
- * the money units before `moneyTimescale` centralised them.
+ * Under `marketSystemMode >= "plants"` a sector is a set of plants:
+ * capacity is bought, output is produced, revenue is derived. Formatting and
+ * colour bands live here so the six surfaces that describe plants cannot
+ * drift.
  *
- * Unit convention, stated once: capacity, produced and sold units are all
- * OUTPUT UNITS PER DAY, the same 24-turn financial day `revenue` is stored on.
- * They never need rescaling against each other or against a money figure at
- * the same period.
+ * Unit convention: capacity, produced and sold units are OUTPUT UNITS PER
+ * DAY, the same 24-turn financial day `revenue` uses, so no rescaling is
+ * needed.
  */
 
 import { ownSiteLabel } from "@/lib/corporations/ownSiteDeliveries";
@@ -140,12 +136,9 @@ export function DeliveryLimitedPill({
   const action = freightClass
     ? freightClassAction(freightClass)
     : "Add freight capacity out of this state, or site capacity nearer buyers.";
-  // Ticket #1180: the pill used to render the bare class name, so "BULK
-  // FREIGHT" sat in warning colours next to a healthy fill chip and read as a
-  // category label, or worse, as "this sector needs freight". A player took it
-  // for a freight-shortage light and built two logistics sectors into a glutted
-  // market. Same lesson as the build-queue pill in #1141: the number and the
-  // verb go on the face, because the tooltip does not exist on touch at all.
+  // The pill must carry the number and the verb, not just the class name.
+  // A bare "BULK FREIGHT" in warning colours reads as a category label or a
+  // shortage light, and the tooltip does not exist on touch at all.
   return (
     <span
       className={`inline-flex max-w-full flex-wrap items-center justify-end gap-x-1 text-right text-[11px] font-medium leading-tight text-warning ${className}`.trim()}
@@ -226,10 +219,7 @@ export function buildProgressLabel(
     p.perTurn != null
       ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
       : "";
-  // Without a per-turn rate the capacity lands in steps (ticket 1753), so saying
-  // it rises each turn would make a build that is on schedule look stuck. The
-  // step need not be a whole plant: an order of 0.8 of a plant lands in one
-  // piece, as does a legacy all-at-once order.
+  // Without a per-turn rate capacity lands in steps, so "rises each turn" would make an on-schedule build look stuck. A step need not be a whole plant: 0.8 of a plant lands in one piece, as does a legacy all-at-once order.
   const arrival =
     p.perTurn != null
       ? " Capacity is added a slice at a time, so the capacity figure rises each turn until then."

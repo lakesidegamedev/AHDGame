@@ -767,9 +767,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       .collection<ElectedOfficial>("electedOfficials")
       .find({
         isNPP: true,
-        // Country-scope the officials. `caucusNppIds` already implies a single
-        // country, but party sequentialIds collide across countries — keep the
-        // filter explicit and uniform with the other whip routes (bug #0699).
+        // Party sequentialIds collide across countries, so scope officials to this
+        // country explicitly for consistency with the other whip routes.
         countryId,
         party: partyIdStr,
         // Resolve the chamber key to the office type members are stored under

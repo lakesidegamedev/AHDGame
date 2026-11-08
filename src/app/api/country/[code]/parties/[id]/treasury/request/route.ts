@@ -33,18 +33,15 @@ interface RouteParams {
 // Auth: requireAuthWithCharacter; must be a member of THIS party
 // Errors: 400, 401, 403, 404, 429
 //
-// Member-initiated Request Funds. Always writes a
-// pendingTreasuryTransactions row (no immediate-execute path); the
-// approval-completion count varies with the party's current
+// Member-initiated Request Funds. Always writes a pendingTreasuryTransactions
+// row (no immediate-execute path); completion count depends on
 // `transactionApprovalMode`:
-//   - "single": one approver from {Treasurer, Chair, VC} satisfies it
-//   - "double": Treasurer + (Chair OR VC) — same as send/transfer
+//   - "single": one approver from {Treasurer, Chair, VC}
+//   - "double": Treasurer + (Chair OR VC)
 //
-// The requester NEVER auto-fills any slot, even if they hold an
-// officer seat (no auto-approvals for Request Funds — user-confirmed
-// 2026-05-23 spec). The pending row's `approvalModeAtPropose` records
-// the mode so the row finishes under the original rules even if the
-// party toggles modes mid-flight.
+// The requester NEVER auto-fills any slot, even holding an officer seat.
+// `approvalModeAtPropose` records the mode so the row finishes under the rules
+// in force at propose time even if the mode changes mid-flight.
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { code, id: partyId } = await params;

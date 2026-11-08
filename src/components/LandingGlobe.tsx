@@ -1045,13 +1045,10 @@ export function LandingGlobe({
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [isLoaded, bare, markInteraction]);
 
-  // Pause auto-rotation when the globe has scrolled off screen (bare/fixed background mode).
-  // Uses a passive scroll listener; 88 % of vh matches the -mt-[12vh] drawer overlap.
-  //
-  // The same signal drives `globeScrolledAway`, which hides the portalled tier
-  // legend. The legend is `position: fixed` on document.body, so without this it
-  // kept floating in the corner over the feature cards, the carousel, and the
-  // "Learn the game" section, explaining a globe that was no longer on screen.
+  // Pause auto-rotation when the globe scrolls off screen (bare/fixed mode).
+  // Passive scroll listener; 88% of vh matches the -mt-[12vh] drawer overlap.
+  // The same signal hides the portalled tier legend, which is position: fixed on
+  // body and would otherwise float over feature cards explaining an off-screen globe.
   useEffect(() => {
     if (!isLoaded || !bare) return;
     const check = () => {

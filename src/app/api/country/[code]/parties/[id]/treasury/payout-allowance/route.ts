@@ -26,22 +26,16 @@ const querySchema = z.object({
 // GET /api/country/[code]/parties/[id]/treasury/payout-allowance
 //     ?characterId=<id>   (omit for your own)
 //
-// How much more party money one member may receive this turn: the
-// country's per-player cap, what they have already drawn, and the
-// difference. Drives the readouts on Send to Member and Request Funds,
-// which previously printed the flat cap and left the player to discover
-// at submit time that most of it was already spent.
+// How much more party money one member may receive this turn: the country's
+// per-player cap, what they have already drawn, and the difference. Drives the
+// readouts on Send to Member and Request Funds, so the number shown is the
+// number enforced by `checkPlayerPayoutCap` (combined across national treasury,
+// every state party and every caucus).
 //
-// The figure is combined across the national treasury, every state
-// party and every caucus, exactly as `checkPlayerPayoutCap` computes it
-// at execution, so the number shown is the number enforced.
-//
-// Auth: requireAuthWithCharacter. A member may ask about THEMSELVES
-// (that is the Request Funds case). Asking about anyone else requires
-// an officer seat on this party AND that the subject is a member of it,
-// matching the send route this figure serves. Without both halves any
-// player could read any other player's treasury intake, or an officer
-// could read a rival party's.
+// Auth: requireAuthWithCharacter. A member may ask about THEMSELVES. Asking
+// about anyone else requires an officer seat on this party AND that the subject
+// is a member of it, matching the send route this figure serves, so no one can
+// read another player's treasury intake or a rival party's.
 // Errors: 400, 401, 403, 404, 429
 export async function GET(request: Request, { params }: RouteParams) {
   try {

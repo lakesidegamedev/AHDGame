@@ -295,9 +295,7 @@ export function StatusBar({
 
   const getTimeUntilNextTurn = () => {
     if (!gameState?.nextScheduledTurn) return null;
-    // The next-turn countdown targets the wall-clock cron schedule, not a
-    // game-clock deadline — so we use formatRealTimeCountdown rather than
-    // useGameClock. See docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+    // Countdown targets the wall-clock cron schedule, not a game-clock deadline, so use formatRealTimeCountdown.
     const text = formatRealTimeCountdown(gameState.nextScheduledTurn, gameState.pausedAt ?? null);
     if (text === "Ended") return "Processing...";
     return text;

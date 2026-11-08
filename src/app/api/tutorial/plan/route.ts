@@ -18,15 +18,11 @@ import {
 /**
  * The player's guided-tour plan and their place in it.
  *
- * GET  — the resolved plan (stored, or migrated from the legacy track), whether
- *        they have answered the welcome flow yet, and the server-side resume
- *        point. The coach and the /tutorial hub both read this.
- * PUT  — write the plan, the resume point, or a finished chapter. All three
- *        fields are independent so the coach can save progress on every step
- *        without resending the plan.
+ * PUT accepts plan, resume point, and finished chapter independently so the
+ * coach can save progress without resending the plan.
  *
  * Progress is stored server-side so switching device does not restart the tour.
- * The coach keeps a localStorage copy as the offline fast path; on load the
+ * The coach keeps a localStorage copy as an offline fast path; on load the
  * server value wins.
  */
 

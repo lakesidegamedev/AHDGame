@@ -164,7 +164,7 @@ export interface CommodityFlow {
   ownSite?: { units: number; share: number; valueAnchor: number };
   /**
    * Supply rows, CEO only: why part of this output went unsold last turn, from
-   * the plant's ask against what buyers in its book paid (#5450).
+   * the plant's ask against what buyers in its book paid.
    */
   unsold?: UnsoldReading;
   /**
@@ -273,8 +273,8 @@ export interface PricingData {
   /** Ramped clearing multiplier applied to realized revenue last turn. */
   clearingFactor: number | null;
   /**
-   * Corp's established price-identity norm (brand loyalty, Package A). Owner/CEO
-   * only, drives the gouging warning. Absent ⇒ feature off or non-owner viewer.
+   * Corp's established price-identity norm, owner/CEO only, drives the gouging
+   * warning. Absent: feature off or non-owner viewer.
    */
   brandPostureNorm?: number | null;
 }
@@ -537,18 +537,15 @@ export interface Market {
 }
 
 /**
- * Why the money figures (revenue, profit, margin, wages, the whole plants
- * money/plant panel) are or are not on screen. Sent on every response so a
- * withheld value renders as a labelled "Hidden" state instead of a bare ", "
- * that reads as a real $0.
+ * Why the money figures (revenue, profit, margin, wages, the plants money
+ * panel) are or are not on screen. Sent on every response so a withheld value
+ * renders as a labelled "Hidden" state instead of a bare ", " that reads as
+ * a real $0.
  *
- * - `visible`      the viewer is the owning CEO or an admin: nothing withheld.
+ * - `visible`      the viewer is the owning CEO or an admin.
  * - `private-corp` a signed-in non-owner looking at a PRIVATE corp.
- * - `public-rival` a signed-in non-owner looking at a PUBLIC corp (competitors
- *                  cannot see each other's live sector financials).
- * - `signed-out`   nobody is authenticated on this device, the single most
- *                  common cause of "my own sector shows dashes": you are not
- *                  logged in as the owner here.
+ * - `public-rival` a signed-in non-owner looking at a PUBLIC corp.
+ * - `signed-out`   nobody is authenticated on this device.
  */
 export type FinancialVisibilityReason = "visible" | "private-corp" | "public-rival" | "signed-out";
 
@@ -704,9 +701,9 @@ export interface PlantsData {
   fillRate: number | null;
   idleCauses: PlantIdleCause[];
   /**
-   * Labels of this sector's outputs that sell only in the state where they are
-   * made (construction, freight, healthcare, real estate). A shortage
-   * elsewhere cannot lift demand for these (ticket 1700).
+   * Labels of outputs that sell only in the state where they are made
+   * (construction, freight, healthcare, real estate). A shortage elsewhere
+   * cannot lift demand for these.
    */
   localMarketOutputs?: string[];
   mothballed: boolean;
@@ -799,8 +796,8 @@ export interface PlantsData {
     upkeepAnchor: number;
     complianceAnchor: number;
     /**
-     * The policy/tech modifier stack as money, POSITIVE = credit (ticket 1122).
-     * Optional because payloads predating the field omit it.
+     * The policy/tech modifier stack as money, positive = credit. Optional
+     * because older payloads omit it.
      */
     policyAnchor?: number;
     /** The same stack in percentage points of revenue. */

@@ -4,10 +4,9 @@ import type { FinancialVisibilityReason } from "../types";
  * Human copy for each reason money figures are withheld. One source of truth so
  * the hero-card stat tooltip and the overview notice never drift apart.
  *
- * `short` labels a single blanked stat cell; `title`/`body` fill the notice
- * banner that stands in for the whole missing money panel. The point of every
- * string is the same: a withheld number is NOT a real $0, and the most common
- * cause is simply not being signed in as the owner on this device.
+ * `short` labels a blanked stat cell; `title`/`body` fill the notice banner.
+ * A withheld number is NOT a real $0; the usual cause is not being signed in
+ * as the owner on this device.
  */
 export interface FinancialVisibilityCopy {
   short: string;

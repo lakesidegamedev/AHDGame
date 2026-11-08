@@ -176,9 +176,7 @@ export function DemographicsManager() {
     dispatch({ type: "SET_RESEED_LOADING", payload: true });
     dispatch({ type: "SET_RESEED_MESSAGE", payload: "" });
     try {
-      // The endpoint defaults to US/2019 when given no body. Sending the target
-      // explicitly is what makes non-US backfills (e.g. RU/DD 1953, #3752)
-      // reachable from the UI at all.
+      // Endpoint defaults to US/2019 without a body; send the target explicitly so non-US backfills work.
       const res = await fetch("/api/admin/demographics/reseed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

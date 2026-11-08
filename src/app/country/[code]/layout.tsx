@@ -84,11 +84,10 @@ export default async function CountryLayout({ params, children }: Props) {
   // are told a decision is waiting on them.
   const peacetime = peace ? <PeaceBanner notice={peace} countryName={name} /> : null;
 
-  // A background country (#5702) has no regions, legislature, parties or
-  // politicians, so the full overview and its sub-pages have nothing to show.
-  // It gets one aggregate overview instead; every sub-page except the currency
-  // market redirects to it, so no link anywhere lands on an empty
-  // full-simulation page. Admins see the same page: there is nothing else.
+  // A background country has no regions, legislature, parties or politicians,
+  // so the full overview and its sub-pages have nothing to show. It gets one
+  // aggregate overview; every sub-page except the currency market redirects
+  // to it. Admins see the same page: there is nothing else.
   if (tier === "background") {
     const route = backgroundCountryRoute((await headers()).get("x-pathname"), countryId);
     if (route.kind === "redirect") redirect(route.to);

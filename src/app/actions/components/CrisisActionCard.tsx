@@ -6,12 +6,7 @@ import { X } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/types/crisis";
 // The one severity calculation, shared with the crises list and detail pages.
-// This card used to carry a private copy that summed only per-turn `tick`
-// magnitudes — precisely the calculation `severity.ts` was written to replace,
-// because it ignores one-off GDP and margin shocks entirely. The two surfaces
-// disagreed about 16 of the 32 crises running on the live world: both active
-// recessions read HIGH here and MEDIUM on /world/crises, and every Civil
-// Defense Fever read LOW here and MEDIUM there.
+// A private copy would drift and disagree across surfaces.
 import { crisisSeverity } from "@/lib/crises/severity";
 import { formatCrisisEffectValue } from "@/lib/crises/effectLabels";
 import { apiErrorText } from "@/lib/errors/catalog";

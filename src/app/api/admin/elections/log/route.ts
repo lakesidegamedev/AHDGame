@@ -1,19 +1,13 @@
 /**
  * GET /api/admin/elections/log
  *
- * Returns a structured election event log for the admin panel.
- * Each entry represents one election and includes:
- *  - Primary results per party (scores, %, advance/eliminate events)
- *  - General election results (votes, %, seats if applicable)
- *  - Resolved office assignments
+ * Structured election event log for the admin panel: one entry per election
+ * with primary results per party, general results, and resolved office
+ * assignments.
  *
- * Query params:
- *  ?q=         free-text search (state, candidate name)
- *  ?type=      senate | house | stateSenate | governor
- *  ?status=    upcoming | active | completed
- *  ?state=     two-letter state abbreviation
- *  ?page=      1-based page (default 1)
- *  ?limit=     results per page (default 50, max 200)
+ * Query: ?q (free-text: state, candidate), ?type (senate|house|stateSenate|
+ * governor), ?status (upcoming|active|completed), ?state (2-letter),
+ * ?page (1-based, default 1), ?limit (default 50, max 200).
  */
 
 import { NextResponse } from "next/server";

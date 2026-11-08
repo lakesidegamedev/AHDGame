@@ -54,10 +54,10 @@ export async function GET() {
     .toArray();
   const response = NextResponse.json(pages);
   if (isAdmin) {
-    // The admin variant includes private/unlisted page metadata, so it varies by
-    // caller and must never be stored in a shared (CDN) cache — otherwise it can
-    // be replayed to non-admins (cross-user leak, #3316). The public variant below
-    // is identical for every non-admin viewer and stays share-cacheable.
+    // Admin variant includes private/unlisted page metadata, so it varies by
+    // caller and must never be shared-cached or it can leak to non-admins.
+    // The public variant is identical for every non-admin viewer and stays
+    // share-cacheable.
     // audit:shared-cache-safe (auth only selects the admin variant above)
     response.headers.set("Cache-Control", "private, no-store");
   } else {

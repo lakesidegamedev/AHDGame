@@ -237,11 +237,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             });
           }
 
-          // Ticket #857 grandfather: units bought before the currency-scale fix
-          // (legacy) were charged the raw ₳ magnitude as native, so they redeem
-          // rate-free (× 1); post-fix units redeem at the true × rate. The blend is
-          // applied uniformly to every payout leg (immediate + queued), so total
-          // native = legacy×nav + postfix×nav×rate.
+          // Legacy units (pre currency-scale fix) redeem rate-free (× 1); post-fix
+          // units redeem at the true rate. Blend applies to every payout leg.
           const blendedRedeemFxRate = computeBlendedRedeemFxRate({
             legacyUnitsRedeemed: debit.legacyUnitsRedeemed,
             totalUnits: units,

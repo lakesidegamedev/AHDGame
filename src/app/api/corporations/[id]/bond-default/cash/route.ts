@@ -138,9 +138,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         const imperialIncs = new Map<string, number>();
         const corpIncs = new Map<string, number>();
         // Index funds and autonomous NPPs hold bond units too (BondHolder.fundId
-        // / .nppId). They were silently dropped by the holder chain below while
-        // the bond was still marked cured, so their principal simply vanished
-        // (#809). Both hold in ₳, matching the bondTurn coupon/maturity legs.
+        // / .nppId). They must be included by the holder chain below, or their
+        // principal vanishes while the bond is still marked cured.
+        // Both hold in ₳, matching the bondTurn coupon/maturity legs.
         const fundIncsAnchor = new Map<string, number>();
         const nppIncsAnchor = new Map<string, number>();
         // Per-(holder, bond) snapshot so each holder gets a `bond_maturity` row at

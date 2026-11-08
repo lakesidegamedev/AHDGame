@@ -1,25 +1,18 @@
 "use client";
 
-// WatchlistPanel (forensics v2, Wave 2 "watchlist + alerts") — a moderator's
-// pinned-accounts board: add/remove a suspicious account, see its recent
-// activity at a glance, and get an alerts strip surfacing anything new
-// (an action taken, or a fresh alt link) since the account was last
-// reviewed. Self-contained: fetches/mutates `/api/admin/watchlist` itself
-// and matches the surface/overline/severity-color language of
-// `src/components/admin/alts/*` (ClusterList/EvidencePanel) so it reads as
-// the same product. The coordinator wires this into a tab; it does not
-// touch AdminTabsConfig itself.
+// WatchlistPanel: a moderator's pinned-accounts board. Add/remove
+// suspicious accounts, see recent activity, and get an alerts strip for
+// anything new since last review. Self-contained: fetches/mutates
+// `/api/admin/watchlist` itself; the coordinator wires it into a tab.
 //
-// Data contract (`src/app/api/admin/watchlist/route.ts`,
-// `src/lib/audit/watchlist.ts`):
-//   GET    /api/admin/watchlist        -> { entries: WatchlistEntryView[], currentTurn }
-//   POST   /api/admin/watchlist        <- { userId, reason? }  -> { entry } (201)
-//   DELETE /api/admin/watchlist/:userId -> { ok: true }
+// Data contract from the API route:
+//   GET    -> { entries, currentTurn }
+//   POST   <- { userId, reason? }
+//   DELETE /:userId -> { ok: true }
 //
 // "Alerts" = activity/links whose `turn` is strictly after the entry's
-// `lastNotifiedTurn` baseline (`0` for a never-reviewed entry — see the
-// server module's doc comment for the exact logic). This component only
-// renders that computed state; it does not itself decide what counts as new.
+// `lastNotifiedTurn` baseline. This component only renders that computed
+// state; the server module decides what counts as new.
 
 import { InlineError } from "@/components/ui/InlineError";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

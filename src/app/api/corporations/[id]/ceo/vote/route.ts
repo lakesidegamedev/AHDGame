@@ -433,11 +433,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 /**
- * DELETE /api/corporations/[id]/ceo/vote
- * Withdraw the caller's CEO vote. POST is an upsert, so before this a
- * shareholder could switch their vote but never take it back — abstaining was
- * impossible once you had voted once, including the self-vote founding casts
- * on your behalf. Removing the last vote also clears any pending offer.
+ * DELETE withdraws the caller's CEO vote. POST is an upsert, so without
+ * this a shareholder could switch votes but never abstain once voted,
+ * including the self-vote founding casts. Removing the last vote also
+ * clears any pending offer.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {

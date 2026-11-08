@@ -1,9 +1,5 @@
-// Shared Cold-War themed-island style tokens for the /world/conflicts pages
-// (combat, generals, situation). Lives here for historical reasons; the Military
-// Commands builder itself moved into the SecDef office and this route now redirects.
-// Mirrors the palette + fonts used by the existing _coldwar/ boards so the
-// suite reads as part of the same themed island. Not AHD design tokens by
-// design — see docs/superpowers/specs/2026-07-12-military-commands-foundation-design.md.
+// Shared Cold-War themed-island style tokens for the /world/conflicts pages.
+// Mirrors the palette and fonts of the _coldwar/ boards; not AHD design tokens.
 
 export const MIL_FONT = {
   mono: "'IBM Plex Mono',monospace",

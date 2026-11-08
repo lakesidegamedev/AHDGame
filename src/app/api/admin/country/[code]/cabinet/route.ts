@@ -88,9 +88,7 @@ async function vacateSeat(
 
   await getCabinetMembersCollection(db).deleteOne({ countryId, positionId });
 
-  // A surviving second row keeps a UK dual holder in cabinet (issue #2049):
-  // repoint at it and skip the restore below. An NPP-held seat has no
-  // character office to restore, so this is skipped for NPP members.
+  // A surviving second row keeps a dual holder in cabinet: repoint at it and skip the restore below.
   if (
     member.characterId &&
     (await preserveSurvivingCabinetRow(db, countryId, member.characterId, now))
@@ -213,9 +211,7 @@ export const POST = withAdminRoute(
     const heldSlots = heldRows
       .map((row) => row.roleSlot ?? roleSlotForPosition(countryId, row.positionId))
       .filter((slot): slot is NonNullable<typeof slot> => slot != null);
-    // Outside the UK rows carry no slot, so the slot check below is vacuous
-    // there: any other held seat blocks the appointment (the pre-#2049
-    // one-seat rule, with its same-seat refresh carve-out).
+    // Outside the UK rows carry no slot, so the slot check is vacuous: any other held seat blocks the appointment (same-seat refresh is carved out below).
     if (targetSlot == null && heldRows.some((row) => row.positionId !== positionId)) {
       return errorResponse(409, "This character already holds another cabinet position");
     }

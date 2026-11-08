@@ -1,22 +1,17 @@
 /**
  * Era-specific flavor cards for the homepage carousel.
- * Each era gets 3 static "leader" cards + dynamic event cards follow.
+ * Each era gets 3 static "leader" cards plus dynamic event cards.
  *
- * Portrait licensing (public landing page — every image slug used here MUST
- * have a documented free license before the asset is uploaded to the CDN):
+ * Portrait licensing: this is a public landing page, so every image slug must
+ * have a documented free license before the asset is uploaded to the CDN.
+ * Licensed slugs:
+ *   bush   Commons "George H. W. Bush presidential portrait.jpg", David Valdez / White House, public domain
+ *   deng   Commons "Deng Xiaoping.jpg", public domain
+ *   major  Commons "John Major 1996.jpg", PFC Tracey L. Hall-Leahy, USA, public domain
  *
- * | slug   | source                                                        | license       |
- * |--------|---------------------------------------------------------------|---------------|
- * | bush   | Commons "George H. W. Bush presidential portrait.jpg",        | Public domain |
- * |        | David Valdez / White House                                    |               |
- * | deng   | Commons "Deng Xiaoping.jpg"                                   | Public domain |
- * | major  | Commons "John Major 1996.jpg", PFC Tracey L. Hall-Leahy, USA  | Public domain |
- *
- * All other imageSlug values below (eisenhower, churchill, malenkov, carter,
- * callaghan, clinton, blair, jiang, bush-jr, brown, hu, trump, may, xi,
- * biden, sunak) have NO asset on the CDN, so the card renders without an image.
- * Do not upload portraits for them without recording a public-domain/CC source
- * in this table first, then adding the slug to FLAVOR_CARD_PORTRAITS.
+ * All other slugs have no CDN asset and render without an image. Do not
+ * upload portraits for them without recording a public-domain/CC source here
+ * first and adding the slug to FLAVOR_CARD_PORTRAITS.
  */
 
 /**

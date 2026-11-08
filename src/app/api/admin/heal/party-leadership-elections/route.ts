@@ -31,10 +31,6 @@ interface OrphanedCandidate {
   characterPartyName: string;
 }
 
-/**
- * GET /api/admin/heal/party-leadership-elections
- * Diagnose candidates in party elections who are no longer members of that party
- */
 export async function GET() {
   try {
     const auth = await requireAdmin();
@@ -229,10 +225,6 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/admin/heal/party-leadership-elections
- * Withdraw candidates from party elections who are no longer members of that party
- */
 export async function POST() {
   try {
     const auth = await requireAdmin();

@@ -23,9 +23,8 @@ import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
 import type { ExchangeData } from "@/app/country/[code]/stockmarket/types";
 
-// One panel per tab, and only the selected tab renders. They used to ship in the
-// first load of /market (6.2k views / 30 days, 71 KB gzipped of route-only JS);
-// the overview stays eager because it is the default tab.
+// One panel per tab, and only the selected tab renders. The overview stays
+// eager because it is the default tab.
 const PanelFallback = () => (
   <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
 );

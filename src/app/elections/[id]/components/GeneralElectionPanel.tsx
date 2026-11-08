@@ -69,11 +69,9 @@ export function GeneralElectionPanel({
   /**
    * Whether to draw the electoral-college bar and the per-ticket table.
    *
-   * False where a caller has already stated both above this panel — the Blend
-   * general screen leads with the college bar and folds each ticket's numbers
-   * into its hero, so this panel repeated the whole standing a second time
-   * further down the same page. The map, the trends and the resolved-race
-   * displays below are not duplicated and still render.
+   * False where a caller has already stated both above this panel, so the
+   * standing is not repeated on the same page. The map and other displays
+   * still render.
    */
   showCollegeSummary?: boolean;
   /**
@@ -113,9 +111,6 @@ export function GeneralElectionPanel({
   const [supportClicks, setSupportClicks] = useState<SupportClicks>(1);
 
   const isPresident = electionType === "president";
-  // Endorsement used to be presidential-only in this panel even though
-  // `POST /api/elections/[id]/endorse` accepts any race, so a Senate or House
-  // general offered no way to endorse from the page it happens on.
   const canEndorse = !!myCharId && !isEnded && !!electionId;
   const canSupport = isPresident && !!myCharId && !isEnded;
 

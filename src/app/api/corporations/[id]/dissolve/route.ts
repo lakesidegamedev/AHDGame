@@ -112,9 +112,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
       return errorResponse(400, dissolutionAgeBlockedMessage(ageBlock.turnsRemaining));
     }
 
-    // Bug #0597: Allow quick dissolve for public corps where the CEO is the
-    // only real shareholder (all other shares are public float). In this case
-    // there is no other shareholder to object, so a vote is unnecessary.
+    // Public corps where the CEO is the only real shareholder (all other
+    // shares are public float) can quick-dissolve: no other shareholder
+    // exists to object, so a vote is unnecessary.
     const realShareholders = (corporation.shareholders ?? []).filter(
       (s) => s.characterId || s.imperialCharacterId || s.corporationId
     );
@@ -526,9 +526,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
             });
           }
 
-          // ── Index-fund shareholders → fund cash (₳); drop the stale holding ──
-          // #3451: previously a fund holder's slice was drained from the corp
-          // but distributed to no one. Fund cash is ₳ (same as the pool), no FX.
+          // Index-fund shareholders get fund cash (₳); the pool is ₳, no FX.
           if (allocation.fundRows.length > 0) {
             await payFundShareholderRows(db, allocation.fundRows, refreshedCorporation._id, now);
           }

@@ -70,9 +70,7 @@ async function buildOnce(
   if (!authResult.ok) return authResult.response;
   const authUser = authResult.user;
 
-  // Party sequentialId is unique per country, so a foreign character's party id
-  // collides onto the same-id party in this country. Block cross-country actors
-  // (admins included) before any spender/auth resolution — Bug #0668.
+  // Party sequentialId is unique per country, so foreign party ids collide with same-id parties here. Block cross-country actors (admins included) first.
   const crossCountry = crossCountryActionGuard(authUser.character, countryId);
   if (crossCountry) return crossCountry;
 
@@ -93,8 +91,8 @@ async function buildOnce(
   // Resolve spender party + its state-party row. The row MAY be absent: the
   // seed deliberately omits some (Land, party) pairs that don't organize
   // there historically (e.g. CDU stays out of Bayern under the CDU/CSU Union
-  // pact). Presence — not row-existence — is the real gate, so we don't bail
-  // on a missing row here; we bootstrap it below once presence + auth pass.
+  // pact). Presence, not row-existence, is the real gate, so we bootstrap the
+  // row below once presence + auth pass.
   const spenderParty = await findPartyBySequentialId(db, partyId, countryId);
   if (!spenderParty) return errorResponse(404, "Party not found");
   // Resolve by the `{countryId, stateId, partyId}` triple with a compound-`_id`
@@ -178,13 +176,7 @@ async function buildOnce(
     psPool === "national" ? "national-targeted" : psPool === "state" ? "state" : undefined;
   const scope = resolveSpenderScope(spenderParty, spenderRow, authUser, preferred);
 
-  // ── Cash gate (2026-09-02) ────────────────────────────────────────────────
-  // Build Org costs money as well as PS, charged from the SAME tier that pays
-  // the PS. Price it BEFORE the PS is spent so a click the treasury cannot fund
-  // is refused for free — no PS debit and no pressure escalation. That means
-  // reading the pressure ladder here rather than relying on the value
-  // `spendPoliticalStrength` computes internally; the preview GET does the same
-  // read, so the quote the player saw and the charge they get agree.
+  // Cash gate: price the build before spending PS so an unaffordable click is refused free, with no PS debit or pressure escalation. Read the pressure ladder here so the quote matches what spendPoliticalStrength will charge.
   const pressureRow = await db
     .collection<PartyStrengthPressure>("partyStrengthPressure")
     .findOne({ _id: `${countryId}_${spenderParty.sequentialId}_${upperRegionId}` });

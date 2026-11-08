@@ -181,20 +181,15 @@ export const GET = withNoStore(async () => {
       });
 
     // Catch IP rotation that happens WITHOUT a re-login, which capture at the
-    // auth endpoints alone misses entirely. That is the evasion this exists to
-    // see: a player who changes network mid-session never re-authenticates, so
-    // `lastKnownIp` keeps reporting the address they logged in from.
+    // auth endpoints alone misses entirely: mid-session network changes never
+    // re-authenticate, so `lastKnownIp` keeps reporting the login address.
     //
-    // `getClientIp` reads `headers()`, so it is resolved inside the request
-    // scope rather than from a detached continuation, where it can throw once
-    // the response has been sent. But that puts it on the critical path of the
-    // endpoint EVERY authenticated page load hits, so the whole block is
-    // wrapped: identity history is evidence collection, and a failure to
-    // collect it must never turn into a 500 for the player.
+    // `getClientIp` reads `headers()`, so it must be resolved inside request
+    // scope, on the critical path of every authenticated page load. Wrapped
+    // so a capture failure never 500s the session response.
     //
-    // The equality check short-circuits before any I/O, so a player on a stable
-    // address costs nothing, and the writer's debounce collapses repeat
-    // sightings for one who is roaming.
+    // The equality check short-circuits before any I/O, and the writer
+    // debounces repeat sightings.
     try {
       const sessionIp = await getClientIp();
       if (sessionIp !== user?.lastKnownIp) {

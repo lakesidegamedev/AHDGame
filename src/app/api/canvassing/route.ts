@@ -187,12 +187,7 @@ export async function POST(req: NextRequest) {
 
     const db = await getDb();
 
-    // Running-mate surrogate branch takes precedence when the acting character
-    // is the running mate on an active general-phase presidential ticket and is
-    // canvassing that ticket's travel state. The surrogate spends the VP's own
-    // actions/funds (like any canvass) AND draws down the ticket's shared
-    // per-day surrogate pool. Otherwise fall through to the normal home / own
-    // candidacy eligibility.
+    // Running-mate surrogate branch takes precedence when the acting character is the running mate canvassing the ticket's travel state. The surrogate spends the VP's own actions/funds AND draws down the ticket's shared per-day surrogate pool. Otherwise fall through to normal eligibility.
     const mateEligibility = await resolveRunningMateCanvassState(db, user.character);
     const usingSurrogate = mateEligibility.ok && mateEligibility.stateId === stateId;
     let surrogateCampaignId: ObjectId | null = null;
@@ -250,12 +245,7 @@ export async function POST(req: NextRequest) {
     const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
     const balanceLocal = localCampaignBalance(user.character, forexEnabled);
 
-    // Crash-safe spend (issue #1672): the optional surrogate-pool draw and the
-    // character funds+actions debit are keyed idempotent legs and the turnout
-    // boost a terminal keyed write, so a crash between the sequential writes
-    // reconciles to exactly one charged canvass instead of charging for a
-    // boost that never landed. `Idempotency-Key` replays the stored outcome
-    // without charging again.
+    // Crash-safe spend: the surrogate-pool draw and character funds+actions debit are keyed idempotent legs, and the turnout boost a terminal keyed write, so a crash between writes reconciles to exactly one charged canvass. `Idempotency-Key` replays the stored outcome without charging again.
     const headerKey = req.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");
