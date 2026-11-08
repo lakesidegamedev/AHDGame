@@ -24,6 +24,7 @@ import type {
   CrisisScope,
   LeverUse,
 } from "@/lib/crises/v2/types";
+import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { ensureBuiltinCrisisInputProviders } from "./crisisV2/inputProviders";
 import { routeEffectIntents } from "./crisisV2/intents";
 import {
@@ -294,6 +295,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
   ensureBuiltinCrisisInputProviders();
+  ensureBuiltinCrisisHolderProviders();
   const world = await loadWorld(db);
   const result: CrisisV2TurnResult = { processed: 0, failed: 0, resolved: 0, opened: 0 };
   const stillActive: DirectorActiveCrisis[] = [];
