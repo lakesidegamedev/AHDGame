@@ -160,6 +160,19 @@ export const MIDWEST_STATES = [
   "WI",
 ] as const;
 
+/**
+ * A metric condition read from a state's macro metrics each turn. The pull
+ * lands in a state only on turns its gate is open, so a realignment tied to a
+ * labour shock or a migration surge fires where and when the trigger metric
+ * crosses its threshold, not on a calendar alone.
+ */
+export interface EraCheckpointGate {
+  /** Dotted path into the macro metrics document, e.g. "economic.unemploymentRate". */
+  metric: string;
+  op: "gte" | "lte";
+  threshold: number;
+}
+
 export interface EraCheckpoint {
   id: string;
   countryId: CountryId;
@@ -193,6 +206,10 @@ export interface EraCheckpoint {
    */
   historicalWindow?: { startYear: number; endYear: number };
   targets: readonly EraCheckpointTarget[];
+  /** `startingYear` of the worlds this checkpoint runs in. Defaults to 1953. */
+  worldStartingYear?: number;
+  /** When set, a state only receives the pull on turns this gate is open. */
+  gate?: EraCheckpointGate;
 }
 
 /** Minimal shape this module needs from a `docketCases` document. */
@@ -669,6 +686,152 @@ const MIRANDA_LAW_AND_ORDER_CHECKPOINT: EraCheckpoint = {
   ],
 };
 
+/** Starting year of the modern worlds the 2027-2050 realignments run in. */
+const MODERN_WORLD_STARTING_YEAR = 2027;
+
+interface ModernRealignmentSpec {
+  id: string;
+  title: string;
+  startYear: number;
+  durationYears: number;
+  gate?: EraCheckpointGate;
+  /** Every shift is signed on the shared -5..+5 lean axis, summed over the full window. */
+  shifts: readonly {
+    dim: string;
+    bucket: string;
+    axis: "economicLean" | "socialLean";
+    totalShift: number;
+  }[];
+}
+
+/**
+ * Every number behind the modern realignments, in one place. Turn-by-turn the
+ * pull is `totalShift / (durationYears * 48)`, and a player's own legislation
+ * still nets against it like any other checkpoint. All are national pulls on
+ * Layer-1 census buckets, never archetypes.
+ */
+export const MODERN_REALIGNMENT_SPECS: readonly ModernRealignmentSpec[] = [
+  {
+    // Degree holders drift left and non-degree voters right, wherever enough adults hold degrees
+    // for the divide to be visible.
+    id: "education-polarisation-2028",
+    title: "Education Polarisation",
+    startYear: 2028,
+    durationYears: 22,
+    gate: { metric: "population.tertiaryAttainment", op: "gte", threshold: 30 },
+    shifts: [
+      { dim: "education", bucket: "graduate", axis: "socialLean", totalShift: -1.0 },
+      { dim: "education", bucket: "college", axis: "socialLean", totalShift: -0.8 },
+      { dim: "education", bucket: "no_college", axis: "socialLean", totalShift: 1.2 },
+      { dim: "education", bucket: "no_college", axis: "economicLean", totalShift: -0.4 },
+    ],
+  },
+  {
+    // Younger cohorts replace older ones: more pro-climate and pro-housing-supply, ungated because
+    // cohort replacement happens everywhere.
+    id: "cohort-replacement-2028",
+    title: "Generational Replacement",
+    startYear: 2028,
+    durationYears: 22,
+    shifts: [
+      { dim: "age", bucket: "young", axis: "socialLean", totalShift: -1.0 },
+      { dim: "age", bucket: "young", axis: "economicLean", totalShift: -0.6 },
+      { dim: "age", bucket: "mid", axis: "socialLean", totalShift: -0.3 },
+      { dim: "age", bucket: "senior", axis: "socialLean", totalShift: 0.4 },
+    ],
+  },
+  {
+    // Places where unemployment runs high after automation swing populist: economically left,
+    // socially right.
+    id: "automation-populism-2030",
+    title: "Automation Populist Swing",
+    startYear: 2030,
+    durationYears: 12,
+    gate: { metric: "economic.unemploymentRate", op: "gte", threshold: 6.5 },
+    shifts: [
+      { dim: "wealth", bucket: "low", axis: "economicLean", totalShift: -1.0 },
+      { dim: "wealth", bucket: "low", axis: "socialLean", totalShift: 0.8 },
+      { dim: "education", bucket: "no_college", axis: "economicLean", totalShift: -0.8 },
+      { dim: "education", bucket: "no_college", axis: "socialLean", totalShift: 0.8 },
+    ],
+  },
+  {
+    // Migration becomes a first-order issue where realized net migration runs well above the
+    // typical annual rate.
+    id: "migration-salience-2030",
+    title: "Migration Salience",
+    startYear: 2030,
+    durationYears: 8,
+    gate: { metric: "population.realizedMigrationRate", op: "gte", threshold: 0.8 },
+    shifts: [
+      { dim: "education", bucket: "no_college", axis: "socialLean", totalShift: 0.8 },
+      { dim: "age", bucket: "mature", axis: "socialLean", totalShift: 0.6 },
+      { dim: "age", bucket: "senior", axis: "socialLean", totalShift: 0.6 },
+      { dim: "wealth", bucket: "middle", axis: "socialLean", totalShift: 0.3 },
+    ],
+  },
+];
+
+function requireFinite(value: number, label: string): number {
+  if (!Number.isFinite(value))
+    throw new Error(`Modern realignment ${label} is not a finite number`);
+  return value;
+}
+
+/** Builds a registered checkpoint from its spec. Throws on any missing or non-finite number. */
+export function buildModernRealignment(spec: ModernRealignmentSpec): EraCheckpoint {
+  if (spec.shifts.length === 0) throw new Error(`Modern realignment ${spec.id} has no shifts`);
+  if (spec.gate) requireFinite(spec.gate.threshold, `${spec.id} gate threshold`);
+  return {
+    id: spec.id,
+    countryId: "US",
+    title: spec.title,
+    worldStartingYear: MODERN_WORLD_STARTING_YEAR,
+    fallbackStartTurn: yearToTurn(
+      requireFinite(spec.startYear, `${spec.id} startYear`),
+      MODERN_WORLD_STARTING_YEAR
+    ),
+    durationTurns: requireFinite(spec.durationYears, `${spec.id} durationYears`) * 48,
+    ...(spec.gate && { gate: spec.gate }),
+    targets: spec.shifts.map((shift) => ({
+      dim: shift.dim,
+      bucket: shift.bucket,
+      stateIds: ALL_US_STATES,
+      axis: shift.axis,
+      totalShift: requireFinite(shift.totalShift, `${spec.id} ${shift.dim}:${shift.bucket} shift`),
+    })),
+  };
+}
+
+export const MODERN_REALIGNMENT_CHECKPOINTS: readonly EraCheckpoint[] =
+  MODERN_REALIGNMENT_SPECS.map(buildModernRealignment);
+
+/** Whether a checkpoint runs in a world that started in `startingYear`. */
+export function checkpointRunsInWorld(checkpoint: EraCheckpoint, startingYear: number): boolean {
+  return (checkpoint.worldStartingYear ?? STARTING_YEAR_1953) === startingYear;
+}
+
+function readMetricPath(doc: unknown, path: string): number | undefined {
+  let cursor: unknown = doc;
+  for (const key of path.split(".")) {
+    if (cursor === null || typeof cursor !== "object") return undefined;
+    cursor = (cursor as Record<string, unknown>)[key];
+  }
+  const value = (cursor as { value?: unknown } | null | undefined)?.value;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/** Whether a gate is open for a state's macro metrics. An unreadable metric keeps the gate shut. */
+export function isCheckpointGateOpen(
+  gate: EraCheckpointGate | undefined,
+  metrics: unknown
+): boolean {
+  if (!gate) return true;
+  const value = readMetricPath(metrics, gate.metric);
+  if (value === undefined) return false;
+  return gate.op === "gte" ? value >= gate.threshold : value <= gate.threshold;
+}
+
 /**
  * Era-agnostic checkpoint registry. Declaring a new era's checkpoints (a 1979
  * or 1991 world's own realignments) means adding entries here — no new
@@ -683,6 +846,7 @@ export const ERA_CHECKPOINTS: readonly EraCheckpoint[] = [
   REYNOLDS_REAPPORTIONMENT_CHECKPOINT,
   GRISWOLD_PRIVACY_CHECKPOINT,
   MIRANDA_LAW_AND_ORDER_CHECKPOINT,
+  ...MODERN_REALIGNMENT_CHECKPOINTS,
 ];
 
 /**
