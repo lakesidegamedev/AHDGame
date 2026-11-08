@@ -158,6 +158,22 @@ export async function executeCorporationBondRefinance(
     holders.push({ corporationId: h.corporationId, units: h.units });
     holderUnitSum += h.units;
   }
+  for (const h of merged.fundHolderUnits.values()) {
+    holders.push({
+      fundId: h.fundId,
+      units: h.units,
+      ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+    });
+    holderUnitSum += h.units;
+  }
+  for (const h of merged.nppHolderUnits.values()) {
+    holders.push({
+      nppId: h.nppId,
+      units: h.units,
+      ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+    });
+    holderUnitSum += h.units;
+  }
   const publicFloatFinal = Math.max(0, merged.publicFloat);
   const totalUnits = holderUnitSum + publicFloatFinal;
   const actualFaceValueLocal = totalUnits * BOND_UNIT_FACE_VALUE;

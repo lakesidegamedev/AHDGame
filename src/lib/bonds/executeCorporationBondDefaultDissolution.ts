@@ -58,6 +58,12 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { reserveSectorsForRestore } from "@/lib/corporations/securedConstructionProperty";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import {
+  addInstitutionalBondPayout,
+  emptyInstitutionalBondPayouts,
+  payInstitutionalBondHolders,
+  selfHeldBondUnits,
+} from "@/lib/bonds/payInstitutionalBondHolders";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -212,10 +218,18 @@ export async function executeCorporationBondDefaultDissolution(
     corpFxRate
   );
 
+  // A bond the issuer holds itself is a claim on itself: it cancels, so it
+  // neither dilutes the other creditors nor takes a share of the pool.
+  const bondsNetOfSelfHeld = bonds.map((b) => {
+    const selfUnits = selfHeldBondUnits(b);
+    return selfUnits > 0
+      ? { ...b, totalIssued: Math.max(0, b.totalIssued - selfUnits * BOND_UNIT_FACE_VALUE) }
+      : b;
+  });
   const dissolvePreview = previewDissolveSettlement(
     refreshedCorporation,
     sectorNpv,
-    bonds,
+    bondsNetOfSelfHeld,
     liquidCapitalAnchor,
     fxByCurrency,
     { plantsEnabled, sectorBookAnchor }
@@ -276,6 +290,7 @@ export async function executeCorporationBondDefaultDissolution(
   const charBondPay = new Map<string, number>();
   const imperialBondPay = new Map<string, number>();
   const corpBondPay = new Map<string, number>();
+  const institutionalBondPay = emptyInstitutionalBondPayouts();
 
   for (const bond of bonds) {
     const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
@@ -285,6 +300,7 @@ export async function executeCorporationBondDefaultDissolution(
       const faceAnchor = corpCapitalToAnchor(faceLocal, bondCcy, bondRate);
       const pay = Math.round(ratio * faceAnchor * 100) / 100;
       if (pay <= 0) continue;
+      if (addInstitutionalBondPayout(institutionalBondPay, h, pay)) continue;
       if (h.characterId) {
         const k = h.characterId.toString();
         charBondPay.set(k, (charBondPay.get(k) ?? 0) + pay);
@@ -547,6 +563,17 @@ export async function executeCorporationBondDefaultDissolution(
     });
     await db.collection<Corporation>("corporations").bulkWrite(corpOps);
   }
+
+  dissolutionTxEntries.push(
+    ...(await payInstitutionalBondHolders(db, institutionalBondPay, {
+      turn: currentTurn,
+      now,
+      source: "default_dissolution_payout",
+      issuerId: refreshedCorporation._id,
+      issuerName: refreshedCorporation.name,
+      txType: "bond_dissolution_payout",
+    }))
+  );
 
   // Pro-rata payout to corporate equity shareholders, whose share of the pool
   // was previously dropped (skipped in allocation while still counted in the denominator).

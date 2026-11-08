@@ -354,6 +354,51 @@ describe("processBondTurn", () => {
     expect(db.collectionMocks["characters"]!.bulkWrite).toHaveBeenCalled();
   });
 
+  it("debits a state-owned issuer for its coupons instead of paying them from nothing", async () => {
+    const issuerCorpId = new ObjectId();
+    const bond = {
+      _id: new ObjectId(),
+      couponRate: 5,
+      maturityTurn: 100,
+      matured: false,
+      defaulted: false,
+      isCorporate: true,
+      holders: [{ characterId: new ObjectId(), units: 5 }],
+      publicFloat: 0,
+      corporationId: issuerCorpId,
+      currencyCode: "USD" as const,
+    };
+    vi.mocked(isCorporateBond).mockReturnValue(true);
+    mockBondFinds([bond], [{ _id: bond._id, marketPrice: 1 }]);
+    db.collectionMocks["corporations"]!.find.mockReturnValue(
+      makeCursor([
+        {
+          _id: issuerCorpId,
+          liquidCapital: 1_000_000,
+          liquidCurrencyCode: "USD",
+          countryId: "US",
+          countryOwnerId: "US",
+          name: "State Oil",
+        },
+      ])
+    );
+    db.collectionMocks["centralBanks"]!.find.mockReturnValue(
+      makeCursor([{ countryId: "US", primeRate: 2.75 }])
+    );
+    db.collectionMocks["bondHistory"]!.aggregate.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+
+    await processBondTurn(10);
+
+    const ops = db.collectionMocks["corporations"]!.bulkWrite.mock.calls.flatMap(
+      (call) =>
+        call[0] as { updateOne: { filter: { _id: ObjectId }; update: Record<string, any> } }[]
+    );
+    const issuerOp = ops.find((op) => op.updateOne.filter._id.equals(issuerCorpId));
+    expect(issuerOp?.updateOne.update.$inc.liquidCapital).toBeLessThan(0);
+  });
+
   it("pays the coupon on pool-held units into the currency's bond market pool", async () => {
     const charId = new ObjectId();
     const bond = {

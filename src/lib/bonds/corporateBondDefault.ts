@@ -483,15 +483,39 @@ export function isBondDefaultCreditPenaltyActive(corp: Corporation, currentTurn:
   return until != null && currentTurn < until;
 }
 
+interface MergedInstitutionHolder {
+  units: number;
+  /** Weighted average cost per unit, absent when no merged entry carried one. */
+  avgCostPerUnit?: number;
+}
+
+function mergeInstitutionUnits(
+  prev: MergedInstitutionHolder,
+  units: number,
+  avgCostPerUnit: number | undefined
+): void {
+  if (prev.avgCostPerUnit !== undefined && avgCostPerUnit !== undefined) {
+    prev.avgCostPerUnit =
+      (prev.avgCostPerUnit * prev.units + avgCostPerUnit * units) / (prev.units + units);
+  } else if (avgCostPerUnit !== undefined && prev.avgCostPerUnit === undefined) {
+    prev.avgCostPerUnit = avgCostPerUnit;
+  }
+  prev.units += units;
+}
+
 export function mergeDefaultedBondHolders(defaultedBonds: Bond[]): {
   holderUnits: Map<string, { characterId: ObjectId; units: number }>;
   imperialHolderUnits: Map<string, { imperialCharacterId: ObjectId; units: number }>;
   corpHolderUnits: Map<string, { corporationId: ObjectId; units: number }>;
+  fundHolderUnits: Map<string, MergedInstitutionHolder & { fundId: ObjectId }>;
+  nppHolderUnits: Map<string, MergedInstitutionHolder & { nppId: ObjectId }>;
   publicFloat: number;
 } {
   const holderUnits = new Map<string, { characterId: ObjectId; units: number }>();
   const imperialHolderUnits = new Map<string, { imperialCharacterId: ObjectId; units: number }>();
   const corpHolderUnits = new Map<string, { corporationId: ObjectId; units: number }>();
+  const fundHolderUnits = new Map<string, MergedInstitutionHolder & { fundId: ObjectId }>();
+  const nppHolderUnits = new Map<string, MergedInstitutionHolder & { nppId: ObjectId }>();
   let publicFloat = 0;
 
   for (const bond of defaultedBonds) {
@@ -516,9 +540,36 @@ export function mergeDefaultedBondHolders(defaultedBonds: Bond[]): {
         const prev = corpHolderUnits.get(k);
         if (prev) prev.units += h.units;
         else corpHolderUnits.set(k, { corporationId: h.corporationId, units: h.units });
+      } else if (h.fundId) {
+        const k = h.fundId.toString();
+        const prev = fundHolderUnits.get(k);
+        if (prev) mergeInstitutionUnits(prev, h.units, h.avgCostPerUnit);
+        else
+          fundHolderUnits.set(k, {
+            fundId: h.fundId,
+            units: h.units,
+            ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+          });
+      } else if (h.nppId) {
+        const k = h.nppId.toString();
+        const prev = nppHolderUnits.get(k);
+        if (prev) mergeInstitutionUnits(prev, h.units, h.avgCostPerUnit);
+        else
+          nppHolderUnits.set(k, {
+            nppId: h.nppId,
+            units: h.units,
+            ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+          });
       }
     }
   }
 
-  return { holderUnits, imperialHolderUnits, corpHolderUnits, publicFloat };
+  return {
+    holderUnits,
+    imperialHolderUnits,
+    corpHolderUnits,
+    fundHolderUnits,
+    nppHolderUnits,
+    publicFloat,
+  };
 }
