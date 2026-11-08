@@ -519,7 +519,8 @@ export async function getNationalCommitteeState(
     committeeMembers,
     committeeSize: COMMITTEE_SIZE,
     election: electionDisplay,
-    canVote: !!isMember,
+    // The vote route refuses during the new-character cooldown, like the enter route.
+    canVote: !!isMember && runCooldownUntil === null,
     canRun: !!isMember,
     runCooldownUntil,
     userVotes,

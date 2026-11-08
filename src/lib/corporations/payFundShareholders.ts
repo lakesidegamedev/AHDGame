@@ -2,7 +2,11 @@ import { ObjectId, type ClientSession, type Db, type UpdateFilter } from "mongod
 import type { IndexFund } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
-import type { FundShareholderPayoutRow } from "@/lib/bonds/corporateBondDefault";
+import type {
+  FundShareholderPayoutRow,
+  NppShareholderPayoutRow,
+} from "@/lib/bonds/corporateBondDefault";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /**
  * Pay index-fund shareholders their ₳ slice of a wound-down corporation's
@@ -102,4 +106,36 @@ export async function payFundShareholderRows(
     });
   }
   return { totalPaidAnchor, txEntries };
+}
+
+/** NPP personal balance that receives ₳-denominated pool payouts. */
+export const NPP_ANCHOR_BALANCE_PATH = "currencyBalances.personal.USD";
+
+/**
+ * Pay NPP shareholders their ₳ slice of a wound-down corporation's payout pool.
+ * Like fund rows, NPP shares sit in the pool's denominator, so an unpaid slice
+ * would leave the payer and reach no one. The pool is ₳, credited to the NPP's
+ * personal USD balance (the anchor account) without conversion.
+ */
+export async function payNppShareholderRows(
+  db: Db,
+  nppRows: readonly NppShareholderPayoutRow[] | undefined,
+  now: Date,
+  options?: { session?: ClientSession }
+): Promise<{ totalPaidAnchor: number }> {
+  const rows = (nppRows ?? []).filter((row) => row.payout > 0);
+  const ops = rows.map((row) => ({
+    updateOne: {
+      filter: { _id: new ObjectId(row.nppId) },
+      update: {
+        $inc: { [NPP_ANCHOR_BALANCE_PATH]: row.payout },
+        $set: { updatedAt: now },
+      },
+    },
+  }));
+  if (ops.length === 0) return { totalPaidAnchor: 0 };
+  await (
+    await getNppsCollection(db)
+  ).bulkWrite(ops, options?.session ? { session: options.session } : undefined);
+  return { totalPaidAnchor: rows.reduce((sum, row) => sum + row.payout, 0) };
 }

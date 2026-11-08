@@ -5,6 +5,12 @@
  */
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
+  campaignAnchorToLocal,
+  campaignLocalRate,
+  loadCampaignCurrencyRates,
+  type CampaignCurrencyRates,
+} from "@/lib/campaigns/campaignCurrency";
+import {
   getStateDemographicTurnoutCollection,
   getPartyBudgetCollection,
 } from "@/lib/db/collections";
@@ -175,6 +181,8 @@ interface RevenueContext {
   /** World reset preset selecting the GDP-baseline era (issue #798). */
   preset: string;
   priceLevel?: number;
+  /** Frozen base-rate snapshot: anchor campaign money -> local treasury currency. */
+  campaignRates: CampaignCurrencyRates;
   partyMap: Map<string, PoliticalParty>;
   statePartyOrgMap: Map<string, StatePartyOrg>;
   statePopMap: Map<string, number>;
@@ -231,17 +239,36 @@ function calculatePartyRevenueFromContext(
         preset: ctx.preset,
         priceLevel: ctx.priceLevel,
       });
-      revenue += calculateTaxAmount(totalFundRate, nationalTaxRate);
+      // Treasuries hold LOCAL campaign money: the deposit phases convert anchor
+      // generation to local before taxing, so the revenue estimate must too.
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate,
+          member.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        nationalTaxRate
+      );
     }
     for (const npp of npps) {
       const pop = ctx.statePopMap.get(npp.homeState) ?? 0;
+      const nppRate = campaignLocalRate(npp.countryId ?? "US", ctx.campaignRates, ctx.preset);
       const totalFundRate = projectNppGeneration({
         population: pop,
         donorBaseLevel: npp.donorBaseLevel ?? 0,
-        currentFundsLocal: (npp.funds ?? 0) / (ctx.priceLevel ?? 1),
+        currentFundsLocal: (npp.funds ?? 0) / (nppRate * (ctx.priceLevel ?? 1)),
         nppEconomyEnabled: ctx.nppEconomyEnabled,
       });
-      revenue += calculateTaxAmount(totalFundRate * (ctx.priceLevel ?? 1), nationalTaxRate);
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate * (ctx.priceLevel ?? 1),
+          npp.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        nationalTaxRate
+      );
     }
     return revenue;
   } else {
@@ -270,16 +297,33 @@ function calculatePartyRevenueFromContext(
         preset: ctx.preset,
         priceLevel: ctx.priceLevel,
       });
-      revenue += calculateTaxAmount(totalFundRate, stateTaxRate);
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate,
+          member.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        stateTaxRate
+      );
     }
     for (const npp of npps) {
+      const nppRate = campaignLocalRate(npp.countryId ?? "US", ctx.campaignRates, ctx.preset);
       const totalFundRate = projectNppGeneration({
         population: pop,
         donorBaseLevel: npp.donorBaseLevel ?? 0,
-        currentFundsLocal: (npp.funds ?? 0) / (ctx.priceLevel ?? 1),
+        currentFundsLocal: (npp.funds ?? 0) / (nppRate * (ctx.priceLevel ?? 1)),
         nppEconomyEnabled: ctx.nppEconomyEnabled,
       });
-      revenue += calculateTaxAmount(totalFundRate * (ctx.priceLevel ?? 1), stateTaxRate);
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate * (ctx.priceLevel ?? 1),
+          npp.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        stateTaxRate
+      );
     }
     return revenue;
   }
@@ -486,13 +530,12 @@ export async function processPartyGOTV(
     revenueCtx = {
       preset,
       priceLevel: resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, preset),
+      campaignRates: await loadCampaignCurrencyRates(db),
       partyMap: nationalPartyMap,
       statePartyOrgMap,
-      // Donor base = adults: use the voting-age population (P1b-1c), falling back
-      // to total on unseeded worlds. Fund generation scales with this base.
-      statePopMap: new Map(
-        allStates.map((s) => [s._id, s.votingEligiblePopulation ?? s.population])
-      ),
+      // Both deposit phases scale generation with total state population, so
+      // the revenue estimate uses the same base.
+      statePopMap: new Map(allStates.map((s) => [s._id, s.population])),
       stateGdpMap: new Map(allStates.map((s) => [s._id, s.gdp])),
       nppEconomyEnabled,
       charactersByParty,

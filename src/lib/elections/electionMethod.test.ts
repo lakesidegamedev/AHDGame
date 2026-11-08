@@ -174,6 +174,7 @@ describe("every multi-seat election type maps to a position", () => {
     "procurador",
     "sovietDeputy",
     "sejmDeputy",
+    "nationsDeputy",
     "assemblyDeputy",
     "assemblyDelegate",
   ]);

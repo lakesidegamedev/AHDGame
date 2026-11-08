@@ -612,18 +612,21 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             (phaseResults as Record<string, unknown>).federationFacilityCompensation = {
               applicationsServiced: compensated,
             };
+        } else {
+          await runtime.markPhaseSkipped(
+            "federationFacilityCompensation",
+            "upstreamAbort",
+            "Skipped because bondTurn did not produce a result."
+          );
         }
 
-        // Collect a staged procurement-windfall assessment after bond coupons
-        // and maturities land, while preserving the supplier's operating reserve.
-        // This runs before share-price recomputation so the balance sheet and
-        // price snapshot agree in the same turn.
+        // Collect the staged procurement windfall after bond coupons land, before
+        // share-price recomputation so balance sheet and price snapshot agree.
         const windfallRecovery = await runtime.runPhase("defenceWindfallRecovery", () =>
           processDefenceWindfallRecoveryTurn(context.db, newTurn, context.realNow)
         );
-        if (windfallRecovery) {
+        if (windfallRecovery)
           (phaseResults as Record<string, unknown>).defenceWindfallRecovery = windfallRecovery;
-        }
 
         // Extraction-contract settlement, runs AFTER commodityPrices because
         // the per-turn royalty is priced off this turn's market. No-op unless

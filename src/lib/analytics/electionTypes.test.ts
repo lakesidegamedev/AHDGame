@@ -13,6 +13,7 @@ const OFFICE_KEYS = new Set([
   "sejmDeputy",
   "assemblyDeputy",
   "assemblyDelegate",
+  "nationsDeputy",
 ]);
 
 describe("ANALYTICS_ELECTION_TYPES", () => {

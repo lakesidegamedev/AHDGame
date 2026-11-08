@@ -67,7 +67,8 @@ export async function createMissingCommitteeElections(
 ): Promise<number> {
   const db = await getDb();
   const now = new Date(effectiveNow);
-  const scopedPartiesQuery = applyOptionalCountryScope({}, countryId);
+  // A merged or folded party has no members left to elect anyone.
+  const scopedPartiesQuery = applyOptionalCountryScope({ isDefunct: { $ne: true } }, countryId);
   const scopedActiveElectionQuery = applyOptionalCountryScope({ status: "voting" }, countryId);
 
   const [parties, activeElections] = await Promise.all([

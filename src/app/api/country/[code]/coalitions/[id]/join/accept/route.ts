@@ -12,6 +12,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
+import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
 
 const acceptSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -109,41 +110,12 @@ export async function POST(
 
     const now = new Date();
 
-    // Use a pipeline update to atomically move party from joinRequests to members.
-    await db.collection("coalitions").updateOne({ _id: coalition._id }, [
-      {
-        $set: {
-          joinRequests: {
-            $filter: {
-              input: "$joinRequests",
-              as: "req",
-              cond: { $ne: ["$$req.partyId", requestingParty._id] },
-            },
-          },
-          members: {
-            $concatArrays: [
-              "$members",
-              [
-                {
-                  partyId: requestingParty._id,
-                  partySequentialId: requestingParty.sequentialId,
-                  joinedAt: now,
-                },
-              ],
-            ],
-          },
-          updatedAt: now,
-        },
-      },
-    ]);
-
-    // Set coalitionId on the party
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: requestingParty._id },
-        { $set: { coalitionId: coalition._id, updatedAt: now } }
+    if (!(await admitPartyToCoalition(db, coalition, requestingParty, "joinRequests", now))) {
+      return errorResponse(
+        409,
+        "This request was already handled or the party joined another coalition."
       );
+    }
 
     // Notify the requesting party's chair
     if (requestingParty.chairId) {

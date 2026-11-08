@@ -44,7 +44,10 @@ import { logWireEvent, wireHeadlineCorpDissolved } from "@/lib/wireEvent";
 import { badRequest } from "@/lib/api/errors";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { distributeCrossEquityInKind } from "@/lib/corporations/distributeCrossEquityInKind";
-import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import {
+  payFundShareholderRows,
+  payNppShareholderRows,
+} from "@/lib/corporations/payFundShareholders";
 import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { disposeLeavingSectors } from "@/lib/corporations/nppPickup";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
@@ -651,6 +654,7 @@ export async function executeCorporationBondDefaultDissolution(
     );
     dissolutionTxEntries.push(...fundTxEntries);
   }
+  await payNppShareholderRows(db, allocation.nppRows, now);
 
   // Emit the bond_default tx (subject side) BEFORE deleting the corp doc so
   // admin queries still resolve counterparty; recipient rows already carry

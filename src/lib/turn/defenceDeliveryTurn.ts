@@ -18,6 +18,7 @@ import {
 import {
   listActiveContracts,
   advanceContract,
+  cancelContract,
   reverseContractDelivery,
   stampDeliveryCarry,
   recordContractPayment,
@@ -133,6 +134,18 @@ export async function applyDefenceDeliveries(
         .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED }),
     ]);
     if (!sector || !corp) {
+      // The supplier plant or corp is gone, so the order can never deliver and
+      // would hold its encumbrance and window quota forever. Tear it up for
+      // cause: the supplier side vanished, so no minister break fee is owed.
+      await cancelContract(db, contract._id, {
+        termination: {
+          basis: "cause",
+          fee: 0,
+          lotsCancelled: Math.max(0, (contract.allocatedLots ?? 0) - (contract.lotsDelivered ?? 0)),
+          favorabilityPenalty: 0,
+          turn: currentTurn,
+        },
+      });
       stalled++;
       continue;
     }

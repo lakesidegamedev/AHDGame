@@ -44,7 +44,10 @@ import { reserveSectorsForRestore } from "@/lib/corporations/securedConstruction
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
-import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import {
+  payFundShareholderRows,
+  payNppShareholderRows,
+} from "@/lib/corporations/payFundShareholders";
 import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
@@ -530,6 +533,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           if (allocation.fundRows.length > 0) {
             await payFundShareholderRows(db, allocation.fundRows, refreshedCorporation._id, now);
           }
+          await payNppShareholderRows(db, allocation.nppRows, now);
 
           // Corp outflow row mirrors the gross pool drained from the dissolving corp.
           dissolutionTxEntries.push({

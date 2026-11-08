@@ -12,6 +12,8 @@ import {
   isPendingTransactionComplete,
   listOpenPendingTransactions,
 } from "@/lib/parties/pendingTreasuryTransactions";
+import { isLeadershipElectionFreezeActive } from "@/lib/parties/leadershipElectionFreeze";
+import { getGameTime } from "@/lib/time/gameTime";
 import type { Character, State } from "@/lib/db/types";
 
 interface RouteParams {
@@ -81,6 +83,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const myCharOid = authResult.user.character._id;
     const myChar = myCharOid.toString();
 
+    // The approve route refuses during the leadership handover freeze, so the
+    // buttons should not be offered either.
+    const { currentTurn } = await getGameTime();
+    const freezeActive = await isLeadershipElectionFreezeActive(db, party, currentTurn);
+
     const items = rows.map((r) => {
       // The viewer's slot for THIS row — null if they can't approve at
       // all (not an officer, or a Request Funds row they themselves
@@ -91,7 +98,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // still reads as a guard rather than a restatement.
       const slotAlreadyFilled = viewerSlot == null ? true : !!r[approvalFieldForSlot(viewerSlot)];
       const rowComplete = isPendingTransactionComplete(r);
-      const canApprove = viewerSlot != null && !slotAlreadyFilled && !rowComplete;
+      const canApprove = viewerSlot != null && !slotAlreadyFilled && !rowComplete && !freezeActive;
       const canCancel = r.proposedBy.toString() === myChar;
 
       const mode = r.approvalModeAtPropose ?? "double";

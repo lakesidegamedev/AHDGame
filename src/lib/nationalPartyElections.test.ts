@@ -1275,6 +1275,25 @@ describe("createMissingNationalElections", () => {
         }
       );
   }
+  it("never opens leadership races for a merged or folded party", async () => {
+    const partyFind = vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+    setMockCollection("nationalPartyElections", {
+      find: electionFind([], []),
+      insertMany: vi.fn(),
+    });
+    setMockCollection("politicalParties", { find: partyFind });
+    setMockCollection("characters", {
+      find: vi.fn().mockReturnValue({
+        project: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
+      }),
+    });
+
+    const { createMissingNationalElections } = await import("./nationalPartyElections");
+    await createMissingNationalElections(100, 72, new Date(), undefined);
+
+    expect(partyFind.mock.calls[0][0]).toMatchObject({ isDefunct: { $ne: true } });
+  });
+
   it("keeps a charter founder's first chair term out of the initial election cycle", async () => {
     const founderParty = { ...party, chairId: new ObjectId(), createdTurn: 100 };
     const insertMany = vi.fn().mockResolvedValue({ insertedCount: 2 });

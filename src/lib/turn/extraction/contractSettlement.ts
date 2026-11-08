@@ -336,6 +336,7 @@ export async function settleExtractionContracts(
 
   const notifications: NotificationInput[] = [];
   const txEntries: Parameters<typeof emitTxBulk>[1] = [];
+  const orphanedContractIds: ObjectId[] = [];
 
   for (const contract of activeContracts) {
     // Term expiry takes precedence — an expiring contract is not charged.
@@ -375,6 +376,14 @@ export async function settleExtractionContracts(
       result.royaltiesPaid += 1;
       result.totalRoyaltyAnchor += resumed.anchorAmount;
       result.contractsSettled += 1;
+      continue;
+    }
+
+    // A dissolved or absorbed contractor can never pay or extract again, but
+    // an active contract keeps counting against the state's contract cap and
+    // reserving deposit capacity. Close it once its holder is gone.
+    if (!corpById.has(contract.corporationId.toString())) {
+      orphanedContractIds.push(contract._id);
       continue;
     }
 
@@ -445,22 +454,7 @@ export async function settleExtractionContracts(
     }
 
     const corp = corpById.get(contract.corporationId.toString());
-    if (!corp) {
-      // Corp vanished (dissolved); leave the contract for revoke/cleanup elsewhere.
-      if (fundedNational) {
-        await contractsCol.updateOne(
-          {
-            _id: contract._id,
-            status: "active",
-            revokedTurn: { $exists: false },
-            $or: [{ lastRoyaltyTurn: { $lt: turn } }, { lastRoyaltyTurn: { $exists: false } }],
-          },
-          { $set: { lastRoyaltyTurn: turn, updatedAt: now } }
-        );
-      }
-      result.contractsSettled += 1;
-      continue;
-    }
+    if (!corp) continue;
 
     const corpCode = resolveCorpLiquidCurrencyCode(corp);
     const corpFxRate = corpCode
@@ -807,6 +801,14 @@ export async function settleExtractionContracts(
     result.royaltiesPaid += 1;
     result.totalRoyaltyAnchor += dueAnchor;
     result.contractsSettled += 1;
+  }
+
+  if (orphanedContractIds.length > 0) {
+    const closed = await contractsCol.updateMany(
+      { _id: { $in: orphanedContractIds }, revokedTurn: { $exists: false } },
+      { $set: { status: "expired", revokedTurn: turn, updatedAt: now } }
+    );
+    result.contractsExpired += closed.modifiedCount;
   }
 
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, thresholds);

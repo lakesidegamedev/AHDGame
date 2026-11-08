@@ -347,6 +347,26 @@ describe("corporateBondDefault", () => {
       expect(sum).toBe(1_000_000);
     });
 
+    it("emits an NPP row so an NPP shareholder's slice is paid, not dropped", () => {
+      const nppA = new ObjectId();
+      const corp = {
+        totalShares: 1_000,
+        publicFloat: 0,
+        shareholders: [
+          { characterId: charA, shares: 750 },
+          { nppId: nppA, shares: 250 },
+        ],
+      } as unknown as Corporation;
+      const result = allocateShareholderPool(corp, 1_000_000, names([charA, "Alice"]));
+      expect(result.nppRows).toEqual([
+        { nppId: nppA.toString(), name: "NPP shareholder", shares: 250, payout: 250_000 },
+      ]);
+      const sum =
+        result.characterRows.reduce((s, r) => s + r.payout, 0) +
+        result.nppRows.reduce((s, r) => s + r.payout, 0);
+      expect(sum).toBe(1_000_000);
+    });
+
     it("returns empty allocation when totalShares is 0 or pool is 0", () => {
       const corp = {
         totalShares: 0,
@@ -357,6 +377,7 @@ describe("corporateBondDefault", () => {
         characterRows: [],
         corporationRows: [],
         fundRows: [],
+        nppRows: [],
         publicFloatRow: null,
       });
       const corp2 = {
@@ -368,6 +389,7 @@ describe("corporateBondDefault", () => {
         characterRows: [],
         corporationRows: [],
         fundRows: [],
+        nppRows: [],
         publicFloatRow: null,
       });
     });

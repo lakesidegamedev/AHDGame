@@ -11,6 +11,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
+import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
 
 // POST /api/coalitions/[id]/invite/accept — Accept a coalition invite
 export async function POST(
@@ -106,40 +107,12 @@ export async function POST(
 
     const now = new Date();
 
-    // Use a pipeline update to atomically move party from pendingInvites to members.
-    // Avoids mixing $push + $pull in a single classic update (which can fail
-    // depending on MongoDB server / driver version).
-    await db.collection("coalitions").updateOne({ _id: coalition._id }, [
-      {
-        $set: {
-          pendingInvites: {
-            $filter: {
-              input: "$pendingInvites",
-              as: "inv",
-              cond: { $ne: ["$$inv.partyId", party._id] },
-            },
-          },
-          members: {
-            $concatArrays: [
-              "$members",
-              [
-                {
-                  partyId: party._id,
-                  partySequentialId: party.sequentialId,
-                  joinedAt: now,
-                },
-              ],
-            ],
-          },
-          updatedAt: now,
-        },
-      },
-    ]);
-
-    // Set coalitionId on the party
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: { coalitionId: coalition._id, updatedAt: now } });
+    if (!(await admitPartyToCoalition(db, coalition, party, "pendingInvites", now))) {
+      return errorResponse(
+        409,
+        "This request was already handled or the party joined another coalition."
+      );
+    }
 
     // Notify coalition chair
     const chairChar = coalition.chairCharacterId
