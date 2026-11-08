@@ -8,6 +8,7 @@ import { runMetricEngine } from "./phase";
 type Op = { updateOne: { filter: { _id: string }; update: { $set: Record<string, number> } } };
 
 interface WorldOptions {
+  investment?: number;
   gdp: number;
   priceIndex?: number;
   inflationRate: number;
@@ -34,6 +35,8 @@ function seedWorld(db: MockDb, opts: WorldOptions): { states: Op[]; budgets: Op[
       population: 100,
       gdp: opts.gdp,
       workingAgePopulation: 70,
+      corpGrowthInvestmentAnchor: opts.investment ?? 0,
+      corpGrowthInvestmentTurn: 100,
       militaryServicePopulation: 0,
     },
   ]);
@@ -129,4 +132,23 @@ describe("nominal GDP in the metric engine", () => {
     expect(budget.gdp).toBeCloseTo(inertia * 4_000_000_000_000 + (1 - inertia) * live, -2);
     expect(budget.gdpSmoothed).toBe(budget.gdp);
   });
+});
+
+it("keeps real capital invariant when nominal investment scales with the price level", async () => {
+  const base = await run({
+    gdp: 5_000_000,
+    priceIndex: 1,
+    inflationRate: 0,
+    investment: 100_000_000,
+  });
+  const priced = await run({
+    gdp: 10_000_000,
+    priceIndex: 2,
+    inflationRate: 0,
+    investment: 200_000_000,
+  });
+  expect(setOf(priced.states, "s_us").capitalStock).toBeCloseTo(
+    setOf(base.states, "s_us").capitalStock,
+    6
+  );
 });
