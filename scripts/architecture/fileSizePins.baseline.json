@@ -1,0 +1,26 @@
+{
+  "note": "Capped files over 1500 lines, pinned at their size. Pins may only go down: run `node scripts/architecture-audit.mjs --lower-size-pins` after a file shrinks.",
+  "files": {
+    "src/app/banking/BankingHubClient.tsx": 1580,
+    "src/app/corporation/[id]/page.tsx": 1666,
+    "src/app/country/[code]/parties/[id]/PartyHubPage.tsx": 1785,
+    "src/components/askDrawer/AskDrawerPanel.tsx": 1791,
+    "src/components/ExperimentalNavbar.tsx": 1718,
+    "src/components/LandingGlobe.tsx": 1838,
+    "src/lib/admin/bootstrapGameWorld.ts": 1551,
+    "src/lib/banking/fundedSovereignCoupons.ts": 1772,
+    "src/lib/elections/enrichElection.ts": 1575,
+    "src/lib/logistics/sourcing.ts": 1639,
+    "src/lib/market/clearing.ts": 1539,
+    "src/lib/market/producerMarket/rules.ts": 1613,
+    "src/lib/military/battle.ts": 1568,
+    "src/lib/nationalization/ownershipTransition.ts": 1809,
+    "src/lib/resetLegislation/regionalCatalog.ts": 1720,
+    "src/lib/turn/bankingTurn.ts": 1713,
+    "src/lib/turn/corporation/fundedProducerTurn.ts": 1851,
+    "src/lib/turn/corporation/sectorCalculations.ts": 1860,
+    "src/lib/turn/corporation/sectorTurn.ts": 1736,
+    "src/lib/world/worldEntityManifest.ts": 1615,
+    "src/simulation/phases/turnPhaseRegistry.ts": 1784
+  }
+}

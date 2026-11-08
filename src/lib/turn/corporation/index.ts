@@ -1,14 +1,6 @@
-import { corporationsWithReservedTaxCash } from "./corporateDecisionCash";
-import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
-import { taxableDistribution } from "@/lib/budget/rules/incomePayout";
-import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
-import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
+import { configureGroupSupply } from "./groupSupplyTurn";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
-import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
-import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
-import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
-import { attemptNppConstructionFinance } from "./nppConstructionFinanceAttempts";
 import { producerStageEnv, runFundedProducerTurn } from "./fundedProducerTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -19,20 +11,11 @@ import { resolvePhaseLookups } from "./phaseLookups";
  * processCorporationTurn shares monetary quotes across automatic dividend conversions.
  */
 import { CORPORATION_TURN_GAME_CONFIG_PROJECTION } from "./gameConfigProjection";
-import { applyCorporationCashWrites } from "@/lib/turn/npp/foundingCashLedger";
-import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
-import { ObjectId } from "mongodb";
-import type { AnyBulkWriteOperation } from "mongodb";
-import type { Character, GameState } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { State } from "@/lib/db/types/state";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getDb } from "@/lib/mongodb";
-import { refreshNationalBudgetRevenue } from "@/lib/budget/revenue";
 import { buildCorporationLookups } from "./buildLookups";
-import { deferAfterTurn, drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import { buildFreightBillingBySector } from "./freightBillingTurn";
-import { USE_GROWTH_INCREMENT, businessAcumenGrowthMultiplier } from "@/lib/stats/statsConstants";
 import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
 import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
@@ -48,14 +31,11 @@ import { isFairnessDoctrineInEffect } from "@/lib/mediaRegulation/rules";
 import { runClearingPrePass } from "./clearingPrePass";
 import { computeQualityUpdates } from "./brandQualityTurn";
 import { consumeManufacturingDevelopmentReceiptsV2 } from "@/lib/products/manufacturingProjectPersistence";
-import { processAdvertisingTurn } from "@/lib/advertising/settlementTurn";
 import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
-import type { CoverageSectorInput } from "@/lib/advertising/rules/coverage";
 import type { CorporationTurnOptions } from "./corporationTurnOptions";
 import { transitionAnchorTurn } from "@/lib/market/producerMarket/transitionRules";
-import { persistNppManufacturingProjects } from "./persistManufacturingProjects";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
-import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
+import { type SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { loadSettleableSupplyAgreements } from "./loadSettleableSupplyAgreements";
 import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
@@ -68,93 +48,35 @@ import { buildUnionEffectsById } from "@/lib/unions/unionLookups";
 import { loadUndergroundStrengthByCountrySector } from "@/lib/unions/undergroundEffects";
 import { loadCollectiveAgreementEffects } from "@/lib/unions/collectiveAgreementEffects";
 import { loadIndustrialActionOutputFactors } from "@/lib/unions/industrialActionEffects";
-import {
-  fireStrikeStartedPulse,
-  fireStrikeResolvedPulse,
-} from "@/lib/corporations/sentimentEvents";
-import { processRdInnovations, seedDepositLookup } from "./rdInnovation";
-import { processVoteReminders, processVoteAutoResolve } from "./voteReminders";
-import { processImfBailoutPayments } from "@/lib/turn/imfBailoutTurn";
-import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
-import {
-  executeMarketMakerTrade,
-  distributeConversionSpreadsBatch,
-} from "@/lib/currency/marketMaker";
-import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
-
-import { loadExchangeRatesMap } from "@/lib/lineOfCredit/netWorth";
-import { toInternalUnits } from "@/lib/lineOfCredit/locMath";
 import { loadTxThresholds } from "@/lib/financialTxLog/emit";
-import { runSoeBackingSweep } from "./soeBackingSweep";
-import { processPendingNationalizations } from "@/lib/nationalization/pendingNationalizations";
-import { processNationalizationAuctions } from "@/lib/nationalization/privatizationAuction";
-import { processNppCorporationDecisions } from "@/lib/turn/nppCorporationBehavior";
-import {
-  buildTechUnlockFlushAudit,
-  flushNppTechUnlockLedger,
-} from "@/lib/corporations/techTree/techUnlockLedger";
-import { processNppSupplyAgreements } from "@/lib/turn/npp/nppSupplyAgreements";
-import { processNppProspecting } from "@/lib/turn/npp/nppProspecting";
-import { processNppCorpTreasury } from "@/lib/turn/npp/nppCorpTreasury";
-import { createNotifications } from "@/lib/notifications";
-import { COMMODITY_LABELS, eraScaledBasePrices } from "@/lib/constants/commodities";
-import { trackFinancialDistress } from "./financialDistressTracking";
-import {
-  persistLabourIndices,
-  persistLabourDemand,
-  creditCorpDividends,
-  updateCorporateTaxBases,
-  emitCorporationTurnTx,
-  settleShareMarketTurn,
-} from "./corporationTurnPhases";
 import { getGameState } from "@/lib/gameState";
-import { deleteDivestedNppSectors } from "../npp/divestmentPersistence";
-import { makeSeededRng } from "@/lib/events/substrate/rng";
-import { logger } from "../../observability/logger";
-import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { createCorporationTurnTimer, type CorporationTurnResult } from "./corporationTurnRuntime";
 import { processEquityMarketPoolTurn } from "@/lib/equities/marketPoolTurn";
 import { placePendingShareIssuances } from "@/lib/equities/primaryMarket";
-import { creditEquityPoolsBatch } from "@/lib/equities/marketPool";
-import { partitionedBulkWrite } from "./partitionedBulkWrite";
 import {
   loadPoliticalMediaOrdersForClearing,
   savePoliticalMediaSettlementPlans,
   type PoliticalMediaOrderForClearing,
 } from "@/lib/politicalMedia/journal";
-import { settlePoliticalMediaOrdersTurn } from "./politicalMediaSettlement";
 import { applyMediaEditorialEffects } from "@/lib/mediaEditorial/applyEffects";
-import {
-  addSettledPoliticalAttention,
-  type SettledPoliticalAttentionOrder,
-} from "@/lib/mediaOperatingModels/reach";
-import { applyOperatingCashThenDevelopmentCash } from "./manufacturingDevelopmentCashSettlement";
-import { loadVentureBoostBySectorId, processProductVentures } from "@/lib/products/venture/turn";
+import { loadVentureBoostBySectorId } from "@/lib/products/venture/turn";
 import { ventureDomainsEnabled } from "@/lib/products/venture/access";
-import { startNppVentures } from "@/lib/products/venture/nppStart";
-import { getNppCashFloorAnchor } from "@/lib/turn/npp/nppCashReserve";
 import { resumeFoundingUnderwritingPlans } from "@/lib/banking/underwritingSettlement";
 import {
   processMediaProductProjectsV1,
   startNppMediaProductsV1,
 } from "@/lib/products/mediaProductPersistence";
-import {
-  attributeMediaProductSales,
-  reconcileMediaProductDelivery,
-  type PaidPoliticalMediaSellerAmount,
-} from "@/lib/products/rules/mediaProductSales";
-import { persistMediaProductSales } from "@/lib/products/mediaProductSales";
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { aggregateMediaProductSectorEffects } from "@/lib/products/rules/mediaProductRules";
+import { runCorporationTurnSideEffects } from "./corporationTurnSideEffects";
+import { settleCorporationTurnPayouts } from "./corporationTurnPayouts";
 
 export type { CorporationTurnResult } from "./corporationTurnRuntime";
 
-// Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
-const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+export { CORP_TURN_RNG_SALT } from "./corporationTurnPayouts";
 
 /**
  * Run the corporation economy, settlement, ownership, and reporting phases for one turn.
@@ -867,1077 +789,94 @@ export async function processCorporationTurn(
   );
   mark("processSectors(CPU)");
   // The previous turn's deferred shadow must land before this one reads it.
-  await drainDeferredTurnWork();
-  await runProducerMarketShadowPhase(db, {
-    // Never measure a shadow beside the live funded market in the same turn.
-    // The shadow is telemetry inside this phase's timeout. Skip it when the
-    // phase has already used most of its budget; a skipped turn only starts a
-    // new shadow run next turn, a timed-out phase fails the economy.
-    enabled:
-      !funded &&
-      marketGovernorConfig?.producerMarketShadowEnabled === true &&
-      shadowFitsPhaseBudget(Date.now() - phaseStartedAt, PHASE_TIMEOUT_MS),
-    turn: turn ?? gameState?.currentTurn ?? 0,
-    worldEpoch: gameState?.worldEpochId,
-    lookups,
-    env: sectorTurnEnv,
-    sectorOps,
-    // Telemetry only: the market run, close and evidence finish after the turn.
-    defer: deferAfterTurn,
-  });
-
-  // Phase 2b: NPP corporation AI decisions, budgets, expansion, dividends
-  // Run before bulk writes so NPP decisions are applied this turn.
-  const {
-    corpUpdates: nppCorpUpdates,
-    sectorUpdates: nppSectorUpdates,
-    newSectors: nppNewSectors,
-    divestedSectorIds: nppDivestedSectorIds,
-    techLedger: nppTechLedger,
-    foundingCashWitnesses = [],
-    reinvestmentCashWitnesses = [],
-    manufacturingProductProjects: nppManufacturingProductProjects,
-    constructionFinanceRequests: nppConstructionFinanceRequests,
-    constructionFinanceCandidateCount: nppConstructionFinanceCandidateCount,
-    constructionFinanceBacklogCount: nppConstructionFinanceBacklogCount,
-  } = await processNppCorporationDecisions(db, turn ?? 0, now, techTreesEnabled, {
-    groupMembership,
-    corporations: corporationsWithReservedTaxCash(
-      lookups.corporations,
-      corpSnapshots,
-      lookups.exchangeRatesByCurrency,
-      treasuryCashLedgerEnabled
-    ),
-    issuerBondsByCorpId: lookups.bondsByCorpId,
-    heldBondsByCorpId: lookups.bondsHeldByCorpId,
-    ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
-  });
-  mark("nppCorpDecisions");
-
-  await persistNppManufacturingProjects(db, nppManufacturingProductProjects);
-
-  corpOps.push(...groupForecastWriteOps(market, lookups));
-  for (const snapshot of corpSnapshots) {
-    const distribution = funded?.deferredDistributions?.get(snapshot.corpId.toHexString());
-    if (distribution) snapshot.deferredProducerDistributions = distribution;
-    if (distribution && (marketGovernorConfig?.nppDividendAfterTaxStage ?? 0) >= 1)
-      snapshot.distributionAfterTax = true;
-  }
-  // Merge NPP corp updates into the main corpOps
-  for (const nppUpdate of nppCorpUpdates) {
-    corpOps.push({
-      updateOne: {
-        filter: nppUpdate.filter,
-        update: nppUpdate.update,
-      },
-    });
-  }
-
-  // Merge brand-loyalty updates (A2). Separate $set ops keyed by corp _id, they
-  // only touch brandLoyalty/brandPostureNorm, so they compose with the main
-  // corp $set for the same doc (Mongo merges multiple bulk ops per document).
-  for (const lu of brandLoyaltyUpdates) {
-    corpOps.push({
-      updateOne: {
-        filter: { _id: new ObjectId(lu.corpId) },
-        update: {
-          $set: {
-            brandLoyalty: Math.round(lu.loyalty * 100) / 100,
-            brandPostureNorm: Math.round(lu.postureNorm * 10000) / 10000,
-          },
-        },
-      },
-    });
-  }
-
-  // Merge quality updates (averageQuality per corp).
-  for (const [corpId, q] of qualityCorpUpdates) {
-    corpOps.push({
-      updateOne: {
-        filter: { _id: new ObjectId(corpId) },
-        update: { $set: { averageQuality: q } },
-      },
-    });
-  }
-
-  // Merge NPP sector growth-rate updates into sectorOps
-  for (const nppSectorUpdate of nppSectorUpdates) {
-    sectorOps.push({
-      updateOne: {
-        filter: nppSectorUpdate.filter,
-        update: nppSectorUpdate.update,
-      },
-    });
-  }
-
-  // Divest losing NPP sectors, remove from corporateSectors
-  await deleteDivestedNppSectors(db, nppDivestedSectorIds);
-
-  // v2: persist the per-state labour wage index (+ v2-3b: automation index) to
-  // stateMetrics, see persistLabourIndices for the prior-value delta capture.
-  // Only written when the labour system is on, so it's inert otherwise.
-  await persistLabourIndices({
+  const { nppNewSectors } = await runCorporationTurnSideEffects({
     db,
-    wagesEnabled: labour.wagesEnabled,
+    funded,
+    marketGovernorConfig,
+    phaseStartedAt,
+    turn,
+    gameState,
+    lookups,
+    sectorTurnEnv,
+    sectorOps,
+    now,
+    techTreesEnabled,
+    groupMembership,
+    corpSnapshots,
+    treasuryCashLedgerEnabled,
+    options,
+    mark,
+    corpOps,
+    market,
+    brandLoyaltyUpdates,
+    qualityCorpUpdates,
+    labour,
     labourWageIndexByState,
     automationIndexByState,
-  });
-
-  // Record current-turn corporate labour demand for every region. The metric
-  // engine combines it with this turn's labour force after computing supply.
-  // Deliberately not gated on the labour system being on.
-  await persistLabourDemand({
-    db,
     labourDemandByState,
     labourDemandWageIndexByState,
     automationDisplacedByState,
-    turn,
+    manufacturingDevelopmentCashOps,
+    mediaProductSlatesEnabled,
+    productVentureDomainsEnabled,
+    plantsEnabledForMarketShare,
+    corpAuditEntries,
+    equityPoolDividendAccruals,
+    mediaOperatingModelsEnabled,
+    currentYear,
+    advertisingDeliveredAnchorBySellerId,
+    settledMarketingSpendAnchorByBuyerId,
+    politicalMediaMarketEnabled,
+    politicalMediaOrders,
+    plannedPoliticalMediaOrders,
+    mediaEditorialEnabled,
+    newCommodityQuality,
+    sectorFxSpreadFees,
+    strikeEvents,
   });
-
-  // Phase 3: Bulk write sector and corp updates
-  if (sectorOps.length > 0) {
-    // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid.
-    // Every op is keyed by its sector `_id`; ops on one sector (the flip-turn
-    // `$push` after the main update) stay together and in order.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await partitionedBulkWrite(db.collection("corporateSectors"), sectorOps as any[]);
-  }
-  // After the sector writes, which carry each sector's own stamp: a sector
-  // founded before the next run catches its builds up from this turn (#5169).
-  if (typeof turn === "number") {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { buildDeliverySettledTurn: turn } });
-  }
-  mark("sectorBulkWrite");
-  if (corpOps.length > 0 || manufacturingDevelopmentCashOps.length > 0) {
-    // Product development is capitalized separately, after operating P&L. The
-    // explicit sequence keeps its live cash guard from racing unordered corpOps.
-    await applyOperatingCashThenDevelopmentCash({
-      productLinesV2Enabled: lookups.productLinesV2Enabled,
-      db,
-      operations: manufacturingDevelopmentCashOps,
-      turn: typeof turn === "number" ? turn : 1,
-      corporations: lookups.corporations,
-      snapshots: corpSnapshots,
-      exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
-      bondsByCorpId: lookups.bondsByCorpId,
-      sectorsByCorp: lookups.sectorsByCorp,
-      constructionLoanDebtByCorpId: lookups.constructionLoanDebtByCorpId,
-      mediaProductSlatesEnabled,
-      applyOperatingCashWrites: async () => {
-        if (corpOps.length === 0) return;
-        // bulkWrite op array type does not satisfy AnyBulkWriteOperation narrowing, runtime shape is valid.
-        await applyCorporationCashWrites(
-          db,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          corpOps as any[],
-          foundingCashWitnesses,
-          reinvestmentCashWitnesses
-        );
-        mark("corpCashWrites");
-        if (treasuryCashLedgerEnabled) {
-          const { settleCorporateOperatingCash } = await import("./operatingCashSettlement");
-          await settleCorporateOperatingCash(
-            db,
-            corpSnapshots,
-            turn ?? gameState?.currentTurn ?? 1,
-            now
-          );
-          mark("operatingCashSettlement");
-        }
-      },
-    });
-    mark("developmentCash");
-  }
-  if (productVentureDomainsEnabled.media || productVentureDomainsEnabled.manufacturing) {
-    try {
-      // Computer-run companies start their own products first; the debit,
-      // events and outcome then run through the same path as a player's.
-      await startNppVentures(db, {
-        turn: typeof turn === "number" ? turn : 1,
-        corporations: lookups.corporations,
-        sectorsByCorp: lookups.sectorsByCorp,
-        exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
-        enabled: productVentureDomainsEnabled,
-        reserveAnchor: getNppCashFloorAnchor(
-          plantsEnabledForMarketShare ? lookups.preset : undefined
-        ),
-        priceRatioOf: (commodity, countryId) =>
-          lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity as never) ??
-          lookups.priceRatioByCommodity.get(commodity as never),
-        currentYear: gameState?.currentYear,
-        techTreesEnabled: gameState?.sectorTechTreesEnabled === true,
-      });
-    } catch (error) {
-      console.error("[corporationTurn] NPP product venture start failed", error);
-    }
-    mark("nppVentureStarts");
-    try {
-      await processProductVentures({
-        db,
-        turn: typeof turn === "number" ? turn : 1,
-        corporations: lookups.corporations,
-        sectorsByCorp: lookups.sectorsByCorp,
-        exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
-        enabled: productVentureDomainsEnabled,
-      });
-    } catch (error) {
-      // A venture fault must never stop the corporation turn.
-      console.error("[corporationTurn] product venture processing failed", error);
-    }
-    mark("productVentures");
-  }
-  const constructionFinance = await attemptNppConstructionFinance({
-    db,
-    turn: turn ?? 0,
-    requests: nppConstructionFinanceRequests,
-    backlogCount: nppConstructionFinanceBacklogCount,
-  });
-  if (nppConstructionFinanceCandidateCount > 0) {
-    corpAuditEntries.push({
-      source: "turn",
-      category: "corp",
-      action: "corp.npp_construction_finance",
-      phase: "corporationTurn",
-      subject: { type: "corpBatch", name: "NPP private-sector construction" },
-      outcome: "ok",
-      meta: {
-        candidates: nppConstructionFinanceCandidateCount,
-        attempted: nppConstructionFinanceRequests.length,
-        funded: constructionFinance.funded,
-        pendingApproval: constructionFinance.pending,
-        deferredOrRejected: constructionFinance.failed,
-        failureReasons: constructionFinance.failureReasons,
-        turn,
-      },
-    });
-  }
-  // Emit only for NPP unlocks proven applied above; the flush dedupes and
-  // refunds any debit whose ledger row cannot be persisted (ticket #1998).
-  if (nppTechLedger.length > 0) {
-    const techFlush = await flushNppTechUnlockLedger(db, nppTechLedger);
-    const techAudit = buildTechUnlockFlushAudit(techFlush);
-    if (techAudit) corpAuditEntries.push(techAudit);
-  }
-  // One read plus one bulk write, instead of two serial round trips per
-  // accrual against a collection holding one document per currency. Missing
-  // pools are still skipped rather than upserted, preserving the legacy sink
-  // on pre-migration worlds.
-  await creditEquityPoolsBatch(db, equityPoolDividendAccruals, "dividendsIn", now);
-  mark("sector+corp bulkWrites");
-
-  // Advertising agreements attribute the spend this turn already settled across
-  // each buyer's agreements and spot. Attribution only: no cash, revenue, or
-  // market write. Gate off performs zero advertising reads or writes.
-  if (mediaOperatingModelsEnabled) {
-    const advertisingSectorsByCorp = new Map<string, CoverageSectorInput[]>();
-    for (const [corpId, sectors] of lookups.sectorsByCorp) {
-      advertisingSectorsByCorp.set(
-        corpId,
-        sectors.map((sector) => ({
-          stateId: sector.stateId,
-          revenue: sector.revenue,
-          sectorType: sector.sectorType,
-          countryId: sector.countryId,
-          mothballed: sector.mothballed,
-          embargoSuspended: sector.embargoSuspended,
-          activeCapacityPercent: sector.activeCapacityPercent,
-          strategyId: sector.strategyId,
-        }))
-      );
-    }
-    await processAdvertisingTurn(db, {
-      enabled: true,
-      turn: turn ?? gameState?.currentTurn,
-      year: currentYear,
-      corpsById: lookups.corpById,
-      sectorsByCorp: advertisingSectorsByCorp,
-      fxByCurrency: lookups.exchangeRatesByCurrency,
-      deliveredAnchorBySellerId: advertisingDeliveredAnchorBySellerId,
-      settledSpendAnchorByBuyerId: settledMarketingSpendAnchorByBuyerId,
-    });
-    mark("advertisingSettlement");
-  }
-
-  const currentTurnNumber = turn ?? gameState?.currentTurn ?? 0;
-  // One journaled move per order, one bulk receipt write for the cohort, and
-  // every settled order's effect applied in bulk. See the module for the move
-  // shape and the refusal path.
-  const {
-    plannedUnitsBySectorId: plannedPoliticalUnitsBySectorId,
-    paidSellerBySectorId: paidPoliticalSellerBySectorId,
-    settledOrders: settledPoliticalMediaOrders,
-  } = politicalMediaMarketEnabled
-    ? await settlePoliticalMediaOrdersTurn({
-        db,
-        orders: politicalMediaOrders,
-        turn: turn ?? 0,
-        currentTurnNumber,
-        plannedByOrderId: plannedPoliticalMediaOrders,
-        mediaProductSlatesEnabled,
-      })
-    : {
-        plannedUnitsBySectorId: new Map<string, number>(),
-        paidSellerBySectorId: new Map<string, PaidPoliticalMediaSellerAmount>(),
-        settledOrders: [] as SettledPoliticalAttentionOrder[],
-      };
-  if (politicalMediaMarketEnabled) mark("politicalMediaOrders");
-
-  if (mediaProductSlatesEnabled && lookups.mediaProductProjectsBySectorId) {
-    const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
-    const attributions: ReturnType<typeof attributeMediaProductSales> = [];
-    const strategyIdBySectorId = new Map<string, string>();
-    for (const sectors of lookups.sectorsByCorp.values()) {
-      for (const sector of sectors) {
-        if (typeof sector.strategyId === "string") {
-          strategyIdBySectorId.set(sector._id.toString(), sector.strategyId);
-        }
-      }
-    }
-    for (const [sectorId, projects] of lookups.mediaProductProjectsBySectorId) {
-      const clearing = market.clearingBySectorId?.get(sectorId);
-      const strategyId = strategyIdBySectorId.get(sectorId);
-      if (!clearing?.deliveredUnitsByCommodity || !strategyId) continue;
-      const reconciled = reconcileMediaProductDelivery({
-        clearing,
-        plannedPoliticalUnits: plannedPoliticalUnitsBySectorId.get(sectorId) ?? 0,
-        paidPoliticalSeller: paidPoliticalSellerBySectorId.get(sectorId) ?? {
-          units: 0,
-          amountAnchor: 0,
-        },
-      });
-      attributions.push(
-        ...attributeMediaProductSales({
-          projects,
-          clearing: reconciled.clearing,
-          basePrices,
-          turn: currentTurnNumber,
-          strategyId,
-          paidPoliticalUnitsByCommodity: reconciled.paidPoliticalUnitsByCommodity,
-          paidPoliticalRevenueAnchorByCommodity: reconciled.paidPoliticalRevenueAnchorByCommodity,
-        })
-      );
-    }
-    await persistMediaProductSales(db, attributions);
-  }
-
-  if (mediaEditorialEnabled && mediaOperatingModelsEnabled && market.editorialOutletsByState) {
-    const outletsByState = addSettledPoliticalAttention({
-      commercialOutletsByState: new Map(
-        [...market.editorialOutletsByState].map(([stateId, outlets]) => [
-          stateId,
-          outlets.map((outlet) => ({
-            ...outlet,
-            attentionUnits: outlet.attentionUnits ?? 0,
-          })),
-        ])
-      ),
-      settledOrders: settledPoliticalMediaOrders,
-      stanceByCorporationId: new Map(
-        [...lookups.corpById].map(([corporationId, corporation]) => [
-          corporationId,
-          {
-            economic: corporation.editorialStance?.economic ?? 0,
-            social: corporation.editorialStance?.social ?? 0,
-          },
-        ])
-      ),
-    });
-    await applyMediaEditorialEffects({
-      db,
-      turn: turn ?? gameState?.currentTurn ?? 0,
-      outletsByState,
-    });
-  }
-
-  // Contracts read the post-bulkWrite snapshot, so this turn's mothball and
-  // production-policy writes are visible to matching.
-  await processNppSupplyAgreements(db, turn ?? 0, now, market.plantsEnabled);
-  mark("nppSupplyAgreements");
-
-  const nppProspects = await processNppProspecting(db, turn ?? 0, now);
-  if (nppProspects > 0) mark("nppProspecting");
-
-  const nppTreasury = await processNppCorpTreasury(db, turn ?? 0, now);
-  if (nppTreasury > 0) mark("nppCorpTreasury");
-
-  // Persist per-commodity output quality for next turn's input pillar (quality
-  // propagation). Upsert by commodity so the lagged read above stays one turn behind.
-  if (newCommodityQuality && newCommodityQuality.size > 0) {
-    await db.collection("commodityQuality").bulkWrite(
-      [...newCommodityQuality].map(([commodity, quality]) => ({
-        updateOne: {
-          filter: { commodity },
-          update: { $set: { commodity, quality, turn: turn ?? 0, updatedAt: now } },
-          upsert: true,
-        },
-      }))
-    );
-  }
-
-  // Route the reduced FX spreads skimmed from foreign operating income into the
-  // CB system (reserve slice → corp's home CB in the source currency; revenue →
-  // source-currency CB). Already deducted from the corp's credited income above.
-  await distributeConversionSpreadsBatch(db, sectorFxSpreadFees);
-
-  // v3 Phase 6: translate this turn's strike trigger/resolution events into
-  // sentiment pulses. Fired after the bulk writes above, on the now-persisted
-  // state, same as every other side effect in this function.
-  for (const { sectorType, countryId, event } of strikeEvents) {
-    if (event === "started") {
-      await fireStrikeStartedPulse(db, sectorType, countryId);
-    } else {
-      await fireStrikeResolvedPulse(db, sectorType, countryId);
-    }
-  }
 
   // Notify player-owned extraction sectors that newly hit a capacity ceiling
   // this turn, their realized resource revenue is now being throttled by the
   // capacity haircut, so the CEO should acquire capacity, adopt a focused
   // extraction strategy, or expand elsewhere. Skips NPP/natcorp-run sectors.
-  if (capacityBindingEvents.length > 0) {
-    const capacityNotifications = capacityBindingEvents.flatMap((ev) => {
-      const corp = lookups.corpById.get(ev.corporationId);
-      if (!corp?.userId || corp.countryOwnerId) return [];
-      const resourceLabel = COMMODITY_LABELS[ev.bindingResource];
-      return [
-        {
-          userId: corp.userId,
-          type: "extraction_capacity_bound" as const,
-          title: `Extraction capacity limit: ${resourceLabel}`,
-          message:
-            `Your extraction operations in ${getStateDisplayName(corp.countryId, ev.stateId)} are constrained to ` +
-            `${Math.round(ev.utilization * 100)}% of potential output by ${resourceLabel} ` +
-            `capacity. Realized resource revenue is being throttled, acquire capacity, ` +
-            `adopt a focused extraction strategy, or expand into states with headroom.`,
-          metadata: {
-            corporationId: ev.corporationId,
-            sectorId: ev.sectorId,
-            stateId: ev.stateId,
-            resource: ev.bindingResource,
-            utilizationPercent: Math.round(ev.utilization * 100),
-            turn,
-          },
-        },
-      ];
-    });
-    if (capacityNotifications.length > 0) {
-      await createNotifications(capacityNotifications);
-    }
-  }
-
-  // Insert any new NPP sectors.
-  //
-  // PLANTS-GATED: write half of the founding insert whose document half lives
-  // in `nppCorporationBehavior.buildNppSectorDocs`. Docs carry `revenue`, so
-  // this is a registered `corporateSectors.revenue` writer, see
-  // `sectorRevenueWriters.guard.test.ts`. Under plants that figure is the legacy nameplate only; `sectorTurn`
-  // restates `revenue` from capacity next tick. Below plants the nameplate is
-  // the operative figure. The quantity that matters is written by the builder,
-  // not here.
-  if (nppNewSectors.length > 0) {
-    await db.collection("corporateSectors").insertMany(nppNewSectors);
-  }
-
-  // Business Acumen use-growth: each turn, every active player CEO accrues
-  // Business Acumen XP (flushed by the action-refresh phase). Mirrors how
-  // legislative play trains Statecraft. The increment scales with the corp's
-  // realized profit margin this turn, a better-run corp teaches more, and a CEO
-  // running several corps is credited for their most successful one.
-  // NPP/imperial/vacant CEOs are excluded.
-  const ceoBestMarginById = new Map<string, { id: ObjectId; margin: number }>();
-  for (const corp of lookups.corporations) {
-    if (corp.ceoId && !corp.ceoVacant && (corp.ceoType === "character" || corp.ceoType == null)) {
-      const key = corp.ceoId.toString();
-      const margin = profitMarginByCorpId.get(corp._id.toString()) ?? 0;
-      const prev = ceoBestMarginById.get(key);
-      if (!prev || margin > prev.margin) {
-        ceoBestMarginById.set(key, { id: corp.ceoId, margin });
-      }
-    }
-  }
-  if (ceoBestMarginById.size > 0) {
-    await db.collection<Character>("characters").bulkWrite(
-      [...ceoBestMarginById.values()].map(({ id, margin }) => ({
-        updateOne: {
-          filter: { _id: id, stats: { $exists: true } },
-          update: {
-            $inc: {
-              "statXp.businessAcumen":
-                USE_GROWTH_INCREMENT * businessAcumenGrowthMultiplier(margin),
-            },
-          },
-        },
-      }))
-    );
-  }
-
-  // Phase 3a/3a': SOE loss backing plus profit remittance (spec §11.1/§11.2,
-  // spec P6g §5.1), folded into snapshots before history persistence. See
-  // runSoeBackingSweep: runs after sector/corp writes so liquidCapital
-  // reflects this turn's result, within the corp turn so metric writes
-  // precede the late state-metrics phase.
-  mark("acumen+fxSpread+newSectors");
-  const soeSweepAudit = await runSoeBackingSweep({
-    db,
-    now,
-    turn: turn ?? gameState?.currentTurn,
-    currentYear,
-    corpSnapshots,
-    corpById: lookups.corpById,
-    mark,
-  });
-  if (soeSweepAudit) corpAuditEntries.push(soeSweepAudit);
-
-  // Phase 3b: R&D innovation, every 6 turns, corps with accumulated R&D score
-  // have a chance to boost a sector's revenue. Extraction corps also boost state
-  // resource capacity. Runs after base sector writes so the $inc is additive.
-  if (typeof turn === "number" && turn % 6 === 0) {
-    const { sectorBoostOps, capacityBoostOps, innovationsTriggered } = processRdInnovations(
+  const { currencyIncomeInternalByCharacterId, currencyIncomeFaceByCharacterId } =
+    await settleCorporationTurnPayouts({
+      capacityBindingEvents,
       lookups,
       turn,
-      now,
-      makeSeededRng(`rdInnovation:${turn}${CORP_TURN_RNG_SALT}`),
-      market.plantsEnabled,
-      seedDepositLookup(gameState?.preset)
-    );
-    if (sectorBoostOps.length > 0) {
-      // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await db.collection("corporateSectors").bulkWrite(sectorBoostOps as any[]);
-    }
-    if (capacityBoostOps.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await db.collection("stateResourceCapacity").bulkWrite(capacityBoostOps as any[]);
-    }
-    if (innovationsTriggered > 0) {
-      console.log(
-        `[corp-turn] R&D innovations: ${innovationsTriggered} breakthrough(s) on turn ${turn}`
-      );
-    }
-  }
-
-  // Constituent corp dividends to index funds (75% reinvest / 25% pass-through).
-  // Grouped by fund and run concurrently; within a fund accruals stay sequential
-  // because they touch the same fund cash/positions and ordering must be exact.
-  mark("rdInnovations");
-  await settleFundDividendAccruals(db, fundDividendAccruals, turn);
-  mark("fundDividends");
-  // Phase 3c: Credit dividends to corporate shareholders, see
-  // creditCorpDividends (FX spread skim, 50% dividend-received deduction tax,
-  // corp_dividend ledger rows, same-turn corporationHistory tax record).
-  // Returns the per-corp dividend-received tax so the ledger emission below
-  // can fold it into the per-country gov_tax_revenue totals.
-  const { dividendTaxPaidByCountry, dividendIncomeReceivedByCorpId } = await creditCorpDividends({
-    db,
-    lookups,
-    corpDividendPaymentsAnchorByCorpId,
-    corpDividendPaymentsAnchorByCorpCurrency,
-    corpDividendTaxedAtSourceAnchorByCorpId,
-    turn,
-    now,
-    thresholds,
-  });
-
-  mark("corpDividends");
-  // Phase 3c2: settle bilateral supply-agreement price premiums (contract-for-
-  // difference) after operating income is on liquidCapital. Conserves cash: the
-  // supplier is credited and the buyer debited the same ₳ premium delta.
-  if (supplyAgreementsEnabled && settleableAgreements && settleableAgreements.length > 0) {
-    try {
-      const { settledCount, settledPremiums } = await settleSupplyAgreements({
-        db,
-        lookups,
-        agreements: settleableAgreements,
-        contractSettlementByCorp,
-        buyerDemandByCorpCommodity,
-        producedByCorpCommodity: market.plantsEnabled ? producedByCorpCommodity : undefined,
-        achievableByCorpCommodity: market.plantsEnabled ? achievableByCorpCommodity : undefined,
-        plantsEnabled: market.plantsEnabled,
-        priceRatioByCommodity: lookups.priceRatioByCommodity,
-        turn: turn ?? 0,
-        now,
-        thresholds,
-      });
-      if (settledCount > 0) {
-        console.log(`[corporationTurn] settled ${settledCount} supply-agreement premium(s)`);
-      }
-
-      // C5: intra-group cross-border pricing. Runs off the same settled premiums
-      // rather than re-deriving them, so what the tax authority sees is exactly
-      // what the contract priced. Best-effort.
-      if (settledPremiums.length > 0) {
-        try {
-          const { applyTransferPricingAudit } =
-            await import("@/lib/corporations/groups/applyTransferPricingAudit");
-          const tp = await applyTransferPricingAudit(
-            db,
-            settledPremiums,
-            lookups.domesticCorpTaxRateByCountry,
-            turn ?? 0,
-            now
-          );
-          if (tp.auditsAssessed > 0) {
-            console.log(
-              `[corporationTurn] transfer pricing: ${tp.auditsAssessed} assessment(s), ₳${Math.round(tp.totalAssessedAnchor).toLocaleString()} across ${tp.positionsTracked} tracked position(s)`
-            );
-            corpAuditEntries.push({
-              source: "turn",
-              category: "corp",
-              action: "corp.transfer_pricing_sweep",
-              phase: "corporationTurn",
-              subject: { type: "corpBatch", name: "transfer pricing sweep" },
-              outcome: "ok",
-              meta: {
-                positionsTracked: tp.positionsTracked,
-                auditsAssessed: tp.auditsAssessed,
-                assessedAnchor: Math.round(tp.totalAssessedAnchor),
-              },
-            });
-          }
-          if (tp.errors.length > 0) {
-            console.error("[corporationTurn] transfer pricing errors:", tp.errors.slice(0, 5));
-          }
-        } catch (err) {
-          console.error("[corporationTurn] transfer pricing audit failed:", err);
-        }
-      }
-    } catch (err) {
-      console.error("[corporationTurn] supply-agreement settlement failed:", err);
-    }
-  }
-  mark("supplyAgreementSettlement");
-  // Phase 3d: IMF facility remittances (after operating income is written to liquidCapital).
-  // WHY: Payment cap uses the same per-turn `income` as corp snapshots; cash moves rescued → IMF (USD).
-  if (typeof turn === "number" && corpSnapshots.length > 0) {
-    await processImfBailoutPayments(db, turn, corpSnapshots, lookups.corporations);
-  }
-  mark("imfBailout");
-
-  // Phase 3e (C4): group loss relief. Runs AFTER tax has been charged and after
-  // IMF remittances, so it reads the same per-corp figures the treasury
-  // actually collected against. Implemented as a rebate rather than a
-  // consolidated recomputation, arithmetically identical for the turn, and
-  // additive instead of unpicking the per-corp tax the whole snapshot is
-  // derived from. Best-effort: a hiccup must not fail the turn.
-  if (typeof turn === "number" && corpSnapshots.length > 0) {
-    try {
-      const { applyGroupLossRelief } = await import("@/lib/corporations/groups/applyGroupRelief");
-      const relief = await applyGroupLossRelief(
-        db,
-        corpSnapshots.map((snap) => ({
-          corpId: snap.corpId,
-          incomePreDividends: snap.incomePreDividends,
-          federalTaxPaid: snap.federalTaxPaid,
-          stateTaxPaid: snap.stateTaxPaid,
-        })),
-        turn,
-        now
-      );
-      if (relief.corpsCredited > 0) {
-        console.log(
-          `[corporationTurn] group relief: ${relief.groupsRelieved} group(s), ${relief.corpsCredited} corp(s), ₳${Math.round(relief.totalReliefAnchor).toLocaleString()}`
-        );
-        corpAuditEntries.push({
-          source: "turn",
-          category: "corp",
-          action: "corp.group_loss_relief",
-          phase: "corporationTurn",
-          subject: { type: "corpBatch", name: "group loss relief" },
-          outcome: "ok",
-          meta: {
-            groups: relief.groupsRelieved,
-            corps: relief.corpsCredited,
-            reliefAnchor: Math.round(relief.totalReliefAnchor),
-          },
-        });
-      }
-      if (relief.errors.length > 0) {
-        console.error("[corporationTurn] group relief errors:", relief.errors.slice(0, 5));
-      }
-    } catch (err) {
-      console.error("[corporationTurn] group loss relief failed:", err);
-    }
-  }
-  mark("groupLossRelief");
-
-  // Phase 3f (C6): group operating synergies. A group's members converge toward
-  // its best marketing and logistics capability, upward only, so acquiring a
-  // weak subsidiary never drags a strong parent down. Best-effort.
-  if (typeof turn === "number") {
-    try {
-      const { applyGroupSynergies } = await import("@/lib/corporations/groups/applySynergies");
-      const synergies = await applyGroupSynergies(db, turn);
-      if (synergies.corpsLifted > 0) {
-        console.log(
-          `[corporationTurn] group synergies: lifted ${synergies.corpsLifted} corp(s) across ${synergies.groupsProcessed} group(s)`
-        );
-      }
-      if (synergies.errors.length > 0) {
-        console.error("[corporationTurn] group synergy errors:", synergies.errors.slice(0, 5));
-      }
-    } catch (err) {
-      console.error("[corporationTurn] group synergies failed:", err);
-    }
-  }
-  mark("groupSynergies");
-
-  // Phase 4 (+4b diagnostic): Update domestic/foreign corporate profits tax
-  // bases (75% GDP-derived floor + 25% actual annualised corp income), see
-  // updateCorporateTaxBases for the currency convention (v0.2.6 locked
-  // decision #3) and the per-turn income-split diagnostic log.
-  await updateCorporateTaxBases({
-    db,
-    lookups,
-    domesticIncomeByCountry,
-    foreignIncomeByCountry,
-    domesticIncomeByOperatingState,
-    foreignIncomeByOperatingState,
-  });
-
-  // O1c (design §5): persist paid growth investment per operating state, turn-
-  // tagged so the metric engine only counts THIS turn's flow (fresh-or-zero).
-  // Stored in ₳; the metric engine converts + caps.
-  if (growthInvestmentByOperatingState.size > 0) {
-    const investTurn = turn ?? 0;
-    const stateInvestOps = Array.from(growthInvestmentByOperatingState, ([stateId, anchor]) => ({
-      updateOne: {
-        filter: { _id: stateId },
-        update: {
-          $set: { corpGrowthInvestmentAnchor: anchor, corpGrowthInvestmentTurn: investTurn },
-        },
-      },
-    }));
-    await db.collection<State>("states").bulkWrite(stateInvestOps);
-  }
-
-  mark("taxBases(fed+state)");
-  // Phase 5: Refresh national budget revenue (public-enterprise corps feed back into budgets)
-  await refreshNationalBudgetRevenue(db);
-  mark("refreshNationalBudget");
-
-  // Phase 6: Pay CEO salaries + dividends to characters' personal balance
-  // (in the corporation's country currency for proper forex support)
-  // Split payments: keys prefixed with "imperial:" go to imperialCharacters collection
-  // keys prefixed with "npp:" go to npps collection
-  const charPayments = new Map<string, Map<CurrencyCode, number>>();
-  const imperialPayments = new Map<string, Map<CurrencyCode, number>>();
-  const nppPayments = new Map<string, Map<CurrencyCode, number>>();
-
-  for (const paymentMap of [ceoSalaryPayments, dividendPayments]) {
-    for (const [id, currMap] of paymentMap) {
-      const isImperial = id.startsWith("imperial:");
-      const isNpp = id.startsWith("npp:");
-      const cleanId = isImperial
-        ? id.slice("imperial:".length)
-        : isNpp
-          ? id.slice("npp:".length)
-          : id;
-      const targetMap = isImperial ? imperialPayments : isNpp ? nppPayments : charPayments;
-
-      if (!targetMap.has(cleanId)) targetMap.set(cleanId, new Map());
-      const merged = targetMap.get(cleanId)!;
-      for (const [currency, amount] of currMap) {
-        merged.set(currency, (merged.get(currency) ?? 0) + amount);
-      }
-    }
-  }
-
-  const currencyIncomeFaceByCharacterId = new Map<string, Map<CurrencyCode, number>>();
-  for (const [id, currMap] of charPayments) {
-    currencyIncomeFaceByCharacterId.set(id, new Map(currMap));
-  }
-  mark("paymentAggregation");
-  const ratesForLoc = await loadExchangeRatesMap(db);
-  const currencyIncomeInternalByCharacterId = new Map<string, number>();
-  for (const [charIdStr, currencyAmounts] of charPayments) {
-    let internal = 0;
-    for (const [currency, amount] of currencyAmounts) {
-      if (amount <= 0) continue;
-      const rate = ratesForLoc[currency];
-      if (!rate || rate <= 0) continue;
-      internal += toInternalUnits(amount, rate);
-    }
-    if (internal > 0) currencyIncomeInternalByCharacterId.set(charIdStr, internal);
-  }
-
-  // Reserve current taxes and old arrears atomically with each net payout.
-  // Gross maps remain available for earnings history and tax-tier observations.
-  const taxableDividendPayments = new Map(
-    [...dividendPayments].map(([id, amounts]) => [id, new Map(amounts)])
-  );
-  const payoutCredits: IncomeCredit[] = [];
-  for (const [ownerCollection, payments] of [
-    ["characters", charPayments],
-    ["imperialCharacters", imperialPayments],
-  ] as const) {
-    for (const [id, amounts] of payments)
-      for (const [currency, gross] of amounts) {
-        const recipientKey = ownerCollection === "imperialCharacters" ? "imperial:" + id : id;
-        const capital =
-          lookups.stockHoldingTaxStartTurn !== undefined &&
-          (turn ?? 0) >= lookups.stockHoldingTaxStartTurn
-            ? (capitalDividendPayments.get(recipientKey)?.get(currency) ?? 0)
-            : 0;
-        const taxable = taxableDistribution(
-          gross,
-          capital,
-          passThroughTaxedDividendPayments.get(recipientKey)?.get(currency) ?? 0,
-          Math.max(0, gross - (dividendPayments.get(recipientKey)?.get(currency) ?? 0))
-        );
-        payoutCredits.push({
-          characterId: new ObjectId(id),
-          ownerCollection,
-          currency,
-          gross,
-          destination: forexEnabled ? "currencyBalances.personal." + currency : "cashOnHand",
-          ...taxable,
-        });
-      }
-  }
-  if (typeof turn !== "number" && payoutCredits.length)
-    throw new Error("Income payout needs a turn identity");
-  const netCredits = await creditIncomeAfterTax(db, "corporation", turn ?? 0, now, payoutCredits);
-  for (const credit of netCredits) {
-    const id = credit.characterId.toHexString();
-    const payments = credit.ownerCollection === "characters" ? charPayments : imperialPayments;
-    payments.get(id)?.set(credit.currency, credit.net);
-    if (credit.ownerCollection === "characters") {
-      const dividend = dividendPayments.get(id)?.get(credit.currency);
-      if (dividend !== undefined)
-        dividendPayments
-          .get(id)!
-          .set(credit.currency, credit.gross > 0 ? (dividend * credit.net) / credit.gross : 0);
-    }
-  }
-  mark("tax+charPayments");
-
-  // Phase 6b: Credit NPP CEO salaries and dividends to the NPP's PERSONAL wealth
-  // (currencyBalances.personal, per corp currency), mirroring the player path in
-  // Phase 6. Dividend/CEO income is OWNERSHIP income and belongs to personal net
-  // worth, which the balance metric measures; the campaign war chest (`funds`,
-  // topped up by nppFundGeneration) is operating capital and is deliberately
-  // excluded from wealth. Previously this credited `funds`, so NPP ownership
-  // income vanished into the wealth-excluded campaign account and measured NPP
-  // wealth read as flat regardless of who owned what. NPPs now carry
-  // currencyBalances (npp.ts), processed by the savings/portfolio phases.
-  if (nppPayments.size > 0) {
-    const nppOps: AnyBulkWriteOperation[] = [];
-    for (const [nppIdStr, currencyAmounts] of nppPayments) {
-      const inc: Record<string, number> = {};
-      for (const [currency, amount] of currencyAmounts) {
-        if (amount > 0) {
-          inc[`currencyBalances.personal.${currency}`] = Math.round(amount);
-        }
-      }
-      if (Object.keys(inc).length > 0) {
-        nppOps.push({
-          updateOne: {
-            filter: { _id: new ObjectId(nppIdStr) },
-            update: { $inc: inc },
-          },
-        });
-      }
-    }
-    if (nppOps.length > 0) {
-      await db.collection("npps").bulkWrite(nppOps);
-    }
-  }
-  mark("imperial+nppPayments");
-
-  // Phase 6a: Auto-convert dividend income back to each holder's home currency.
-  // One `executeMarketMakerTrade` per (character, foreign currency), dividends paid
-  // this turn across all corps in that currency are aggregated into a single trade,
-  // which contributes to forex volume/pressure for the involved currency pair.
-  // Gated on forexEnabled; CEO salary is left in the paying corp's currency by design.
-  // Note: only processes regular character dividends; imperial dividends use the
-  // "imperial:" prefix convention and were already separated into imperialPayments above.
-  if (forexEnabled && dividendPayments.size > 0 && typeof turn === "number") {
-    // Filter to only non-imperial, non-npp dividend entries
-    const divCharIds = [...dividendPayments.keys()]
-      .filter((id) => !id.startsWith("imperial:") && !id.startsWith("npp:"))
-      .map((id) => new ObjectId(id));
-    const divChars =
-      divCharIds.length > 0
-        ? await db
-            .collection<Character>("characters")
-            .find({ _id: { $in: divCharIds } })
-            .toArray()
-        : [];
-    const charById = new Map(divChars.map((c) => [c._id.toString(), c]));
-    const quoteContext = await loadConversionQuoteContext(db, gameState?.euroMonetaryUnion);
-
-    for (const [charIdStr, currMap] of dividendPayments) {
-      if (charIdStr.startsWith("imperial:") || charIdStr.startsWith("npp:")) continue;
-      const char = charById.get(charIdStr);
-      if (!char) continue;
-      const homeCurrency = getHomeCurrency(char);
-      for (const [currency, amount] of currMap) {
-        if (currency === homeCurrency || amount <= 0) continue;
-        await executeMarketMakerTrade(db, {
-          characterId: char._id,
-          countryId: char.countryId as CountryId,
-          fromCurrency: currency,
-          toCurrency: homeCurrency,
-          amount,
-          turn,
-          source: "auto_dividend",
-          quoteContext,
-        });
-      }
-    }
-  }
-
-  mark("marketMakerDividendConv");
-  await settleShareMarketTurn({
-    db,
-    now,
-    turn,
-    lookups,
-    corpSnapshots,
-    dividendIncomeReceivedByCorpId,
-    dividendTaxPaidByCountry,
-    rng: makeSeededRng(`marketCapCandle:${turn}${CORP_TURN_RNG_SALT}`),
-    mark,
-  });
-
-  // Emit corp_revenue / corp_tax_paid (per corp), corp_salary / corp_dividend
-  // (per character) and gov_tax_revenue (per country) ledger rows, see
-  // emitCorporationTurnTx for the Phase-3 split rationale and tax fold-in.
-  await emitCorporationTurnTx({
-    db,
-    lookups,
-    corpSnapshots,
-    ceoSalaryPayments,
-    dividendPayments: taxableDividendPayments,
-    passThroughTaxedDividendPayments,
-    dividendTaxPaidByCountry,
-    capitalDividendPayments:
-      lookups.stockHoldingTaxStartTurn !== undefined &&
-      (turn ?? 0) >= lookups.stockHoldingTaxStartTurn
-        ? capitalDividendPayments
-        : undefined,
-    turn,
-    now,
-    thresholds,
-    incomeTaxAtSource: true,
-  });
-  mark("emitTx(revenue/salary/tax)");
-
-  // Phase 9: Auto-finalize due/certain shareholder votes, then send closing reminders.
-  if (typeof turn === "number") {
-    // Await the resolver so vote effects are part of the completed corporation turn.
-    await processVoteAutoResolve(
+      nppNewSectors,
       db,
-      turn,
+      profitMarginByCorpId,
+      mark,
+      now,
+      gameState,
+      currentYear,
+      corpSnapshots,
+      corpAuditEntries,
+      market,
+      fundDividendAccruals,
+      corpDividendPaymentsAnchorByCorpId,
+      corpDividendPaymentsAnchorByCorpCurrency,
+      corpDividendTaxedAtSourceAnchorByCorpId,
+      thresholds,
+      supplyAgreementsEnabled,
+      settleableAgreements,
+      contractSettlementByCorp,
+      buyerDemandByCorpCommodity,
+      producedByCorpCommodity,
+      achievableByCorpCommodity,
+      domesticIncomeByCountry,
+      foreignIncomeByCountry,
+      domesticIncomeByOperatingState,
+      foreignIncomeByOperatingState,
+      growthInvestmentByOperatingState,
+      ceoSalaryPayments,
+      dividendPayments,
+      capitalDividendPayments,
+      passThroughTaxedDividendPayments,
       forexEnabled,
-      lookups.stockHoldingTaxStartTurn !== undefined && turn >= lookups.stockHoldingTaxStartTurn
-    );
-    void processVoteReminders(db, turn);
-    mark("voteAutoResolve");
-    // Resolve nationalizations whose notice window has elapsed (spec §14): cure-cancel
-    // or complete the taking. Awaited so its effects land within this corp turn.
-    await processPendingNationalizations(db, turn);
-    // Resolve privatization auctions whose bid window has closed (spec §13.3):
-    // sell to the top bidder or re-absorb the unsold carve-out.
-    await processNationalizationAuctions(db, turn);
-    mark("nationalizations");
-
-    // Financial-distress clock for the executive-nationalization grace window.
-    // Runs last, after pending takings may have removed seized corps and all
-    // liquidCapital writes have settled, so it reads each surviving player corp's
-    // post-turn cash. Best-effort: a hiccup must not fail the turn.
-    try {
-      await trackFinancialDistress(db, turn);
-    } catch (err) {
-      logger.error("corporationTurn", "financial-distress tracking failed", err);
-    }
-    mark("financialDistress");
-
-    // Subsidiary corporations (feature-gated, dynamic import to avoid circular
-    // deps): clear the formalization marker + dividend-floor fields on any corp
-    // whose controlling parent has slipped below 50% voting power. Derived-model
-    // equivalent of auto-dissolution; no synergy work. Best-effort.
-    if (subsidiaryCorporationsEnabled) {
-      try {
-        const { cleanupZombieSubsidiaries } =
-          await import("@/lib/corporations/subsidiaries/turnCleanup");
-        const cleared = await cleanupZombieSubsidiaries(db, lookups.corporations, now);
-        if (cleared > 0) {
-          console.log(`[corporationTurn] cleared ${cleared} zombie subsidiary marker(s)/floor(s)`);
-          corpAuditEntries.push({
-            source: "turn",
-            category: "corp",
-            action: "corp.subsidiary_cleanup",
-            phase: "corporationTurn",
-            subject: { type: "corpBatch", name: "zombie subsidiary cleanup" },
-            outcome: "ok",
-            meta: { count: cleared },
-          });
-        }
-      } catch (err) {
-        console.error("[corporationTurn] subsidiary cleanup failed:", err);
-      }
-    }
-
-    // Merger review (C3): decide every referral whose deadline has passed on the
-    // published bands, then fine any corporation still sitting on an overdue
-    // divestiture order. Runs after subsidiary cleanup so the controlled-group
-    // measurement reads settled ownership. Best-effort: a hiccup must not fail
-    // the turn.
-    mark("subsidiaryCleanup");
-    try {
-      const { resolveDueMergerReviews, fineOverdueDivestitures } =
-        await import("@/lib/corporations/mergerReview/lifecycle");
-      const { resolved } = await resolveDueMergerReviews(db, turn);
-      const { fined, totalAnchor } = await fineOverdueDivestitures(db, turn);
-      const { processAntitrustCompliance } = await import("./antitrustCompliance");
-      const antitrust = await processAntitrustCompliance(db, lookups, turn);
-      if (resolved > 0 || fined > 0) {
-        console.log(
-          `[corporationTurn] merger review: ${resolved} referral(s) resolved on deadline, ${fined} overdue divestiture(s) fined`
-        );
-        corpAuditEntries.push({
-          source: "turn",
-          category: "corp",
-          action: "corp.merger_review_sweep",
-          phase: "corporationTurn",
-          subject: { type: "corpBatch", name: "merger review sweep" },
-          outcome: "ok",
-          meta: { resolved, fined, finesAnchor: totalAnchor, ...antitrust },
-        });
-      }
-    } catch (err) {
-      console.error("[corporationTurn] merger review sweep failed:", err);
-    }
-
-    // NPP-corp bankruptcy exit: player corps get nationalized/dissolved when
-    // they fail, but NPP corps had no such exit and bled to arbitrarily
-    // negative liquidCapital forever. Wind down the terminally-insolvent ones
-    // (see nppInsolvencyDissolution.ts). Runs after distress tracking so it
-    // reads the same post-turn cash. Best-effort.
-    mark("mergerReview");
-    try {
-      const { processNppInsolventCorpDissolution } =
-        await import("@/lib/turn/corporation/nppInsolvencyDissolution");
-      const dissolveResult = await processNppInsolventCorpDissolution(db, turn);
-      if (dissolveResult.dissolved > 0) {
-        console.log(
-          `[corporationTurn] auto-dissolved ${dissolveResult.dissolved}/${dissolveResult.candidates} terminally-insolvent NPP corp(s)`
-        );
-      }
-    } catch (err) {
-      logger.error("corporationTurn", "NPP insolvency dissolution failed", err);
-    }
-  }
-  mark("nppInsolvencyDissolution");
-
-  // One bulk write for the whole turn's aggregate corp-audit entries, never
-  // per-corp (perf guard, see comment above `corpAuditEntries`).
-  if (corpAuditEntries.length > 0) {
-    recordAuditBulk(corpAuditEntries);
-  }
+      subsidiaryCorporationsEnabled,
+    });
 
   timer.finish(turn);
 

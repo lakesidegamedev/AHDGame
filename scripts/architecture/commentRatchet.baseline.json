@@ -4151,7 +4151,7 @@
     },
     "src/lib/banking/bankTreasury.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/banking/capacityAllocation.ts": {
       "longBlocks": 0,
@@ -4455,7 +4455,7 @@
     },
     "src/lib/bonds/sovereign.ts": {
       "longBlocks": 2,
-      "narrativeLines": 10
+      "narrativeLines": 6
     },
     "src/lib/bonds/sovereignCouponBook.ts": {
       "longBlocks": 0,
@@ -5783,7 +5783,7 @@
     },
     "src/lib/corporations/queries/sectorDetail.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/lib/corporations/queries/sectorDetailCommodities.ts": {
       "longBlocks": 0,
@@ -5792,10 +5792,6 @@
     "src/lib/corporations/queries/sectorDetailPlants.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/corporations/queries/sectorDetailSections.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 5
     },
     "src/lib/corporations/queries/sectorPlantsTypes.ts": {
       "longBlocks": 1,
@@ -7918,7 +7914,7 @@
       "narrativeLines": 1
     },
     "src/lib/db/types/gameState.ts": {
-      "longBlocks": 3,
+      "longBlocks": 2,
       "narrativeLines": 5
     },
     "src/lib/db/types/governmentApproval.ts": {
@@ -8274,10 +8270,6 @@
       "narrativeLines": 0
     },
     "src/lib/economy/economicVitalSigns.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/economy/economicVitalSigns.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -9699,7 +9691,7 @@
     },
     "src/lib/market/producerMarket/production.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/market/producerMarket/publicBuyerRules.ts": {
       "longBlocks": 1,
@@ -10799,7 +10791,7 @@
     },
     "src/lib/nppAutonomy/__tests__/foreignPolicy.test.ts": {
       "longBlocks": 1,
-      "narrativeLines": 8
+      "narrativeLines": 7
     },
     "src/lib/nppAutonomy/__tests__/ministerialReshuffleTenure.test.ts": {
       "longBlocks": 0,
@@ -10896,10 +10888,6 @@
     "src/lib/nppAutonomy/nppChairAutoRate.ts": {
       "longBlocks": 1,
       "narrativeLines": 3
-    },
-    "src/lib/nppAutonomy/offensiveFlags.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/nppAutonomy/oppositionBehavior.ts": {
       "longBlocks": 1,
@@ -13263,7 +13251,7 @@
     },
     "src/lib/turn/bondTurn.ts": {
       "longBlocks": 2,
-      "narrativeLines": 2
+      "narrativeLines": 0
     },
     "src/lib/turn/bondTurnAutoResolve.ts": {
       "longBlocks": 1,
@@ -13427,7 +13415,7 @@
     },
     "src/lib/turn/corporation/buildLookups.ts": {
       "longBlocks": 1,
-      "narrativeLines": 9
+      "narrativeLines": 6
     },
     "src/lib/turn/corporation/cashArrears.ts": {
       "longBlocks": 0,
@@ -13467,7 +13455,7 @@
     },
     "src/lib/turn/corporation/index.ts": {
       "longBlocks": 0,
-      "narrativeLines": 5
+      "narrativeLines": 2
     },
     "src/lib/turn/corporation/marketCapSnapshot.test.ts": {
       "longBlocks": 0,
@@ -13736,10 +13724,6 @@
     "src/lib/turn/election/generalResolution.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/lib/turn/election/generalResolution.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
     },
     "src/lib/turn/election/generalResolutionExecutiveEligibility.test.ts": {
       "longBlocks": 0,
@@ -14022,8 +14006,8 @@
       "narrativeLines": 0
     },
     "src/lib/turn/npp/makeCorpDecision.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 6
+      "longBlocks": 1,
+      "narrativeLines": 4
     },
     "src/lib/turn/npp/marketSignals.placement.test.ts": {
       "longBlocks": 0,
@@ -14094,8 +14078,8 @@
       "narrativeLines": 0
     },
     "src/lib/turn/nppActionProcessing.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 7
+      "longBlocks": 0,
+      "narrativeLines": 4
     },
     "src/lib/turn/nppBehavior.ts": {
       "longBlocks": 0,
