@@ -20,8 +20,13 @@ import {
 
 /** Stop on convergence, with a bounded fallback for difficult live markets. */
 export const LIVE_PLANNING_PASSES = 64;
-/** Cooperative budget includes market preparation; final clearing still completes. */
-export const LIVE_PLANNING_BUDGET_MS = 30_000;
+/**
+ * Cooperative budget includes market preparation (~20 s live); final clearing
+ * still completes. 30 s allowed one ~15 s planning pass, leaving 6,500+ plans
+ * still moving 40-65% (turn 746); 90 s allows about four within the 450 s
+ * execution budget of the ten-minute corporation window. Owner 2026-11-08.
+ */
+export const LIVE_PLANNING_BUDGET_MS = 90_000;
 /**
  * Size the pre-settlement deadline from the corporation-specific timeout,
  * leaving a quarter of the phase for durable settlement and other work.
