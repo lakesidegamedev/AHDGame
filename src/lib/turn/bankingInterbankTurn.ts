@@ -3,7 +3,6 @@
  * out of bankingTurn.ts, which runs it every turn from processBankingTurn.
  */
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
@@ -30,6 +29,7 @@ import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInteres
 import { discountWindowRatePercent } from "@/lib/banking/discountWindow";
 import { getCashReserves } from "@/lib/banking/bankCash";
 import type { BankingTurnSummary } from "./bankingTurn";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 /**
  * Service interbank interest from borrower to lender, and central-bank
@@ -76,8 +76,9 @@ export async function serviceInterbankAndCbMargin(
     summary.interbankDefaultsWrittenOff += result.writtenOff;
   }
 
-  const marginBanks = await db
-    .collection<Corporation>("corporations")
+  const marginBanks = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       "bankCharter.status": "active",
       // Either central-bank facility puts a bank in this pass. Selecting on the

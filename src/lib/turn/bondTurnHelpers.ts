@@ -16,6 +16,11 @@ import { isCorporateBond } from "@/lib/bonds/sovereign";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import {
+  getCorporateSectorsCollection,
+  CORPORATE_SECTOR_LEAN_FIELDS,
+} from "@/lib/db/collections/corporateSectors";
 
 /**
  * Bonds-only exception to escrow ring-fencing: before declaring a corp defaulted
@@ -52,7 +57,7 @@ export async function coverBondShortfallsFromEscrow(
     }
     if (corp.liquidCapital < 0) stillNegative.add(corp._id.toString());
   }
-  if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
+  if (ops.length > 0) await (await getCorporationsCollection(db)).bulkWrite(ops);
   return stillNegative;
 }
 
@@ -99,12 +104,10 @@ export async function filterInsolventCorps(
   const primeMap = buildPrimeRateMap(ctx.centralBanks as CentralBank[]);
 
   const ids = [...candidates].map((id) => new ObjectId(id));
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find(
-      { corporationId: { $in: ids } },
-      { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
-    )
+  const sectors = await (
+    await getCorporateSectorsCollection(db)
+  )
+    .find({ corporationId: { $in: ids } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
     .toArray();
   const sectorsByCorp = new Map<string, CorporateSector[]>();
   for (const s of sectors) {

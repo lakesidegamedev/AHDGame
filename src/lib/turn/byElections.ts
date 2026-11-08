@@ -1,12 +1,14 @@
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type { Election, ElectedOfficial } from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 /**
  * By-elections: fill a seat that goes VACANT MID-TERM (resignation, retirement,
@@ -112,7 +114,7 @@ export async function spawnGovernorByElection(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<Election>("elections").insertOne(withCampaignRules(doc));
+  await (await getElectionsCollection(db)).insertOne(withCampaignRules(doc));
   return doc._id;
 }
 
@@ -131,8 +133,8 @@ export async function processByElectionWatcher(
   currentTurn: number,
   now: Date
 ): Promise<{ spawned: number }> {
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
-  const elections = db.collection<Election>("elections");
+  const officials = await getElectedOfficialsCollection(db);
+  const elections = await getElectionsCollection(db);
 
   let spawned = 0;
   for (const countryId of BY_ELECTION_COUNTRIES) {

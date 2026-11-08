@@ -9,6 +9,7 @@ import type { DepartmentCountryId } from "@/lib/governmentFinance/departmentCata
 import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry, type ResetVersionState } from "@/lib/resetVersions/rules";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 const MAX_COMMIT_ATTEMPTS = 3;
 
@@ -58,8 +59,7 @@ const GENERALIZED_BUDGET_PROJECTION = {
 } as const;
 
 async function loadGeneralizedBudgets(db: Db): Promise<FederalBudget[]> {
-  return db
-    .collection<FederalBudget>("federalBudget")
+  return (await getFederalBudgetCollection(db))
     .find(
       { countryId: { $in: GENERALIZED_COUNTRIES } },
       { projection: GENERALIZED_BUDGET_PROJECTION }
@@ -71,9 +71,10 @@ async function loadGeneralizedBudget(
   db: Db,
   countryId: DepartmentCountryId
 ): Promise<FederalBudget | null> {
-  return db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: GENERALIZED_BUDGET_PROJECTION });
+  return (await getFederalBudgetCollection(db)).findOne(
+    { countryId },
+    { projection: GENERALIZED_BUDGET_PROJECTION }
+  );
 }
 
 async function processGeneralizedDepartmentSettlement(

@@ -19,7 +19,6 @@ import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { yearToTurn } from "@/lib/scotus/turnConversion";
 import { calendarTurn } from "@/lib/utils/gameDate";
@@ -29,6 +28,8 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { awardAchievement } from "@/lib/achievements";
 import { SCOTUS_DIED_IN_OFFICE_SLUG } from "@/lib/scotus/achievementDefinitions";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 export interface ScotusTenureTurnResult {
   seatsAdvanced: number;
@@ -92,9 +93,9 @@ async function notifySeatVacated(
     const justiceLabel = seat.justiceName?.trim() || "A justice";
 
     if (seat.justiceCharacterId) {
-      const occupant = await db
-        .collection<Character>("characters")
-        .findOne({ _id: seat.justiceCharacterId }, { projection: { userId: 1 } });
+      const occupant = await (
+        await getCharactersCollection(db)
+      ).findOne({ _id: seat.justiceCharacterId }, { projection: { userId: 1 } });
       if (occupant?.userId) {
         if (cause === "death") {
           await awardAchievement(
@@ -121,15 +122,17 @@ async function notifySeatVacated(
       }
     }
 
-    const presidentOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const presidentOfficial = await (
+      await getElectedOfficialsCollection(db)
+    ).findOne({
       countryId: seat.countryId,
       officeType: "president",
       characterId: { $ne: null },
     });
     if (presidentOfficial?.characterId) {
-      const presidentChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: presidentOfficial.characterId }, { projection: { userId: 1 } });
+      const presidentChar = await (
+        await getCharactersCollection(db)
+      ).findOne({ _id: presidentOfficial.characterId }, { projection: { userId: 1 } });
       if (presidentChar?.userId && !notifiedUserIds.has(presidentChar.userId.toString())) {
         const left =
           cause === "death"

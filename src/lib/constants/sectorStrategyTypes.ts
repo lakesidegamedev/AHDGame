@@ -51,6 +51,12 @@ export interface SectorStrategy {
    */
   researchThreshold?: number;
   /**
+   * Cross-sector prerequisites: each listed sector's cumulative world frontier
+   * research must reach its figure before the method opens, so a method can
+   * depend on another industry's progress (orbital mining on launch services).
+   */
+  requiresLaneResearch?: ReadonlyArray<{ lane: string; threshold: number }>;
+  /**
    * Tier id from which this method is retired: closed to new sites and
    * retools, existing sites pay a rising operating penalty, and a retool to
    * one of `successorIds` gets a conversion discount. See techTree/sunset.

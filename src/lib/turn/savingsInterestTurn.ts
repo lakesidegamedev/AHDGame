@@ -27,6 +27,7 @@ import { getNppAutonomyLevel, nppAutonomyLevelAtLeast } from "@/lib/nppAutonomy/
 import { processNppSavingsInterest } from "@/lib/turn/nppSavingsInterest";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { ensureCentralBankPricingPhaseIn } from "@/lib/monetaryPolicy/centralBankPricing";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -140,8 +141,9 @@ export async function processSavingsInterestTurn(
         [`currencyBalances.savings.${c}`]: { $gt: 0 },
       })),
     };
-    const accrualCharacters = await db
-      .collection<Character>("characters")
+    const accrualCharacters = await (
+      await getCharactersCollection(db)
+    )
       .find(accrualFilter)
       .project({ _id: 1, currencyBalances: 1 })
       .toArray();
@@ -244,8 +246,9 @@ export async function processSavingsInterestTurn(
           [`currencyBalances.pendingSavingsInterest.${c}`]: { $gt: 0 },
         })),
       };
-      const creditCharacters = await db
-        .collection<Character>("characters")
+      const creditCharacters = await (
+        await getCharactersCollection(db)
+      )
         .find(creditFilter)
         .project({ _id: 1, currencyBalances: 1 })
         .toArray();
@@ -355,8 +358,9 @@ export async function processSavingsInterestTurn(
         // Emit savings_interest tx log entries for each quarterly credit
         const thresholds = await loadTxThresholds(db);
         const charIds = [...new Set(ledgerBatch.map((e) => e.characterId))];
-        const nameDocs = await db
-          .collection<Character>("characters")
+        const nameDocs = await (
+          await getCharactersCollection(db)
+        )
           .find({ _id: { $in: charIds } })
           .project({ _id: 1, name: 1 })
           .toArray();
@@ -401,8 +405,9 @@ export async function processSavingsInterestTurn(
   // Legacy path (non-forex): per-turn credit, unchanged
   // ─────────────────────────────────────────
   const legacyFilter = { $or: [{ savingsOnHand: { $gt: 0 } }] };
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(legacyFilter)
     .project({ _id: 1, name: 1, countryId: 1, savingsOnHand: 1, currencyBalances: 1 })
     .toArray();

@@ -1,8 +1,9 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, ElectionCandidate } from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { activeUserIds } from "@/lib/players/playerActivity";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 /**
  * Withdraws the active candidacies of players inactive for >96 turns, using the
@@ -37,8 +38,9 @@ export async function withdrawInactiveCandidates(
   if (candidates.length === 0) return { withdrawn: 0 };
 
   const characterIds = candidates.map((c) => c.characterId);
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();

@@ -6,7 +6,11 @@ import { sectorNodeId, TECH_TREE, DECADE_COST } from "./nodes";
 import type { TechCorpView } from "./selectors";
 import { getSectorTechEffectsForYear } from "./selectors";
 import { aggregateTechEffects, NEUTRAL_TECH_EFFECTS, TECH_PLANT_OUTPUT_CAP } from "./effects";
-import { countsAsFrontierResearch, isBreakthroughReached } from "./breakthrough";
+import {
+  arePrerequisiteLanesReached,
+  countsAsFrontierResearch,
+  isBreakthroughReached,
+} from "./breakthrough";
 import {
   FRONTIER_COST_GROWTH,
   FRONTIER_INPUT_PCT,
@@ -201,5 +205,54 @@ describe("method sunsets", () => {
       sunsetSuccessorFor(energyStandard, strategies, 2040, (s) => s.id !== "advanced_fission")?.id
     ).toBe("renewables");
     expect(sunsetSuccessorFor(energyStandard, strategies, 2038, () => true)).toBeNull();
+  });
+});
+
+describe("cross-sector prerequisites", () => {
+  const space = getStrategy("extraction", "space_resources");
+  const districts = getStrategy("real_estate", "autonomous_districts");
+  const spaceCorp: TechCorpView = {
+    type: "extraction",
+    unlockedTechNodeIds: [sectorNodeId("extraction", "2049", 1)],
+  };
+
+  it("space resources and autonomous districts name the sectors they depend on", () => {
+    expect(space.requiresLaneResearch?.map((r) => r.lane)).toEqual(["logistics"]);
+    expect(districts.requiresLaneResearch?.map((r) => r.lane).sort()).toEqual([
+      "energy",
+      "technology",
+    ]);
+    expect(isUngatedStrategy(space)).toBe(false);
+  });
+
+  it("keeps a method closed until every listed sector has the research", () => {
+    const own = { sectorResearch: 1e9 };
+    expect(getStrategyAvailability(spaceCorp, space, 2050, true, own).reason).toBe("prerequisite");
+    expect(
+      getStrategyAvailability(spaceCorp, space, 2050, true, {
+        ...own,
+        laneResearch: new Map([["logistics", 2999]]),
+      }).reason
+    ).toBe("prerequisite");
+    expect(
+      getStrategyAvailability(spaceCorp, space, 2050, true, {
+        ...own,
+        laneResearch: new Map([["logistics", 3000]]),
+      }).locked
+    ).toBe(false);
+  });
+
+  it("needs all of several prerequisites", () => {
+    const reach = (m: Map<string, number>) => arePrerequisiteLanesReached(districts, m);
+    expect(reach(new Map([["technology", 3000]]))).toBe(false);
+    expect(
+      reach(
+        new Map([
+          ["technology", 3000],
+          ["energy", 3000],
+        ])
+      )
+    ).toBe(true);
+    expect(arePrerequisiteLanesReached({}, undefined)).toBe(true);
   });
 });

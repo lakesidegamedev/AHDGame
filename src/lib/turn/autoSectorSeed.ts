@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { UnownedSector } from "@/lib/db/types";
-import type { State } from "@/lib/db/types/state";
 import { OPERATING_SECTOR_TYPES, operatingSectorIdentity } from "@/lib/constants/corporations";
 import { computeUnownedSeedRevenue } from "@/lib/admin/seed/seedUnownedSectors";
 import type { CountryId } from "@/lib/constants/countries";
@@ -20,6 +19,7 @@ import { computeUnownedHeadroomUnits, unownedPoolBoostSet } from "@/lib/market/u
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { plantSizeMongoExpr } from "@/lib/constants/facilityQuantum";
+import { getStatesCollection } from "@/lib/db/collections/states";
 
 // Max per-year revenue boost applied to the most distressed sector type (linearly
 // scaled down the distress ranking). Raised 0.02 → 0.06 (audit t786): at 0.02 the
@@ -104,8 +104,9 @@ export async function processAutoSectorSeed(
   ]);
   const natCorpObjectIds = [...nationalCorpIds].map((id) => new ObjectId(id));
 
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find({ _id: { $not: /^NATIONAL_/ } })
     .toArray();
 

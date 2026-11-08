@@ -42,6 +42,12 @@ const READ_PATTERN = new RegExp(
   `\\.collection(?:<[^>]*>)?\\("(${FAT_COLLECTIONS.join("|")})"\\)\\s*\\.find\\(`,
   "g"
 );
+const GETTER_READ_PATTERN =
+  /\(\s*await\s+get(Npps|CorporateSectors)Collection\([^)]*\)\s*\)\s*\.find\(/g;
+const GETTER_COLLECTIONS: Record<string, string> = {
+  Npps: "npps",
+  CorporateSectors: "corporateSectors",
+};
 const MARKER = /full-read\((npps|corporateSectors|legislationTypes)\)/;
 
 function listSourceFiles(root: string): string[] {
@@ -89,8 +95,14 @@ export function findUnprojectedFatReads(repoRoot: string): Violation[] {
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     const lines = source.split("\n");
-    for (const match of source.matchAll(READ_PATTERN)) {
-      const collection = match[1]!;
+    const reads = [
+      ...[...source.matchAll(READ_PATTERN)].map((m) => ({ match: m, collection: m[1]! })),
+      ...[...source.matchAll(GETTER_READ_PATTERN)].map((m) => ({
+        match: m,
+        collection: GETTER_COLLECTIONS[m[1]!]!,
+      })),
+    ];
+    for (const { match, collection } of reads) {
       const lineIndex = source.slice(0, match.index).split("\n").length - 1;
       if (hasProjection(source, match.index! + match[0].length)) continue;
       if (isMarked(lines, lineIndex, collection)) continue;

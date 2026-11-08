@@ -18,6 +18,7 @@ import { calendarTurn } from "@/lib/utils/gameDate";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { hu2014RegionSeats } from "@/lib/turn/huAssemblyReform";
 import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
@@ -170,10 +171,7 @@ async function materializeHu2011PrimaryCohorts(
   );
   const regions = await db
     .collection<State>("states")
-    .find(
-      { countryId: "HU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+    .find({ countryId: "HU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db
     .collection<StateRegistrationPool>("stateRegistrationPool")

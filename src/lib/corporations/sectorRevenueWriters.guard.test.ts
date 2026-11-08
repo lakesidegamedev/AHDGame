@@ -53,7 +53,7 @@ const REVENUE_KEY = /\brevenue\s*:/;
  * is a silent, unreviewed writer, which is what this file exists to prevent.
  */
 const INDIRECT_INSERT =
-  /\.collection\s*(?:<[^>]*>)?\s*\(\s*["'`]corporateSectors["'`]\s*\)\s*\.insert(?:One|Many)\s*\(\s*[A-Za-z_$]/;
+  /(?:\.collection\s*(?:<[^>]*>)?\s*\(\s*["'`]corporateSectors["'`]\s*\)|getCorporateSectorsCollection\s*\([^)]*\)\s*\))\s*\.insert(?:One|Many)\s*\(\s*[A-Za-z_$]/;
 
 /**
  * Return the source text of the object literal that begins at `open` (the index

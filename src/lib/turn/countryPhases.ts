@@ -123,6 +123,7 @@ import { getDb } from "@/lib/mongodb";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { JP_ELECTIONS } from "@/lib/countries/jp/elections";
 import { JP_BILL_PHASE_SHAPE } from "@/lib/countries/jp/elections/billLifecycle";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 /** Countries that need a custom updateGovernmentSeats wrapper (e.g. for legacy seed). */
 const SEAT_UPDATE_OVERRIDES: Partial<Record<CountryId, () => Promise<void>>> = {
@@ -493,8 +494,7 @@ export async function runPostElectionGovernmentPhases(
       ),
     ];
     const [recent, live] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      (await getElectionsCollection(db))
         .find(
           {
             countryId: { $in: countryIds },
@@ -506,8 +506,7 @@ export async function runPostElectionGovernmentPhases(
         )
         .sort({ updatedAt: -1, _id: -1 })
         .toArray(),
-      db
-        .collection<Election>("elections")
+      (await getElectionsCollection(db))
         .find(
           {
             countryId: { $in: countryIds },

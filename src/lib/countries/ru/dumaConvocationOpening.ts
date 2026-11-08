@@ -20,6 +20,7 @@ import {
   RUSSIAN_DUMA_CONVOCATIONS_COLLECTION,
   type RussianDumaConvocationRecord,
 } from "./dumaConvocationAuthority";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 
 export async function materializeRussianDumaConvocationOpening(input: {
   db: Db;
@@ -97,10 +98,7 @@ export async function materializeRussianDumaConvocationOpening(input: {
     return null;
   const regions = await db
     .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
   const pools = await db
     .collection<StateRegistrationPool>("stateRegistrationPool")

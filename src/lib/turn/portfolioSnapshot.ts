@@ -38,6 +38,8 @@ import {
   loadValuationFxRates,
 } from "@/lib/currency/corporationCapital";
 import { computeCorporationLiabilityValueAnchor } from "@/lib/corporations/netWorth";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 /**
  * Snapshot portfolio values for all characters who hold shares and/or bonds.
@@ -64,8 +66,9 @@ export async function snapshotPortfolioValues(
     : undefined;
 
   // Fetch all characters for personal wealth lookup
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find({})
     .project({
       _id: 1,
@@ -110,8 +113,7 @@ export async function snapshotPortfolioValues(
   }
 
   const [corporations, bonds, charFxByCurrency] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find({ "shareholders.0": { $exists: true } })
       .project<Corporation>({
         shareholders: 1,
@@ -379,8 +381,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   // Every corp gets a snapshot so cash-only corps (no stocks/bonds) still have Net
   // Worth history.
   const [allCorps, bonds, fxByCurrency, reserved, fundPositions] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find({})
       .project<Corporation>({
         _id: 1,

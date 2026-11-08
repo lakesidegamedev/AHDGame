@@ -23,7 +23,6 @@ import type {
   InterventionRecord,
 } from "@/lib/db/types/exchangeRate";
 import { FOREX_AND_MACRO_CHART_HISTORY_TURNS } from "@/lib/constants/turnTime";
-import type { Character } from "@/lib/db/types/character";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   INITIAL_RATES,
@@ -71,6 +70,7 @@ import {
   expireStaleOrders,
   sendFillNotifications,
 } from "./forexLimitOrders";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 export interface ForexTurnResult {
   countriesUpdated: number;
@@ -766,12 +766,12 @@ async function persistInterventionSideEffects(
   outcome: InterventionOutcome
 ): Promise<void> {
   if (outcome.infamyCharged && bank.chairCharacterId) {
-    const chair = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: bank.chairCharacterId },
-        { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } }
-      );
+    const chair = await (
+      await getCharactersCollection(db)
+    ).findOne(
+      { _id: bank.chairCharacterId },
+      { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } }
+    );
     if (chair) {
       await sendSystemMail(db, {
         toCharacterId: chair._id,
