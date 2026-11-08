@@ -496,8 +496,7 @@ export interface Crisis {
   v2?: CrisisInstance;
   /**
    * What a v2 crisis currently does to plant output, rewritten each turn the
-   * crisis runs. `routedTurn` is the receipt that keeps a turn's effects from
-   * being applied twice.
+   * crisis runs. `routedTurn` is the turn the cuts were computed for.
    */
   v2Output?: CrisisV2Output;
 }
@@ -521,6 +520,18 @@ export interface CrisisLeverUse {
   intensity?: number;
   submittedTurn: number;
   appliedTurn: number | null;
+  /**
+   * `pending` from the moment the pull claims its unique slot until its cost has
+   * landed; the turn phase skips pending rows. Absent on rows written before
+   * costs existed, which count as charged.
+   */
+  chargeState?: "pending" | "charged";
+  /** Cost actually debited, after scaling by intensity. */
+  cost?: import("@/lib/crises/v2/types").LeverCost;
+  /** Corporation whose cash paid, for corporate levers. */
+  corporationId?: ObjectId;
+  /** Emergency bill that authorised the use, for legislature levers. */
+  billId?: ObjectId;
   createdAt: Date;
 }
 

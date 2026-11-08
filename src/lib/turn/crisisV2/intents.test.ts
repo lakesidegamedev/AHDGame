@@ -39,43 +39,20 @@ describe("routeEffectIntents", () => {
   beforeEach(() => applyCrisisEffects.mockReset());
 
   it("records plant output cuts on the crisis, including commodity supply cuts", async () => {
-    const { db, collections } = makeDb();
+    const { db } = makeDb();
     const intents: EffectIntent[] = [
       { kind: "plantCapacity", sectorType: "energy", factor: -0.1, scope: "output" },
       { kind: "commoditySupply", commodity: "oil", factor: -0.05 },
       { kind: "commoditySupply", commodity: "software", factor: -0.05 },
     ];
     const result = await routeEffectIntents(db, intents, targets());
-    const update = collections.get("crises")!.updateOne;
-    expect(update).toHaveBeenCalledTimes(1);
-    const [filter, change] = update.mock.calls[0] as unknown as [
-      Record<string, unknown>,
-      { $set: { v2Output: { routedTurn: number; productionCuts: unknown[] } } },
-    ];
-    expect(filter).toMatchObject({ _id: crisisId, "v2Output.routedTurn": { $ne: 12 } });
-    expect(change.$set.v2Output.routedTurn).toBe(12);
-    expect(change.$set.v2Output.productionCuts).toEqual([
+    const output = result.v2Output!;
+    expect(output.routedTurn).toBe(12);
+    expect(output.productionCuts).toEqual([
       { sectorType: "energy", points: -10 },
       { sectorType: "extraction", points: -5 },
     ]);
     expect(result.unsupported).toEqual({ commoditySupply: 1 });
-  });
-
-  it("applies nothing a second time for the same crisis and turn", async () => {
-    const { db, collections } = makeDb(0);
-    const result = await routeEffectIntents(
-      db,
-      [
-        { kind: "bankStress", delta: 2 },
-        { kind: "bondYield", deltaBps: 50 },
-        { kind: "approval", delta: -1 },
-      ],
-      targets()
-    );
-    expect(result.alreadyRouted).toBe(true);
-    expect(applyCrisisEffects).not.toHaveBeenCalled();
-    expect(collections.get("corporations")).toBeUndefined();
-    expect(collections.get("federalBudget")).toBeUndefined();
   });
 
   it("writes commodity demand as expiring modifiers with stable ids", async () => {

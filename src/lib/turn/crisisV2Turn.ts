@@ -1,7 +1,7 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { logger } from "@/lib/observability/logger";
 import { logWireEvent } from "@/lib/wireEvent";
-import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
+import type { Crisis, CrisisLeverUse, CrisisV2Output } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
 import {
   recordInaction,
@@ -24,7 +24,9 @@ import type {
   CrisisScope,
   LeverUse,
 } from "@/lib/crises/v2/types";
+import { processCrisisEmergencyBills } from "@/lib/crises/levers/emergencyBill";
 import { ensureBuiltinCrisisV2Content } from "./crisisV2/builtins";
+import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { routeEffectIntents } from "./crisisV2/intents";
 import {
   getCrisisDefinition,
@@ -170,6 +172,26 @@ async function loadHolders(
   return loaded;
 }
 
+/**
+ * Claims a crisis's step for this turn before any effect is routed, so a retry
+ * after a failed state write cannot apply the same effects twice. Losing the
+ * claim means another run already stepped it.
+ */
+async function claimTurn(db: Db, crisisId: ObjectId, turn: number): Promise<boolean> {
+  const claimed = await db.collection<Crisis>("crises").updateOne(
+    {
+      _id: crisisId,
+      status: "active",
+      $or: [
+        { "v2.lastEvaluatedTurn": { $exists: false } },
+        { "v2.lastEvaluatedTurn": { $lt: turn } },
+      ],
+    },
+    { $set: { "v2.lastEvaluatedTurn": turn } }
+  );
+  return claimed.matchedCount > 0;
+}
+
 function toCrisisScope(scope: CrisisScope): Crisis["scope"] {
   if (scope === "global") return "global";
   if (scope === "national") return "country";
@@ -259,16 +281,24 @@ async function openNewCrises(
  */
 export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV2TurnResult> {
   ensureBuiltinCrisisV2Content();
-  const crises = (await db
-    .collection<Crisis>("crises")
-    .find(
-      { status: "active", "v2.definitionId": { $exists: true } },
-      { projection: LIVE_PROJECTION }
-    )
-    .toArray()) as unknown as LiveCrisis[];
+  const loadLive = async () =>
+    (await db
+      .collection<Crisis>("crises")
+      .find(
+        { status: "active", "v2.definitionId": { $exists: true } },
+        { projection: LIVE_PROJECTION }
+      )
+      .toArray()) as unknown as LiveCrisis[];
+  let crises = await loadLive();
+  if (crises.length > 0) {
+    // outcomes land on the instance before it is read for stepping
+    const bills = await processCrisisEmergencyBills(db, turn);
+    if (bills.failed > 0) crises = await loadLive();
+  }
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
+  ensureBuiltinCrisisHolderProviders();
   const world: World =
     crises.length > 0
       ? await loadWorld(db)
@@ -280,7 +310,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   const missingDefinitions = new Set<string>();
   for (const crisis of crises) {
     const def = getCrisisDefinition(crisis.v2.definitionId);
-    const lastSample = crisis.v2.severityHistory.at(-1)?.turn ?? -Infinity;
+    const lastSample = Math.max(
+      crisis.v2.severityHistory.at(-1)?.turn ?? -Infinity,
+      crisis.v2.lastEvaluatedTurn ?? -Infinity
+    );
     if (!def) {
       missingDefinitions.add(crisis.v2.definitionId);
     } else if (lastSample < turn) {
@@ -312,7 +345,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
       loadInputs(db, turn, defs, countryIds, world),
       db
         .collection<CrisisLeverUse>("crisisLeverUses")
-        .find({ crisisId: { $in: ids }, appliedTurn: null })
+        .find({ crisisId: { $in: ids }, appliedTurn: null, chargeState: { $ne: "pending" } })
         .toArray(),
       needsHolders ? loadHolders(db, turn, countryIds) : Promise.resolve([]),
     ]);
@@ -331,6 +364,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
     for (const { crisis, def } of runnable) {
       try {
+        if (!(await claimTurn(db, crisis._id, turn))) continue;
         const crisisCountries = crisisCountryIds(crisis, world);
         const driverInputs: Record<string, number> = {};
         for (const driver of def.severity.drivers) {
@@ -356,6 +390,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         next = recordInaction(next, def, mergeHolders(holderMaps, crisisCountries), turn);
         next = applySeverityStep(next, step, turn);
         next = applyTransition(next, nextStage(next, def, step.after, turn), turn);
+        next = { ...next, lastEvaluatedTurn: turn };
 
         const evaluation = evaluateEffectModules(def.effectModules, effectRegistry, {
           instance: next,
@@ -366,6 +401,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
           regionIds: crisis.scope === "region" ? crisis.regionIds : [],
         });
         for (const id of evaluation.missing) missingModules.add(id);
+        let v2Output: CrisisV2Output | undefined;
         if (evaluation.intents.length > 0) {
           const routing = await routeEffectIntents(db, evaluation.intents, {
             stateIds: crisisStateIds(crisis, world),
@@ -373,6 +409,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
             crisisId: crisis._id,
             turn,
           });
+          v2Output = routing.v2Output;
           for (const [kind, count] of Object.entries(routing.unsupported)) {
             unsupportedTotals[kind] = (unsupportedTotals[kind] ?? 0) + count;
           }
@@ -383,9 +420,11 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
           updateOne: {
             filter: { _id: crisis._id, status: "active" },
             update: {
-              $set: resolving
-                ? { v2: next, status: "resolved", endTurn: turn, resolvedAt: new Date() }
-                : { v2: next },
+              $set: {
+                v2: next,
+                ...(v2Output ? { v2Output } : {}),
+                ...(resolving ? { status: "resolved", endTurn: turn, resolvedAt: new Date() } : {}),
+              },
             },
           },
         });

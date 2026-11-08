@@ -16,7 +16,7 @@ import { defaultMarginEffectForApproval } from "@/lib/states/conditions/marginEf
 export interface IntentTargets {
   stateIds: string[];
   countryIds: string[];
-  /** With `turn`, makes routing apply at most once per crisis per turn. */
+  /** Names the crisis whose demand modifiers are written. */
   crisisId?: ObjectId;
   turn?: number;
 }
@@ -25,8 +25,8 @@ export interface IntentRouting {
   applied: number;
   /** Intent kinds with no handler yet, with how many were dropped. */
   unsupported: Record<string, number>;
-  /** True when this crisis's effects for the turn had already been applied. */
-  alreadyRouted?: boolean;
+  /** Plant output cuts for the caller to persist with the crisis's other writes. */
+  v2Output?: CrisisV2Output;
 }
 
 /** Sector whose plants make each commodity. Commodities with no entry cannot be shocked yet. */
@@ -274,9 +274,10 @@ async function applyBondPressure(
 /**
  * Sends a crisis's intents to the system that owns each write: plant output via
  * `v2Output`, demand via expiring modifiers, migration via regional metrics,
- * bank panic, investor confidence, and government approval. With `crisisId`
- * and `turn`, a receipt on the crisis makes a repeat call a no-op. Kinds with
- * no handler are counted so a definition using one is visible.
+ * bank panic, investor confidence, and government approval. Callers claim the
+ * turn first; routing itself is not idempotent, and the output cuts are returned
+ * for the caller to persist. Kinds with no handler are
+ * counted so a definition using one is visible.
  */
 export async function routeEffectIntents(
   db: Db,
@@ -341,21 +342,15 @@ export async function routeEffectIntents(
     }
   }
 
-  if (targets.crisisId && targets.turn !== undefined) {
-    const output: CrisisV2Output = {
-      routedTurn: targets.turn,
-      productionCuts: [...cutPoints]
-        .filter(([, points]) => points !== 0)
-        .map(([sectorType, points]) => ({ sectorType, points: Math.max(-100, points) })),
-    };
-    const claim = await db
-      .collection<Crisis>("crises")
-      .updateOne(
-        { _id: targets.crisisId, "v2Output.routedTurn": { $ne: targets.turn } },
-        { $set: { v2Output: output } }
-      );
-    if (claim.modifiedCount === 0) return { applied: 0, unsupported: {}, alreadyRouted: true };
-  }
+  const v2Output: CrisisV2Output | undefined =
+    targets.turn === undefined
+      ? undefined
+      : {
+          routedTurn: targets.turn,
+          productionCuts: [...cutPoints]
+            .filter(([, points]) => points !== 0)
+            .map(([sectorType, points]) => ({ sectorType, points: Math.max(-100, points) })),
+        };
 
   if (approvalDelta !== 0) legacy.push(approvalEffect(approvalDelta));
   if (targets.stateIds.length > 0 && legacy.length > 0) {
@@ -375,5 +370,5 @@ export async function routeEffectIntents(
     migration.length +
     (bankDelta > 0 ? 1 : 0) +
     (bondBps !== 0 ? 1 : 0);
-  return { applied: handled, unsupported };
+  return { applied: handled, unsupported, v2Output };
 }
