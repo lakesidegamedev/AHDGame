@@ -370,7 +370,7 @@
     "898216eab592e80617fbbf21d01fba1390886efd48778f9b25ffb6e6e7c56ab7": 1,
     "48497e225c37c8a0e447625e3d52ccbbd20122d575729e7549e10d082c2bb14d": 1,
     "39d195ca4444b2f0c366194430b02f3e87e95e5e2449508473528a46c21c497d": 2,
-    "8c51f22444ea3ff1995259ae13c1450806287abab09ca1ab3e65aba52fce262f": 1,
+    "219e4a2f0a45d6448d3830a8da0f165d5baa4603a1760e281a39b43356c3464e": 1,
     "2898069efe099088a621ebf694922e56ec4e4adad9c425562aa8cf7a431c5b5a": 1,
     "bff3355b10cad186d5710aa77157716d65ccd6fb67ef392f19d280f05d5b2119": 1,
     "3daef2c1d0baafad0647552ff4394508b9d2fe6df132a1eb7bc2ff06d69f42e0": 1,
@@ -3318,11 +3318,11 @@
       "fingerprint": "39d195ca4444b2f0c366194430b02f3e87e95e5e2449508473528a46c21c497d"
     },
     {
-      "file": "src/lib/turn/bondTurn.ts",
+      "file": "src/lib/turn/bondTurnMaturities.ts",
       "operation": "findOne",
-      "owner": "processBondTurn",
+      "owner": "payMaturedBonds",
       "expression": "db .collection<FederalBudget>(\"federalBudget\") .findOne({ _id: budgetId }, { projection: { countryId: 1, bankSovereignClaims: 1 } })",
-      "fingerprint": "8c51f22444ea3ff1995259ae13c1450806287abab09ca1ab3e65aba52fce262f"
+      "fingerprint": "219e4a2f0a45d6448d3830a8da0f165d5baa4603a1760e281a39b43356c3464e"
     },
     {
       "file": "src/lib/world/succession/legacyServiceTurn.ts",

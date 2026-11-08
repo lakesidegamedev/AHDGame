@@ -80,11 +80,8 @@ export const NPP_STOCK_SELL_FRACTION = 0.4;
 // decision. Funds threshold is FOUNDING_FEE × a buffer so an NPP doesn't
 // spend down to exactly zero on a single roll. The fee is denominated in ₳
 // and converted to local at the founder's home rate, so it costs the same real
-// value everywhere. Sized from the live NPP cash distribution: cash clusters
-// tightly per country (median ~₳10.7k, p90 ~₳11.2k in the typical country), so
-// a ₳7,500 fee with the 1.5x buffer puts the bar at ₳11,250, about the richest
-// 5 to 10% of NPPs. The old flat 100k local fee was ~₳20 in Turkey and ~₳89k in
-// the US.
+// value everywhere. With the 1.5x buffer the bar is ₳11,250, about the
+// richest 5 to 10% of NPPs given how tightly NPP cash clusters per country.
 export const NPP_FOUNDING_FEE_ANCHOR = 7_500;
 
 export const NPP_FOUNDING_FUNDS_BUFFER = 1.5;
@@ -115,11 +112,8 @@ export const NPP_FOUNDING_CANDIDATE_POOL = 300;
  * row weighted by campaign aggression, and rolls a campaignAggressionMult-scaled
  * chance to have them trigger `nppBuildPartyOrg` for that row.
  *
- * Two things changed from the original: the actor was picked as the lowest `_id`
- * in the state — so the SAME NPP was forever the local organiser, which reads as
- * scripted rather than autonomous — and the pool was fetched with one query per
- * row, an O(rows) round-trip loop inside a turn phase. Both are fixed by loading
- * every candidate once and grouping in memory.
+ * Candidates are loaded once and grouped in memory, so the organiser varies
+ * and the phase makes no per-row round trip.
  */
 export async function buildNppPartyOrgSurplus(
   db: Db,
@@ -228,16 +222,10 @@ export async function buildNppPartyOrgSurplus(
  * cheaper than scanning every NPP to find the ones who happen to hold
  * stock. Batches the NPP-countryId lookup (needed by nppSellShares' home-
  * currency scope check) into one query rather than per-holding.
- *
- * Excludes a corp's own CEO from selling THAT corp's stock. Found via a
- * real sim run: CEO_INITIAL_SHARES is 10,000,000 and the founding CEO holds
- * 51% of it (~5.1M shares) — the SAME flat probability/fraction that's a
- * sensible "occasionally trim a small position" for a passive shareholder
- * would instead liquidate millions of shares of a CEO's own controlling
- * stake in one action, producing implausible proceeds and visibly skewing
- * wealth-concentration metrics (Gini 0.51-0.65 → 0.72, top-1% share 4-5% →
- * 19% in one run). A CEO divesting their own company is a fundamentally
- * different, much higher-stakes decision this sweep was never designed for.
+ * Excludes a corp's own CEO from selling THAT corp's stock: the flat
+ * probability and fraction that trim a passive holder's position would sell
+ * millions of shares of a CEO's controlling stake in one action, which is a
+ * different decision this sweep was not designed for.
  */
 export async function sellNppStockSurplus(
   db: Db,

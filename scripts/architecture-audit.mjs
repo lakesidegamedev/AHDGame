@@ -362,6 +362,70 @@ function findSizeViolations() {
 }
 
 // ---------------------------------------------------------------------------
+// Size pins
+// ---------------------------------------------------------------------------
+// A file just under the block threshold tends to grow until it touches it.
+// Every capped file over SIZE_PIN_LOC is pinned at its size in the baseline: it
+// may shrink, never grow, and a file newly crossing SIZE_PIN_LOC fails until it
+// is decomposed. After a file shrinks, run
+// `node scripts/architecture-audit.mjs --lower-size-pins` to tighten its pin.
+
+const SIZE_PIN_LOC = 1500;
+const SIZE_PIN_BASELINE = path.join("scripts", "architecture", "fileSizePins.baseline.json");
+
+function countLoc(file) {
+  return fs.readFileSync(file, "utf8").split(/\r?\n/).length;
+}
+
+/** Capped files (not exempt, not tests, not allowlisted) over SIZE_PIN_LOC. */
+function currentPinnedSizes() {
+  /** @type {Record<string, number>} */
+  const sizes = {};
+  for (const file of walkDir(path.resolve(process.cwd(), "src"))) {
+    if (isSizeExempt(file)) continue;
+    if (/\.(test|integration\.test|spec)\.tsx?$/.test(file)) continue;
+    const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
+    if (SIZE_CAP_ALLOWLIST.has(rel)) continue;
+    const loc = countLoc(file);
+    if (loc > SIZE_PIN_LOC && loc <= SIZE_BLOCK_LOC) sizes[rel] = loc;
+  }
+  return sizes;
+}
+
+function readSizePins() {
+  const raw = JSON.parse(fs.readFileSync(SIZE_PIN_BASELINE, "utf8"));
+  return /** @type {Record<string, number>} */ (raw.files);
+}
+
+function findSizePinViolations() {
+  const pins = readSizePins();
+  /** @type {{ file: string, loc: number, pinned: number | null }[]} */
+  const violations = [];
+  for (const [file, loc] of Object.entries(currentPinnedSizes())) {
+    const pinned = pins[file] ?? null;
+    if (pinned === null || loc > pinned) violations.push({ file, loc, pinned });
+  }
+  return violations;
+}
+
+/** Lower every pin to the file's current size; drop files at or under SIZE_PIN_LOC. */
+function lowerSizePins() {
+  const pins = readSizePins();
+  const current = currentPinnedSizes();
+  /** @type {Record<string, number>} */
+  const files = {};
+  for (const [file, pinned] of Object.entries(pins).sort(([a], [b]) => a.localeCompare(b))) {
+    if (current[file] !== undefined) files[file] = Math.min(pinned, current[file]);
+  }
+  const note =
+    "Capped files over 1500 lines, pinned at their size. Pins may only go down: run `node scripts/architecture-audit.mjs --lower-size-pins` after a file shrinks.";
+  fs.writeFileSync(SIZE_PIN_BASELINE, `${JSON.stringify({ note, files }, null, 2)}\n`);
+  console.log(
+    `Size pins lowered: ${Object.keys(pins).length} -> ${Object.keys(files).length} files.`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Fat route rule
 // ---------------------------------------------------------------------------
 // A route handler should authenticate, parse and delegate. Workflow composed
@@ -922,6 +986,23 @@ function main() {
     console.log(`PASS file size <= ${SIZE_WARN_LOC} LOC`);
   }
 
+  const pinViolations = findSizePinViolations();
+  if (pinViolations.length > 0) {
+    console.log(`FAIL file grew past its size pin (${pinViolations.length})`);
+    console.log(
+      `   Files over ${SIZE_PIN_LOC} LOC may not grow. Decompose instead; see ${SIZE_PIN_BASELINE}.`
+    );
+    for (const { file, loc, pinned } of pinViolations) {
+      console.log(
+        `   ${file} (${loc} LOC, ${pinned === null ? "not pinned" : `pinned at ${pinned}`})`
+      );
+    }
+    console.log();
+    blockingCount += pinViolations.length;
+  } else {
+    console.log(`PASS files over ${SIZE_PIN_LOC} LOC stay at or under their pins`);
+  }
+
   const fatRoutes = findFatRoutes();
   if (fatRoutes.length > 0) {
     console.log(`WARN route.ts > ${ROUTE_WARN_LOC} LOC (${fatRoutes.length})`);
@@ -1027,4 +1108,8 @@ function main() {
   }
 }
 
-main();
+if (process.argv.includes("--lower-size-pins")) {
+  lowerSizePins();
+} else {
+  main();
+}

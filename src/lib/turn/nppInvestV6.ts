@@ -219,20 +219,15 @@ export async function investNppBondSurplusV6(
 
 /**
  * v6 stock-investment sweep (NPP engine 6). Same candidates, sampling and
- * sizing as the engine 5 sweep, with two changes.
- *
- * Decision: each NPP looks at its market before deciding. Its chance scales
+ * sizing as the engine 5 sweep, with two changes. Decision: each NPP looks at its market before deciding. Its chance scales
  * with the best value ratio on offer against its own value floor, normalized
  * so the expected number of purchases is unchanged; see
  * v6/rules/opportunityInvesting.ts.
  *
- * Cost: the sweep is split by home currency. A buy reads and writes only its
- * NPP, a corporation of the NPP's country, and that currency's equity pool,
- * so partitions share no document. Each partition draws from its own seeded
- * stream and keeps its NPPs in `_id` order, so the outcome does not depend on
- * how many partitions run at once, and they run concurrently. Equity pools
- * are read once for the sweep instead of once per buy; the settlement keeps
- * each snapshot's cash in step with its own credit.
+ * Cost: the sweep is split by home currency, so partitions share no document
+ * and run concurrently. Each draws from its own seeded stream in `_id` order,
+ * so the outcome does not depend on how many run at once. Equity pools are
+ * read once per sweep; settlement keeps each snapshot's cash in step.
  */
 export async function investNppStockSurplusV6(
   db: Db,

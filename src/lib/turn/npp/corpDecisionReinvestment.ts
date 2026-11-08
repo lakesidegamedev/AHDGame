@@ -256,29 +256,16 @@ export function decideNppCapacityReinvestment({
         observeReinvestCandidate(preSizingGate, sector, capitalStock, null, 0, null);
         continue;
       }
-      // ─── Headroom is a gate on GROWTH, never on REPLACEMENT ────────────────
-      //
-      // A bucket an incumbent already fills has ZERO unowned headroom by
-      // construction, and nothing ever puts headroom back: depreciation
-      // destroys owned capacity without returning it to the pool (see
-      // `advanceCapitalStock` in sectorTurn — the stock shrinks, no pool write
-      // follows). Gating the whole build on `headroomUnits > 0` therefore
-      // blocked reinvestment in exactly the sectors that needed it, forever.
-      //
-      // Measured on the 96-turn A/B (`ab4_plants`, turn 135): 128 of 3,842 pool
-      // rows sat at zero headroom, and those rows covered 391 of the 1,006
-      // owned sectors — 237 of the 238 NPP sectors that passed every other gate
-      // were refused here. That is the whole "zero builds in a 96-turn world".
-      //
-      // The split below is the accounting that makes both legs honest:
-      //   • REPLACEMENT (δ) — buying back capacity that already existed in this
-      //     market and wore out. World capacity is not increased, so it needs no
-      //     headroom and draws nothing from the pool. It is the netted form of
-      //     "depreciation frees headroom, the rebuild consumes it again".
-      //   • GROWTH (g) — genuine new capacity. Headroom-gated, clamped to a
+      // Headroom is a gate on GROWTH, never on REPLACEMENT. A bucket an
+      // incumbent fills has ZERO unowned headroom, and depreciation never
+      // returns capacity to the pool, so gating the whole build on headroom
+      // would block reinvestment exactly where it is needed.
+      //   • REPLACEMENT (δ) buys back capacity that wore out in this market. It
+      //     adds no world capacity, so it needs no headroom and draws nothing.
+      //   • GROWTH (g) is genuine new capacity: headroom-gated, clamped to a
       //     quarter of the pool and drawn out of it, exactly as founding is.
-      // It also matches the player path: `buildCapacity` (a top-up) is not
-      // headroom-gated at all, while `expandSector` (an entry) draws the pool.
+      // This matches the player path: `buildCapacity` (a top-up) is not
+      // headroom-gated, while `expandSector` (an entry) draws the pool.
       const headroomUnits = reinvestPoolHeadroomUnits(
         poolFor,
         sector,
@@ -651,10 +638,8 @@ export function decideNppCapacityReinvestment({
       //
       // Two rails, because the two legs are different decisions. A build with a
       // GROWTH leg is a discretionary bet and faces the same entry floor the
-      // founding path uses. A REPLACEMENT-ONLY build is maintenance, and is
-      // rationed as a share of cash instead — see
-      // NPP_REINVEST_MAINTENANCE_CASH_SHARE for why the entry floor applied to
-      // maintenance is a death spiral rather than prudence.
+      // founding path uses. A REPLACEMENT-ONLY build is maintenance, rationed
+      // as a share of cash (see NPP_REINVEST_MAINTENANCE_CASH_SHARE).
       // A zero or negative charge is not a buildable quote: observe it as a
       // sizing rejection, the same outcome as sizing to non-positive units.
       if (!(costLocal > 0)) {
