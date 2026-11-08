@@ -266,7 +266,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("flags a phase past 75% of the timeout as an error", async () => {
-      seedTurnLog({ corporationTurn: ranFor(250_000) }); // 83% of 300s
+      seedTurnLog({ corporationTurn: ranFor(500_000) }); // 83% of 600s
 
       const { GET } = await import("./route");
       const res = await GET(
@@ -285,7 +285,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("flags a phase between 50% and 75% as a warning", async () => {
-      seedTurnLog({ corporationTurn: ranFor(165_000) }); // 55% of 300s
+      seedTurnLog({ corporationTurn: ranFor(330_000) }); // 55% of 600s
 
       const { GET } = await import("./route");
       const res = await GET(
@@ -312,7 +312,7 @@ describe("GET /api/admin/health/warnings", () => {
 
     it("reports only the worst phase per turn, not every slow one", async () => {
       seedTurnLog({
-        corporationTurn: ranFor(200_000),
+        corporationTurn: ranFor(400_000),
         indexFunds: ranFor(130_000),
         bondTurn: ranFor(125_000),
       });
@@ -353,7 +353,7 @@ describe("GET /api/admin/health/warnings", () => {
     // descending is index-backed and equivalent here, because ObjectIds are
     // monotonic and turn logs are written once per turn in order.
     it("orders by _id, not turn, so the query stays index-backed", async () => {
-      seedTurnLog({ corporationTurn: ranFor(200_000) });
+      seedTurnLog({ corporationTurn: ranFor(400_000) });
 
       const { GET } = await import("./route");
       await GET(new Request("http://localhost/api/admin/health/warnings?source=phaseBudget"));
@@ -362,7 +362,7 @@ describe("GET /api/admin/health/warnings", () => {
     });
 
     it("projects away the bulky phases field", async () => {
-      seedTurnLog({ corporationTurn: ranFor(200_000) });
+      seedTurnLog({ corporationTurn: ranFor(400_000) });
 
       const { GET } = await import("./route");
       await GET(new Request("http://localhost/api/admin/health/warnings?source=phaseBudget"));
@@ -378,7 +378,7 @@ describe("GET /api/admin/health/warnings", () => {
     // one malformed row must not take the whole response down with it.
     it("falls back to createdAt when realTime is missing", async () => {
       seedTurnLog(
-        { corporationTurn: ranFor(200_000) },
+        { corporationTurn: ranFor(400_000) },
         { realTime: undefined, createdAt: new Date("2026-04-29T05:30:00.000Z") }
       );
 
@@ -395,7 +395,7 @@ describe("GET /api/admin/health/warnings", () => {
 
     it("drops a row with no usable timestamp instead of 500ing the endpoint", async () => {
       seedTurnLog(
-        { corporationTurn: ranFor(200_000) },
+        { corporationTurn: ranFor(400_000) },
         { realTime: undefined, createdAt: undefined }
       );
 

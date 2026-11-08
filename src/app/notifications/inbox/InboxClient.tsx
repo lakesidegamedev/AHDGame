@@ -6,7 +6,8 @@
  * segment chips, and grouping into "This turn / Earlier".
  */
 
-import { useReducer, useMemo, useEffect, useState, useCallback } from "react";
+import { useReducer, useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useInboxData } from "./useInboxData";
 import { inboxReducer, initialInboxState } from "./inboxReducer";
 import { RailItem } from "./RailItem";
@@ -210,6 +211,21 @@ export function InboxClient() {
     },
     [state.readIds]
   );
+
+  // Deep link from the navbar bell: /notifications?id=<notification id> opens
+  // that item. Widen the segment and history so the item is on the rail even
+  // when it is read or older than the focused list, then select it once.
+  const deepLinkId = useSearchParams()?.get("id") ?? null;
+  const handledDeepLinkId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!deepLinkId || loading || handledDeepLinkId.current === deepLinkId) return;
+    const target = items.find((item) => item.id === deepLinkId);
+    handledDeepLinkId.current = deepLinkId;
+    if (!target) return;
+    dispatch({ type: "SET_SEG", seg: "all" });
+    setShowHistory(true);
+    void handleSelect(target);
+  }, [deepLinkId, loading, items, handleSelect]);
 
   // Archive
   const handleArchive = useCallback(async (item: InboxItem) => {
