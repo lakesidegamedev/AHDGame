@@ -804,6 +804,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // Advance the Solow capital stock off THIS turn's REAL output level (pre-compound
     // state.gdp deflated, millions — same unit as K). Cold-start seeds K ≈ 3×gdp (P1c-0).
     const output = realGdpOf(state);
+    const priceIndexNow = priceIndexBefore.get(countryId);
     const capital = state.capitalStock ?? seedCapitalStock(output);
     // O1c (design §5): fold THIS turn's paid corp growth cost into investment,
     // capped at 5% of region GDP/yr. Only when the write is from this turn
@@ -814,12 +815,15 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       const currency = COUNTRY_CURRENCY_MAP[countryId as keyof typeof COUNTRY_CURRENCY_MAP];
       const fx = currency ? (fxByCurrency.get(currency) ?? 1) : 1;
       const localMillions = (anchor * fx) / 1_000_000;
-      corpInvestPerTurn = Math.max(0, localMillions);
+      corpInvestPerTurn = Math.max(0, toRealOutput(localMillions, priceIndexNow));
     }
     const additionalCapitalPerTurn = combineAdditionalCapitalInvestment({
       outputAnnualLocalMillions: output,
       publicCapitalBudgetAnnualLocalMillions: countryMacro
-        ? (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
+        ? toRealOutput(
+            spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0,
+            priceIndexNow
+          )
         : 0,
       corporateInvestmentPerTurnLocalMillions: corpInvestPerTurn,
       ownPcAnchor: countryMacro?.ownPcAnchor ?? 0,
