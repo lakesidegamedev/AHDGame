@@ -142,9 +142,9 @@ export async function loadSettleableSupplyAgreements(args: {
         `${agreementMigration.pendingCancelled} pending withdrawn`
     );
   }
-  const docs = (await db
+  const docs = await db
     .collection("supplyAgreements")
-    .find(
+    .find<LiveAgreementDoc>(
       { status: { $in: ["active", "cancelling"] } },
       {
         projection: {
@@ -165,7 +165,7 @@ export async function loadSettleableSupplyAgreements(args: {
         },
       }
     )
-    .toArray()) as unknown as LiveAgreementDoc[];
+    .toArray();
 
   let legacyStateLocalAgreementLive = false;
   const agreements: SettleableSupplyAgreement[] = [];

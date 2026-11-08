@@ -33,9 +33,9 @@ async function getShareholderUserIds(db: Db, corporationId: ObjectId): Promise<O
   if (!characterIds.length) return [];
   const characters = await db
     .collection("characters")
-    .find({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
+    .find<{ userId: ObjectId }>({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
     .toArray();
-  return characters.map((c) => (c as unknown as { userId: ObjectId }).userId);
+  return characters.map((c) => c.userId);
 }
 
 function buildTitleAndMessage(

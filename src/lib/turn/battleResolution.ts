@@ -343,9 +343,9 @@ export async function resolveBattleDeclarations(
   // load would be hundreds of round trips inside a phase that already has a turn time
   // budget. `navairOperations` wrote this earlier in the same turn.
   const navairChannels = await loadNavairChannels(db);
-  const navairUnits = (await getMilitaryUnitsCollection(db)
-    .find({ domain: { $in: ["naval", "air"] } })
-    .toArray()) as unknown as NavairUnit[];
+  const navairUnits = await getMilitaryUnitsCollection(db)
+    .find<NavairUnit>({ domain: { $in: ["naval", "air"] } })
+    .toArray();
 
   // Who fights an offensive here without declaring one: player standing orders, plus
   // the countries the NPP join switch opts in wholesale. Read ONCE for the whole tick
