@@ -15,6 +15,7 @@ import {
   pickCanonicalVotingElectionPerKey,
 } from "@/lib/elections/canonicalVotingElection";
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import type {
   Character,
   NationalCommitteeCandidate,
@@ -115,6 +116,8 @@ export async function getNationalPartyElectionState(
     }
   }
 
+  // A banned account no longer holds its seat.
+  await vacateBannedOfficerSeats(db, party);
   const holderMap: Record<NationalPartyElectionPosition, string | null> = {
     chair: party.chairId?.toString() ?? null,
     viceChair: party.viceChairId?.toString() ?? null,

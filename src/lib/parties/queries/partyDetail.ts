@@ -411,11 +411,9 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     discordInviteUrl: party.discordInviteUrl ?? null,
     economicPosition: party.economicPosition,
     socialPosition: party.socialPosition,
-    seatedOfficers: countDistinctOfficers([
-      party.chairId?.toString(),
-      party.viceChairId?.toString(),
-      party.treasurerId?.toString(),
-    ]),
+    // The visible leaders already exclude banned holders, so the figure the
+    // client shows is the one the server enforces.
+    seatedOfficers: countDistinctOfficers([chair?.id, viceChair?.id, treasurer?.id]),
     chair,
     viceChair,
     treasurer,

@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -69,6 +70,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const party = await findPartyBySequentialId(db, partyId, countryId);
+    await vacateBannedOfficerSeats(db, party);
     if (!party) {
       return errorResponse(404, "Party not found");
     }

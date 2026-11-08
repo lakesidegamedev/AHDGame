@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -42,6 +43,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const party = await findPartyBySequentialId(db, partyId, countryId);
+    await vacateBannedOfficerSeats(db, party);
     if (!party) return errorResponse(404, "Party not found");
 
     const rows = await listOpenPendingTransactions(db, party._id, countryId);
