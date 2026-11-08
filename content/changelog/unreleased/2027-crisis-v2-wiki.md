@@ -9,7 +9,7 @@ summary: >-
   page is replaced.
 tags: [wiki, crises]
 badges: [patch]
-areas: [docs]
+areas: [frontend]
 ---
 
 ## What changed
