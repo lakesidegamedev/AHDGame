@@ -114,7 +114,7 @@ export async function loadCorporationLookupInputs({
     // `plantsPnl` is ~15% of the collection. corporationTurn writes it via
     // sectorTurn as a complete overwrite and never reads the prior value.
     // `soldByCommodity` IS read: the demand throttle values last turn's sales
-    // leg by leg (ticket 1370), so it must not be projected out.
+    // leg by leg, so it must not be projected out.
     // `constructionFinancing` and `constructionPropertyTransition` are the
     // construction-lending claim on the sector: no turn module reads either
     // field (the banking commands do, under their own projections), so the
@@ -207,8 +207,7 @@ export async function loadCorporationLookupInputs({
             // Pass-through owners are taxed at the top personal rate.
             "taxRates.incomeTaxHigh": 1,
             "taxRates.incomeTax": 1,
-            // Per-country authored GDP-share targets (fiscal-scale audit,
-            // 2026-07-29) - updateCorporateTaxBases below reads
+            // Per-country authored GDP-share targets: updateCorporateTaxBases reads
             // taxBaseGdpShareBaseline.{domestic,foreign}CorporateProfits as the
             // per-country floor share instead of the universal
             // GDP_DOMESTIC/FOREIGN_CORPORATE_FACTOR constants. Must be

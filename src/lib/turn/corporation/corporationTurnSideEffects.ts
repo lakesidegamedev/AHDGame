@@ -297,7 +297,7 @@ export async function runCorporationTurnSideEffects({
     await partitionedBulkWrite(db.collection("corporateSectors"), sectorOps as any[]);
   }
   // After the sector writes, which carry each sector's own stamp: a sector
-  // founded before the next run catches its builds up from this turn (#5169).
+  // founded before the next run catches its builds up from this turn.
   if (typeof turn === "number") {
     await db
       .collection<GameState>("gameState")
@@ -408,7 +408,7 @@ export async function runCorporationTurnSideEffects({
     });
   }
   // Emit only for NPP unlocks proven applied above; the flush dedupes and
-  // refunds any debit whose ledger row cannot be persisted (ticket #1998).
+  // refunds any debit whose ledger row cannot be persisted.
   if (nppTechLedger.length > 0) {
     const techFlush = await flushNppTechUnlockLedger(db, nppTechLedger);
     const techAudit = buildTechUnlockFlushAudit(techFlush);

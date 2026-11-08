@@ -294,10 +294,9 @@ export function decideNppFounding({
             sectorType: foundingTarget.sectorType as CorporationType,
           };
         }
-        // Names the priced shortfall explicitly. Previously an
-        // unaffordable candidate with no credit, size, or exceptional path
-        // kept its pre-pricing reason (usually the cash floor), so the
-        // funnel understated real founding-cost rejections.
+        // Names the priced shortfall explicitly, so an unaffordable candidate
+        // with no credit, size, or exceptional path is not reported under its
+        // pre-pricing reason (usually the cash floor) in the funnel.
         entryDiagnostic = setNppMarketEntryReason(
           entryDiagnostic,
           resolveFoundingShortfallReason({

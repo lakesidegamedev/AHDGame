@@ -191,7 +191,7 @@ export async function bankCashFloor(
     playerDeposits: charter.playerDeposits ?? 0,
     playerDepositsAreLiabilities,
     discountWindowDebt: charter.discountWindowDebt ?? 0,
-    // Interest floor counts only the interest-bearing margin line (#1694).
+    // Interest floor counts only the interest-bearing margin line.
     cbMarginDebt: interestBearingCbMarginDebt(charter),
     interbankLoans: interbankLoans.map((loan) => ({
       outstanding: loan.outstanding ?? 0,

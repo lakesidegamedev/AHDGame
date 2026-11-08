@@ -86,7 +86,7 @@ export async function loadGeneralElectionCandidates({
   const candidateIds = Object.keys(effectiveVotes);
 
   // A candidacy filed under a party that has since merged away counts for,
-  // and seats into, the party that absorbed it (ticket 1376).
+  // and seats into, the party that absorbed it.
   const survivingParty = await loadSurvivingPartyResolver(db, election.countryId ?? "US");
   for (const c of candidates) c.party = survivingParty(c.party) ?? c.party;
 
@@ -112,7 +112,7 @@ export async function loadGeneralElectionCandidates({
       .map((c) => c._id.toString())
   );
   // A sitting national executive in a presidential system cannot take a
-  // legislative (or any non-executive) seat (#2038). The resolver usually
+  // legislative (or any non-executive) seat. The resolver usually
   // seats the executive after the legislature, but a delayed executive
   // seating retry or a filing after the seating can produce the reverse
   // order. Exclude such winners before allocation so the seat falls to the

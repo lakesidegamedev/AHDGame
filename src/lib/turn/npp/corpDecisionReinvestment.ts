@@ -391,8 +391,7 @@ export function decideNppCapacityReinvestment({
       // shut growth out for a whole build cycle: on the live 1991 world 80% of
       // retail capacity, 87% of real estate and 58% of healthcare sat in plants
       // with a healthy fill and two trivial orders pending, in markets running
-      // at 30% of demand. Two full-size growth orders are the ceiling the slot
-      // count used to enforce, so that is the in-flight ceiling here.
+      // at 30% of demand. Two full-size growth orders is the in-flight ceiling.
       const pendingUnits = (sector.buildQueue ?? []).reduce(
         (sum, o) => sum + (Number.isFinite(o.unitsOrdered) ? Math.max(0, o.unitsOrdered) : 0),
         0

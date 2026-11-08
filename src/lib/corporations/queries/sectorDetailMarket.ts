@@ -81,7 +81,7 @@ export function computeSectorMarketPosition(args: {
   unownedDoc: UnownedSector | null;
   /**
    * Active world preset, for the era-correct GDP→₳ normalization of the
-   * GDP-derived market size (refs #3778). Omitted = modern base config.
+   * GDP-derived market size. Omitted = modern base config.
    */
   preset?: string;
 }) {
@@ -123,7 +123,7 @@ export function computeSectorMarketPosition(args: {
   );
 
   // Market = the TOTAL real revenue produced in this (state, sectorType) cell
-  // (ticket #1145). No unowned pool, no GDP floor: a sector's share is its
+  //. No unowned pool, no GDP floor: a sector's share is its
   // revenue over what every producer actually earns, and the shares add to 100%.
   const effectiveMarket = Math.max(0, Math.round(totalOwnedRevenue));
   // Focal sector's own revenue in ₳ for market-share + competitor ratios.
@@ -161,7 +161,7 @@ export function computeSectorMarketPosition(args: {
     });
 
   // No unclaimed market any more: every bit of the cell's revenue belongs to a
-  // real producer, so the "unowned" slice is gone (ticket #1145).
+  // real producer, so the "unowned" slice is gone.
   const unownedRevenue = 0;
   const unownedPercent = 0;
 
@@ -415,14 +415,13 @@ export function computeSectorMarginSection(args: {
   );
   // Compute profit off the REALIZED (embargo/haircut-adjusted) revenue basis —
   // the same `sectorEconomicRevenue` the corp list and Financials page already
-  // use — instead of raw nameplate `sector.revenue`. Previously this path used
-  // nameplate, so an embargoed/suppressed sector showed a healthy positive net
-  // here while the sector list (realized basis) showed a loss: the exact
-  // list-vs-detail divergence in ticket 984. Both paths now agree.
+  // use — instead of raw nameplate `sector.revenue`. On nameplate an
+  // embargoed or suppressed sector would show a healthy net here while the
+  // sector list (realized basis) shows a loss.
   const economicRevenue = sectorEconomicRevenue(sector);
   const stackMargin = softCapEffectiveMargin(mods.effective + additionalMarginModifier);
   // Money uses the margin the engine ACTUALLY applied last turn, exactly as the
-  // corp page does post-#262 (see corporationDetail.ts). Under plants the
+  // corp page does (see corporationDetail.ts). Under plants the
   // stored field is derived from the physical P&L — inputs at live commodity
   // prices, labor, upkeep — which the stack recomputed above knows nothing
   // about. Observed on prod: a farm the engine paid −6.19% (input shortage x
@@ -434,7 +433,7 @@ export function computeSectorMarginSection(args: {
     typeof sector.effectiveProfitMargin === "number" ? sector.effectiveProfitMargin : null;
   const effectiveMargin = engineMargin ?? stackMargin;
   const effectiveMods = { ...mods, effective: effectiveMargin };
-  // Ticket 1122: prefer the P&L the turn actually booked over inverting the
+  // Prefer the P&L the turn actually booked over inverting the
   // margin. `effectiveProfitMargin` is that P&L's OUTPUT, capped at 100, so
   // inverting it recovers a zero operating cost from a genuinely negative one
   // (profit == revenue, the reported defect) and drops upkeep + compliance on

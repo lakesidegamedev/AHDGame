@@ -120,11 +120,10 @@ export function resolveBondMaturitiesAndDefaults({
       if (bond.holders?.some((holder) => holder.bankTreasuryTradeId)) continue;
       // Auto-redeem at maturity: Phase 5 (below) returns face value to every
       // holder from the in-memory `bond.holders` snapshot captured here, then
-      // we clear the holdings so the redeemed position does NOT linger. Before
-      // this, a matured bond kept its `holders` array populated: the position
-      // stayed visible in holder-based views (sovereign holdings, wealth list)
-      // while being excluded from portfolio `bondValue` (which filters
-      // `matured: false`) — the phantom-holding split reported in issue #2974.
+      // we clear the holdings so the redeemed position does NOT linger. A
+      // matured bond that kept its `holders` array would stay visible in
+      // holder-based views (sovereign holdings, wealth list) while being
+      // excluded from portfolio `bondValue` (which filters `matured: false`).
       // Clearing `holders` + `publicFloat` and stamping `redeemedAtTurn` makes
       // the redemption clean and idempotent (the bond leaves `activeBonds`
       // next turn via the `matured: false` filter, so it is never paid twice).
@@ -422,7 +421,7 @@ export async function payMaturedBonds({
         });
       } else if (holder.fundId) {
         const maturityAnchor = addFundPayment(holder.fundId.toString(), faceValueReturnAnchor);
-        // #992 tranche 4: same fund-subject treatment as the coupon leg above.
+        // Same fund-subject treatment as the coupon leg above.
         const maturityFundIdStr = holder.fundId.toString();
         const maturityFundCcy = fundLedgerCurrency(maturityFundIdStr);
         if (maturityFundCcy) {

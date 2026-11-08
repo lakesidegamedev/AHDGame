@@ -73,7 +73,7 @@ export async function settleSovereignBondMaturity(
   // Net exactly this bond's outstanding contribution (face minus any restructure
   // haircut, see sovereignPrincipal.ts), not raw face: a haircut bond carries
   // only its written-down stock on the books, so redeeming full face would push
-  // principal below the remaining outstanding sum (#1975).
+  // principal below the remaining outstanding sum.
   const maturedFace = sovereignBondOutstanding({
     issuerType: "sovereign",
     matured: false,
@@ -710,7 +710,7 @@ export interface SovereignPrincipalResync {
  * Re-point a country's stored `debt.principal` at its authoritative outstanding
  * bond stock (see sovereignPrincipal.ts) and refresh the debt-service terms off
  * that stock. Treasury cash is deliberately untouched: a haircut, repudiation,
- * or merge writes down obligations, never cash (#1975).
+ * or merge writes down obligations, never cash.
  *
  * Idempotent: a pure function of the bonds read, so crash/retry replay and the
  * end-of-turn hygiene pass converge to the same value.
@@ -729,7 +729,7 @@ export async function resyncSovereignPrincipalFromBonds(
         // The outstanding sum re-checks the query-filtered fields, so they
         // must be projected: a doc arriving without `issuerType` reads as
         // non-sovereign and contributes 0, which would re-point the stored
-        // principal at zero (refs #1975).
+        // principal at zero.
         {
           projection: {
             issuerType: 1,

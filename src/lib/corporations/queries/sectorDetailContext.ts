@@ -61,7 +61,7 @@ export async function loadSectorDetailContext({
     user?.isModerator === true &&
     new URL(request.url).searchParams.get("modView") === "1";
   // The CEO of the controlling parent is an insider of its subsidiary, same
-  // rule GET /api/corporations/[id] applies (ticket 1423).
+  // rule GET /api/corporations/[id] applies.
   let isParentCeo = false;
   let parentDirection: {
     parentName: string;

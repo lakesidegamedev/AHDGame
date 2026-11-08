@@ -60,11 +60,11 @@ export type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?
  * none for the last turn (legacy worlds keep the throttle reading).
  *
  * A funded plant loses run for distinct reasons, and the page has to name the
- * one the player can act on (ticket 1728): the demand plan held its run below
+ * one the player can act on: the demand plan held its run below
  * capacity (demand, or ramping back up once it sells out), short inputs or
  * short cash cut what it made below that plan, and unsold output is demand.
  * A sold-out plant whose run was cut is held by that input or by cash, not
- * ramping up (ticket 1765): the plan is not what is keeping it down.
+ * ramping up: the plan is not what is keeping it down.
  */
 export function fundedIdleWeights(
   receipt: CorporateSector["producerSettlement"] | null | undefined,
@@ -231,8 +231,7 @@ export function buildSectorPlantsSection(args: {
   const soldUnits = num(sector.soldUnits);
   const mothballed = sector.mothballed === true;
 
-  // Output handed free to the company's own sites is used, not unsold (ticket
-  // 1757): a Kanto plant that fed its owner's US mines read "75 units went
+  // Output handed free to the company's own sites is used, not unsold: a Kanto plant that fed its owner's US mines read "75 units went
   // unsold, the market is oversupplied" on a fully used turn.
   const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
   const ownSiteShare = ownSite?.share ?? 0;
@@ -472,33 +471,16 @@ export function buildSectorPlantsSection(args: {
       : nonNeg((money.realizedRevenueAnchor * Math.max(0, regulatoryBurdenPp)) / 100);
   // The input bill renders at its real size, and `otherOperating` is the SIGNED
   // remainder that makes the named lines sum back to `maintenanceNet` exactly.
-  //
-  // Under plants the engine's derived operating cost can land BELOW the named
-  // physical lines. `solveOtherOpexPerUnit` deliberately keeps a NEGATIVE
-  // residual (a sector whose policy credit and calibration anchor outweigh its
-  // physical costs), and `derivedMarginPct` is additionally capped at 100. Both
-  // reconstruct here as a maintenance bill smaller than the wage bill, so
+  // Under plants the derived operating cost can land below the named physical
+  // lines (a negative opex residual, a margin capped at 100), so
   // `maintenanceNet` goes negative once wages are carved out. That is a credit,
-  // not an absence of costs.
-  //
-  // Clamping it at zero, and clamping the inputs line to fit inside a negative
-  // budget, is what broke prod sector 6a83e59f97baa9dbe6bb7980 (a California
-  // newsroom, other-opex anchor -0.0754/unit): realized revenue 321,760.57 at
-  // an 88.63% engine margin is a 36,584.10 operating bill against a 70,561.75
-  // wage bill, so the panel printed $322K of revenue, $70.6K of wages, $0 on
-  // every other line and $285K of profit. 322 - 70.6 is 251.4, not 285
-  // (ticket 1122).
-  //
-  // This mirrors the corporation page's `otherPp` residual (corporationDetail.ts,
-  // ticket 1072), which was already signed and unclamped for the same reason.
-  //
-  // Ticket 1122 follow-up: all of the above is the FALLBACK. When the turn's own
-  // lines are on the row (`money.enginePnl`) they are used verbatim and nothing
-  // is inverted, because the inversion cannot be right at the margin cap: a
-  // sector whose policy credit outruns its operating bill has a NEGATIVE
-  // operating cost and a profit above its revenue, and `min(100, ...)` erases
-  // exactly that. The engine path also carries upkeep and compliance, which the
-  // margin's scope excludes and the profit includes.
+  // not an absence of costs: clamping it at zero prints a profit the named
+  // lines cannot add up to. Mirrors the corporation page's signed `otherPp`.
+
+  // All of the above is the FALLBACK. When the turn's own lines are on the row
+  // (`money.enginePnl`) they are used verbatim: the inversion cannot be right at
+  // the margin cap, and the engine path also carries upkeep and compliance,
+  // which the margin's scope excludes and the profit includes.
   const engine = money.enginePnl ?? null;
   const inputsAnchor = engine ? engine.inputs : nonNeg(money.inputsAnchor);
   const internalSupplyDiscountAnchor = engine?.internalSupplyDiscountAnchor ?? 0;
@@ -522,8 +504,7 @@ export function buildSectorPlantsSection(args: {
       internalSupplyDiscountAnchor
     : engine
       ? // Financial legs (disaster losses) and inventory carry have no line of
-        // their own in the cost chain, so they sit here, exactly as the residual
-        // used to carry them.
+        // their own in the cost chain, so they sit here in the residual.
         engine.otherOpex +
         engine.financialLegs +
         engine.inventoryCarry -
@@ -551,8 +532,7 @@ export function buildSectorPlantsSection(args: {
   // revenue over every unit made, which is the basis the player's bank balance
   // actually moves on.
   // One definition: market sales over units made, the same two numbers the
-  // Offered / Sold / Unsold rows print (ticket 1773: the engine's stored
-  // soldFraction read 100% beside 139 sold of 195 made). The engine value is
+  // Offered / Sold / Unsold rows print, so the two can never disagree. The engine value is
   // only the fallback when the unit counts are missing.
   const soldFraction = fillRate ?? num(sector.soldFraction);
   const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
@@ -580,7 +560,7 @@ export function buildSectorPlantsSection(args: {
   // credit) under plants, and flooring it on its own double-counted wages that
   // the credit had already offset, inflating cost-per-unit.
   //
-  // Ticket 1122: with the engine's own lines the bill needs no flooring at all.
+  // With the engine's own lines the bill needs no flooring at all.
   // A negative total would be a sector paid more to run than it spends, and the
   // engine can say so; the fallback keeps the floor because an INVERTED total
   // can go negative for reasons that are artefacts of the inversion.

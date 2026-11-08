@@ -543,10 +543,9 @@ export async function settleCorporationTurnPayouts({
   // Phase 6. Dividend/CEO income is OWNERSHIP income and belongs to personal net
   // worth, which the balance metric measures; the campaign war chest (`funds`,
   // topped up by nppFundGeneration) is operating capital and is deliberately
-  // excluded from wealth. Previously this credited `funds`, so NPP ownership
-  // income vanished into the wealth-excluded campaign account and measured NPP
-  // wealth read as flat regardless of who owned what. NPPs now carry
-  // currencyBalances (npp.ts), processed by the savings/portfolio phases.
+  // excluded from wealth. Crediting `funds` would hide NPP ownership income
+  // from the wealth measure. NPPs carry currencyBalances (npp.ts), processed by
+  // the savings/portfolio phases.
   if (nppPayments.size > 0) {
     const nppOps: AnyBulkWriteOperation[] = [];
     for (const [nppIdStr, currencyAmounts] of nppPayments) {

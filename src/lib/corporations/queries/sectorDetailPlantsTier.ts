@@ -518,14 +518,14 @@ export async function buildSectorDetailPlantsTier({
     // True buyers' room for THIS sector's outputs, in sector output units.
     // `headroomUnits` (the unowned pool) measures claimable market SHARE,
     // under a clearing glut it reads tens of thousands of "room" while every
-    // leg goes unsold (ticket #1027 follow-up: player read it as demand).
+    // leg goes unsold, which a player would read as demand.
     //
     // Scoped to the sector's HOME COUNTRY reachable book, which is the book
     // the clearing engine actually settles this sector against (see
-    // market/tradePartition). The world aggregate it used to read counted
-    // embargoed and untraded supply the sector can neither buy from nor lose
-    // a sale to, so a sector in a real shortage was told it was oversupplied
-    // (ticket #1077). Falls back to the aggregate when no book is persisted.
+    // market/tradePartition). The world aggregate counts embargoed and
+    // untraded supply the sector can neither buy from nor lose a sale to, so
+    // it can call a real shortage oversupplied. Falls back to the aggregate
+    // when no book is persisted.
     const reachableBooks = await loadReachableBooks(db, currentTurn);
     const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
     const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
@@ -722,7 +722,7 @@ export async function buildSectorDetailPlantsTier({
             })),
           });
 
-    // Ticket 1370 follow-up: when the plant is held back because the
+    // When the plant is held back because the
     // valuable part of its output is oversupplied, name the strategy whose
     // output this market is short of. Advisory only. Prices and books are the
     // sector's own market, the same ones the throttle and clearing read.
@@ -908,7 +908,7 @@ export async function buildSectorDetailPlantsTier({
           Number.isFinite(sector.plantsPnl.compliance)
             ? sectorAmountAnchor(sector.plantsPnl.compliance)
             : null,
-        // Ticket 1122: the turn's own lines, normalized to ₳. Present on any
+        // The turn's own lines, normalized to ₳. Present on any
         // sector that has run a plants turn since the field shipped; the
         // builder falls back to reconstruction when it is null.
         enginePnl: enginePnl

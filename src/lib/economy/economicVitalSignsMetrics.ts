@@ -807,7 +807,7 @@ export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
       observationVersions,
       /** Per-currency growth comparability: high = comparable, medium = current method but warming, low = legacy. */
       observationConfidence,
-      /** Bond-pool settlement inventory excluded from observed M2 (#2021). */
+      /** Bond-pool settlement inventory excluded from observed M2. */
       excludedBondPoolCash: metric(
         totalExcludedBondPoolCash,
         input.money.length,

@@ -221,7 +221,7 @@ export async function buildExtractionAndPortfolioLookups({
       const sectorId = sector._id.toString();
       ratesBySector.set(sectorId, rates);
       outputUnitsBySector.set(sectorId, revenueBasedOutput);
-      // Plants (#4503): parked or mothballed capacity digs nothing, so it does
+      // Plants: parked or mothballed capacity digs nothing, so it does
       // not claim a share of the deposit. This turn's demand throttle is not
       // known yet here; the ledger caps at real output.
       let plantOutputCap: ExtractionSectorInput["plantOutputCap"];

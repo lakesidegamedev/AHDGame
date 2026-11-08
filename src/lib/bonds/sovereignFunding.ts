@@ -101,7 +101,7 @@ export async function fundSovereignSeries(
     (sum, doc) => sum + Math.floor(doc.totalIssued / BOND_UNIT_FACE_VALUE),
     0
   );
-  // Funded Treasury cash forbids minting (#3401): the gap stays unsold and
+  // Funded Treasury cash forbids minting: the gap stays unsold and
   // places later as pool cash allows, with no face, principal or coupon now.
   let monetaryCapacity =
     args.accounting.treasuryCashLedgerEnabled !== true &&

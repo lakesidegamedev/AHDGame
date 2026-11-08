@@ -64,7 +64,7 @@ export interface ProductionPlan {
   labourRecipientAccountId: string;
   operatingRecipientAccountId: string;
   inputStock: readonly PurchasedStock[];
-  /** Previously produced, unsold stock available beside current production. */
+  /** Already produced, unsold stock available beside current production. */
   outputStock: readonly ProducedStock[];
   /**
    * Units this plant sold last turn, for stock-cover markdown (stockCoverRules).

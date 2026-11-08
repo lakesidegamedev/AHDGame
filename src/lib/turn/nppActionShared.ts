@@ -5,10 +5,9 @@ import type { CountryId } from "@/lib/constants/countries";
 // runs while staying reproducible within a run (set by the sim harness).
 export const NPP_ACTION_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
 
-// v3 = non-player-only autonomy, v4 = global — see the econActive/econGlobal
-// gate in processNppActions. The ordering itself is the canonical export from
-// nppAutonomy/featureFlag; this file used to keep a private copy, which is
-// exactly how two call sites elsewhere ended up comparing levels with `===`.
+// v3 = non-player-only autonomy, v4 = global; see the econActive/econGlobal
+// gate in processNppActions. The ordering is the canonical export from
+// nppAutonomy/featureFlag.
 
 /** Mongo filter fragment restricting a query to the autonomy country scope. */
 export function countryScopeFilter(scope: CountryId[] | null): Record<string, unknown> {

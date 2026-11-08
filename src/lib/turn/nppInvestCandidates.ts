@@ -74,10 +74,9 @@ export type ScoredBond = { bond: Bond; yield: number };
 
 /**
  * The bonds an NPP of `countryId` can buy, best current yield first, cut to
- * the sampling pool. Candidate selection used to be "always the single
- * highest couponRate bond in the country", which meant every NPP in a country
- * bought the same issue. Ranking by CURRENT yield (coupon relative to what the
- * bond actually costs) is the number an investor would care about.
+ * the sampling pool, so NPPs in one country do not all buy the same issue.
+ * Ranking by CURRENT yield (coupon relative to what the bond actually costs)
+ * is the number an investor would care about.
  */
 export function bondCandidates(
   bonds: readonly Bond[],
@@ -172,9 +171,9 @@ export function stockMinValueRatio(riskToleranceMult: number): number {
 /**
  * The corporations an NPP may buy: the top of its market by size in its home
  * currency, scored on value (fundamentalSharePrice / execution price), and
- * kept only where the value clears this NPP's floor. Selection used to be the
- * single largest corp, forever; risk-tolerant NPPs now weight size and chase
- * momentum, cautious ones weight the discount and refuse to overpay.
+ * kept only where the value clears this NPP's floor. Risk-tolerant NPPs
+ * weight size and chase momentum, cautious ones weight the discount and refuse
+ * to overpay.
  */
 export function stockCandidates(
   corps: readonly StockCandidateCorp[],
