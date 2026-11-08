@@ -8,7 +8,7 @@ import { applyLivingConflictFallback } from "@/lib/livingConflict/fallbackTrajec
 import { canCharacterInteract, canRespondToCrisis } from "./rules/authorization";
 import { collectiveDurationReduction } from "./rules/collectiveReduction";
 export { canCharacterInteract } from "./rules/authorization";
-import { ObjectId, type Db } from "mongodb";
+import { ObjectId, type Db, type UpdateFilter } from "mongodb";
 import type {
   Crisis,
   CrisisEffect,
@@ -636,54 +636,80 @@ export async function submitCrisisDecision(
     const option = currentNode.options?.find((o) => o.optionId === optionId);
     if (!option) throw badRequest("Invalid option");
 
-    if (option.collectiveContribution && option.collectiveContribution > 0) {
+    const interactions = db.collection<CrisisInteraction>("crisisInteractions");
+    const contribution = option.collectiveContribution ?? 0;
+    const now = new Date();
+    const entry = {
+      countryId,
+      amount: contribution,
+      characterId,
+      contributedAt: now,
+    };
+
+    if (contribution > 0) {
       const already = interaction.contributors.some(
         (c) => c.characterId.toString() === characterId.toString()
       );
       if (already) throw conflict("You have already contributed to this crisis");
 
       const treasury = await getTreasuryBalance(db, countryId);
-      if (treasury < option.collectiveContribution) {
+      if (treasury < contribution) {
         throw badRequest(
-          `Insufficient treasury funds. Required: ${option.collectiveContribution}, Available: ${treasury}`
+          `Insufficient treasury funds. Required: ${contribution}, Available: ${treasury}`
         );
       }
-      await spendFromTreasury(db, countryId, option.collectiveContribution, {
-        resyncDerived: true,
-        witness: {
-          flow: "crisis_response",
-          key: `crisis-collective:${interaction._id.toString()}:${characterId.toString()}:${optionId}`,
-          site: "crises/interactionEngine",
-        },
-      });
 
-      interaction.contributors.push({
-        countryId,
-        amount: option.collectiveContribution,
-        characterId,
-        contributedAt: new Date(),
-      });
-      interaction.collectiveCurrent += option.collectiveContribution;
+      // Claim the contribution slot before any money moves; $push/$inc keep
+      // concurrent contributions from different countries from overwriting
+      // each other.
+      const claimed = await interactions.updateOne(
+        {
+          _id: interactionId,
+          resolvedAt: null,
+          currentNodeId: currentNode.nodeId,
+          "contributors.characterId": { $ne: characterId },
+        },
+        {
+          $push: { contributors: entry },
+          $inc: { collectiveCurrent: contribution },
+          $set: { updatedAt: now },
+        }
+      );
+      if (claimed.matchedCount === 0) {
+        throw conflict("You have already contributed to this crisis");
+      }
+      try {
+        await spendFromTreasury(db, countryId, contribution, {
+          resyncDerived: true,
+          witness: {
+            flow: "crisis_response",
+            key: `crisis-collective:${interaction._id.toString()}:${characterId.toString()}:${optionId}`,
+            site: "crises/interactionEngine",
+          },
+        });
+      } catch (err) {
+        await interactions.updateOne({ _id: interactionId }, {
+          $pull: { contributors: { characterId, contributedAt: now } },
+          $inc: { collectiveCurrent: -contribution },
+          $set: { updatedAt: new Date() },
+        } as unknown as UpdateFilter<CrisisInteraction>);
+        throw err;
+      }
+
+      interaction.contributors.push(entry);
+      interaction.collectiveCurrent += contribution;
     }
+    await interactions.updateOne(
+      { _id: interactionId },
+      { $push: { resolutionPath: optionId }, $set: { updatedAt: now } }
+    );
 
     if (option.effects.length > 0) {
       await applyEffectsForCrisis(db, interaction.crisisId, option.effects);
     }
 
     interaction.resolutionPath.push(optionId);
-    interaction.updatedAt = new Date();
-
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
-      { _id: interactionId },
-      {
-        $set: {
-          collectiveCurrent: interaction.collectiveCurrent,
-          contributors: interaction.contributors,
-          resolutionPath: interaction.resolutionPath,
-          updatedAt: interaction.updatedAt,
-        },
-      }
-    );
+    interaction.updatedAt = now;
 
     return { interaction, nextNode: currentNode, appliedEffects: option.effects };
   }
@@ -720,6 +746,26 @@ export async function submitCrisisDecision(
           `Insufficient funds. Required: ${option.requiredBudget}, Available: ${treasury}`
         );
       }
+    }
+
+    // Claim the decision on the version this request read, before any money
+    // or effect moves, so a double click cannot apply the choice twice.
+    const claimedAt = new Date();
+    const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+      {
+        _id: interactionId,
+        resolvedAt: null,
+        currentNodeId: currentNode.nodeId,
+        updatedAt: interaction.updatedAt,
+      },
+      { $set: { updatedAt: claimedAt } }
+    );
+    if (claimed.matchedCount === 0) {
+      throw conflict("This crisis decision was already made");
+    }
+    interaction.updatedAt = claimedAt;
+
+    if (option.requiredBudget) {
       await debitTreasury(
         db,
         countryId,

@@ -114,8 +114,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
     // collection named by ceoType. A stale "npp" renders "CEO Vacant"
     // while a live character sits in ceoId. Caretaker records must die with
     // the handover, or a later dismissal restores the old human over the new.
-    await db.collection<Corporation>("corporations").updateOne(
-      { _id: corporation._id },
+    // Claimed on the offer still naming this character, so an accept that
+    // lands after a withdrawal, re-offer or a parallel accept seats no one.
+    const seated = await db.collection<Corporation>("corporations").updateOne(
+      { _id: corporation._id, pendingCeoCharacterId: myChar._id },
       {
         $set: {
           ceoId: myChar._id,
@@ -127,6 +129,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         $unset: { pendingCeoCharacterId: "", caretakerCeo: "" },
       }
     );
+    if (seated.matchedCount === 0) {
+      return errorResponse(409, "This CEO offer is no longer pending");
+    }
 
     await openCeoTenure(db, corporation._id, {
       holderId: myChar._id,

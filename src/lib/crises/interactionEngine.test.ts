@@ -435,12 +435,33 @@ describe("submitCrisisDecision", () => {
     expect(result.interaction.collectiveCurrent).toBe(5_000_000);
     expect(result.interaction.resolvedAt).toBeNull();
     expect(result.interaction.currentNodeId).toBe("fund");
-    // Treasury was debited via spendFromTreasury (uses $set, not $inc).
+    // Treasury was debited via spendFromTreasury as an atomic $inc.
     const debit = db.collectionMocks["federalBudget"]!.updateOne.mock.calls.at(-1);
     expect(debit?.[0]).toEqual({ countryId: "US" });
-    expect((debit?.[1] as { $set: { treasuryBalance: number } }).$set.treasuryBalance).toBe(
-      95_000_000
+    expect((debit?.[1] as { $inc: { treasuryBalance: number } }).$inc.treasuryBalance).toBe(
+      -5_000_000
     );
+  });
+
+  it("charges nothing when a concurrent request already claimed the contribution", async () => {
+    const interaction = makeInteraction({ currentNodeId: "fund", collectiveTarget: 10_000_000 });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+    db.collectionMocks["crisisInteractions"]!.updateOne.mockResolvedValueOnce({
+      matchedCount: 0,
+      modifiedCount: 0,
+    });
+    db.collectionMocks["federalBudget"]!.findOne.mockResolvedValue({
+      treasuryBalance: 100_000_000,
+    });
+    const charId = new ObjectId();
+
+    await expect(
+      submitCrisisDecision(mdb(), interaction._id, "contribute_5m", charId, "US", ["any"])
+    ).rejects.toThrow("already contributed");
+    const [filter, update] = db.collectionMocks["crisisInteractions"]!.updateOne.mock.calls[0];
+    expect(filter).toMatchObject({ "contributors.characterId": { $ne: charId } });
+    expect(update).toMatchObject({ $inc: { collectiveCurrent: 5_000_000 } });
+    expect(db.collectionMocks["federalBudget"]!.updateOne).not.toHaveBeenCalled();
   });
 
   it("rejects a contribution when the treasury is short", async () => {
