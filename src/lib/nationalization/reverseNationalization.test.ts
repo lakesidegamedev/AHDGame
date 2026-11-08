@@ -238,6 +238,96 @@ describe("resumePendingCompensationRecoveries", () => {
     ...over,
   });
 
+  const spinOutWorld = (sectorHolder: "state" | "spun") => {
+    const memory = createInMemoryDb();
+    const natCorp = new ObjectId();
+    const spun = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      {
+        _id: natCorp,
+        countryOwnerId: "US",
+        liquidCapital: 0,
+        countryId: "US",
+        pendingCompensationRecoveries: {
+          [`${sectorId.toHexString()}_10`]: marker(sectorId, { spinOut: true }),
+        },
+      },
+      { _id: spun, liquidCapital: 1_000, countryId: "US" },
+    ]);
+    memory.seed("corporateSectors", [
+      {
+        _id: sectorId,
+        corporationId: sectorHolder === "state" ? natCorp : spun,
+        nationalizationProvenance: { takenAtTurn: 10, compensationAnchor: 600 },
+      },
+    ]);
+    return { memory, natCorp, spun, sectorId, key: `${sectorId.toHexString()}_10` };
+  };
+
+  it("recovers from the new owner when a crash hit between the spin-out and the marker hand-over", async () => {
+    creditTreasury.mockClear();
+    const w = spinOutWorld("spun");
+    await resumePendingCompensationRecoveries(w.memory as unknown as Db);
+
+    const nat = await w.memory.collection("corporations").findOne({ _id: w.natCorp });
+    const spun = await w.memory.collection("corporations").findOne({ _id: w.spun });
+    expect(Object.keys(nat?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    expect(Object.keys(spun?.pendingCompensationRecoveries ?? {})).toEqual([w.key]);
+    const sector = await w.memory.collection("corporateSectors").findOne({ _id: w.sectorId });
+    expect(sector?.nationalizationProvenance).toBeUndefined();
+
+    await resumePendingCompensationRecoveries(w.memory as unknown as Db);
+    const after = await w.memory.collection("corporations").findOne({ _id: w.spun });
+    expect(after?.liquidCapital).toBe(400);
+    expect(Object.keys(after?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    expect(creditTreasury).toHaveBeenCalledTimes(1);
+
+    await resumePendingCompensationRecoveries(w.memory as unknown as Db);
+    expect(creditTreasury).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a spin-out marker when the crash came before the asset left the state", async () => {
+    creditTreasury.mockClear();
+    const w = spinOutWorld("state");
+    await resumePendingCompensationRecoveries(w.memory as unknown as Db);
+
+    const nat = await w.memory.collection("corporations").findOne({ _id: w.natCorp });
+    expect(Object.keys(nat?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    const sector = await w.memory.collection("corporateSectors").findOne({ _id: w.sectorId });
+    expect(sector?.nationalizationProvenance).toBeDefined();
+    expect(creditTreasury).not.toHaveBeenCalled();
+  });
+
+  it("leaves the taking intact and the marker dropped when the spin-out itself fails", async () => {
+    const memory = createInMemoryDb();
+    const natCorp = new ObjectId();
+    const gone = new ObjectId();
+    const sectorId = new ObjectId();
+    memory.seed("corporations", [
+      { _id: natCorp, countryOwnerId: "US", liquidCapital: 0, countryId: "US" },
+    ]);
+    memory.seed("corporateSectors", [
+      {
+        _id: sectorId,
+        corporationId: natCorp,
+        nationalizationProvenance: {
+          formerCorporationId: gone,
+          takenAtTurn: 10,
+          compensationAnchor: 500,
+          compensationCountryId: "US",
+        },
+      },
+    ]);
+    vi.mocked(privatizeAsset).mockRejectedValueOnce(new Error("crash"));
+    await reverseNationalizationTaking(memory as unknown as Db, params(sectorId));
+
+    const nat = await memory.collection("corporations").findOne({ _id: natCorp });
+    expect(Object.keys(nat?.pendingCompensationRecoveries ?? {})).toEqual([]);
+    const sector = await memory.collection("corporateSectors").findOne({ _id: sectorId });
+    expect(sector?.nationalizationProvenance).toBeDefined();
+  });
+
   it("completes a recovery whose asset already moved before the crash", async () => {
     creditTreasury.mockClear();
     const memory = createInMemoryDb();

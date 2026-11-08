@@ -22,6 +22,8 @@ export interface CompensationRecoveryInput {
   sectorId: ObjectId;
   takenAtTurn: number;
   compensationAnchor: number;
+  /** Written against the state corporation before a spin-out creates the real owner. */
+  spinOut?: boolean;
 }
 
 const NOTHING: CompensationClawbackResult = { recoveredAnchor: 0, owedAnchor: 0 };
@@ -55,11 +57,40 @@ export async function recordCompensationRecovery(
           countryId: input.countryId,
           anchor: input.compensationAnchor,
           stage: "pending",
+          ...(input.spinOut ? { spinOut: true } : {}),
         },
       },
     }
   );
   return key;
+}
+
+/**
+ * Hand a spin-out marker to the corporation that now owns the asset. The new
+ * marker is written before the old one is removed, so a crash leaves at least
+ * one of them.
+ */
+export async function rehomeSpinOutRecovery(
+  db: Db,
+  fromCorporationId: ObjectId,
+  key: string,
+  toCorporationId: ObjectId
+): Promise<void> {
+  const corps = await getCorporationsCollection(db);
+  const from = await corps.findOne({ _id: fromCorporationId });
+  const marker = from?.pendingCompensationRecoveries?.[key];
+  if (!marker?.spinOut) return;
+  await recordCompensationRecovery(db, {
+    countryId: marker.countryId,
+    corporationId: toCorporationId,
+    sectorId: marker.sectorId,
+    takenAtTurn: marker.takenAtTurn,
+    compensationAnchor: marker.anchor,
+  });
+  await corps.updateOne(
+    { _id: fromCorporationId, [`${markerPath(key)}.spinOut`]: true },
+    { $unset: { [markerPath(key)]: "" } }
+  );
 }
 
 /** Drop a marker whose reversal did not go ahead; nothing has moved at the `pending` stage. */
@@ -133,6 +164,7 @@ export async function completeCompensationRecovery(
       flow: "nationalization_compensation",
       ledger: { context: await loadTreasuryCashContext(db) },
       site: "clawbackCompensation",
+      onceKey: key,
     });
   }
 

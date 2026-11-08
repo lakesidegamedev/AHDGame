@@ -525,6 +525,8 @@ export interface Corporation {
       /** `debited` once the cash has left the corporation and awaits the treasury credit. */
       stage: "pending" | "debited";
       paidAnchor?: number;
+      /** Held on the state corporation while a spin-out is under way; the corporation that ends up owning the asset takes it over. */
+      spinOut?: boolean;
     }
   >;
   /**
