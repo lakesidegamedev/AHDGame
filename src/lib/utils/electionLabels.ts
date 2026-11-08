@@ -260,6 +260,7 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "chamberOfDeputies",
   "federalAssembly",
   "sejmDeputy",
+  "nationsDeputy",
   "assemblyDeputy",
   "assemblyDelegate",
   // DD Volkskammer regional races (5 bloc parties): multi-seat regional PR
