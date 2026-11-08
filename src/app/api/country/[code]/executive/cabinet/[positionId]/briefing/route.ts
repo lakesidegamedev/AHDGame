@@ -132,12 +132,7 @@ import {
   expireMinisterialOrders,
   isMinisterialOrderActive,
 } from "@/lib/cabinet/ministerialOrderLifecycle";
-import { loadPublicHealthDeliveryMultiplier } from "@/lib/governmentFinance/deliveryMultiplier";
-import { US_HEALTH_DEPARTMENT_ID } from "@/lib/governmentFinance/departments";
-import {
-  buildDepartmentFinanceReadModel,
-  buildPublicHealthProgramReadModel,
-} from "@/lib/governmentFinance/readModel";
+import { buildDepartmentFinanceReadModel } from "@/lib/governmentFinance/readModel";
 import {
   getDepartmentDefinitions,
   resolveDepartmentDefinitionName,
@@ -757,17 +752,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const cabinetV2 =
       resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).cabinet === "v2";
-    // Generalized department finance supersedes the single-program public health
-    // slice, so the slice read model always reports itself as not running.
-    const departmentProgram =
-      !cabinetV2 && countryId === COUNTRY_CONFIGS.US.id && positionId === "secretary_of_health"
-        ? buildPublicHealthProgramReadModel({
-            enabled: false,
-            departmentName: resolveDepartment(mechanics, liveYear),
-            account: budget?.departmentAccounts?.[US_HEALTH_DEPARTMENT_ID],
-            delivery: await loadPublicHealthDeliveryMultiplier(db, currentTurn, false),
-          })
-        : undefined;
     const departmentDefinitions = isResetV2Country(countryId)
       ? getDepartmentDefinitions(
           countryId as DepartmentCountryId,
@@ -985,7 +969,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
               holderChar?.actions
             )
           : null,
-      departmentProgram,
       departmentFinances,
       units,
       forceSummary,

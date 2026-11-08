@@ -8,10 +8,7 @@ import type { CorpsMember } from "@/lib/db/collections/characterGenerals";
 import type { CabinetLeverScope } from "@/lib/cabinet/actingScope";
 import type { ActionBlockReason } from "@/lib/resetCabinet/rules/actions";
 import type { OfficePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
-import type {
-  DepartmentFinanceReadModel,
-  DepartmentProgramReadModel,
-} from "@/lib/governmentFinance/readModel";
+import type { DepartmentFinanceReadModel } from "@/lib/governmentFinance/readModel";
 
 export interface CabinetOfficeData {
   cabinetVersion?: "v1" | "v2";
@@ -191,8 +188,6 @@ export interface CabinetOfficeData {
   /** Finance seat only: the read-only monetary dossier + debt-op state. */
   monetary?: MonetaryView;
   currentTurn: number;
-  /** US health vertical slice only: read-only department settlement explanation. */
-  departmentProgram?: DepartmentProgramReadModel;
   /** Generalized institution-owned accounts controlled by this office. */
   departmentFinances?: DepartmentFinanceReadModel[];
 }
