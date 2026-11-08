@@ -1,4 +1,5 @@
 import { DE_WAHLKREIS_SEATS } from "@/lib/constants/states";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { defineChamberSpec } from "@/lib/turn/perpetualElections/chamberSpec";
 import { getLandtagAnchor } from "../data/deLandtag";
 
@@ -34,7 +35,7 @@ export const DE_LANDTAG_SPEC = defineChamberSpec({
   byElections: "none",
   snap: "none",
   healLiveSeats: false,
-  regionAnchor: getLandtagAnchor,
+  regionAnchor: (land, preset) => getLandtagAnchor(land, preset ?? DEFAULT_SEED_PRESET),
   silent: true,
 });
 
