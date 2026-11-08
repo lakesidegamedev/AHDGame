@@ -98,7 +98,7 @@ const INHERENTLY_HEAVY = ["src/lib/seeds/regionCensusData.ts"];
  */
 const LEGACY_TRANSITIVE_COUNTRY_BOUNDARY = {
   count: 205,
-  sha256: "020862f595404ada942f81290fc276cc7edc2003bc139728b67a4ff11a08ec96",
+  sha256: "a17a05b21e158bc3e014390afa3fdab285a11ba4d831936834dc1c74fc5070bf",
 } as const;
 
 /** `import ... from` that is not `import type ... from`, and not a bare side-effect import. */
