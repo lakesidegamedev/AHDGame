@@ -154,7 +154,7 @@ describe("phone navigation dock", () => {
         "/corporation/7/group",
         "/about",
         "/privacy",
-        "/admin",
+        "/control",
       ])
     );
   });

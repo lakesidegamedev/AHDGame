@@ -1204,26 +1204,25 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 </div>
 
                 {/* Staff — admin/mod only */}
-                {(user?.isAdmin || user?.isModerator || user?.isJuniorDev) &&
-                  staffSubItems.length > 0 && (
-                    <div
-                      className="relative shrink-0"
-                      ref={open === "staff" ? dropdownAnchorRef : undefined}
+                {staffSubItems.length > 0 && (
+                  <div
+                    className="relative shrink-0"
+                    ref={open === "staff" ? dropdownAnchorRef : undefined}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggle("staff")}
+                      aria-expanded={open === "staff"}
+                      aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
+                      className={navTabClassName(open === "staff")}
                     >
-                      <button
-                        type="button"
-                        onClick={() => toggle("staff")}
-                        aria-expanded={open === "staff"}
-                        aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
-                        className={navTabClassName(open === "staff")}
-                      >
-                        <NavIcon name="Staff" />
-                        <NavItemLabel>{t("common.staff")}</NavItemLabel>
-                        <NavItemChevron open={open === "staff"} />
-                      </button>
-                      {open === "staff" && (megaPanel ?? staffMenu)}
-                    </div>
-                  )}
+                      <NavIcon name="Staff" />
+                      <NavItemLabel>{t("common.staff")}</NavItemLabel>
+                      <NavItemChevron open={open === "staff"} />
+                    </button>
+                    {open === "staff" && (megaPanel ?? staffMenu)}
+                  </div>
+                )}
               </div>
 
               {/* Icon cluster */}

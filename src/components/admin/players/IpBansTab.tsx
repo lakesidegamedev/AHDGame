@@ -3,6 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LocalTime } from "@/components/time/LocalTime";
+import Link from "next/link";
 
 interface BannedIpRow {
   _id: string;
@@ -204,9 +205,9 @@ export function IpBansTab() {
         >
           {collision?.enabled ? "Enabled" : "Disabled"}
         </span>{" "}
-        <a href="/control/overview/dashboard" className="text-primary hover:underline">
+        <Link href="/control/overview/dashboard" className="text-primary hover:underline">
           Manage on dashboard →
-        </a>
+        </Link>
       </div>
 
       {/* Forms */}

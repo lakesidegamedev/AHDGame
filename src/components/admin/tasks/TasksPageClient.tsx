@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import type { Task, TaskType, TaskStatus, TaskPriority } from "@/lib/db/types";
 import type { TaskLesson, LessonCategory } from "@/lib/db/types/taskLesson";
-import { TaskFormToast } from "@/components/control/overview/tasks/TaskFormToast";
-import { TaskDetailModal } from "@/components/control/overview/tasks/TaskDetailModal";
-import { HealingTools } from "@/components/control/overview/tasks/HealingTools";
+import { TaskFormToast } from "@/components/admin/tasks/TaskFormToast";
+import { TaskDetailModal } from "@/components/admin/tasks/TaskDetailModal";
+import { HealingTools } from "@/components/admin/tasks/HealingTools";
 import { LocalTime } from "@/components/time/LocalTime";
 import { useSearchParams, useRouter } from "next/navigation";
 
