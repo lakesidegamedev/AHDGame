@@ -2,6 +2,7 @@ import { electionRegionUrl } from "@/lib/urls";
 import type { ElectionDisplay } from "@/lib/db/types";
 import { isCloseRace } from "@/lib/elections/rules/closeRace";
 import { raceHref } from "@/lib/campaignManager/links";
+import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 
 export type ElectionType =
   "senate" | "house" | "stateSenate" | "governor" | "president" | "commons" | "primeMinister";
@@ -16,69 +17,7 @@ export const SENATE_CLASS_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: 
 
 export const ELECTION_STATE_NAMES: Record<string, string> = {
   US: "National",
-  AL: "Alabama",
-  AK: "Alaska",
-  AZ: "Arizona",
-  AR: "Arkansas",
-  CA: "California",
-  CO: "Colorado",
-  CT: "Connecticut",
-  DE: "Delaware",
-  FL: "Florida",
-  GA: "Georgia",
-  HI: "Hawaii",
-  ID: "Idaho",
-  IL: "Illinois",
-  IN: "Indiana",
-  IA: "Iowa",
-  KS: "Kansas",
-  KY: "Kentucky",
-  LA: "Louisiana",
-  ME: "Maine",
-  MD: "Maryland",
-  MA: "Massachusetts",
-  MI: "Michigan",
-  MN: "Minnesota",
-  MS: "Mississippi",
-  MO: "Missouri",
-  MT: "Montana",
-  NE: "Nebraska",
-  NV: "Nevada",
-  NH: "New Hampshire",
-  NJ: "New Jersey",
-  NM: "New Mexico",
-  NY: "New York",
-  NC: "North Carolina",
-  ND: "North Dakota",
-  OH: "Ohio",
-  OK: "Oklahoma",
-  OR: "Oregon",
-  PA: "Pennsylvania",
-  RI: "Rhode Island",
-  SC: "South Carolina",
-  SD: "South Dakota",
-  TN: "Tennessee",
-  TX: "Texas",
-  UT: "Utah",
-  VT: "Vermont",
-  VA: "Virginia",
-  WA: "Washington",
-  WV: "West Virginia",
-  WI: "Wisconsin",
-  WY: "Wyoming",
-  // UK Regions
-  LON: "London",
-  SEE: "South East England",
-  SWE: "South West England",
-  EMI: "East Midlands",
-  WMI: "West Midlands",
-  YHU: "Yorkshire and the Humber",
-  NWE: "North West England",
-  NEE: "North East England",
-  WAL: "Wales",
-  SCO: "Scotland",
-  NIR: "Northern Ireland",
-  EAE: "East of England",
+  ...US_STATE_NAMES,
 };
 
 /** The shared "Close" rule (see `@/lib/elections/rules/closeRace`). */

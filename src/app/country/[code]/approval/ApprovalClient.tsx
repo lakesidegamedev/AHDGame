@@ -15,6 +15,7 @@ import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { mergeApprovalModifiers } from "./mergeApprovalModifiers";
 import { displayEffect } from "@/lib/country/rules/approvalBreakdown";
+import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
 
 interface StateApprovalEntry {
   stateId: string;
@@ -255,42 +256,11 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                   )}
                 </div>
                 {regionalModifiers.length > 0 && (
-                  <div className="flex gap-4 text-right text-xs">
-                    <div>
-                      <div className="text-body-sm font-medium text-muted">
-                        {hasBreakdown ? "Net regional approval" : "Net approval"}
-                      </div>
-                      <div
-                        className={
-                          "mt-0.5 font-semibold tabular-nums " +
-                          (netApproval > 0
-                            ? "text-emerald-500"
-                            : netApproval < 0
-                              ? "text-rose-500"
-                              : "text-muted")
-                        }
-                      >
-                        {netApproval > 0 ? "+" : ""}
-                        {netApproval}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-body-sm font-medium text-muted">Net margin</div>
-                      <div
-                        className={
-                          "mt-0.5 font-semibold tabular-nums " +
-                          (netMargin > 0
-                            ? "text-emerald-500"
-                            : netMargin < 0
-                              ? "text-rose-500"
-                              : "text-muted")
-                        }
-                      >
-                        {netMargin > 0 ? "+" : ""}
-                        {netMargin}pp
-                      </div>
-                    </div>
-                  </div>
+                  <NetEffectTotals
+                    approvalLabel={hasBreakdown ? "Net regional approval" : "Net approval"}
+                    netApproval={netApproval}
+                    netMargin={netMargin}
+                  />
                 )}
               </div>
               <ModifierList modifiers={regionalModifiers} emptyText="No active effects." />

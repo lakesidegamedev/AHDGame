@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useClickOutside } from "@/hooks/useClickOutside";
 import { useTranslations } from "next-intl";
-import { DROPDOWN_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
 import { NavPanelSkeleton } from "@/components/navbar/NavPanelSkeleton";
+import { NavDropdownShell } from "@/components/navbar/NavDropdownShell";
 import { type WorldNavOpts } from "@/components/navbar/worldNavItems";
 
 const WorldDropdownPanel = dynamic(
@@ -21,41 +19,13 @@ interface WorldDropdownProps extends WorldNavOpts {
 
 export function WorldDropdown(props: WorldDropdownProps) {
   const t = useTranslations("nav");
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const closeDropdown = useCallback(() => setIsOpen(false), []);
-  useClickOutside(dropdownRef, isOpen, closeDropdown, { closeOnEscape: true });
-
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        onPointerEnter={preloadPanel}
-        onFocus={preloadPanel}
-        className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-      >
-        {t("common.world")}
-        <svg
-          className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          role="menu"
-          className={`absolute right-0 z-50 mt-2 w-56 rounded-xl border border-card-border bg-card shadow-modal ${DROPDOWN_PANEL_CLASS}`}
-        >
-          <WorldDropdownPanel {...props} onClose={closeDropdown} />
-        </div>
-      )}
-    </div>
+    <NavDropdownShell
+      label={t("common.world")}
+      panelWidthClass="w-56"
+      onPreload={preloadPanel}
+      panelRole="menu"
+      renderPanel={(close) => <WorldDropdownPanel {...props} onClose={close} />}
+    />
   );
 }
