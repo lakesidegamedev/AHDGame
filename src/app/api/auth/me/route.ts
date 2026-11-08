@@ -24,9 +24,6 @@ import { isPatreonActive } from "@/lib/db/types";
 import { getImperialTitle } from "@/lib/imperial";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
-import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { getNotificationBundleUserIds } from "@/lib/notifications/notificationBundle";
 import { getClientIp } from "@/lib/utils/network";
@@ -284,8 +281,6 @@ export const GET = withNoStore(async () => {
 
     const forexEnabled = await isForexEnabled();
     const forexRates = forexEnabled ? await loadFxRatesRecord(db) : undefined;
-    const rpgStatsEnabled = await isRpgStatsEnabled();
-    const redistrictingEnabled = isRedistrictingEnabled(await getGameState(db));
 
     // Keep the character-creation hint cookie (read by middleware) in sync with
     // DB truth on every page load. This is the self-healer: a character lost to
@@ -314,8 +309,6 @@ export const GET = withNoStore(async () => {
           patreonSince: user?.patreonSince ?? null,
           patreonUserId: user?.patreonUserId ?? null,
           adsDisabled: user?.adsDisabled ?? false,
-          rpgStatsEnabled,
-          redistrictingEnabled,
           patreonAdPreference: getPatreonAdPreference(user),
           patreonHighlightColor: user?.patreonHighlightColor ?? null,
           patreonProfileBorder: user?.patreonProfileBorder ?? null,
@@ -377,9 +370,7 @@ export const GET = withNoStore(async () => {
                 statsAllocated: character.statsAllocated ?? false,
                 statsReallocationUsed: character.statsReallocationUsed ?? false,
                 needsStatAllocation:
-                  rpgStatsEnabled &&
-                  !character.statsAllocated &&
-                  !character.statAllocationDismissed,
+                  !character.statsAllocated && !character.statAllocationDismissed,
                 needsWealthTierRepick: character.wealthTierRepickPending === true,
                 displayCurrencyPreference:
                   character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),

@@ -29,7 +29,7 @@ vi.mock("@/lib/db/collections/conflicts", () => ({ getConflict: vi.fn() }));
 const { proposeOrganizationLegislation } = await import("../proposeLegislation");
 
 const db = {
-  collection: () => ({ findOne: async () => ({ conflictsEnabled: true }) }),
+  collection: () => ({ findOne: async () => ({}) }),
 } as unknown as Db;
 
 const propose = () =>

@@ -117,7 +117,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const subBlock = await subsidiaryIssuanceBlockReason(corporation);
+    const subBlock = subsidiaryIssuanceBlockReason(corporation);
     if (subBlock) return errorResponse(403, subBlock);
 
     const openShareholderVote = await db

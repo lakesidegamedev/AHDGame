@@ -106,18 +106,10 @@ export async function runCensus(
   }));
   if (ops.length > 0) await db.collection<State>("states").bulkWrite(ops);
 
-  // Regenerate districts for states whose seat count changed, plus, only when
-  // redistricting is on, states that auto-neutralize each census.
-  //
-  // Reapportioned states are redrawn REGARDLESS of the flag: district docs are
-  // the delegation size of record for `districtedHouseResolution` and are
-  // seeded unconditionally, so a stale count disagrees with `houseDistricts`.
-  // The flag gates whether districts DRIVE resolution, not whether they are
-  // accurate.
+  // Regenerate districts for states whose seat count changed, plus states that
+  // auto-neutralize each census.
   const changed = deltas.map((d) => d.state);
-  const autoNeutral = gameState?.redistrictingEnabled
-    ? await getAutoNeutralizeStateIds(db, "US")
-    : [];
+  const autoNeutral = await getAutoNeutralizeStateIds(db, "US");
   const toRegen = [...new Set([...changed, ...autoNeutral])];
   if (toRegen.length > 0) {
     await regenerateCongressionalDistricts(db, {

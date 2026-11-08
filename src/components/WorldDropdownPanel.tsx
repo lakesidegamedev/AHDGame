@@ -15,7 +15,6 @@ export function WorldDropdownPanel({
   myCorporationId = null,
   myCorporationHasGroup = false,
   myUnionId = null,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
   onClose,
@@ -27,7 +26,6 @@ export function WorldDropdownPanel({
     myCorporationId,
     myCorporationHasGroup,
     myUnionId,
-    conflictsEnabled,
     unionsEnabled,
     settlementCrisisLive,
   });

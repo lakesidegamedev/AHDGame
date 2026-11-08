@@ -1,4 +1,3 @@
-import { requireConflictsEnabled } from "../_coldwar/gate";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
@@ -24,13 +23,11 @@ import { CombatCommandClient } from "./CombatCommandClient";
 import type { BattleReportView, ConflictView } from "./useCombatState";
 import { toBattleReportView } from "./battleReportView";
 
-// Combat Command — order-of-battle + PvP theater-resolution surface. Gated by
-// conflictsEnabled and styled to match the Cold-War themed island. Units + org come
+// Combat Command — order-of-battle + PvP theater-resolution surface. Styled
+// to match the Cold-War themed island. Units + org come
 // from live gameState; offensives are declared here and resolved on the turn tick
 // against the target nation's real forces.
 export default async function CombatCommandPage() {
-  await requireConflictsEnabled();
-
   const authUser = await getAuthUserWithCharacter();
   const country = authUser?.character?.countryId ?? "US";
 

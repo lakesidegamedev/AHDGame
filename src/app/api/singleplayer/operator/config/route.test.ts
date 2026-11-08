@@ -37,7 +37,7 @@ const currentConfig = {
   featureFlags: {
     forexEnabled: false,
     playerRandomEventsEnabled: true,
-    rpgStatsEnabled: true,
+    sectorTechTreesEnabled: true,
   },
 };
 
@@ -73,7 +73,7 @@ describe("PATCH /api/singleplayer/operator/config", () => {
         featureFlags: {
           forexEnabled: true,
           playerRandomEventsEnabled: true,
-          rpgStatsEnabled: true,
+          sectorTechTreesEnabled: true,
         },
       }
     );
@@ -84,7 +84,7 @@ describe("PATCH /api/singleplayer/operator/config", () => {
       featureFlags: {
         forexEnabled: true,
         playerRandomEventsEnabled: true,
-        rpgStatsEnabled: true,
+        sectorTechTreesEnabled: true,
       },
     });
   });

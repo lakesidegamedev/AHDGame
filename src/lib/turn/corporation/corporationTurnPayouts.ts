@@ -84,7 +84,6 @@ export async function settleCorporationTurnPayouts({
   capitalDividendPayments,
   passThroughTaxedDividendPayments,
   forexEnabled,
-  subsidiaryCorporationsEnabled,
 }: {
   capacityBindingEvents: {
     sectorId: string;
@@ -126,7 +125,6 @@ export async function settleCorporationTurnPayouts({
   capitalDividendPayments: Map<string, Map<CurrencyCode, number>>;
   passThroughTaxedDividendPayments: Map<string, Map<CurrencyCode, number>>;
   forexEnabled: boolean;
-  subsidiaryCorporationsEnabled: boolean;
 }) {
   if (capacityBindingEvents.length > 0) {
     const capacityNotifications = capacityBindingEvents.flatMap((ev) => {
@@ -686,30 +684,28 @@ export async function settleCorporationTurnPayouts({
     }
     mark("financialDistress");
 
-    // Subsidiary corporations (feature-gated, dynamic import to avoid circular
-    // deps): clear the formalization marker + dividend-floor fields on any corp
-    // whose controlling parent has slipped below 50% voting power. Derived-model
-    // equivalent of auto-dissolution; no synergy work. Best-effort.
-    if (subsidiaryCorporationsEnabled) {
-      try {
-        const { cleanupZombieSubsidiaries } =
-          await import("@/lib/corporations/subsidiaries/turnCleanup");
-        const cleared = await cleanupZombieSubsidiaries(db, lookups.corporations, now);
-        if (cleared > 0) {
-          console.log(`[corporationTurn] cleared ${cleared} zombie subsidiary marker(s)/floor(s)`);
-          corpAuditEntries.push({
-            source: "turn",
-            category: "corp",
-            action: "corp.subsidiary_cleanup",
-            phase: "corporationTurn",
-            subject: { type: "corpBatch", name: "zombie subsidiary cleanup" },
-            outcome: "ok",
-            meta: { count: cleared },
-          });
-        }
-      } catch (err) {
-        console.error("[corporationTurn] subsidiary cleanup failed:", err);
+    // Subsidiary corporations (dynamic import to avoid circular deps): clear the
+    // formalization marker + dividend-floor fields on any corp whose controlling
+    // parent has slipped below 50% voting power. Derived-model equivalent of
+    // auto-dissolution; no synergy work. Best-effort.
+    try {
+      const { cleanupZombieSubsidiaries } =
+        await import("@/lib/corporations/subsidiaries/turnCleanup");
+      const cleared = await cleanupZombieSubsidiaries(db, lookups.corporations, now);
+      if (cleared > 0) {
+        console.log(`[corporationTurn] cleared ${cleared} zombie subsidiary marker(s)/floor(s)`);
+        corpAuditEntries.push({
+          source: "turn",
+          category: "corp",
+          action: "corp.subsidiary_cleanup",
+          phase: "corporationTurn",
+          subject: { type: "corpBatch", name: "zombie subsidiary cleanup" },
+          outcome: "ok",
+          meta: { count: cleared },
+        });
       }
+    } catch (err) {
+      console.error("[corporationTurn] subsidiary cleanup failed:", err);
     }
 
     // Merger review (C3): decide every referral whose deadline has passed on the

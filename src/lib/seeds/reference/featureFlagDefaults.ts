@@ -44,7 +44,6 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   forexEnabled: true,
   playerRandomEventsEnabled: true,
   autoDisastersEnabled: true,
-  rpgStatsEnabled: true,
   sectorTechTreesEnabled: true,
   nppAutonomyLevel: FRESH_WORLD_FLAG_EXCLUSIONS.nppAutonomyLevel.value,
   // Kept in sync with nppAutonomyLevel for legacy readers.
@@ -61,15 +60,10 @@ export const DEFAULT_GAME_STATE_FLAGS = {
   legislationSystemVersion: "v1",
   cabinetSystemVersion: "v1",
   eraSystemEnabled: true,
-  conflictsEnabled: true,
   livingConflictsEnabled: true,
-  demographicsLayer1PositionsEnabled: true,
   coldWarEnabled: true,
-  redistrictingEnabled: true,
-  subsidiaryCorporationsEnabled: true,
   nppEntryViabilityMode: "enforce",
   frontierEntryExperimentEnabled: true,
-  intOrgAlignmentEnabled: true,
   nppCorpStrategyEnabled: true,
   // Macro demand reads state GDP in anchor terms. Fresh worlds only: existing
   // worlds lack the field and keep the raw stored reading.

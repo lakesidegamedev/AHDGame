@@ -1,7 +1,6 @@
 import type { Db, Filter } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
-import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { resolveConflict } from "@/lib/military/resolveConflict";
 
 /**
@@ -10,19 +9,11 @@ import { resolveConflict } from "@/lib/military/resolveConflict";
  * A real sweep, not lazy expiry: nothing forces anyone to open a conflict
  * document, so a victor who never logs in would leave a won war stuck in
  * `terms_pending` forever. Runs every tick regardless of activity.
- *
- * Reads `conflictsEnabled` itself: unlike other conflict steps reached from a
- * declaration, this one is reached from a stamp on a document.
  */
 export async function resolvePeaceWindows(
   db: Db,
   currentTurn: number
 ): Promise<{ resolved: number }> {
-  const gameState = await getGameStateCollection(db).then((col) =>
-    col.findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } })
-  );
-  if (!gameState?.conflictsEnabled) return { resolved: 0 };
-
   const lapsed = await getConflictsCollection(db)
     .find({
       status: "terms_pending",

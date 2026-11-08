@@ -61,15 +61,10 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
       ),
       db
         .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { projection: { subsidiaryCorporationsEnabled: 1, currentTurn: 1 } }
-        ),
+        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
     const groupCoordinationActive =
-      mode === "plants" &&
-      config?.groupSupplyCoordinationEnabled === true &&
-      world?.subsidiaryCorporationsEnabled === true;
+      mode === "plants" && config?.groupSupplyCoordinationEnabled === true;
     // Funded worlds settle own-company fills as free transfers, so a discount has nothing to act on.
     const liveFrom = config?.producerMarketLiveFromTurn;
     const fundedMarket = typeof liveFrom === "number" && (world?.currentTurn ?? 0) >= liveFrom;

@@ -30,7 +30,6 @@ export interface WorldNavOpts {
   myCorporationId?: number | null;
   myCorporationHasGroup?: boolean;
   myUnionId?: string | null;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   /**
    * A settlement crisis is LIVE — not merely that the subsystem is switched on.
@@ -50,7 +49,6 @@ export function buildWorldNavItems({
   myCorporationId = null,
   myCorporationHasGroup = false,
   myUnionId = null,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
 }: WorldNavOpts): WorldNavItem[] {
@@ -129,7 +127,7 @@ export function buildWorldNavItems({
       labelKey: "menus.world.conflicts",
       href: "/world/conflicts",
       section: "main",
-      show: conflictsEnabled,
+      show: true,
     },
     {
       id: "internationalOrgs",

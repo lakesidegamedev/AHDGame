@@ -180,16 +180,6 @@ export async function applyResolutionEffect(
         currentTurn,
         context: warPlanningContext,
       });
-      if (!plan.conflictsEnabled) {
-        await recordOrgHistoryEvent(
-          db,
-          resolution.proposingCountryId,
-          currentTurn,
-          `${resolution.organizationId}'s declaration lapsed because conflicts are disabled.`,
-          { organizationId: resolution.organizationId, legislationId: resolution._id.toString() }
-        );
-        return false;
-      }
       if (!plan.targetEnabled) {
         await recordOrgHistoryEvent(
           db,

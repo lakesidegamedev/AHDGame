@@ -10,7 +10,6 @@ import {
   ORG_PROPOSAL_VOTING_TURNS,
   orgTributeRateAnnual,
 } from "@/lib/constants/internationalOrganizations";
-import { isIntOrgAlignmentEnabled } from "@/lib/alignment/featureFlag";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
@@ -46,12 +45,9 @@ export { loadUsdGdpByCountry };
 
 export async function loadWorldOrganizationsView(db: Db) {
   await ensureFoundingMembershipsAndLeadership(db);
-  const [summaries, currentTurn, alignmentFlag] = await Promise.all([
+  const [summaries, currentTurn] = await Promise.all([
     loadOrganizationSummaries(db),
     getCurrentTurn(db),
-    db
-      .collection<{ intOrgAlignmentEnabled?: boolean }>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { intOrgAlignmentEnabled: 1 } }),
   ]);
 
   // Derived metrics are GDP-weighted across the WHOLE membership, not just the
@@ -233,10 +229,5 @@ export async function loadWorldOrganizationsView(db: Db) {
     definitions: INTERNATIONAL_ORGANIZATIONS,
     currentTurn,
     proposalVotingWindowTurns: ORG_PROPOSAL_VOTING_TURNS,
-    // Drives whether the per-org Influence tab is offered at all. Fail-closed,
-    // like every other alignment surface: a world with the gate off must show
-    // no trace of the feature, not a tab explaining it is unavailable. Read
-    // from the db already in hand rather than letting the helper open its own.
-    intOrgAlignmentEnabled: await isIntOrgAlignmentEnabled(alignmentFlag ?? {}),
   };
 }

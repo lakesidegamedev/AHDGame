@@ -190,7 +190,6 @@ export default function CreateCharacterClient() {
   const [compassTouched, setCompassTouched] = useState(false);
   const [partyTouched, setPartyTouched] = useState(false);
   // Gated behind the RPG-stats feature flag (from /api/auth/me).
-  const [rpgStatsEnabled, setRpgStatsEnabled] = useState(false);
   // Guided chat is opt-in and persisted. The classic all-steps form stays the
   // default, so current player behavior is unchanged unless chosen.
   const [chatMode, setChatMode] = useState(false);
@@ -335,7 +334,6 @@ export default function CreateCharacterClient() {
           router.replace("/profile");
           return;
         }
-        setRpgStatsEnabled(data.user.rpgStatsEnabled === true);
         // Capture Discord linking state
         if (data.user.discordId) {
           dispatchDiscord({ type: "linked" });
@@ -577,7 +575,7 @@ export default function CreateCharacterClient() {
       return;
     }
 
-    if (rpgStatsEnabled && pointsRemaining(stats) !== 0) {
+    if (pointsRemaining(stats) !== 0) {
       setError("Please allocate all of your stat points before continuing");
       setIsLoading(false);
       return;
@@ -601,7 +599,7 @@ export default function CreateCharacterClient() {
           party: formData.party,
           policies: formData.policyPositions,
           demographics: formData.demographics,
-          ...(rpgStatsEnabled ? { stats } : {}),
+          stats,
         }),
       });
 
@@ -768,17 +766,11 @@ export default function CreateCharacterClient() {
         : "Pick a party, or choose Independent on purpose",
       met: noPartiesAvailable || partyTouched,
     },
-    ...(rpgStatsEnabled
-      ? [
-          {
-            key: "stats",
-            label: `Allocate ${statPointsLeft} remaining stat point${
-              statPointsLeft === 1 ? "" : "s"
-            }`,
-            met: statPointsLeft === 0,
-          },
-        ]
-      : []),
+    {
+      key: "stats",
+      label: `Allocate ${statPointsLeft} remaining stat point${statPointsLeft === 1 ? "" : "s"}`,
+      met: statPointsLeft === 0,
+    },
   ];
 
   const countriesLoading = countryOptions === undefined;
@@ -1084,7 +1076,7 @@ export default function CreateCharacterClient() {
     </StepPanel>
   );
 
-  const statsPanel = rpgStatsEnabled ? (
+  const statsPanel = (
     <StepPanel
       step={6}
       title="Stats"
@@ -1093,7 +1085,7 @@ export default function CreateCharacterClient() {
     >
       <StatPointAllocator value={stats} onChange={setStats} />
     </StepPanel>
-  ) : null;
+  );
 
   const discordPanel = (
     <DiscordLinkSection
@@ -1190,7 +1182,6 @@ export default function CreateCharacterClient() {
 
   const conversationSteps = buildConversationSteps({
     regionNoun,
-    rpgStatsEnabled,
     partySelectorVisible,
     complete: {
       country: Boolean(country),
@@ -1211,7 +1202,7 @@ export default function CreateCharacterClient() {
         : formData.party === "independent"
           ? "Independent"
           : (selectedParty?.name ?? "Independent"),
-      stats: rpgStatsEnabled && statPointsLeft === 0 ? "Allocated" : null,
+      stats: statPointsLeft === 0 ? "Allocated" : null,
       review: null,
     },
   });

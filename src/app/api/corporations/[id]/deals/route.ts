@@ -21,7 +21,6 @@ import {
   resolveAcquisitionOfferStatus,
   listDealsForCorp,
 } from "@/lib/corporations/commands/acquisitions/acquisitionOffers";
-import { isSubsidiaryAcquisitionAvailable } from "@/lib/corporations/commands/acquisitions/subsidiaryOutcome";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,11 +48,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const [deals, subsidiaryAvailable] = await Promise.all([
-      listDealsForCorp(db, resolved.corporation._id),
-      isSubsidiaryAcquisitionAvailable(db),
-    ]);
-    return NextResponse.json({ enabled: true, subsidiaryAvailable, ...deals });
+    const deals = await listDealsForCorp(db, resolved.corporation._id);
+    return NextResponse.json({ enabled: true, ...deals });
   } catch (error) {
     return handleRouteError(error);
   }

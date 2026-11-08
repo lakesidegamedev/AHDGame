@@ -94,28 +94,24 @@ export async function seedCNDemographics(
     ? await import("@/lib/seeds/reference/stateDemographics1991")
     : { applyEra1991DemographicAdjustments: <T>(x: T): T => x };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let cnRegionDemographics: typeof cnRegionDemographicsStatic = cnRegionDemographicsStatic;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("CN", era);
-    if (model) {
-      const full = await loadFullOverride("CN", era);
-      if (full) log(`[CN] Applying model override for era ${era}`);
-      cnRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[CN] Using Layer-1-derived demographics (${cnRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = eraForPreset(preset);
+  const model = getCountryLayer1Model("CN", era);
+  if (model) {
+    const full = await loadFullOverride("CN", era);
+    if (full) log(`[CN] Applying model override for era ${era}`);
+    cnRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[CN] Using Layer-1-derived demographics (${cnRegionDemographics.length} regions, era ${era})`
+    );
   }
   for (const raw of cnRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "CN") : raw;

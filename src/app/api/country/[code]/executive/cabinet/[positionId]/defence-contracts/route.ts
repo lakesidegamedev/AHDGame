@@ -3,11 +3,6 @@
 //
 // Auth: defence cabinet holder or admin, on the country's own defence seat.
 //
-// Deliberately NOT gated on `conflictsEnabled`. Procurement is base military/economy — the
-// recruit and upgrade routes are ungated for the same reason — and an arsenal that only
-// filled while the conflicts subsystem was on would leave every unit hollow on worlds that
-// have it off.
-//
 // Errors: 400, 401, 403, 404, 409
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";

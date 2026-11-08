@@ -85,7 +85,6 @@ describe("battle forecast route", () => {
       toArray: vi.fn().mockResolvedValue([]),
     });
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
@@ -295,7 +294,6 @@ describe("battle forecast route", () => {
       vi.resetModules();
       db.collectionMocks.conflicts.findOne.mockResolvedValue(alliedConflict);
       db.collectionMocks.gameState.findOne.mockResolvedValue({
-        conflictsEnabled: true,
         currentTurn: 40,
       });
       db.collection("countryGameStates");
@@ -446,12 +444,6 @@ describe("battle forecast route", () => {
     const res = await GET(req("theaterId=afghan&targetCountry=US"), ddCall);
     expect(res.status).toBe(200);
     expect(typeof (await res.json()).oddsPct).toBe("number");
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { GET } = await import(ROUTE);
-    expect((await GET(req("theaterId=afghan&targetCountry=CN"), call)).status).toBe(404);
   });
 
   it("403s a non-holder when no theater commander is designated", async () => {

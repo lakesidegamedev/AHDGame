@@ -42,7 +42,6 @@ const navBody = {
   governorOffice: null,
   isImperialMode: false,
   wikiDisabled: false,
-  conflictsEnabled: false,
   settlementCrisisLive: false,
   unionsEnabled: false,
   pendingCharterCount: 0,

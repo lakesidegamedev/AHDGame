@@ -16,7 +16,6 @@ import {
   MastheadStat,
 } from "@/components/national/InstitutionMasthead";
 import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
-import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 import { getExecutiveSurface } from "@/lib/constants/executiveSurface";
 import { getExecutiveSeal } from "@/lib/constants/executiveSeals";
 import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
@@ -156,7 +155,6 @@ export default function WhiteHouseClient({
       ? requested
       : "overview";
   });
-  const conflictsEnabled = useConflictsEnabled();
   const clock = useGameClock();
   const [approval, setApproval] = useState<number | null>(null);
   const [approvalHistory, setApprovalHistory] = useState<
@@ -575,7 +573,7 @@ export default function WhiteHouseClient({
               Endorsements
             </TabButton>
           )}
-          {(data.isPresident || data.isAdmin) && conflictsEnabled && (
+          {(data.isPresident || data.isAdmin) && (
             <TabButton active={activeTab === "foreign"} onClick={() => setActiveTab("foreign")}>
               Foreign affairs
             </TabButton>
@@ -595,10 +593,7 @@ export default function WhiteHouseClient({
         {activeTab === "orders" && <WhiteHouseOrdersTab countryId={countryId} />}
         {activeTab === "endorsements" && <WhiteHouseEndorsementsTab countryId={countryId} />}
 
-        {/* Guards repeated on the BODY, not just the button: activeTab is component
-            state, so a flag flipping off while this tab is open would otherwise
-            leave it rendered. */}
-        {activeTab === "foreign" && (data.isPresident || data.isAdmin) && conflictsEnabled && (
+        {activeTab === "foreign" && (data.isPresident || data.isAdmin) && (
           <ForeignAffairsTab
             countryId={countryId as CountryId}
             canAct={data.isPresident || data.isAdmin}

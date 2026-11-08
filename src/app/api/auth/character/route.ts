@@ -40,7 +40,6 @@ import {
   seatSingleplayerHeadOfState,
 } from "@/lib/singleplayerHeadOfState";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import type { CharacterStats } from "@/lib/stats/statsConstants";
 import { sendSystemMail } from "@/lib/mail/systemMail";
 import { onboardingRewardAmount } from "@/lib/onboarding/reward";
@@ -115,11 +114,9 @@ export async function POST(request: Request) {
 
     // Validate the optional 28-point stat allocation. When provided it must be a
     // legal spread; when omitted the character is created without stats and is
-    // routed through the grandfather allocation flow on next login. Gated behind
-    // the RPG-stats feature flag — when off, any submitted stats are ignored.
+    // routed through the grandfather allocation flow on next login.
     let allocatedStats: CharacterStats | undefined;
-    const rpgStatsEnabled = await isRpgStatsEnabled();
-    if (rpgStatsEnabled && rawStats !== undefined) {
+    if (rawStats !== undefined) {
       const statValidation = validateStatAllocation(rawStats);
       if (!statValidation.ok) {
         return errorResponse(400, statValidation.error);

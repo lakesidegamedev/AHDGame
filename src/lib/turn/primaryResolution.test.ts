@@ -740,7 +740,6 @@ describe("resolvePrimariesIfNeeded", () => {
     db.collectionMocks["gameState"] = db.collection("gameState");
     db.collectionMocks["gameState"].findOne.mockResolvedValue({
       _id: "current",
-      redistrictingEnabled: true,
     });
     db.collectionMocks["elections"] = db.collection("elections");
     db.collectionMocks["elections"].find.mockReturnValue(makeCursor([election]));

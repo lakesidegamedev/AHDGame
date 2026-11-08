@@ -29,7 +29,6 @@ import type { Db } from "mongodb";
 import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { registerAndGenerate } from "@/lib/seeds/stateDemographics";
-import { isLayer1PositionsEnabled } from "@/lib/seeds/layer1PositionsFlag";
 import { calculateStateLean } from "@/lib/utils/demographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
@@ -70,7 +69,6 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const layer1Positions = await isLayer1PositionsEnabled();
 
     // ── International path ──────────────────────────────────────────────────
     if (countryId !== "US") {
@@ -83,7 +81,7 @@ export async function POST(request: Request) {
         return errorResponse(400, `No Layer-1 model for ${countryId}:${era}`);
       }
 
-      const full = layer1Positions ? await loadFullOverride(countryId, era) : null;
+      const full = await loadFullOverride(countryId, era);
       const regionDemographics = buildModelRegionDemographics(
         model,
         full?.positions ?? undefined,
@@ -125,7 +123,6 @@ export async function POST(request: Request) {
         success: true,
         countryId,
         era,
-        layer1Positions,
         snapshotId,
         statesCount: regionDemographics.length,
         message: `Reseeded ${regionDemographics.length} ${countryId} regions (era ${era}).`,
@@ -134,7 +131,7 @@ export async function POST(request: Request) {
 
     // ── US path ─────────────────────────────────────────────────────────────
     const { loadEraFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const override = layer1Positions ? ((await loadEraFullOverride(era)) ?? undefined) : undefined;
+    const override = (await loadEraFullOverride(era)) ?? undefined;
 
     // Era-aware census bundle
     const { stateCensusData } = await import("@/lib/seeds/stateCensusData");
@@ -145,7 +142,7 @@ export async function POST(request: Request) {
 
     const regenerated = Object.entries(censusBundle).map(([stateId, config]) =>
       registerAndGenerate(stateId, config, era, {
-        layer1Positions,
+        layer1Positions: true,
         positions: override?.positions,
         turnout: override?.turnout,
       })
@@ -218,7 +215,6 @@ export async function POST(request: Request) {
       success: true,
       countryId,
       era,
-      layer1Positions,
       snapshotId,
       skipPollClear,
       message: `Reseeded ${demographicCategories.length} category (${groupsPerCategory} voter archetypes) and ${regenerated.length} state demographics (era ${era}). ${skipPollClear ? "Poll clear skipped." : `Cleared stored polls from ${charactersCleared} characters.`}`,

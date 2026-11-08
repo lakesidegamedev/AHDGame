@@ -55,10 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
 
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) {
@@ -89,7 +86,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       );
     }
 
-    const currentTurn = gs.currentTurn ?? 0;
+    const currentTurn = gs?.currentTurn ?? 0;
     const check = await validateDeclareWar(
       db,
       { targetCountry, warGoal: parsed.data.warGoal },

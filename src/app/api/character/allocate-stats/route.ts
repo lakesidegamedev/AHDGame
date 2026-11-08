@@ -9,7 +9,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { Character, User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import { suggestStatBuild, type SuggestBuildInput } from "@/lib/stats/suggestedBuild";
 
 const allocateStatsSchema = z.object({
@@ -53,15 +52,11 @@ async function buildSuggestion(
 
 // GET /api/character/allocate-stats: suggested 28-point build for the
 // active character; pre-fills the grandfather allocation modal.
-// Auth: requireHumanSession. Errors: 401, 403, 404, 409.
+// Auth: requireHumanSession. Errors: 401, 404, 409.
 async function handleGET(request: Request) {
   try {
     const auth = await requireHumanSession(request);
     if (!auth.ok) return auth.response;
-
-    if (!(await isRpgStatsEnabled())) {
-      return errorResponse(403, "The stat system is not currently enabled.");
-    }
 
     const { db, character } = await loadActiveCharacter(auth.user.userId);
     if (!character) {
@@ -82,7 +77,7 @@ export const GET = withNoStore(handleGET);
 
 // POST /api/character/allocate-stats — Commits a one-time 28-point stat allocation
 // for a grandfathered character.
-// Auth: requireHumanSession. Errors: 400, 401, 403, 404, 409, 429.
+// Auth: requireHumanSession. Errors: 400, 401, 404, 409, 429.
 export async function POST(request: Request) {
   try {
     const auth = await requireHumanSession(request);
@@ -90,10 +85,6 @@ export async function POST(request: Request) {
 
     const rateLimit = checkRateLimit(`api/character/allocate-stats:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
-
-    if (!(await isRpgStatsEnabled())) {
-      return errorResponse(403, "The stat system is not currently enabled.");
-    }
 
     const parsed = await parseJsonBody(request, allocateStatsSchema);
     if (!parsed.success) {

@@ -125,28 +125,24 @@ export async function seedNGDemographics(
     ? await import("@/lib/seeds/reference/stateDemographics1991")
     : { applyEra1991DemographicAdjustments: <T>(x: T): T => x };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let ngRegionDemographics: typeof ngRegionDemographicsStatic = ngRegionDemographicsStatic;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("NG", era);
-    if (model) {
-      const full = await loadFullOverride("NG", era);
-      if (full) log(`[NG] Applying model override for era ${era}`);
-      ngRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[NG] Using Layer-1-derived demographics (${ngRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = eraForPreset(preset);
+  const model = getCountryLayer1Model("NG", era);
+  if (model) {
+    const full = await loadFullOverride("NG", era);
+    if (full) log(`[NG] Applying model override for era ${era}`);
+    ngRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[NG] Using Layer-1-derived demographics (${ngRegionDemographics.length} regions, era ${era})`
+    );
   }
   for (const raw of ngRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "NG") : raw;

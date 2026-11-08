@@ -116,28 +116,24 @@ export async function seedDEDemographics(
     ? await import("@/lib/seeds/reference/stateDemographics1991")
     : { applyEra1991DemographicAdjustments: <T>(x: T): T => x };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let deRegionDemographics: typeof deRegionDemographicsStatic = deRegionDemographicsStatic;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("DE", era);
-    if (model) {
-      const full = await loadFullOverride("DE", era);
-      if (full) log(`[DE] Applying model override for era ${era}`);
-      deRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[DE] Using Layer-1-derived demographics (${deRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = eraForPreset(preset);
+  const model = getCountryLayer1Model("DE", era);
+  if (model) {
+    const full = await loadFullOverride("DE", era);
+    if (full) log(`[DE] Applying model override for era ${era}`);
+    deRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[DE] Using Layer-1-derived demographics (${deRegionDemographics.length} regions, era ${era})`
+    );
   }
 
   for (const category of deDemographicCategories) {

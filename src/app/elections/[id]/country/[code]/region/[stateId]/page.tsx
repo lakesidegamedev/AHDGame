@@ -326,8 +326,8 @@ export default function StateElectionResultsPage({
           } else {
             setError("Congressional district data not available");
           }
-          // Live square overlay (present only when redistrictingEnabled). Failure
-          // is non-fatal — the page falls back to the legacy district map.
+          // Live square overlay. Failure is non-fatal: the page falls back to the
+          // legacy district map.
           try {
             const sqRes = await fetch(`/api/congressional-districts/${stateUpper}`);
             if (sqRes.ok) {

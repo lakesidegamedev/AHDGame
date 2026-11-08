@@ -90,13 +90,11 @@ export {
   DEBATE_PREP_ACTION_COST,
   DEBATE_PREP_SUCCESS_CHANCE,
   DEBATE_PREP_DEBATE_GAIN,
-  DEBATE_PREP_DISABLED_ERROR,
   DEBATE_PREP_UNALLOCATED_ERROR,
   quoteDebatePrepAction,
   describeDebatePrepAction,
   describeDebatePrepEffect,
   type DebatePrepQuoteActor,
-  type DebatePrepQuoteOptions,
   type DebatePrepQuote,
 } from "./actions/rules";
 
@@ -557,12 +555,6 @@ export type CanPerformActionOptions = {
   preset?: string;
   /** Resolved between-era campaign price level; 1 preserves current behavior. */
   priceLevel?: number;
-  /**
-   * Resolved RPG-stats feature flag for Debate Prep validation. The execute
-   * shell always passes the resolved value; callers that cannot know it omit
-   * the field and skip the flag leg only (the stat-block leg still applies).
-   */
-  rpgStatsEnabled?: boolean;
 };
 
 /**
@@ -687,18 +679,14 @@ export function canPerformAction(
   }
 
   // Debate Prep validates through the same rules quote the execute gate
-  // uses: flat AP cost, the fixed success chance and the flag + stat-block
-  // eligibility. A missing stat block rejects here with the quote reason
-  // instead of charging for a roll that cannot land. The flag leg applies
-  // only when the caller passes the resolved value (the execute shell does).
+  // uses: flat AP cost, the fixed success chance and stat-block eligibility.
+  // A missing stat block rejects here with the quote reason instead of
+  // charging for a roll that cannot land.
   if (actionType === "debatePrep") {
-    const quote = quoteDebatePrepAction(
-      {
-        debate: character.stats?.debate,
-        hasStats: !!character.stats,
-      },
-      { rpgStatsEnabled: options?.rpgStatsEnabled }
-    );
+    const quote = quoteDebatePrepAction({
+      debate: character.stats?.debate,
+      hasStats: !!character.stats,
+    });
     if (!quote.ok) {
       return { canPerform: false, reason: quote.error };
     }

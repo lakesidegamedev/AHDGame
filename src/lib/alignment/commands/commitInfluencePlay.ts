@@ -14,21 +14,18 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { getAlignmentPlaysCollection, getCountryAlignmentsCollection } from "@/lib/db/collections";
-import type { GameState } from "@/lib/db/types";
 import {
   disburseFromOrganizationFund,
   localToUsd,
   resolveOrgFundCurrencyCountry,
 } from "@/lib/internationalOrganizations/organizationFund";
 import { loadGdpUsdMillionsByEntity } from "@/lib/internationalOrganizations/entityGdp";
-import { isIntOrgAlignmentEnabled } from "../featureFlag";
 import { leadFor } from "../project";
 import { MIN_PLAY_POINTS, pointsForSpend } from "../influence";
 import { roundToShareGrid } from "../normalize";
 import { loadAlignmentTopology } from "../topology";
 
 export type CommitPlayFailure =
-  | "gate-off"
   | "no-channel"
   | "unknown-target"
   | "target-locked"
@@ -49,11 +46,6 @@ export async function commitInfluencePlay(params: {
   year: number;
 }): Promise<CommitPlayResult> {
   const { db } = params;
-
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { intOrgAlignmentEnabled: 1 } });
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) return { ok: false, reason: "gate-off" };
 
   // An org can only carry influence through a channel this era defines. Most
   // orgs have none in most eras, and that is a refusal, not an error.

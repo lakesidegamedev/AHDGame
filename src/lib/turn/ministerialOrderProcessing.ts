@@ -488,7 +488,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
 
   // 4b-ii. Resolve declared theater offensives (Conflicts). Declarations made on an
   // earlier turn resolve now against the target's real units, persisting outcomes to
-  // both nations' live units + reports. Gated upstream by conflictsEnabled at declare time.
+  // both nations' live units + reports.
   await resolveBattleDeclarations(db, currentTurn);
 
   // 4b-ii-a. Resolve proxy wars pinned at a pole for three turns. Runs AFTER battles
@@ -496,13 +496,13 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   //
   // Must be a turn step, not a check inside `applyOccupation`: once pinned at 100
   // the front cannot move, so nothing would re-enter it and the timer would never
-  // fire. Reads `conflictsEnabled` itself: no upstream declaration gates it.
+  // fire.
   await resolveColdWarHolds(db, currentTurn);
 
   // 4b-ii-a-i. Finish non-proxy wars that reached a pole before their 24-turn
   // minimum and still hold it now. This runs after battles for the same reason as
   // the proxy hold sweep: a counterattack this turn must clear the pole first.
-  await resolveMatureWarPoles(db, currentTurn, defenceGameState?.conflictsEnabled === true);
+  await resolveMatureWarPoles(db, currentTurn);
 
   // 4b-ii-a-ii. White-peace any won war whose dictate window has lapsed. A real
   // sweep rather than lazy expiry: nothing forces a victor to open the conflict

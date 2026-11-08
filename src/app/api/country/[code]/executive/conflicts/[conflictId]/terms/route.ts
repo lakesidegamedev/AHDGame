@@ -69,11 +69,8 @@ export async function POST(
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
-    const currentTurn = gs.currentTurn ?? 0;
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const currentTurn = gs?.currentTurn ?? 0;
 
     // The same seat gate the peace routes use: head of government or the foreign
     // seat holder, either one, no precedence.

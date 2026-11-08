@@ -137,7 +137,7 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
   //
   // So the invariant is unchanged and the expected number moved with it: of five
   // candidates, one advances and four are withdrawn.
-  it("advances one US house nominee per party even when redistricting is enabled", async () => {
+  it("advances one US house nominee per party", async () => {
     const electionId = new ObjectId();
     const now = new Date();
     const election = {
@@ -162,7 +162,6 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
     db.collectionMocks["gameState"] = db.collection("gameState");
     db.collectionMocks["gameState"].findOne.mockResolvedValue({
       _id: "current",
-      redistrictingEnabled: true,
     });
     db.collectionMocks["elections"] = db.collection("elections");
     db.collectionMocks["elections"].find.mockReturnValue(makeCursor([election]));
@@ -210,67 +209,6 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
     expect(withdrawnIds).toContain(candidates[2]._id.toString());
     expect(withdrawnIds).toContain(candidates[3]._id.toString());
     expect(withdrawnIds).toContain(candidates[4]._id.toString());
-  });
-
-  it("keeps top-1 US house candidate per party when redistricting is disabled", async () => {
-    const electionId = new ObjectId();
-    const now = new Date();
-    const election = {
-      _id: electionId,
-      electionType: "house",
-      status: "active",
-      countryId: "US",
-      state: "CA",
-      primaryEndTime: new Date(now.getTime() - 3600_000),
-      endTime: new Date(now.getTime() + 3600_000),
-    };
-    const candidates = [1, 2, 3].map((i) => ({
-      _id: new ObjectId(),
-      electionId,
-      party: "1",
-      characterName: `C${i}`,
-      characterId: new ObjectId(),
-      isNPP: false,
-      status: "active",
-    }));
-
-    db.collectionMocks["gameState"] = db.collection("gameState");
-    db.collectionMocks["gameState"].findOne.mockResolvedValue({
-      _id: "current",
-      redistrictingEnabled: false,
-    });
-    db.collectionMocks["elections"] = db.collection("elections");
-    db.collectionMocks["elections"].find.mockReturnValue(makeCursor([election]));
-    db.collectionMocks["politicalParties"] = db.collection("politicalParties");
-    db.collectionMocks["politicalParties"].find.mockReturnValue(makeCursor([]));
-    db.collectionMocks["electionCandidates"] = db.collection("electionCandidates");
-    db.collectionMocks["electionCandidates"].find.mockReturnValue(makeCursor(candidates));
-    db.collectionMocks["electionVoteTallies"] = db.collection("electionVoteTallies");
-    db.collectionMocks["electionVoteTallies"].find.mockReturnValue(makeCursor([]));
-    db.collectionMocks["electionVoteTallies"].findOne.mockResolvedValue(null);
-
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
-    vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
-      candidates.map((c) => ({
-        candidateId: c._id.toString(),
-        charEP: 0,
-        charSP: 0,
-        favorability: 50,
-        politicalInfluence: 100,
-      })) as never
-    );
-    const { calcPrimaryScore } = await import("@/lib/primaryScore");
-    vi.mocked(calcPrimaryScore)
-      .mockReturnValueOnce(100)
-      .mockReturnValueOnce(80)
-      .mockReturnValueOnce(60);
-
-    const { POST } = await import("./route");
-    const res = await POST();
-    const data = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(data.eliminated).toBe(2);
   });
 
   it("keeps top-1 US senate candidate per party", async () => {

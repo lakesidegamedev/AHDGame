@@ -40,7 +40,7 @@ export default async function WorldPage() {
   const [countryAccess, gameState] = await Promise.all([
     getAllCountryAccess(),
     getGameStateCollection(db).then((col) =>
-      col.findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, preset: 1 } })
+      col.findOne({ _id: "current" }, { projection: { preset: 1 } })
     ),
   ]);
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
@@ -70,7 +70,6 @@ export default async function WorldPage() {
       rows={rows}
       roadmap={WORLD_ROADMAP_COUNTRIES}
       countryAccess={countryAccess}
-      conflictsEnabled={!!gameState?.conflictsEnabled}
       worldEntities={worldEntities}
       blocMapData={blocMapData}
       legacyFinances={legacyFinances}

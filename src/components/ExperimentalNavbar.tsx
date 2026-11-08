@@ -156,7 +156,6 @@ export interface ExperimentalNavbarProps {
   myUnionId?: string | null;
   adminCharacters?: AdminCharacter[];
   imperialCharacter?: ImperialCharacterNav;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   settlementCrisisLive?: boolean;
   activePresidentElectionId?: string;
@@ -191,7 +190,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   myUnionId,
   adminCharacters,
   imperialCharacter,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
   activePresidentElectionId: _activePresidentElectionId,
@@ -493,7 +491,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     myCorporationHasGroup,
     countryId: pageCountry,
     myCorporationId,
-    conflictsEnabled,
     unionsEnabled,
     settlementCrisisLive,
   });
@@ -905,7 +902,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     myCorporationId,
     myCorporationHasGroup,
     myUnionId,
-    conflictsEnabled,
     unionsEnabled,
     settlementCrisisLive,
     nationalDetailSections,

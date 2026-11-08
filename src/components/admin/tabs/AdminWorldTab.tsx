@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { DemographicsManager } from "@/components/DemographicsManager";
-import { Layer1PositionsToggle } from "@/components/positionEditor/Layer1PositionsToggle";
 import { SubNavLayout } from "./SubNavLayout";
 
 const NPPManagement = dynamic(
@@ -77,12 +76,8 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
                   <h3 className="text-lg text-foreground">Position editor</h3>
                   <p className="mt-0.5 max-w-xl text-sm text-muted">
                     Author Layer-1 demographic positions and turnout by state, then apply them as
-                    global seed defaults. The toggle below gates whether a reseed derives leans from
-                    this model.
+                    global seed defaults.
                   </p>
-                  <div className="mt-3">
-                    <Layer1PositionsToggle />
-                  </div>
                 </div>
                 <Link
                   href="/admin/position-editor"

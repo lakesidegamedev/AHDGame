@@ -87,7 +87,6 @@ import {
   type PrimaryCalendarWave,
 } from "@/lib/elections/candidateEnrichment";
 import { getOrCreateVoteTally } from "@/lib/elections/voteTallyService";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { projectDistrictedSeats } from "@/lib/redistricting/districtedHouseResolution";
 import { buildPrimaryShareMap } from "@/lib/turn/election/generalResolutionHelpers";
 import { selectEndedDisplayCandidates } from "@/lib/elections/endedResultsCandidates";
@@ -499,15 +498,12 @@ export async function _enrichElection(
           election.state
         ));
 
-  // US House with redistricting on: project seats district-by-district using the
+  // US House: project seats district-by-district using the
   // SAME engine that decides the final result, instead of the statewide
   // proportional estimate above — so the live "Projected Seats" panel matches
   // how the race will actually resolve. Falls back to the proportional estimate
   // for states with no districts drawn.
-  const redistrictedHouseRace =
-    election.electionType === "house" &&
-    (countryId ?? "US") === "US" &&
-    isRedistrictingEnabled(gameState);
+  const redistrictedHouseRace = election.electionType === "house" && (countryId ?? "US") === "US";
   let districtsForState: CongressionalDistrict[] | null = null;
   let districtedMarginProjection: SeatProjection | null = null;
   if (redistrictedHouseRace && !seatedAllocation && tally) {
@@ -1330,7 +1326,6 @@ export async function _enrichElection(
             lastTurnProcessed: gameState.lastTurnProcessed ?? null,
             currentTurn: gameState.currentTurn,
             effectiveNow: gameTime.effectiveNow.toISOString(),
-            redistrictingEnabled: isRedistrictingEnabled(gameState),
           }
         : null,
 

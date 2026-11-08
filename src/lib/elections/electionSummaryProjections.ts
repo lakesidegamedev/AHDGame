@@ -12,9 +12,8 @@
  * reads. ADD new fields here (not a wider fetch) when summary enrichment starts
  * reading more.
  *
- * GameState: summary enrichment reads preset, currentYear and
- * redistrictingEnabled only; the `gameState` response block is null in summary
- * mode.
+ * GameState: summary enrichment reads preset and currentYear only; the
+ * `gameState` response block is null in summary mode.
  *
  * Full view keeps whole documents: detail pages and turn-adjacent overlays read
  * beyond this set.
@@ -49,7 +48,6 @@ export const ELECTION_SUMMARY_CHARACTER_PROJECTION: Document = {
 export const ELECTION_SUMMARY_GAME_STATE_PROJECTION: Document = {
   preset: 1,
   currentYear: 1,
-  redistrictingEnabled: 1,
   // Cycle-anchor context: years for legacy races with none baked.
   startingYear: 1,
   preIterationTurns: 1,

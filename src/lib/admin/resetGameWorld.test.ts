@@ -406,8 +406,8 @@ describe("resetGameWorld", () => {
       currentYear: 1995,
       iteration: 1,
       nppAutonomyLevel: "v5",
-      rpgStatsEnabled: false,
-      intOrgAlignmentEnabled: false,
+      sectorTechTreesEnabled: false,
+      coldWarEnabled: false,
     });
     await resetGameWorld(db as never, {
       deleteProfiles: true,
@@ -417,8 +417,8 @@ describe("resetGameWorld", () => {
     assertSetFields(db.collectionMocks.gameState.updateOne, { ...DEFAULT_GAME_STATE_FLAGS });
     assertSetFields(db.collectionMocks.gameState.updateOne, {
       nppAutonomyLevel: "v4",
-      rpgStatsEnabled: true,
-      intOrgAlignmentEnabled: true,
+      sectorTechTreesEnabled: true,
+      coldWarEnabled: true,
     });
     assertSetFields(db.collectionMocks.gameConfig.updateOne, {
       treasuryCashLedgerEnabled: true,
