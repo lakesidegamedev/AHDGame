@@ -1,0 +1,72 @@
+## fresh-t1 fr.senat
+(none)
+## fresh-t1 it.senato
+(none)
+## fresh-t1 es.senado
+(none)
+## fresh-t1 tr.senato
+(none)
+## fresh-t300 fr.senat
+(none)
+## fresh-t300 it.senato
+(none)
+## fresh-t300 es.senado
+(none)
+## fresh-t300 tr.senato
+(none)
+## after-cycle1-t120 fr.senat
+(none)
+## after-cycle1-t120 it.senato
+(none)
+## after-cycle1-t120 es.senado
+(none)
+## after-cycle1-t120 tr.senato
+(none)
+## after-cycle1-t700 fr.senat
+(none)
+## after-cycle1-t700 it.senato
+(none)
+## after-cycle1-t700 es.senado
+(none)
+## after-cycle1-t700 tr.senato
+(none)
+## all-live fr.senat
+(none)
+## all-live it.senato
+(none)
+## all-live es.senado
+(none)
+## all-live tr.senato
+(none)
+## late-joiner fr.senat
+(none)
+## late-joiner it.senato
+(none)
+## late-joiner es.senado
+(none)
+## late-joiner tr.senato
+(none)
+## late-joiner-with-history fr.senat
+(none)
+## late-joiner-with-history it.senato
+(none)
+## late-joiner-with-history es.senado
+(none)
+## late-joiner-with-history tr.senato
+(none)
+## resolved-this-turn fr.senat
+(none)
+## resolved-this-turn it.senato
+(none)
+## resolved-this-turn es.senado
+(none)
+## resolved-this-turn tr.senato
+(none)
+## gate-closed fr.senat
+(none)
+## gate-closed it.senato
+(none)
+## gate-closed es.senado
+(none)
+## gate-closed tr.senato
+(none)

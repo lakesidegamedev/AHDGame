@@ -222,6 +222,16 @@ async function betaSpawners(): Promise<Spawner[]> {
   ];
 }
 
+async function betaSenateSpawners(): Promise<Spawner[]> {
+  const b = await import("@/lib/turn/perpetualElections/countries/betaParliaments");
+  return [
+    spawner("fr.senat", "FR", "senat", false, b.ensureFRSenateElections),
+    spawner("it.senato", "IT", "senato", false, b.ensureITSenateElections),
+    spawner("es.senado", "ES", "senado", false, b.ensureESSenateElections),
+    spawner("tr.senato", "TR", "senato", false, b.ensureTRSenateElections),
+  ];
+}
+
 async function cnSpawners(): Promise<Spawner[]> {
   const cn = await import("@/lib/countries/cn/elections/perpetual");
   return [
@@ -468,6 +478,13 @@ const GROUPS: Group[] = [
     spawners: betaSpawners,
     regionsFor: seededRegions,
     scenarios: [...BASE_SCENARIOS, ...SNAP_SCENARIOS],
+  },
+  {
+    id: "senate.",
+    title: "beta senates",
+    spawners: betaSenateSpawners,
+    regionsFor: seededRegions,
+    scenarios: BASE_SCENARIOS,
   },
   {
     id: "cn.",
