@@ -1,6 +1,8 @@
-import type { Db, Document, UpdateFilter } from "mongodb";
+import type { Db, UpdateFilter } from "mongodb";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
+import { getCoalitionsCollection } from "@/lib/db/collections/coalitions";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 
 /**
  * Move a party from a coalition's pending invites or join requests into its
@@ -19,7 +21,7 @@ export async function admitPartyToCoalition(
   from: "pendingInvites" | "joinRequests",
   now: Date
 ): Promise<boolean> {
-  const coalitions = db.collection("coalitions");
+  const coalitions = await getCoalitionsCollection(db);
   const moved = await coalitions.updateOne(
     {
       _id: coalition._id,
@@ -49,17 +51,17 @@ export async function admitPartyToCoalition(
   );
   if (moved.modifiedCount !== 1) return false;
 
-  const seated = await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { _id: party._id, coalitionId: { $in: [null, coalition._id] } },
-      { $set: { coalitionId: coalition._id, updatedAt: now } }
-    );
+  const seated = await (
+    await getPoliticalPartiesCollection(db)
+  ).updateOne(
+    { _id: party._id, coalitionId: { $in: [null, coalition._id] } },
+    { $set: { coalitionId: coalition._id, updatedAt: now } }
+  );
   if (seated.matchedCount === 1) return true;
 
   await coalitions.updateOne({ _id: coalition._id }, {
     $pull: { members: { partyId: party._id } },
     $set: { updatedAt: now },
-  } as unknown as UpdateFilter<Document>);
+  } as unknown as UpdateFilter<Coalition>);
   return false;
 }

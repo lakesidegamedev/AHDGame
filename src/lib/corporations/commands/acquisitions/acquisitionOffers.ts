@@ -28,6 +28,7 @@ import {
   meetsNppAcquisitionThreshold,
   nppAcquisitionMinimumPrice,
 } from "./rules";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
 const OFFERS = "acquisitionOffers";
@@ -457,9 +458,9 @@ export async function listDealsForCorp(
 
   // Expire stale offers lazily: the accept route refuses them but nothing else
   // ever stamps "expired", so without this they read as pending forever.
-  const gameState = await db
-    .collection<{ currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" as unknown as ObjectId }, { projection: { currentTurn: 1 } });
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
   const currentTurn = gameState?.currentTurn ?? 0;
   const staleIds = offers.filter((o) => o.expiresAtTurn < currentTurn).map((o) => o._id);
   if (staleIds.length > 0) {

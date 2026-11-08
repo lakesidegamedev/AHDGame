@@ -21,6 +21,7 @@ import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import type { TreasuryCashOptions } from "./treasuryLedger";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -98,13 +99,14 @@ export async function settleFundedWholeCorpShareholderPool(
       .collection<IndexFund>("indexFunds")
       .find({ _id: { $in: fundRows.map((row) => new ObjectId(row.fundId)) } })
       .toArray(),
-    db
-      .collection("npps")
-      .find(
-        { _id: { $in: nppRows.map((row) => new ObjectId(row.nppId)) } },
-        { projection: { _id: 1 } }
-      )
-      .toArray(),
+    getNppsCollection(db).then((npps) =>
+      npps
+        .find(
+          { _id: { $in: nppRows.map((row) => new ObjectId(row.nppId)) } },
+          { projection: { _id: 1 } }
+        )
+        .toArray()
+    ),
   ]);
   const personalById = new Map(
     [...personalDocs, ...imperialDocs].map((doc) => [doc._id.toString(), doc])

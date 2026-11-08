@@ -104,6 +104,8 @@ import { attachMergerRemedy } from "@/lib/corporations/mergerReview/lifecycle";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { NPP_ANCHOR_BALANCE_PATH } from "@/lib/corporations/payFundShareholders";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -419,9 +421,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       // The target was loaded before the lock; a retried request reaches this
       // point after the first takeover already deleted it, and every payout
       // below would run a second time off the stale snapshot.
-      const freshTarget = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: target._id });
+      const freshTarget = await (
+        await getCorporationsCollection(db)
+      ).findOne({ _id: target._id }, { projection: { _id: 1 } });
       if (!freshTarget) {
         return errorResponse(409, "The target corporation no longer exists.");
       }
@@ -684,7 +686,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
             // NPP shares are in the squeeze-out total the parent was debited
             // for, so they must be paid or that slice leaves the parent and
             // reaches no one.
-            await db.collection("npps").updateOne(
+            await (
+              await getNppsCollection(db)
+            ).updateOne(
               { _id: sh.nppId },
               {
                 $inc: { [NPP_ANCHOR_BALANCE_PATH]: Math.round(payoutAnchor) },

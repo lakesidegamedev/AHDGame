@@ -6,6 +6,7 @@ import type {
   FundShareholderPayoutRow,
   NppShareholderPayoutRow,
 } from "@/lib/bonds/corporateBondDefault";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /**
  * Pay index-fund shareholders their ₳ slice of a wound-down corporation's
@@ -133,8 +134,8 @@ export async function payNppShareholderRows(
     },
   }));
   if (ops.length === 0) return { totalPaidAnchor: 0 };
-  await db
-    .collection("npps")
-    .bulkWrite(ops, options?.session ? { session: options.session } : undefined);
+  await (
+    await getNppsCollection(db)
+  ).bulkWrite(ops, options?.session ? { session: options.session } : undefined);
   return { totalPaidAnchor: rows.reduce((sum, row) => sum + row.payout, 0) };
 }

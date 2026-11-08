@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
+import type { AnyBulkWriteOperation, Db, Document, ObjectId } from "mongodb";
 import type {
   CommitteeProposal,
   CommitteeProposalVote,
@@ -1056,8 +1056,8 @@ export async function mergePartyInto(
       );
       const cancelRace = { $set: { status: "cancelled", updatedAt: now } };
       await Promise.all([
-        db.collection("nationalPartyElections").updateMany(openRaces, cancelRace),
-        db.collection("nationalCommitteeElections").updateMany(openRaces, cancelRace),
+        db.collection<Document>("nationalPartyElections").updateMany(openRaces, cancelRace),
+        db.collection<Document>("nationalCommitteeElections").updateMany(openRaces, cancelRace),
       ]);
 
       // 10. Update target party member count

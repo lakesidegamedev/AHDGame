@@ -5,7 +5,7 @@ import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import { ObjectId } from "mongodb";
-import type { Db } from "mongodb";
+import type { Db, Document } from "mongodb";
 import type {
   PoliticalParty,
   ExchangeRate,
@@ -454,9 +454,9 @@ export async function retireCharacter(
   };
   const withdrawNomination = { $set: { status: "withdrawn", updatedAt: now } };
   await Promise.all([
-    db.collection("cabinetNominations").updateMany(openNomination, withdrawNomination),
-    db.collection("scotusNominations").updateMany(openNomination, withdrawNomination),
-    db.collection("fomcNominations").updateMany(openNomination, withdrawNomination),
+    db.collection<Document>("cabinetNominations").updateMany(openNomination, withdrawNomination),
+    db.collection<Document>("scotusNominations").updateMany(openNomination, withdrawNomination),
+    db.collection<Document>("fomcNominations").updateMany(openNomination, withdrawNomination),
   ]);
 
   await db.collection("congressLeaders").deleteMany({ characterId });

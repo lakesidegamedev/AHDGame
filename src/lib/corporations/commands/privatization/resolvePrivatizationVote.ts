@@ -13,6 +13,7 @@ import type {
   Character,
   CorporationPrivatizationVote,
   IndexFund,
+  NPP,
   Shareholder,
 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -29,6 +30,7 @@ import {
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 export interface ResolveInput {
   db: Db;
@@ -215,7 +217,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   let totalCharCorpPaid = 0;
   let totalPaidLocal = 0;
   const personalPayoutOps: AnyBulkWriteOperation<Character>[] = [];
-  const nppPayoutOps: AnyBulkWriteOperation[] = [];
+  const nppPayoutOps: AnyBulkWriteOperation<NPP>[] = [];
   let totalFundPaidAnchor = 0;
   for (const holder of nonCeoHolders) {
     const payout = Math.round(holder.shares * vote.lockedBuyoutPrice * reserveScale);
@@ -299,7 +301,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
 
   if (personalPayoutOps.length)
     await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
-  if (nppPayoutOps.length) await db.collection("npps").bulkWrite(nppPayoutOps);
+  if (nppPayoutOps.length) await (await getNppsCollection(db)).bulkWrite(nppPayoutOps);
 
   // The float belongs to the equity market pool, not the issuer being taken private.
   const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice * reserveScale);
