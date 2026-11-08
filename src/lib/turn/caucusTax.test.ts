@@ -461,13 +461,16 @@ describe("processCaucusTax", () => {
     const result = await processCaucusTax(true, 100);
 
     expect(result).toMatchObject({ membersTaxed: 0, totalTaxed: 0 });
-    const calls = db.collectionMocks.characters!.updateOne.mock.calls as [
+    const debit = db.collectionMocks.characters!.updateOne.mock.calls[0] as [
       Record<string, unknown>,
       { $inc: Record<string, number> },
-    ][];
-    expect(calls).toHaveLength(2);
-    expect(calls[0][1].$inc).toEqual({ "currencyBalances.campaign": -1_000 });
-    expect(calls[1][1].$inc).toEqual({ "currencyBalances.campaign": 1_000 });
+    ];
+    expect(debit[1].$inc).toEqual({ "currencyBalances.campaign": -1_000 });
+    const refund = db.collectionMocks.characters!.bulkWrite.mock.calls[0]![0] as {
+      updateOne: { update: { $inc: Record<string, number> } };
+    }[];
+    expect(refund).toHaveLength(1);
+    expect(refund[0].updateOne.update.$inc).toEqual({ "currencyBalances.campaign": 1_000 });
     expect(emitTxBulk).not.toHaveBeenCalled();
   });
 });

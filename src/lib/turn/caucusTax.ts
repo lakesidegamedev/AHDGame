@@ -17,6 +17,8 @@ import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { projectCharacterGeneration, projectNppGeneration } from "@/lib/utils/fundGeneration";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { campaignAnchorToLocal, campaignLocalRate } from "@/lib/campaigns/campaignCurrency";
 import type { ObjectId } from "mongodb";
@@ -25,6 +27,13 @@ interface CaucusTaxResult {
   caucusesProcessed: number;
   membersTaxed: number;
   totalTaxed: number;
+}
+
+interface LandedDebit {
+  collection: "characters" | "npps";
+  id: ObjectId;
+  field: string;
+  tax: number;
 }
 
 /** A rejected write counts as not landed, so it cannot discard the credit owed for other debits. */
@@ -63,16 +72,13 @@ export async function processCaucusTax(
   const now = new Date();
   const debitTxEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
 
+  const refunds: LandedDebit[] = [];
+
   for (const caucus of taxedCaucuses) {
     const txStart = debitTxEntries.length;
     const membersStart = membersTaxed;
     let credited = false;
-    const landedDebits: {
-      collection: "characters" | "npps";
-      id: ObjectId;
-      field: string;
-      tax: number;
-    }[] = [];
+    const landedDebits: LandedDebit[] = [];
     try {
       const memberships = await db
         .collection<CaucusMembership>("caucusMemberships")
@@ -276,17 +282,36 @@ export async function processCaucusTax(
       // Isolate the caucus. Before the credit lands, give back what was debited
       // so a failed credit cannot destroy the tax; later caucuses still run.
       if (!credited) {
-        await Promise.all(
-          landedDebits.map((d) =>
-            landedOrNull(
-              db.collection(d.collection).updateOne({ _id: d.id }, { $inc: { [d.field]: d.tax } })
-            )
-          )
-        );
+        refunds.push(...landedDebits);
         debitTxEntries.length = txStart;
         membersTaxed = membersStart;
       }
     }
+  }
+
+  if (refunds.length > 0) {
+    const charRefunds = refunds.filter((d) => d.collection === "characters");
+    const nppRefunds = refunds.filter((d) => d.collection === "npps");
+    await Promise.all([
+      charRefunds.length
+        ? landedOrNull(
+            (await getCharactersCollection(db)).bulkWrite(
+              charRefunds.map((d) => ({
+                updateOne: { filter: { _id: d.id }, update: { $inc: { [d.field]: d.tax } } },
+              }))
+            )
+          )
+        : null,
+      nppRefunds.length
+        ? landedOrNull(
+            (await getNppsCollection(db)).bulkWrite(
+              nppRefunds.map((d) => ({
+                updateOne: { filter: { _id: d.id }, update: { $inc: { funds: d.tax } } },
+              }))
+            )
+          )
+        : null,
+    ]);
   }
 
   if (debitTxEntries.length > 0) {
