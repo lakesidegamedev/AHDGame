@@ -9,6 +9,7 @@ import { trRegions1991 } from "./data/trRegions1991";
 import { trRegions1953 } from "./data/trRegions1953";
 import { trRegions2013 } from "./data/trRegions2013";
 import { trRegionsModern } from "./data/trRegionsModern";
+import { modernRegionalPopulation2027 } from "@/lib/seeds/reference/modernRegionalPopulation2027";
 import { trStateMetrics } from "./data/trStateMetrics";
 import {
   TR_ADJACENCY_MAP,
@@ -69,7 +70,7 @@ const regionBundles = {
   "2007-default": trRegions2013,
   "2019-default": trRegionsModern,
   "2023-default": trRegionsModern,
-  "2027-default": trRegionsModern,
+  "2027-default": modernRegionalPopulation2027("TR", trRegionsModern),
 };
 
 export const TR_GEOGRAPHY: CountryGeography = {

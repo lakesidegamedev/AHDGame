@@ -4,6 +4,7 @@ import type { CountryGeography } from "../contract";
 import { ukMetricPresets1953 } from "./data/ukMetricPresets1953";
 import { ukMetricPresets1979 } from "./data/ukMetricPresets1979";
 import { ukMetricPresets1991, ukMetricPresets2019 } from "./data/ukMetricPresets";
+import { ukMetricPresets2027 } from "./data/ukMetricPresets2027";
 import { ukPopulationAnchors1991, ukPopulationAnchors2019 } from "./data/ukPopulationAnchors";
 import { ukRegionCensusData } from "./data/ukRegionCensusData";
 import { ukRegionCensusData1953 } from "./data/ukRegionCensusData1953";
@@ -61,6 +62,7 @@ const censusBundles = {
 };
 
 const metricPresetBundles = {
+  "2027-default": ukMetricPresets2027,
   "2019-default": ukMetricPresets2019,
   "1991-default": ukMetricPresets1991,
   "1979-default": ukMetricPresets1979,

@@ -5,6 +5,7 @@ import { modernRegionalPopulation2027 } from "@/lib/seeds/reference/modernRegion
 import { cnMetricPresets1953 } from "./data/cnMetricPresets1953";
 import { cnMetricPresets1979 } from "./data/cnMetricPresets1979";
 import { cnMetricPresets1991, cnMetricPresets2019 } from "./data/cnMetricPresets";
+import { cnMetricPresets2027 } from "./data/cnMetricPresets2027";
 import { cnPopulationAnchors1991, cnPopulationAnchors2019 } from "./data/cnPopulationAnchors";
 import { cnRegionCensusData } from "./data/cnRegionCensusData";
 import { cnRegionCensusData1953 } from "./data/cnRegionCensusData1953";
@@ -61,6 +62,7 @@ const censusBundles = {
 };
 
 const metricPresetBundles = {
+  "2027-default": cnMetricPresets2027,
   "2019-default": cnMetricPresets2019,
   "1991-default": cnMetricPresets1991,
   "1979-default": cnMetricPresets1979,

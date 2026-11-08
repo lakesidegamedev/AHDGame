@@ -10,6 +10,7 @@ import { IE_GEOGRAPHY } from "./ie/geography";
 import { IT_GEOGRAPHY } from "./it/geography";
 import { NG_GEOGRAPHY } from "./ng/geography";
 import { SE_GEOGRAPHY } from "./se/geography";
+import { TR_GEOGRAPHY } from "./tr/geography";
 import { MODERN_REGIONAL_POPULATION_ANCHORS_2027 } from "../seeds/reference/modernRegionalPopulation2027";
 import { getNationalBudgetSeedConfigsForPreset } from "../seeds/reference/budgets";
 import { selectPresetBundle } from "../seeds/presetSelector";
@@ -25,6 +26,7 @@ const MODERN_COUNTRIES = {
   GR: { geography: GR_GEOGRAPHY, shareSource: GR_GEOGRAPHY.regionBundles["2019-default"] },
   AT: { geography: AT_GEOGRAPHY, shareSource: AT_GEOGRAPHY.regionBundles["2019-default"] },
   FI: { geography: FI_GEOGRAPHY, shareSource: FI_GEOGRAPHY.regionBundles["2019-default"] },
+  TR: { geography: TR_GEOGRAPHY, shareSource: TR_GEOGRAPHY.regionBundles["2019-default"] },
 } as const;
 
 describe("modern 2027 regional population anchors", () => {

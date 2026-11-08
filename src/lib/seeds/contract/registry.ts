@@ -4,6 +4,10 @@
  * must provide one. Datasets that genuinely do not vary by era are declared
  * once with the reason.
  *
+ * Regional datasets are required and checked only where their country runs
+ * the full simulation: a background country simulates no regions, so it needs
+ * national figures only.
+ *
  * Server-only: providers import every era's data as values.
  */
 
@@ -20,6 +24,8 @@ import { CENSUS_BUNDLES } from "@/lib/seeds/regionCensusData";
 import { METRIC_PRESET_BUNDLES } from "@/lib/seeds/metricPresets";
 import { POPULATION_ANCHOR_BUNDLES } from "@/lib/seeds/populationAnchors";
 import { COHORT_NATIONAL_SOURCE_1991 } from "@/lib/seeds/reference/cohortAgeSources1991";
+import { backgroundCountriesFor, isBackgroundInPreset } from "@/lib/world/eraRoster";
+import { background2027Scale, isAuthoredBackground2027 } from "@/lib/world/macro/background2027";
 import { REGION_TABLES } from "./regionTables";
 
 export interface PresetDataset {
@@ -29,10 +35,13 @@ export interface PresetDataset {
   /** The authored value for `preset`, or undefined when there is none. */
   readonly provide: (preset: SeedPresetId) => unknown;
   /**
-   * Reduces the value before the duplicate guard compares presets, for data
-   * whose money is in a different unit in each era.
+   * Reduces the value before the duplicate guard compares it with other
+   * presets', for data whose money is in a different unit in each era.
+   * `preset` is the preset being checked.
    */
-  readonly fingerprint?: (value: unknown) => unknown;
+  readonly fingerprint?: (value: unknown, preset: SeedPresetId) => unknown;
+  /** The country a regional dataset describes. */
+  readonly regionalCountry?: string;
 }
 
 export interface EraInvariantDataset {
@@ -42,6 +51,11 @@ export interface EraInvariantDataset {
 
 const ALL_PRESETS: readonly SeedPresetId[] = SEED_PRESET_IDS;
 
+/** False where the preset holds `countryId` as a background country. */
+export function simulatesRegions(preset: SeedPresetId, countryId: string): boolean {
+  return !isBackgroundInPreset(preset, countryId);
+}
+
 function tryProvide<T>(read: () => T): T | undefined {
   try {
     return read();
@@ -50,10 +64,24 @@ function tryProvide<T>(read: () => T): T | undefined {
   }
 }
 
-/** A national budget row reduced to GDP shares, so a currency change is not a new budget. */
-function budgetFingerprint(value: unknown): unknown {
+/**
+ * A national budget row reduced to GDP shares, so a currency change is not a
+ * new budget. A background country is compared on its national figures only.
+ */
+function budgetFingerprint(value: unknown, preset: SeedPresetId): unknown {
   const config = value as NationalBudgetSeedConfig;
   const share = (amount: number) => Number((amount / config.gdp).toPrecision(9));
+  if (!simulatesRegions(preset, config.countryId)) {
+    const spending = Object.values(config.baselineSpendingByCategory).reduce((a, b) => a + b, 0);
+    return {
+      population: config.population,
+      spending: share(spending + config.baselineStateGrants),
+      otherRevenue: share(config.otherRevenue),
+      debt: share(config.debt.principal),
+      interestRate: config.debt.interestRate,
+      economicFactors: config.economicFactors,
+    };
+  }
   return {
     population: config.population,
     spending: Object.fromEntries(
@@ -81,6 +109,11 @@ const BUDGET_COUNTRIES = [
   ),
 ].sort();
 
+/** Countries some preset holds outside the full simulation. */
+const BACKGROUND_COUNTRIES = [
+  ...new Set(ALL_PRESETS.flatMap((preset) => backgroundCountriesFor(preset) as string[])),
+].sort();
+
 /** Presets that seed `countryId`'s regions, which are the presets that read its overlays. */
 function seededPresets(countryId: string): readonly SeedPresetId[] {
   return REGION_TABLES[countryId]?.seededIn ?? [];
@@ -98,8 +131,11 @@ function overlayDatasets(
 ): PresetDataset[] {
   return Object.entries(bundles).map(([countryId, byPreset]) => ({
     id: `${kind}:${countryId}`,
-    requiredIn: byPreset?.["2019-default"] ? readIn(countryId) : [],
+    requiredIn: byPreset?.["2019-default"]
+      ? readIn(countryId).filter((preset) => simulatesRegions(preset, countryId))
+      : [],
     provide: (preset) => byPreset?.[preset],
+    regionalCountry: countryId,
   }));
 }
 
@@ -122,12 +158,19 @@ export const PRESET_DATASETS: readonly PresetDataset[] = [
     id: `regions:${countryId}`,
     requiredIn: entry.seededIn,
     provide: (preset) => entry.table[preset],
+    regionalCountry: countryId,
   })),
   ...BUDGET_COUNTRIES.map((countryId): PresetDataset => ({
     id: `budget:${countryId}`,
     requiredIn: [],
     provide: budgetFor(countryId),
     fingerprint: budgetFingerprint,
+  })),
+  ...BACKGROUND_COUNTRIES.map((countryId): PresetDataset => ({
+    id: `national:${countryId}`,
+    requiredIn: ALL_PRESETS.filter((preset) => isBackgroundInPreset(preset, countryId)),
+    provide: (preset) =>
+      isAuthoredBackground2027(preset, countryId) ? background2027Scale(countryId) : undefined,
   })),
   {
     id: "fxRates",

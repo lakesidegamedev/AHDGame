@@ -6,6 +6,7 @@ import { checkSeedContract } from "./checkSeedContract";
 import { ERA_INVARIANT_DATASETS, PRESET_DATASETS } from "./registry";
 import { REGION_TABLES } from "./regionTables";
 import { SeedContractError, type SeedContractGap } from "./seedContractError";
+import { backgroundCountriesFor } from "@/lib/world/eraRoster";
 
 function gapKey(gap: SeedContractGap): string {
   if (gap.detail.startsWith("no authored")) return `${gap.dataset} missing`;
@@ -52,6 +53,29 @@ describe("seed contract registry", () => {
         "US",
       ].sort()
     );
+  });
+});
+
+describe("tier-aware requirements", () => {
+  const dataset = (id: string) => PRESET_DATASETS.find((entry) => entry.id === id);
+
+  it("requires regional overlays only where the country runs the full simulation", () => {
+    expect(dataset("census:BR")?.requiredIn).not.toContain("2027-default");
+    expect(dataset("metricPresets:NG")?.requiredIn).not.toContain("2027-default");
+    expect(dataset("metricPresets:NG")?.requiredIn).toContain("2019-default");
+    for (const countryId of ["US", "UK", "DE", "JP", "CN"]) {
+      expect(dataset(`metricPresets:${countryId}`)?.requiredIn, countryId).toContain(
+        "2027-default"
+      );
+    }
+  });
+
+  it("requires national figures for every 2027 background country", () => {
+    for (const countryId of backgroundCountriesFor("2027-default")) {
+      const national = dataset(`national:${countryId}`);
+      expect(national?.requiredIn, countryId).toContain("2027-default");
+      expect(national?.provide("2027-default"), countryId).toBeDefined();
+    }
   });
 });
 

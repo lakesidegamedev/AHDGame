@@ -16,6 +16,7 @@ import { jpRegionCensusData1979 } from "@/lib/countries/jp/data/jpRegionCensusDa
 import { jpRegionCensusData1991 } from "@/lib/countries/jp/data/jpRegionCensusData1991";
 import { jpRegionCensusData2027 } from "@/lib/countries/jp/data/jpRegionCensusData2027";
 import { jpMetricPresets2019 } from "@/lib/countries/jp/data/jpMetricPresets";
+import { jpMetricPresets2027 } from "@/lib/countries/jp/data/jpMetricPresets2027";
 import { jpMetricPresets1953 } from "@/lib/countries/jp/data/jpMetricPresets1953";
 import { jpMetricPresets1979 } from "@/lib/countries/jp/data/jpMetricPresets1979";
 import { jpMetricPresets1991 } from "@/lib/countries/jp/data/jpMetricPresets";
@@ -91,6 +92,7 @@ const censusBundles = {
 };
 
 const metricPresets = {
+  "2027-default": jpMetricPresets2027,
   "2019-default": jpMetricPresets2019,
   "1991-default": jpMetricPresets1991,
   "1979-default": jpMetricPresets1979,
