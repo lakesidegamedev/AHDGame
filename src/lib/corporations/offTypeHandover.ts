@@ -130,7 +130,7 @@ export async function runOffTypeHandover(
     sectorsCol.find({ corporationId: { $in: corps.map((c) => c._id) } }).toArray(),
     db
       .collection("defenceContracts")
-      .distinct("sectorId", { status: { $nin: ["cancelled", "completed", "expired"] } }),
+      .distinct("sectorId", { status: { $nin: ["cancelled", "complete", "declined"] } }),
     db
       .collection("supplyAgreements")
       .find(
