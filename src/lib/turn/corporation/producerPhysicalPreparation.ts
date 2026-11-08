@@ -158,6 +158,8 @@ export type ProducerPhysicalEnv = Pick<
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
   captiveDeliveryStage?: number;
+  /** gameConfig.fundedValuationOwnSiteCreditStage >= 1: own-site deliveries credited to the sector valuation only. */
+  ownSiteValuationCredit?: boolean;
   /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan; >= 2 on its marginal cost. */
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
