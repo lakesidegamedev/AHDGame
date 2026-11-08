@@ -21,8 +21,8 @@ import { getGameState } from "@/lib/gameState";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { yearToTurn } from "@/lib/scotus/turnConversion";
-import { calendarTurn } from "@/lib/utils/gameDate";
-import { rollDivergentDeparture } from "@/lib/scotus/tenure";
+import { calendarTurn, yearOfTurn } from "@/lib/utils/gameDate";
+import { rollDivergentDeparture, rollOpenEndedHistoricalDeparture } from "@/lib/scotus/tenure";
 import { generateScotusVacancyNews } from "@/lib/scotus/scotusNews";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -214,7 +214,23 @@ export async function processScotusTenureTurn(
       if (seat.justiceMode !== "historical") continue;
 
       const occupant = seat.historicalOccupants[seat.historicalOccupantIndex];
-      if (!occupant || occupant.departureYear == null) continue; // still serving to "present"
+      if (!occupant) continue;
+      if (occupant.departureYear == null) {
+        // Open-ended seeded justice: serves until the authored record ends,
+        // then leaves on the same hazard as a Divergent Justice.
+        const calendarYear = yearOfTurn(currentTurn, startingYear, {
+          preIterationActive: gameState?.preIteration?.active,
+          preIterationTurns: gameState?.preIterationTurns,
+        });
+        if (
+          rollOpenEndedHistoricalDeparture(calendarYear, Math.random()) &&
+          (await vacateSeatIfStillOccupied(database, seat, now))
+        ) {
+          seatsVacatedByHazard++;
+          await notifySeatVacated(database, seat, notifications, "death");
+        }
+        continue;
+      }
 
       const departureTurn = yearToTurn(occupant.departureYear, startingYear);
       if (calTurn < departureTurn) continue;

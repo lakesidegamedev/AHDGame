@@ -69,6 +69,9 @@ export function templatesForYear(
   );
 }
 
+/** First year the modern docket themes can be heard. */
+const MODERN_DOCKET_FROM_YEAR = 2027;
+
 export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
   {
     templateKey: "phantom-fizz-bottling-v-interstate-commerce-guild",
@@ -267,5 +270,295 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     // County registrars held the discretion this case turns on until the 1965
     // Voting Rights Act put covered jurisdictions under federal preclearance.
     activeUntil: 1968,
+  },
+  // Modern themes: algorithms and data, housing, elections, grid and climate,
+  // platforms, gig work and schooling. Fictional parties throughout.
+  {
+    templateKey: "harborlight-analytics-v-federal-algorithm-review-board",
+    title: "Harborlight Analytics v. Federal Algorithm Review Board",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_federal_science_funding",
+      policyOptionId: "federal_science_funding_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_federal_science_funding",
+      policyOptionId: "federal_science_funding_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "riverbend-tenants-union-v-automated-screening-services",
+    title: "Riverbend Tenants Union v. Automated Screening Services",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_housing",
+      policyOptionId: "housing_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_housing",
+      policyOptionId: "housing_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "open-ledger-cooperative-v-national-data-custodian",
+    title: "Open Ledger Cooperative v. National Data Custodian",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_broadband_energy",
+      policyOptionId: "broadband_energy_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_broadband_energy",
+      policyOptionId: "broadband_energy_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "cedar-county-voters-v-state-election-board-of-certification",
+    title: "Cedar County Voters v. State Election Board of Certification",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_civics_voting_rights",
+      policyOptionId: "civics_voting_rights_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_civics_voting_rights",
+      policyOptionId: "civics_voting_rights_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "midland-grid-operators-v-department-of-resilience",
+    title: "Midland Grid Operators v. Department of Resilience",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_clean_energy",
+      policyOptionId: "clean_energy_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_clean_energy",
+      policyOptionId: "clean_energy_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "friends-of-the-salt-marsh-v-coastal-permitting-authority",
+    title: "Friends of the Salt Marsh v. Coastal Permitting Authority",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_conservation",
+      policyOptionId: "conservation_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_conservation",
+      policyOptionId: "conservation_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "brightwater-publishers-v-federal-platform-commission",
+    title: "Brightwater Publishers v. Federal Platform Commission",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_media_communications",
+      policyOptionId: "media_communications_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_media_communications",
+      policyOptionId: "media_communications_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "lakeshore-gig-drivers-v-dispatchwise-holdings",
+    title: "Lakeshore Gig Drivers v. Dispatchwise Holdings",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_workforce_development",
+      policyOptionId: "workforce_development_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_workforce_development",
+      policyOptionId: "workforce_development_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "quillfeather-learning-v-state-board-of-instruction",
+    title: "Quillfeather Learning v. State Board of Instruction",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_school_standards",
+      policyOptionId: "school_standards_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_school_standards",
+      policyOptionId: "school_standards_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "in-re-biometric-checkpoint-program",
+    title: "In re Biometric Checkpoint Program",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_law_enforcement_criminal_justice",
+      policyOptionId: "law_enforcement_criminal_justice_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_law_enforcement_criminal_justice",
+      policyOptionId: "law_enforcement_criminal_justice_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "pinewood-hospital-network-v-telehealth-licensing-council",
+    title: "Pinewood Hospital Network v. Telehealth Licensing Council",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_public_health",
+      policyOptionId: "public_health_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_public_health",
+      policyOptionId: "public_health_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "northgate-county-v-redistricting-commission-of-the-state",
+    title: "Northgate County v. Redistricting Commission of the State",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_civics_voting_rights",
+      policyOptionId: "civics_voting_rights_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_civics_voting_rights",
+      policyOptionId: "civics_voting_rights_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "sandstone-freight-v-autonomous-corridor-authority",
+    title: "Sandstone Freight v. Autonomous Corridor Authority",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_transportation",
+      policyOptionId: "transportation_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_transportation",
+      policyOptionId: "transportation_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "coalition-for-open-ballots-v-secretary-of-the-commonwealth",
+    title: "Coalition for Open Ballots v. Secretary of the Commonwealth",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_government_ethics",
+      policyOptionId: "government_ethics_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_government_ethics",
+      policyOptionId: "government_ethics_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "tidewater-fishers-v-offshore-wind-leasing-office",
+    title: "Tidewater Fishers v. Offshore Wind Leasing Office",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_clean_energy",
+      policyOptionId: "clean_energy_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_clean_energy",
+      policyOptionId: "clean_energy_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "ironbridge-pension-trustees-v-treasury-fund-office",
+    title: "Ironbridge Pension Trustees v. Treasury Fund Office",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_social_security",
+      policyOptionId: "social_security_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_social_security",
+      policyOptionId: "social_security_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "merrimack-school-district-v-virtual-academy-network",
+    title: "Merrimack School District v. Virtual Academy Network",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us_federal_education_funding",
+      policyOptionId: "federal_education_funding_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_federal_education_funding",
+      policyOptionId: "federal_education_funding_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "amberfield-growers-v-heat-safety-enforcement-bureau",
+    title: "Amberfield Growers v. Heat Safety Enforcement Bureau",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us_workforce_development",
+      policyOptionId: "workforce_development_opt_5",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us_workforce_development",
+      policyOptionId: "workforce_development_opt_1",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
   },
 ];

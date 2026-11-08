@@ -96,3 +96,24 @@ export function formatDivergentDeathChance(
   }
   return `${livePct} death chance per turn`;
 }
+
+/**
+ * Calendar year at which authored departure data stops. A seeded justice with
+ * no departure year is "still serving" only as far as the authored record
+ * reaches; from this year on the same flat hazard as a Divergent Justice
+ * applies, with no grace floor because they are already seated.
+ */
+export const HISTORICAL_RECORD_END_YEAR = 2027;
+
+/**
+ * Decide whether an open-ended seeded justice (no authored departure year)
+ * leaves this turn. Pure: the caller supplies the calendar year and the draw.
+ */
+export function rollOpenEndedHistoricalDeparture(
+  calendarYear: number,
+  randomDraw: number,
+  hazardPerTurn: number = DIVERGENT_TENURE_HAZARD_PER_TURN
+): boolean {
+  if (calendarYear < HISTORICAL_RECORD_END_YEAR) return false;
+  return randomDraw < hazardPerTurn;
+}
