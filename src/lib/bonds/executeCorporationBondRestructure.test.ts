@@ -150,10 +150,8 @@ describe("executeCorporationBondRestructure", () => {
         },
       ])
     );
-    const { sumDefaultedBondPrincipal } = await import("@/lib/bonds/corporateBondDefault");
-    vi.mocked(sumDefaultedBondPrincipal).mockReturnValueOnce(5000);
     db.collection("corporateSectors").find.mockReturnValue(
-      makeCursor([{ _id: idA, corporationId: corpId, revenue: 10000 }])
+      makeCursor([{ _id: idA, corporationId: corpId, revenue: 2000 }])
     );
     db.collection("indexFunds").find.mockReturnValue(
       makeCursor([{ _id: fundId, name: "Index", anchorCurrencyCode: "USD" }])
@@ -168,10 +166,11 @@ describe("executeCorporationBondRestructure", () => {
       cureTurn: 50,
     });
 
-    // Salvage 8500 in, four paid units (4000) out: the self-held unit is not paid.
+    // The stubbed principal is 1000 and equals the issuer's own unit, which is not
+    // debited, so the whole 1700 of salvage stays with the issuer.
     const corpUpdate = db.collection("corporations").updateOne.mock.calls[0]!;
     expect((corpUpdate[1] as { $inc: { liquidCapital: number } }).$inc.liquidCapital).toBeCloseTo(
-      4500,
+      1700,
       6
     );
     expect(creditBondPool).toHaveBeenCalledWith(
