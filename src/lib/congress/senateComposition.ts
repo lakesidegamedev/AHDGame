@@ -5,9 +5,9 @@
  */
 import type { Db } from "@/lib/mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
-import { getUsChamberComposition, type UsChamberComposition } from "./usChamberComposition";
+import { getUsChamberComposition, type UsChamberComposition } from "./congressChamberComposition";
 
-export type { PartySeats } from "./usChamberComposition";
+export type { PartySeats } from "./congressChamberComposition";
 export type SenateComposition = UsChamberComposition;
 
 export function getSenateComposition(
