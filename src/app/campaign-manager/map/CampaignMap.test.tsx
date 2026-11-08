@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithElectionsMessages } from "@/lib/test-utils/renderWithElectionsMessages";
 import { buildRaceIndex, type RaceFilter } from "@/lib/campaignManager/rules";
 import { election } from "@/lib/campaignManager/rules/__fixtures__/election";
@@ -283,13 +283,17 @@ describe("CampaignMap pan and zoom", () => {
   });
 
   it("zooms on the wheel instead of scrolling the page", async () => {
-    renderMap();
+    // The geometry loads asynchronously. Flush the render and passive effects
+    // so usePanZoom has attached its native wheel listener before dispatch.
+    await act(async () => {
+      renderMap();
+    });
     await screen.findByRole("button", { name: /London/ });
     const svg = screen.getByRole("group", { name: /map/ });
     const wheel = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
     fireEvent(svg, wheel);
-    expect(scaleOf(mapGroup())).toBeGreaterThan(1);
     expect(wheel.defaultPrevented).toBe(true);
+    expect(scaleOf(mapGroup())).toBeGreaterThan(1);
   });
 
   it("pans on a drag, and the drag's closing click does not pick a region", async () => {

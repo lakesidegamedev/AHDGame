@@ -436,6 +436,12 @@ function planRecoveryRunShareCore(
      * the never-below-sales floor counts the excess (see planRecoveryRunShare).
      */
     stockCoverTurns?: number;
+    /**
+     * producerRunPlanStage >= 3: a line whose sold units lost money after inputs,
+     * wages and site costs steps down instead of holding or growing, and may plan
+     * below last turn's sales (see planRecoveryRunShare).
+     */
+    lossCutBelowSales?: boolean;
   } = {}
 ): number {
   const floor = options.floor ?? OUTPUT_RUN_FLOOR;
@@ -507,6 +513,24 @@ export function planRecoveryRunShare(
   prior: PriorReceipt | null | undefined,
   options: Parameters<typeof planRecoveryRunShareCore>[1] = {}
 ): number {
+  // Stage 3 (owner 2026-11-08): a line selling every unit below its running cost
+  // was held at its sales by the floor and grew on the sell-out, so it ran until
+  // its company's cash hit zero and every plant stopped at once (49 car plants
+  // on turn 761). It now steps down a cut a turn and may plan below its sales.
+  if (options.lossCutBelowSales && prior) {
+    const signals = runSignals(prior, options.floor ?? OUTPUT_RUN_FLOOR);
+    const base = planBaseRunShare(prior, options.floor ?? OUTPUT_RUN_FLOOR);
+    const unitCost =
+      (signals?.unitMaterials ?? 0) + (signals?.unitWages ?? 0) + (signals?.unitSite ?? 0);
+    if (
+      signals &&
+      base != null &&
+      finiteSold(prior) > 0 &&
+      signals.unitPrice != null &&
+      signals.unitPrice < unitCost
+    )
+      return Math.max(options.floor ?? OUTPUT_RUN_FLOOR, base * (1 - OUTPUT_CUT_STEP));
+  }
   const next = planRecoveryRunShareCore(prior, options);
   if (!prior) return next;
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
@@ -530,4 +554,8 @@ export function planRecoveryRunShare(
       : 0;
   const soldShare = Math.min(1, Math.max(0, sold - excessStock) / active);
   return Math.max(next, soldShare);
+}
+
+function finiteSold(prior: PriorReceipt): number {
+  return Number.isFinite(prior.soldUnits) ? prior.soldUnits : 0;
 }

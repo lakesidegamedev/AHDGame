@@ -212,7 +212,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           chairId: caucus.chairId,
           viceChairId: caucus.viceChairId,
         }),
-        canWhip: character.length < 2,
+        canWhip: !character.some((whip) => whip.mode === "soft"),
       };
       return { nppSummary, playerSummary };
     };

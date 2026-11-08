@@ -18,7 +18,7 @@ function makeRequest(body: Record<string, unknown>) {
   return new Request("http://localhost/api/country/de/parties/1/caucuses/test-caucus/whip", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ mode: body.audience === "character" ? "soft" : "hard", ...body }),
   });
 }
 
@@ -65,6 +65,37 @@ describe("POST /api/country/[code]/parties/[id]/caucuses/[slug]/whip", () => {
         chairId,
       },
     } as never);
+  });
+
+  it.each([
+    "bill",
+    "speakerElection",
+    "leadershipElection",
+    "pmAppointmentVote",
+    "noConfidenceVote",
+    "cabinetNomination",
+    "speakerVacateMotion",
+    "impeachmentVote",
+  ])("rejects hard or default-hard player %s whips", async (targetType) => {
+    for (const mode of ["hard", undefined]) {
+      const { POST } = await import("./route");
+      const response = await POST(
+        makeRequest({
+          audience: "character",
+          targetType,
+          targetId: new ObjectId().toString(),
+          chamber: "bundestag",
+          direction: "against",
+          mode,
+        }),
+        { params: Promise.resolve({ code: "de", id: "1", slug: "test-caucus" }) }
+      );
+      expect(response.status).toBe(400);
+      expect(JSON.stringify(await response.json())).toContain(
+        "Hard whips cannot force player votes"
+      );
+      expect(db.collectionMocks.billWhips!.insertOne).not.toHaveBeenCalled();
+    }
   });
 
   it("rejects leadershipElection whips on the Bundestag chamber", async () => {
@@ -123,7 +154,7 @@ describe("POST caucus whip — motion to vacate", () => {
     return new Request("http://localhost/api/country/us/parties/1/caucuses/test-caucus/whip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ mode: body.audience === "character" ? "soft" : "hard", ...body }),
     });
   }
 
