@@ -1,5 +1,6 @@
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
+import { migration as crisisV2Indexes } from "./entries/2026-11-08-crisis-v2-indexes";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
 import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as playerReadIndexes } from "./entries/2026-10-27-player-read-indexes";
@@ -128,6 +129,7 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   // Turn-phase probes on bonds and money moves stay bounded by live work.
   turnGrowthIndexes,
   playerReadIndexes,
+  crisisV2Indexes,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {

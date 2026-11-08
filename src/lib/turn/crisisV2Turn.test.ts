@@ -1,0 +1,384 @@
+import { ObjectId } from "mongodb";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CrisisInstance } from "@/lib/crises/v2/types";
+import { createCrisisInstance } from "@/lib/crises/v2/instance";
+import { makeDefinition } from "@/lib/crises/v2/testFixtures";
+import type { EffectModule } from "@/lib/crises/v2/effectModule";
+
+const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), fatal: vi.fn() }));
+const applyCrisisEffects = vi.hoisted(() => vi.fn());
+const logWireEvent = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/observability/logger", () => ({ logger }));
+vi.mock("@/lib/crises/applyEffects", () => ({ applyCrisisEffects }));
+vi.mock("@/lib/wireEvent", () => ({ logWireEvent }));
+
+import { processCrisisV2Turn } from "./crisisV2Turn";
+import {
+  registerCrisisDefinition,
+  registerCrisisEffectModule,
+  registerCrisisHolderProvider,
+  registerCrisisOpenCandidateProvider,
+  resetCrisisV2RegistryForTests,
+} from "./crisisV2/registry";
+
+interface FakeData {
+  crises: Record<string, unknown>[];
+  states: { _id: string; countryId: string }[];
+  stateMetrics: Record<string, unknown>[];
+  leverUses: Record<string, unknown>[];
+}
+
+function makeDb(data: FakeData) {
+  const calls = {
+    bulkWrite: vi.fn(async () => ({})),
+    insertMany: vi.fn(async () => ({})),
+    leverUpdateMany: vi.fn(async () => ({})),
+    collectionsRead: [] as string[],
+  };
+  const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
+  const db = {
+    collection(name: string) {
+      return {
+        find() {
+          calls.collectionsRead.push(name);
+          if (name === "crises") return cursor(data.crises);
+          if (name === "states") return cursor(data.states);
+          if (name === "stateMetrics") return cursor(data.stateMetrics);
+          if (name === "crisisLeverUses") return cursor(data.leverUses);
+          return cursor([]);
+        },
+        bulkWrite: calls.bulkWrite,
+        insertMany: calls.insertMany,
+        updateMany: name === "crisisLeverUses" ? calls.leverUpdateMany : vi.fn(),
+      };
+    },
+  };
+  return { db: db as never, calls };
+}
+
+function liveCrisis(overrides: Partial<CrisisInstance> = {}, id = new ObjectId()) {
+  const instance: CrisisInstance = {
+    ...createCrisisInstance(makeDefinition(), 0),
+    stage: "onset",
+    stageStartTurn: 1,
+    severity: 40,
+    ...overrides,
+  };
+  return {
+    _id: id,
+    name: "Test crisis",
+    scope: "country",
+    countryIds: ["US"],
+    regionIds: [],
+    wireMessageOnEnd: "Over.",
+    startTurn: 0,
+    v2: instance,
+  };
+}
+
+const baseData = (): FakeData => ({
+  crises: [],
+  states: [
+    { _id: "s1", countryId: "US" },
+    { _id: "s2", countryId: "US" },
+  ],
+  stateMetrics: [],
+  leverUses: [],
+});
+
+function writtenInstances(calls: ReturnType<typeof makeDb>["calls"]): CrisisInstance[] {
+  const ops = (calls.bulkWrite.mock.calls[0] as unknown as [unknown[]])[0] as {
+    updateOne: { update: { $set: { v2: CrisisInstance } } };
+  }[];
+  return ops.map((op) => op.updateOne.update.$set.v2);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetCrisisV2RegistryForTests();
+  registerCrisisDefinition(makeDefinition());
+});
+
+describe("processCrisisV2Turn", () => {
+  it("is a no-op beyond one indexed read when no crisis carries a v2 instance", async () => {
+    const { db, calls } = makeDb(baseData());
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result).toEqual({ processed: 0, failed: 0, resolved: 0, opened: 0 });
+    expect(calls.collectionsRead).toEqual(["crises"]);
+    expect(calls.bulkWrite).not.toHaveBeenCalled();
+  });
+
+  it("feeds sim inputs into severity and writes the instance in one bulk write", async () => {
+    const base = makeDefinition();
+    registerCrisisDefinition(
+      makeDefinition({
+        severity: {
+          ...base.severity,
+          drivers: [{ id: "unemployment", input: "unemploymentRate", coefficient: 10 }],
+        },
+      })
+    );
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    data.stateMetrics = [
+      { _id: "s1", economic: { unemploymentRate: { value: 4 } } },
+      { _id: "s2", economic: { unemploymentRate: { value: 6 } } },
+    ];
+    const { db, calls } = makeDb(data);
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result.processed).toBe(1);
+    expect(calls.bulkWrite).toHaveBeenCalledTimes(1);
+    const [written] = writtenInstances(calls);
+    // unemployment coefficient 10 x mean 5, plus one idle turn inside grace
+    expect(written.severity).toBe(90);
+    expect(written.severityHistory.at(-1)).toEqual({ turn: 10, severity: 90 });
+  });
+
+  it("reads unregistered inputs as zero", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    const [written] = writtenInstances(calls);
+    // no drivers, no mitigation: one idle turn is inside the grace period
+    expect(written.severity).toBe(40);
+  });
+
+  it("applies lever uses recorded for the crisis and marks them consumed", async () => {
+    const data = baseData();
+    const crisis = liveCrisis();
+    data.crises = [crisis];
+    const useId = new ObjectId();
+    data.leverUses = [
+      {
+        _id: useId,
+        crisisId: crisis._id,
+        leverId: "rate-cut",
+        holderId: "chair-1",
+        appliedTurn: null,
+      },
+    ];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    const [written] = writtenInstances(calls);
+    expect(written.severity).toBe(32);
+    expect(written.ledger).toHaveLength(1);
+    expect(written.ledger[0]).toMatchObject({ role: "centralBankChair", leverId: "rate-cut" });
+    expect(calls.leverUpdateMany).toHaveBeenCalledWith(
+      { _id: { $in: [useId] } },
+      { $set: { appliedTurn: 10 } }
+    );
+  });
+
+  it("skips a crisis already stepped this turn", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis({ severityHistory: [{ turn: 10, severity: 40 }] })];
+    const { db, calls } = makeDb(data);
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result.processed).toBe(0);
+    expect(calls.bulkWrite).not.toHaveBeenCalled();
+  });
+
+  it("leaves crises with an unregistered definition untouched", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis({ definitionId: "unknown" })];
+    const { db, calls } = makeDb(data);
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result.processed).toBe(0);
+    expect(calls.bulkWrite).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "crisisV2Turn",
+      expect.stringContaining("unregistered definitions"),
+      { definitions: ["unknown"] }
+    );
+  });
+
+  it("resolves a contained crisis and closes its document", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis({ stage: "aftermath", stageStartTurn: 1, severity: 10 })];
+    const { db, calls } = makeDb(data);
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result.resolved).toBe(1);
+    const ops = (calls.bulkWrite.mock.calls[0] as unknown as [unknown[]])[0] as {
+      updateOne: { update: { $set: Record<string, unknown> } };
+    }[];
+    expect(ops[0].updateOne.update.$set).toMatchObject({ status: "resolved", endTurn: 10 });
+    expect(logWireEvent).toHaveBeenCalledWith("crisis_end", "Over.", expect.anything());
+  });
+});
+
+describe("effect routing", () => {
+  const moduleOf = (intents: ReturnType<EffectModule["evaluate"]>): EffectModule => ({
+    id: "legacy",
+    evaluate: () => intents,
+  });
+
+  it("sends legacy intents through the existing writers", async () => {
+    registerCrisisEffectModule(moduleOf([{ kind: "approval", delta: -2 }]));
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    expect(applyCrisisEffects).toHaveBeenCalledTimes(1);
+    const [, effects, stateIds, countryIds] = applyCrisisEffects.mock.calls[0];
+    expect(effects).toEqual([expect.objectContaining({ targetType: "approval", value: -2 })]);
+    expect(stateIds).toEqual(["s1", "s2"]);
+    expect(countryIds).toEqual(["US"]);
+  });
+
+  it("logs unsupported intent kinds instead of dropping them silently", async () => {
+    registerCrisisEffectModule(moduleOf([{ kind: "bankStress", delta: 5 }]));
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db } = makeDb(data);
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result.processed).toBe(1);
+    expect(applyCrisisEffects).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith("crisisV2Turn", "unsupported intent kinds dropped", {
+      bankStress: 1,
+    });
+  });
+});
+
+describe("per-crisis isolation", () => {
+  it("keeps stepping other crises when one throws", async () => {
+    const bad = liveCrisis();
+    const good = liveCrisis();
+    registerCrisisEffectModule({
+      id: "legacy",
+      evaluate: (ctx) => {
+        if (ctx.instance.startTurn === 99) throw new Error("boom");
+        return [];
+      },
+    });
+    bad.v2 = { ...bad.v2, startTurn: 99 };
+    const data = baseData();
+    data.crises = [bad, good];
+    const { db, calls } = makeDb(data);
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result).toMatchObject({ processed: 1, failed: 1 });
+    const ops = (calls.bulkWrite.mock.calls[0] as unknown as [unknown[]])[0] as {
+      updateOne: { filter: { _id: ObjectId } };
+    }[];
+    expect(ops).toHaveLength(1);
+    expect(ops[0].updateOne.filter._id).toBe(good._id);
+    expect(logger.error).toHaveBeenCalledWith(
+      "crisisV2Turn",
+      expect.stringContaining("crisis step failed"),
+      expect.any(Error),
+      expect.objectContaining({ crisisId: bad._id.toString() })
+    );
+  });
+
+  it("does not throw when the bulk write fails", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    calls.bulkWrite.mockRejectedValueOnce(new Error("write failed"));
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result).toMatchObject({ processed: 0, failed: 1 });
+    expect(calls.leverUpdateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("inaction ledger", () => {
+  beforeEach(() => {
+    registerCrisisHolderProvider({
+      id: "test",
+      load: async () =>
+        new Map([
+          [
+            "US",
+            {
+              headOfState: ["pres-1"],
+              centralBankChair: ["chair-1"],
+              corpCeo: ["ceo-1"],
+            },
+          ],
+        ]),
+    });
+  });
+
+  it("records inaction for holders with an available lever who pulled none", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis()];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    const [written] = writtenInstances(calls);
+    const idle = written.ledger.filter((row) => row.leverId === null);
+    expect(idle.map((row) => `${row.role}:${row.holderId}`).sort()).toEqual([
+      "centralBankChair:chair-1",
+      "headOfState:pres-1",
+    ]);
+    expect(idle.every((row) => row.turn === 10 && row.stage === "onset")).toBe(true);
+    // corpCeo has no lever in the definition, so nobody is blamed for it
+    expect(idle.some((row) => row.role === "corpCeo")).toBe(false);
+  });
+
+  it("does not blame a holder who acted", async () => {
+    const data = baseData();
+    const crisis = liveCrisis();
+    data.crises = [crisis];
+    data.leverUses = [
+      {
+        _id: new ObjectId(),
+        crisisId: crisis._id,
+        leverId: "rate-cut",
+        holderId: "chair-1",
+        appliedTurn: null,
+      },
+    ];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    const [written] = writtenInstances(calls);
+    const byHolder = new Map(written.ledger.map((row) => [row.holderId, row]));
+    expect(byHolder.get("chair-1")?.leverId).toBe("rate-cut");
+    expect(byHolder.get("pres-1")?.leverId).toBeNull();
+    expect(written.ledger.filter((row) => row.holderId === "chair-1")).toHaveLength(1);
+  });
+
+  it("does not blame anyone in the aftermath", async () => {
+    const data = baseData();
+    data.crises = [liveCrisis({ stage: "aftermath", severity: 50, stageStartTurn: 9 })];
+    const { db, calls } = makeDb(data);
+    await processCrisisV2Turn(db, 10);
+    const [written] = writtenInstances(calls);
+    expect(written.ledger).toEqual([]);
+  });
+});
+
+describe("director integration", () => {
+  it("opens approved candidates and holds the rest back", async () => {
+    registerCrisisOpenCandidateProvider({
+      id: "test",
+      load: async () => [
+        {
+          key: "a",
+          definitionId: "test-crisis",
+          scope: "national",
+          countryIds: ["US"],
+          regionIds: [],
+          priority: 1,
+        },
+        {
+          key: "b",
+          definitionId: "test-crisis",
+          scope: "national",
+          countryIds: ["DE"],
+          regionIds: [],
+          priority: 0,
+        },
+      ],
+    });
+    const { db, calls } = makeDb(baseData());
+    const result = await processCrisisV2Turn(db, 10);
+    expect(result.opened).toBe(1);
+    const docs = (
+      calls.insertMany.mock.calls[0] as unknown as [{ countryIds: string[]; v2: CrisisInstance }[]]
+    )[0];
+    expect(docs).toHaveLength(1);
+    expect(docs[0].countryIds).toEqual(["US"]);
+    expect(docs[0].v2.stage).toBe("signal");
+  });
+});

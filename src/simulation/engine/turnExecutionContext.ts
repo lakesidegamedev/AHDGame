@@ -176,6 +176,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     jpRegionalBudgetProcessing: null,
     deRegionalBudgetProcessing: null,
     crisisTurn: null,
+    crisisV2Turn: null,
     ministerialOrders: null,
     officeStateSeed: null,
     governorAPRegen: null,
