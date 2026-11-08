@@ -17,3 +17,4 @@ areas: [frontend]
 - Junior devs get a notice that their access is read-only, and changes are refused before they leave the browser as well as on the server.
 - The Staff roles tool replaces the old Moderators tool. Admins use it to give and remove both the moderator and junior dev roles.
 - The staff menu in the navbar now has a single Control Panel link.
+- Old `/admin` and `/moderator` links, bookmarks and notification links still work: they redirect to the matching tool in the control panel.

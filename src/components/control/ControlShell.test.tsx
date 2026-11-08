@@ -10,6 +10,9 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("@/components/admin/nav/AdminAlertsStrip", () => ({ AdminAlertsStrip: () => null }));
+vi.mock("@/components/admin/system/ClockDriftBanner", () => ({ ClockDriftBanner: () => null }));
+
 import { ControlShell } from "./ControlShell";
 import { ReadOnlyGuard } from "./ReadOnlyGuard";
 

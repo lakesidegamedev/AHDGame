@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { navFor } from "@/lib/staff/panelRegistry";
+import { useRouter } from "next/navigation";
+import { navFor, toolForLegacy, toolPath } from "@/lib/staff/panelRegistry";
+import { AdminAlertsStrip } from "@/components/admin/nav/AdminAlertsStrip";
+import { ClockDriftBanner } from "@/components/admin/system/ClockDriftBanner";
 import { canWrite as roleCanWrite, type StaffRole } from "@/lib/staff/rules";
-import { ControlPanelContext } from "./ControlContext";
 import { ControlNav } from "./ControlNav";
 import { ControlPalette } from "./ControlPalette";
 import { ReadOnlyGuard } from "./ReadOnlyGuard";
@@ -24,6 +26,7 @@ export function ControlShell({
   username: string;
   children: ReactNode;
 }) {
+  const router = useRouter();
   const groups = useMemo(() => navFor(role), [role]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -46,7 +49,7 @@ export function ControlShell({
   }, []);
 
   return (
-    <ControlPanelContext.Provider value={{ role, canWrite }}>
+    <>
       <div className="min-h-screen bg-background">
         <header className="sticky top-14 z-20 flex h-11 items-center gap-3 border-b border-card-border bg-card px-3 sm:px-4">
           <button
@@ -75,6 +78,16 @@ export function ControlShell({
             </button>
           </div>
         </header>
+        {role === "moderator" ? (
+          <ClockDriftBanner />
+        ) : (
+          <AdminAlertsStrip
+            onNavigate={(tab, sub) => {
+              const target = toolForLegacy("admin", tab, sub ?? null);
+              router.push(target ? toolPath(target) : "/control");
+            }}
+          />
+        )}
         <ReadOnlyGuard active={!canWrite} />
         <div className="lg:flex lg:items-start">
           <aside
@@ -97,6 +110,6 @@ export function ControlShell({
         </div>
         <ControlPalette groups={groups} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       </div>
-    </ControlPanelContext.Provider>
+    </>
   );
 }

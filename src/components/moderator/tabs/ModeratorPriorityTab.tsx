@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ModTabId } from "./ModeratorTabsConfig";
 
 type Severity = "high" | "medium" | "low";
 type SeverityFilter = Severity | "all";
@@ -45,7 +44,7 @@ interface PendingWikiPage {
 }
 
 interface ModeratorPriorityTabProps {
-  onJump: (tab: ModTabId, sub?: string) => void;
+  onJump: (tab: string, sub?: string) => void;
 }
 
 const SEV_TONE: Record<"high" | "medium" | "low", string> = {

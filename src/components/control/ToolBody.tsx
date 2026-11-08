@@ -197,8 +197,6 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
     const target = toolForLegacy("admin", tab, nextSub ?? null);
     router.replace(target ? toolPath(target) : "/control");
   };
-  // Area tabs call onSubChange with a sub of their own tab.
-  const onSubChange = (nextSub: string) => open(legacy.tab, nextSub);
 
   switch (legacy.tab) {
     case "dashboard":
@@ -211,26 +209,26 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
     case "traffic":
       return <AdminTrafficTab />;
     case "politics":
-      return <AdminPoliticsTab activeSub={sub as never} onSubChange={onSubChange} />;
+      return <AdminPoliticsTab activeSub={sub as never} />;
     case "world":
-      return <AdminWorldTab activeSub={sub as never} onSubChange={onSubChange} />;
+      return <AdminWorldTab activeSub={sub as never} />;
     case "economy":
-      return <AdminEconomyTab activeSub={sub as never} onSubChange={onSubChange} />;
+      return <AdminEconomyTab activeSub={sub as never} />;
     case "content":
-      return <AdminContentTab activeSub={sub as never} onSubChange={onSubChange} />;
+      return <AdminContentTab activeSub={sub as never} />;
     case "players":
-      return <AdminPlayersTab activeSub={sub as never} onSubChange={onSubChange} />;
+      return <AdminPlayersTab activeSub={sub as never} />;
     case "support":
       return (
         <AdminSupportTab
           activeSub={sub as never}
-          onSubChange={onSubChange}
+
           initialFeedbackIssue={sub === "feedback" ? deepLinkIssue : undefined}
           initialSuggestionIssue={sub === "suggestions" ? deepLinkIssue : undefined}
         />
       );
     case "system":
-      return <AdminSystemTab activeSub={sub as never} onSubChange={onSubChange} />;
+      return <AdminSystemTab activeSub={sub as never} />;
     default:
       return <p className="text-body-sm text-muted">{tool.label} is not available.</p>;
   }

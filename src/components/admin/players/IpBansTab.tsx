@@ -204,7 +204,7 @@ export function IpBansTab() {
         >
           {collision?.enabled ? "Enabled" : "Disabled"}
         </span>{" "}
-        <a href="/admin?tab=dashboard" className="text-primary hover:underline">
+        <a href="/control/overview/dashboard" className="text-primary hover:underline">
           Manage on dashboard →
         </a>
       </div>

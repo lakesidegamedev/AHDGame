@@ -160,6 +160,49 @@ describe("proxy() — behaviors preserved from the deleted root middleware.ts", 
   });
 });
 
+describe("proxy() — retired admin and moderator panel URLs", () => {
+  const redirectOf = async (path: string) => {
+    const res = await proxy(
+      makeRequest(`https://ahousedividedgame.com${path}`, { host: "ahousedividedgame.com" })
+    );
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    return location.pathname + location.search;
+  };
+
+  it("redirects the panel roots to the control panel", async () => {
+    expect(await redirectOf("/admin")).toBe("/control");
+    expect(await redirectOf("/moderator")).toBe("/control");
+  });
+
+  it("keeps deep links and carries other params over", async () => {
+    expect(await redirectOf("/admin?tab=players&sub=users")).toBe("/control/players/users");
+    expect(await redirectOf("/admin?tab=support&sub=suggestions&issue=9")).toBe(
+      "/control/support/suggestions?issue=9"
+    );
+    expect(await redirectOf("/moderator?tab=content&sub=wiki-review")).toBe(
+      "/control/community/wiki-review"
+    );
+  });
+
+  it("maps the standalone pages", async () => {
+    expect(await redirectOf("/admin/tasks")).toBe("/control/overview/tasks");
+    expect(await redirectOf("/admin/country/CN/regime")).toBe("/control/world/regime/CN");
+    expect(await redirectOf("/moderator/mail-reports/abc")).toBe(
+      "/control/support/mail-reports/abc"
+    );
+  });
+
+  it("does not touch the singleplayer admin page or look-alike paths", async () => {
+    for (const path of ["/singleplayer/admin", "/administration", "/moderators"]) {
+      const res = await proxy(
+        makeRequest(`https://ahousedividedgame.com${path}`, { host: "ahousedividedgame.com" })
+      );
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+});
+
 describe("proxy() — tri-state maintenance gating", () => {
   it("redirects a non-admin to /maintenance when mode is 'full'", async () => {
     mockMaintenanceStatus.mockResolvedValueOnce({ mode: "full", enabled: true });

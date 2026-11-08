@@ -6,7 +6,6 @@ import { ResourceGrantManager } from "@/components/ResourceGrantManager";
 import { CharacterStateManager } from "@/components/admin/players/CharacterStateManager";
 import { PatreonManagementTab } from "@/components/admin/players/PatreonManagementTab";
 import { PlayerBannerAdsTab } from "@/components/admin/players/PlayerBannerAdsTab";
-import { SubNavLayout } from "./SubNavLayout";
 
 const UsersTab = dynamic(
   () => import("@/components/admin/players/UsersTab").then((m) => ({ default: m.UsersTab })),
@@ -96,16 +95,15 @@ export type PlayersSubTab =
 
 interface AdminPlayersTabProps {
   activeSub: PlayersSubTab;
-  onSubChange: (sub: PlayersSubTab) => void;
 }
 
-export function AdminPlayersTab({ activeSub, onSubChange }: AdminPlayersTabProps) {
+export function AdminPlayersTab({ activeSub }: AdminPlayersTabProps) {
   // Dossier deep link (`?user=<id>`) — set by the Users table's Dossier
   // shortcut. Keyed remount so switching subjects resets the dossier state.
   const dossierUser = useSearchParams().get("user");
 
   return (
-    <SubNavLayout tab="players" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         {activeSub === "users" && <UsersTab />}
         {activeSub === "resources" && <ResourceGrantManager />}
@@ -131,6 +129,6 @@ export function AdminPlayersTab({ activeSub, onSubChange }: AdminPlayersTabProps
         {activeSub === "api-keys" && <UserApiKeysTab />}
         {activeSub === "api-abuse" && <ApiAbuseTab />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }

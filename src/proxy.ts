@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { REQUEST_METHOD_HEADER } from "@/lib/staff/rules";
+import { legacyRedirect } from "@/lib/staff/panelRegistry";
 import type { NextRequest } from "next/server";
 import { SignJWT } from "jose";
 import { getCachedMaintenanceStatus, isMaintenanceBypassPath } from "@/lib/maintenanceStatus";
@@ -254,6 +255,21 @@ export async function proxy(request: NextRequest) {
   // redirect. Page-load telemetry ranks both of these among the slowest
   // routes precisely because a two-hop navigation paid for a full server
   // render before the hop.
+  // The admin and moderator panels were replaced by /control. Old bookmarks,
+  // notification links and ticket links keep working: tab/sub and the
+  // standalone pages map to the same tool, other query params carry over.
+  // Temporary (307) so a rollback does not leave browsers pinned to /control.
+  const legacyPanel =
+    pathname === "/admin" || pathname.startsWith("/admin/")
+      ? "admin"
+      : pathname === "/moderator" || pathname.startsWith("/moderator/")
+        ? "moderator"
+        : null;
+  if (legacyPanel) {
+    const target = legacyRedirect(legacyPanel, pathname, request.nextUrl.searchParams);
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+
   const stockMarketMatch = pathname.match(/^\/country\/([a-z]{2,3})\/stockmarket$/i);
   if (stockMarketMatch) {
     const search = Object.fromEntries(request.nextUrl.searchParams.entries());

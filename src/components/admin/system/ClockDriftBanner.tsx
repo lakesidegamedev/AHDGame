@@ -4,12 +4,12 @@ import { useGameClock } from "@/contexts/useGameClock";
 
 interface ClockDriftBannerProps {
   /**
-   * Where the "investigate" link should point. Defaults to "/admin" but the
-   * moderator panel mounts the banner with "/moderator" so the link routes
+   * Where the "investigate" link should point. Defaults to "/control", the one
+   * panel every staff role uses, so the link routes
    * moderators to a page they actually have access to.
    */
   panelHref?: string;
-  /** Human-readable label for the destination panel. Defaults to "admin panel". */
+  /** Human-readable label for the destination panel. Defaults to "control panel". */
   panelLabel?: string;
 }
 
@@ -22,8 +22,8 @@ interface ClockDriftBannerProps {
  * polling. Gate visibility at the mount point, not here.
  */
 export function ClockDriftBanner({
-  panelHref = "/admin",
-  panelLabel = "admin panel",
+  panelHref = "/control",
+  panelLabel = "control panel",
 }: ClockDriftBannerProps = {}) {
   const clock = useGameClock();
 

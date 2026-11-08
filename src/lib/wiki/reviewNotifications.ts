@@ -26,7 +26,7 @@ export async function notifyModeratorsOfWikiSubmission(opts: {
         type: "wiki_submission_pending",
         title: "New wiki submission",
         message: `${opts.submitterName} submitted "${opts.title}" for review.`,
-        metadata: { slug: opts.slug, href: "/moderator?tab=content&sub=wiki-review" },
+        metadata: { slug: opts.slug, href: "/control/community/wiki-review" },
       })
     )
   );

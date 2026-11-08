@@ -8,7 +8,7 @@ import { WhiteHouseAddressTab } from "@/app/whitehouse/WhiteHouseAddressTab";
 import { WhiteHouseOrdersTab } from "@/app/whitehouse/WhiteHouseOrdersTab";
 import { WhiteHouseEndorsementsTab } from "@/app/whitehouse/WhiteHouseEndorsementsTab";
 import { RegimeHealthTab } from "./RegimeHealthTab";
-import { AdminRegimePanel } from "@/app/admin/country/[code]/regime/AdminRegimePanel";
+import { AdminRegimePanel } from "@/components/admin/AdminRegimePanel";
 import { AdminAppointPmButton } from "./components/AdminAppointPmModal";
 import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { ExecutiveActivitySection } from "./components/ExecutiveActivitySection";
