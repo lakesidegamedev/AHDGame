@@ -24,6 +24,7 @@ import { brRegions1991 } from "@/lib/seeds/br/brRegions1991";
 import { brRegions1999 } from "@/lib/seeds/br/brRegions1999";
 import { brRegions2007 } from "@/lib/seeds/br/brRegions2007";
 import { brRegions2023 } from "@/lib/seeds/br/brRegions2023";
+import { brRegions2027 } from "@/lib/countries/br/data/brRegions2027";
 import { cnRegions } from "@/lib/seeds/cn/cnRegions";
 import { cnRegions1953 } from "@/lib/seeds/cn/cnRegions1953";
 import { cnRegions1979 } from "@/lib/seeds/cn/cnRegions1979";
@@ -197,6 +198,7 @@ export const REGION_TABLES: Readonly<Record<string, CountryRegionTable>> = {
       "2007-default": brRegions2007,
       "2019-default": brRegions,
       "2023-default": brRegions2023,
+      "2027-default": brRegions2027,
     },
   },
   NG: {

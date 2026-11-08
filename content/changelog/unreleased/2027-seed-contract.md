@@ -16,5 +16,6 @@ areas: [engine, backend]
 - A new world no longer quietly fills a gap with another start date's data. Before anything is reset, the game checks every start date's regions, budgets, exchange rates, alignments, election dates and seat rosters, and stops with one list of everything that needs writing.
 - Budgets and regional totals are also checked against the start date's own economy: spending and debt as a share of GDP, costs per person against income, regional totals against the national figures, currencies that were in use at the time, and prices against the era's price level.
 - The 2027 world has its own opening alignments for every nation, reflecting changes since 2023 such as Finland and Sweden in NATO and Syria after the fall of its government.
+- Brazil's five regions in the 2027 world have their own 2027 population and economy figures.
 - Austria, Greece, Finland and Ukraine now name their politicians from their own name lists.
 - Some start dates cannot be started until their missing data is written. Worlds that are already running, including the live world, keep playing exactly as before.

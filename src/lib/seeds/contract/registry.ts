@@ -19,6 +19,7 @@ import {
 import { CENSUS_BUNDLES } from "@/lib/seeds/regionCensusData";
 import { METRIC_PRESET_BUNDLES } from "@/lib/seeds/metricPresets";
 import { POPULATION_ANCHOR_BUNDLES } from "@/lib/seeds/populationAnchors";
+import { COHORT_NATIONAL_SOURCE_1991 } from "@/lib/seeds/reference/cohortAgeSources1991";
 import { REGION_TABLES } from "./regionTables";
 
 export interface PresetDataset {
@@ -80,26 +81,43 @@ const BUDGET_COUNTRIES = [
   ),
 ].sort();
 
+/** Presets that seed `countryId`'s regions, which are the presets that read its overlays. */
+function seededPresets(countryId: string): readonly SeedPresetId[] {
+  return REGION_TABLES[countryId]?.seededIn ?? [];
+}
+
 /**
  * Per-country regional overlays (census, metric presets, population anchors).
- * A country with a 2019 overlay needs its own in every preset, because no
- * preset may read the 2019 one; a country without any needs none.
+ * A country with a 2019 overlay needs its own in every preset `readIn` returns,
+ * because no preset may read the 2019 one; a country without any needs none.
  */
 function overlayDatasets(
   kind: string,
-  bundles: Readonly<Record<string, Partial<Record<string, unknown>> | undefined>>
+  bundles: Readonly<Record<string, Partial<Record<string, unknown>> | undefined>>,
+  readIn: (countryId: string) => readonly SeedPresetId[]
 ): PresetDataset[] {
   return Object.entries(bundles).map(([countryId, byPreset]) => ({
     id: `${kind}:${countryId}`,
-    requiredIn: byPreset?.["2019-default"] ? ALL_PRESETS : [],
+    requiredIn: byPreset?.["2019-default"] ? readIn(countryId) : [],
     provide: (preset) => byPreset?.[preset],
   }));
 }
 
+/** A dated 1991 age source replaces the census for cohort stocks. */
+function censusReadIn(countryId: string): readonly SeedPresetId[] {
+  const proxied = COHORT_NATIONAL_SOURCE_1991[countryId] !== undefined;
+  return seededPresets(countryId).filter((preset) => !(proxied && preset === "1991-default"));
+}
+
+/** Population anchors only drive the 1991 era adjustment. */
+function anchorReadIn(countryId: string): readonly SeedPresetId[] {
+  return seededPresets(countryId).filter((preset) => preset === "1991-default");
+}
+
 export const PRESET_DATASETS: readonly PresetDataset[] = [
-  ...overlayDatasets("census", CENSUS_BUNDLES),
-  ...overlayDatasets("metricPresets", METRIC_PRESET_BUNDLES),
-  ...overlayDatasets("populationAnchors", POPULATION_ANCHOR_BUNDLES),
+  ...overlayDatasets("census", CENSUS_BUNDLES, censusReadIn),
+  ...overlayDatasets("metricPresets", METRIC_PRESET_BUNDLES, seededPresets),
+  ...overlayDatasets("populationAnchors", POPULATION_ANCHOR_BUNDLES, anchorReadIn),
   ...Object.entries(REGION_TABLES).map(([countryId, entry]): PresetDataset => ({
     id: `regions:${countryId}`,
     requiredIn: entry.seededIn,
