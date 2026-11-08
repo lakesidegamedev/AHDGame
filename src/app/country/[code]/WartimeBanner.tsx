@@ -16,7 +16,7 @@ export function WartimeBanner({ notice }: { notice: CountryWarNotice }) {
   const href =
     notice.conflictNumber !== null
       ? `/world/conflicts/${notice.conflictNumber}`
-      : "/world/conflicts";
+      : "/world/crises?view=conflicts";
 
   return (
     <div className="border-b border-error/30 bg-error/10 px-4 py-2 text-center text-sm text-error">

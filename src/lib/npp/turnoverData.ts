@@ -8,3 +8,9 @@ export const NPP_TURNOVER_CONFIG = parseNppTurnoverConfig({
   backfill: { minAge: 35, ageSpan: 36 },
   leaders: { windowTurns: 24, termTurns: 192, midTermRetirementAge: 85 },
 });
+
+/**
+ * Countries whose NPPs never age out, retire or get replaced by turnover.
+ * The US NPP side stays static so player parties face a stable field.
+ */
+export const NPP_TURNOVER_EXEMPT_COUNTRIES: ReadonlySet<string> = new Set(["US"]);

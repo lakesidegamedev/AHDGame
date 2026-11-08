@@ -66,7 +66,7 @@ import { ExperimentalUserMenu } from "@/components/navbar/ExperimentalUserMenu";
 import { NavSettingsMenu, NavSettingsIcon } from "@/components/navbar/NavSettingsMenu";
 import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
 import { useToast } from "@/contexts/ToastContext";
-import { useRefetchNav } from "@/contexts/AuthDataContext";
+import { useOptionalAuthMe, useRefetchNav } from "@/contexts/AuthDataContext";
 import {
   applySavedOrder,
   MAX_NAV_PINS,
@@ -417,6 +417,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   // preset/era AND any runtime rename — not every non-coming-soon country with
   // its default name.
   const countryName = useCountryDisplayName();
+  const crisisActionCount = useOptionalAuthMe()?.navData?.crisisActionCount ?? 0;
   const switchableCountries = useEnabledCountries();
 
   const stateLegislatureLabel = stateLegislatureLabelFor(t as unknown as NavTranslator, homeState);
@@ -493,6 +494,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     myCorporationId,
     unionsEnabled,
     settlementCrisisLive,
+    crisisActionCount,
   });
 
   const profileOrgItems = visibleProfileOrgItems({
@@ -562,6 +564,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
               strong={item.id === "legacyLeaderboard"}
               dot={item.primary ? "bg-primary" : undefined}
               nested={item.parentId != null}
+              meta={item.badge ? String(item.badge > 9 ? "9+" : item.badge) : undefined}
+              metaClass="rounded-full bg-error px-1.5 text-[10px] font-semibold text-white"
             >
               {t(item.labelKey)}
             </MenuRow>

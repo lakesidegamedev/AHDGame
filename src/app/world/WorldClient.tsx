@@ -76,7 +76,7 @@ export default function WorldClient({
       heading: "World affairs",
       title: "Conflicts",
       description: "Rivalries, blocs, and confrontations between nations.",
-      href: "/world/conflicts",
+      href: "/world/crises?view=conflicts",
     },
     {
       heading: "World trade",
