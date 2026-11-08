@@ -987,6 +987,12 @@ export const RUNTIME: CollectionEntry[] = [
     notes:
       "Auto-crisis spawn cooldown (turn-based lastSpawnTurn). Previously survived resets, suppressing crisis spawns in the new world.",
   },
+  {
+    name: "crisisAlertState",
+    category: "runtime",
+    notes:
+      "Last alerted decision-tree position per crisis, keyed by crisis id. Crisis ids are per world, so it resets with them.",
+  },
   { name: "referendums", category: "runtime" },
   { name: "referendumWire", category: "runtime" },
   { name: "debateSessions", category: "runtime" },

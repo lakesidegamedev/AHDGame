@@ -25,6 +25,7 @@ import { processRURegionalBudgets } from "@/lib/turn/ruRegionalBudget";
 import { processPoliticalMetricsDynamics } from "@/lib/turn/politicalMetricsDynamics";
 import { syncAllPartyChairHeadsOfState } from "@/lib/turn/partyChairHeadOfState";
 import { processCrisisTurn } from "@/lib/turn/crisisTurn";
+import { notifyCrisisChanges } from "@/lib/crises/inboxAlerts";
 import { processMinisterialOrders } from "@/lib/turn/ministerialOrderProcessing";
 import { processNavairTurn } from "@/lib/navair/turn";
 import { processIntelligenceTurn } from "@/lib/turn/intelligenceTurn";
@@ -104,9 +105,14 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       // Pass the authoritative turn-context year: gameState.currentYear is only
       // stamped at turn end, so reading it here would gate year-boundary openings
       // one turn late.
-      const crisisResult = await runtime.runPhase("crisisTurn", () =>
-        processCrisisTurn(db, newTurn, currentYear)
-      );
+      const crisisResult = await runtime.runPhase("crisisTurn", async () => {
+        const processed = await processCrisisTurn(db, newTurn, currentYear);
+        // A failed inbox alert must never fail the crisis phase.
+        await notifyCrisisChanges(db, newTurn).catch((err) =>
+          console.error("[crisisTurn] inbox alerts failed:", err)
+        );
+        return processed;
+      });
       // Intelligence upkeep resolves before navair, so a later phase's sabotage
       // lands on the dispositions this turn actually fights on. Note the honest
       // limit: navair RECOMPUTES sea control and air superiority from live units

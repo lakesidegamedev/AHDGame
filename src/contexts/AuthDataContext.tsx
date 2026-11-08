@@ -67,6 +67,8 @@ export interface ClientNavBootstrap {
    * pending or the feature is off.
    */
   pendingSeasonRecapId?: string | null;
+  /** Crises where the viewer has an action available now. Drives the Crises nav badge. */
+  crisisActionCount?: number;
 }
 
 type AuthMeResult =
