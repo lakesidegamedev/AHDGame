@@ -496,6 +496,22 @@ export interface Crisis {
   v2?: CrisisInstance;
 }
 
+/**
+ * A lever use waiting to be counted by the Crisis v2 turn phase. The phase
+ * consumes a row by stamping `appliedTurn`; rows with a null stamp are pending.
+ */
+export interface CrisisLeverUse {
+  _id: ObjectId;
+  crisisId: ObjectId;
+  leverId: string;
+  holderId: string;
+  /** Share of full effect, 0..1. Absent = 1. */
+  intensity?: number;
+  submittedTurn: number;
+  appliedTurn: number | null;
+  createdAt: Date;
+}
+
 /** One row per (auto-crisis template, scope key) tracking the last turn it
  *  spawned, so the spawner can enforce per-template cooldowns. `scopeKey` is a
  *  countryId for national/regional crises or "GLOBAL" for world-scoped ones. */

@@ -25,6 +25,7 @@ import { processRURegionalBudgets } from "@/lib/turn/ruRegionalBudget";
 import { processPoliticalMetricsDynamics } from "@/lib/turn/politicalMetricsDynamics";
 import { syncAllPartyChairHeadsOfState } from "@/lib/turn/partyChairHeadOfState";
 import { processCrisisTurn } from "@/lib/turn/crisisTurn";
+import { processCrisisV2Turn } from "@/lib/turn/crisisV2Turn";
 import { processMinisterialOrders } from "@/lib/turn/ministerialOrderProcessing";
 import { processNavairTurn } from "@/lib/navair/turn";
 import { processIntelligenceTurn } from "@/lib/turn/intelligenceTurn";
@@ -107,6 +108,10 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       const crisisResult = await runtime.runPhase("crisisTurn", () =>
         processCrisisTurn(db, newTurn, currentYear)
       );
+      // Same stateMetrics writers as crisisTurn, so it stays inside this chain.
+      const crisisV2Result = await runtime.runPhase("crisisV2Turn", () =>
+        processCrisisV2Turn(db, newTurn)
+      );
       // Intelligence upkeep resolves before navair, so a later phase's sabotage
       // lands on the dispositions this turn actually fights on. Note the honest
       // limit: navair RECOMPUTES sea control and air superiority from live units
@@ -130,6 +135,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       return {
         intelligenceResult,
         crisisResult,
+        crisisV2Result,
         navairResult,
         ministerialOrdersResult,
       };
@@ -205,7 +211,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       return { ...prerequisiteResults, policyResult };
     })();
     const [
-      { crisisResult, navairResult, ministerialOrdersResult, policyResult },
+      { crisisResult, crisisV2Result, navairResult, ministerialOrdersResult, policyResult },
       demoEffectResult,
       archetypeDecayResult,
       unownedResult,
@@ -347,6 +353,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         }
       : null;
     phaseResults.crisisTurn = { crisisesProcessed: crisisResult ?? 0 };
+    phaseResults.crisisV2Turn = crisisV2Result ?? null;
     phaseResults.ministerialOrders = ministerialOrdersResult ?? null;
     (phaseResults as Record<string, unknown>).navairOperations = navairResult ?? null;
     phaseResults.topSectorsRecompute = topSectorsResult ?? null;

@@ -75,6 +75,7 @@ import { migration as ukRegionalPartyOrgBackfill } from "./entries/2026-08-26-uk
 import { migration as easternDepositsCnSoeIron } from "./entries/2026-08-25-eastern-deposits-cn-soe-iron";
 import { migration as backfillRedistrictingAuthorityTypes } from "./entries/2026-08-26-backfill-redistricting-authority-types";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
+import { migration as crisisV2Indexes } from "./entries/2026-11-08-crisis-v2-indexes";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
 import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as playerReadIndexes } from "./entries/2026-10-27-player-read-indexes";
@@ -390,6 +391,7 @@ export const MIGRATIONS: Migration[] = [
   partyNppRegionalBills,
   nationalPartyNppBills,
   archiveNonPresidentialCampaigns,
+  crisisV2Indexes,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.
