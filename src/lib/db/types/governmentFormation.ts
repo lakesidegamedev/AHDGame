@@ -91,12 +91,7 @@ export interface GovernmentFormation {
   /** Bounded history for the executive confidence trend chart. */
   confidenceGaugeHistory?: GovernmentConfidencePoint[];
 
-  // Cabinet reshuffle log (epic #856, ticket #859). Additive record of used
-  // once-per-parliament-per-government reshuffle tokens, read by
-  // `canReshuffle` in `src/lib/uk/cabinet/reshuffleLimit.ts`. Election-reset
-  // and vacate paths `$set` specific fields, so entries survive across
-  // parliaments and governments and are told apart by their ids. Runtime —
-  // wiped on world reset with the rest of this collection.
+  // Additive record of once-per-parliament-per-government reshuffle tokens, read by `canReshuffle`. Entries are told apart by id since election-reset and vacate paths only $set specific fields.
   reshuffleLog?: ReshuffleRecord[];
 
   // Snap election tracking — applies to any parliamentary country

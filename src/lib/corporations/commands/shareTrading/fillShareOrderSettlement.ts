@@ -39,15 +39,11 @@ export const resolveCharName = async (
 };
 
 /**
- * Evidence a filled fund sell order with the single fund-subject
- * `stock_trade_sell` ledger row. The fund's `cashAnchor` credit itself is a
- * keyed money leg now (issue #1672); this row is post-commit best effort,
- * emitted once per attempt under the caller's deterministic id so a retry
- * converges instead of double-booking. Shared by both seller-leg sites (the
- * corporation-buyer and character-buyer fills) so the committed-path-only
- * row is identical at both. Fund-subject rows never mirror, so this is the
- * only ledger row for the credit (the contra is the buyer's shares, an
- * asset account the shadow ledger does not carry).
+ * Emits the single fund-subject `stock_trade_sell` ledger row for a filled
+ * fund sell order. Post-commit best effort, keyed by the caller's
+ * deterministic id so a retry converges instead of double-booking. Shared by
+ * both seller-leg sites so the row is identical. Fund-subject rows never
+ * mirror, so this is the only ledger row for the credit.
  */
 export async function emitSellerFundProceedsRow(args: {
   db: Db;
@@ -173,20 +169,18 @@ export async function settleBuyOrderFill(args: {
     corporation.shareholders?.find((sh) =>
       isImperialFiller ? sh.imperialCharacterId?.equals(fillerId) : sh.characterId?.equals(fillerId)
     )?.avgCostPerShare ?? order.pricePerShare;
-  // All money moves through the keyed share-fill money flow (issue #1672):
-  // filler share debit, buyer cap-table credit, fund holdings credit, and
-  // escrow release run as compare-and-set steps under the attempt key with
-  // keyed inverses, so a crash between any two converges on retry instead
-  // of stranding shares or double-releasing escrow. The flow settles its
-  // own receipt (compensating the prefix on a later-step failure); the
-  // caller only restores the order claim and maps the legacy response.
+  // All money moves through the keyed share-fill money flow: filler debit,
+  // buyer cap-table credit, fund holdings credit, and escrow release run as
+  // compare-and-set steps under the attempt key with keyed inverses, so a
+  // crash between any two converges on retry instead of stranding shares or
+  // double-releasing escrow. The flow settles its own receipt (compensating
+  // the prefix on a later-step failure); the caller only restores the order
+  // claim and maps the legacy response.
   //
-  // #992 audit, preserved: a buy-order fill moves NO fund cash. The fund's
-  // cashAnchor was debited up front at placement, so the plan below carries
-  // no proceeds leg — the filler is paid out of that already-moved escrow,
-  // and the fund side of this fill is shares in. Proven by the
-  // no-fund-cash-movement characterization test in
-  // fillShareOrderSettlement.test.ts.
+  // A buy-order fill moves NO fund cash: the fund's cashAnchor was debited up
+  // front at placement, so this fill has no proceeds leg (the filler is paid
+  // from that escrow; the fund side is shares in). Covered by the
+  // no-fund-cash-movement test in fillShareOrderSettlement.test.ts.
   const fillPriceAnchor = shares > 0 ? total / shares : 0;
   const moneyPlan: ShareFillMoneyPlan = {
     version: 1,

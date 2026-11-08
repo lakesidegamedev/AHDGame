@@ -144,19 +144,11 @@ export function computeSharePrices(
     // Bond-income interest-rate-risk adjustments.
     // Split normalized earnings into operating vs bond-derived, discount the
     // bond slice (0.75x), and measure reliance for the graduated penalty.
-    //
-    // The bond slice is the NET of coupons received over interest paid, floored
-    // at 0. Measuring reliance on gross coupons misfired on leveraged
-    // operators: a corp paying 763K/yr of interest against 371K of coupons had
-    // its entire (interest-shrunken) net earnings classified as bond income,
-    // its real operating earnings clamped to zero, and the maximum bond-fund
-    // penalty applied on top — the more indebted the operator, the more it was
-    // priced as a bond fund (corp 484, 2026-08-15). A net debtor has no bond
-    // RELIANCE at all; the penalty exists for corps living off coupons (#941),
-    // and for those bondInterestExpenseAnchor is ~0 so nothing moves.
-    // bondPortion stays clamped to total earnings so operating earnings never
-    // go negative when the (current-turn) net-coupon figure outruns the
-    // (rolling) earnings average.
+    // The bond slice is NET coupons received over interest paid, floored at 0:
+    // a net debtor has no bond RELIANCE, and for pure coupon-livers interest
+    // expense is ~0 so gross and net agree. bondPortion is clamped to total
+    // earnings so operating earnings never go negative when the current-turn
+    // net-coupon figure outruns the rolling earnings average.
     const totalEarnings = Math.max(0, i.normalizedEarningsAnchor);
     const netBondIncome = Math.max(
       0,
@@ -206,9 +198,7 @@ export function computeSharePrices(
         FUNDAMENTAL_GROWTH_PREMIUM_WEIGHT * growthPremiumPerShare) *
       reliancePenalty;
 
-    // Conglomerate discount (suggestion #363) applies to the fundamental, before
-    // the rate limiter, so the price converges to the discounted value instead
-    // of compounding the discount through the previous-price anchor.
+    // Applied to the fundamental before the rate limiter so the price converges to the discounted value instead of compounding through the previous-price anchor.
     const fundamentalValue =
       (FUNDAMENTAL_TANGIBLE_BOOK_WEIGHT * tangibleBookPerShare + earningsComponent) *
       subsidiarySprawlMultiplier(i.subsidiaryCount ?? 0);
@@ -221,20 +211,12 @@ export function computeSharePrices(
     const inSplitCooldown =
       turnsSinceSplit >= 0 && turnsSinceSplit <= STOCK_SPLIT_PRICE_SMOOTHING_TURNS;
 
-    // Split-cooldown path has its own (stronger) smoothing; the per-turn rate
-    // limiter only guards the normal fundamental path. Skipping the limiter in
-    // cooldown avoids double-smoothing and keeps the split re-scaling intact.
-    //
-    // The previous-price anchor is clamped to within
-    // STOCK_SPLIT_PREV_ANCHOR_MAX_RATIO of the fresh multipliedFundamental
-    // before blending, so both sides are on the same post-multiplier scale.
-    // Without the clamp, the cooldown path (which skips the rate limiter by
-    // design) blended whatever the LIVE price happened to be — including a
-    // price pumped intra-turn via structure-change abuse or wash trades —
-    // directly into the new fundamental (2026-08-20 incident: a live price
-    // ~250x fundamentals became ~0.5x of itself the new fundamental). Honest
-    // splits rescale price and fundamental by the same share-count ratio, so
-    // prev/fundamental stays near 1 and the clamp never binds.
+    // Split cooldown skips the per-turn limiter (it has stronger smoothing);
+    // clamp the prev-price anchor to STOCK_SPLIT_PREV_ANCHOR_MAX_RATIO of the
+    // fresh multipliedFundamental so both sides share the post-multiplier scale
+    // and an intra-turn pumped live price cannot blend into the new fundamental.
+    // Honest splits rescale price and fundamentals by the same ratio, so the
+    // clamp never binds.
 
     // Insider-concentration discount: smooth quadratic penalty on public corps
     // where the character CEO holds > INSIDER_CONCENTRATION_THRESHOLD of all shares.
@@ -390,12 +372,11 @@ export interface SectorNpvPrior {
 /**
  * Annualized trailing growth rate for the Gordon-growth premium input.
  *
- * Under plants mode the CEO growth slider no longer buys capacity, so feeding
- * it to the premium pays a permanent unearned premium for a dead setting.
- * This estimates g from what actually happened instead: the geometric
- * per-turn growth of sector NPV from the oldest usable prior to the current
- * turn, scaled to an annual rate. The formula's own cap
- * (g <= costOfCapital - {@link GROWTH_PREMIUM_CAP_BUFFER}) still binds
+ * The CEO growth slider no longer buys capacity under plants mode, so feeding
+ * it to the premium would pay an unearned premium for a dead setting. This
+ * estimates g from the geometric per-turn growth of sector NPV from the oldest
+ * usable prior to the current turn, scaled to an annual rate. The formula's own
+ * cap (g <= costOfCapital - {@link GROWTH_PREMIUM_CAP_BUFFER}) still binds
  * downstream, and the ±35% per-turn rate limiter damps single-turn noise.
  *
  * Fail-closed: missing/non-positive history, a non-positive current value,

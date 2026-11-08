@@ -2,22 +2,14 @@ import type { ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /**
- * Pre-computed stock exchange listing data, generated once per turn.
- * Avoids expensive queries when Discord bot or UI requests stock data.
+ * Pre-computed stock exchange listing data, generated once per turn to avoid
+ * expensive queries when the bot or UI requests stock data.
  *
- * Currency semantics (v0.2.6):
- *   - `sharePrice`, `totalRevenue`, `income`, `marketCap` render as the
- *     corp's `liquidCurrencyCode` (exposed here as `liquidCurrencyCode`).
- *     UI passes the code as `nativeCurrencyCode` to `formatAmount` so the
- *     wallet preference still governs final display.
- *   - `*Anchor` siblings hold the same values normalized to ₳. Used for:
- *     (a) cross-corp sort (so sorting "Revenue" doesn't rank a JPY corp
- *         ahead of a USD corp purely due to denomination), and
- *     (b) cross-corp aggregates (admin market-cap totals, stockmarket
- *         headline stats) that sum across listings with different
- *         currencies.
- *   Pre-forex listings (no `liquidCurrencyCode` on the corp) passthrough
- *   — the anchor and local fields are equal.
+ * Currency semantics: `sharePrice`, `totalRevenue`, `income`, `marketCap`
+ * render as the corp's `liquidCurrencyCode`. `*Anchor` siblings hold the same
+ * values normalized to ₳ for cross-corp sort and aggregates across listings.
+ * Pre-forex listings (no `liquidCurrencyCode`) pass through; anchor equals
+ * local.
  */
 export interface StockExchangeListing {
   _id: ObjectId;

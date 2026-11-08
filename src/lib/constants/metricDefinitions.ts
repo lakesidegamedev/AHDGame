@@ -103,10 +103,7 @@ export const metricCategories: MetricCategory[] = [
         isHigherBetter: true,
         formatSuffix: "%",
         decimals: 1,
-        // Realistic range — without these bounds, the default 0-100 ceiling
-        // lets cabinet-order $inc loops compound into double-digit growth
-        // (bug #0571: DE at 26%). A real-economy ceiling of ~15% leaves room
-        // for genuine booms while preventing runaway feedback loops.
+        // Bounded so $inc feedback loops cannot compound into runaway growth; ~15% still allows genuine booms.
         minValue: -10,
         maxValue: 15,
       },

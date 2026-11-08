@@ -146,10 +146,8 @@ export async function loadCorporationDetailView(args: {
     commodityPrices,
   });
 
-  // Realization-vs-nameplate reconciliation (#2958): derived from the corp's
-  // own latest history snapshot; applied uniformly as the fallback for
-  // sectors without an exact persisted realizedRevenue (#3001/#3002).
-  // See realizationRatio.ts.
+  // Fallback realization ratio from the corp's latest history snapshot for
+  // sectors without a persisted realizedRevenue. See realizationRatio.ts.
   const revenueRealizationRatio = await computeRevenueRealizationRatio(
     db,
     corporation,

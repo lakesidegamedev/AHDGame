@@ -99,9 +99,8 @@ export interface DistributeVotesOptions {
   /** Weight party over candidate: (partyWeight*party + candidate)/(partyWeight+1). 2 = 2:1 party. */
   partyPositionWeight?: number;
   /**
-   * @deprecated 2026-06-18 (D3) - no-op. Selected the retired presidential Org
-   * scalar; general elections now use `normalizedOrgShare` regardless and the
-   * engines no longer read this flag. Kept so existing call sites type-check.
+   * @deprecated No-op. The engines no longer read this flag; kept so existing
+   * call sites type-check.
    */
   usePresidentialPartyOrg?: boolean;
   /** Include NPI influence score in appeal (true for presidential, false for state) */
@@ -133,12 +132,11 @@ export interface DistributeVotesOptions {
    * for FPTP spoiler modelling. Defaults to "US" when omitted.
    */
   countryId?: CountryId;
-  /**
-   * UK manifesto policy-popularity multipliers, keyed party → demographic group
-   * id → factor (centred on 1.0). Absent (the default) means the feature is off:
-   * the per-candidate weight is multiplied by 1.0. Precomputed by the manifesto
-   * layer (src/lib/uk/manifesto) so the vote engine stays generic and decoupled.
-   * Epic #856 / ticket #857. Enable only after worldsim coefficient calibration.
+    /**
+   * UK manifesto policy-popularity multipliers, keyed party → demographic
+   * group id → factor (centred on 1.0). Absent means the feature is off and
+   * the weight is multiplied by 1.0. Precomputed by the manifesto layer so
+   * the vote engine stays generic and decoupled.
    */
   manifestoMultipliers?: Record<string, Record<string, number>>;
   /**
@@ -255,47 +253,24 @@ export interface DistributeVotesOptions {
    */
   fundsByParty?: Map<string, number>;
   /**
-   * Per-state median voter — turnout-weighted average of demographic
-   * group leans. Consumed by `policyDistanceDriver` so a centrist
-   * candidate is judged relative to the state's actual median voter
-   * rather than abstract `(0, 0)` neutrality. Undefined falls back to
-   * the original `(0, 0)` behavior for backward compatibility.
-   *
-   * Plumbed in M3 from `2026-05-22-per-state-median-voter.md`.
+   * Per-state median voter: turnout-weighted average of demographic group
+   * leans. `policyDistanceDriver` judges a centrist candidate relative to the
+   * state's actual median voter rather than `(0, 0)` neutrality. Undefined
+   * falls back to `(0, 0)`.
    */
   medianVoter?: { ep: number; sp: number };
   /**
-   * Per-party prior seat-share in this race, in `[0, 1]`. Values across
-   * the map sum to ≤ 1.0 (one rounding tolerance). Feeds the incumbency
-   * driver — defenders with larger prior stakes get larger lift, smaller
-   * stakes get smaller lift. Undefined / empty map = first-ever race or
-   * no prior cycle (driver returns 0).
+   * Per-party prior seat-share in this race, in [0, 1], summing to <= 1.0 (one rounding tolerance). Feeds the incumbency driver: larger prior stakes get larger lift. Undefined or empty map = first-ever race or no prior cycle (driver returns 0).
    *
-   * Models the codebase's vote-share → seat-share allocation for multi-
-   * seat races (US House, UK Regional Council, JP Shugiin/Sangiin, DE
-   * Bundestag, etc). Races with an officeholder incumbency path do NOT use
-   * this map: single-winner executives use `incumbentPartyId` (approval curve)
-   * and US Senate uses `legislativeIncumbentPartyId` (flat shield). The map
-   * holds raw prior-cycle vote shares, so for a single winner it would
-   * otherwise yield a meaningless margin-scaled value — and on a vacant seat,
-   * an incumbency bonus with no incumbent. Enforced by
-   * `usesSeatShareIncumbency` in `incumbentSeatShare.ts`, whose doc records the
-   * one case still left on this path by design.
-   *
-   * Plumbed in A1 from `2026-05-22-swing-flow-driver-activation.md`;
-   * consumed by `persuasionDrivers.ts`.
+   * Models vote-share to seat-share allocation for multi-seat races. Races with an officeholder incumbency path do NOT use this map: single-winner executives use incumbentPartyId and US Senate uses legislativeIncumbentPartyId. The map holds raw prior-cycle vote shares, so for a single winner it would yield a meaningless margin-scaled value, and on a vacant seat an incumbency bonus with no incumbent. Enforced by usesSeatShareIncumbency in incumbentSeatShare.ts.
    */
   incumbentSeatShareByParty?: Map<string, number>;
-  /**
+    /**
    * Single-winner executive own-race only: the sitting executive's party id
-   * and approval (0..100). When `incumbentPartyId` is set, the incumbency
-   * driver switches to a full-magnitude directional shield/drag scaled by
-   * `incumbentApproval` (see `approvalAdjustedIncumbencyBudget`). Unset for
-   * legislatures / primaries / vacant offices. A vacant executive office is an
-   * OPEN seat: `incumbentSeatShareByParty` is empty for single-winner races
-   * (see `usesSeatShareIncumbency`), so the driver reads 0 rather than
-   * inheriting the prior holder's vote margin.
-   * Plumbed from `2026-06-22-incumbency-approval-bonus-design.md`.
+   * and approval (0..100). When set, the incumbency driver becomes a
+   * directional shield/drag scaled by `incumbentApproval`. Unset for
+   * legislatures, primaries, and vacant offices; an open seat reads 0 rather
+   * than inheriting the prior holder's margin.
    */
   incumbentPartyId?: string;
   incumbentApproval?: number;
@@ -317,12 +292,10 @@ export interface DistributeVotesOptions {
   incumbentConsecutiveTerms?: number;
   /**
    * Single-seat legislative own-race (US Senate): party id of the sitting
-   * officeholder, set ONLY when that officeholder is a candidate in this race
-   * (open seats leave it unset). When present, the incumbency driver applies a
-   * flat directional shield that decays with `legislativeIncumbentTenureTerms`
-   * to a permanent +1pt floor — never a drag, no approval/favorability input.
-   * Takes precedence over `incumbentSeatShareByParty`. Plumbed from
-   * `2026-07-15-senate-incumbency-driver-design.md`.
+   * officeholder, set ONLY when that officeholder is a candidate here (open
+   * seats leave it unset). Applies a flat directional shield decaying with
+   * `legislativeIncumbentTenureTerms` to a permanent +1pt floor, never a drag.
+   * Takes precedence over `incumbentSeatShareByParty`.
    */
   legislativeIncumbentPartyId?: string;
   /**
@@ -432,8 +405,7 @@ export interface AccumulateVoteTurnPreload {
   db?: import("mongodb").Db;
   /**
    * Incumbent seat share per election id, precomputed for the whole vote turn
-   * from resolved history (#2695). Absent entries fall back to the per-election
-   * read.
+   * from resolved history. Absent entries fall back to the per-election read.
    */
   incumbentSeatShareByElection?: Map<string, Map<string, number>>;
   /** US Senate incumbency, resolved for the sweep without per-race history reads. */
@@ -467,10 +439,7 @@ export interface AccumulateVoteTurnPreload {
    * behavior, byte-identical.
    */
   eraSystemEnabled?: boolean;
-  /**
-   * gameState.nppPartyRenewalEnabled. When true the seat-share incumbency
-   * shield stops growing past half the seats (#5704).
-   */
+    /** When true, the seat-share incumbency shield stops growing past half the seats. */
   partyRenewalEnabled?: boolean;
   /**
    * Seeded per-state snapshots (`demographicDefaults` collection), used by the

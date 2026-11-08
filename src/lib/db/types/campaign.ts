@@ -57,13 +57,10 @@ export interface Campaign {
   candidateIsNPP: boolean;
   party: string;
 
-  /**
+    /**
    * Lifecycle state. `"archived"` campaigns are retained but excluded from
-   * active surfaces (primary loser, voluntary withdrawal, admin removal, ban,
-   * or a race Campaign Manager no longer covers).
-   * Missing/undefined is treated as `"active"` for legacy rows. Campaigns are
-   * only hard-deleted when the election resolves (see presidentResolution /
-   * generalResolution) so the next cycle starts fresh.
+   * active surfaces. Missing/undefined treated as `"active"` for legacy rows.
+   * Only hard-deleted when the election resolves, so the next cycle starts fresh.
    */
   status?: "active" | "archived";
   archivedAt?: Date | null;
@@ -164,11 +161,9 @@ export interface Campaign {
    */
   spendStock?: number;
 
-  /**
-   * Optional candidate-set campaign color (hex like "#3B82F6"). Used to shade
-   * the candidate on the per-party primary map and per-state primary pages, so
-   * two candidates in the same party are visibly distinct. Nominee/manager/admin
-   * may change it via POST /api/campaigns/[id]/color.
+    /**
+   * Hex campaign color ("#3B82F6") used to shade the candidate on primary maps
+   * and pages so same-party candidates are distinguishable.
    */
   color?: string | null;
 
@@ -177,15 +172,11 @@ export interface Campaign {
 
   /**
    * Running-mate surrogate action pool for a presidential ticket. Bounds the
-   * throughput of the VP's ticket-surrogate acts (canvass-for-ticket +
-   * campaign-in-a-state), which spend the VP's OWN character economy (their
-   * actions/funds) rather than the campaign treasury, but draw down this shared
-   * per-day counter so the mechanic degrades on the VP's absence rather than
-   * scaling without limit. Refilled to `presidentialRulesetFor(election)
-   * .vpSurrogateActionCap` once per Eastern-time calendar day by the turn engine
-   * (see src/lib/turn/runningMateSurrogateActionReset.ts). Optional/undefined on
-   * rows written before this shipped and on non-presidential campaigns; effect
-   * code degrades to the ruleset cap on read.
+   * VP's ticket-surrogate throughput, which spends the VP's own character
+   * economy rather than the campaign treasury, so the mechanic degrades on the
+   * VP's absence rather than scaling without limit. Refilled to the ruleset's
+   * `vpSurrogateActionCap` once per Eastern-time calendar day by the turn engine.
+   * Optional: undefined rows degrade to the ruleset cap on read.
    */
   runningMateSurrogateActionsRemaining?: number;
   /** Eastern-time calendar day the surrogate pool was last refilled (YYYY-MM-DD). */

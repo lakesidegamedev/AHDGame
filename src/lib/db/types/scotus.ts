@@ -4,14 +4,7 @@ import type { WhippedFromVoteMap } from "./legislation";
 import type { IterationStampFields } from "./gameState";
 
 /**
- * SCOTUS core mechanics (#3598, spec #3581).
- *
- * Justice is stored on its own document — mirroring how central-bank-chair
- * lives on `centralBanks.chairCharacterId` rather than `character.currentOffice`
- * (see `src/lib/db/types/centralBank.ts` + `scripts/migrations/decouple-chair-from-currentoffice.ts`)
- * — so holding a Justice seat never blocks, and is never blocked by, any other
- * office a character holds. Do NOT add a "justice" member to `OfficeType` or set
- * `character.currentOffice` on confirmation/vacancy.
+ * SCOTUS core mechanics. Justice lives on its own document, mirroring central-bank-chair, so a Justice seat never blocks or is blocked by other offices. Do NOT add a "justice" member to `OfficeType` or set `character.currentOffice` on confirmation/vacancy.
  */
 
 /** One scripted (fictional) justice's tenure on a given seat, authored by the per-preset content tickets (#3599-#3602). */
@@ -137,10 +130,9 @@ export type DocketCaseOutcome = "affirmed" | "diverged";
 /**
  * The law-equivalent effect a diverged case applies. Shaped like a minimal
  * `PolicyProvision` (src/lib/db/types/legislation.ts) referencing an EXISTING
- * `legislationTypes`/`policyOptions` entry — this is what lets a diverged ruling
- * flow through `onBillEnacted`/`recordEnactedLaw` completely unmodified.
- * Content tickets (#3599-#3602) author this per case that could plausibly diverge;
- * affirmed cases never read it.
+ * `legislationTypes`/`policyOptions` entry, so a diverged ruling flows through
+ * `onBillEnacted`/`recordEnactedLaw` unmodified. Authored per case that can
+ * diverge; affirmed cases never read it.
  */
 export interface DocketCaseEffect {
   legislationTypeId: string;
@@ -167,12 +159,11 @@ export interface DocketCase {
   title: string;
   axis: DocketCaseAxis;
   /**
-   * Absent for procedurally-spawned surprise cases (#3607, `isSurprise`) —
-   * those have no real-world ruling to affirm or diverge from, so there is
-   * nothing here to author. Always present for curated historical Docket
-   * cases (#3599-3602); `scotusDocketTurn.ts` only ever reads this off a
-   * `status: "pending"` row, and surprise cases are inserted directly as
-   * `status: "decided"` and never enter that query, so the two never collide.
+   * Absent for procedurally-spawned surprise cases, which have no real-world
+   * ruling to affirm or diverge from. Always present for curated historical
+   * Docket cases. `scotusDocketTurn.ts` only reads this off a `status: "pending"`
+   * row, and surprise cases are inserted directly as `status: "decided"` and
+   * never enter that query, so the two never collide.
    */
   historicalMajorityDirection?: 1 | -1;
   /**
@@ -197,14 +188,7 @@ export interface DocketCase {
   effect?: DocketCaseEffect;
 
   /**
-   * Plain-language player-facing summary of the REAL historical holding and
-   * its practical consequence — shown when the case affirms history, and
-   * always shown in the catalogue/report regardless of outcome. Authored for
-   * every curated Docket case (#3599-3602 content + the SCOTUS case-catalogue
-   * expansion), not just ones with a mechanical `effect` — every decided case
-   * gets a full wire post (see `src/lib/scotus/scotusNews.ts`), including the
-   * six cases with no `effect` authored (Bush v. Gore, Lawrence v. Texas,
-   * Heller, McDonald, Windsor, Obergefell).
+   * Player-facing summary of the real historical holding and its consequence. Shown when the case affirms history and always in the catalogue. Authored for every curated case, including those with no mechanical `effect`.
    */
   historicalSummary?: string;
   /**
@@ -262,12 +246,11 @@ export interface DocketCase {
   /** _id of the synthesized enactedLaws row, when outcome === "diverged" and effect was authored. */
   enactedLawId?: ObjectId;
   /**
-   * True for a procedurally-spawned "surprise" Docket case (#3607) — flavor
-   * content on top of the curated real-historical Docket, distinguishable
-   * here (and via `enactedLaws.source: "scotus_surprise_ruling"`) so the
-   * case-history read layer (`getScotusCaseHistory`) and its future UI
-   * (#3605) can render/filter them apart from real historical cases.
-   * Absent/false for every historical Docket case.
+   * True for a procedurally-spawned "surprise" Docket case: flavor content on
+   * top of the curated real-historical Docket. Distinguishable here (and via
+   * `enactedLaws.source: "scotus_surprise_ruling"`) so the case-history read
+   * layer (`getScotusCaseHistory`) can render/filter them apart from real
+   * historical cases. Absent/false for every historical Docket case.
    */
   isSurprise?: boolean;
 

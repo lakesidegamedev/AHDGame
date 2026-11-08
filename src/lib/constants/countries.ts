@@ -1272,19 +1272,12 @@ export function getPrimaryWinnersForCountry(countryId: CountryId): number {
 /**
  * Resolve the primary-winner cap for a specific (country, electionType).
  *
- * One election-type exception overrides the government-type default:
- * single-winner executive offices ({@link SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES})
- * always advance exactly one candidate per party — a governor/president race
- * fills one seat, so parliamentary/one-party multi-advance would split its vote.
+ * Single-winner executive offices
+ * ({@link SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES}) always advance exactly one
+ * candidate per party: a governor/president race fills one seat, so
+ * multi-advance would split its vote.
  *
- * Otherwise it equals {@link getPrimaryWinnersForCountry}.
- *
- * US House used to advance three per party under the districted-redistricting
- * system so the resolver could split a state's delegation by primary share.
- * That was reverted: a party's own filler NPP survived the primary alongside
- * the player who beat it and then took a proportional slice of the delegation,
- * which is not how a primary is meant to work. US House is back to one nominee
- * per party, like every other US race.
+ * Otherwise equals {@link getPrimaryWinnersForCountry}.
  */
 export function getPrimaryWinnersForElection(countryId: CountryId, electionType: string): number {
   if (SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES.has(electionType)) {
@@ -1529,15 +1522,10 @@ export function getRegionAppointableSeats(countryId: CountryId): RegionAppointab
 }
 
 /**
- * Election-type keys a Governor's-Office can endorse from within their state:
- * the sub-national legislature plus any elected federal chambers (House/Senate
- * for US, Commons for UK, Bundestag for DE, Shugiin/Sangiin for JP). Appointed
- * chambers (UK Lords, DE Bundesrat) are excluded because they have no
- * elections to endorse in. Also includes the legacy "stateHouse" key for
- * older fixtures.
- *
- * Used to filter `elections.find({ state: regionId, electionType: { $in } })`
- * so a governor sees races in their state at every electable level.
+ * Election-type keys a Governor's Office can endorse within its state: the
+ * sub-national legislature plus elected federal chambers. Appointed chambers
+ * are excluded (no elections to endorse). Includes legacy "stateHouse" for
+ * older fixtures. Used to filter elections by state and type.
  */
 export function getEndorseableElectionTypes(countryId: CountryId): string[] {
   const config = getCountryConfig(countryId);

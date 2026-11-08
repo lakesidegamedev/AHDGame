@@ -116,25 +116,10 @@ export const CONTRACT_SHARE_MAX = 0.75;
 // ── Era ──────────────────────────────────────────────────────────────────────
 
 /**
- * Era scaling for prospecting.
- *
- * A survey in 1953 and a survey in 2019 were running the same numbers, which
- * gets the era wrong in two opposite directions at once.
- *
- * Finding oil in 1953 meant surface geology, magnetometers and single-fold
- * seismic read off paper — no digital processing, no 3D imaging, no satellite
- * gravimetry. Success rates were far worse and a survey took much longer. But
- * the deposits still out there were the easy ones: shallow, large, and
- * unclaimed. By 2019 the technology finds almost anything, and what is left to
- * find is marginal.
- *
- * So the era model is a trade rather than a difficulty slider: earlier worlds
- * hit less often and wait longer, and are paid more when they do hit. That
- * keeps prospecting a live decision in every era instead of a strictly worse
- * one in the past.
- *
- * Anchors interpolate linearly, matching `METRIC_BAND_CURVES`. A null year
- * (era clock off) returns neutral, so an existing world is unchanged.
+ * Era scaling for prospecting: earlier eras succeed less often and take
+ * longer, but pay more on a hit, so prospecting stays a live decision in
+ * every era. Anchors interpolate linearly like `METRIC_BAND_CURVES`; a
+ * null year returns neutral.
  */
 export interface ProspectEraScaling {
   /** Multiplier on success chance. */

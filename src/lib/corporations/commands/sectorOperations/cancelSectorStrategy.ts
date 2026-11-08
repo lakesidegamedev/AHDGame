@@ -149,27 +149,24 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     const newStrategyId = sector.transitionFromStrategyId; // the original strategy (destination of reversal)
     const newTransitionFromStrategyId = sector.strategyId; // what we were transitioning toward
 
-    // D9: the same RPU normalization `setSectorStrategy` applies, run in the
-    // opposite direction. The stock was rescaled to the DESTINATION's mix when
-    // the transition was committed; cancelling makes the original strategy the
-    // destination again, so rescale from `sector.strategyId` (the abandoned
-    // destination) to `newStrategyId` (the original). Composing the two changes
-    // returns the sector to exactly its pre-retool capacity — capacity is one
-    // currency, and changing your mind must not mint or burn any of it.
+    // The same RPU normalization `setSectorStrategy` applies, run in the
+    // opposite direction. The stock was rescaled to the DESTINATION's mix when the
+    // transition was committed; cancelling makes the original strategy the
+    // destination again, so rescale from `sector.strategyId` to `newStrategyId`.
+    // Composing the two changes returns the sector to exactly its pre-retool
+    // capacity: changing your mind must not mint or burn capacity.
+    //
     // PLANTS-GATED for the same reason as `setSectorStrategy`: below plants
     // `capitalStock` is production-gating state with a different meaning, and
     // rescaling it would move live output.
     //
-    // The gate is the FLAG the retool persisted, not this request's mode. Each
-    // command used to resolve `plantsEnabled` independently at its own call
-    // time, so a retool committed under capital mode and cancelled after a flip
-    // to plants applied the inverse ratio to a stock that was never scaled
-    // forward — a permanent mint or burn of the entire RPU ratio, which reaches
-    // 327x for a coal to rare-earth pair. The mode is still required as well: a
-    // flip the OTHER way (retool under plants, cancel after a rollback to
-    // capital) must not write plants-basis capacity onto a row capital mode now
-    // owns. Only when both agree is the inverse both owed and safe. A legacy row
-    // with no flag predates plants and was never rescaled, so it reads false.
+    // The gate is the FLAG the retool persisted, not this request's mode. A retool
+    // committed under capital mode and cancelled after a flip to plants would
+    // otherwise apply the inverse ratio to a stock that was never scaled forward,
+    // minting or burning the full RPU ratio. The mode is still required: a flip
+    // the OTHER way must not write plants-basis capacity onto a capital row. Only
+    // when both agree is the inverse both owed and safe. A legacy row with no flag
+    // predates plants and was never rescaled, so it reads false.
     const marketMode = await getMarketSystemModeForDb(db);
     const plantsEnabled =
       marketAtLeast(marketMode, "plants") && sector.retoolRescaleApplied === true;

@@ -40,23 +40,16 @@ export async function getNextSequentialId(
 /**
  * Reserve `count` consecutive sequential ids in a single round trip.
  *
- * Same counter document and the same atomic `findOneAndUpdate` as
- * {@link getNextSequentialId} — the increment is N instead of 1 and the caller
- * owns the whole returned block. Uniqueness and monotonicity are therefore
- * identical, and the two can interleave freely: a live single allocation
- * between two reservations simply takes the next id.
+ * Same counter and atomic `findOneAndUpdate` as {@link getNextSequentialId},
+ * with an increment of N instead of 1. Uniqueness and monotonicity hold, and
+ * the two can interleave freely.
  *
- * For callers that know their count up front and are allocating in a loop. A
- * seed allocates 436 NPP ids one await at a time, which is 436 round trips to
- * increment one integer. Single-entity callers (a player creating a character,
- * a corporation being founded) should keep using {@link getNextSequentialId} —
- * they do not know a count, and one id is one round trip either way.
+ * For callers that know their count up front. Single-entity callers should
+ * keep using {@link getNextSequentialId}.
  *
- * Reserving more than you use is safe but leaves a gap: ids are unique and
- * increasing, never contiguous by contract. `realignPartyCountersToExisting`
- * already resolves counters via `max(sequentialId)` rather than assuming
- * contiguity. `count: 0` performs no write at all, so a pass that turns out to
- * have nothing to create stays a true no-op.
+ * Reserving more than you use leaves a gap: ids are unique and increasing,
+ * never contiguous by contract. `realignPartyCountersToExisting` resolves
+ * counters via `max(sequentialId)`. `count: 0` performs no write.
  */
 export async function reserveSequentialIds(
   db: Db,

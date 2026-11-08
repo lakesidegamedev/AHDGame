@@ -20,15 +20,13 @@ import {
 
 /**
  * Distribute a dissolving corp's holdings in OTHER corps IN-KIND, pro-rata to
- * the dissolving corp's own cap table — instead of cashing them out at market
- * price (the money-mint both dissolution paths used to do: they credited
- * `shares × issuer.sharePrice` into liquidCapital with no counterparty debit,
- * letting a ring pump prices and extract the difference). No cash is created
- * and every issuer's `totalShares` stays invariant: the dissolving corp's stake
- * simply moves to its shareholders (and its public-float fraction to the
- * issuer's public float). A corp may never hold its own shares, so any
- * allocation back to the issuer itself (cross-holding rings hit this) is routed
- * to the issuer's public float instead.
+ * its own cap table, rather than cashing them out at market price. Cashing out
+ * would mint money (crediting shares × issuer.sharePrice with no counterparty
+ * debit), letting a ring pump prices and extract the difference. No cash is
+ * created and every issuer's `totalShares` stays invariant: the stake moves to
+ * the shareholders (and the public-float fraction to the issuer's public
+ * float). A corp may never hold its own shares, so allocations back to the
+ * issuer (cross-holding rings) go to its public float instead.
  *
  * Shared by the quick-dissolve route and the bond-default dissolution.
  */

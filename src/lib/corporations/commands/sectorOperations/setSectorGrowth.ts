@@ -90,11 +90,9 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
     const activeGrowthRate = sector.currentGrowthRate ?? sector.growthRate ?? 0;
     // Host country, not the corporation's domicile: this feeds the prime rate
     // the growth-cost quote is discounted at and the country stamped on the
-    // action log. The old chain fell through to the corp and then to a literal
-    // "US", which quoted a foreign operation at American rates (ticket #1271,
-    // the same defect `buildCapacity` and `expandSector` carried). State first,
-    // matching `getSectorOperatingCountryId`: a stored `countryId` left stale by
-    // a region changing hands is the case that precedence exists for.
+    // action log. State first, matching `getSectorOperatingCountryId`: a stored
+    // `countryId` left stale by a region changing hands is the case that
+    // precedence exists for.
     const sectorState = await db
       .collection<State>("states")
       .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });

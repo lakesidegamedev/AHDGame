@@ -77,11 +77,10 @@ export interface ElectedOfficial {
   lastVpActionAccrualTurn?: number;
   /** Turn the VP last bought +1 action with main AP (once per turn). */
   lastVpActionTopUpTurn?: number;
-  /**
-   * Westminster whip withdrawal (issue #859). True while the MP sits suspended
-   * from the parliamentary party: the whip is withdrawn, they sit as an
-   * independent, and they face elevated reselection risk. Set only by the
-   * sitting PM via the whip withdraw/restore endpoints; absent means whipped.
+    /**
+   * Westminster whip withdrawal: true while the MP sits suspended from the
+   * parliamentary party as an independent with elevated reselection risk.
+   * Set only by the sitting PM; absent means whipped.
    */
   whipWithdrawn?: boolean;
   /** When the whip was withdrawn. */

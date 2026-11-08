@@ -176,11 +176,10 @@ export interface Election {
    * `planNextLowerChamberCycle`.
    */
   shiftedScheduleEndTurn?: number;
-  /**
-   * Commons by-election carve (#860): fraction of the region's electorate this
-   * race contests (vacatedSeats / totalRegionSeats). Stored at spawn so tally
-   * invariants and the UI can prove the scaled pool. Present only on
-   * `special_commons` races.
+    /**
+   * Fraction of the region's electorate this race contests
+   * (vacatedSeats / totalRegionSeats), stored so tally and UI can verify the
+   * scaled pool. Present only on `special_commons` races.
    */
   byElectionCarve?: number;
   /** Vacancy docs claimed by this by-election (one race may fill several). */
@@ -230,21 +229,13 @@ export interface ElectionCandidate {
   isNPP?: boolean;
   nppId?: ObjectId;
   enteredAt: Date;
-  /**
-   * Phase 0.5 §3.1 canonical Support store — short-term candidate mood /
-   * momentum, 0..100. Written by Phase 4 primary resolution and Phase 5b
-   * campaign / polling actions. Undefined on pre-Phase-4 rows (degrades to
-   * neutral 1.0× in the formula).
-   *
-   * NATIONAL, not per state: one scalar for the candidate, read by
-   * `supportMoodMultiplier` and applied identically to every state's vote
-   * distribution (0.6× at 0, 1.0× at 50, 1.4× at 100). Rallies and the rally
-   * tour move this figure, so they lift the candidate everywhere at once
-   * rather than in the state they are camped in.
-   *
-   * Read by both the general-election distribution and the primary stagger
-   * phase. It was general-only until the stagger began reading it too, so a
-   * whole primary season of rallies moved no votes.
+    /**
+   * Short-term candidate mood / momentum, 0..100, written by primary
+   * resolution and campaign actions. NATIONAL scalar, not per state: applied
+   * identically to every state's vote distribution by
+   * `supportMoodMultiplier` (0.6x at 0, 1.0x at 50, 1.4x at 100). Undefined on
+   * older rows, where it degrades to neutral 1.0x. Read by both the
+   * general-election distribution and the primary stagger phase.
    */
   support?: number;
   withdrawnAt?: Date;
@@ -264,12 +255,8 @@ export interface ElectionCandidate {
   travelState?: string | null;
   /** When the travel was last set */
   traveledAt?: Date;
-  /**
-   * President-general-only: state the ticket's running mate is campaigning in as
-   * a surrogate. Set on the NOMINEE's candidate row (the running mate has no
-   * candidate row of their own). Adds the ruleset's vpTravelPresenceWeight to the
-   * ticket's per-turn travel-presence favorability. Optional/undefined until the
-   * running mate travels; degrades to no bonus on read.
+    /**
+   * President-general-only: state the ticket's running mate is campaigning in as a surrogate. Set on the nominee's candidate row (the running mate has no candidate row). Adds the ruleset's vpTravelPresenceWeight to the ticket's per-turn travel-presence favorability. Undefined until the running mate travels; degrades to no bonus on read.
    */
   runningMateTravelState?: string | null;
   /** When the running mate's surrogate travel state was last set. */
@@ -301,25 +288,19 @@ export interface ElectionCandidate {
    */
   primarySurgeBoost?: number;
 
-  /**
-   * Phase B — queued Support drips from rally events. Each entry is one
-   * trailing-share payout (`amountPerTurn` Support points / turn for
-   * `turnsRemaining` more turns). The accrual-tick processor applies and
-   * decrements each entry every turn; entries with `turnsRemaining === 0`
-   * are pruned. Undefined / empty = no pending drips. See
-   * `2026-05-22-swing-flow-driver-activation.md` §B1.
+    /**
+   * Queued Support drips from rally events: each entry pays `amountPerTurn`
+   * Support points per turn for `turnsRemaining` turns. The accrual-tick
+   * processor decrements each entry and prunes at zero. Undefined or empty
+   * means no pending drips.
    */
   supportAccrual?: Array<{
     amountPerTurn: number;
     turnsRemaining: number;
   }>;
 
-  /**
-   * Phase B — turn number of the most recently fired one-shot rally
-   * action. Used to throttle the rally button (one one-shot per turn
-   * per candidate). Tour ticks DO NOT update this field — they run
-   * automatically when the tour is active, not via the one-shot
-   * action button.
+    /**
+   * Turn number of the most recently fired one-shot rally action. Throttles the rally button (one one-shot per turn per candidate). Tour ticks do not update this field; they run automatically while the tour is active.
    */
   lastRallyTurn?: number;
 
@@ -331,13 +312,12 @@ export interface ElectionCandidate {
    */
   rallyTourActive?: boolean;
 
-  /**
+    /**
    * Presidential general-election only: nominee suspended active campaigning
    * and endorsed another ticket. The candidate stays on the ballot; 25% of
-   * campaign strength transfers immediately (one-time), and 25% of per-state
-   * character org boosts the endorsed nominee's electoral vote math each turn
-   * (no org debited from the suspender). Suspender retains existing votes but
-   * stops further accumulation.
+   * campaign strength transfers immediately, and 25% of per-state character
+   * org boosts the endorsed nominee's electoral vote math each turn (no org
+   * debited). Suspender retains existing votes but stops accumulating more.
    */
   campaignSuspended?: boolean;
   suspendedAt?: Date;

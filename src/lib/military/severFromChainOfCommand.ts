@@ -30,19 +30,13 @@ export interface SeveredCommandTies {
  * any command they led loses its lead, their conflict postings go, and the units
  * assigned to them fall back to the General Staff in reserve.
  *
- * Two events need exactly this and used to implement it separately — or, in one
- * case, not at all:
- *
- *   - DISMISSAL. The defence secretary sacks a general. Already cascaded; this is
- *     that cascade, lifted out so it has one definition.
- *   - EMIGRATION. A commissioned general relocates to another country. Nothing
- *     severed anything, so the saved command kept their character id and every
- *     consequence followed from that: the office could not draw a row for someone
- *     its roster no longer held, the commands PUT refused every later edit over
- *     that id, and `requireCommandingGeneral` went on treating them as the lead —
- *     which handed a player who had moved abroad their old country's postings and
- *     Theater Commander picks. Production had two of these: Russia's only command
- *     and one of the United Kingdom's.
+ * Two events need exactly this: DISMISSAL (the defence secretary sacks a general)
+ * and EMIGRATION (a commissioned general relocates to another country). Left
+ * unsevered, the saved command keeps their character id: the office cannot draw a
+ * row for someone its roster no longer holds, the commands PUT refuses every later
+ * edit over that id, and `requireCommandingGeneral` treats them as the lead, which
+ * hands an emigrated player their old country's postings and Theater Commander
+ * picks.
  *
  * The commission itself is NOT touched. `characterGenerals` carries no country and
  * a general's country is resolved from their character, so emigrating already moves
@@ -51,7 +45,7 @@ export interface SeveredCommandTies {
  *
  * Nobody is promoted to fill the gap. Severing a Theater Commander vacates that
  * front and authority falls back to the defence holder, which `canActAtTheater`
- * already handles — but the seat has quietly taken the front back and owes it a
+ * already handles, but the seat has quietly taken the front back and owes it a
  * successor.
  *
  * Idempotent, and writes nothing when the character held nothing: relocation runs

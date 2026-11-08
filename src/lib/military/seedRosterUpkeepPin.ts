@@ -4,37 +4,22 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { seedRosterUpkeepFor } from "@/lib/military/seedRosterUpkeep";
 
 /**
- * A world's OWN seed-roster upkeep denominators, captured when it was created.
+ * A world's OWN seed-roster upkeep denominators, captured at creation.
  *
- * `upkeepPerTurn` divides a country's live roster cost by the cost of the roster it
- * STARTED with, so a nation sitting at its historical starting force pays exactly
- * `SEED_UPKEEP_TARGET_SHARE` of its appropriation. `seedRosterUpkeepFor` derives that
- * denominator by calling `buildCountryRoster` at read time, which its own docstring
- * argues for and which is right in one respect: a checked-in table would go stale the
- * moment an archetype's upkeep or a branch's era gate changed.
+ * `upkeepPerTurn` divides live roster cost by the cost of the roster the
+ * country STARTED with, so a nation at its starting force pays exactly
+ * `SEED_UPKEEP_TARGET_SHARE` of its appropriation. Deriving that denominator
+ * at read time breaks when the SEED TABLE changes under an already-seeded
+ * world: the live roster is a database fact, but the denominator would be
+ * recomputed from the current source, silently re-pricing existing armies.
  *
- * It breaks in exactly one case, and that case is a deploy: when the SEED TABLE ITSELF
- * changes under a world that has already been seeded. The live roster is a database
- * fact from turn one; the denominator is recomputed from whatever the code says today.
- * Change `ORDERS_OF_BATTLE` and every existing army is silently re-priced with nothing
- * having touched the world.
+ * The pin makes the denominator a property of a WORLD, fixed at seeding. It is
+ * preferred at read time and falls back to derivation when absent so older
+ * worlds keep working.
  *
- * Measured on prod (`1953-default`, turn 672) across the authored orders of battle in
- * #1518: the US denominator moves 4,366 to 25,512, which drops its upkeep burden from
- * 0.50 to 0.09 and hands it a nearly free army, while JP (1,453 to 693) and IE (2,226
- * to 547) move the other way into immediate arrears on rosters their players never
- * chose. Nobody edited the world. The code moved underneath it.
- *
- * The pin makes the denominator what it has always logically been: a property of a
- * WORLD, fixed when that world was seeded, not of the current source file. It is
- * captured at bootstrap, preferred at read time, and falls back to derivation when
- * absent so a world created before this existed keeps working unchanged.
- *
- * ⚠️ IT MUST BE REWRITTEN ON EVERY RESEED. `gameConfig` is manifest category
- * `reference`, so teardown does NOT sweep it: a pin left from the previous world would
- * survive a reset and silently hold the NEW world to the OLD world's denominators,
- * which is a worse version of the bug it exists to fix. `captureSeedRosterUpkeepPin`
- * is therefore called unconditionally by the seeder, not only when the field is missing.
+ * MUST be rewritten on every reseed: `gameConfig` is not swept by teardown, so
+ * a stale pin would hold the new world to the old world's denominators.
+ * `captureSeedRosterUpkeepPin` is called unconditionally by the seeder.
  */
 export interface SeedRosterUpkeepPin {
   /** The preset this was captured for. A pin never applies to a different one. */

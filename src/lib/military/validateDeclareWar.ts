@@ -12,13 +12,10 @@ export type DeclareWarCheck = { ok: true } | { ok: false; status: number; error:
 /**
  * Every check a war declaration must clear, in ONE place.
  *
- * Both proposal paths call this. `cabinet-bills` — the route the executive actually
- * uses — builds its provision array directly and never runs `validateBillProvisions`,
- * so keeping these checks only in that validator would leave every one of them
- * unenforced on the path players take. The conquest reservation in particular is
- * only meaningful if it holds here.
- *
- * Spec: docs/superpowers/specs/2026-08-04-war-declaration-legislation-design.md
+ * Both proposal paths call this. `cabinet-bills` builds its provision array directly
+ * and never runs `validateBillProvisions`, so checks kept only there would be
+ * unenforced on the path players take. The conquest reservation only holds if it
+ * holds here.
  */
 export async function validateDeclareWar(
   db: Db,

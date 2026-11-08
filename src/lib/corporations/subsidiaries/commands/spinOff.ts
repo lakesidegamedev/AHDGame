@@ -232,9 +232,7 @@ export async function spinOff(
       CEO_INITIAL_SHARES,
       await getGameStatePresetOrDefault(db)
     );
-    // Passed-decade baseline tech, exactly as a newly founded corp gets it
-    // (suggestion #363). Without it the moved sectors lost their tech margin,
-    // build discount and input/output bonuses the moment they changed hands.
+    // Baseline tech for the passed decade, matching a newly founded corp. Without it moved sectors lose tech margin, build discount and bonuses on transfer.
     const gameState = await getGameState(db);
     const baselineTechNodeIds =
       gameState?.sectorTechTreesEnabled === true
@@ -295,21 +293,13 @@ export async function spinOff(
     await insertCorporationWithTickerRetry(db, corpDoc as Corporation);
     await openCeoTenure(db, newCorpId, { holderId: ceoId, ceoType: ceoTypeResolved, turn });
 
-    // Transfer the parent's sectors of this type to the new corp, re-denominating
-    // revenue/currentGrowthCost across corp currencies (identity when the two
-    // share a currency, which is the norm for a spun-off corp).
-    //
-    // PLANT STATE (P3b): this is a REASSIGN, not a merge — the sector doc keeps
-    // its `_id` and only changes `corporationId`, so `capitalStock`,
-    // `buildQueue`, `constructionInProgressAnchor`, `mothballed` and
-    // `plantsStartTurn` ride along untouched. That is the correct outcome and
-    // it must stay that way: the ₳-anchored capex fields (CIP, and each build
-    // order's `costPaidAnchor`) must NOT be put through the
-    // readCorpEconomicAnchor/writeCorpEconomicLocal round-trip applied to
-    // revenue below. Those two fields are already ₳ by contract; re-denominating
-    // them on a cross-currency spin-out would restate the same money by the FX
-    // rate (~87× on a JPY parent) and let the subsidiary cancel its inherited
-    // build orders for a refund far larger than the parent ever paid.
+    // Reassign sector docs to the new corp: only corporationId changes, so
+    // capitalStock, buildQueue, mothballed and plantsStartTurn ride along.
+    // The A-anchored capex fields (CIP, each order's costPaidAnchor) are already
+    // A by contract and must NOT go through the readCorpEconomicAnchor/
+    // writeCorpEconomicLocal round-trip applied to revenue below. Re-denominating
+    // them on a cross-currency spin-out would restate the money by the FX rate
+    // and let the subsidiary cancel inherited orders for an inflated refund.
     const newFx = parentFx; // same country/currency as parent
     for (const [index, sector] of sectors.entries()) {
       const revenueAnchor = readCorpEconomicAnchor(sector.revenue, parentCurrency, parentFx);
@@ -350,9 +340,8 @@ export async function spinOff(
       .updateOne({ _id: parent._id }, { $set: { lastSpinOffTurn: turn, updatedAt: now } });
 
     // The incorporation fee is government revenue, not destroyed money: it goes
-    // to the parent's country treasury, and both legs are ledgered. Previously
-    // this was a single-sided debit with no counter-account, which read as a
-    // leak to any money-conservation check.
+    // to the parent's country treasury, and both legs are ledgered for
+    // money-conservation checks.
     const feeCurrency = (parentCurrency ?? "USD") as CurrencyCode;
     const feeToTreasury = await creditTreasuryProceeds(db, parent.countryId, costLocal, now);
     await Promise.all([

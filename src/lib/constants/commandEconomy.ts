@@ -18,31 +18,22 @@ const EASTERN_BLOC_ALL_SECTORS_SOE: OperatingSectorType[] = [...OPERATING_SECTOR
 /**
  * Command-economy regime model.
  *
- * AHD is a general-equilibrium MARKET simulator, but the USSR and command-era
- * China were quantity-planned SHORTAGE economies: a fixed, non-convertible
- * official currency; an administered price/inflation path rather than a market
- * Phillips curve; a passive monobank (no Taylor-rule chair); soft budget
- * constraints (state firms do not go bankrupt); two-circuit money (cash vs
- * non-cash); and a repressed second (black-market) economy. Modeling their
- * currency as a floating, convertible, chair-managed market currency is the
- * wrong KIND of economy — the same class of failure that produced the naira
- * 100x FX incident.
+ * Command-era economies are quantity-planned shortage economies (fixed
+ * non-convertible currency, administered prices, passive monobank, soft budget
+ * constraints, two-circuit money, repressed second economy), not floating
+ * market currencies. Modeling them as market economies is the wrong kind of
+ * economy.
  *
- * The regime is not a switch but a DIAL — `marketizationLevel` (0 fully
- * command → 100 fully market). China migrates ALONG it across eras (1953 ≈
- * command, 1991 ≈ dual-track, 2019 ≈ market); the Soviet ruble sits near the
- * command end through dissolution. Subsystems activate on threshold bands:
+ * The regime is a dial, `marketizationLevel` (0 fully command, 100 fully market).
+ * Subsystems activate on threshold bands:
  *
- *   level <  COMMAND_CEILING     → FULLY COMMAND   (fixed non-convertible
- *                                   currency, passive monobank, administered
- *                                   CPI, soft budget, administered prices,
- *                                   two-circuit money, second economy)
- *   COMMAND_CEILING..DUAL_TRACK  → DUAL-TRACK      (plan + market engines run
- *                                   in parallel, output split by `plannedShare`)
- *   level >= DUAL_TRACK_CEILING  → MARKET          (standard engine)
+ *   level < COMMAND_CEILING      -> FULLY COMMAND
+ *   COMMAND_CEILING..DUAL_TRACK  -> DUAL-TRACK (plan and market run in parallel,
+ *                                   output split by `plannedShare`)
+ *   level >= DUAL_TRACK_CEILING  -> MARKET (standard engine)
  *
- * Everything is gated behind the `commandEconomyEnabled` GameConfig flag
- * (default OFF) — existing worlds are byte-identical until an operator opts in.
+ * Everything is gated behind the `commandEconomyEnabled` flag (default off), so
+ * existing worlds are byte-identical until an operator opts in.
  */
 
 /** Fully-market marketization level (dial at 100). */
@@ -56,25 +47,19 @@ export { MARKETIZATION_SCHEDULE } from "./marketizationSchedule";
 export type { MarketizationStep } from "./marketizationSchedule";
 
 /**
- * Command Economy v2 (P0) — stored, endogenous marketization levels.
+ * Command Economy v2: stored, endogenous marketization levels.
  *
- * `marketizationLevel` used to be a pure schedule function. Under v2 the level
- * becomes STATEFUL: it drifts each turn on black-market pressure, SOE
- * performance and policy stance (see {@link marketizationDrift}) and is
- * persisted per country. To keep the accessor's signature/behaviour contract
- * intact for the ~16 downstream consumers, the stored value lives in this
- * process-level registry: the command-economy turn phase hydrates it from the
- * DB at the start of the turn and writes the drifted value back, so every
- * later phase in the same turn (forex, insolvency, pricing, CPI, …) sees the
- * current level through the unchanged accessor. Absent an entry, the accessor
- * falls back to the era SCHEDULE (which also seeds the stored value the first
- * time). Empty registry ⇒ pure schedule behaviour (flag-off worlds never
- * populate it, so they stay byte-identical).
+ * `marketizationLevel` is stateful under v2, drifting each turn and persisted
+ * per country. To preserve the accessor's signature for downstream consumers,
+ * the stored value lives in this process-level registry: the turn phase
+ * hydrates it from the DB and writes the drifted value back so later phases
+ * see the current level. Absent an entry, the accessor falls back to the era
+ * SCHEDULE (which also seeds the stored value the first time).
  *
- * SEAM (P1/P2): read-only API/UI request paths run in separate processes and
- * won't share this registry; they should hydrate it from
+ * SEAM: read-only API/UI request paths run in separate processes and will not
+ * share this registry; hydrate it from
  * `FederalBudget.economicFactors.marketizationLevel` before rendering the
- * marketization gauge. The turn engine (single process) is fully covered here.
+ * marketization gauge. The turn engine (single process) is fully covered.
  */
 const storedMarketizationLevels = new Map<string, number>();
 
@@ -273,9 +258,8 @@ export function plannedShare(
  * transport→logistics.
  */
 export const COMMAND_ECONOMY_SOE_SECTORS: Partial<Record<CountryId, OperatingSectorType[]>> = {
-  // USSR + union republics + Warsaw Pact + Yugoslavia: full sector stack.
-  // (Historical "commanding heights only" lists left most plants missing under
-  // the plants market tier — see ticket #1014 / EASTERN_BLOC_ALL_SECTORS_SOE.)
+  // Full sector stack for USSR, union republics, Warsaw Pact, and Yugoslavia,
+  // so plants market tiers don't leave most plants missing.
   RU: EASTERN_BLOC_ALL_SECTORS_SOE,
   UKR: EASTERN_BLOC_ALL_SECTORS_SOE,
   BLR: EASTERN_BLOC_ALL_SECTORS_SOE,
@@ -321,34 +305,20 @@ export function commandEconomySoeSectors(
  *          + w_pol * policyStance                  // reformist → +, orthodox → −
  */
 export const MARKETIZATION_DRIFT_WEIGHTS = {
-  /**
-   * Weight on black-market pressure (0..1). Max +0.22/turn. P3 raised this from
-   * 0.30 to 0.34 so the shortage→black-market reform spiral genuinely moved the
-   * dial rather than only the readouts.
+    /**
+   * Weight on black-market pressure (0..1). Max +0.22/turn. Tuned so the
+   * shortage→black-market reform spiral moves the dial without overshooting:
+   * `accumulateOverhang` counts unmet plan as a goods deficit, and a
+   * competently-run, orthodox, hands-off USSR crosses COMMAND_CEILING in 1984
+   * on higher weights. At 0.22 it stays COMMAND through 1991.
    *
-   * 1.1: trimmed to 0.22. Two reasons, and the second is the binding one.
-   *
-   * First, `accumulateOverhang` now counts the unmet plan as a goods deficit,
-   * so the same world produces more shortage pressure than it did when 0.34 was
-   * tuned; without a trim the whole reform spiral simply ran that much hotter.
-   *
-   * Second, and this is a PRE-EXISTING bug the new term only made more visible:
-   * the USSR-to-1991 guard was failing. Scenario E in
-   * `commandEconomyBalanceHarness` (a competently-run, orthodox, hands-off USSR)
-   * crossed COMMAND_CEILING in 1984 on the old weights, which is the Soviet
-   * Union voluntarily marketizing halfway through Chernenko. It was invisible
-   * because the scenario only ran 10 of the 38 years it was guarding. At 0.22
-   * it stays COMMAND for the full run to 1991.
-   *
-   * The mismanagement and collapse paths are almost untouched by the trim: they
-   * are dominated by the soePerformance and policyStance terms, so scenario C
-   * still reforms at yr+3.5 and scenario F still reaches market at yr+6.5.
+   * Mismanagement and collapse paths are dominated by the soePerformance and
+   * policyStance terms, so this trim leaves them nearly untouched.
    */
   blackMarket: 0.22,
-  /** Weight on the SOE plan-fulfillment shortfall (baseline − perf). P3: trimmed
-   *  from 0.25 so chronic plan misses remain the primary player-driven reform
-   *  channel without a totally-collapsed world rocketing to fully-market in a few
-   *  years (the extreme corner used to hit level 100 in ~10yr). */
+    /** Weight on the SOE plan-fulfillment shortfall (baseline − perf). Kept low
+   *  so chronic plan misses stay the primary reform channel without a
+   *  collapsed world rocketing to fully-market in a few years. */
   soePerformance: 0.18,
   /** Weight on the signed reform-vs-orthodox policy stance (−1..+1). P3: nudged
    *  from 0.10 now that government reformism is wired live end-to-end (a
@@ -402,27 +372,21 @@ export const MARKETIZATION_GRAVITY_RATE = 0.004;
 export const MARKETIZATION_GRAVITY_MAX_STEP = 0.02;
 
 /**
- * The signed per-turn ERA-GRAVITY term: a weak restoring pull from the live
- * level back toward {@link scheduledMarketizationLevel}.
+ * Signed per-turn ERA-GRAVITY term: a weak, saturating restoring pull from
+ * the live level toward {@link scheduledMarketizationLevel}.
  *
- * This is GRAVITY, not RAILS, and the distinction is the whole design:
+ * This is GRAVITY, not RAILS: it is a small restoring force (rate × gap,
+ * capped at {@link MARKETIZATION_GRAVITY_MAX_STEP}), never an assignment.
+ * The cap is below what the three free drivers can sustain
+ * ({@link MARKETIZATION_DRIFT_WEIGHTS} sum to 0.64 of headroom), so real
+ * reform or entrenchment overwhelms it. It is exactly zero at the scheduled
+ * level, so a world that has never drifted is byte-identical.
  *
- *  - It is a small, saturating restoring FORCE (rate × gap, capped at
- *    {@link MARKETIZATION_GRAVITY_MAX_STEP}), never an assignment. Nothing here
- *    ever sets the level to the scheduled value.
- *  - It is capped BELOW what the three free drivers can sustain
- *    ({@link MARKETIZATION_DRIFT_WEIGHTS} sum to 0.64 of headroom), so a
- *    government that actually reforms — or one that runs a tight enough plan to
- *    entrench past history — overwhelms it. History is beatable.
- *  - It is exactly zero when the level sits at the scheduled value, so a world
- *    that has never drifted is byte-identical.
- *
- * The v2 P0 model shipped with NO gravity ("history can break"), which sounded
- * freer than it played: with the policy-stance term pinned negative (see
- * {@link blendGovernmentReformism}) every bloc country ratcheted monotonically
- * to the 0 floor, ending up BELOW the authored schedule regardless of play. The
- * intended default when nobody intervenes is the historical level; deviation
- * should be something a player earns in either direction.
+ * Without it, a pinned-negative policy-stance term (see
+ * {@link blendGovernmentReformism}) ratchets every bloc country monotonically
+ * to the 0 floor, below the authored schedule regardless of play. The intended
+ * default when nobody intervenes is the historical level; deviation should be
+ * earned in either direction.
  */
 export function marketizationGravity(level: number, scheduledLevel: number): number {
   if (!Number.isFinite(level) || !Number.isFinite(scheduledLevel)) return 0;

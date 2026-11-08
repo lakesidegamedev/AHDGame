@@ -1,19 +1,9 @@
 /**
- * Frontier programmes (issue #5705): repeatable research after the last
- * authored tier, so R&D always has a use.
+ * Frontier programmes: repeatable research after the last authored tier, so R&D always has a use.
  *
- * Once a corporation owns every baseline node (slots 1 to 9) of the last
- * tier in the lane it committed to, it may buy frontier programmes for its
- * sector. Each purchase is one of two kinds: an output programme (+0.4% plant
- * output) or an input programme (-0.6% plant inputs). Each costs 15% more
- * rdScore than the one before, counted over both kinds, and the effects pass
- * through the same aggregate caps as every node (TECH_PLANT_OUTPUT_CAP,
- * TECH_INPUT_EFFICIENCY_CAP), so stacking can never run away.
+ * Once a corporation owns every baseline node (slots 1 to 9) of the last tier in the lane it committed to, it may buy frontier programmes for its sector. Each purchase is one of two kinds: an output programme (+0.4% plant output) or an input programme (-0.6% plant inputs). Each costs 15% more rdScore than the one before, counted over both kinds, and the effects pass through the same aggregate caps as every node (TECH_PLANT_OUTPUT_CAP, TECH_INPUT_EFFICIENCY_CAP), so stacking can never run away.
  *
- * Programme effects apply to the corporation's primary sector, at full
- * strength, and never expire with a decade.
- *
- * Plain data in, plain data out.
+ * Programme effects apply to the corporation's primary sector, at full strength, and never expire with a decade.
  */
 import { TECH_DECADES, isDecadeReached } from "./decades";
 import { DECADE_COST, TECH_TREE, type TechLane } from "./nodes";

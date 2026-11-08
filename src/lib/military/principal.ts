@@ -17,35 +17,19 @@ export const DICTATE_WINDOW_TURNS = 24;
 /**
  * The founding belligerent of one side, or null when the side has none.
  *
- * A guest is any country that did not start this war on this side, and there are TWO
- * ways to be one:
+ * A guest is any country that did not start the war on this side. Two ways to be
+ * one: a join stamp in `joinTurns`, or a treaty entry, because `declareWar`
+ * resolves treaty defenders BEFORE `createConflict` so `joinSide` never runs for
+ * them. Both must be checked; reading only `joinTurns` misclassifies
+ * dragged-in allies as founders.
  *
- *   - A JOIN STAMP. `joinTurns` records every country that entered after the war
- *     opened, as its own comment states: "Founding belligerents are absent and fall
- *     back to `startTurn` / `controlStart`."
- *   - A TREATY ENTRY. A war CREATED with treaty defenders never stamps them:
- *     `declareWar` resolves them BEFORE `createConflict`, because they drive
- *     `initialControl`, `deployOpeningForces` and `baseStrength`, so `joinSide`
- *     never runs for them. Read by `joinTurns` alone a dragged-in ally looks like a
- *     founder. The live War for Germany is exactly this shape: Russia was pulled in
- *     under the Warsaw Pact and carries no join stamp at all.
+ * The principal is used (not the whole side) so a coalition victory yields ONE
+ * term instead of one per ally.
  *
- * Both are checked. Reading only the first happened to give the right answer today
- * because `createConflict` writes `countries: [defender, ...defenders]`, so the
- * founder is first in the array. That array order is not a stated contract, and a
- * rule this load-bearing should not rest on it.
- *
- * WHY THE PRINCIPAL AND NOT THE WHOLE SIDE. A coalition victory must yield ONE
- * term, not one per ally, or "pick one" stops meaning anything. The country that
- * started the war is the one with the claim; allies pulled in behind it get the
- * truce, matching how `treatyEntries` already treats them as guests in someone
- * else's war.
- *
- * Null in two cases the caller must handle by resolving the war outright:
- *   - An EMPTY roster, which is a generated side with no government to address.
- *   - Every country carrying a join stamp, which happens once the founder has
- *     taken a separate peace. Handing its claim to a late joiner would award the
- *     war to a country that did not start it.
+ * Null in two cases the caller must handle by resolving the war outright: an
+ * empty roster (generated side with no government), and every country carrying
+ * a guest stamp (the founder took a separate peace; its claim must not pass to a
+ * late joiner).
  */
 export function principalOf(
   // A Pick rather than the whole document, so the offer validator and the offer form

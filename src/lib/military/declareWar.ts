@@ -33,10 +33,9 @@ export interface DeclareWarResult {
  *
  * ONE war per defender. If a live conflict is already hosted in the defender, the
  * declarer enrols on the side opposing it rather than opening a parallel war over the
- * same ground — which matches the coalition model, and keeps one map pin per
- * besieged country. Otherwise a new conflict is created, hosted in the defender:
- * `createConflict` derives `region` from `hostCountry`, so the pin lands there with
- * no extra work.
+ * same ground, keeping one map pin per besieged country. Otherwise a new conflict
+ * is created, hosted in the defender: `createConflict` derives `region` from
+ * `hostCountry`, so the pin lands there with no extra work.
  *
  * Spec: docs/superpowers/specs/2026-08-04-war-declaration-legislation-design.md
  */
@@ -60,10 +59,8 @@ export async function declareWar(db: Db, input: DeclareWarInput): Promise<Declar
   if (live) {
     // Enrol on the side opposing the defender, which is not necessarily side B:
     // the defender may already sit on side A of a war someone else started.
-    //
-    // `sideOf` takes the era's live bloc roll since #4001 — it resolves an unrostered
-    // country by matching its bloc against the sides' backers. Loaded here rather
-    // than hoisted because enactment runs once per ratified declaration, not per tick.
+    // `sideOf` takes the era's live bloc roll to resolve unrostered countries.
+    // Loaded here rather than hoisted: enactment runs once per ratified declaration.
     const blocs = await loadMilitaryBlocs(db);
     const defenderSide = sideOf(live, defender, blocs);
 
@@ -126,9 +123,7 @@ export async function declareWar(db: Db, input: DeclareWarInput): Promise<Declar
 
   const conflict = await createConflict(db, {
     id: `war_${declarer}_${defender}_${currentTurn}`.toLowerCase(),
-    // Plain hyphen, not an en dash: the war name is player-facing copy and the project
-    // bars en dashes there. Conflicts created before this keep their stored name; only
-    // new wars are affected.
+    // Plain hyphen, not an en dash: war names are player-facing and the project bars en dashes there.
     name: `${declarerName}-${defenderName} War`,
     hostCountry: defender,
     type: "interstate",

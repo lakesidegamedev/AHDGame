@@ -277,10 +277,7 @@ export function distributeVotesByGroupLevelAllocation(
         weights[ec.candidateId] = w;
       }
 
-      // Slate-nested split (#1048), kept identical to the swing-flow engine so
-      // the two lanes cannot drift. No-op for primaries (one party, so the
-      // single slate takes the whole pool and the within-slate split reproduces
-      // the old per-candidate split) and for one-candidate-per-party generals.
+      // Must stay identical to the swing-flow engine so the lanes cannot drift. No-op for primaries and one-candidate-per-party generals.
       const groupSplit = splitGroupPoolBySlate(
         groupPool,
         enriched.map((ec) => ({

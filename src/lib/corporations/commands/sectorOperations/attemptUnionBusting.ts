@@ -92,13 +92,10 @@ export async function attemptUnionBusting(
   }
   // ONE COUNTRY, RESOLVED ONCE, used by the ban gate below and by the backlash
   // at the end. It is the country the WORKFORCE is in, which is the state's, not
-  // wherever the corporation is domiciled (ticket #1271: the precedence
-  // `getSectorOperatingCountryId` sets, and the shape `buildCapacity` and
-  // `expandSector` carried). Resolving it in two places asked the same question
-  // twice and could get two answers: on a plant whose stored country went stale
-  // when its region changed hands, the gate would clear a bust under the old
-  // country's law and then fire the backlash at the new one, letting a CEO pay
-  // for a bust that is moot where it actually lands.
+  // wherever the corporation is domiciled. Resolving it in two places could get
+  // two answers: on a plant whose stored country went stale when its region
+  // changed hands, the gate would clear a bust under the old country's law and
+  // then fire the backlash at the new one.
   const bustingState = await db
     .collection<State>("states")
     .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });

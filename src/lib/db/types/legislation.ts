@@ -939,44 +939,29 @@ export interface DemographicEffect {
   magnitude?: number;
   /**
    * Designer marker for a LANDMARK effect: while `true` (for
-   * `target: "economicLean" | "socialLean" | "turnout"` — still ignored for
-   * `"population"`, the always-on legacy channel that has no durable/temporary
-   * distinction to make), this entry's per-turn shift durably relocates the
-   * group's base value via the shared durable-relocation mechanism
-   * (`src/lib/demographics/durableRealignment.ts` — the SAME one era
-   * checkpoints and the SCOTUS demographic-signal consumer use): it is not
-   * capped by `LEAN_MAX_DEVIATION_FROM_BASELINE` / `TURNOUT_MAX_DEVIATION_FROM_BASELINE`,
-   * it does NOT decay back toward baseline once the law lapses or is repealed,
-   * and it is visible to the granular vote path — via
-   * `demographicDefaults.layer1PositionOverrides` for the lean axes, or
-   * `demographicDefaults.layer1TurnoutOverrides` for turnout (see that type's
-   * doc comment in `src/lib/db/types/demographics.ts` for why turnout needed
-   * its OWN overlay rather than reusing the lean one: it is a single bounded
-   * 0-100 percentage, not a signed two-axis lean, and the legacy engine
-   * ignores `groups[id].turnout` drift for any state with a Layer-1 census,
-   * so the archetype-level write alone would have been invisible again — not
-   * just the legacy one).
+   * `target: "economicLean" | "socialLean" | "turnout"`; still ignored for
+   * `"population"`), the per-turn shift durably relocates the group's base
+   * value via the shared durable-relocation mechanism
+   * (`src/lib/demographics/durableRealignment.ts`, the same one era checkpoints
+   * and the SCOTUS demographic-signal consumer use): it is not capped by
+   * `LEAN_MAX_DEVIATION_FROM_BASELINE` / `TURNOUT_MAX_DEVIATION_FROM_BASELINE`,
+   * it does not decay back toward baseline once the law lapses or is repealed,
+   * and it is visible to the granular vote path via
+   * `demographicDefaults.layer1PositionOverrides` (lean axes) or
+   * `layer1TurnoutOverrides` (turnout). Turnout has its own overlay because it
+   * is a bounded single 0-100 percentage, not a signed two-axis lean, and the
+   * legacy engine ignores `groups[id].turnout` drift for any state with a
+   * Layer-1 census.
    *
-   * Absent/false (the default — leave this unset for ordinary bills) keeps
-   * the existing TEMPORARY behavior: a capped, decaying overlay on top of the
-   * seeded baseline (`applyBandedShift` / `applyBaselineDecay` in
-   * `demographicEffects.ts`) — correct for a tax tweak or a routine
-   * regulation, which should NOT permanently redefine an electorate.
+   * Absent/false (the default) keeps the existing TEMPORARY behavior: a capped,
+   * decaying overlay on top of the seeded baseline (`applyBandedShift` /
+   * `applyBaselineDecay` in `demographicEffects.ts`) for ordinary bills.
    *
    * Reserve `permanent: true` for legislation whose real-world consequence
-   * was to durably change who the electorate IS — landmark, rarely-repealed
-   * civil-rights/enfranchisement-scale acts (the Civil Rights Act's lean
-   * consolidation; the Voting Rights Act's `target: "turnout"` enfranchisement
-   * effect — voters who could not previously cast a ballot at all, not voters
-   * who changed their politics — is the project's worked example for the
-   * turnout channel specifically) — the same bar the era checkpoint's
-   * `SOUTHERN_REALIGNMENT_CHECKPOINT` targets. It is still "gravity, not
-   * rails": an opposing durable or temporary effect targeting the same
-   * group+axis nets against it every turn it is active (the existing
-   * per-target sum in `calculateDemographicShiftsByTarget`), so a durable
-   * shift — including a turnout enfranchisement effect against a sustained
-   * voter-suppression counter-effort — remains beatable by sustained
-   * counter-legislation.
+   * durably changed who the electorate IS (civil-rights/enfranchisement-scale
+   * acts). It is still "gravity, not rails": opposing durable or temporary
+   * effects on the same group+axis net against it every active turn, so a
+   * durable shift remains beatable by sustained counter-legislation.
    */
   permanent?: boolean;
 }

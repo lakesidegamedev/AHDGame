@@ -135,10 +135,9 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    // Private companies trade through Private sale only (#4461). A limit order
-    // on a private company leaves a resting bid that the only holders able to
-    // fill it cannot see, and the private-sale band cannot match an order-book
-    // price. Refuse at the source so the asymmetry cannot be created.
+    // Private companies trade through Private sale only. A limit order leaves a
+    // resting bid only private holders can see but cannot fill, and the private
+    // sale band cannot match an order-book price. Refuse at the source.
     if (corporation.isPrivate === true) {
       return errorResponse(
         400,
@@ -154,11 +153,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     );
 
     // Limit prices must sit inside the fundamental-anchored sanity band.
-    // Wildly off-fundamental limit orders were used as manipulation rails
-    // (2026-08-20 incident: limit fills ~10x fundamental inflated order-flow
-    // notionals and moved real money at fabricated prices). Honest orders
-    // near the market price are unaffected; the band only exists when the
-    // corp has a positive fundamentalSharePrice to anchor on.
+    // Off-fundamental orders were used for manipulation: fills far from
+    // fundamental inflated order-flow notionals at fabricated prices. Honest
+    // orders near market price are unaffected. The band only applies when the
+    // corp has a positive fundamentalSharePrice.
     if (!isWithinShareExecutionBand(corporation, pricePerShare)) {
       return errorResponse(
         400,

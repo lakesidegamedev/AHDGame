@@ -19,13 +19,10 @@ export interface Caucus {
    * current slug.
    */
   slug: string;
-  /**
-   * Slugs this caucus used to hold but renamed away from. Used to redirect old
-   * links to the current slug. **Reclaimable:** if another caucus in the same
-   * party later founds with (or renames to) one of these slugs, that slug must
-   * be removed from this caucus's `previousSlugs` so the new caucus owns the
-   * URL going forward. The reclaim sweep runs in any write path that creates
-   * or activates a slug claim (found, rename, restore-from-disbanded).
+    /**
+   * Previously held slugs, used to redirect old links. Reclaimable: if another
+   * caucus in the same party later claims one, remove it here so the new caucus
+   * owns the URL. Swepthandled by any write path that claims a slug.
    */
   previousSlugs: string[];
   countryId: CountryId;

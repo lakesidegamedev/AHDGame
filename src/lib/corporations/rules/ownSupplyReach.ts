@@ -1,17 +1,16 @@
 /**
  * Why a company's own output of an input did not cover one of its plants.
  *
- * The company page nets output against input use across every site, so a
- * company can read a surplus of a commodity its own plant is short of. Own
- * output only reaches a plant when the supply policy puts own plants first,
- * when freight actually hauled it across states (freight-class goods), and
- * only for demand no supply agreement has already claimed. This names which
- * of those stood in the way, from last turn's records.
+ * The company page nets output against input use across all sites, so a company
+ * can show a surplus of a commodity its own plant is short of. Own output only
+ * reaches a plant when the supply policy puts own plants first, when freight
+ * actually hauled it across states (freight-class goods), and only for demand
+ * no supply agreement has claimed. Names which of those blocked it, from last
+ * turn's records.
  *
- * In a funded world the producer market decides instead (issue 5385): own
- * output goes to own sites first, in any region, unless the company chose the
- * open market first. The old policy and freight reasons were wrong there, so a
- * funded world reads the settled receipts and names what actually happened.
+ * In a funded world the producer market decides instead: own output goes to own
+ * sites first, in any region, unless the company chose the open market first.
+ * A funded world reads settled receipts and names what actually happened.
  *
  * Pure: plain data in, reasons out.
  */

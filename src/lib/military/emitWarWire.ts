@@ -60,9 +60,7 @@ export async function emitWarWire(db: Db, _currentTurn: number): Promise<{ posts
   const settled = await getConflictsCollection(db)
     .find({
       status: "resolved",
-      // Only wars that ended since this feature existed. A world's whole archive of
-      // previously resolved wars carries no `endTurn`-adjacent stamp and must not be
-      // reported now as though it had just happened.
+      // Only wars ended after this stamp existed; pre-existing archives have no stamp and must not be reported as new.
       settlement: { $exists: true },
       postedWireEvents: { $ne: SETTLED },
     } as Filter<ConflictDoc>)

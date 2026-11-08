@@ -19,13 +19,10 @@ export type Side = "A" | "B";
 /**
  * Which side a country fights on here: explicit roster membership first, then a
  * UNIQUE match between the country's bloc and the sides' backers. Null when neither
- * resolves — the caller fights the battle normally but moves no ground.
+ * resolves: the caller fights the battle normally but moves no ground.
  *
- * `blocs` is the era's live roll (`loadMilitaryBlocs`), passed in rather than looked up
- * so this stays pure. It used to be a global read against a static 9-entry table whose
- * unknown-country fallback was the US row, which quietly enrolled every Warsaw Pact
- * member it had never heard of into NATO. A `nonAligned` country matches no backer and
- * so lands on neither side, which is the honest answer.
+ * `blocs` is passed in rather than looked up to keep this pure. A `nonAligned`
+ * country matches no backer and lands on neither side.
  */
 export function sideOf(
   c: Pick<ConflictDoc, "sideA" | "sideB">,
@@ -53,15 +50,10 @@ export function sideOf(
 /**
  * Are these two countries DECLARED belligerents against each other here?
  *
- * Roster membership only — deliberately NOT `sideOf`. `sideOf` falls back to a bloc
- * match against the sides' backers, which is right for "whose ground does this unit
- * take" but wrong for "are these two at war": it would call any two bloc rivals
- * opposed in every war their patrons back. A country pulled toward a side by affinity
- * has not declared war on anyone.
- *
- * (#4001 made that fallback honest — a nonAligned country now matches no backer
- * instead of silently falling into the US row. That removed the loudest failure mode,
- * not the reason for this helper: bloc affinity still is not a declaration.)
+ * Roster membership only, deliberately NOT `sideOf`. `sideOf` falls back to a
+ * bloc affinity match, which is right for "whose ground does this unit take"
+ * but wrong for "are these two at war": a country pulled toward a side by
+ * affinity has not declared war on anyone.
  *
  * Used for the one-war-per-pair rule and for revalidating a peace offer.
  */
@@ -181,15 +173,13 @@ function mobilizationFactor(turnsElapsed?: number): number {
  * `control` after an engagement. A decisive win takes the full step; narrower wins
  * scale down; a loser who withdrew in order yields less.
  *
- * There used to be a third drag here: the step halved once the winner held
- * `deepPushDepth` of the host. Keyed on the winner, it halved the attacker's wins
- * past that mark but not the defender's, so on a near-even front the line drifted
- * back faster than it advanced: a wall, not a slowdown, on top of the supply
- * penalties that already compound with distance from the start line
- * (`derivedSupply` below, applied to throughput in `battle.ts`). It was removed;
- * the report is `scripts/sim/reports/control-drift-deep-push.md`. `deepPushDepth`
- * itself survives for the winding-down status and the peace-offer threshold, which
- * read progress from the START line, not the winner's share.
+ * The step is NOT additionally reduced once the winner holds `deepPushDepth` of the
+ * host: keyed on the winner, that halved the attacker's wins past the mark but not the
+ * defender's, which on a near-even front became a wall rather than a slowdown. Supply
+ * penalties already compound with distance from the start line (`derivedSupply`, applied
+ * to throughput in `battle.ts`). `deepPushDepth` survives for winding-down status and
+ * the peace-offer threshold, which read progress from the START line, not the winner's
+ * share.
  */
 export function occupationShift({
   control,

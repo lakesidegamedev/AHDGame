@@ -62,10 +62,9 @@ export const MONETARY_BASELINES_1953: Partial<Record<CountryId, EraMonetaryBasel
   // (modern table's 6%/12% is the post-independence naira regime).
   NG: NG_ECONOMY.monetary.byEra["1953"],
   // BR targetInflation is a POLICY target (Taylor rule + CPI attractor + FX
-  // deviation baseline), not realized Vargas CPI. Authoring 10% here because
-  // 1953 Brazil *experienced* ~10-20% made the NPP/FOMC chair treat 10% as
-  // fine and, with the era-blind 6% FX absolute-penalty ceiling, structurally
-  // depreciated BRL even on-target (ticket 1124). Do not put this back.
+  // deviation baseline), not realized Vargas CPI. Authoring the historical ~10-20%
+  // made the NPP/FOMC chair treat 10% as fine and, with the era-blind 6% FX
+  // absolute-penalty ceiling, structurally depreciated BRL even on-target.
   BR: BR_ECONOMY.monetary.byEra["1953"],
   // Administered prices with annual state retail price cuts; Gosbank
   // administrative rates. trendGdpGrowth matches the authored RU 1953
@@ -277,18 +276,10 @@ export const MACRO_ARC_START_YEAR = 2027;
 
 /**
  * Invented central path for the 2027 world (not a forecast). Each anchor maps
- * onto the fields the baseline tables actually hold:
- * - trendGdpGrowth: real trend growth, converging from the 2027 level toward
- *   the 2045 level as populations age and catch-up fades.
- * - targetInflation: unchanged from the country's modern baseline (2% for
- *   US/UK/DE/CN, 1% for JP).
- * - neutralPrimeRate: nominal, so target inflation + neutral real rate + a
- *   fixed country premium. The common neutral real rate is 0.8 in 2027, peaks
- *   at 1.2 in 2035 (electrification and automation investment demand), then
- *   eases to 0.9 by 2045. The premium keeps each country's modern real-rate
- *   gap to the common path (JP structurally low, CN structurally high), so
- *   the 2027 anchor does not step the nominal rate by more than a few tenths.
- * Interpolation is linear between anchors and holds the 2045 values after.
+ * to baseline table fields: trendGdpGrowth is real trend growth, targetInflation
+ * is the modern baseline, neutralPrimeRate is nominal (target + neutral real
+ * rate + country premium). Interpolation is linear between anchors and holds
+ * the 2045 values after.
  */
 const MACRO_ARC_ANCHOR_YEARS = [2027, 2035, 2045] as const;
 const MACRO_ARC_NEUTRAL_REAL_RATE: Record<(typeof MACRO_ARC_ANCHOR_YEARS)[number], number> = {

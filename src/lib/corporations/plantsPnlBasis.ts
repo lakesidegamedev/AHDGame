@@ -218,11 +218,10 @@ export function buildPolicyStackRows(args: {
   if (!finite(policyCreditAnchor) || policyCreditAnchor === 0) return [];
   if (!finite(revenueAnchor) || revenueAnchor <= 0) return [];
 
-  // `stateMetricsModifier` is the state-metric TOTAL the engine applies
-  // (`computeAllMarginModifiers` adds `stateMetricTotal`, never the nine
-  // headline readings). Listing both counted the state twice and left "Other
-  // factors" to quietly cancel it (ticket 1448). When the total is present it
-  // is the row; the readings stay on the condition list as detail.
+  // `stateMetricsModifier` is the state-metric total the engine applies;
+  // the nine headline readings are already folded into it. Listing both
+  // double-counts the state and the remainder cancels to "Other factors".
+  // When the total is present it is the row; readings stay as detail.
   const useStateMetricTotal = finite(mods.stateMetricsModifier);
   const named = POLICY_STACK_LABELS.filter(
     ({ key }) => !(useStateMetricTotal && STATE_METRIC_COMPONENT_KEYS.has(key))
@@ -238,10 +237,9 @@ export function buildPolicyStackRows(args: {
 
   const sumPp = rows.reduce((s, r) => s + r.pp, 0);
   if (!(Math.abs(sumPp) > 1e-9)) return [];
-  // Ticket 1148: scaling by `credit / sumPp` is only honest when they share a
-  // sign. Opposite signs invert every named row (a -10pp penalty becomes a
-  // credit). Convert those stacks at the natural $/pp and park the leftover
-  // on Other factors so the parts still sum to the line.
+  // Scaling by `credit / sumPp` is only valid when both share a sign.
+  // Opposite signs invert each row (a -10pp penalty becomes a credit), so
+  // convert at the natural $/pp and park any leftover on Other factors.
   if (Math.sign(sumPp) !== Math.sign(policyCreditAnchor)) {
     const perPp = revenueAnchor / 100;
     const withMoney = rows.map((r) => ({ ...r, anchor: r.pp * perPp }));

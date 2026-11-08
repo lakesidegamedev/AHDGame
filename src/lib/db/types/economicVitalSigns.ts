@@ -9,10 +9,9 @@ export interface EconomicMetric {
 }
 
 /**
- * Per-country sovereign issuance rollup (#1001): the issue-level diagnostics
- * grouped so a country-local allocator gap shows up as a cross-section.
- * Plain data, computed from the same bond inputs as the aggregate securities
- * section; additive and safe for older snapshots to omit.
+ * Per-country sovereign issuance rollup: issue-level diagnostics so a
+ * country-local allocator gap shows up as a cross-section. Additive; older
+ * snapshots may omit it.
  */
 export interface SovereignCountryIssuanceSnapshot {
   countryId: string;
@@ -24,11 +23,9 @@ export interface SovereignCountryIssuanceSnapshot {
   medianSpreadToParPct: number;
   maturityHhi: number;
   thinIssueCount: number;
-  /**
-   * Demand-gap cross-section (#1001): unheld issues by primary exclusion
-   * reason (`no_domestic_fund`, `capital_controls`, `cash_buffer`, ...).
-   * Counts sum to `unheldIssueCount`. Absent when the snapshot was computed
-   * without fund demand inputs, so older snapshots keep reading identically.
+    /**
+   * Unheld issues by primary exclusion reason; counts sum to
+   * `unheldIssueCount`. Absent when computed without fund demand inputs.
    */
   demandGapByReason?: Partial<Record<SovereignDemandGapReason, number>>;
 }
@@ -250,11 +247,10 @@ export interface EconomicVitalSigns {
     stockVsFlowDivergentCount: number | null;
     stockVsFlowSkipped: boolean | null;
     moneySupplyFindingCount: number | null;
-    /**
-     * Per-kind stock-vs-flow inventory (ranked by unexplained ₳), copied from
-     * the reconciliation report. null when the check was skipped or no
-     * reconciliation ran: unknown, not zero. Survives the report's findings
-     * cap because it is computed pre-cap (#992).
+        /**
+     * Per-kind stock-vs-flow inventory (ranked by unexplained ₳). null when no
+     * reconciliation ran: unknown, not zero. Computed pre-cap so it survives
+     * the findings cap.
      */
     stockVsFlowByKind: StockVsFlowByKind[] | null;
   };

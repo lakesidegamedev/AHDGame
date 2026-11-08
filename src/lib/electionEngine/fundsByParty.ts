@@ -20,22 +20,12 @@ import type { Campaign } from "@/lib/db/types";
 
 /**
  * Aggregate `Campaign.spendStock` + `Campaign.spendThisTurn` by party for
- * a single election.
- *
- * Sums every campaign in the race by their party, returning a Map keyed
- * by party ID with the per-party spend total. Parties with zero spend
- * are omitted (driver treats them as 0 via Map.get(p) ?? 0).
- *
- * Returns an empty Map when:
- *   - no campaigns exist for the election (early-cycle NPP races, etc.)
- *   - every campaign has no spend recorded
- *
- * Either case is fine — the money driver returns 0 when fundsJ and
- * fundsI are both 0.
+ * a single election. Sums every campaign in the race by party, returning a
+ * Map keyed by party ID with per-party spend. Parties with zero spend are
+ * omitted (driver treats them as 0 via `Map.get(p) ?? 0`).
  */
 /**
- * The same aggregate for many elections in one read, keyed by election id
- * string. A turn's vote accumulation used to issue this per election.
+ * The same aggregate for many elections in one read, keyed by election id string.
  */
 export async function loadFundsByPartyForElections(
   electionIds: ObjectId[],

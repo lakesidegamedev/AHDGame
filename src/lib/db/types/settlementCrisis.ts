@@ -152,10 +152,9 @@ export interface SettlementCrisisDoc {
    * settlement outright and the index is not consulted.
    */
   conflictId: string | null;
-  /**
-   * Which roster wins the settlement for whom. Optional because crises frozen
-   * before this field existed have none; `settleFromConflict` falls back to the
-   * sides' `backer` for those.
+    /**
+   * Which roster wins the settlement for whom. Optional since older crises lack it;
+   * `settleFromConflict` falls back to the sides' `backer`.
    */
   conflictSides?: SettlementConflictSides | null;
   /** Present only on an ATTACHED crisis. See `SettlementConflictAttachment`. */
@@ -180,20 +179,13 @@ export interface SettlementCrisisDoc {
   postedWireEvents?: string[];
   outcome: SettlementOutcome | null;
   cooldownUntilTurn: number | null;
-  /**
+    /**
    * The turn the outcome's consequences FINISHED landing on the world.
    *
-   * ⚠️ This, not `cooldownUntilTurn`, is what says a settlement has been enacted.
-   * The two were one field, and conflating them cost a live world: the claim that
-   * STARTED the merge also marked it done, so when the process died partway
-   * through — a reunification runs a whole country merge, and the peace-term road
-   * runs it on a request — nothing retried it and no sweep noticed. The world sat
-   * half-merged with one Land's politics under the survivor and its territory
-   * under the dissolving state.
-   *
-   * Null means "not finished", which is the same answer for never started and for
-   * died halfway. Every step of the actuation is individually idempotent, so
-   * re-entering it resumes rather than repeats.
+   * ⚠️ This, not `cooldownUntilTurn`, is what says a settlement has been
+   * enacted: actuation can die halfway, so the claim must not mark it done.
+   * Null means not finished (never started or died mid-way). Every step of
+   * the actuation is idempotent, so re-entering resumes rather than repeats.
    */
   actuationCompletedTurn?: number | null;
   /**

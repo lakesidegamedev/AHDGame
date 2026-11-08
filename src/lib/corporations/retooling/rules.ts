@@ -1,22 +1,12 @@
 /**
- * Retooling blends the old and new production recipes over several turns.
- * retoolOperatingCapacityRatio preserves plant value while units change;
- * retoolProductionMeasurements keeps sales and utilization on the same basis.
- *
- * THE CONVERSION INVARIANT (issue #2009): owned capital, destination
- * technology productivity, transitional operating capacity, and commodity
- * output share one unit basis per strategy pair. Owned capital converts to
- * the destination strategy's units once, at the retool boundary, by the RPU
- * ratio (`capacityRescaleRatio`); transitional operating capacity is that
- * converted stock expressed in the blended recipe's units
- * (`transitionalOperatingCapacity`). At every transition progress p, for
- * every strategy pair:
- *
+ * Retooling blends old and new production recipes over several turns.
+ * Conversion invariant: owned capital converts to the destination strategy's
+ * units once, at the retool boundary, via the RPU ratio; transitional
+ * operating capacity is that converted stock in the blended recipe's units.
+ * At every progress p, per strategy pair:
  *   operatingCapacity(p) x effectiveMixPrice(p) == ownedCapital x RPU(from)
- *
- * so a retool is a re-aim, never a capital grant, in either direction. Any
- * operating capacity above converted-stock x blend ratio is unsupported
- * output the sector never built and never paid for.
+ * so a retool re-aims the plant, never grants capital, in either direction.
+ * Capacity above converted-stock x blend ratio is unsupported output.
  */
 import type { CorporationType } from "@/lib/constants/corporations";
 import { unitYieldForSupply } from "@/lib/constants/capacityEconomy";
@@ -43,11 +33,9 @@ interface RetoolCapacityBasis {
 }
 
 export function retoolOperatingCapacityRatio(args: RetoolCapacityBasis): number {
-  // The flag is proof the owned stock is on the destination basis. Without
-  // it the stock may still be source-basis (a pre-rescale or pre-plants
-  // commitment surfaced under plants, issue #2009): applying the blend ratio
-  // to that stock manufactures unsupported capacity, up to ~585x for an
-  // oil_gas to rare_earth_mining pair.
+  // The flag proves owned stock is on the destination basis. Without it the
+  // stock may still be source-basis; applying the blend ratio would manufacture
+  // unsupported capacity (up to ~585x for an oil_gas to rare_earth_mining pair).
   if (args.retoolRescaleApplied !== true || !args.transitionFromStrategyId) return 1;
   return retoolBlendRatio(args);
 }

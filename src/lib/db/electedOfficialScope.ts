@@ -6,20 +6,18 @@
  * 1. Party sequentialIds collide across countries ("3" is Reform in the US and
  *    a Brazilian party in BR) and office types like "house" and "senate" are
  *    shared between countries, so a query filtered only by party and office
- *    matches foreign members (bug #0699).
+ *    matches foreign members.
  * 2. US officials predate the explicit `countryId` field, so a plain
- *    `{ countryId: "US" }` filter drops legitimate rows that simply never got
+ *    `{ countryId: "US" }` filter drops legitimate rows that never got
  *    stamped. Absence has to count as US until every environment has been
  *    rewritten by normal turn processing.
  *
- * Both rules used to be restated at each call site, which is how some queries
- * ended up with one and not the other. This module states them once.
+ * Stating both rules here keeps call sites from applying one and not the other.
  *
  * Scoped to `electedOfficials` on purpose. Other collections carry their own
  * legacy story (party elections key off `DEFAULT_LEGACY_COUNTRY_ID`, and the
  * `states` / `elections` / `politicalParties` filters answer a different
- * question), so folding them in here would assert an equivalence that does not
- * hold.
+ * question), so folding them in would assert an equivalence that does not hold.
  */
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 

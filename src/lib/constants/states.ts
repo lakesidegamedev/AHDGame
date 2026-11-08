@@ -479,25 +479,22 @@ export function getCnPeoplesCongressSeats(preset: string | undefined): Record<st
 }
 
 /**
- * Total seats in a region's sub-national legislature — the elected chamber whose
+ * Total seats in a region's sub-national legislature: the elected chamber whose
  * composition the region legislature page renders, whose vacancies the seat
  * appointer validates against, and whose size sets state-bill majorities.
  *
  * For China this is the Provincial People's Congress
  * (`getCnPeoplesCongressSeats(preset)`), NOT the State's `stateSenateSeats`
- * field — for CN in the modern eras that field holds the separate, appointed
- * CPPCC allocation (~half the size). Every other country's sub-national chamber
- * (US State Senate, DE Landtag, …) is sized by `stateSenateSeats`.
+ * field, which for CN holds the separate, appointed CPPCC allocation (~half
+ * the size). Every other country's sub-national chamber is sized by
+ * `stateSenateSeats`.
  *
- * This is the single source of truth shared by the seat appointer, the public
- * legislature API, and state-bill vote math, so they can never disagree with the
- * election system — which sizes CN People's Congress races from the same
- * selector. Sizing the People's Congress off `stateSenateSeats` was bug #0853: a
- * region's parties summed to more seats (e.g. 317) than the displayed cap (175).
+ * Single source of truth shared by the seat appointer, public legislature API,
+ * and state-bill vote math, so they cannot disagree with the election system,
+ * which sizes CN People's Congress races from the same selector.
  *
- * `preset` is optional only so non-CN callers (every country but China) need not
- * plumb it; ALWAYS pass it when the country can be CN, or a 1953 world reads the
- * modern chamber size.
+ * `preset` is optional only so non-CN callers need not plumb it; ALWAYS pass
+ * it when the country can be CN, or a 1953 world reads the modern chamber size.
  */
 export function subNationalChamberSeats(
   countryId: string,
@@ -627,17 +624,15 @@ export const ELECTORAL_MAJORITY = 270;
  * One electoral-vote unit: a whole state, or one leg of a ME/NE split.
  *
  * `electorateShare` is the fraction of the parent state's electorate this unit
- * draws. It exists because every unit used to resolve its pool from
- * `unit.stateId` and therefore draw the WHOLE state (#1464) — so ME contributed
- * about 3x and NE about 4x to the national popular vote once the district split
- * activated.
+ * draws. Without it every unit resolves its pool from the whole state, so ME
+ * and NE districts double count against the state.
  *
- * The real rule is two at-large electors decided by the statewide total and one
- * per district. Scaling the districts alone would still double count against
- * the at-large unit, so the at-large leg carries `derivesFromDistricts` instead:
- * it is not simulated, and its tally is summed from its districts at
- * resolution. Districts partition the state exactly, so each ballot is counted
- * once and the statewide winner is the one who carried the state.
+ * The real rule is two at-large electors decided by the statewide total and
+ * one per district. Scaling districts alone would still double count against
+ * the at-large unit, so the at-large leg carries `derivesFromDistricts`: it is
+ * not simulated, and its tally is summed from its districts at resolution.
+ * Districts partition the state exactly, so each ballot is counted once and the
+ * statewide winner is the one who carried the state.
  */
 export interface ElectoralVoteUnit {
   unitId: string;

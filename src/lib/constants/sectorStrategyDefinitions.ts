@@ -1221,9 +1221,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Mixed online and physical retail operations.",
       supply: { retail: 0.5 },
       demand: {
-        // Broad-basket rates sum to 0.735 rather than 1.05. Retail still creates
-        // the widest final-demand sink, but no longer buys more than its entire
-        // nameplate before payroll, occupancy and other operating costs.
+        // Broad-basket rates sum to 0.735, not 1.05: retail still creates the widest final-demand sink but no longer buys more than its entire nameplate before operating costs.
         food: 0.1,
         electronics: 0.06,
         energy: 0.05,

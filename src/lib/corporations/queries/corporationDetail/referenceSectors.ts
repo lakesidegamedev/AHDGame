@@ -17,10 +17,8 @@ interface SectorMirror {
   corpByIdForTariffs: Map<string, Pick<Corporation, "_id" | "countryId">>;
 }
 
-// Every corporation page used to read every sector and the home country of
-// every owning corporation, about 14k rows, to build tariff and FTA exposure.
-// Those fields only move with the turn, so share one load per turn across
-// requests. The TTL bounds staleness for sectors founded between turns.
+// These fields only change with the turn, so share one load per turn
+// across requests. The TTL bounds staleness for sectors founded between turns.
 const MIRROR_TTL_MS = 5 * 60_000;
 const mirrorCache = new WeakMap<
   Db,
@@ -72,14 +70,13 @@ export interface ReferenceSectorsResult {
 }
 
 /**
- * Reference-data + sector loads for the corporation detail view (#587).
+ * Reference-data + sector loads for the corporation detail view.
  *
  * Awaits the already-initiated turn-reference promise alongside this corp's
- * own sectors and the all-sector tariff mirror, then builds the tariff
- * sector-presence inputs from the same raw rows the view always used.
- * `refDataPromise` is created by the caller before the share-invariant reads
- * so those round trips overlap, exactly as before. The all-sector mirror is
- * shared per turn (see getSectorMirror).
+ * sectors and the all-sector tariff mirror, then builds tariff
+ * sector-presence inputs. `refDataPromise` is started by the caller before the
+ * share-invariant reads so those round trips overlap. The mirror is shared
+ * per turn (see getSectorMirror).
  */
 export async function loadReferenceSectors(
   db: Db,

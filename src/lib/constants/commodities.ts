@@ -21,25 +21,17 @@ import {
 
 /**
  * Commodity system constants.
- * Maps sector types to the commodities they supply and demand.
- * Only owned sectors create demand or supply.
  *
- * Retail generates consumer demand across a broad finished-and-intermediate
- * basket (21 of 28 commodity keys), scaled by GDP growth (50% national average
- * + 50% regional). This makes retail the primary demand driver for the
- * commodity market.
+ * Maps sector types to the commodities they supply and demand. Only owned
+ * sectors create flow. Retail drives broad consumer demand scaled 50% national
+ * average + 50% regional GDP growth.
  *
- * Supply/demand in UNITS:
- *   units = (sector daily revenue × rate) / basePrice
+ * Flows are in units: units = (sector daily revenue × rate) / basePrice.
  *
- * Market price is dynamic with sliding logarithmic returns:
- *   rawRatio = max(totalDemand, MIN_COMMODITY_FLOW_UNITS) / max(totalSupply, MIN_COMMODITY_FLOW_UNITS)
- *   effectiveRatio = rawRatio inside the soft-knee (3x default; 8x for
- *   extractable prices), compressed beyond it
- *   if effectiveRatio >= 1: price = basePrice × (1 + PRICE_LOG_SCALE × ln(effectiveRatio))
- *   else:                   price = basePrice / (1 + PRICE_LOG_SCALE × ln(1 / effectiveRatio))
- *
- * Pricing blend: 50% global + 25% national (country-aggregate) + 25% regional (state-level).
+ * Price uses sliding logarithmic returns: rawRatio is totalDemand/totalSupply
+ * (both floored at MIN_COMMODITY_FLOW_UNITS), compressed beyond a soft knee
+ * (3x default, 8x for extractable prices). Price blends 50% global, 25%
+ * national, 25% regional.
  */
 
 import type { OperatingSectorType } from "./corporations";
@@ -60,27 +52,23 @@ import {
 } from "@/lib/market/inputDemandRealPhase";
 
 /**
- * Per-country, per-commodity NATIONAL demand multiplier — the demand half of the
- * DD downstream fix (ticket-1072). The seed half (COUNTRY_SECTOR_SEED_MULTIPLIER
- * in admin/seed/seedUnownedSectors.ts) grows East German construction CAPACITY;
- * this grows the domestic APPETITE that capacity is meant to feed.
+ * Per-country, per-commodity national demand multiplier: the demand half of the
+ * DD fix. The seed half grows East German construction capacity; this grows the
+ * domestic appetite that capacity is meant to feed.
  *
- * WHY. DD construction is seeded x8 to soak its lignite-fed steel glut, but the
- * Aufbau/Stalinallee building programme it represents has no in-game buyer sized
- * to it: construction_services is a service DD cannot export, the West is
- * CoCom-embargoed, and a command economy bans the private founding that would
- * create private demand. Live prod: DD construction_services supply 18,276 vs
- * demand 784 (ratio 0.04), so the sector clears at the price floor and the state
- * corp that runs it bleeds. The x18 here lifts DD's national construction demand
- * to ~0.75× its own supply so the plan-scale building programme actually buys
- * the crew-days it was built to buy.
+ * DD construction is seeded x8 to soak its lignite-fed steel glut, but the
+ * Aufbau/Stalinallee programme has no in-game buyer sized to it:
+ * construction_services is a service DD cannot export, the West is CoCom-embargoed,
+ * and a command economy bans the private founding that would create demand. Live
+ * supply 18,276 vs demand 784 (ratio 0.04), so the sector clears at the price
+ * floor and the state corp bleeds. The x18 lifts DD's national construction demand
+ * to ~0.75x its own supply so the programme buys the crew-days it was built for.
  *
- * HARD GUARD. This is a pure per-(country, commodity) lookup that DEFAULTS TO 1
- * (see countryCommodityDemandMultiplier). It is applied only to the per-country
- * national demand leg, never to the global book, so market economies and every
- * unlisted (country, commodity) pair are byte-identical. Deliberately NOT applied
- * to `vehicles`: that output has no reachable buyer, so inflating its demand
- * would be fictional clearing rather than a real domestic sink.
+ * HARD GUARD. This is a pure per-(country, commodity) lookup that defaults to 1
+ * (see countryCommodityDemandMultiplier). Applied only to the per-country national
+ * demand leg, never to the global book, so other pairs are byte-identical.
+ * Deliberately not applied to `vehicles`, which has no reachable buyer, so
+ * inflating it would be fictional clearing.
  */
 export const COUNTRY_COMMODITY_DEMAND_MULTIPLIER: Partial<
   Record<CountryId, Partial<Record<CommodityType, number>>>
@@ -101,32 +89,26 @@ export function countryCommodityDemandMultiplier(
 }
 
 /**
- * Per-resource extraction output scale (audit t873, "structural extraction
- * shortage"). In the S/D ratio the base price cancels, so a commodity's
- * shortage is purely Σ(extraction_revenue × supply_rate) vs Σ(manufacturing
- * _revenue × demand_rate) - and manufacturing sectors out-mass extraction in
- * revenue, so every extractable runs chronically short (rare_earth, which
- * covers copper, 4-5x; iron/gas 2-3x). This map lifts the supply side
- * per-resource, calibrated to how short each one is (coal is near-balanced,
- * so it stays 1.0 and is omitted).
+ * Per-resource extraction output scale. In the S/D ratio the base price
+ * cancels, so shortage is Σ(extraction_revenue × supply_rate) vs
+ * Σ(manufacturing_revenue × demand_rate). Manufacturing out-masses
+ * extraction in revenue, so extractables run chronically short; this lifts
+ * the supply side per-resource, calibrated to how short each one is (coal is
+ * near-balanced, so it's omitted).
  *
- * This is a CALIBRATION STABILIZER, not the durable fix: it gets the board to a
- * sane starting point so the clearing/capital tiers can equilibrate (shortage →
- * premium → extraction profit → investment → supply) from there. It is a static
- * multiplier and will drift as the economy grows — re-tune periodically.
+ * This is a calibration stabilizer, not the durable fix: it gets the board to
+ * a sane starting point so clearing/capital tiers can equilibrate from there.
+ * It's a static multiplier and will drift as the economy grows; re-tune
+ * periodically.
  *
- * Gated: only applied when gameConfig.extractionOutputScaleEnabled is true, so
- * it is inert on prod until deliberately dialed in (same pattern as
- * marketSystemMode). Applied BEFORE the capacity haircut so the boost fills the
- * ample idle deposit capacity rather than exceeding it. On plants worlds it
- * does not apply to extraction with a realized fraction: that tonnage is the
- * real amount mined, so boosting it would count the same ore twice.
+ * Gated by extractionOutputScaleEnabled, applied BEFORE the capacity haircut
+ * so the boost fills idle capacity rather than exceeding it. It does not
+ * apply to extraction with a realized fraction: that tonnage is the real
+ * amount mined, so boosting it would count the same ore twice.
  *
- * RE-TUNE FLAG: rare_earth's 2.5x (covers the merged copper market) was
- * calibrated at t873 against a global S/D that later received a large one-off
- * manual boost. Stacking the full 2.5x on that lift is more supply-side help
- * than this value was calibrated for. Revisit before flipping
- * extractionOutputScaleEnabled on.
+ * rare_earth's 2.5x (the merged copper market) was calibrated against a
+ * global S/D that later received a large one-off manual boost. Revisit
+ * before enabling the flag.
  */
 export const EXTRACTION_OUTPUT_SCALE: Partial<Record<ExtractableResource, number>> = {
   rare_earth: 2.5,
@@ -330,19 +312,15 @@ export const DEMOGRAPHIC_CONSUMER_COMMODITIES: readonly CommodityType[] = COMMOD
 
 /**
  * Demographic consumer demand model (`demographicsDemandEnabled`). Per state,
- * per non-extractable commodity, demand is UPLIFTED as a bounded fraction of
+ * per non-extractable commodity, demand is uplifted as a bounded fraction of
  * that commodity's EXISTING per-state demand:
  *
  *   demandUnits += existingDemand × DEMOGRAPHIC_UPLIFT_PCT × wealthMult
  *
- * Proportional-to-existing is the shock-free, realistic shape: existing demand
- * already encodes real consumption patterns (nobody spends equal ₳ on cars and
- * chewing gum), so a flat per-capita rate would swamp small categories (+1000%
- * on entertainment). It scales with POPULATION and GDP because existing demand
- * does (economy size = population × productivity), and `wealthMult` (GDP per
- * capita) makes richer states consume MORE of everything. Bounded so it never
- * shocks a shortage-prone market; still likely needs a small output-rate boost
- * when enabled (owner-flagged).
+ * Proportional-to-existing preserves real consumption patterns; a flat
+ * per-capita rate would swamp small categories. Scales with population and
+ * GDP, and `wealthMult` (GDP per capita) makes richer states consume more.
+ * Bounded so it never shocks a shortage-prone market.
  */
 export const DEMOGRAPHIC_UPLIFT_PCT = 0.1;
 /** GDP-per-capita that reads as "par" wealth (wealthMult ≈ 1). */
@@ -396,21 +374,13 @@ export const NATIONAL_COMMODITY_STABILIZER = 500;
 
 /**
  * Bounded mean-reverting drift applied to every commodity's global supply
- * and demand, sized relative to that commodity's own stabilizer (audit
- * t101 follow-up: sandbox-seed-audit-t101 found commodities with zero owned-
- * sector footprint sitting at `supply === demand === stabilizer` forever —
- * 9 of 28 seeded commodities showed exactly 0.000% price deviation after
- * 101 turns). Supply and demand drift out of phase (±DRIFT_AMPLITUDE of the
- * stabilizer, opposite sine phase) so their ratio genuinely oscillates
- * instead of staying pinned — a real price signal for commodities nothing
- * currently produces/consumes, without inventing new GDP-share economics.
- * For commodities with real sector/macro-demand activity the term is
- * negligible (it scales with the commodity's own stabilizer, not with its
- * accumulated supply/demand), so this does not add noise on top of markets
- * that are already dynamic.
- *
- * Deliberately conservative starting values — retune with real playtesting
- * once this lands. See docs/plans/2026-07-03-market-structural-plan.md.
+ * and demand, sized relative to that commodity's own stabilizer. Supply and
+ * demand drift out of phase (±DRIFT_AMPLITUDE of the stabilizer, opposite
+ * sine phase) so their ratio oscillates instead of staying pinned, giving a
+ * price signal for commodities nothing currently produces or consumes. Scales
+ * with the commodity's stabilizer, not its accumulated supply/demand, so it is
+ * negligible for commodities with real activity. Conservative starting values;
+ * retune with real playtesting.
  */
 export const UNOWNED_DRIFT_AMPLITUDE = 0.06;
 /** Full drift cycle length in turns — bounds the perturbation to mean-revert rather than trend. */
@@ -522,31 +492,17 @@ export const GOVT_HEALTHCARE_DEMAND_RATE = 0.015;
  * Budget category keys that all mean "government health spending", in priority
  * order.
  *
- * The seed reference authors most countries with `healthcare` but UK, CN and IE
- * with `health` (see `seeds/reference/budgets.ts`; `BASELINE_OVERRIDE_CATEGORIES`
- * there already lists both spellings). The commodity demand leg read only
- * `healthcare`, so those three countries produced ZERO healthcare_services
- * demand — the UK's NHS line, authored at £570M/yr with the comment "NHS — new
- * (1948) but growing fast", reached the market as nothing at all. Confirmed on
- * prod: UK, CN and IE were the only budgets carrying a defense line and no
- * healthcare line.
- *
- * Resolved by alias rather than renamed in the seed because live worlds already
- * hold documents spelled `health`, and a rename would need a migration to reach
- * them while this does not.
+ * The seed authors most countries with `healthcare` but UK, CN and IE with
+ * `health`. The commodity demand leg read only `healthcare`, so those countries
+ * produced zero healthcare_services demand. Alias rather than rename because
+ * live worlds already hold `health` documents and a rename needs a migration.
  */
 /**
- * Share of a PLANNED economy's education budget that buys state media.
- *
- * A command economy funds its media directly rather than leaving it to
- * commercial advertisers, so this is the domestic buyer for its broadcasters'
- * output (advertising since the entertainment commodity was removed,
- * 2026-10-19). Applies ONLY to planned economies; a market economy's education
- * budget buys no such thing.
- *
- * Sized against prod at turn 114 (Poland's education line, ~₳810M/yr at the
- * era rate): roughly ₳345M/yr of bloc-wide state media spending, a visible
- * slice of a propaganda state's budget rather than a rounding error.
+ * Share of a planned economy's education budget that buys state media.
+ * Command economies fund media directly instead of relying on commercial
+ * advertisers, so this is the domestic buyer for their broadcasters' output.
+ * Applies only to planned economies. Sized so state media is a visible slice
+ * of a propaganda state's budget, not a rounding error.
  */
 export const STATE_MEDIA_DEMAND_RATE = 0.09;
 
@@ -580,34 +536,17 @@ export function govtSpendForCategory(
 
 /**
  * Fraction of a government's annual defense budget that converts to `ordnance`
- * demand (procurement of weapons systems), the defense analogue of
+ * demand (procurement), the defense analogue of
  * {@link GOVT_HEALTHCARE_DEMAND_RATE}.
  *
- * Before this existed, healthcare was the ONLY government budget category that
- * reached the commodity market, so `SECTOR_SUPPLY.defense` produced ordnance
- * with no state customer at all: the sole consumer was `SECTOR_DEMAND.extraction`
- * at 0.06 ("bulk mining explosives"). The result was that ordnance markets sized
- * themselves to a country's MINING industry — the largest were PL/RU/CS — while
- * the US defense budget ($53.5B/yr in the 1953 sandbox) generated exactly zero
- * demand and the commodity read as inert to players (#3880).
+ * Rate is lower than healthcare's 0.015 because 1953 defense budgets are mostly
+ * personnel and operations, not procurement, and ordnance has few defense
+ * sectors to supply it: a higher rate would pin the price at the shortage
+ * ceiling. 0.005 keeps defense sectors profitable and leaves headroom to raise
+ * the rate once supply grows.
  *
- * Rate chosen at 0.005, not healthcare's 0.015. Reasons, measured against the
- * live 1953 sandbox at turn 20 (global ordnance S 2,069 / D 2,302, price 4,640
- * vs 4,500 base — the smallest real market in the game):
- *  - At 0.015 the same arithmetic adds ~5,743 units/turn: it triples the market
- *    and pins the price at the 1.81x shortage ceiling permanently, because only
- *    ~39 small defense sectors exist to supply it.
- *  - At 0.005 it adds ~1,914 units/turn → D/S ~2.04, price ~1.50x base. Firmly
- *    profitable for defense sectors, and it leaves headroom to raise the rate
- *    once defense supply actually grows.
- *  - Real 1953 defense budgets are majority personnel and operations, not
- *    procurement, so a procurement share well below the healthcare share is the
- *    historically defensible reading rather than a purely mechanical one.
- *
- * Known consequence, accepted: ordnance is a cost input to `extraction`, the
- * largest sector class, so a sustained ordnance price rise is mild cost-push
- * into mining. That is the intended trade — the alternative leaves the entire
- * defense industry without a customer.
+ * Known consequence, accepted: ordnance is a cost input to `extraction`, so a
+ * sustained ordnance price rise is mild cost-push into mining.
  */
 export const GOVT_DEFENSE_ORDNANCE_DEMAND_RATE = 0.005;
 
@@ -628,14 +567,10 @@ export const NETWORK_SERVICES_GDP_DEMAND_FRACTION = 4e-6;
 export const CONSTRUCTION_SERVICES_GDP_DEMAND_FRACTION = 5e-7;
 
 /**
- * Natcorp (country-owned corporation) commodity supply/demand multiplier.
- * State-owned sectors participate in commodity markets like any private producer
- * (1.0×): a nationalized energy company supplies energy normally. A near-zero
- * value here would mean nationalizing a commodity producer collapses that
- * commodity's national supply (Bug #0775) — the state-run "cost" is already
- * modelled by the SOE margin-efficiency penalty, the treasury compensation, and
- * the transition revenue haircut, not by erasing output. Tunable if a future
- * balance pass wants a state-inefficiency discount (e.g. 0.85).
+ * Natcorp (state-owned) commodity supply/demand multiplier.
+ * State-owned producers supply commodities like private ones (1.0x); erasing
+ * output would collapse national supply. State-run inefficiency is modeled
+ * elsewhere (SOE margin penalty, treasury compensation, transition haircut).
  */
 export const NATCORP_COMMODITY_MULTIPLIER = 1.0;
 
@@ -696,26 +631,23 @@ export function embargoSupplyFactorFor(sector: {
  * measured `producedUnits` to get the units that actually reach the world
  * market.
  *
- * `producedUnits` is what the plant physically made. Ticket #1072: the
- * production-policy output multiplier is NO LONGER applied here — it is a
- * PHYSICAL throttle and now lives in `sectorTurn`'s `productionFactor`, so
- * `producedUnits` already carries it. Applying it here as well made a throttled
- * plant build full tonnage and offer less than it made, leaving the difference
- * as permanently unsold inventory the owner still paid to produce.
+ * `producedUnits` is what the plant physically made. The production-policy
+ * output multiplier is a PHYSICAL throttle applied in `sectorTurn`'s
+ * `productionFactor`, so `producedUnits` already carries it; applying it here
+ * again would build full tonnage and offer less than made, leaving permanently
+ * unsold inventory the owner still paid to produce.
  *
- * What `producedUnits` still does NOT carry is `natcorpScale` and the embargo
- * write-off, so both the world-supply ledger below
- * (`computeRawSupplyDemand`) and the clearing OFFER (turn/corporation/index.ts)
- * have to apply them. They MUST apply the identical chain: the offer is flagged
- * `realUnits` and is therefore EXEMPT from clearing's lagged-supply
- * normalization, which is the safety net that used to hide any divergence. An
- * embargoed sector previously over-offered relative to ledger supply because
- * only the ledger applied `embargoSupplyFactor`, and nothing reconciled it.
- * Keep this the single source of the formula — a duplicated chain is the bug.
+ * `producedUnits` does NOT carry `natcorpScale` or the embargo write-off, so
+ * both the world-supply ledger (`computeRawSupplyDemand`) and the clearing
+ * OFFER (turn/corporation/index.ts) have to apply them. They MUST apply the
+ * identical chain: the offer is flagged `realUnits` and is EXEMPT from
+ * clearing's lagged-supply normalization, which would otherwise hide
+ * divergence. Keep this the single source of the formula; a duplicated chain
+ * is the bug.
  *
  * Returns null when there is no measured production to scale (the sector has
- * never run a plants turn), which is the caller's signal to fall back to the
- * revenue nameplate.
+ * never run a plants turn), the caller's signal to fall back to the revenue
+ * nameplate.
  */
 export function plantsSupplyScaledUnits(args: {
   producedUnits: number | null | undefined;
@@ -1044,19 +976,13 @@ export const COMMODITY_AGGREGATE_INPUT_CAP = 30;
 /**
  * Per-commodity ceiling on the ERA-RESCALED ledger demand (see
  * `ledgerUnitScale` on `computeRawSupplyDemand`), as a multiple of the SAME
- * pass's global supply - the intermediate-leg sibling of
- * `PLANTS_HOUSEHOLD_SUPPLY_CAP` (householdConsumption.ts), same value on
- * purpose. The static 1953 seed projection shows the raw x69.8 re-anchor
- * flipping about a third of the market from deep glut into deep shortage
- * (electronics 4.1x demand/supply, software 6.1x, fertilizers 75x): the
- * SECTOR_DEMAND rate tables were tuned against the undercounted basis, so at
- * full era scale they ask for more than the seeded plants can physically make.
- * Bounding the rescaled total at this multiple keeps a clear, bounded
- * build-here signal instead of a pinned price cap.
+ * pass's global supply. Sibling of `PLANTS_HOUSEHOLD_SUPPLY_CAP`, same value on
+ * purpose. The SECTOR_DEMAND rate tables were tuned against the undercounted
+ * basis, so at era scale they exceed seeded plant capacity; this bounds the
+ * rescale without a pinned price cap.
  *
- * The cap NEVER cuts demand below its unscaled (legacy-basis) level - a
- * commodity already in genuine shortage on the legacy basis (fertilizers,
- * pharma) keeps its full pressure; only the scale-up is bounded.
+ * The cap NEVER cuts demand below its unscaled (legacy-basis) level; only the
+ * scale-up is bounded.
  */
 export const PLANTS_LEDGER_DEMAND_SUPPLY_CAP = 1.5;
 
@@ -1462,13 +1388,9 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "freight", rate: 0.45 },
     { commodity: "consulting_services", rate: 0.25 },
   ],
-  // Broad-mix extraction rates. rare_earth (covers copper) was previously 0.03
-  // on the assumption it was "near-balanced" - that balance was an artifact of
-  // the flat 50k stabilizer masking a real ~34x shortage. With the stabilizer
-  // unmasked (audit t786), the merged rare_earth rate is 0.27 (was 0.15 copper
-  // + 0.12 rare_earth) so broad-mix extraction actually produces a meaningful
-  // amount. Closing the gap fully depends on extraction sectors adopting the
-  // rare_earth_mining strategy (rate 0.72) in states that carry those deposits.
+  // Broad-mix extraction rates. rare_earth rate 0.27 accounts for the copper
+  // shortage, which the flat 50k stabilizer masks; closing the gap
+  // fully needs rare_earth_mining strategy (0.72) in states with deposits.
   extraction: [
     { commodity: "iron", rate: 0.4 },
     { commodity: "coal", rate: 0.3 },
@@ -1897,34 +1819,16 @@ export function computeRawSupplyDemand(
    * path stays byte-identical.
    */
   plantsEnabled = false,
-  /**
-   * Plants tier, ERA WORLDS (ticket #1027 phase 2): the world's era unit-basis
-   * scale (`getEraUnitScale(preset)`, ~69.8 for 1953, exactly 1 for modern).
-   *
-   * Under plants, SUPPLY became physical `producedUnits` from `capitalStock`,
-   * which carries the era unit scale (one era ₳ buys ~70 modern-priced units -
-   * see `capacityUnitYield`). But every dollars-to-units leg in THIS function
-   * still divides era-nominal revenue by the MODERN `COMMODITY_BASE_PRICES`
-   * table: intermediate SECTOR_DEMAND inputs, the macro GDP legs (real estate /
-   * network / construction services), and the legacy nameplate
-   * supply path (unowned buckets, extraction). On a 1953 world those legs are
-   * therefore undercounted ~70x against plants supply - the structural driver
-   * of the 12-312x finished-good gluts and the 0.44-0.68x price floor cluster
-   * that #4254's household re-anchor could not reach (it only moved the
-   * household leg).
-   *
-   * Multiplying every dollars-derived leg by this scale re-expresses the whole
-   * ledger in the era's own units, the same basis `eraScaledBasePrices` gives
-   * the rest of `commodityPriceTurn`. Legacy-vs-legacy ratios (e.g. extraction
-   * supply vs its industrial consumers - the currently healthy extractables)
-   * are preserved exactly, because both sides scale together; only the
-   * legacy-vs-plants mismatch closes. The stabilizer and drift terms are
-   * deliberately NOT scaled - they are modern-unit floors on both sides and
-   * shrink in relative terms as the real economy is counted at full size.
-   *
-   * Passed ONLY by plants-era callers (`plantsLedgerEnabled ? eraUnitScale : 1`
-   * in `commodityPriceTurn`); absent/1 is a pure no-op, so every legacy caller,
-   * every modern world and every below-plants world stays byte-identical.
+    /**
+   * Era unit-basis scale for plants worlds (~69.8 for 1953, 1 for modern).
+   * Plants supply uses physical era-scaled units, but this function's
+   * dollars-to-units legs divide era-nominal revenue by modern prices, so
+   * without this they undercount ~70x and cause gluts and a price floor.
+   * Multiplying every dollars-derived leg re-expresses the ledger in era
+   * units; legacy-vs-legacy ratios stay identical since both sides scale.
+   * Stabilizer and drift terms are deliberately NOT scaled: they are
+   * modern-unit floors that shrink in relative terms.
+   * Absent/1 is a no-op for legacy, modern, and below-plants callers.
    */
   ledgerUnitScale = 1,
   /**
@@ -2052,9 +1956,7 @@ export function computeRawSupplyDemand(
     stateDeltas.set(commodity, (stateDeltas.get(commodity) ?? 0) + outputUnits * (pct / 100));
   };
 
-  // Initialize all commodity types with the per-commodity stabilizer. Big
-  // markets keep the 50k default; thin markets use a smaller value so the
-  // stabilizer no longer flattens their true supply/demand ratio (audit t786).
+  // Seed each type with its per-commodity stabilizer: thin markets need smaller values so the stabilizer doesn't flatten supply/demand ratio.
   for (const c of COMMODITY_TYPES) {
     const stab = getCommodityStabilizer(c);
     global.set(c, { supply: stab, demand: stab });
@@ -2121,31 +2023,28 @@ export function computeRawSupplyDemand(
     // ── Plants: real production replaces the revenue nameplate ────────────────
     // The nameplate derivation (revenue × rate / basePrice) is a PROXY for
     // output. Under plants the sector already measured what it made, so the
-    // ledger reads that instead — this is what makes a throttled, mothballed or
+    // ledger reads that instead, which is what makes a throttled, mothballed or
     // capacity-constrained plant actually disappear from world supply.
     //
     // The scaling chain (natcorpScale × embargoSupplyFactor) is applied on top
     // because `producedUnits` does not carry those legs. The production-policy
-    // output curve is NOT in this chain — since ticket #1072 it gates tonnage in
-    // `sectorTurn`, so `producedUnits` already carries it. It lives in ONE place,
+    // output curve is NOT in this chain: it gates tonnage in `sectorTurn`, so
+    // `producedUnits` already carries it. It lives in ONE place,
     // `plantsSupplyScaledUnits`, shared with the clearing offer in
-    // turn/corporation/index.ts — the offered book and this ledger must stay in
+    // turn/corporation/index.ts; the offered book and this ledger must stay in
     // the same units or clearing's lagged-supply reconciliation misfires (and
-    // for `realUnits` offers it is switched off entirely, so nothing catches a
-    // drift).
+    // for `realUnits` offers it is switched off, so nothing catches a drift).
     //
     // EXTRACTION IS EXCLUDED on purpose: extraction supply carries the
-    // per-resource output scale and the deposit-capacity rationing multipliers
+    // per-resource output scale and deposit-capacity rationing multipliers
     // applied further down this loop, and `producedUnits` already contains its
     // own capacity haircut. Mixing the two would double-count the rationing, so
-    // extraction keeps the legacy derivation (owned by the extraction-rationing
-    // pass). Mothballing still zeroes it, below — that is mode-level, not
-    // extraction math.
+    // extraction keeps the legacy derivation. Mothballing still zeroes it below;
+    // that is mode-level, not extraction math.
     // Output sold to a state arsenal never reaches the market. Applied to both supply
-    // paths below — the plants override and the revenue nameplate — because a contracted
-    // plant diverts real production either way. The matching deduction on the cash side is
-    // the `hourlyRevenue` leg in `sectorTurn`; the two must move together or the plant
-    // loses revenue for goods the world still received.
+    // paths because a contracted plant diverts real production either way. The matching
+    // cash deduction is the `hourlyRevenue` leg in `sectorTurn`; the two must move
+    // together or the plant loses revenue for goods the world still received.
     const militaryRetained = 1 - Math.min(1, Math.max(0, sector.militaryDivertedFraction ?? 0));
 
     const plantsMothballed = plantsEnabled && sector.mothballed === true;
@@ -2198,10 +2097,8 @@ export function computeRawSupplyDemand(
         continue;
       }
       if (plantsSupplyUnits != null && plantsSupplyRates) {
-        // Canonical plants basis (issue #2054): the same chain the clearing
-        // offer builds through, so the book and the ledger cannot sit in
-        // different units. Numerically identical to the leg it replaces (mix
-        // weights are scale-free and the military leg matches).
+        // Canonical plants basis: same chain the clearing offer uses, so the
+        // book and the ledger cannot drift into different units.
         const units = canonicalPlantsUnitsForCommodity({
           producedUnits: sector.producedUnits,
           isNatcorp: sector.isNatcorp === true,
@@ -2308,10 +2205,8 @@ export function computeRawSupplyDemand(
       }
     }
 
-    // Household Ledger consolidation: retail's consumer-input demand is the
-    // legacy consumer proxy — skip it when the household pass owns final demand.
-    // D12 residual: a mothballed plant buys nothing either. Before this, cold
-    // capacity kept demanding its full nameplate inputs from the world ledger.
+    // Skip retail consumer-input demand when the household pass owns final
+    // demand, and skip mothballed plants, which buy nothing.
     if (!(suppressRetailConsumerDemand && st === "retail") && !plantsMothballed) {
       // Input demand follows real output. Legacy worlds deflate the revenue
       // anchor by the sector's realized price leg as the phase advances; plants

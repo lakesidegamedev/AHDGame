@@ -3,48 +3,34 @@ import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { priceRealizationFactor } from "@/lib/market/priceRealization";
 
 /**
- * What it costs a plant to BUILD one lot, and what a minister is allowed to pay for it.
+ * Cost to a plant to build one lot, and what a minister may pay for it.
  *
- * Before this module a delivery credited the supplier the full contract price with no cost
- * behind it, so every lot was pure cash creation: an order for a million lots turned the
- * defence appropriation into corporate cash one-for-one and inflated the supplier's balance
- * (and, through it, the market-cap series) by the whole appropriation. Payment must be MARGIN.
+ * Payment must be MARGIN: crediting the full contract price with no cost behind it
+ * is pure cash creation.
  *
- * Everything here is pure. The award route, the delivery sweep and the client-side award form
- * all need the same numbers, and a client component cannot pull `mongodb` into the bundle.
+ * Pure by design so the client award form can import it without pulling `mongodb`
+ * into the bundle.
  */
 
 /**
- * The revenue a plant must book to produce exactly one lot, in the SAME units as
+ * Revenue a plant must book to produce exactly one lot, in the same units as
  * `CorporateSector.revenue`.
  *
- * `rawLotsFromSector` defines a lot as `Σ_c revenue × supplyRate_c / basePrice_c`, so one lot
- * is `1 / Σ_c (supplyRate_c / basePrice_c)`. Inverting the one identity the arsenal already
- * uses is deliberate: a second cost table for "what a lot is worth" would drift against the
- * production model the moment either was tuned.
+ * `rawLotsFromSector` defines a lot as `Σ_c revenue × supplyRate_c / basePrice_c`, so one
+ * lot is `1 / Σ_c (supplyRate_c / basePrice_c)`. Inverting the existing identity avoids a
+ * second cost table that would drift against the production model.
  *
- * **This MUST read the same base-price table `rawLotsFromSector` reads, and it deliberately
- * reads the modern `COMMODITY_BASE_PRICES` rather than `eraScaledBasePrices`.** Swapping this
- * one to the era basis looks like a bug fix on a 1953 world, where the live commodity book is
- * era-scaled, and it is not. Two things make it wrong:
+ * MUST read the same base-price table `rawLotsFromSector` reads, and deliberately uses
+ * `COMMODITY_BASE_PRICES`, not `eraScaledBasePrices`. The base price defines the lot UNIT
+ * here, not a cost input. Swap to era basis alone and "lots delivered" and "cost per lot"
+ * are counted in different units, breaking delivery burn. Swap BOTH and the base price
+ * cancels out of input cost exactly (`units × unitPrice` where `units = revenue × rate /
+ * basePrice` and `unitPrice = basePrice × realization`), so era-scaling both ends is a
+ * no-op in money but redefines a lot ~70x smaller, making `lotsRequired` ~70x cheaper in
+ * real terms.
  *
- * 1. The base price is not a cost input here, it is the definition of the lot UNIT. Whatever
- *    table this function reads, `rawLotsFromSector` must read too, or "how many lots were
- *    delivered" and "what each lot cost to build" are counted in different units and the
- *    delivery burn is wrong by the era scale. That is the same denomination mismatch between
- *    the two ends of the price band that ticket #1134 exists to close.
- * 2. Changing BOTH is a no-op in money and a balance change in materiel. The base price
- *    cancels out of the input bill exactly - `computeInputsCost` charges
- *    `units × unitPrice` where `units = revenue × rate / basePrice` and
- *    `unitPrice = basePrice × realization` - so a plant's total input spend is
- *    `revenue × Σ(rate × realization)` on any table. Era-scaling both ends leaves the money
- *    untouched and simply redefines a lot as ~70x smaller, which makes every unit's
- *    `lotsRequired` load ~70x cheaper in real terms, because `lotsRequired` is a fixed
- *    function of archetype cost and does not move with it.
- *
- * Returns null for a strategy that supplies nothing (`cyber`) or is not a defence line - the
- * same empty case `componentsForStrategy` returns `[]` for, and callers must refuse rather
- * than treat it as free.
+ * Returns null for a strategy that supplies nothing (`cyber`) or is not a defence line,
+ * matching `componentsForStrategy`'s empty case. Callers must refuse, not treat as free.
  */
 export function revenueBasisPerLot(strategyId: string | undefined | null): number | null {
   const strategy = SECTOR_STRATEGIES.defense.find((s) => s.id === (strategyId ?? "standard"));
@@ -138,24 +124,15 @@ export function contractLotProductionCost(
 }
 
 /**
- * The profit a defence prime is expected to make on a lot it builds to order.
+ * Target operating margin for a defence prime on a lot it builds to order.
  *
- * THE dial that decides what a contract IS. A lot's price is set by
- * `lotPrice`, the GDP-anchored figure the arsenal is calibrated around; production cost is
- * then that price less this margin. Cost is derived from price, not the other way round.
+ * Price is set by `lotPrice` (GDP-anchored); production cost is that price
+ * less this margin. Cost is derived from price, not built up from the
+ * commodity recipe, or a delivered lot would consume almost nothing.
  *
- * Inverting the derivation is the whole of ticket #1134. Cost used to be built up from the
- * commodity recipe alone and came out around 1,091 against a lot the state paid 383,748,809
- * for, so delivering a lot consumed nothing and the supplier banked 99.9997% of the contract.
- * The appropriation was not buying materiel, it was buying a number in a corporation's cash
- * balance, and the minister signing for it could own part of that corporation.
- *
- * 15% is a real arms-industry return. The large Western primes run operating margins around
- * 9% to 11%, and US government contracting fee targets sit near 10% to 15%. Taking the top of
- * that range rather than the middle is deliberate: this is a game, and a defence contract
- * should be worth chasing. It is a good business, not a windfall. It also sits just above the
- * 12% `MIN_CONTRACT_MARGIN` floor, so the negotiable band is a genuine range rather than a
- * single legal price.
+ * 15% sits at the top of the real-primes range (~9-11% operating, ~10-15%
+ * government fee targets): worth chasing, not a windfall. Just above the
+ * 12% `MIN_CONTRACT_MARGIN` floor, so the negotiable band is a real range.
  */
 export const TARGET_SUPPLIER_MARGIN = 0.15;
 
@@ -242,14 +219,11 @@ export const MIN_CONTRACT_MARGIN = 0.12;
 export const MAX_COST_SHARE_OF_PRICE = 1 / (1 + MIN_CONTRACT_MARGIN);
 
 /**
- * The most a contract may mark a lot up over what it costs to build (ticket #1134).
+ * The most a contract may mark a lot up over what it costs to build.
  *
- * A backstop, not the working ceiling. With cost derived from price at
- * `TARGET_SUPPLIER_MARGIN` the GDP anchor is normally the tighter of the two bounds and is
- * what a minister actually negotiates against. This one exists so that if the cost model is
- * ever changed, mis-seeded, or handed a nonsense figure, the price still cannot float orders
- * of magnitude above what building the thing consumed. That is the failure mode this ticket
- * was raised for and it should be impossible by construction, not by calibration.
+ * A backstop, not the working ceiling: the GDP anchor is normally tighter. This
+ * exists so a changed or mis-seeded cost model cannot let price float orders of
+ * magnitude above build cost.
  */
 export const MAX_CONTRACT_MARGIN = 1.0;
 
@@ -289,31 +263,21 @@ export interface LotPriceBand {
   suggested: number;
 }
 
-/**
- * The band a minister may set a lot price inside (suggestion #291, re-anchored by #1134).
+/*
+ * Price band a minister may set a lot inside.
  *
- * `anchorPrice` is `lotPrice(countryId, militaryPriceAnchor(...))`, the GDP-anchored figure
- * the whole arsenal is calibrated around: how much of its budget a country turns into materiel
- * per turn, how many lots a platform needs, and how long equipping a roster takes are all
- * derived from it. It is the designed number and this function does not second-guess it.
+ * `anchorPrice` is the GDP-anchored figure the arsenal is calibrated around.
+ * The ceiling is the anchor; the floor is `anchorPrice` less
+ * `TARGET_SUPPLIER_MARGIN`, so both ends are two views of one figure and
+ * cannot drift apart. The result is a narrow but genuine negotiation: a hard
+ * bargainer saves real money, and no price in the band lets a supplier bank
+ * the appropriation.
  *
- * What #1134 changed is the OTHER end. Production cost is now `anchorPrice` less
- * `TARGET_SUPPLIER_MARGIN`, so the two ends of the band are two views of one figure and
- * cannot drift apart. Previously the ceiling was the anchor and the floor was a raw commodity
- * bill computed on the physical lot definition, which sits five orders of magnitude below what
- * a lot sells for. The band therefore spanned from about 1,200 to about 383,700,000 and every
- * contract in it was a transfer rather than a purchase.
+ * Not retroactive: a contract stores `pricePerLot` at award and the delivery
+ * sweep bills the stored figure.
  *
- * The result is a genuine but narrow negotiation: roughly 12% margin at the floor, the
- * designed anchor price at the ceiling. A minister who bargains hard saves real money; one who
- * does not is not fleeced; and no price in the band lets a supplier bank the appropriation.
- *
- * Deliberately NOT retroactive on price. A contract stores `pricePerLot` at award and the
- * delivery sweep bills the stored figure, so every live order keeps the price its supplier
- * agreed to.
- *
- * Returns null when either input is unusable. Callers MUST refuse: a null band treated as
- * "no limits" is the exploit this whole module exists to close.
+ * Returns null when either input is unusable. Callers MUST refuse: a null
+ * band treated as "no limits" is the exploit this module exists to close.
  */
 export function lotPriceBand(input: {
   anchorPrice: number;

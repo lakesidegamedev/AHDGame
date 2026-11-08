@@ -4,29 +4,21 @@ import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { getRevenueMultiplier } from "@/lib/utils/productionPolicy";
 
 /**
- * Realization-vs-nameplate reconciliation (#587, originally #2958).
+ * Realization-vs-nameplate reconciliation.
  *
- * `sector.revenue` is a DAILY NAMEPLATE baseline written by turn processing,
- * before the realized-output multipliers the turn applies on top — market
- * clearing / sold fraction, capacity haircut, throughput, capital utilization,
- * strikes, embargo suspension. Those produce the realized `hourlyRevenue` that
- * is summed into `CorporationHistory.revenue`, which is what the Revenue/Costs
- * chart plots.
- *
- * This view used to multiply nameplate revenue by only `revenueMultiplier`, the
- * production-policy dial, and call the result "Gross Revenue". That overstated
- * revenue for any corp with unsold or clearing-haircut output — ticket #925,
- * where an oversupplied sector with low sold% showed a loss on the chart and a
- * large profit on live Financials.
+ * `sector.revenue` is a DAILY NAMEPLATE baseline written before the turn's
+ * realized-output multipliers (market clearing / sold fraction, capacity
+ * haircut, throughput, utilization, strikes, embargo suspension). Those
+ * produce the realized `hourlyRevenue` summed into `CorporationHistory.revenue`,
+ * which is what the Revenue/Costs chart plots.
  *
  * Replicating the turn processor's per-sector realization math here would
- * duplicate a large mode-gated computation that is already done correctly once
- * per turn. Instead this derives ONE per-corp ratio from the corp's own latest
- * history snapshot and applies it uniformly. For a multi-sector corp with
- * heterogeneous per-sector haircuts that is an approximation, but a large
- * improvement over assuming 100% realization, and it keeps every downstream
- * income-statement line internally consistent because they all scale off the
- * same corrected revenue.
+ * duplicate a large mode-gated computation. Instead this derives ONE per-corp
+ * ratio from the latest history snapshot and applies it uniformly. For
+ * multi-sector corps with heterogeneous haircuts that is an approximation,
+ * but far better than assuming 100% realization, and every downstream line
+ * stays internally consistent because they all scale off the same corrected
+ * revenue.
  */
 export async function computeRevenueRealizationRatio(
   db: Db,

@@ -2,9 +2,8 @@ import type { TicketPlatform } from "@/lib/tickets/platform";
 import type { ObjectId } from "mongodb";
 
 /**
- * Support ticket — opened ONLY via the Discord bot `/ticket` flow (see plan:
- * tickets are Discord-only). Bug reports submitted from the website use the
- * separate `feedback` collection and are NOT part of this triage pipeline.
+ * Support ticket, opened ONLY via the Discord bot `/ticket` flow. Website bug
+ * reports use the separate `feedback` collection and are NOT part of this pipeline.
  */
 
 /** High-level ticket topic (mirrors the bot's ticket panel categories). */

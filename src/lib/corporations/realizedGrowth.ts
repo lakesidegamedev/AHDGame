@@ -9,19 +9,16 @@ import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
 /**
  * Realized revenue growth for ONE corporation, for display.
  *
- * Why this exists: under `marketSystemMode >= "plants"` a sector's
- * `currentGrowthRate` field no longer drives revenue — revenue is derived from
- * produced units against plant capacity — so the field is vestigial and sits at
- * 0 for most corporations. The corporation pages were still averaging it and
- * printing the result as "Average Growth Rate", which is how every corporation
- * came to read 0.00% (#922). The honest replacement is the same one the GDP
- * signal took for regions: measure the realized revenue the corp actually
- * booked, and annualize it.
+ * Under `marketSystemMode >= "plants"` a sector's `currentGrowthRate` field no
+ * longer drives revenue (revenue is derived from produced units against plant
+ * capacity), so it is vestigial and sits at 0 for most corporations. Averaging
+ * it printed 0.00% for every corp. The honest replacement is to measure the
+ * realized revenue the corp actually booked and annualize it.
  *
  * Deliberately NOT the region helper (`computeRealizedRevenueGrowthRate`): that
- * clamps into the GDP signal band [-10, 15], which is right for an input to the
- * output gap and wrong for a number shown to a CEO — a corporation genuinely
- * growing 40%/yr must not read 15%.
+ * clamps into the GDP signal band [-10, 15], which is right for an input to
+ * the output gap and wrong for a number shown to a CEO: a corporation
+ * genuinely growing 40%/yr must not read 15%.
  */
 
 /** Widest span worth measuring over: one game year. */

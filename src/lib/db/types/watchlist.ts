@@ -1,19 +1,13 @@
 import type { ObjectId } from "mongodb";
 
 /**
- * `watchlist` — moderator/admin-pinned accounts (forensics v2, Wave 2
- * "watchlist + alerts"). Deliberately tiny: this is a bookmark, not a
- * detector. The detection itself already happens continuously in
- * `actionAuditLog` (every action) and `altLinks` (the alt-scoring pass);
- * watchlisting an account just gives staff a standing shortlist and a way
- * to ask "has anything happened on this account since I last looked?"
- * without re-running a search every time.
+ * `watchlist` - moderator/admin-pinned accounts. Deliberately tiny: a
+ * bookmark, not a detector. Detection already runs continuously in
+ * `actionAuditLog` and `altLinks`; watchlisting gives staff a standing
+ * shortlist and a "what changed since I last looked" baseline.
  *
- * Read side lives in `src/lib/audit/watchlist.ts`
- * (`buildWatchlistEntryView`/`buildWatchlistViews`), which joins each entry
- * against `actionAuditLog` (recent activity summary) and `altLinks` (new
- * links since `lastNotifiedTurn`). See that module's doc comment for the
- * exact alert-detection logic.
+ * Read side: `src/lib/audit/watchlist.ts` (`buildWatchlistEntryView`,
+ * `buildWatchlistViews`).
  */
 export interface WatchlistEntry {
   _id: ObjectId;

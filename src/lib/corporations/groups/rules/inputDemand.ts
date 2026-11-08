@@ -19,12 +19,9 @@ import type { SupplyAgreementDemandSector } from "@/lib/turn/corporation/settleS
 /**
  * Input units one sector demands this turn, keyed by commodity.
  *
- * The per-sector form exists because the internal-supply and group-supply
- * passes need each sector's own demand to split an agreement across its
- * plants. `computeSupplyAgreementBuyerDemand` used to be called with a
- * one-element array for that, which built an outer corporation map and threw it
- * away once per sector. State-scope keys are the buyer aggregate's business,
- * so this returns the commodity totals alone.
+ * Per-sector form lets internal-supply and group-supply passes split an
+ * agreement across each sector's plants without rebuilding a discarded
+ * corporation-wide map. State-scope keys belong to the buyer aggregate.
  */
 export function computeSupplyAgreementSectorDemand(args: {
   preset?: string;

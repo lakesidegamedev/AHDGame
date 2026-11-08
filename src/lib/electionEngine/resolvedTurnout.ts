@@ -27,17 +27,15 @@ type Layer1Dim = (typeof LAYER1_DIMS)[number];
 /**
  * For US-style states (those with a Layer-1 census config registered in
  * stateCensusData), recompute each archetype's effective turnout from the
- * Layer-1 baselines + any per-dimension modifiers stored on turnoutDoc.
+ * Layer-1 baselines + per-dimension modifiers on turnoutDoc.
  *
- * US canvassing and GOTV write modifiers like `modifiers.race.white = -9.6`
- * (keys are demographic groups, not archetype IDs). The archetype-keyed
- * lookup below never matches these, so without this step those modifiers
- * would silently have zero effect on elections. Pulling them through
- * deriveGroupTurnout reuses the same composition logic that built the
- * stored archetype turnouts in the first place.
+ * US canvassing/GOTV write modifiers keyed by demographic group
+ * (`modifiers.race.white = -9.6`), not archetype ID, so the archetype-keyed
+ * lookup alone would silently drop them. deriveGroupTurnout reuses the same
+ * composition that built the stored turnouts.
  *
- * Returns null for non-US states (UK/JP/etc) so callers fall back to the
- * stored archetype turnout + archetype-keyed modifier path.
+ * Returns null for non-US states so callers use the stored archetype + 
+ * archetype-keyed modifier path.
  */
 function computeLayer1DerivedArchetypeTurnouts(
   stateId: string,
@@ -135,30 +133,9 @@ export interface ResolvedTurnoutOptions {
 
 /**
  * Resolve effective turnout rates for all demographic groups in a state.
- *
  * Combines baseline turnout from StateDemographics with runtime modifiers
- * from StateDemographicTurnout. Modifiers are clamped to valid ranges
- * and applied as percentage point adjustments.
- *
- * @param statePopulation - Total population of the state/region
- * @param demographics - Static demographic data with baseline turnout rates
- * @param categories - Active demographic categories for this country/state
- * @param turnoutDoc - Optional dynamic turnout modifiers from GOTV/canvassing/suppression
- * @param options - Optional overrides and clamping settings
- * @returns Resolved turnout rates by group and total weighted pool
- *
- * @example
- * ```typescript
- * const resolved = resolveTurnout(
- *   state.population,
- *   stateDemographics,
- *   demographicCategories,
- *   turnoutDoc, // from stateDemographicTurnout collection
- * );
- *
- * // Use in election calculation
- * const turnoutPct = resolved.byGroup[group.id];
- * ```
+ * from StateDemographicTurnout (GOTV/canvassing/suppression), clamped and
+ * applied as percentage point adjustments.
  */
 export function resolveTurnout(
   statePopulation: number,
@@ -362,24 +339,16 @@ export function capTurnSliceToElectorate(
 }
 
 /**
- * Scale a general-election vote pool down to the REGISTERED share of the
- * electorate.
+ * Scale a general-election vote pool down to the REGISTERED electorate.
  *
- * The registration-pool model (`stateRegistrationPool`) partitions the
- * eligible electorate into party registrations + independents + unregistered.
- * Registered partisans and independents vote in a general; the unregistered by
- * definition cannot cast a ballot — yet the resolved turnout pool spans the
- * whole electorate, so without this every general silently counted their
- * ballots too (and the primary side, which draws only the registered-partisan
- * slices, would not share a consistent electorate with the general).
+ * The resolved pool spans the whole electorate, but unregistered voters cannot
+ * cast a general ballot; scaling keeps the general consistent with the primary
+ * (which only draws registered slices).
  *
- * Vote SHARES are invariant to pool magnitude (the F-4 guarantee), so this
- * changes reported ballot counts and turnout percentages only — never a
- * winner, a seat, or an electoral vote.
+ * Shares are invariant to pool magnitude, so only ballot counts and turnout
+ * percentages change, never outcomes.
  *
- * A missing or non-finite `unregisteredPct` (a region with no registration
- * pool doc — most non-US worlds) leaves the pool untouched: prior behavior,
- * no invented exclusion.
+ * Missing or non-finite `unregisteredPct` leaves the pool untouched.
  */
 export { scalePoolToRegistered } from "./rules/registration";
 

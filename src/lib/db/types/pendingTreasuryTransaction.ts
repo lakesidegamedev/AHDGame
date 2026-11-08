@@ -53,11 +53,10 @@ export interface PendingTreasuryTransaction {
    * Absent value on legacy rows is treated as "double".
    */
   approvalModeAtPropose?: "single" | "double";
-  /**
+    /**
    * Treasurer slot. Filled when proposer is treasurer OR when treasurer
    * clicks Approve. For type === "request" the requester NEVER fills
-   * this slot, even if they hold the Treasurer seat (user-confirmed
-   * 2026-05-23: no auto-approvals for Request Funds).
+   * this slot, even if they hold the Treasurer seat (no auto-approvals).
    */
   treasurerApproval?: { characterId: ObjectId; approvedAt: Date };
   /**

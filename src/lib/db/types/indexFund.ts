@@ -215,12 +215,9 @@ export interface IndexFundRedemptionQueueEntry {
    * subtracted from NAV backing until paid.
    */
   unitsBurnedAtRequest?: boolean;
-  /**
-   * The ₳ → native multiplier to apply when crediting this queued payout to a
-   * character/imperial wallet (ticket #857 grandfather). Blended per request:
-   * 1 for pre-fix (legacy) units, the fund's FX rate for post-fix units. Absent
-   * = pre-fix queue row → credit rate-free (× 1), matching what the holder was
-   * owed under the old symmetric-scale code. NPP credits ignore this (₳-native).
+    /**
+   * The ₳ → native multiplier applied when crediting this queued payout to a
+   * wallet. Absent means credit rate-free (× 1). NPP credits ignore this.
    */
   redeemFxRate?: number;
   status: IndexFundRedemptionStatus;

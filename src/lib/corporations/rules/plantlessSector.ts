@@ -52,11 +52,9 @@ export function plantlessSectorView<T extends PlantlessSectorFields>(sector: T):
  * The full daily cost bill a funded producer settlement wrote for a sector, or
  * null when the row is not a funded one or the bill is missing.
  *
- * Funded rows carry summary lines only, so the page used to rebuild the bill as
- * revenue x (1 - margin). That holds while the sector sells, but a sector that
- * sold nothing has zero revenue and a zero margin, so the rebuilt bill was zero
- * and the row showed the stock it made as profit (a plant losing money read
- * as earning it).
+ * Funded rows carry summary lines only. Rebuilding the bill as revenue x
+ * (1 - margin) breaks for a sector that sold nothing (zero revenue, zero
+ * margin), which then reads the stock it made as profit.
  */
 export function fundedSectorTotalCost(
   pnl: { source?: string; totalCost?: number | null } | null | undefined

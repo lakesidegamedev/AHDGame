@@ -90,14 +90,12 @@ export interface DefenceContract {
   /** Plant-issued sequence fences delayed CEO allocation writes. */
   factoryAllocationSequence?: number;
   /**
-   * Why this contract shipped less than it could have on its last delivery turn, or absent
-   * when it shipped everything it built.
+   * Why this contract shipped less than it could have on its last delivery turn,
+   * or absent when it shipped everything it built.
    *
-   * Every boundary in the sweep - a sub-lot output, an appropriation that cannot cover the
-   * turn, an order down to its last part-lot - now CARRIES the work in `deliveryCarry` and
-   * records why here. Nothing is discarded silently any more: a plant that appeared to be
-   * building nothing for ten turns was in fact having a finished lot destroyed every turn
-   * (ticket #1099), and the order book gave the CEO no way to see it.
+   * Every sweep boundary (sub-lot output, unaffordable appropriation, order down
+   * to its last part-lot) carries the work in `deliveryCarry` and records why
+   * here, so nothing is discarded silently.
    */
   carryReason?: DefenceCarryReason;
   /** Turn `carryReason` was last written, so a stale reason is legible as stale. */
@@ -158,20 +156,19 @@ export interface DefenceContract {
     turn: number;
   };
   /**
-   * Which economics settle this contract's deliveries (ticket #1134).
+   * Which economics settle this contract's deliveries.
    *
-   * `"margin"` means build cost is a share of `pricePerLot` at `TARGET_SUPPLIER_MARGIN`, so a
-   * delivery converts the appropriation into materiel and pays the supplier a normal return.
+   * `"margin"` means build cost is a share of `pricePerLot` at `TARGET_SUPPLIER_MARGIN`,
+   * so a delivery converts appropriation into materiel and pays the supplier a normal
+   * return.
    *
-   * **ABSENT means the contract predates that fix and settles under the old economics**, where
-   * cost was a raw commodity bill unrelated to the price and the supplier kept nearly the whole
-   * contract. That is deliberate and it is a rule, not an exception for one order: a player who
-   * signed under the old terms keeps them for the lots they have left. A repair never takes
-   * away what a player already holds.
+   * **ABSENT means the contract predates that change and settles under the old
+   * economics**, where cost was a raw commodity bill and the supplier kept nearly the
+   * whole contract. A player who signed under the old terms keeps them for remaining
+   * lots.
    *
-   * Absence is the marker precisely so no backfill is needed. Every contract awarded before the
-   * deploy lacks the field and is grandfathered by construction, including any awarded between
-   * the merge and the release.
+   * Absence is the marker so no backfill is needed: every pre-existing contract is
+   * grandfathered by construction.
    */
   costBasis?: "margin";
   status: DefenceContractStatus;

@@ -5,10 +5,9 @@ import type { GameIteration } from "./gameState";
 export type OfficeKind = "executive" | "cabinet" | "leadership";
 
 /**
- * Admin-curated office-holder entry for a past/known iteration. Generated wiki
- * office pages merge these with the auto-derived history and group both by
- * iteration. Used to populate iterations (e.g. Alpha 1, Beta 1) that predate
- * iteration stamping and have no recoverable per-event data.
+ * Admin-curated office-holder entry for a past iteration. Wiki office pages
+ * merge these with auto-derived history, grouped by iteration. Populates
+ * iterations that predate iteration stamping and lack recoverable event data.
  *
  * Collection: "manualOfficeHistory".
  */

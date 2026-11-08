@@ -20,15 +20,12 @@ export function isOrderFlowPriceEligible(
 }
 
 /**
- * Sanity band for share execution prices, anchored on fundamentalSharePrice:
+ * Sanity band for execution prices anchored on fundamentalSharePrice:
  * [fundamental / K, fundamental * K], K = SHARE_EXECUTION_PRICE_BAND_MAX_RATIO.
  *
- * Returns null when the corp has no positive fundamental to anchor on (freshly
- * founded / never turn-priced corps), in which case callers execute unclamped
- * as before. The fundamental itself is guarded upstream (issuance dilution
- * scaling + the split-cooldown anchor clamp in sharePriceFormula), so it can
- * no longer be poisoned by the live price the way it was in the 2026-08-20
- * incident; anchoring the band on it is then safe defense in depth.
+ * Returns null when there is no positive fundamental to anchor on
+ * (freshly founded / never turn-priced corps); callers then execute unclamped.
+ * The fundamental is guarded upstream, so this is defense in depth.
  */
 export function shareExecutionPriceBand(
   corporation: Pick<Corporation, "fundamentalSharePrice">

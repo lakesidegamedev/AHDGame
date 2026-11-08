@@ -116,9 +116,8 @@ export async function loadPortfolioHoldings(
   const GAME_DAYS_PER_YEAR_RATIO = TURNS_PER_YEAR / TURNS_PER_DAY;
   const portfolioFxByCurrency = await loadValuationFxRates(db);
   const heldBondsSummary: HeldBondSummary[] = heldBondsRaw.map((bond) => {
-    // `holders` is required by the Bond type, but legacy rows can arrive
-    // without it; an unguarded `.find` throws a TypeError and 500s the whole
-    // corporation page (#2349). A bond with no holder rows contributes nothing.
+    // `holders` is required by the Bond type, but legacy rows can arrive without it;
+    // an unguarded `.find` throws. A bond with no holder rows contributes nothing.
     const holding = (bond.holders ?? []).find(
       (h) => h.corporationId?.toString() === corporation._id.toString()
     );
@@ -210,9 +209,8 @@ export async function loadPortfolioHoldings(
   ]);
   const turnIncomeForImf =
     typeof latestCorpIncomeRow?.income === "number" ? latestCorpIncomeRow.income : 0;
-  // Realized dividend income (local ccy) this corp received from holdings last
-  // turn, scaled per-turn → daily to match the projected `income` units (#3109).
-  // Reporting only — the cash was already credited in the dividend phase.
+  // Realized dividend income (local ccy) this corp received last turn, scaled
+  // per-turn to daily to match projected `income` units. Reporting only; cash was already credited.
   const dividendIncomeReceivedDaily =
     typeof latestCorpIncomeRow?.dividendIncomeReceived === "number"
       ? Math.round(latestCorpIncomeRow.dividendIncomeReceived * TURNS_PER_DAY)

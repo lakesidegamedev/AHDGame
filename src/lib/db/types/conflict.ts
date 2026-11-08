@@ -5,13 +5,9 @@ import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
 import type { PeaceTerm } from "@/lib/military/peaceTerm";
 
 /**
- * A conflict — a dynamic, first-class battleground that generalizes the retired
- * static theaters. Created at runtime (player declaration or event); the world starts
- * with none. The whole W1–W10 military system runs on conflicts exactly as it ran on
- * the 4 hardcoded theaters: units deploy to one (`unit.theaterId` = a conflict id),
- * generals command it, battles resolve at it, supply/commitment track per it.
- *
- * Spec: docs/superpowers/specs/2026-07-23-conflict-model-sub-a-design.md
+ * A conflict: a dynamic battleground created at runtime. Units deploy to one
+ * (`unit.theaterId` = a conflict id), generals command it, battles resolve at
+ * it, supply/commitment track per it. The world starts with none.
  */
 
 export type ConflictType =
@@ -69,11 +65,10 @@ export interface TreatyEntry {
   countryId: CountryId;
   /** The alliance that bound it, e.g. "NATO" / "WARSAW_PACT", or a custom org id. */
   organizationId: string;
-  /**
-   * The alliance's display name when the entry was written. A custom organization's
-   * name lives in the database, not in the built-in constants, so a reader holding
-   * only the id could show nothing better than the id. Absent on entries written
-   * before this field; readers fall back to the built-in name, then the id.
+    /**
+   * Display name of the alliance at write time. Custom organization names live in
+   * the database, so an id-only reader would have nothing to show. Absent on
+   * older entries; readers fall back to built-in name, then id.
    */
   organizationName?: string;
   /**

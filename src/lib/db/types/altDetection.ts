@@ -12,27 +12,21 @@ import type { ObjectId } from "mongodb";
  * game-admin Alts view; a human moderator/admin always takes the action.
  */
 
-/** One signal type in the registry — see plan §3.2's weight table.
+/** One signal type in the registry.
  *
  * `ip_intelligence` / `impossible_travel` / `email_alias_match` /
- * `payment_correlation` are forensics-v2 Wave 1 additions (deeper
- * tracking); see `src/lib/altDetection/signals.ts` for evaluator detail and
- * which of these are fully wired vs. scaffolded pending an external
- * dataset. `cf_tls_fingerprint` is a forensics-v2 Part A addition (server-side
- * Cloudflare edge fingerprint): a shared JA4/JA3 TLS fingerprint across two
- * accounts, which survives cookie clears/incognito.
+ * `payment_correlation` are forensics tracking signals (see
+ * `src/lib/altDetection/signals.ts`). `cf_tls_fingerprint` is a server-side
+ * Cloudflare edge fingerprint: a shared JA3/JA4 across accounts survives
+ * cookie clears and incognito.
  *
- * `activity_rhythm` / `session_handoff` are forensics-v2 Wave 3 (behavior
- * tracking) additions — they read the SHAPE of when an account is active
- * rather than any identity token, so they survive a fresh browser, a new
- * device, and a VPN. See `src/lib/altDetection/behavior.ts` for the
- * histogram/session maths and the concentration/overlap guards that keep
- * "everyone plays in the evening" from firing them.
+ * `activity_rhythm` / `session_handoff` read the SHAPE of activity timing
+ * rather than an identity token, so they survive a fresh browser, device, and
+ * VPN. See `src/lib/altDetection/behavior.ts`.
  *
- * NOTE for consumers with
- * an exhaustive `Record<AltSignal, ...>` (e.g.
- * `src/components/admin/alts/altTypes.ts`'s `SIGNAL_META`): every new member
- * needs a matching entry added there too. */
+ * NOTE for exhaustive `Record<AltSignal, ...>` consumers (e.g. `SIGNAL_META`
+ * in `src/components/admin/alts/altTypes.ts`): every new member needs a
+ * matching entry. */
 export type AltSignal =
   | "oauth_shared"
   | "device_fingerprint_exact"

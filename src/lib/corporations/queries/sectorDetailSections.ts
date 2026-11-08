@@ -697,18 +697,11 @@ export function buildSectorStrategySection(args: {
         sectorHostFxRate
       );
 
-      // Per-strategy margin + realization projection, for EVERY sector type.
-      //
-      // Strategies carry no direct margin modifier — their whole effect is the
-      // commodity supply/demand mix they impose (see sectorStrategies.ts header).
-      // So the honest projection is to run the engine's own
-      // `computeBlendedMarginModifiers` over each candidate strategy's rates
-      // against today's market, and diff it against the live sector's modifier.
-      //
-      // Before this, the picker showed a name, a description, and (extraction
-      // only) a projected ₳/turn. A player could not weigh "more revenue vs the
-      // loss in profit margin" — the exact complaint in #gameplay-advisors on
-      // 2026-07-29 — because the margin half of the trade was never quantified.
+      // Per-strategy margin + realization projection, for every sector type.
+      // Strategies carry no direct margin modifier: their effect is the commodity
+      // supply/demand mix they impose (see sectorStrategies.ts header). So project
+      // by running computeBlendedMarginModifiers over each candidate strategy's
+      // rates against today's market, then diff against the live sector's modifier.
       const priceRatioMapTyped = new Map<CommodityType, number>(
         commodityPrices
           .filter(
@@ -1256,11 +1249,10 @@ type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?: strin
  * none for the last turn (legacy worlds keep the throttle reading).
  *
  * A funded plant loses run for distinct reasons, and the page has to name the
- * one the player can act on (ticket 1728): the demand plan held its run below
- * capacity (demand, or ramping back up once it sells out), short inputs or
- * short cash cut what it made below that plan, and unsold output is demand.
- * A sold-out plant whose run was cut is held by that input or by cash, not
- * ramping up (ticket 1765): the plan is not what is keeping it down.
+ * one the player can act on: the demand plan held its run below capacity,
+ * short inputs or short cash cut what it made below that plan, and unsold
+ * output is demand. A sold-out plant whose run was cut is held by that input
+ * or by cash, not ramping up: the plan is not what is keeping it down.
  */
 function fundedIdleWeights(
   receipt: CorporateSector["producerSettlement"] | null | undefined,
@@ -1669,32 +1661,19 @@ export function buildSectorPlantsSection(args: {
   // The input bill renders at its real size, and `otherOperating` is the SIGNED
   // remainder that makes the named lines sum back to `maintenanceNet` exactly.
   //
-  // Under plants the engine's derived operating cost can land BELOW the named
-  // physical lines. `solveOtherOpexPerUnit` deliberately keeps a NEGATIVE
-  // residual (a sector whose policy credit and calibration anchor outweigh its
-  // physical costs), and `derivedMarginPct` is additionally capped at 100. Both
-  // reconstruct here as a maintenance bill smaller than the wage bill, so
-  // `maintenanceNet` goes negative once wages are carved out. That is a credit,
-  // not an absence of costs.
+  // A sector's derived operating cost can land BELOW its named physical lines:
+  // `solveOtherOpexPerUnit` keeps a NEGATIVE residual, and `derivedMarginPct` is
+  // capped at 100. Both reconstruct as a maintenance bill smaller than the wage
+  // bill, so `maintenanceNet` can go negative once wages are carved out. That is
+  // a credit, not an absence of costs; do not clamp it or squeeze the inputs line
+  // to fit, or the lines stop summing to profit.
   //
-  // Clamping it at zero, and clamping the inputs line to fit inside a negative
-  // budget, is what broke prod sector 6a83e59f97baa9dbe6bb7980 (a California
-  // newsroom, other-opex anchor -0.0754/unit): realized revenue 321,760.57 at
-  // an 88.63% engine margin is a 36,584.10 operating bill against a 70,561.75
-  // wage bill, so the panel printed $322K of revenue, $70.6K of wages, $0 on
-  // every other line and $285K of profit. 322 - 70.6 is 251.4, not 285
-  // (ticket 1122).
+  // This mirrors the corporation page's signed, unclamped `otherPp` residual.
   //
-  // This mirrors the corporation page's `otherPp` residual (corporationDetail.ts,
-  // ticket 1072), which was already signed and unclamped for the same reason.
-  //
-  // Ticket 1122 follow-up: all of the above is the FALLBACK. When the turn's own
-  // lines are on the row (`money.enginePnl`) they are used verbatim and nothing
-  // is inverted, because the inversion cannot be right at the margin cap: a
-  // sector whose policy credit outruns its operating bill has a NEGATIVE
-  // operating cost and a profit above its revenue, and `min(100, ...)` erases
-  // exactly that. The engine path also carries upkeep and compliance, which the
-  // margin's scope excludes and the profit includes.
+  // FALLBACK ONLY: when the turn's own lines are on the row (`money.enginePnl`)
+  // they are used verbatim and nothing is inverted, because the inversion cannot
+  // be right at the margin cap. The engine path also carries upkeep and
+  // compliance, which the margin's scope excludes and the profit includes.
   const engine = money.enginePnl ?? null;
   const inputsAnchor = engine ? engine.inputs : nonNeg(money.inputsAnchor);
   const internalSupplyDiscountAnchor = engine?.internalSupplyDiscountAnchor ?? 0;
@@ -1742,14 +1721,12 @@ export function buildSectorPlantsSection(args: {
   // ─── Truth headline ───────────────────────────────────────────────────────
   // Everything below is per-PRODUCED-unit on purpose. The stored margin divides
   // by sold revenue, so a sector selling 15% of its output can display a fat
-  // positive margin while the whole operation loses money (77% of live sectors
-  // sell under half their output). The headline instead spreads cost and
-  // revenue over every unit made, which is the basis the player's bank balance
-  // actually moves on.
+  // positive margin while the whole operation loses money. The headline
+  // spreads cost and revenue over every unit made, which is the basis the
+  // player's bank balance actually moves on.
   // One definition: market sales over units made, the same two numbers the
-  // Offered / Sold / Unsold rows print (ticket 1773: the engine's stored
-  // soldFraction read 100% beside 139 sold of 195 made). The engine value is
-  // only the fallback when the unit counts are missing.
+  // Offered / Sold / Unsold rows print. The engine's soldFraction is only the
+  // fallback when the unit counts are missing.
   const soldFraction = fillRate ?? num(sector.soldFraction);
   const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
@@ -1770,15 +1747,12 @@ export function buildSectorPlantsSection(args: {
     sector.deliveryLimitedFreightClass === "grid"
       ? sector.deliveryLimitedFreightClass
       : null;
-  // Full operating bill: maintenanceNet already carries inputs, upkeep on idle
-  // capacity, compliance and other opex; labour is billed beside it.
-  // Floor the SUM, not each leg: `maintenanceNet` is routinely negative (a
-  // credit) under plants, and flooring it on its own double-counted wages that
-  // the credit had already offset, inflating cost-per-unit.
-  //
-  // Ticket 1122: with the engine's own lines the bill needs no flooring at all.
-  // A negative total would be a sector paid more to run than it spends, and the
-  // engine can say so; the fallback keeps the floor because an INVERTED total
+  // Full operating bill: maintenanceNet carries inputs, upkeep on idle capacity,
+  // compliance and other opex; labour is billed beside it. Floor the SUM, not
+  // each leg: maintenanceNet is routinely negative (a credit) under plants, and
+  // flooring it alone double-counts wages the credit already offset.
+  // When using the engine's own lines, no flooring is needed: a negative total
+  // is meaningful there. The fallback keeps the floor because an INVERTED total
   // can go negative for reasons that are artefacts of the inversion.
   const {
     engineGrowthAnchor,

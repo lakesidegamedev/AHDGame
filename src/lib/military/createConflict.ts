@@ -29,10 +29,9 @@ import {
 } from "@/lib/coldwar/tension";
 
 /**
- * Birth-data generation for a conflict: the flavor the 4 static theaters hardcoded
- * (across both the old Theater and combat.ts Front datasets), now derived from the
- * host and the two sides. First-pass heuristics; all tunable in playtest.
- * Spec: docs/superpowers/specs/2026-07-23-conflict-model-sub-a-design.md
+ * Birth-data generation for a conflict: the flavor the 4 static theaters
+ * hardcoded, now derived from the host and the two sides. First-pass
+ * heuristics; tunable in playtest.
  */
 
 /** Terrain keyword to (combat factor, plausible enemy composition). */

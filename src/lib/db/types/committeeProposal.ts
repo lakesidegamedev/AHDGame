@@ -5,10 +5,9 @@ import type { CountryId } from "../../constants/countries";
 export type PositionShiftAxis = "economic" | "social";
 
 /**
- * Axes retired in ticket #1032. They were written by seeds, charters and
- * the shift UI but never read by any gameplay mechanic, so players could
- * spend a committee vote and a 336-turn cooldown for no effect. Retained
- * only so historical proposals stay describable and renderable.
+ * Retired axes, written by older seeds, charters and shift UI but never read
+ * by gameplay. Retained only so historical proposals stay describable and
+ * renderable.
  */
 export type RetiredPositionShiftAxis = "foreignPolicy" | "culture";
 
@@ -73,26 +72,23 @@ export interface CommitteeProposal {
   electionMethod?: { method: "party" | "committee" | "influence" };
   /** Populated for type === "electionDuration" */
   electionDuration?: { durationTurns: number };
-  /**
+    /**
    * Populated for type === "removeOfficeHolder".
    *
    * Vacates a specific elected seat on the party. The chair-appointed
-   * `treasurer` slot is also removable here (tickets #1100, #285): a
-   * treasurer who wins their seat unopposed cannot otherwise be
-   * dislodged, so the committee can vacate it and force a re-appointment
-   * or fresh election.
+   * `treasurer` slot is also removable here: a treasurer who wins their seat
+   * unopposed cannot otherwise be dislodged, so the committee can vacate it and
+   * force a re-appointment or fresh election.
    *
    * `campaigner` pulls the target from `campaignerIds`. Campaigners are
-   * chair-nominated but committee-confirmed, so the committee can strip
-   * the seat back out without the chair's consent. The chair can also
-   * fire a campaigner instantly via the campaigners route.
+   * chair-nominated but committee-confirmed, so the committee can strip the
+   * seat without the chair's consent; the chair can also fire one instantly via
+   * the campaigners route.
    *
-   * The target character is excluded from the voter set for this
-   * proposal (procedural fairness — you can't vote on your own
-   * removal). The effect handler clears `chairId` / `viceChairId` to
-   * null, or pulls the target from `committeeIds`. No auto-promotion
-   * follows; the VC inherits chair authority via the acting-chair
-   * helper when chair is vacated.
+   * The target is excluded from the voter set (you can't vote on your own
+   * removal). The effect handler clears `chairId` / `viceChairId` to null, or
+   * pulls the target from `committeeIds`. No auto-promotion follows; the VC
+   * inherits chair authority via the acting-chair helper.
    */
   removeOfficeHolder?: {
     role: "chair" | "viceChair" | "treasurer" | "committeeMember" | "campaigner";

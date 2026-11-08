@@ -21,10 +21,7 @@ export interface TradeFlowSnapshot {
   /** World totals (₳). */
   world: { grossVolume: number; clearedVolume: number; unclearedSurplus: number };
   /**
-   * Per-country reachable market books in commodity UNITS (ticket #1077), for
-   * read surfaces that must quote the market a seller can actually reach rather
-   * than the global aggregate. Optional: documents written before 1.1.2 do not
-   * carry it, and callers fall back to the global figures.
+   * Per-country reachable market books in commodity units, for surfaces quoting what a seller can actually reach. Optional: older documents lack it; callers fall back to global figures.
    */
   books?: ReachableBooksDoc;
   /**

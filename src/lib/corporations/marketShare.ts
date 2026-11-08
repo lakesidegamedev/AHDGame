@@ -243,41 +243,32 @@ export function effectiveMarketAnchor(
 }
 
 /* ------------------------------------------------------------------ *
- * Plants tier (marketSystemMode >= "plants", buildable-sectors P2 §5 D8)
+ * Plants tier (marketSystemMode >= "plants")
  *
- * Under plants a sector IS its plants: owned CAPACITY (units/turn), not a
- * revenue nameplate, is the authoritative production base. Market share
- * therefore becomes a capacity ratio:
+ * Under plants a sector IS its plants: owned CAPACITY (units/turn) is the
+ * authoritative production base. Market share is a capacity ratio:
  *
  *     share = ownedCapacityUnits / (Σ ownedCapacityUnits + headroomUnits)
  *
- * Everything below is unit-denominated, via `impliedOutputUnits` (Σ revenue x
- * supplyRate / basePrice over a supply mix).
+ * Everything is unit-denominated via `impliedOutputUnits`.
  *
  * WHICH MIX depends on what the quantity represents:
  *
- *   - An OWNED sector's units use the sector's OWN `strategyId` mix. A flipped
+ *   - An OWNED sector's units use its OWN `strategyId` mix. A flipped
  *     sector's `capitalStock` was seeded from its own strategy, so converting
- *     an unflipped sibling through the default "standard" mix compared two
- *     different unit bases. For a focused specialist (e.g. a rare-earth miner,
- *     whose standard mix barely supplies the commodity it is built around) that
- *     understated its share by orders of magnitude — a LIVE defect under
- *     plants, not a rounding concern.
+ *     an unflipped sibling through the default mix compares different unit
+ *     bases (can understate specialists by orders of magnitude).
  *
- *   - The GDP FLOOR and UNOWNED HEADROOM stay on the default "standard" mix.
- *     Neither is a specific operator: the floor is generic market mass implied
- *     by state GDP, and an unowned sector is unclaimed demand with no strategy
- *     of its own (UnownedSector has no strategyId field). Converting either
- *     through some particular sector's specialism would make the denominator
- *     depend on which sector happened to be asking.
+ *   - The GDP FLOOR and UNOWNED HEADROOM use the default "standard" mix.
+ *     Neither is a specific operator (UnownedSector has no strategyId), so a
+ *     specialism would make the denominator depend on who is asking.
  *
- * Fallbacks, in order, per (state, sectorType) market:
- *   (a) a sector with no `capitalStock` (not yet flipped / lazily migrated)
- *       contributes its revenue-implied units;
- *   (b) an unowned doc with no `headroomUnits` (P1 backfill not run)
- *       contributes headroom computed on the fly from its ₳ revenue;
- *   (c) if the market still yields no usable unit denominator, the whole
- *       bucket falls back to the legacy revenue-based path.
+ * Fallbacks per (state, sectorType) market:
+ *   (a) no `capitalStock` (not yet flipped): revenue-implied units;
+ *   (b) unowned doc with no `headroomUnits` (backfill not run): headroom
+ *       computed on the fly from ₳ revenue;
+ *   (c) no usable unit denominator: bucket falls back to the legacy
+ *       revenue-based path.
  * ------------------------------------------------------------------ */
 
 /**
@@ -380,10 +371,9 @@ interface BuildSectorMarketShareInputs {
 }
 
 /**
- * One sector's anchor-denominated revenue and its host country. Both share
- * builders read exactly these two facts; resolving them once per sector in a
- * shared pass keeps the FX lookup, the country fallback and the id string off
- * the per-bucket path.
+ * @deprecated Unused. Sector revenue uses the host-state currency, not the
+ * owning corp's, so per-owner FX resolution is unnecessary. Accepted for
+ * call-site compatibility; remove once all callers drop it.
  */
 interface SectorAnchorIndex {
   /** ₳ revenue per sector, in `sectors` order. */
@@ -469,23 +459,17 @@ export function buildMarketShareBySectorId(
 }
 
 /**
- * Per-sector NATIONAL dominance share: the owning corp's aggregate share of the
- * whole (countryId, sectorType) market, summed across every state.
+ * Per-sector NATIONAL dominance share: the owning corp's aggregate share of
+ * the whole (countryId, sectorType) market, summed across every state.
  *
- * The per-(state, sectorType) share in {@link buildMarketShareBySectorId} is the
- * right grain for a *local* contest (attacks, one region's clearing), but it lets
- * a national champion dodge every antitrust toll by spreading thin: 40% of a
- * sector in all fifty states is a de-facto national monopoly that pays a zero
- * dominance penalty because no single cell crosses the threshold. This map feeds
- * a parallel toll so the turn engine can charge on `max(local, national)` share.
+ * The local map lets a national champion spread thin and dodge antitrust; this
+ * feeds a parallel toll so the turn engine charges on `max(local, national)`.
  *
- * Revenue-basis on purpose. It is a ratio (share of a market), so the era unit
- * scale cancels and there is no plants/units branch to keep in sync — antitrust
- * cares about economic weight, not physical capacity. The denominator is the sum
- * of each state's {@link effectiveMarketAnchor} (owned + unowned/GDP floor) over
- * the country, matching the local map's market definition exactly.
+ * Revenue-basis on purpose: share is a ratio so era units cancel, and
+ * antitrust cares about economic weight. Denominator is sum of each state's
+ * {@link effectiveMarketAnchor}, matching the local market definition.
  *
- * SOE exemption is applied by the caller (as with the local tolls), not here.
+ * SOE exemption is applied by the caller.
  */
 export function buildNationalDominanceShareBySectorId(
   inputs: BuildSectorMarketShareInputs
@@ -599,17 +583,12 @@ export async function fetchSectorMarketSharePercent(
    * Share basis override. Leave undefined and the tier is resolved from the db
    * handle this function already holds.
    *
-   * This used to default to `false` ("omit for legacy revenue behavior") and
-   * every one of the seven call sites omitted it — including `buildCapacity`,
-   * the plants-native growth path, and `monopolyTrigger`, which decides
-   * nationalization. So on a plants world every share in the game was computed
-   * on the legacy revenue basis and nothing indicated it. A default that no
-   * caller ever overrides is not a default, it is a silent wrong answer, so the
-   * function now works it out itself.
+   * A default no caller overrides would be a silent wrong answer (plants worlds
+   * would compute every share on the legacy revenue basis), so the function
+   * resolves it itself.
    */
   // Retained for call-site compatibility. Market share is revenue-basis in every
-  // tier now (ticket #1145 — cell revenue share, no capacity-units twin), so the
-  // tier no longer selects a different basis.
+  // tier now, so the tier does not select a basis.
   _plantsEnabledOverride?: boolean
 ): Promise<number> {
   const { loadFxRatesByCurrency } = await import("@/lib/currency/corporationCapital");
@@ -645,9 +624,8 @@ export async function fetchSectorMarketSharePercent(
   if (!state) return 0;
   const countryId = (sector.countryId as CountryId | undefined) ?? (state.countryId as CountryId);
 
-  // Every sibling sector is in the same state (same host country), so they all
-  // share one host-state functional currency — the currency their revenue is
-  // stored in regardless of owner. Resolve the ₳ rate once from the host country.
+  // Retained for call-site compatibility. Market share is revenue-basis in every
+  // tier now, so the tier does not select a basis.
   const hostCode = resolveSectorHostCurrencyCode({ countryId }, null);
   const hostRate = fxRateForSectorHostFromMap({ countryId }, null, fxByCurrency);
 
@@ -774,22 +752,10 @@ export async function fetchCorporationNationalSectorSharePercent(
 }
 
 /**
- * Count distinct RIVAL corporations holding a sector in the same
- * (state, sectorType) cell — how contested this market actually is.
- *
- * Feeds `dominanceDensityFactor` so the dominance build toll can tell a
- * five-way fight for California from being the only firm in Maryland. The
- * building corp's own sectors are excluded, so the count is rivals, not
- * participants: a sole occupant returns 0.
- *
- * Deliberately its own small query rather than a second return value from
- * {@link fetchSectorMarketSharePercent}: that function has seven call sites
- * that want only the share, and widening its contract to serve one of them
- * would have every caller paying for a field it ignores.
- *
- * Returns null when the count cannot be established, which
- * `dominanceDensityFactor` reads as "crowded" (full toll). Failing toward the
- * higher price keeps a DB hiccup from silently discounting expansion.
+ * Count distinct rival corporations holding a sector in the same
+ * (state, sectorType) cell. Excludes the building corp's own sectors, so a
+ * sole occupant returns 0. Feeds `dominanceDensityFactor`. Returns null when
+ * the count cannot be established; callers read null as "crowded" (full toll).
  */
 export async function fetchSectorCompetitorCount(
   db: Db,
@@ -915,7 +881,7 @@ export async function fetchAttackerDefenderShares(
   _defenderCorp: CorpCapitalCurrencyInfo,
   attackerCorpId: import("mongodb").ObjectId,
   // Retained for call-site compatibility. Market share is revenue-basis in every
-  // tier now (ticket #1145), so the tier no longer selects a different basis.
+  // tier now, so the tier does not select a basis.
   _plantsEnabled: boolean = false
 ): Promise<{ defenderSharePercent: number; attackerSharePercent: number }> {
   const { loadFxRatesByCurrency } = await import("@/lib/currency/corporationCapital");

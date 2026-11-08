@@ -258,15 +258,14 @@ export const TRADE_GROWTH_SENSITIVITY = 0.005;
  */
 export const TRADE_BALANCE_SENSITIVITY = 0.08;
 
-// ── Absolute-inflation depreciation (carry-trade fix, #3064 Phase 2) ──────────
-// The macro target's inflation term is a deviation from each currency's OWN
-// targetInflation, so a currency whose baseline is set high (e.g. IT/TR/SE in the
-// late-1970s profiles) sits at par despite crippling inflation — which is exactly
-// what let high-nominal-rate currencies pay a free real carry. This term adds a
-// persistent weakening keyed off ABSOLUTE inflation above a healthy ceiling,
-// independent of the currency's own baseline, so high inflation actually costs the
-// holder (relative-PPP direction). Only bites above the threshold, so developed
-// markets (~1-2% inflation) are unaffected and their calibration is preserved.
+// ── Absolute-inflation depreciation ──────────────────────────────────────────
+// The macro target's inflation term is a deviation from each currency's own
+// targetInflation, so a high-baseline currency sits at par despite crippling
+// inflation, letting high-nominal-rate currencies pay a free real carry. This
+// term adds persistent weakening keyed off ABSOLUTE inflation above a healthy
+// ceiling, independent of the baseline, so high inflation costs the holder.
+// Only bites above the threshold, so developed markets and their calibration
+// are unaffected.
 export const ABSOLUTE_INFLATION_DEPRECIATION_THRESHOLD = 6.0; // pp; healthy inflation ceiling
 export const ABSOLUTE_INFLATION_SENSITIVITY = 0.015; // per excess pp above the threshold
 
@@ -397,10 +396,9 @@ export const INITIAL_RATES_1991: Partial<Record<CountryId, number>> = {
   // RU is an administered game quote; DD is absent after reunification.
   RU: 2.22,
   DD: 2.22, // DDM placeholder (DD not enabled in 1991)
-  // FR/IT/ES/SE/TR/GR/AT/FI: WDI PA.NUS.FCRF 1991 period averages in the legacy
-  // currencies, with the GDP, budget and regional seeds authored in the same
-  // units so local GDP over the rate equals the published dollar GDP (#3034).
-  // Sources and derivations: fiscalAnchors1991.ts.
+  // FR/IT/ES/SE/TR/GR/AT/FI: WDI PA.NUS.FCRF 1991 period averages in legacy
+  // currencies, with GDP, budget and regional seeds in the same units so local
+  // GDP over the rate equals published dollar GDP. Sources: fiscalAnchors1991.ts.
   FR: FISCAL_ANCHORS_1991.FR.lcuPerUsd,
   IT: FISCAL_ANCHORS_1991.IT.lcuPerUsd,
   ES: FISCAL_ANCHORS_1991.ES.lcuPerUsd,
@@ -441,25 +439,19 @@ export const INITIAL_RATES_1953: Partial<Record<CountryId, number>> = {
   AT: 26.0, // ATS: 1953 Bretton Woods schilling parity
   FI: 230.0, // FIM: 1953 old markka par (redenominated 100:1 in 1963 — cf. FR old francs)
 
-  // ── Warsaw Pact / non-aligned satellites (refs #3778 §1) ───────────────────
-  // These six are NOT in FOREX_ACTIVE_COUNTRIES and `seedExchangeRates` never
-  // writes a row for them — they are budget-only economies. The entries exist so
-  // ERA_COUNTRY_CONFIG_OVERRIDES["1953-default"] has ONE table to derive its
-  // `usdExchangeRate` from, exactly as the forex-active countries above do, and
-  // so the two never drift apart again.
+  // Warsaw Pact / non-aligned satellites.
   //
-  // WHY NOT THE OFFICIAL PARITY. Every bloc currency had a published gold parity
-  // and a resulting official USD rate, and every one of them was an accounting
-  // fiction: the plan, not a market, set it, and no one could transact at it.
-  // Converting an authored plan-accounting national GDP at the official parity
-  // produces absurd results — Poland would read as a $75B economy in 1953, more
-  // than West Germany plus the United Kingdom combined. This repo already made
-  // that call once, for RU above: the official rouble rate was 4/USD and the
-  // seed uses 9/USD instead, citing the Western GNP-estimate basis. The same
-  // ruling is applied here, and each entry records the official rate it departs
-  // from and the documented rate or cross it lands on. Every result is
-  // sanity-checked against Maddison-consistent 1953 USD GDP and against the
-  // seeded GDR ($11.9B / 18.4M people) as the in-world yardstick.
+  // These six are NOT in FOREX_ACTIVE_COUNTRIES and `seedExchangeRates` never
+  // writes a row for them: they are budget-only economies. The entries exist so
+  // ERA_COUNTRY_CONFIG_OVERRIDES["1953-default"] derives its `usdExchangeRate`
+  // from one table and the two never drift apart.
+  //
+  // Uses the documented non-commercial/tourist rate, not the official parity.
+  // Official parities were plan-set accounting fictions nobody could transact at;
+  // converting authored plan-accounting GDP at them produces absurd results (at
+  // parity, Poland reads as a $75B economy, larger than West Germany plus the UK).
+  // Each entry records the official rate it departs from and the rate it lands on,
+  // sanity-checked against Maddison-consistent 1953 USD GDP.
   PL: 24.0, // PLZ: official parity 4 zł/USD (30 Oct 1950 reform, gold content
   // 0.222168 g — the same as the rouble, hence the 1:1 rouble cross). The
   // NON-COMMERCIAL / tourist rate was 24 zł/USD. At 4 the authored zł 300B seed
@@ -602,10 +594,7 @@ export function getInitialRates(preset: string): Partial<Record<CountryId, numbe
   if (preset === "1991-default") return INITIAL_RATES_1991;
   if (preset === "2019-default") return INITIAL_RATES_2019_TRANSITION;
   if (preset === "2027-default") return INITIAL_RATES_2027;
-  // 1999 and 2007 have no authored table and used to fall through to the 2019
-  // one, so a 1999 world started with 2019 money: Nigeria at 1550 naira/USD
-  // when the real 1999 rate was about 97, a 16x error on day one. Interpolate
-  // between the authored anchors instead. See getInitialRatesForYear.
+  // 1999 and 2007 have no authored table; interpolate between authored anchors so early worlds get period-appropriate rates instead of 2019 values.
   const year = getStartingYearForPreset(preset);
   if (year !== STARTING_YEAR) return getInitialRatesForYear(year);
   return INITIAL_RATES;
@@ -630,23 +619,15 @@ function rateAnchors(): ReadonlyArray<{ year: number; rates: Partial<Record<Coun
 }
 
 /**
- * Seed exchange rates for an arbitrary year, interpolated between the authored
- * anchors above.
+ * Seed exchange rates for an arbitrary year, geometrically interpolated
+ * between the authored anchors above.
  *
- * GEOMETRIC, not linear. Exchange rates compound — a currency that goes 9.9 to
- * 1550 over 28 years is running at a steady proportional rate, not adding a
- * fixed number of units per year. Straight-line interpolation of Nigeria at
- * 1999 gives about 450; the geometric mean gives about 42 against a real ~97.
- * Neither is exact, because that devaluation was not smooth, but one is the
- * right shape and the other is off by an order of magnitude in the wrong
- * direction.
+ * GEOMETRIC, not linear: exchange rates compound proportionally, so straight
+ * line interpolation is off by an order of magnitude for fast-devaluing
+ * currencies.
  *
- * Deliberately NOT new authored history: this interpolates data that already
- * exists rather than inventing per-country year tables. Gentle by construction.
- *
- * Anchor identity: at an authored year the anchor's own table is returned
- * unchanged, so 1953/1979/1991/2019 worlds are byte-identical. Years past the
- * last anchor clamp to it rather than extrapolating a runaway curve.
+ * Anchors return their own tables unchanged (byte-identical), and years past
+ * the last anchor clamp to it rather than extrapolate.
  */
 export function getInitialRatesForYear(year: number): Partial<Record<CountryId, number>> {
   if (!Number.isFinite(year)) return INITIAL_RATES;
@@ -823,25 +804,15 @@ export const INTERVENTION_HISTORY_MAX = 24;
 export const TREASURY_TRANSFER_HISTORY_MAX = 50;
 
 /**
- * The authored era rate for a currency (local units per ₳), independent of
- * whether `exchangeRates` carries a row for it.
+ * Authored era rate for a currency (local units per ₳), independent of
+ * whether `exchangeRates` has a row for it.
  *
- * ⚠️ This exists because "has a currency code" and "has an exchange-rate row"
- * are NOT the same set. `COUNTRY_CURRENCY_MAP` assigns a currency to 28
- * countries; `FOREX_ACTIVE_COUNTRIES` lists 18. The ten-country gap includes the
- * six Warsaw-Pact members, which are deliberately budget-only economies — see
- * INITIAL_RATES_1953's note — so `seedExchangeRates` never writes them a row.
+ * "Has a currency code" and "has an exchange-rate row" are different sets:
+ * some countries (budget-only economies) never get a rate row, so FX helpers
+ * that branch on the code fell through to 1.0 and overstated revenue badly.
+ * The authored era rate is the correct answer.
  *
- * Every FX helper that branched on the CODE therefore took the convert path,
- * found no document, and fell through to 1.0 — valuing a Polish corporation's
- * złoty revenue as though 1 zł = ₳1, a ~24x overstatement on the 1953 rate.
- * `commodityPriceTurn.ts` already worked around this for budgets and stated the
- * rule: "The authored era rate is the correct answer, so resolve it from the
- * preset's table before conceding to 1.0." This is that rule, extracted so the
- * corporation-valuation helpers can apply it too.
- *
- * Returns `undefined` for a code no country uses, so callers keep their own
- * final fallback rather than being handed a fabricated rate.
+ * Returns `undefined` for unknown codes so callers keep their own fallback.
  */
 export function eraRateForCurrency(
   code: CurrencyCode | undefined,

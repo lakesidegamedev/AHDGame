@@ -100,19 +100,15 @@ const MS_PER_TURN_LOCAL = 3_600_000;
  * Resolve the `{ totalTurns, turnIndex }` window that drives `turnVoteWeight`'s
  * 75/25 closing surge.
  *
- * Turn-first (drift-immune), mirroring `@/lib/elections/phases.ts`: when the
- * election carries numeric `startTurn` + `endTurn`, the window is derived purely
- * from turn numbers so the final-4-turn surge band always coincides with the
- * race's actual last 4 turns (`currentTurn >= endTurn` is what resolves it).
+ * Turn-first (drift-immune): when the election carries numeric `startTurn` +
+ * `endTurn`, the window derives purely from turn numbers so the final-4-turn
+ * surge band always coincides with the race's actual last 4 turns.
  *
- * The game clock (`gameNow`) can drift from the turn counter — `computeGameNow`
- * snaps up to real time after stalls and freezes on pause — and `endTime` /
- * `startTime` are frozen projections stamped at spawn. Deriving the surge window
- * from those timestamps let the surge land at the wrong time (or never, when the
- * race resolved on `endTurn` before the hour-based `turnIndex` reached the band).
+ * The game clock can drift from the turn counter, and `endTime` / `startTime`
+ * are frozen projections stamped at spawn; deriving the surge window from those
+ * timestamps let the surge land at the wrong time or never.
  *
- * The Date path is retained as a permanent fallback for legacy / un-backfilled
- * docs that lack turn fields, reproducing the prior game-hours behavior exactly.
+ * The Date path is a fallback for legacy docs that lack turn fields.
  */
 export function resolveTurnWindow(args: {
   startTurn?: number | null;

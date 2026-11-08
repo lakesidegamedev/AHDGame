@@ -124,20 +124,16 @@ export interface ElectionVoteTally {
   primaryResults?: PrimaryResults;
   /**
    * Non-presidential primaries: cumulative PRIMARY ballots per candidate,
-   * accrued by `recordPrimarySnapshots` over the closing window of the primary
-   * (as long as the race's general window; see primaryBallotWindow). Each
-   * turn's party pool is the region's resolved turnout pool scaled by that
-   * party's registration share, split within the party by that turn's score
-   * shares — so ballots are the time-integral of the standings the players
-   * watched, and `resolvePrimariesIfNeeded` picks the nominee from these
-   * counts when they exist (score fallback otherwise).
+   * accrued by `recordPrimarySnapshots` over the primary's closing window (as
+   * long as the race's general window; see primaryBallotWindow).
+   * `resolvePrimariesIfNeeded` picks the nominee from these counts when they
+   * exist (score fallback otherwise).
    *
    * Deliberately separate from `totalVotes`, which holds GENERAL ballots only:
-   * seat estimates, the swing-flow engine and every general display sum
-   * `totalVotes` and must never see primary ballots in that denominator.
-   * Absent on legacy rows and on races whose region lacks registration or
-   * demographic data. Presidential primaries never use this — they have their
-   * own per-state vote projection (`primaryStateVotes` / `primaryDelegates`).
+   * seat estimates, swing-flow and general displays sum `totalVotes` and must
+   * never see primary ballots in that denominator. Absent on legacy rows and
+   * on races whose region lacks registration or demographic data. Presidential
+   * primaries use `primaryStateVotes` / `primaryDelegates` instead.
    */
   primaryVotes?: Record<string, number>;
   /**

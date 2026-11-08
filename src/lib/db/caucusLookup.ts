@@ -20,13 +20,9 @@ export function normaliseCaucusSlug(input: string): string {
 
 /**
  * Strip `slug` from the `previousSlugs` array of any OTHER caucus in the same
- * party that still claims it. Call this whenever a slug is being claimed by
- * a new owner (founding a caucus, renaming an existing caucus). The reclaim
- * invariant documented on `Caucus.previousSlugs` requires this so the
- * resolver in `findCaucusBySlug` doesn't accidentally redirect to a stale
- * caucus that no longer owns the slug.
- *
- * Returns the number of documents that were modified.
+ * party that still claims it. Call whenever a slug is claimed by a new owner
+ * (founding or renaming a caucus) so the `findCaucusBySlug` resolver cannot
+ * redirect to a stale caucus. Returns the number of documents modified.
  */
 export async function reclaimSlug(
   db: Db,
@@ -62,18 +58,12 @@ export interface CaucusSlugResolution {
 }
 
 /**
- * Look up a caucus by its slug (current OR previous) within a (countryId, partyId).
+ * Look up a caucus by slug (current OR previous) within a (countryId, partyId).
  * Returns null if no caucus claims the slug.
  *
- * Resolution order:
- *   1. Active caucus whose current `slug` matches.
- *   2. Active caucus whose `previousSlugs` array contains the slug — flagged as redirect.
- *
- * If a slug appears in another caucus's `previousSlugs` AND in an active caucus's
- * current `slug`, the current owner always wins. Write paths must wipe a slug
- * from any other caucus's `previousSlugs` whenever a new owner claims it (see
- * `previousSlugs` doc in caucus.ts) — that invariant is what keeps this lookup
- * unambiguous.
+ * Current `slug` matches win over `previousSlugs` matches (flagged as redirect).
+ * Write paths must wipe a slug from other caucuses' `previousSlugs` whenever a
+ * new owner claims it; that invariant keeps this lookup unambiguous.
  */
 export async function findCaucusBySlug(
   db: Db,

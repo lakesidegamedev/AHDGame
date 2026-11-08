@@ -332,16 +332,13 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       { countryId: state.countryId },
       corporation
     );
-    // Under plants the legacy nameplate must match the STARTER quantum, not the
-    // ₳1M/day legacy grant: sectorTurn only restates `revenue` from owned
+    // Under plants the legacy nameplate must match the STARTER quantum, not
+    // the ₳1M/day legacy grant: sectorTurn only restates `revenue` from owned
     // capacity, and a founding sector owns 0 for its whole build window, so
-    // whatever is written here PERSISTS for ~17 turns and feeds market share,
-    // dominance and competitor-revenue reads. Measured live (ticket #1027
-    // follow-up): a facility-quantum founding carried a ₳1,050,544 nameplate at
-    // capitalStock 0 and dominated its (state, type) market-share panel while
-    // producing nothing. Price the nameplate at what the starter build will
-    // actually be worth once it lands (units × revenue-per-unit at the default
-    // mix — the same figure the plants restatement converges to).
+    // whatever is written here persists for ~17 turns and feeds market share,
+    // dominance and competitor-revenue reads. Price it at units ×
+    // revenue-per-unit at the default mix, the figure the plants restatement
+    // converges to.
     const startingRevenueAnchor = plantsEnabled
       ? starterUnits *
         revenuePerCapacityUnit(sectorType, eraUnitScale, industryModel, mediaDiscriminator)
@@ -480,31 +477,14 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     }
 
     if (plantsEnabled && starterUnits > 0) {
-      // ─── Draw the starter capacity DOWN from the unowned pool ──────────────
-      //
-      // The pre-plants founding flow created capacity out of nothing: a new
-      // sector appeared with 1M ₳/day of output while the unowned market it
-      // entered kept every unit of its headroom. Market share (which is
-      // owned / (owned + headroom) under plants) therefore counted the same
-      // demand twice, and repeated found-and-abandon cycles inflated the world's
-      // capacity without ever consuming the demand backing it.
-      //
-      // Entering a market CONSUMES headroom. Pipeline update because
-      // `headroomUnits` and `revenue` are two views of one quantity and must
-      // move together (legacy readers still use `revenue`); both are clamped at
-      // 0 so a pool smaller than the starter build cannot go negative.
-      // The drawdown shape (upsert scaffolding, self-healing base, clamp at 0,
-      // and the trailing restatement of `revenue` from the post-draw units) is
-      // shared with `buildCapacity` via `unownedPoolDrawdown`. It used to live
-      // inline here and nowhere else, which is exactly how `buildCapacity`
-      // shipped without a drawdown at all (#1145).
-      // The pool row is an upsert, and its `countryId` is stamped from this
-      // bucket, so it has to be the HOST country like every other country read
-      // in this function. Taking the corporation's domicile here filed a
-      // brand-new pool row on a foreign state under the founder's own country:
-      // unreachable to the country the capacity is physically in, and counted
-      // as the founder's headroom by the sector browser and the supply math
-      // (ticket #1271, the same defect `buildCapacity` carried).
+      // Entering a market CONSUMES unowned headroom: market share is
+      // owned / (owned + headroom), so creating starter capacity without
+      // drawing the pool counts the same demand twice and inflates world
+      // capacity across found-and-abandon cycles. Headroom, revenue and the
+      // upsert must move together; both clamp at 0 so a small pool cannot go
+      // negative. The pool row is stamped with the HOST country, matching
+      // every other country read here; using the corp's domicile makes the
+      // row unreachable to the country the capacity is physically in.
       const starterDrawdown = unownedPoolDrawdown(
         { stateId, countryId: state.countryId, sectorType, industryModel, mediaDiscriminator },
         starterUnits,

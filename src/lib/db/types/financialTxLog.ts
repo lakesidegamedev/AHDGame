@@ -120,10 +120,7 @@ export type FinancialTxType =
   | "index_fund_redeem"
   | "index_fund_dividend"
   | "npp_investment_income"
-  // #992: the fund's own retained slice of a constituent dividend (75%
-  // reinvest + undistributed pass-through remainder). Subject is the fund;
-  // the corp payer evidences net-of-dividend revenue, so this completes the
-  // earnings to gross as an attributed mint rather than backlog.
+  // The fund's own retained slice of a constituent dividend (reinvest plus undistributed remainder). Subject is the fund; this completes the corp payer's net revenue to gross as an attributed mint rather than backlog.
   | "dividend_reinvest"
   // #992: one index fund buying a constituent position from another
   // (cross-fund rebalancing). Subject is the buyer fund; the seller fund is
@@ -282,16 +279,12 @@ export interface FinancialTxLogEntry {
 
   /**
    * Set when the subject character / corporation has been deleted, retired,
-   * or dissolved. Tx rows are NEVER cascade-deleted — admin forensic queries
+   * or dissolved. Tx rows are NEVER cascade-deleted, so admin forensic queries
    * must still resolve the subject after the entity is gone. The existing
    * `subjectName` was captured at emit time so it's still readable; this
-   * timestamp marks "the entity behind subjectId is no longer joinable".
-   *
-   * Pre-Phase-4 a deleted character's tx history was orphaned: subjectId
-   * pointed at a row that no longer existed in `characters`, and the wealth-
-   * list audit had to special-case lookups. Phase 4 stamps this field on the
-   * deletion path so the financial ledger UI can render a "(deleted)" badge
-   * without doing a cross-collection join.
+   * timestamp marks "the entity behind subjectId is no longer joinable" so the
+   * financial ledger UI can render a "(deleted)" badge without a cross-collection
+   * join.
    */
   subjectDeletedAt?: Date;
   /**

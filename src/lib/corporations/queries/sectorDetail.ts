@@ -1279,10 +1279,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               })),
             });
 
-      // Ticket 1370 follow-up: when the plant is held back because the
-      // valuable part of its output is oversupplied, name the strategy whose
-      // output this market is short of. Advisory only. Prices and books are the
-      // sector's own market, the same ones the throttle and clearing read.
+      // When the plant is held back because the valuable part of its output
+      // is oversupplied, name the strategy whose output this market is short
+      // of. Advisory only. Prices and books are the sector's own market.
       const marketRatioFor = (commodity: CommodityType): number | null => {
         const doc = priceDocByCommodity.get(commodity);
         if (!doc || !(doc.basePrice > 0)) return null;
@@ -1473,9 +1472,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
             Number.isFinite(sector.plantsPnl.compliance)
               ? sectorAmountAnchor(sector.plantsPnl.compliance)
               : null,
-          // Ticket 1122: the turn's own lines, normalized to ₳. Present on any
-          // sector that has run a plants turn since the field shipped; the
-          // builder falls back to reconstruction when it is null.
+          // Turn's own lines, normalized to ₳. Null on sectors that have not run a turn since the field shipped; the builder then falls back to reconstruction.
           enginePnl: enginePnl
             ? {
                 revenue: sectorAmountAnchor(enginePnl.revenue),
@@ -1827,9 +1824,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           : null,
         revenue: Math.round(sectorAmountInCorpCurrency(sector.revenue)),
         // Realized revenue after every realization leg (capacity, clearing,
-        // throughput, capital, strike, embargo). Surfaced so the detail page can
-        // show the gap between nameplate and realized income, e.g. an embargo
-        // haircut, instead of being embargo-blind (ticket 984).
+        // throughput, capital, strike, embargo). Surfaced so the detail page
+        // shows the gap between nameplate and realized income.
         realizedRevenue: Math.round(sectorAmountInCorpCurrency(sectorEconomicRevenue(sector))),
         embargoSuspended: sector.embargoSuspended ?? false,
         // Maintenance shown net of labour; the wage slice is broken out as `laborCost`.

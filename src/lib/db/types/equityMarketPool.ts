@@ -26,11 +26,9 @@ export interface EquityMarketPool {
   /**
    * Cash the pool was created with, in local currency.
    *
-   * Pools were originally inserted at `m2 x EQUITY_POOL_M2_SHARE` with no ledger
-   * counter, so without this the conservation identity cannot be evaluated at
-   * all: there is no way to tell an opening balance from created money.
-   * Backfilled by 2026-09-07-equity-pool-seed-backfill; absent on a pool that
-   * predates it, which `poolConservationResidual` reports as NaN.
+   * Without this the conservation identity cannot be evaluated: there is no
+   * way to tell an opening balance from created money. Absent on legacy pools,
+   * which `poolConservationResidual` reports as NaN.
    */
   seedLocal?: number;
   lastTurn?: number;

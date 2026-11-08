@@ -93,13 +93,12 @@ export interface GameConfig {
   discordChangelogWebhookUrl?: string;
   /** Discord webhook URL for in-game player suggestions (feedback modal). Optional. */
   discordSuggestionsWebhookUrl?: string;
-  /**
+    /**
    * Deployment slug ({@link deploymentServiceSlug}) that owns the webhook URLs
-   * above — stamped whenever an admin saves them. Every send is suppressed when
-   * the running deployment does not match, so a database restored into a
-   * sandbox, staging, or local world cannot post its events into the players'
-   * Discord (#1208). Absent on worlds whose webhooks predate the stamp, which
-   * post as before.
+   * above, stamped whenever an admin saves them. Sends are suppressed when the
+   * running deployment does not match, so a restored sandbox, staging, or
+   * local world cannot post into the players' Discord. Absent on worlds whose
+   * webhooks predate the stamp, which post as before.
    */
   discordWebhookOwnerService?: string;
 
@@ -206,11 +205,10 @@ export interface GameConfig {
    * Needs freightSettlementMode "active" (own routes only run then).
    */
   ownFreightFirstStage?: number;
-  /**
-   * Funded producer market: >= 1 keeps a share of each public budget line's
-   * unfilled money in the public wallet for the next turn (instead of burning
-   * it at close), capped at four turns of the line's outlay. Support and grants
-   * are paid from what is left. 0 or absent = off.
+    /**
+   * Funded producer market: >= 1 lets a public line draw at most half its fresh
+   * outlay from carry each turn; the rest waits, so a long-short line does not
+   * unlock several turns of budget at once. 0 or absent = off.
    */
   producerPublicCarryStage?: number;
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
@@ -313,20 +311,14 @@ export interface GameConfig {
    * at most doubling a turn, instead of a fixed step. 0 or absent = off.
    */
   producerShortageGrowthStage?: number;
-  /**
-   * Funded producer market: >= 1 counts a plant's deliveries to its own
-   * company's sites as sales for the demand plan and the zero-sales counter
-   * (valued at its asking price for the profit test), so a captive supplier is
-   * not read as idle and mothballed. Settlement is unchanged. 0 or absent = off.
-   * >= 2 values them at
-   * what those sites bid (capped at the reference, never under the ask) when the
-   * company's own sites were left short of that good, so a plant feeding its
-   * own short consumers is not cut for a market price below its cost.
-   * >= 3 also books every own-site delivery in the site accounts at that turn's
-   * clearing price for the good (the selling site's ask when it did not trade):
-   * income for the selling site and the same charge for the receiving site, so
-   * company totals and cash are unchanged. Companies with their own internal
-   * transfer price keep it.
+    /**
+   * Funded producer market: >= 1 counts a plant's own-company deliveries as
+   * sales for the demand plan and zero-sales counter (at asking price for the
+   * profit test), so a captive supplier is not mothballed. Settlement unchanged.
+   * >= 2 values them at what own short sites bid (capped at reference, never
+   * under ask). >= 3 also books own-site deliveries in the site accounts at
+   * clearing price, income to seller and charge to receiver, so company totals
+   * and cash are unchanged. 0 or absent = off.
    */
   producerCaptiveDeliveryStage?: number;
   /**
@@ -694,14 +686,8 @@ export interface GameConfig {
    */
   indexFundsEnabled?: boolean;
   /**
-   * Labour/Unions economic system rollout mode. Graduated, each tier a superset
-   * of the previous (see docs/plans/2026-06-30-labour-system.md):
-   *   off    — today's economy, unchanged (default)
-   *   wages  — explicit labor cost, wage slider, min-wage law, automation tech
-   *   macro  — wages ↔ unemployment ↔ politics loop (the MVP goal)
-   *   unions — NPC unionization metric, strikes, union-busting, union laws
-   *   full   — player-run unions (capstone)
-   * Absent/unknown is treated as "off". Resolve via `getLabourSystemMode`.
+   * Labour/Unions economic system rollout mode. Each tier supersets the previous:
+   * off, wages, macro, unions, full. Absent/unknown means off. Resolve via `getLabourSystemMode`.
    */
   labourSystemMode?: "off" | "wages" | "macro" | "unions" | "full";
   /** Username of the admin who last changed the labour system mode. */
@@ -914,31 +900,28 @@ export interface GameConfig {
    * (migrateEntertainmentRemoval). Present means later turns skip it.
    */
   entertainmentCommodityRemovedAtTurn?: number;
-  /**
-   * Money wiring (interstate-logistics plan step 5, phase A): when true, a
-   * sector's input bill adds the landed-price premium for out-of-state
-   * sourcing (last turn's sourcingNetworkLoad doc) on top of the global lagged
-   * price ratio, so plants in states that source interstate/import actually
-   * pay for it. Off (or unset) → inputsCost is unchanged, matching the
-   * record-only sourcing pass behavior from before this flag existed.
+    /**
+   * When true, a sector's input bill adds the landed-price premium for
+   * out-of-state sourcing (last turn's sourcingNetworkLoad doc) on top of the
+   * global lagged price ratio, so plants sourcing interstate/import actually
+   * pay. Off or unset leaves inputsCost unchanged.
    */
   interstateMoneyWiringEnabled?: boolean;
-  /**
-   * Canonical freight billing v1 (issue #897, markets plan Phase 4): when
-   * true, the sourcing pass's per-state shipping money (charge = freight price
-   * x price TEU weight x units x hops on each accepted domestic haul) is
-   * persisted on the sourcingNetworkLoad doc and the next corporation turn
-   * apportions it: charges across buyer sectors in the destination state
-   * proportional to their input demand for the hauled commodity, haul revenue
-   * across freight-supplying sectors in the origin state proportional to
-   * their freight supply share. Both legs are persisted per sector as named
-   * lines (freightBillingCharge / freightBillingCredit) and ride sector costs
-   * and revenue. A transfer, not a sink: world totals of the two legs match.
-   * Off (or unset) → nothing is computed or written, matching the shadow-price
-   * behavior from before this flag existed. ENABLING IS A BALANCE CHANGE
-   * (~22M world-scale bill at audit calibration; the sourcing aggregates are
-   * DAILY money, spread over TURNS_PER_DAY when charged, ticket 1448) and
-   * merges only with a simulation report from scripts/sim/ per CONTRIBUTING.md.
+    /**
+   * Canonical freight billing v1. When true, the sourcing pass's per-state
+   * shipping money (charge = freight price x price TEU weight x units x hops
+   * per accepted domestic haul) is persisted on the sourcingNetworkLoad doc
+   * and the next corporation turn apportions it: charges across buyer sectors
+   * in the destination state by input demand for the hauled commodity, haul
+   * revenue across freight-supplying sectors in the origin state by freight
+   * supply share. Both legs persist as named lines
+   * (freightBillingCharge / freightBillingCredit) and ride sector costs and
+   * revenue. A transfer, not a sink: world totals of the two legs match.
+   * Off or unset: nothing is computed or written.
+   *
+   * Enabling is a BALANCE CHANGE (sourcing aggregates are DAILY money, spread
+   * over TURNS_PER_DAY when charged) and merges only with a simulation report
+   * from scripts/sim/.
    */
   canonicalFreightBillingEnabled?: boolean;
   /**
@@ -966,14 +949,12 @@ export interface GameConfig {
    * Absent or false keeps one replacement bond per claim.
    */
   sovereignRolloverConsolidationEnabled?: boolean;
-  /**
-   * Stage gate for grouped sovereign coupon accrual. When true the Treasury
-   * phase freezes each turn's coupons as one claim per budget, currency and
-   * payee group (players apart from the bond pool, index funds and NPPs)
-   * instead of one claim per bond, so an unfunded Treasury's arrears queue
-   * grows by a couple of documents a turn rather than one per bond. Every
-   * payee is owed exactly what its per-bond claims summed to. Absent or false
-   * keeps one claim per bond.
+    /**
+   * Dark gate for autonomous NPP index-fund redemption. When true, autonomous
+   * NPP investing may redeem fund units (enqueueing a redemption and, on the
+   * cron pass, selling holdings for cash). Default off: enabling it changes
+   * simulated NPP portfolios and fund liquidity, so it merges only with a
+   * worldsim report from scripts/sim/ per CONTRIBUTING.md.
    */
   sovereignCouponGroupedAccrualEnabled?: boolean;
   /** Dark gate for the index-fund 20 percent sovereign-bond allocation target. */
@@ -1138,14 +1119,7 @@ export interface GameConfig {
    */
   extractionOutputScaleEnabled?: boolean;
   /**
-   * Shadow double-entry ledger master flag (audit: t841 FX blowup / ghost-bank
-   * / phantom-credit bug class). When on, financialTxLog emissions are ALSO
-   * mirrored into the shadow `ledgerEntries` collection and a per-turn
-   * reconciler (src/lib/ledger/reconcile.ts) asserts a conservation law and
-   * alarms on violations. SHADOW-ONLY (Phases 1-3): game behavior is unchanged;
-   * game code never reads the ledger. Off by default in prod seeds; on in the
-   * sim harness. Absent/false = off. See
-   * docs/plans/2026-07-05-shadow-ledger-plan.md.
+   * Shadow double-entry ledger flag. When on, financialTxLog emissions are also mirrored into `ledgerEntries` and a per-turn reconciler asserts a conservation law. Shadow-only: game code never reads it and behavior is unchanged. Absent/false = off.
    */
   ledgerShadow?: boolean;
   /**
@@ -1347,14 +1321,7 @@ export interface GameConfig {
   altScoringUpdatedAt?: string;
 
   /**
-   * Era price-level deflator for campaign finance (#2119). When true, campaign
-   * action fund costs and campaign income are scaled by the active era's price
-   * level relative to the modern baseline, so a 1953 world stops charging
-   * 2019-scale dollar costs while paying 2019-scale income. The per-region GDP
-   * ratio from #798 already varies WITHIN an era; this adds the BETWEEN-era
-   * price level on top. Default off (absent means off, byte-identical to
-   * today): enabling it is a balance change and merges only with a simulation
-   * report from scripts/sim/ per CONTRIBUTING.md.
+   * When true, campaign fund costs and income are scaled by the active era's price level relative to the modern baseline, so older eras don't pay modern-scale costs against modern-scale income. Default off (absent = off). Enabling is a balance change requiring a simulation report.
    */
   campaignEraPriceLevelEnabled?: boolean;
 }

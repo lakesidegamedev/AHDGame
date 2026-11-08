@@ -8,12 +8,10 @@ import { readNppOffensiveJoinEnabled } from "@/lib/nppAutonomy/offensiveFlags";
 /**
  * Who joins an offensive at a front without declaring one.
  *
- * There are two sources of that consent and they must be read the same way in both
- * places that ask. `battleResolution` builds the roster an offensive actually fights
- * with; the cabinet battle forecast predicts that roster for the minister about to
- * order the attack. The forecast's own contract is that it can never disagree with
- * the outcome it predicts, so the question is asked here once and answered
- * identically for both.
+ * `battleResolution` builds the roster an offensive actually fights with; the
+ * cabinet battle forecast predicts that roster. The forecast's contract is that it
+ * can never disagree with the outcome it predicts, so the question is asked here
+ * once and answered identically for both.
  *
  * Spec: docs/superpowers/specs/2026-08-04-allied-coalition-battles-design.md
  */

@@ -306,11 +306,10 @@ export interface SectorPlantsSection {
     profitPerUnitAnchor: number | null;
   };
   /**
-   * The three-number headline (ticket #1027 family): what the sector page leads
-   * with so a player never again reads "43% margin" and "no money coming in" on
-   * the same screen. Everything here is computed from the same telemetry the
-   * pnl block reads, so the headline can never disagree with the money chain
-   * below it.
+   * The three-number headline: what the sector page leads with so a player
+   * never reads "43% margin" and "no money coming in" on the same screen.
+   * Everything here is computed from the same telemetry the pnl block reads,
+   * so the headline can never disagree with the money chain below it.
    */
   truth: {
     /**

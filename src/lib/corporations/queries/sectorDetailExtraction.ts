@@ -80,11 +80,9 @@ export async function computeSectorExtractionCapacityContext(
           .toArray(),
       ]);
 
-      // Every sector here operates in `sector.stateId`, so they share the host
-      // state's currency. Sector revenue is stored in that currency; normalize it
-      // to ₳ — the unit COMMODITY_BASE_PRICES and the capacity allocator use — at
-      // the host rate before the per-resource output math. (Fixes both the
-      // host-vs-owner denomination and the prior local-as-₳ approximation.)
+      // Sectors share the host state's currency; revenue is stored in that
+      // currency. Normalize to the anchor unit (used by COMMODITY_BASE_PRICES
+      // and the capacity allocator) at the host rate before per-resource output math.
       const hostCode = resolveSectorHostCurrencyCode(sector, null);
       const hostRate = await getSectorHostFxRate(db, sector, null);
       const revenueAnchorOf = (rev: number): number =>

@@ -136,9 +136,7 @@ export async function listDefenceSuppliers(
       stateOwned,
     });
 
-    // The SAME resolver the award route and the delivery sweep use. A picker that offered a
-    // plant the route would refuse turned every clear 400 into a dead option the minister
-    // could not diagnose, and every divergence between these checks has shipped as a ticket.
+    // Must use the same resolver as the award route and delivery sweep. A picker that offers a plant the route rejects produces undiagnosable errors.
     const fill = resolveFillEligibility({
       corp,
       sector,

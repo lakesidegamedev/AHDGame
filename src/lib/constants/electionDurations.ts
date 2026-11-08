@@ -41,9 +41,7 @@ export const DEFAULT_DURATIONS: Record<
   // Governor by-election (mid-term vacancy fill) — 24-turn filing/primary and 24-turn general; the
   // spawner sets timing directly, this entry just registers the type.
   special_governor: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
-  // Commons by-election (#860) — compressed regular race like its governor
-  // cousin, but WITH a filing/primary window so candidates can file. Mirrors
-  // the regular Commons 24h + 24h split; the spawner sets timing directly.
+  // Commons by-election: compressed race but WITH filing/primary window so candidates can file. Mirrors regular Commons 24h + 24h split.
   special_commons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // CN NPC Delegate elections (5-year cycle, 48h election window)
   npcDelegate: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
@@ -94,9 +92,7 @@ export const DEFAULT_DURATIONS: Record<
   holyrood: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // WAL Senedd Cymru — 5-year AMS cycle, 48h election window. Stood up at secession.
   senedd: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
-  // Beta-country parliamentary lower chambers (FR/IT/ES/SE/TR, issue #3239):
-  // 48h election window; the multi-year cycle gap is handled by the canonical
-  // schedule in ensureBetaParliamentElections.
+  // Beta-country parliamentary lower chambers: 48h window; multi-year cycle gap handled by canonical schedule in ensureBetaParliamentElections.
   assembleeNationale: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   cameraDeputati: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   congresoDiputados: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },

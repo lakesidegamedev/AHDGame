@@ -88,10 +88,9 @@ export function buildFinancials(inputs: FinancialsInputs) {
     totalRevenue: Math.round(totals.totalRevenue),
     // Maintenance shown net of labour; the wage slice is broken out as `laborCosts`.
     // Under plants this residual CAN be negative: derived operating cost already
-    // includes labour, and a negative other-opex residual is a real credit that
-    // Gross Profit must keep (clamping it double-counts wages; ticket #1122 is
-    // a display bug, not a sign error). The Cost of Revenue renderer formats a
-    // credit without wrapping a minus inside parentheses.
+    // includes labour, and a negative other-opex residual is a real credit Gross
+    // Profit must keep (clamping it double-counts wages). The Cost of Revenue
+    // renderer formats a credit without wrapping a minus inside parentheses.
     maintenanceCosts: Math.round(totals.totalMaintenanceCosts - totals.totalLaborCosts),
     laborCosts: Math.round(totals.totalLaborCosts),
     freightCosts: Math.round(totals.totalFreightCosts ?? 0),
@@ -131,10 +130,9 @@ export function buildFinancials(inputs: FinancialsInputs) {
     bankingIncome: Math.round(inc.bankIncomeLocalPerDay),
     ...(inc.bankingIncomeTurn != null ? { bankingIncomeTurn: inc.bankingIncomeTurn } : {}),
     economicIncomeIncludingBank: Math.round(inc.income + inc.bankIncomeLocalPerDay),
-    // Ground-truth realized net income from the engine's last snapshot, converted
-    // from per-turn to the daily display units the projected `income` uses. This
-    // is what actually hit liquidCapital last turn — it reflects embargo/tariff/
-    // clearing haircuts the projection above can't fully reproduce (ticket #935).
+    // Ground-truth realized net income from the engine's last snapshot,
+    // converted from per-turn to daily display units. Reflects embargo, tariff
+    // and clearing haircuts the projection above cannot fully reproduce.
     ...(typeof latestCorpIncomeRow?.income === "number"
       ? {
           // Matches the Financials headline (operating + bond coupons −
@@ -149,11 +147,9 @@ export function buildFinancials(inputs: FinancialsInputs) {
           ),
           // Dividends the engine ACTUALLY paid out of that same turn's income,
           // in the same daily display units. `realizedIncome` above is already
-          // net of this (sectorCalculations.ts: `income = afterTaxOperating −
-          // hourlyDividendPayout`), so surfaces must NOT subtract
-          // `dividendDistribution` — the projection-derived estimate — from it
-          // again. Exposing the realized payout lets them reconstruct the
-          // pre-dividend headline instead (ticket #1098).
+          // net of this, so surfaces must NOT subtract `dividendDistribution`
+          // from it again. Exposing the realized payout lets them reconstruct
+          // the pre-dividend headline instead.
           realizedDividendPaid: Math.round(
             Math.max(0, latestCorpIncomeRow.dividendPaidPerTurn ?? 0) * TURNS_PER_DAY
           ),

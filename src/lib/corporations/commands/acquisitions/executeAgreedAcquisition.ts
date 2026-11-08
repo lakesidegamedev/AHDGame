@@ -103,29 +103,24 @@ export type ExecuteAgreedAcquisitionResult =
  * the agreed price.
  *
  * Money flow (conserved): the acquirer pays the agreed price to the target's
- * shareholders (public-float slice → the equity market pool that paid for
- * it, or the country treasury in a world without pools), then the target's own liquid cash relocates to the acquirer and
- * every sector re-parents to the acquirer; the target shell is deleted.
+ * shareholders (public-float slice → the equity market pool that paid for it, or
+ * the country treasury), then the target's liquid cash relocates to the acquirer
+ * and every sector re-parents; the target shell is deleted.
  *
- * Crash safety: every amount and recipient is pinned once per offer in an
- * `acquisitionSettlements` record claimed before money moves, and each leg
- * applies as an atomic credit-plus-stamp write. A retry resumes from the
- * record: landed legs are skipped, unlanded legs apply, and a completed
- * settlement returns its recorded result. Only a permanently unpayable leg
- * (recipient gone) ends in terminal compensation — refund of exactly the
- * undelivered remainder, never a full refund over paid holders — and the offer
- * goes to `failed`, never back to `pending`.
+ * Crash safety: amounts and recipients are pinned once per offer in an
+ * `acquisitionSettlements` record claimed before money moves; each leg is an
+ * atomic credit-plus-stamp write. A retry resumes from the record. Only a
+ * permanently unpayable leg ends in terminal compensation (refund of the exact
+ * undelivered remainder) and the offer goes to `failed`, never `pending`.
  *
- * v1 scope: the target must have NO outstanding bonds and hold NO equity in other
- * corporations (bond assumption and cross-holding transfer are deferred). Both
- * are blocked with a clear error rather than mishandled.
+ * The target must have NO outstanding bonds and hold NO equity in other
+ * corporations; both are blocked with a clear error.
  *
- * Subsidiary outcome (`offer.outcome === "subsidiary"`): the same pinned debit and
- * holder payouts, but the target is not dissolved. Its sectors, cash, bonds,
- * charter, identity and CEO stay put; the last step makes the acquirer its only
- * shareholder and formalizes it as the acquirer's subsidiary. Because the target
- * survives, its bonds and minority cross-holdings are no obstacle; chaining,
- * ownership cycles, the one-person rule and the subsidiary feature gate are.
+ * Subsidiary outcome (`offer.outcome === "subsidiary"`): same pinned debit and
+ * holder payouts, but the target survives with its sectors, cash, bonds, charter,
+ * identity and CEO intact; the acquirer becomes its only shareholder. Bonds and
+ * minority cross-holdings are no obstacle, but chaining, ownership cycles, the
+ * one-person rule and the subsidiary feature gate are.
  */
 export async function executeAgreedAcquisition(
   params: ExecuteAgreedAcquisitionParams
@@ -259,15 +254,11 @@ async function runAgreedAcquisition(
       };
   }
 
-  // Banked target (ticket-1267): the charter is a sub-document on the target,
-  // so deleting the shell would delete its bank with it. Blocked up front,
-  // before any money moves. Exception: a retry whose earlier attempt claimed
-  // the slot and then crashed before releasing the target (dual-charter
-  // state). That window belongs to the transfer recovery protocol in #2016;
-  // this pre-check must not veto its resume, so it stands aside exactly when
-  // the slot charter is this target's own charter by identity and a live
-  // settlement for this offer owns the run. (Identity compare mirrors
-  // #2016's; the protocol itself is not duplicated here.)
+  // The charter is a sub-document on the target, so deleting the shell would
+  // delete its bank with it. Blocked up front, before any money moves.
+  // Exception: an interrupted retry whose earlier attempt claimed the slot and
+  // crashed before releasing the target. A live settlement owning the run is
+  // allowed to resume.
   const bankConflict = subsidiary ? null : bankTransferConflict(target, acquirer);
   if (
     bankConflict &&
@@ -667,12 +658,7 @@ async function runAgreedAcquisition(
       return finishCommitTail(db, settlement, currentTurn);
     }
 
-    // 3. Move the bank charter BEFORE any payout: a conflict still unwinds
-    // cleanly (nothing paid yet). A retry that already completed the transfer
-    // (persisted flag) skips the call outright, so the recorded result keeps
-    // reporting the transfer and no second move is ever attempted. Crash
-    // windows INSIDE the transfer (claim/release, satellite re-keys) belong
-    // to its own recovery protocol in #2016; this caller only depends on it.
+    // 3. Move the bank charter before any payout: a conflict unwinds cleanly (nothing paid yet). Skip if already transferred so retries don't move twice; crash windows inside the transfer are its own recovery concern.
     const bankTransfer = settlement.bankCharterTransferred
       ? { ok: true as const, transferred: true }
       : await transferBankCharterToAcquirer(db, target._id, acquirer._id, now);
@@ -695,12 +681,7 @@ async function runAgreedAcquisition(
     // company, cash included). Stamped like any other leg.
     await applyStep("shell-cash");
 
-    // 6. Move every sector into the acquirer (haircut-free, currency
-    // re-denominated). Resumable by re-read: moved sectors no longer belong
-    // to the target, so a retry only sees what is left. The recorded total
-    // derives from the pinned claim-time count minus the sectors still on
-    // the target, so moves landed by an attempt that crashed before marking
-    // are still counted: ground truth, not an accumulation.
+    // 6. Move each sector to the acquirer (haircut-free, re-denominated). Resumable by re-read: moved sectors no longer belong to target. Total derives from pinned claim-time count minus remaining, so crashed attempts still count.
     for (const sector of targetSectors) {
       await moveSectorToCorp(
         db,
