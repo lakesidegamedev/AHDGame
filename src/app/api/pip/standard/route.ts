@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 // GET /api/pip/standard — Returns decay projections, income summary, and recent notifications for the Standard PiP view.
@@ -102,7 +103,10 @@ export async function GET() {
       character.countryId,
       undefined,
       preset,
-      await loadCampaignPriceLevel(db)
+      await loadCampaignPriceLevel(db),
+      homeState?.gdp === undefined
+        ? undefined
+        : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
     );
 
     return NextResponse.json(

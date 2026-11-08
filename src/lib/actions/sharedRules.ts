@@ -71,6 +71,8 @@ export interface SharedActionTarget {
   population?: number | null;
   countryId?: string | null;
   preset?: string | null;
+  /** Live national GDP per capita for the cost baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 export interface SharedActionContext {

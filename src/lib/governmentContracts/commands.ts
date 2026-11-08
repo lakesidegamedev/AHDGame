@@ -509,11 +509,41 @@ async function awardLocked(
       throw new ContractError(
         "A different award attempt owns this payment. Refresh before retrying."
       );
+    const offered = contract;
+    const reopenFailedAward = async () => {
+      const removed = await col.deleteOne({
+        _id: offered._id,
+        status: "offered",
+        signingFeeAttemptKey: t.awardAttemptId,
+        signingFeeSettled: { $ne: true },
+      });
+      const remaining = removed.deletedCount
+        ? null
+        : await col.findOne({ _id: offered._id }, { projection: { _id: 1 } });
+      if (!remaining)
+        await tenders(db).updateOne(
+          { _id: t._id, status: "awarding", awardLeaseKey: t.awardLeaseKey },
+          {
+            $set: { status: "open" },
+            $unset: {
+              winningCorporationId: "",
+              awardReason: "",
+              awardedBy: "",
+              awardedTurn: "",
+              awardAttemptId: "",
+              awardSelfDealing: "",
+            },
+          }
+        );
+    };
     if (!contract.signingFeeSettled || contract.status !== "active") {
       const corp = await db
         .collection<Corporation>("corporations")
         .findOne({ _id: contract.corporationId });
-      if (!corp) throw new ContractError("The selected corporation no longer exists.");
+      if (!corp) {
+        await reopenFailedAward();
+        throw new ContractError("The selected corporation no longer exists.");
+      }
       const result = await settleTenderSigningFee(
         db,
         contract,
@@ -524,30 +554,7 @@ async function awardLocked(
         settings.contractIssuanceEnabled === true && contractsEnabled
       );
       if (!result.ok) {
-        const removed = await col.deleteOne({
-          _id: contract._id,
-          status: "offered",
-          signingFeeAttemptKey: t.awardAttemptId,
-          signingFeeSettled: { $ne: true },
-        });
-        const remaining = removed.deletedCount
-          ? null
-          : await col.findOne({ _id: contract._id }, { projection: { _id: 1 } });
-        if (!remaining)
-          await tenders(db).updateOne(
-            { _id: t._id, status: "awarding", awardLeaseKey: t.awardLeaseKey },
-            {
-              $set: { status: "open" },
-              $unset: {
-                winningCorporationId: "",
-                awardReason: "",
-                awardedBy: "",
-                awardedTurn: "",
-                awardAttemptId: "",
-                awardSelfDealing: "",
-              },
-            }
-          );
+        await reopenFailedAward();
         throw new ContractError(result.error ?? "The signing fee was refused.", 402);
       }
     }

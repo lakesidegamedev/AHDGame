@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -178,7 +179,10 @@ async function handleGET() {
       character.countryId,
       undefined,
       gameState?.preset,
-      await loadCampaignPriceLevel(db)
+      await loadCampaignPriceLevel(db),
+      homeState?.gdp === undefined
+        ? undefined
+        : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
     );
 
     // --- Decay projections (what happens next turn) ---

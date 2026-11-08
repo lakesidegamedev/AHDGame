@@ -121,9 +121,11 @@ export function getFundMultiplier(
   // modern-era baseline; runtime money paths pass the world's gameState.preset.
   preset?: string,
   // Optional (never defaulted): the resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
-  const baseline = getGdpBaseline(countryId, preset);
+  const baseline = getGdpBaseline(countryId, preset, nationalGdpPerCapita);
   const gdpPerCapita = (gdpMillions * 1_000_000) / population;
   const gdpScalar = Math.max(0.85, Math.min(2.0, gdpPerCapita / baseline));
   return (1 + tier * 0.2) * gdpScalar * priceLevel;
@@ -169,7 +171,9 @@ export function getCampaignFundCost(
   // Optional (never defaulted): see getFundMultiplier.
   preset?: string,
   // Optional (never defaulted): resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
   const tier = getCampaignActionCost(influence); // 1-5
   const multiplier = getFundMultiplier(
@@ -177,7 +181,9 @@ export function getCampaignFundCost(
     stateGdpMillions,
     statePopulation,
     countryId,
-    preset
+    preset,
+    1,
+    nationalGdpPerCapita
   );
   return Math.round(
     Math.round((CAMPAIGN_BASE_FUND_COST * tier * multiplier) / 1_000) * 1_000 * priceLevel
@@ -197,10 +203,20 @@ export function getAdvertiseFundCost(
   // Optional (never defaulted): see getFundMultiplier.
   preset?: string,
   // Optional (never defaulted): resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
   const tier = getAdvertiseActionCost(favorability) - 5; // tier index 0-4
-  const multiplier = getFundMultiplier(tier, stateGdpMillions, statePopulation, countryId, preset);
+  const multiplier = getFundMultiplier(
+    tier,
+    stateGdpMillions,
+    statePopulation,
+    countryId,
+    preset,
+    1,
+    nationalGdpPerCapita
+  );
   return Math.round(
     Math.round((ADVERTISE_BASE_FUND_COST * multiplier) / 1_000) * 1_000 * priceLevel
   );
@@ -260,6 +276,8 @@ export interface CampaignQuoteTarget {
    * pass the world's `gameState.preset`.
    */
   preset?: string | null;
+  /** Live national GDP per capita for the baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 /**
@@ -289,6 +307,8 @@ export interface AdvertiseQuoteTarget {
    * pass the world's `gameState.preset`.
    */
   preset?: string | null;
+  /** Live national GDP per capita for the baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 /**
@@ -341,6 +361,7 @@ export function quoteCampaignAction(
   }
   const { gdpMillions, population, countryId } = target;
   const preset = target.preset ?? undefined;
+  const nationalGdpPerCapita = target.nationalGdpPerCapita ?? undefined;
   if (typeof gdpMillions !== "number" || !Number.isFinite(gdpMillions) || gdpMillions < 0) {
     return {
       ok: false,
@@ -358,8 +379,15 @@ export function quoteCampaignAction(
   }
   // Intellect softens the campaign cost-scaling curve (higher → cheaper).
   const fundCostAnchor = Math.round(
-    getCampaignFundCost(influence, gdpMillions, population, countryId, preset, priceLevel) /
-      statMultiplier(intellect)
+    getCampaignFundCost(
+      influence,
+      gdpMillions,
+      population,
+      countryId,
+      preset,
+      priceLevel,
+      nationalGdpPerCapita
+    ) / statMultiplier(intellect)
   );
   // Charisma scales the diminishing-returns gain (gentle ±20%).
   const influenceGain = campaignInfluenceGain(influence, statMultiplier(charisma));
@@ -403,6 +431,7 @@ export function quoteAdvertiseAction(
   }
   const { gdpMillions, population, countryId } = target;
   const preset = target.preset ?? undefined;
+  const nationalGdpPerCapita = target.nationalGdpPerCapita ?? undefined;
   if (typeof gdpMillions !== "number" || !Number.isFinite(gdpMillions) || gdpMillions < 0) {
     return {
       ok: false,
@@ -424,7 +453,8 @@ export function quoteAdvertiseAction(
     population,
     countryId,
     preset,
-    priceLevel
+    priceLevel,
+    nationalGdpPerCapita
   );
   // Charisma scales the diminishing-returns gain (gentle ±20%).
   const favorabilityGain = advertiseFavorabilityGain(favorability, statMultiplier(charisma));
@@ -468,10 +498,12 @@ export function getBuildDonorBaseFundCost(
   // Optional (never defaulted): see getFundMultiplier.
   preset?: string,
   // Optional (never defaulted): resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
   const baseCost = BUILD_DONOR_BASE_FUND + donorBaseLevel * BUILD_DONOR_BASE_FUND_PER_LEVEL;
-  const baseline = getGdpBaseline(countryId, preset);
+  const baseline = getGdpBaseline(countryId, preset, nationalGdpPerCapita);
   const gdpPerCapita = (stateGdpMillions * 1_000_000) / statePopulation;
   const gdpScalar = Math.max(0.85, Math.min(2.0, gdpPerCapita / baseline));
   return Math.round(Math.round((baseCost * gdpScalar) / 1_000) * 1_000 * priceLevel);
@@ -514,6 +546,8 @@ export interface BuildDonorBaseQuoteTarget {
    * pass the world's `gameState.preset`.
    */
   preset?: string | null;
+  /** Live national GDP per capita for the baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 /**
@@ -553,6 +587,7 @@ export function quoteBuildDonorBaseAction(
   }
   const { gdpMillions, population, countryId } = target;
   const preset = target.preset ?? undefined;
+  const nationalGdpPerCapita = target.nationalGdpPerCapita ?? undefined;
   if (typeof gdpMillions !== "number" || !Number.isFinite(gdpMillions) || gdpMillions < 0) {
     return {
       ok: false,
@@ -570,8 +605,15 @@ export function quoteBuildDonorBaseAction(
   }
   // Fundraising softens the donor-network cost curve (higher → cheaper).
   const fundCostAnchor = Math.round(
-    getBuildDonorBaseFundCost(level, gdpMillions, population, countryId, preset, priceLevel) /
-      statMultiplier(fundraising)
+    getBuildDonorBaseFundCost(
+      level,
+      gdpMillions,
+      population,
+      countryId,
+      preset,
+      priceLevel,
+      nationalGdpPerCapita
+    ) / statMultiplier(fundraising)
   );
   return {
     ok: true,

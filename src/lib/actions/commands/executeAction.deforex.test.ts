@@ -6,6 +6,17 @@ import type { Character } from "@/lib/db/types";
 // Campaign funds are decoupled from live forex: the campaign-fund debit must use
 // the frozen INITIAL_RATES scale (NG ×1550), NOT the live exchange rate. We mock
 // loadCharacterFxRate to a sentinel 9999 to prove it is ignored for campaign funds.
+// National GDP per capita is a database read; pin it to the era baseline so
+// these tests keep exercising the pre-existing scalar of exactly 1.0.
+vi.mock("@/lib/campaigns/nationalGdpBasis", async () => {
+  const { gdpBaselinePerCapita } = await import("@/lib/campaigns/rules/gdpBaseline");
+  const { getGameState } = await import("@/lib/gameState");
+  return {
+    loadNationalGdpPerCapita: vi.fn(async (_db: unknown, countryId: string) =>
+      gdpBaselinePerCapita(countryId, (await getGameState())?.preset)
+    ),
+  };
+});
 vi.mock("@/lib/gameState", () => ({
   getGameState: vi.fn().mockResolvedValue({ currentTurn: 1, preset: undefined }),
 }));
