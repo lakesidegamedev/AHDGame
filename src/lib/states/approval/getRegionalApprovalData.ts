@@ -58,14 +58,13 @@ export async function getRegionalApprovalData(
         currentYear: 1,
         preset: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
       },
     }
   );
   const currentTurn = gameState?.currentTurn ?? 0;
   const preset = gameState?.preset ?? null;
   // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameState?.eraSystemEnabled ? resolveGameYear(gameState ?? {}) : null;
+  const year = gameState ? resolveGameYear(gameState) : null;
 
   const addressModifiers = await getActiveAddressApprovalModifiers(
     db,

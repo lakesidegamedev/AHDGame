@@ -92,7 +92,6 @@ export async function loadPoliticalApprovalBases(
           currentTurn: 1,
           currentYear: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
           resetWorldId: 1,
           resetVersionSeeds: 1,
           metricsSystemVersion: 1,
@@ -120,7 +119,7 @@ export async function loadPoliticalApprovalBases(
   );
   if (resetInputs) {
     const averages = computeNationalAveragesFromMetrics(resetInputs.metrics);
-    const year = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+    const year = gameState ? resolveGameYear(gameState) : null;
     const byRegion = new Map(
       resetInputs.metrics.map((metrics) => [
         String(metrics._id),
@@ -160,7 +159,7 @@ export async function loadPoliticalApprovalBases(
       loadElectorateGroups(db, { countryId }),
     ]);
     const averages = computeNationalAveragesFromMetrics(metrics);
-    const year = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+    const year = gameState ? resolveGameYear(gameState) : null;
     const byRegion = new Map(
       metrics.map((metric) => [
         String(metric._id),

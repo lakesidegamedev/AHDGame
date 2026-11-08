@@ -13,17 +13,15 @@ export interface WorldFlags {
   euroMonetaryUnion?: EuroMonetaryUnion;
   euroMemberCurrencies?: CurrencyCode[];
   euroAdoptionEligibleCountries?: CountryId[];
-  /** Era system master switch (era stamps, wire news, era-aware scoring); false until an admin enables it. */
-  eraSystemEnabled: boolean;
   /** Live in-game year (null until the fetch resolves or on legacy rows). */
   currentYear: number | null;
   /** Decade era id ("2000s") stamped by the era-crossing phase; null before the first crossing. */
   currentEraId: string | null;
-  /** World starting year (frozen) — anchors the medianIncome era band; null flag-off. */
+  /** World starting year (frozen) — anchors the medianIncome era band. */
   startingYear: number | null;
-  /** Per-country realized-growth index for the medianIncome era band; null flag-off. */
+  /** Per-country realized-growth index for the medianIncome era band. */
   incomeBandIndexByCountry: Partial<Record<string, number>> | null;
-  /** Income vintage provenance for the medianIncome anchor; null flag-off or legacy data. */
+  /** Income vintage provenance for the medianIncome anchor; null on legacy data. */
   incomeStartVintages: Partial<Record<string, string>> | null;
   /** Reset choice: "none" means the playable countries opened with no parties. */
   startingPartiesMode: "default" | "none";
@@ -48,7 +46,6 @@ const DEFAULT_FLAGS: WorldFlags = {
   preset: "2019-default",
   campaignPriceLevel: 1,
   eurozoneEnabled: true,
-  eraSystemEnabled: false,
   currentYear: null,
   currentEraId: null,
   startingYear: null,

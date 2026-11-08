@@ -30,7 +30,6 @@ export async function loadCampaignAudience(
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
         },
       }
     ),
@@ -97,7 +96,6 @@ export async function loadCampaignProjectionContext(db: Db, regionIds: string[])
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
         },
       }
     ),

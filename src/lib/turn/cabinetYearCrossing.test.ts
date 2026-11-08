@@ -68,36 +68,6 @@ describe("runCabinetYearCrossing", () => {
     expect(sendNewsEvent).toHaveBeenCalled();
   });
 
-  it("reconcile still runs with eraSystemEnabled off — news does not", async () => {
-    db.collection("gameState").findOne.mockResolvedValue({
-      _id: "current",
-      currentYear: 2001,
-      lastCabinetYearProcessed: 2000,
-      eraSystemEnabled: false,
-    });
-    db.collection("cabinetMembers").findOne.mockImplementation(
-      async (query: Record<string, unknown>) =>
-        query.positionId === "agriculture_secretary" && query.countryId === "UK"
-          ? { _id: "member1", countryId: "UK", positionId: "agriculture_secretary" }
-          : null
-    );
-    const result = await runCabinetYearCrossing(db as unknown as Db);
-    expect(result.transferred).toContain("UK:agriculture_secretary->environment_secretary");
-    expect(db.collection("cabinetMembers").updateOne).toHaveBeenCalledWith(
-      { _id: "member1" },
-      expect.objectContaining({
-        $set: expect.objectContaining({ positionId: "environment_secretary" }),
-      })
-    );
-    expect(createSystemNewsPost).not.toHaveBeenCalled();
-    expect(db.collection("gameState").updateOne).toHaveBeenCalledWith(
-      { _id: "current" },
-      expect.objectContaining({
-        $set: expect.objectContaining({ lastCabinetYearProcessed: 2001 }),
-      })
-    );
-  });
-
   it("2000→2001 with news on: single reorganization item, no literal years", async () => {
     db.collection("gameState").findOne.mockResolvedValue({
       _id: "current",
@@ -130,7 +100,6 @@ describe("runCabinetYearCrossing", () => {
       _id: "current",
       currentYear: 2001,
       lastCabinetYearProcessed: 2000,
-      eraSystemEnabled: false,
     });
     db.collection("cabinetMembers").findOne.mockImplementation(
       async (query: Record<string, unknown>) => {

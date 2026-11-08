@@ -28,7 +28,7 @@ const NOTHING: NuclearProductionResult = { warheadsBuilt: 0, spent: 0 };
  * `accrueWarheads` clamps the rate to the adopted device tier cap and affordable
  * balance, so a starved budget builds fewer or zero warheads, never arrears.
  *
- * Skips while `defenceProcurementPaused` or Cold War is off. `_year` is reserved
+ * Skips while `defenceProcurementPaused`. `_year` is reserved
  * for era-priced production.
  */
 export async function applyNuclearProduction(
@@ -36,20 +36,14 @@ export async function applyNuclearProduction(
   countryId: CountryId,
   _year: number,
   _turn: number,
-  preloadedGameState?: { coldWarEnabled?: boolean; defenceProcurementPaused?: boolean }
+  preloadedGameState?: { defenceProcurementPaused?: boolean }
 ): Promise<NuclearProductionResult> {
   const gs =
     preloadedGameState ??
     (await db
-      .collection<{ _id: string; coldWarEnabled?: boolean; defenceProcurementPaused?: boolean }>(
-        "gameState"
-      )
-      .findOne(
-        { _id: "current" },
-        { projection: { coldWarEnabled: 1, defenceProcurementPaused: 1 } }
-      )) ??
+      .collection<{ _id: string; defenceProcurementPaused?: boolean }>("gameState")
+      .findOne({ _id: "current" }, { projection: { defenceProcurementPaused: 1 } })) ??
     {};
-  if (gs.coldWarEnabled !== true) return NOTHING;
   if (gs.defenceProcurementPaused === true) return NOTHING;
 
   const program = await getNuclearProgram(db, countryId);

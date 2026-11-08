@@ -407,7 +407,7 @@ export async function accumulatePresidentVoteTurn(
   const uniqueStateIds = [...new Set(electoralVoteUnits.map((u) => u.stateId))];
   // Granular-cell electorate engine (fail-closed): swap the archetype
   // substrate for Layer-1 cells in the per-state distribution loop below.
-  // Live era clock (null while `eraSystemEnabled` is off — legacy behavior).
+  // Live era clock.
   const eraYear = eraYearContextFromGameState(gsDoc);
 
   const [

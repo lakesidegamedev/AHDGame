@@ -57,9 +57,6 @@ vi.mock("@/lib/currency/sectorFxSpread", () => ({
 vi.mock("@/lib/currency/marketMaker", () => ({
   safeDistributeConversionSpread: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/corporations/techTree/featureFlag", () => ({
-  isSectorTechTreesEnabled: vi.fn().mockResolvedValue(false),
-}));
 vi.mock("@/lib/corporations/sectorGrowthCost", () => ({
   resolveCountryPrimeRate: vi.fn().mockResolvedValue(0),
 }));

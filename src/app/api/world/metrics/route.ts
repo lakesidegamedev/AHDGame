@@ -51,15 +51,14 @@ export async function GET(request: Request) {
         currentYear?: number;
         currentTurn?: number;
         startingYear?: number;
-        eraSystemEnabled?: boolean;
         incomeBandIndexByCountry?: Partial<Record<string, number>>;
         incomeStartVintages?: Partial<Record<string, string>>;
       }>("gameState")
       .findOne({ _id: "current" });
     const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
-    // Live year for era-aware score bands; null while the flag is off.
-    const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
-    // medianIncome era band inputs (null flag-off ⇒ legacy band).
+    // Live year for era-aware score bands.
+    const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
+    // medianIncome era band inputs.
     const startingYear = year != null ? (gameStateDoc?.startingYear ?? null) : null;
     const incomeIndexByCountry =
       year != null ? (gameStateDoc?.incomeBandIndexByCountry ?? null) : null;

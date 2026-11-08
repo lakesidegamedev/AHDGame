@@ -343,20 +343,16 @@ export async function createNppCorporationShell(
     { _id: "current" },
     {
       projection: {
-        sectorTechTreesEnabled: 1,
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
       },
     }
   );
-  const techGrantIds =
-    techGameState?.sectorTechTreesEnabled === true
-      ? autoGrantedNodeIds(
-          getOperatingSectorType(type, industryModel, mediaDiscriminator),
-          resolveGameYear(techGameState) ?? getStartingYearForPreset(preset)
-        )
-      : [];
+  const techGrantIds = autoGrantedNodeIds(
+    getOperatingSectorType(type, industryModel, mediaDiscriminator),
+    resolveGameYear(techGameState) ?? getStartingYearForPreset(preset)
+  );
   const startingCapital =
     customCapital ??
     Math.round(

@@ -47,14 +47,6 @@ describe("runEraCrossing (phase)", () => {
     db = createMockDb();
   });
 
-  it("no-ops entirely while the era system is disabled — even on a decade year", async () => {
-    db.collection("gameState").findOne.mockResolvedValue({ _id: "current", currentYear: 2010 });
-    const result = await runEraCrossing(db as unknown as Db);
-    expect(result.ran).toBe(false);
-    expect(db.collection("gameState").updateOne).not.toHaveBeenCalled();
-    expect(createSystemNewsPost).not.toHaveBeenCalled();
-  });
-
   it("no-ops off decade years when the marker is already current", async () => {
     db.collection("gameState").findOne.mockResolvedValue({
       _id: "current",
@@ -124,13 +116,6 @@ describe("runMetricActivation (era catalog activation news)", () => {
     db = createMockDb();
     vi.mocked(createSystemNewsPost).mockClear();
     vi.mocked(sendNewsEvent).mockClear();
-  });
-
-  it("no-ops entirely while the era system is disabled", async () => {
-    db.collection("gameState").findOne.mockResolvedValue({ _id: "current", currentYear: 1998 });
-    const result = await runMetricActivation(db as unknown as Db);
-    expect(result.posted).toEqual([]);
-    expect(db.collection("gameState").updateOne).not.toHaveBeenCalled();
   });
 
   it("first flag-on run quietly self-heals the guard — stamps, posts NOTHING", async () => {

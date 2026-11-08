@@ -263,8 +263,7 @@ export interface GranularSubstrateInput {
    * Live in-game year (`gameState.currentYear`). When set, the Layer-1
    * substrate is resolved from the YEAR — census marginals and positions slide
    * between the bracketing era anchors — instead of from the frozen seed
-   * `preset`. Null/undefined keeps the legacy preset-driven resolution exactly,
-   * which is what the `eraSystemEnabled` flag gate passes while it is off.
+   * `preset`. Null/undefined keeps the preset-driven resolution exactly.
    */
   year?: number | null;
   /**

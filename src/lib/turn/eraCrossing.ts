@@ -19,8 +19,7 @@ export interface EraCrossingResult {
  * turn it becomes ≡0 mod 10 IS Week 1; `lastEraCrossedYear` guards re-fire. No
  * preset start year is ≡0 mod 10, so nothing fires at bootstrap.
  *
- * The whole phase is gated on `eraSystemEnabled`. When the flag is enabled
- * mid-decade, the phase self-heals `currentEraId` on the next turn without
+ * A mid-decade start self-heals `currentEraId` on the next turn without
  * posting a wire item; news only fires on a real decade rollover. Scoring
  * never reads the stamp (it computes from currentYear), so a missed stamp
  * cannot skew math.
@@ -48,10 +47,10 @@ export async function runEraCrossing(
   ).findOne(
     { _id: "current" },
     {
-      projection: { currentYear: 1, lastEraCrossedYear: 1, currentEraId: 1, eraSystemEnabled: 1 },
+      projection: { currentYear: 1, lastEraCrossedYear: 1, currentEraId: 1 },
     }
   );
-  if (!gameState?.eraSystemEnabled) return { ran: false };
+  if (!gameState) return { ran: false };
 
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
@@ -117,11 +116,10 @@ export async function runMetricActivation(
       projection: {
         currentYear: 1,
         lastMetricActivationYear: 1,
-        eraSystemEnabled: 1,
       },
     }
   );
-  if (!gameState?.eraSystemEnabled) return { posted: [] };
+  if (!gameState) return { posted: [] };
 
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).

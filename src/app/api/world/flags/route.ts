@@ -43,7 +43,6 @@ export async function GET() {
         euroAdoptedCountries: 1,
         euroMonetaryUnion: 1,
         currentTurn: 1,
-        eraSystemEnabled: 1,
         currentYear: 1,
         currentEraId: 1,
         startingYear: 1,
@@ -75,7 +74,6 @@ export async function GET() {
         union: gs?.euroMonetaryUnion,
       })
   );
-  const eraOn = gs?.eraSystemEnabled ?? false;
   const resetSystemVersions = resetSystemVersionsFrom(gs, RESET_V2_READY);
   const resetV2Countries = RESET_V2_COUNTRIES.filter(
     (countryId) => resetSystemVersionsForCountry(gs, RESET_V2_READY, countryId).metrics === "v2"
@@ -89,14 +87,12 @@ export async function GET() {
       euroMonetaryUnion: gs?.euroMonetaryUnion,
       euroAdoptionEligibleCountries,
       maastrichtEligibleCountries,
-      eraSystemEnabled: eraOn,
       currentYear: gs?.currentYear ?? null,
       currentEraId: gs?.currentEraId ?? null,
-      // Era income-band inputs (metric era catalog); null while the flag is off
-      // so client scoring falls back to the full legacy band.
-      startingYear: eraOn ? (gs?.startingYear ?? null) : null,
-      incomeBandIndexByCountry: eraOn ? (gs?.incomeBandIndexByCountry ?? null) : null,
-      incomeStartVintages: eraOn ? (gs?.incomeStartVintages ?? null) : null,
+      // Era income-band inputs (metric era catalog).
+      startingYear: gs?.startingYear ?? null,
+      incomeBandIndexByCountry: gs?.incomeBandIndexByCountry ?? null,
+      incomeStartVintages: gs?.incomeStartVintages ?? null,
       resetV2Countries,
       resetSystemVersions,
       startingPartiesMode: gs?.startingPartiesMode ?? "default",

@@ -18,7 +18,7 @@ function statusView(over: Partial<NuclearStatusView> = {}): NuclearStatusView {
     productionCap: 2,
     warheadUnitCost: 800,
     deterrence: 19,
-    eligibility: { capable: true, coldWarEnabled: true, doctrineAdopted: true, eligible: true },
+    eligibility: { capable: true, doctrineAdopted: true, eligible: true },
     year: 1957,
     ...over,
   };
@@ -51,7 +51,6 @@ describe("NuclearTab", () => {
       status: statusView({
         eligibility: {
           capable: true,
-          coldWarEnabled: true,
           doctrineAdopted: false,
           eligible: false,
         },

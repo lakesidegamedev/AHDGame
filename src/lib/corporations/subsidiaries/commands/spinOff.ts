@@ -234,10 +234,10 @@ export async function spinOff(
     );
     // Baseline tech for the passed decade, matching a newly founded corp. Without it moved sectors lose tech margin, build discount and bonuses on transfer.
     const gameState = await getGameState(db);
-    const baselineTechNodeIds =
-      gameState?.sectorTechTreesEnabled === true
-        ? autoGrantedNodeIds(sectorType, resolveGameYear(gameState) ?? STARTING_YEAR)
-        : [];
+    const baselineTechNodeIds = autoGrantedNodeIds(
+      sectorType,
+      resolveGameYear(gameState) ?? STARTING_YEAR
+    );
     // Create the wholly parent-owned private corp. Parent holds 100% of shares.
     const corpDoc: Omit<Corporation, "_id"> & { _id: ObjectId } = {
       _id: newCorpId,

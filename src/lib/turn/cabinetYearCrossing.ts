@@ -31,7 +31,7 @@ export interface CabinetYearCrossingResult {
  *
  * State reconcile ALWAYS runs when year data exists: the roster resolver reads
  * the live year directly, so leaving a member on a retired seat would desync UI
- * and DB. News posting is gated on `eraSystemEnabled`. Guarded by
+ * and DB. Guarded by
  * `gameState.lastCabinetYearProcessed`; the first run reconciles retirements
  * silently and posts nothing, so enabling mid-game never bursts missed news.
  * Seats filled AHEAD of their `yearEnabled` are untouched.
@@ -50,10 +50,7 @@ export async function runCabinetYearCrossing(
   };
   const gameState = await (
     await getGameStateCollection(db)
-  ).findOne(
-    { _id: "current" },
-    { projection: { currentYear: 1, lastCabinetYearProcessed: 1, eraSystemEnabled: 1 } }
-  );
+  ).findOne({ _id: "current" }, { projection: { currentYear: 1, lastCabinetYearProcessed: 1 } });
 
   if (!gameState) return result;
   // Prefer the turn context's authoritative year: the persisted
@@ -69,7 +66,7 @@ export async function runCabinetYearCrossing(
   }
   if (currentYear <= lastYear) return result;
 
-  const postNews = !!gameState.eraSystemEnabled;
+  const postNews = true;
 
   for (const countryId of getCabinetCountryIds()) {
     const countryName = COUNTRY_CONFIGS[countryId as CountryId]?.name ?? countryId;

@@ -40,11 +40,8 @@ const NOTHING: CovertNuclearTurnResult = { spent: 0, discovered: false };
 export async function applyCovertNuclearTurn(
   db: Db,
   countryId: CountryId,
-  turn: number,
-  gates: { coldWarEnabled?: boolean }
+  turn: number
 ): Promise<CovertNuclearTurnResult> {
-  if (gates.coldWarEnabled !== true) return NOTHING;
-
   // Never started: no doc, nothing funded, nothing built. Skip without a write
   // so the collection never grows a doc for a country that never opened it.
   const doc = await getCovertNuclearProgramsCollection(db).findOne({ _id: countryId });

@@ -88,11 +88,8 @@ export async function processScotusSurpriseCaseTurn(
   // that could actually be heard this year. The windows cut both ways: a 1953
   // Court cannot hear a solar-cartel antitrust suit, and a 2019 Court cannot sue
   // the Bureau of the Budget, which became OMB in 1970.
-  // Gated on the era clock, not on decisionYear. `decisionYear` is always
-  // computable (it is just startingYear + turns) and is still what the case is
-  // stamped with, but the anachronism FILTER is an era feature and must be off
-  // when `eraSystemEnabled` is — otherwise a flag-off world silently loses
-  // templates, which is the same inconsistency prospecting had.
+  // Filtered on the era clock, not on decisionYear. `decisionYear` is just
+  // startingYear + turns and is what the case is stamped with.
   const eraEligible = templatesForYear(
     SURPRISE_CASE_TEMPLATES,
     (await getEraContext(database)).year

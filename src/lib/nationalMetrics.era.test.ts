@@ -48,13 +48,6 @@ describe("computeNationalMetrics — era income-band index", () => {
     db = createMockDb();
   });
 
-  it("flag off ⇒ no gameState write, no index", async () => {
-    wireDb(db, { gameState: { _id: "current" }, income: 15_500 });
-    await computeNationalMetrics(db as unknown as Db);
-    const calls = db.collectionMocks["gameState"]!.updateOne.mock.calls;
-    expect(calls.length).toBe(0);
-  });
-
   it("self-heals the baseline at first flag-on: band centers on realized income", async () => {
     // 1991-start UK world: realized income 15_500 == anchor(UK, 1991) ⇒
     // baseline = gdpPc / 1 = 50_000 ⇒ index = 1.

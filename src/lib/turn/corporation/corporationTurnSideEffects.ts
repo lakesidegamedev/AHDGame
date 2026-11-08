@@ -374,7 +374,7 @@ export async function runCorporationTurnSideEffects({
           lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity as never) ??
           lookups.priceRatioByCommodity.get(commodity as never),
         currentYear: gameState?.currentYear,
-        techTreesEnabled: gameState?.sectorTechTreesEnabled === true,
+        techTreesEnabled: true,
       });
     } catch (error) {
       console.error("[corporationTurn] NPP product venture start failed", error);

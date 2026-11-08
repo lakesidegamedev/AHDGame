@@ -415,9 +415,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
 
     // Decade-era crossing: stamps gameState.currentEraId + posts wire news
     // in Week 1 of years ending in 0 (same trigger cadence as the census —
-    // the decade rolls over once, both fire). Whole phase is gated on
-    // eraSystemEnabled; on mid-decade enable it self-heals the marker
-    // quietly (healed: true, no news).
+    // the decade rolls over once, both fire). A mid-decade start
+    // self-heals the marker quietly (healed: true, no news).
     const eraCrossingResult = await runtime.runPhase("eraCrossing", () =>
       runEraCrossing(db, currentYear)
     );
@@ -440,7 +439,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
 
     // Cabinet year crossing: seat unlocks/renames/retirements vs the live
     // year. State reconcile (succession auto-transfer) always runs when year
-    // data exists; news is gated on eraSystemEnabled inside. First run
+    // data exists. First run
     // self-heals quietly (no news burst).
     const cabinetYearResult = await runtime.runPhase("cabinetYearCrossing", () =>
       runCabinetYearCrossing(db, currentYear)

@@ -20,7 +20,6 @@ export interface NuclearStatusView {
   deterrence: number;
   eligibility: {
     capable: boolean;
-    coldWarEnabled: boolean;
     doctrineAdopted: boolean;
     eligible: boolean;
   };
@@ -121,7 +120,6 @@ export function NuclearTab({
             met={eligibility.doctrineAdopted}
             label={`The "${NUCLEAR_ENTRY_DOCTRINE_NODE}" doctrine node adopted`}
           />
-          <Gate met={eligibility.coldWarEnabled} label="The Cold War subsystem active" />
         </div>
       </div>
     );

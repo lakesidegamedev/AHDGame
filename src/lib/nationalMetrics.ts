@@ -73,15 +73,13 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
           eraGdpPerCapitaBaseline: 1,
           incomeStartVintages: 1,
         },
       }
     ),
   ]);
-  // Era income-band index: only computed while the era system is on.
-  const eraOn = eraGameState?.eraSystemEnabled === true;
+  const eraOn = eraGameState != null;
   const labourDemandTurn = turn ?? eraGameState?.currentTurn;
   const eraStartingYear = eraGameState?.startingYear ?? null;
   const incomeVintages = eraGameState?.incomeStartVintages ?? null;

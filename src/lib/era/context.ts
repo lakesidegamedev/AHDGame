@@ -34,8 +34,7 @@ export interface EraContext {
  * Pure counterpart to {@link getEraContext} for callers that have already read
  * `gameState` for their own reasons and must not pay a second round-trip —
  * the election engines read it per tally, so an extra query there is a real
- * cost. Encapsulates the same `eraSystemEnabled` gate, so a flag-off world
- * yields `year: null` and every downstream path keeps legacy behavior.
+ * cost.
  */
 export function eraYearContextFromGameState(
   gs:
@@ -43,19 +42,17 @@ export function eraYearContextFromGameState(
         currentYear?: number;
         currentTurn?: number;
         startingYear?: number;
-        eraSystemEnabled?: boolean;
       }
     | null
     | undefined
 ): { year: number | null; startingYear: number | null } {
-  if (!gs?.eraSystemEnabled) return { year: null, startingYear: null };
+  if (!gs) return { year: null, startingYear: null };
   return { year: resolveGameYear(gs), startingYear: gs.startingYear ?? null };
 }
 
 /**
- * One-stop era context for server scoring paths. Encapsulates the flag gate:
- * callers pass `year` straight into scoreMetric/evaluateModifiers and get
- * legacy behavior automatically while the flag is off.
+ * One-stop era context for server scoring paths: callers pass `year` straight
+ * into scoreMetric/evaluateModifiers. Year is null only when no world exists.
  */
 export async function getEraContext(db: Db): Promise<EraContext> {
   const gs = await db.collection<GameState>("gameState").findOne(
@@ -66,7 +63,6 @@ export async function getEraContext(db: Db): Promise<EraContext> {
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
         incomeBandIndexByCountry: 1,
         incomeStartVintages: 1,
         mediaRegulationSnapshot: 1,
@@ -81,7 +77,7 @@ export async function getEraContext(db: Db): Promise<EraContext> {
     marketSystemMode: regulation?.marketSystemMode ?? "off",
     commandEconomyEnabled: regulation?.commandEconomyEnabled === true,
   } satisfies EraContext["mediaRegulation"];
-  if (!gs?.eraSystemEnabled) {
+  if (!gs) {
     return {
       year: null,
       currentTurn,
@@ -116,9 +112,8 @@ export async function getEraContext(db: Db): Promise<EraContext> {
  * regardless of era.
  *
  * Seed-time callers use this rather than `getEraContext` because they must
- * resolve a year even while `eraSystemEnabled` is off: the political pipeline
- * is year-driven unconditionally, and a null year there would mean "no
- * baselines", not "legacy behavior".
+ * resolve a year before a world exists: the political pipeline is year-driven,
+ * and a null year there would mean "no baselines".
  */
 export async function resolveWorldSeedYear(db: Db, preset: string): Promise<number> {
   const gs = await db

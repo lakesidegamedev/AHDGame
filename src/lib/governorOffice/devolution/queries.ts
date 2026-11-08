@@ -127,7 +127,7 @@ export async function loadIndependenceDesireSnapshots(
   ]);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
   // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
+  const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
   // SP4: hybrid political bases once for the whole drift pass.
   const ukBases = await loadPoliticalApprovalBases(db, "UK");
 

@@ -422,16 +422,12 @@ export async function loadSectorDetailContext({
               projection: {
                 _id: 1,
                 countryId: 1,
-                ...(gameState?.sectorTechTreesEnabled === true
-                  ? {
-                      type: 1,
-                      industryModel: 1,
-                      mediaDiscriminator: 1,
-                      unlockedTechNodeIds: 1,
-                      techDecadeLane: 1,
-                      frontierProgrammes: 1,
-                    }
-                  : {}),
+                type: 1,
+                industryModel: 1,
+                mediaDiscriminator: 1,
+                unlockedTechNodeIds: 1,
+                techDecadeLane: 1,
+                frontierProgrammes: 1,
               },
             }
           )

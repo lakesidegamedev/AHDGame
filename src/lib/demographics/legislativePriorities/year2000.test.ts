@@ -203,7 +203,7 @@ describe("year-2000 legislative calibration", () => {
     );
   });
 
-  it("uses the world clock only when enabled, including worlds started in an earlier era", () => {
+  it("uses the world clock, including worlds started in an earlier era", () => {
     const world = {
       preset: "1953-default",
       currentYear: 2000,
@@ -213,10 +213,6 @@ describe("year-2000 legislative calibration", () => {
     expect(priorityWorldContext(world)).toEqual({
       yearContext: { year: 2000, startingYear: 1953 },
       priorityYear: 2000,
-    });
-    expect(priorityWorldContext({ ...world, eraSystemEnabled: false })).toEqual({
-      yearContext: { year: null, startingYear: 1953 },
-      priorityYear: 1953,
     });
     expect(priorityWorldContext({ ...world, currentYear: Number.NaN }).priorityYear).toBe(1953);
     expect(priorityWorldContext({ preset: "1999-default" }).priorityYear).toBe(1999);

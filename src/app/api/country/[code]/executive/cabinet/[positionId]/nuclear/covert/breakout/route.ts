@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: NuclearRouteParams) {
     const { db, countryId } = guard;
 
     const gs = await loadGameStateSlice(db);
-    if (!COVERT_CAPABLE.includes(countryId) || gs?.coldWarEnabled !== true) {
+    if (!COVERT_CAPABLE.includes(countryId)) {
       return statusResponse(404, { eligible: false });
     }
 

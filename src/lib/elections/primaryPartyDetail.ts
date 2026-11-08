@@ -262,7 +262,6 @@ export async function loadPrimaryPartyData(
       currentYear?: number;
       currentTurn?: number;
       startingYear?: number;
-      eraSystemEnabled?: boolean;
     }>("gameState")
     .findOne({ _id: "current" });
   const apportionmentPreset = gameStateDoc?.preset;

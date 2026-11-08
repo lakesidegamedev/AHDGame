@@ -20,12 +20,10 @@ export function priorityWorldContext(
     preset?: string;
     currentYear?: number;
     startingYear?: number;
-    eraSystemEnabled?: boolean;
   } | null
 ) {
   const anchor = Number(eraForPreset(world?.preset ?? DEFAULT_SEED_PRESET));
-  const liveYear =
-    world?.eraSystemEnabled && Number.isFinite(world.currentYear) ? world.currentYear! : null;
+  const liveYear = Number.isFinite(world?.currentYear) ? world!.currentYear! : null;
   return {
     yearContext: { year: liveYear, startingYear: world?.startingYear ?? anchor },
     priorityYear: liveYear ?? anchor,

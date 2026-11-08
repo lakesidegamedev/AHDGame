@@ -263,8 +263,7 @@ function finite(value: unknown): number | undefined {
  * unemployment (golden-master gated, R2). Skips NATIONAL_SCOPE synthetic docs.
  */
 export async function runMetricEngine(db: Db, turn: number): Promise<number> {
-  // Era envelopes: live year for the metric era catalog's engine clamps; null
-  // while eraSystemEnabled is off (no clamps — byte-identical legacy).
+  // Era envelopes: live year for the metric era catalog's engine clamps.
   const eraGameState = await db.collection<import("@/lib/db/types").GameState>("gameState").findOne(
     { _id: "current" },
     {
@@ -272,7 +271,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
         preset: 1,
         livingConflictsEnabled: 1,
         resetWorldId: 1,
@@ -283,7 +281,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       },
     }
   );
-  const eraYear = eraGameState?.eraSystemEnabled ? resolveGameYear(eraGameState) : null;
+  const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
   const armedConflicts = eraGameState?.livingConflictsEnabled
     ? await db
         .collection<LivingConflictState>("livingConflicts")

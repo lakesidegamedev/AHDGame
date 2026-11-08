@@ -163,7 +163,6 @@ export async function processPoliticalMetricsDynamics(
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
           livingConflictsEnabled: 1,
         },
       }
@@ -183,12 +182,9 @@ export async function processPoliticalMetricsDynamics(
     db,
     eraGameState?.livingConflictsEnabled === true
   );
-  // Era-aware only while the era system is on, matching every other consumer:
-  // a metric's realistic span moves with the era, so scoring a 1953 outcome
+  // A metric's realistic span moves with the era, so scoring a 1953 outcome
   // against modern thresholds would read it as bottom-of-scale.
-  const eraYear = eraGameState?.eraSystemEnabled
-    ? (resolveGameYear(eraGameState) ?? undefined)
-    : undefined;
+  const eraYear = eraGameState ? (resolveGameYear(eraGameState) ?? undefined) : undefined;
   const [deliveryByCountry, deliveryByRegion] = await Promise.all([
     loadDepartmentDeliveryMultipliersByCountry(db, turnNumber, true, countryIds),
     loadRegionalDeliveryMultipliersByRegion(db, turnNumber, true),

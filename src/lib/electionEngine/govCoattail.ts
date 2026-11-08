@@ -130,7 +130,7 @@ export async function resolveGovExecutiveApproval(
   const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
   // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
+  const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
   // SP4: playable-country live fallback reads the hybrid political base.
   let metricModifiers;
   let baseOverride: number | undefined;

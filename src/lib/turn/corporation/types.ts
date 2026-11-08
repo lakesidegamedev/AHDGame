@@ -439,7 +439,7 @@ export interface CorporationLookups {
   };
   /** Named regional conditions (approval modifiers) stacked into sector margins. */
   regionalConditionMarginByState?: Map<string, number>;
-  /** Live era year (null while eraSystemEnabled is off) — gates inactive metric margin signals. */
+  /** Live era year — gates inactive metric margin signals. */
   eraYear?: number | null;
   /**
    * The world's era unit-basis scale (`getEraUnitScale(preset)`): 1 for modern
