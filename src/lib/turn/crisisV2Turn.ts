@@ -62,6 +62,8 @@ import { runForcedEvents } from "./crisisV2/forcedEventsShell";
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { processCrisisScars } from "./crisisV2/scarsShell";
 import { routeEffectIntents } from "./crisisV2/intents";
+import { runNppCrisisResponse } from "./crisisV2/nppResponse";
+import { runCrisisSpillover } from "./crisisV2/spillover";
 import {
   getCrisisDefinition,
   getCrisisEffectRegistry,
@@ -440,6 +442,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   ensureLegacyCrisisContent();
   ensureCampaignCrisisContent();
   ensureBuiltinCrisisHolderProviders();
+  if (crises.length > 0) await runNppCrisisResponse(db, turn);
   const world: World =
     crises.length > 0
       ? await loadWorld(db)
@@ -740,5 +743,6 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
     logger.error(COMPONENT, "scar pass failed", error);
   }
   result.opened = await openNewCrises(db, turn, stillActive);
+  result.opened += (await runCrisisSpillover(db, turn)).opened;
   return result;
 }
