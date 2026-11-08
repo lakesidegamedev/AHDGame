@@ -93,6 +93,7 @@ function createFakeDb(fixtures: {
   statePolicies: StatePolicy[];
   stateDemographics: StateDemographics[];
   demographicDefaults: StateDemographics[];
+  macroMetrics?: Array<{ _id: string } & Record<string, unknown>>;
 }) {
   const collections = {
     // The turn processor gates on the world's starting year (checkpoints are
@@ -105,6 +106,7 @@ function createFakeDb(fixtures: {
     ),
     stateDemographics: createFakeCollection(fixtures.stateDemographics),
     demographicDefaults: createFakeCollection(fixtures.demographicDefaults),
+    macroMetrics: createFakeCollection(fixtures.macroMetrics ?? []),
   };
   const db = {
     collection: (name: string) => (collections as Record<string, unknown>)[name],
@@ -783,5 +785,55 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
     // starting position (0 — no pre-existing overlay) instead of letting it
     // drift negative.
     expect(overlayValue(oh, "race", "black", "economicLean")).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("processEraCheckpointsTurn in a 2027 world", () => {
+  function modernWorld(macroMetrics: Array<{ _id: string } & Record<string, unknown>>) {
+    const fixtures = createFakeDb({
+      docketCases: [],
+      legislationTypes: [],
+      statePolicies: [],
+      stateDemographics: [makeStateDemographics("AL"), makeStateDemographics("VT")],
+      demographicDefaults: [makeStateDemographics("AL"), makeStateDemographics("VT")],
+      macroMetrics,
+    });
+    (
+      fixtures.collections as { gameState: { __store: Map<string, { startingYear?: number }> } }
+    ).gameState.__store.get("current")!.startingYear = 2027;
+    return fixtures;
+  }
+
+  const FIRST_TURN_OF_2031 = 4 * 48;
+
+  it("runs no historical checkpoint before 2030 and gates the education pull on its metric", async () => {
+    const { db, collections } = modernWorld([]);
+    const result = await processEraCheckpointsTurn(db, 100, "US");
+    expect(result.checkpointsActive).toBe(2);
+    const al = collections.demographicDefaults.__store.get("AL")!;
+    expect(overlay(al, "age", "young", "socialLean")).toBeLessThan(0);
+    expect(overlay(al, "race", "white", "economicLean")).toBe(0);
+  });
+
+  it("applies the automation pull only in states whose unemployment gate is open", async () => {
+    const { db, collections } = modernWorld([
+      { _id: "AL", economic: { unemploymentRate: { value: 8.2 } } },
+      { _id: "VT", economic: { unemploymentRate: { value: 3.9 } } },
+    ]);
+    await processEraCheckpointsTurn(db, FIRST_TURN_OF_2031, "US");
+    const al = collections.demographicDefaults.__store.get("AL")!;
+    const vt = collections.demographicDefaults.__store.get("VT")!;
+    expect(overlay(al, "wealth", "low", "economicLean")).toBeLessThan(0);
+    expect(overlay(vt, "wealth", "low", "economicLean")).toBe(0);
+    // The ungated cohort pull still reaches both.
+    expect(overlay(vt, "age", "young", "socialLean")).toBeLessThan(0);
+  });
+
+  it("keeps a gated pull shut when the metric is unreadable", async () => {
+    const { db, collections } = modernWorld([{ _id: "AL" }]);
+    await processEraCheckpointsTurn(db, FIRST_TURN_OF_2031, "US");
+    const al = collections.demographicDefaults.__store.get("AL")!;
+    expect(overlay(al, "wealth", "low", "economicLean")).toBe(0);
+    expect(overlay(al, "education", "graduate", "socialLean")).toBe(0);
   });
 });

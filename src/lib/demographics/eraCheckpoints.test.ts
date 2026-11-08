@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calendarTurn } from "@/lib/utils/gameDate";
+import { yearToTurn } from "@/lib/scotus/turnConversion";
 import {
   applyCheckpointStep,
   applyCounterPressure,
@@ -10,6 +11,11 @@ import {
   ERA_CHECKPOINTS,
   ALL_US_STATES,
   MIDWEST_STATES,
+  MODERN_REALIGNMENT_CHECKPOINTS,
+  MODERN_REALIGNMENT_SPECS,
+  buildModernRealignment,
+  checkpointRunsInWorld,
+  isCheckpointGateOpen,
   type EraCheckpoint,
   type EraCheckpointTarget,
   type DocketCaseLookupEntry,
@@ -330,5 +336,71 @@ describe("EraCheckpointTarget shape — every registered checkpoint's targets ar
     );
     expect(target).toBeDefined();
     expect(target!.stateIds).toEqual(expect.arrayContaining(["AL", "MS", "SC", "LA", "GA", "AR"]));
+  });
+});
+
+describe("modern realignment checkpoints", () => {
+  it("registers the four realignments for 2027 worlds, bucket targets only", () => {
+    expect(MODERN_REALIGNMENT_CHECKPOINTS.map((c) => c.id)).toEqual([
+      "education-polarisation-2028",
+      "cohort-replacement-2028",
+      "automation-populism-2030",
+      "migration-salience-2030",
+    ]);
+    for (const c of MODERN_REALIGNMENT_CHECKPOINTS) {
+      expect(ERA_CHECKPOINTS).toContain(c);
+      expect(c.worldStartingYear).toBe(2027);
+      expect(c.historicalWindow).toBeUndefined();
+      for (const t of c.targets) {
+        expect(typeof t.dim).toBe("string");
+        expect(typeof t.bucket).toBe("string");
+      }
+    }
+  });
+
+  it("starts in the named year of a 2027 world and stays inside 2050", () => {
+    for (const spec of MODERN_REALIGNMENT_SPECS) {
+      const c = buildModernRealignment(spec);
+      expect(c.fallbackStartTurn).toBe(yearToTurn(spec.startYear, 2027));
+      expect(spec.startYear + spec.durationYears).toBeLessThanOrEqual(2050);
+    }
+  });
+
+  it("throws on a missing or non-finite number", () => {
+    const base = MODERN_REALIGNMENT_SPECS[0];
+    expect(() => buildModernRealignment({ ...base, startYear: Number.NaN })).toThrow();
+    expect(() => buildModernRealignment({ ...base, durationYears: Number.NaN })).toThrow();
+    expect(() => buildModernRealignment({ ...base, shifts: [] })).toThrow();
+    expect(() =>
+      buildModernRealignment({
+        ...base,
+        shifts: [{ dim: "age", bucket: "young", axis: "socialLean", totalShift: Number.NaN }],
+      })
+    ).toThrow();
+    expect(() =>
+      buildModernRealignment({ ...base, gate: { metric: "x", op: "gte", threshold: Number.NaN } })
+    ).toThrow();
+  });
+
+  it("runs historical checkpoints only in 1953 worlds and modern ones only in 2027 worlds", () => {
+    expect(checkpointRunsInWorld(ERA_CHECKPOINTS[0], 1953)).toBe(true);
+    expect(checkpointRunsInWorld(ERA_CHECKPOINTS[0], 2027)).toBe(false);
+    expect(checkpointRunsInWorld(MODERN_REALIGNMENT_CHECKPOINTS[0], 2027)).toBe(true);
+    expect(checkpointRunsInWorld(MODERN_REALIGNMENT_CHECKPOINTS[0], 2019)).toBe(false);
+  });
+
+  it("opens a gate by comparing the metric and shuts it when unreadable", () => {
+    const gate = { metric: "economic.unemploymentRate", op: "gte", threshold: 6.5 } as const;
+    expect(isCheckpointGateOpen(gate, { economic: { unemploymentRate: { value: 6.5 } } })).toBe(
+      true
+    );
+    expect(isCheckpointGateOpen(gate, { economic: { unemploymentRate: { value: 6.4 } } })).toBe(
+      false
+    );
+    expect(isCheckpointGateOpen(gate, {})).toBe(false);
+    expect(
+      isCheckpointGateOpen({ ...gate, op: "lte" }, { economic: { unemploymentRate: { value: 6 } } })
+    ).toBe(true);
+    expect(isCheckpointGateOpen(undefined, undefined)).toBe(true);
   });
 });

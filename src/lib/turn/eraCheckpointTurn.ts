@@ -39,6 +39,8 @@ import {
   isCheckpointActive,
   computeCheckpointRawDelta,
   applyCounterPressure,
+  checkpointRunsInWorld,
+  isCheckpointGateOpen,
   type EraCheckpoint,
   type DocketCaseLookupEntry,
 } from "@/lib/demographics/eraCheckpoints";
@@ -55,9 +57,12 @@ async function resolveActiveCheckpoints(
   db: Db,
   countryId: CountryId,
   currentTurn: number,
-  clock: CalendarClock
+  clock: CalendarClock,
+  worldStartingYear: number
 ): Promise<Array<{ checkpoint: EraCheckpoint; startTurn: number }>> {
-  const checkpoints = ERA_CHECKPOINTS.filter((c) => c.countryId === countryId);
+  const checkpoints = ERA_CHECKPOINTS.filter(
+    (c) => c.countryId === countryId && checkpointRunsInWorld(c, worldStartingYear)
+  );
   if (checkpoints.length === 0) return [];
 
   const caseKeys = [
@@ -107,12 +112,9 @@ export async function processEraCheckpointsTurn(
   currentTurn: number,
   countryId: CountryId = "US"
 ): Promise<EraCheckpointTurnResult> {
-  // Every checkpoint's start/fallback turn is an absolute turn computed
-  // against a 1953 starting year, and the checkpoints model 1950s-60s history
-  // (Civil Rights, Southern Realignment). In a 2019/1979 world the trigger
-  // dockets don't exist, so the fallback turns would fire the 1953 timeline
-  // against a modern electorate and permanently mutate demographicDefaults —
-  // gate on the world's starting year instead.
+  // Each checkpoint names the world start it was authored against (the
+  // 1950s-60s history for 1953, the modern realignments for 2027); its start
+  // turns are absolute from that year, so it must not run in any other world.
   const gameStateDoc = await db
     .collection<{
       _id: string;
@@ -124,13 +126,19 @@ export async function processEraCheckpointsTurn(
       { _id: "current" },
       { projection: { startingYear: 1, preIterationTurns: 1, preIteration: 1 } }
     );
-  if ((gameStateDoc?.startingYear ?? 2019) !== 1953) return NO_RESULT;
+  const worldStartingYear = gameStateDoc?.startingYear ?? 2019;
 
   const clock: CalendarClock = {
     preIterationActive: gameStateDoc?.preIteration?.active,
     preIterationTurns: gameStateDoc?.preIterationTurns,
   };
-  const active = await resolveActiveCheckpoints(db, countryId, currentTurn, clock);
+  const active = await resolveActiveCheckpoints(
+    db,
+    countryId,
+    currentTurn,
+    clock,
+    worldStartingYear
+  );
   if (active.length === 0) return NO_RESULT;
 
   const stateIds = new Set<string>();
@@ -141,7 +149,10 @@ export async function processEraCheckpointsTurn(
   }
   if (stateIds.size === 0) return NO_RESULT;
 
-  const [legTypes, demographicsDocs, defaultsDocs] = await Promise.all([
+  const gateMetrics = [
+    ...new Set(active.map((a) => a.checkpoint.gate?.metric).filter(Boolean)),
+  ] as string[];
+  const [legTypes, demographicsDocs, defaultsDocs, metricsDocs] = await Promise.all([
     // full-read(legislationTypes): the era checkpoint re-applies every law through the policy-effects map
     db.collection<LegislationType>("legislationTypes").find({}).toArray(),
     db
@@ -152,7 +163,17 @@ export async function processEraCheckpointsTurn(
       .collection<StateDemographics>("demographicDefaults")
       .find({ _id: { $in: [...stateIds] } })
       .toArray(),
+    gateMetrics.length === 0
+      ? Promise.resolve([] as Array<{ _id: string }>)
+      : db
+          .collection<{ _id: string }>("macroMetrics")
+          .find(
+            { _id: { $in: [...stateIds] } },
+            { projection: Object.fromEntries(gateMetrics.map((m) => [m, 1])) }
+          )
+          .toArray(),
   ]);
+  const metricsByState = new Map(metricsDocs.map((d) => [String(d._id), d]));
   const legTypeMap: LegislationTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
   const demographicsByState = new Map(demographicsDocs.map((d) => [String(d._id), d]));
   const defaultsByState = new Map(defaultsDocs.map((d) => [String(d._id), d]));
@@ -173,6 +194,7 @@ export async function processEraCheckpointsTurn(
     const defaults = defaultsByState.get(stateId);
 
     for (const { checkpoint, startTurn: _startTurn } of active) {
+      if (!isCheckpointGateOpen(checkpoint.gate, metricsByState.get(stateId))) continue;
       for (const target of checkpoint.targets) {
         if (!target.stateIds.includes(stateId)) continue;
         const rawDelta = computeCheckpointRawDelta(target, checkpoint);
