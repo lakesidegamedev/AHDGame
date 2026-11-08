@@ -763,7 +763,7 @@ export async function processBondTurn(
         bondCcy,
         budgetsWithBankClaims,
         liveTargets,
-        consolidateRollover: config?.sovereignRolloverConsolidationEnabled === true,
+        consolidateRollover: config?.sovereignRolloverConsolidationEnabled !== false,
       })
     );
   };
