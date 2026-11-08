@@ -214,3 +214,46 @@ describe("InboxClient bell deep link", () => {
     });
   });
 });
+
+describe("InboxClient selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetch(() => okJson({ success: true }));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("keeps the opened item selected and visible in Needs action with more than 24 unread", async () => {
+    const items = Array.from({ length: 30 }, (_, i) => notif(`n${i + 1}`));
+    mockUseInboxData.mockReturnValue(hookResult(items, vi.fn()));
+
+    render(<InboxClient />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: /Needs action/ }));
+    fireEvent.click(await screen.findByText("Title n5"));
+
+    await waitFor(() => {
+      expect(
+        (global.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some((c) =>
+          String((c[1] as RequestInit | undefined)?.body).includes('"id":"n5"')
+        )
+      ).toBe(true);
+    });
+    const current = document.querySelector('[aria-current="true"]');
+    expect(current?.textContent).toContain("Title n5");
+  });
+
+  it("keeps the opened item in the All view when it ranks inside the first 24", async () => {
+    const items = Array.from({ length: 30 }, (_, i) => notif(`n${i + 1}`));
+    mockUseInboxData.mockReturnValue(hookResult(items, vi.fn()));
+
+    render(<InboxClient />);
+
+    fireEvent.click(await screen.findByText("Title n5"));
+    await waitFor(() => {
+      expect(document.querySelector('[aria-current="true"]')?.textContent).toContain("Title n5");
+    });
+  });
+});
