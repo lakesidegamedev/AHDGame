@@ -1329,10 +1329,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/app/api/commodities/[type]/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/app/api/commodities/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -1465,10 +1461,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/briefing/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/debt-operation/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -1584,10 +1576,6 @@
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/election/vote/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/whip/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/whippable-leadership/route.ts": {
       "longBlocks": 0,

@@ -968,13 +968,6 @@
     "src/app/api/client/diagnostics/route.ts": {
       "untyped": 1
     },
-    "src/app/api/commodities/[type]/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 1,
-      "federalBudget": 1,
-      "gameState": 1,
-      "states": 1
-    },
     "src/app/api/commodities/route.ts": {
       "states": 1
     },
@@ -1433,14 +1426,6 @@
     "src/app/api/country/[code]/executive/cabinet/[positionId]/bond-profile/route.ts": {
       "federalBudget": 2
     },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/briefing/route.ts": {
-      "characters": 1,
-      "corporations": 1,
-      "federalBudget": 1,
-      "politicalParties": 1,
-      "states": 1,
-      "untyped": 1
-    },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/commands/route.ts": {
       "characters": 1
     },
@@ -1567,11 +1552,6 @@
     },
     "src/app/api/country/[code]/legislature/cabinet-bills/[id]/vote/route.ts": {
       "untyped": 1
-    },
-    "src/app/api/country/[code]/legislature/cabinet-bills/route.ts": {
-      "characters": 8,
-      "politicalParties": 1,
-      "untyped": 4
     },
     "src/app/api/country/[code]/legislature/cppcc-chair/route.ts": {
       "characters": 1,
@@ -1705,13 +1685,6 @@
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/transfer/route.ts": {
       "politicalParties": 2,
       "untyped": 2
-    },
-    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/whip/route.ts": {
-      "characters": 3,
-      "electedOfficials": 2,
-      "gameState": 1,
-      "npps": 1,
-      "untyped": 3
     },
     "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/whippable-leadership/route.ts": {
       "electedOfficials": 1
@@ -2521,13 +2494,6 @@
     },
     "src/app/api/roadmap/route.ts": {
       "untyped": 2
-    },
-    "src/app/api/search/universal/route.ts": {
-      "characters": 3,
-      "corporations": 2,
-      "electedOfficials": 1,
-      "elections": 1,
-      "npps": 1
     },
     "src/app/api/sectors/route.ts": {
       "corporateSectors": 3,
