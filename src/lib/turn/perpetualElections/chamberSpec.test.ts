@@ -7,9 +7,32 @@ import {
 import { BY_ELECTION_COUNTRIES } from "@/lib/turn/byElections";
 import { IE_CHAMBER_SPECS } from "@/lib/countries/ie/elections/chamberSpecs";
 import { NG_CHAMBER_SPECS } from "@/lib/countries/ng/elections/chamberSpecs";
+import { CN_CHAMBER_SPECS } from "@/lib/countries/cn/elections/chamberSpecs";
+import { BR_CHAMBER_SPECS } from "@/lib/countries/br/elections/chamberSpecs";
+import { AT_LOWER_CHAMBER_SPEC } from "@/lib/countries/at/elections/chamberSpecs";
+import { ES_LOWER_CHAMBER_SPEC } from "@/lib/countries/es/elections/chamberSpecs";
+import { FI_LOWER_CHAMBER_SPEC } from "@/lib/countries/fi/elections/chamberSpecs";
+import { FR_LOWER_CHAMBER_SPEC } from "@/lib/countries/fr/elections/chamberSpecs";
+import { GR_LOWER_CHAMBER_SPEC } from "@/lib/countries/gr/elections/chamberSpecs";
+import { IT_LOWER_CHAMBER_SPEC } from "@/lib/countries/it/elections/chamberSpecs";
+import { SE_LOWER_CHAMBER_SPEC } from "@/lib/countries/se/elections/chamberSpecs";
+import { TR_LOWER_CHAMBER_SPEC } from "@/lib/countries/tr/elections/chamberSpecs";
 import { defineChamberSpec, seatsForRegion, type ChamberSpec } from "./chamberSpec";
 
-const ALL_SPECS: readonly ChamberSpec[] = [...IE_CHAMBER_SPECS, ...NG_CHAMBER_SPECS];
+const ALL_SPECS: readonly ChamberSpec[] = [
+  ...IE_CHAMBER_SPECS,
+  ...NG_CHAMBER_SPECS,
+  ...CN_CHAMBER_SPECS,
+  ...BR_CHAMBER_SPECS,
+  FR_LOWER_CHAMBER_SPEC,
+  IT_LOWER_CHAMBER_SPEC,
+  ES_LOWER_CHAMBER_SPEC,
+  SE_LOWER_CHAMBER_SPEC,
+  TR_LOWER_CHAMBER_SPEC,
+  GR_LOWER_CHAMBER_SPEC,
+  AT_LOWER_CHAMBER_SPEC,
+  FI_LOWER_CHAMBER_SPEC,
+];
 
 const valid: ChamberSpec = {
   chamberId: "dail",
@@ -23,6 +46,8 @@ const valid: ChamberSpec = {
   lateJoiners: "ownCycle",
   openPrimaryImmediately: true,
   byElections: "none",
+  snap: "none",
+  healLiveSeats: false,
 };
 
 describe("defineChamberSpec", () => {
@@ -43,6 +68,10 @@ describe("defineChamberSpec", () => {
     ["lateJoiners", { lateJoiners: undefined }],
     ["openPrimaryImmediately", { openPrimaryImmediately: undefined }],
     ["byElections", { byElections: undefined }],
+    ["snap", { snap: undefined }],
+    ["healLiveSeats", { healLiveSeats: undefined }],
+    ["snap without an immediate primary", { snap: "shiftsCycle", openPrimaryImmediately: false }],
+    ["healing a single-seat chamber", { seats: { kind: "single" }, healLiveSeats: true }],
     ["seat missing policy", { seats: { kind: "stateField", field: "houseDistricts" } }],
     ["empty seat table", { seats: { kind: "table", table: {}, missing: "throw" } }],
     [
@@ -72,6 +101,20 @@ describe("seatsForRegion", () => {
     ).toThrow(/no seat entry/);
   });
 
+  it("reads a preset table through the world's preset", () => {
+    const byPreset: ChamberSpec = {
+      ...valid,
+      seats: {
+        kind: "presetTable",
+        tableFor: (preset) => (preset === "old" ? { DUB: 3 } : { DUB: 9 }),
+        missing: "throw",
+      },
+    };
+    expect(seatsForRegion(byPreset, "DUB", undefined, "old")).toBe(3);
+    expect(seatsForRegion(byPreset, "DUB", undefined, "new")).toBe(9);
+    expect(() => seatsForRegion(byPreset, "COR", undefined, "new")).toThrow(/no seat entry/);
+  });
+
   it("returns one seat for a missing value only when the spec declares it", () => {
     const lenient: ChamberSpec = {
       ...valid,
@@ -82,7 +125,7 @@ describe("seatsForRegion", () => {
   });
 });
 
-describe("IE and NG chamber specs", () => {
+describe("chamber specs", () => {
   it("name each chamber once", () => {
     const ids = ALL_SPECS.map((s) => `${s.countryId}/${s.chamberId}`);
     expect(new Set(ids).size).toBe(ids.length);
@@ -102,9 +145,13 @@ describe("IE and NG chamber specs", () => {
       const anchors = getCycleAnchors(ctx);
       for (const spec of ALL_SPECS) {
         const anchor = anchors[spec.cycle.anchor];
-        expect(anchor, `${spec.chamberId} anchor`).not.toBeNull();
         const base = { electionType: spec.electionType, countryId: spec.countryId, ctx };
         const first = canonicalTurnsForCycle({ ...base, cycle: 1 });
+        if (first == null) {
+          // Era-gated: the chamber does not run in this preset.
+          continue;
+        }
+        expect(anchor, `${spec.chamberId} anchor`).not.toBeNull();
         const second = canonicalTurnsForCycle({ ...base, cycle: 2 });
         expect(first?.endTurn, `${spec.chamberId} cycle 1`).toBe(anchor);
         expect(second!.endTurn - first!.endTurn, `${spec.chamberId} period`).toBe(
