@@ -153,6 +153,15 @@ export interface ForcedEventThreshold {
   stages?: readonly ActiveCrisisStage[];
 }
 
+/**
+ * How a definition's stage and severity are paced when they are not simulated.
+ * `scripted` follows the elapsed fraction of a fixed length (the length lives
+ * on the crisis, so extensions and shortenings apply). `tracked` follows an
+ * input that some other system already owns, such as a campaign's intensity.
+ */
+export type CrisisPacing =
+  { kind: "scripted"; durationTurns: number | null } | { kind: "tracked"; input: string };
+
 export interface CrisisDefinition {
   id: string;
   source: CrisisSource;
@@ -168,6 +177,8 @@ export interface CrisisDefinition {
   spillover: readonly SpilloverLink[];
   scarRules: readonly ScarRule[];
   forcedEvents: readonly ForcedEventThreshold[];
+  /** Absent = stage and severity are simulated from drivers and levers. */
+  pacing?: CrisisPacing;
 }
 
 export interface SeveritySample {

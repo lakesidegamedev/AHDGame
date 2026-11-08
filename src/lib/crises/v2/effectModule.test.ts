@@ -86,9 +86,9 @@ describe("createLegacyEffectModule", () => {
     expect(legacy.evaluate(ctx(20), {})).toContainEqual({ kind: "approval", delta: -0.25 });
   });
 
-  it("halves decay effects each turn", () => {
-    expect(legacy.evaluate(ctx(10), {})).toContainEqual({ kind: "inflation", delta: 2 });
-    expect(legacy.evaluate(ctx(12), {})).toContainEqual({ kind: "inflation", delta: 0.5 });
+  it("never applies decay effects per turn, as the old engine did not", () => {
+    expect(legacy.evaluate(ctx(10), {})).not.toContainEqual({ kind: "inflation", delta: 2 });
+    expect(legacy.evaluate(ctx(12), {}).some((i) => i.kind === "inflation")).toBe(false);
   });
 
   it("emits nothing before the start turn", () => {

@@ -1,7 +1,7 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { logger } from "@/lib/observability/logger";
 import { logWireEvent } from "@/lib/wireEvent";
-import type { Crisis, CrisisLeverUse } from "@/lib/db/types/crisis";
+import type { Crisis, CrisisInteraction, CrisisLeverUse } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
 import {
   recordInaction,
@@ -13,10 +13,24 @@ import {
   type DirectorActiveCrisis,
   type DirectorCandidate,
 } from "@/lib/crises/v2/director";
-import { evaluateEffectModules } from "@/lib/crises/v2/effectModule";
+import {
+  evaluateEffectModules,
+  LEGACY_STORED_EFFECTS_MODULE_ID,
+  legacyEffectsForTurn,
+} from "@/lib/crises/v2/effectModule";
+import { applyTrackedSeverity, scriptedStageAt } from "@/lib/crises/v2/scriptedPacing";
+import { SCRIPTED_REFERENCE_SEVERITY } from "@/lib/crises/v2/scriptedPacing";
+import {
+  calculateCollectiveReduction,
+  calculateDecisionDurationReduction,
+} from "@/lib/crises/interactionEngine";
+import { applyCrisisTurnEffects, finalizeResolvedCrises } from "./crisisTurn";
+import { ensureLegacyCrisisContent } from "./crisisV2/legacyContent";
+import { getGameState } from "@/lib/gameState";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
 import { applySeverityStep, computeSeverityStep } from "@/lib/crises/v2/severity";
-import { applyTransition, nextStage } from "@/lib/crises/v2/stageMachine";
+import { applyTransition, nextStage, type StageTransition } from "@/lib/crises/v2/stageMachine";
+import { STAGE_INDEX } from "@/lib/crises/v2/types";
 import type {
   CrisisDefinition,
   CrisisInstance,
@@ -48,8 +62,16 @@ export interface CrisisV2TurnResult {
 
 type LiveCrisis = Pick<
   Crisis,
-  "_id" | "name" | "scope" | "countryIds" | "regionIds" | "wireMessageOnEnd" | "startTurn"
-> & { v2: CrisisInstance };
+  | "_id"
+  | "name"
+  | "scope"
+  | "countryIds"
+  | "regionIds"
+  | "wireMessageOnEnd"
+  | "startTurn"
+  | "effects"
+  | "durationTurns"
+> & { v2: CrisisInstance; interactionDefinition?: { autoResolveOnExpiry: boolean } };
 
 interface World {
   allStateIds: string[];
@@ -66,6 +88,9 @@ const LIVE_PROJECTION = {
   regionIds: 1,
   wireMessageOnEnd: 1,
   startTurn: 1,
+  effects: 1,
+  durationTurns: 1,
+  "interactionDefinition.autoResolveOnExpiry": 1,
   v2: 1,
 } as const;
 
@@ -118,6 +143,7 @@ async function loadInputs(
   const wanted = new Set<string>();
   for (const def of defs.values()) {
     for (const driver of def.severity.drivers) wanted.add(driver.input);
+    if (def.pacing?.kind === "tracked") wanted.add(def.pacing.input);
   }
   const loaded = new Map<string, Map<string, number>>();
   await Promise.all(
@@ -277,6 +303,71 @@ async function openNewCrises(
 }
 
 /**
+ * Length each scripted crisis is currently scheduled to run: the stored length
+ * less what collective aid and decisive responses have earned, as the old
+ * engine computed it. Read in one query.
+ */
+async function loadScheduledLengths(
+  db: Db,
+  crises: readonly LiveCrisis[]
+): Promise<Map<string, number | null>> {
+  const lengths = new Map<string, number | null>();
+  const withInteraction = crises.filter((crisis) => crisis.interactionDefinition);
+  if (withInteraction.length === 0) return lengths;
+  const interactions = await db
+    .collection<CrisisInteraction>("crisisInteractions")
+    .find({ crisisId: { $in: withInteraction.map((crisis) => crisis._id) } })
+    .toArray();
+  const byCrisis = new Map(interactions.map((row) => [row.crisisId.toString(), row]));
+  for (const crisis of withInteraction) {
+    const interaction = byCrisis.get(crisis._id.toString());
+    if (!interaction || crisis.durationTurns === null) continue;
+    const reduction =
+      calculateCollectiveReduction(interaction, crisis.durationTurns) +
+      calculateDecisionDurationReduction(interaction);
+    lengths.set(crisis._id.toString(), Math.max(1, crisis.durationTurns - reduction));
+  }
+  return lengths;
+}
+
+/** Stage a scripted crisis should be in this turn. Stages only move forward. */
+function scriptedTransition(
+  instance: CrisisInstance,
+  turn: number,
+  length: number | null
+): StageTransition {
+  const target = scriptedStageAt(turn - instance.startTurn, length);
+  if (STAGE_INDEX[target] <= STAGE_INDEX[instance.stage]) {
+    return { stage: instance.stage, changed: false, reason: "hold" };
+  }
+  return { stage: target, changed: true, reason: target === "resolved" ? "expired" : "threshold" };
+}
+
+async function finalizeScripted(
+  db: Db,
+  turn: number,
+  ids: readonly ObjectId[],
+  world: World
+): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    const docs = await db
+      .collection<Crisis>("crises")
+      .find({ _id: { $in: [...ids] } })
+      .toArray();
+    const gameState = await getGameState(db);
+    await finalizeResolvedCrises(db, docs, turn, {
+      year: gameState?.currentYear,
+      livingEnabled: gameState?.livingConflictsEnabled === true,
+      allStateIds: world.allStateIds,
+      statesByCountry: world.stateIdsByCountry as Map<string, string[]>,
+    });
+  } catch (error) {
+    logger.error(COMPONENT, "closing scripted crises failed; retried next turn", error);
+  }
+}
+
+/**
  * Runs every active Crisis v2 instance one turn: fills driver inputs from the
  * sim, applies the lever uses recorded for it, steps severity and stage, routes
  * effect intents to the owning systems and writes the instance back in one bulk
@@ -302,6 +393,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
+  ensureLegacyCrisisContent();
   ensureBuiltinCrisisInputProviders();
   ensureBuiltinCrisisHolderProviders();
   const world = await loadWorld(db);
@@ -357,8 +449,13 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
       usesByCrisis.set(key, [...(usesByCrisis.get(key) ?? []), row]);
     }
 
+    const scheduledLength = await loadScheduledLengths(
+      db,
+      runnable.filter(({ def }) => def.pacing?.kind === "scripted").map(({ crisis }) => crisis)
+    );
     const effectRegistry = getCrisisEffectRegistry();
     const writes: AnyBulkWriteOperation<Crisis>[] = [];
+    const scriptedResolved: ObjectId[] = [];
     const consumedUseIds: ObjectId[] = [];
     const unsupportedTotals: Record<string, number> = {};
     const missingModules = new Set<string>();
@@ -369,10 +466,12 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         if (!(await claimTurn(db, crisis._id, turn))) continue;
         const crisisCountries = crisisCountryIds(crisis, world);
         const driverInputs: Record<string, number> = {};
-        for (const driver of def.severity.drivers) {
-          const byCountry = inputs.get(driver.input);
+        const wantedInputs = def.severity.drivers.map((driver) => driver.input);
+        if (def.pacing?.kind === "tracked") wantedInputs.push(def.pacing.input);
+        for (const input of wantedInputs) {
+          const byCountry = inputs.get(input);
           if (!byCountry) continue;
-          driverInputs[driver.input] = mean(
+          driverInputs[input] = mean(
             crisisCountries.flatMap((id) =>
               byCountry.has(id) ? [byCountry.get(id) as number] : []
             )
@@ -391,10 +490,22 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         let next = recordLeverUses(before, step.accepted, turn);
         next = recordInaction(next, def, mergeHolders(holderMaps, crisisCountries), turn);
         next = applySeverityStep(next, step, turn);
-        next = applyTransition(next, nextStage(next, def, step.after, turn), turn);
+        const length = scheduledLength.get(crisis._id.toString()) ?? crisis.durationTurns;
+        if (def.pacing?.kind === "tracked" && driverInputs[def.pacing.input] !== undefined) {
+          next = applyTrackedSeverity(next, driverInputs[def.pacing.input]);
+        }
+        const transition =
+          def.pacing?.kind === "scripted"
+            ? scriptedTransition(next, turn, length)
+            : nextStage(next, def, next.severity, turn);
+        next = applyTransition(next, transition, turn);
         next = { ...next, lastEvaluatedTurn: turn };
 
-        const evaluation = evaluateEffectModules(def.effectModules, effectRegistry, {
+        const scripted = def.pacing?.kind === "scripted";
+        const refs = scripted
+          ? def.effectModules.filter((ref) => ref.moduleId !== LEGACY_STORED_EFFECTS_MODULE_ID)
+          : def.effectModules;
+        const evaluation = evaluateEffectModules(refs, effectRegistry, {
           instance: next,
           severity: next.severity,
           stage: next.stage,
@@ -412,13 +523,37 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
             unsupportedTotals[kind] = (unsupportedTotals[kind] ?? 0) + count;
           }
         }
+        if (scripted) {
+          // Authored effects keep their original writers, so size and scoping
+          // match what the crisis did before it ran on v2.
+          const authored = legacyEffectsForTurn(crisis.effects, {
+            turn,
+            startTurn: crisis.startTurn,
+            durationTurns: length,
+            factor: Math.min(1, next.severity / SCRIPTED_REFERENCE_SEVERITY),
+          });
+          const stateIds = crisisStateIds(crisis, world);
+          if (authored.length > 0 && stateIds.length > 0) {
+            await applyCrisisTurnEffects(
+              db,
+              crisis as unknown as Crisis,
+              authored,
+              stateIds,
+              world.countryByState,
+              world.stateIdsByCountry as Map<string, string[]>
+            );
+          }
+        }
 
         const resolving = next.stage === "resolved";
+        // A scripted crisis is closed by the shared finalizer, which also ends
+        // its interactions and advances any chain; until then it stays active.
+        const closesHere = resolving && !scripted;
         writes.push({
           updateOne: {
             filter: { _id: crisis._id, status: "active" },
             update: {
-              $set: resolving
+              $set: closesHere
                 ? { v2: next, status: "resolved", endTurn: turn, resolvedAt: new Date() }
                 : { v2: next },
             },
@@ -426,7 +561,8 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         });
         for (const row of rows) consumedUseIds.push(row._id);
         if (resolving) {
-          resolvedCrises.push(crisis);
+          if (scripted) scriptedResolved.push(crisis._id);
+          else resolvedCrises.push(crisis);
           result.resolved += 1;
           const index = stillActive.findIndex(
             (active) =>
@@ -467,8 +603,10 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
         result.processed -= writes.length;
         result.resolved = 0;
         resolvedCrises.length = 0;
+        scriptedResolved.length = 0;
       }
     }
+    await finalizeScripted(db, turn, scriptedResolved, world);
     for (const crisis of resolvedCrises) {
       if (!crisis.wireMessageOnEnd) continue;
       try {
