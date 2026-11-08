@@ -124,6 +124,8 @@ export interface ResetRunOutcome {
   /** Set for a full reset so the row's action matches the previous behaviour. */
   deleteProfiles?: boolean;
   adminUsername?: string;
+  /** Post-reset residue violations; above zero keeps the turn system stopped. */
+  residueViolations?: number;
 }
 
 /**
@@ -152,6 +154,7 @@ export async function closeResetRunLog(
           "resetRun.failures": run.failures,
           "resetRun.finishedAt": finishedAt,
           "resetRun.logTail": outcome.logs.slice(-LOG_TAIL_LINES),
+          "resetRun.residueViolations": outcome.residueViolations ?? 0,
         },
       } as never
     );
@@ -170,6 +173,7 @@ export async function closeResetRunLog(
             phaseReached: outcome.phaseReached,
             at: finishedAt,
             by: outcome.adminUsername,
+            residueViolations: outcome.residueViolations ?? 0,
           },
         },
       } as never,

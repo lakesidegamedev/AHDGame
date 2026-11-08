@@ -91,6 +91,7 @@ import { captureTurnPosthog } from "@/lib/analytics/turnPosthog";
 import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
+import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -345,10 +346,15 @@ async function processTurnImpl(
       // inert there — the same shape as simTurnPhaseMode below.
       // A singleplayer world only advances when the player asks it to, so a
       // gap of days between turns is the normal case, not a dead cron.
-      const simSandbox =
-        localSingleplayer ||
-        (await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }))?.simSandbox ===
-          true;
+      const turnConfig = localSingleplayer
+        ? null
+        : await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+      const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
+      const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
+      if (residueRefusal) {
+        console.error(`[Turn System] Refused turn: ${residueRefusal}`);
+        return { success: false, turn: 0, message: residueRefusal, warnings, health: null };
+      }
       if (preLockState) {
         // #2815: detect a stale lock left by a turn that crashed after phases
         // began applying writes. Recorded here; the recovery close-out runs
@@ -1084,6 +1090,11 @@ async function processTurnImpl(
 export async function startTurnSystem(): Promise<{ success: boolean; message: string }> {
   try {
     const db = await getDb();
+    const config = await db
+      .collection<GameConfig>("gameConfig")
+      .findOne({ _id: "default" }, { projection: { lastReset: 1 } });
+    const residueRefusal = resetResidueTurnRefusal(config?.lastReset);
+    if (residueRefusal) return { success: false, message: residueRefusal };
     const now = new Date();
     const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
 
