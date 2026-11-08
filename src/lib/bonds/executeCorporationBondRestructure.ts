@@ -28,6 +28,7 @@ import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
 import {
   addInstitutionalBondPayout,
   emptyInstitutionalBondPayouts,
+  assertNoBankTreasuryHolders,
   payInstitutionalBondHolders,
   selfHeldBondUnits,
 } from "@/lib/bonds/payInstitutionalBondHolders";
@@ -174,6 +175,7 @@ export async function executeCorporationBondRestructure(
       bondCcy,
       bondRate
     );
+    assertNoBankTreasuryHolders([bond]);
     for (const h of bond.holders) {
       if (h.fundId || h.nppId) {
         addInstitutionalBondPayout(

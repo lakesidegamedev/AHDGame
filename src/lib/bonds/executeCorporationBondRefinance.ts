@@ -18,6 +18,7 @@ import {
   sumNonMaturedBondPrincipal,
 } from "@/lib/bonds/corporateBondDefault";
 import { sumCorporateSectorConstructionInProgress } from "@/lib/bonds/corporateCredit";
+import { assertNoBankTreasuryHolders } from "@/lib/bonds/payInstitutionalBondHolders";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { MAX_BOND_DEFAULT_REFINANCES } from "@/lib/constants/bonds";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -79,6 +80,7 @@ export async function executeCorporationBondRefinance(
   if (defaultedBonds.length === 0) {
     return { ok: false, reason: "No defaulted bonds to refinance" };
   }
+  assertNoBankTreasuryHolders(defaultedBonds);
 
   // Cap lifetime refinances to prevent default → refi cash-extraction loops.
   const refiCount = corporation.bondDefaultRefinanceCount ?? 0;
