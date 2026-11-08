@@ -8535,6 +8535,9 @@
       "untyped": 3
     },
     "src/lib/turn/bankingTurn.ts": {
+      "characters": 2,
+      "corporateSectors": 1,
+      "corporations": 6,
       "untyped": 1
     },
     "src/lib/turn/bankSolvencyTurn.ts": {
@@ -9245,7 +9248,9 @@
       "federalBudget": 2
     },
     "src/lib/turn/treasuryTurn.ts": {
-      "federalBudget": 1
+      "corporations": 1,
+      "federalBudget": 3,
+      "gameState": 1
     },
     "src/lib/turn/turnWorkerHandoff.ts": {
       "gameState": 1

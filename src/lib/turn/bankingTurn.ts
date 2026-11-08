@@ -13,7 +13,7 @@ import { resumeReservePoolTransfers } from "@/lib/centralBank/reservePoolTransfe
 import { resumeMonetaryOperations } from "@/lib/moneySupply/monetaryOperationJournal";
 import { resumeLiquidityAdvances } from "@/lib/moneySupply/liquidityAdvance";
 import { MONETARY_OPERATION_COOLDOWN_TURNS } from "@/lib/moneySupply/operations";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
 import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -81,9 +81,6 @@ import {
 } from "@/lib/banking/creditBands";
 import { ZERO_BANKING_TURN_SUMMARY, type BankingTurnSummary } from "@/lib/turn/bankingTurnSummary";
 import { serviceInterbankAndCbMargin } from "./bankingInterbankTurn";
-import { getCorporationsCollection } from "@/lib/db/collections/corporations";
-import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
-import { getCharactersCollection } from "@/lib/db/collections/characters";
 
 // Re-exported for the turn's tests and dashboards; defined in the rules zone.
 export { ARREARS_DEFAULT_TURNS, MAX_NPC_FLOW_PER_TURN_FRACTION };
@@ -184,7 +181,8 @@ async function runBankingTurn(
     // The banking stages read the charter, cash and deposit book. The
     // settlement stamps on the same document are most of its bytes and are
     // only read by the journal, under its own projection.
-    (await getCorporationsCollection(db))
+    db
+      .collection<Corporation>("corporations")
       .find({ "bankCharter.status": "active" }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray(),
     db
@@ -275,9 +273,8 @@ async function runBankingTurn(
   // turn-level snapshots, so hoisting them cannot reorder a money movement.
   const passCaches: BankPassCaches = { npcShareByBankId, cbById, premiumReceiptByKey };
   if (options.batchPerBankReads && depositTakers.length > 0) {
-    const sectors = await (
-      await getCorporateSectorsCollection(db)
-    )
+    const sectors = await db
+      .collection<CorporateSector>("corporateSectors")
       .find(
         {
           corporationId: { $in: depositTakers.map((row) => row.corp._id) },
@@ -478,7 +475,8 @@ async function bankPassLockKeys(
   }
   if (!depositTakers.length) return keys;
   const [depositors, loans] = await Promise.all([
-    (await getCharactersCollection(db))
+    db
+      .collection<Character>("characters")
       .find(
         {
           $or: [...bankIdsByCurrency].map(([currency, ids]) => ({
@@ -539,9 +537,9 @@ async function processOneBank(
   };
 
   // Re-check idempotency against live doc (concurrent / retry safety).
-  const live = await (
-    await getCorporationsCollection(db)
-  ).findOne({ _id: corp._id }, { projection: { liquidCapital: 1, bankCharter: 1, countryId: 1 } });
+  const live = await db
+    .collection<Corporation>("corporations")
+    .findOne({ _id: corp._id }, { projection: { liquidCapital: 1, bankCharter: 1, countryId: 1 } });
   if (!live?.bankCharter || live.bankCharter.lastBankingTurn === turn) {
     return result;
   }
@@ -562,9 +560,8 @@ async function processOneBank(
   // (a) Player depositors, loaded once — the total here and the interest pass
   // in (c) below use the same rows (NPC flow in (b) does not touch player
   // savings, so reading them up front is equivalent).
-  const depositors = await (
-    await getCharactersCollection(db)
-  )
+  const depositors = await db
+    .collection<Character>("characters")
     .find({ [`currencyBalances.savingsHolder.${currency}`]: bankIdHex })
     // `name` is projected for the interest ledger legs in (c): the alternative
     // is one lookup per depositor per bank per turn.
@@ -1000,7 +997,7 @@ async function processOneBank(
   let underwritingFeesForTurn = 0;
   let published = false;
   let superseded = false;
-  const corporations = await getCorporationsCollection(db);
+  const corporations = db.collection<Corporation>("corporations");
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const unbooked = unbookedSovereignAssetIncome(publicationCharter);
     sovereignCouponIncomeForTurn = unbooked.couponIncome;
@@ -1121,9 +1118,9 @@ async function processLoanBookOnlyBank(
   row: LoanBookOnlyBank
 ): Promise<LoanServiceResult | null> {
   const { corp } = row;
-  const live = await (
-    await getCorporationsCollection(db)
-  ).findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
+  const live = await db
+    .collection<Corporation>("corporations")
+    .findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
   const charter = live?.bankCharter;
   if (!isNamedLendingCharter(charter) || charter.lastBankingTurn === turn) return null;
   // Not the type guard: a deposit taker is handled by processOneBank, and the
@@ -1135,7 +1132,7 @@ async function processLoanBookOnlyBank(
     serviceNamedLoanBook(db, turn, corp, currency, charter.charteredTurn)
   );
 
-  const corporations = await getCorporationsCollection(db);
+  const corporations = db.collection<Corporation>("corporations");
   let publicationCharter = charter;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (attempt > 0) {
@@ -1296,10 +1293,9 @@ async function serviceNpcBulkBook(
       throw new Error(settled.error ?? "Household loan book is awaiting settlement recovery");
     }
     const [bank, loans, pool] = await Promise.all([
-      (await getCorporationsCollection(db)).findOne(
-        { _id: bankCorporationId },
-        { projection: { bankCharter: 1 } }
-      ),
+      db
+        .collection<Corporation>("corporations")
+        .findOne({ _id: bankCorporationId }, { projection: { bankCharter: 1 } }),
       db
         .collection<BankLoan>("bankLoans")
         .aggregate<{ total: number }>([
