@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { visibleWorldNavItems, type WorldNavOpts } from "@/components/navbar/worldNavItems";
+import { WorldNavBadge } from "@/components/navbar/WorldNavBadge";
+import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
 
 export interface WorldDropdownPanelProps extends WorldNavOpts {
   isUKContext?: boolean;
@@ -20,6 +22,7 @@ export function WorldDropdownPanel({
   onClose,
 }: WorldDropdownPanelProps) {
   const t = useTranslations("nav");
+  const crisisActionCount = useOptionalAuthMe()?.navData?.crisisActionCount ?? 0;
 
   const items = visibleWorldNavItems({
     countryId,
@@ -28,6 +31,7 @@ export function WorldDropdownPanel({
     myUnionId,
     unionsEnabled,
     settlementCrisisLive,
+    crisisActionCount,
   });
   const corporate = items.filter((i) => i.section === "corporate");
   const leaderboard = items.filter((i) => i.section === "leaderboard");
@@ -94,6 +98,7 @@ export function WorldDropdownPanel({
           role="menuitem"
         >
           {t(item.labelKey)}
+          <WorldNavBadge count={item.badge} />
         </Link>
       ))}
     </div>

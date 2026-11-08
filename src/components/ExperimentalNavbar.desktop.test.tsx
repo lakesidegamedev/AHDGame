@@ -108,7 +108,7 @@ describe("experimental desktop menu integration", () => {
       "/corporation/7/group",
       "/unions/union",
       "/world/german-question",
-      "/world/conflicts",
+      "/world/crises?view=conflicts",
       "/market",
       "/world/trade",
     ])

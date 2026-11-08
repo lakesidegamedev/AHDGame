@@ -25,6 +25,13 @@ describe("buildWorldNavItems", () => {
     expect(on.map((i) => i.id)).toContain("unions");
   });
 
+  it("badges Crises with the viewer's available action count", () => {
+    const crises = (n?: number) =>
+      visibleWorldNavItems({ crisisActionCount: n }).find((i) => i.id === "crises");
+    expect(crises(3)?.badge).toBe(3);
+    expect(crises()?.badge).toBe(0);
+  });
+
   it("shows corporation link only when CEO", () => {
     const without = visibleWorldNavItems({ myCorporationId: null });
     expect(without.map((i) => i.id)).not.toContain("myCorporation");
