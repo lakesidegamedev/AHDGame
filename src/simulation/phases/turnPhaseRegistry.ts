@@ -137,6 +137,8 @@ import { processInactiveShareholderShares } from "@/lib/account/processInactiveS
 import { processInactiveCeoCorpShares } from "@/lib/account/processInactiveCeoCorpShares";
 import { processPartyInfluenceTurn } from "@/lib/turn/partyInfluenceTurn";
 import { processPresidentialSuccession } from "@/lib/turn/presidentialSuccession";
+import { fillUncontestedByElections } from "@/lib/elections/resolution/byElectionFill";
+import { processExecutiveSuccession } from "@/lib/elections/resolution/executiveSuccession";
 import { processImpeachmentLifecycle } from "@/lib/turn/impeachmentLifecycle";
 import { processByElectionWatcher } from "@/lib/turn/byElections";
 import { processCommonsByElectionWatcher } from "@/lib/turn/commonsByElections";
@@ -1540,9 +1542,11 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // of the regular schedule). Suppressed during founding, every seat is
         // being elected, so there are no "mid-term" vacancies to backfill.
         if (!foundingActive) {
-          await runtime.runPhase("byElectionWatcher", () =>
-            processByElectionWatcher(db, newTurn, gameNow)
-          );
+          await runtime.runPhase("byElectionWatcher", async () => {
+            const spawned = await processByElectionWatcher(db, newTurn, gameNow);
+            await fillUncontestedByElections(db, newTurn, gameNow);
+            return spawned;
+          });
           // Immediately after the governor watcher: same settled seat state,
           // separate country scope (UK Commons), separate election type.
           phaseResults.commonsByElectionWatcher = await runtime.runPhase(
@@ -1585,7 +1589,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         await runtime.runPhase("impeachmentLifecycle", () =>
           processImpeachmentLifecycle(db, newTurn, gameNow)
         );
-        await runtime.runPhase("presidentialSuccession", () => processPresidentialSuccession(db));
+        await runtime.runPhase("presidentialSuccession", async () => {
+          await processPresidentialSuccession(db);
+          await processExecutiveSuccession(db, newTurn, gameNow);
+        });
       },
     },
     {

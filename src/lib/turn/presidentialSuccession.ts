@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { Character, CareerEvent, OfficeType } from "@/lib/db/types";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { createNotifications } from "@/lib/notifications";
@@ -16,12 +16,20 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 /**
- * Checks if the US president office is vacant and a VP exists.
+ * Checks if a president office is vacant and a VP exists (US by default; other
+ * countries whose succession rule is a permanent deputy).
  * If so, auto-promotes the VP to President and clears the VP office.
  * Runs each turn after election resolution (Group 11.5).
  */
-export async function processPresidentialSuccession(db: Db): Promise<boolean> {
-  const usCountryId = COUNTRY_CONFIGS.US.id;
+export async function processPresidentialSuccession(
+  db: Db,
+  countryId: CountryId = COUNTRY_CONFIGS.US.id
+): Promise<boolean> {
+  const usCountryId = countryId;
+  const officeName =
+    countryId === COUNTRY_CONFIGS.US.id
+      ? "President of the United States"
+      : `President of ${COUNTRY_CONFIGS[countryId].name}`;
   const presidentRecord = await (
     await getElectedOfficialsCollection(db)
   ).findOne(getExecutiveOfficialFilter(usCountryId, "president"));
@@ -65,7 +73,7 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
     if (!vpCharacter) return false;
     if (hasReachedExecutiveTermLimit(vpCharacter, usCountryId)) {
       console.warn(
-        `[Turn] Presidential succession blocked: VP ${vpRecord.characterId.toString()} has already reached the US presidential term limit`
+        `[Turn] Presidential succession blocked: VP ${vpRecord.characterId.toString()} has already reached the presidential term limit in ${countryId}`
       );
       return false;
     }
@@ -120,7 +128,7 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
       {
         userId: vpCharacter.userId,
         type: "general_win",
-        title: "Succession — President of the United States",
+        title: `Succession — ${officeName}`,
         message: `${vpCharacter.name} has succeeded to the presidency following a vacancy in the office.`,
         metadata: {},
       },

@@ -8,6 +8,8 @@ import type { GoverningGoalState } from "@/lib/nppAutonomy/v5/rules/governingGoa
 import type { PersistedReshuffleGuardState } from "@/lib/nppAutonomy/rules/reshuffleGuard";
 import type { MandateDomains } from "@/lib/nppAutonomy/rules/electoralMandate";
 import type { CoalitionRefusal } from "@/lib/government/rules/coalitionRefusals";
+import type { CaretakerState } from "@/lib/elections/rules/caretaker";
+import type { SuccessionFill } from "@/lib/elections/rules/executiveSuccession";
 
 // --- GovernmentFormation ---
 
@@ -179,6 +181,21 @@ export interface GovernmentFormation {
    * Never consulted by caretaker or player-controlled paths.
    */
   ministerialReshuffle?: PersistedReshuffleGuardState | null;
+
+  /** Set when a dissolution leaves the outgoing government in caretaker mode; ignored once a government is formed. */
+  caretaker?: CaretakerState | null;
+  /** Open succession for a vacant national executive office; cleared when it is filled. */
+  succession?: ExecutiveSuccessionState | null;
+}
+
+export interface ExecutiveSuccessionState {
+  office: string;
+  fill: SuccessionFill;
+  actingLabel: string;
+  vacatedTurn: number;
+  actingUntilTurn: number;
+  fillByTurn: number;
+  overdue: boolean;
 }
 
 export interface GovernmentConfidencePoint {

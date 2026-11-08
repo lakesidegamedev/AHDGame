@@ -54,6 +54,8 @@ import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
 import { enactSingleplayerDecree } from "./enactSingleplayerDecree";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { caretakerBlocksBill, CARETAKER_BILL_MESSAGE } from "@/lib/elections/rules/caretaker";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -100,6 +102,13 @@ export async function proposeNationalBill(
       status: 409,
       body: { error: "This legislature is dissolved and cannot receive bills." },
     };
+  }
+  const caretakerGov = await getGovernmentFormationsCollection(db).findOne(
+    { _id: countryId },
+    { projection: { status: 1, caretaker: 1 } }
+  );
+  if (caretakerBlocksBill(caretakerGov, input.category)) {
+    return { status: 409, body: { error: CARETAKER_BILL_MESSAGE } };
   }
   const lowerKey = config.legislature.lowerChamber.key;
   const upperKey = config.legislature.upperChamber?.key;

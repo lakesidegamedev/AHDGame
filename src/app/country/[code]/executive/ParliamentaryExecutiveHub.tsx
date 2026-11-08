@@ -31,6 +31,7 @@ import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { ParliamentaryGovernmentActions } from "./components/ParliamentaryGovernmentActions";
 import { ReferendumConsentSection } from "@/components/uk/ReferendumConsentSection";
 import { ExecutiveTabsClient } from "./ExecutiveTabsClient";
+import { isCaretakerActive } from "@/lib/elections/rules/caretaker";
 import { formationTurnToLarpDate } from "@/lib/government/formationDate";
 import { fetchImperialPossessive } from "@/lib/imperial";
 import {
@@ -406,8 +407,12 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const lostMajority = govFormation?.lostMajority ?? false;
 
   let statusStripText: string;
-  if (isPending) {
-    statusStripText = "Awaiting Formation";
+  if (isCaretakerActive(govFormation)) {
+    statusStripText = "Caretaker Government: limited powers until a new government forms";
+  } else if (isPending) {
+    statusStripText = govFormation?.succession
+      ? `Awaiting Formation (acting: ${govFormation.succession.actingLabel})`
+      : "Awaiting Formation";
   } else if (lostMajority) {
     statusStripText = "Formed (Lost Majority)";
   } else if (formationType === "coalition") {

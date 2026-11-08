@@ -6,6 +6,8 @@
  * character lookup, no election-risk auto-fail gate).
  */
 
+import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { isCaretakerActive } from "@/lib/elections/rules/caretaker";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -104,6 +106,15 @@ export async function proposeNppNationalBill(
     if (isBannedParty({ governmentType: runtimeState.governmentType }, sponsorParty)) {
       return { ok: false, reason: "Banned parties cannot propose legislation." };
     }
+  }
+
+  // ── Caretaker government: no new major bills ───────────────────────────────
+  const caretakerGov = await getGovernmentFormationsCollection(db).findOne(
+    { _id: countryId },
+    { projection: { status: 1, caretaker: 1 } }
+  );
+  if (caretakerGov && isCaretakerActive(caretakerGov)) {
+    return { ok: false, reason: "The government is in caretaker mode." };
   }
 
   // ── Chamber key for the sponsor official ──────────────────────────────────
