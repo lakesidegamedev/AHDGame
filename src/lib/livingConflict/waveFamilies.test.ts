@@ -235,7 +235,7 @@ describe("wave family definitions", () => {
     for (const phase of def.phases) {
       for (const event of phase.events) {
         expect(`${event.headline}${event.body}`).not.toMatch(/[–—]/);
-        const options = event.response!.decisionTrees.belligerent!.options;
+        const options = event.response!.decisionTrees.belligerent!.options ?? [];
         expect(options).toHaveLength(4);
         expect(options.map((o) => Object.keys(o.responseScores ?? {})[0]).filter(Boolean)).toEqual([
           "contain",
