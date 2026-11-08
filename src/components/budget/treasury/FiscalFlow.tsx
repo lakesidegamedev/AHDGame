@@ -2,6 +2,7 @@
 
 import { useState, type KeyboardEvent } from "react";
 import { formatFundsCompact } from "@/lib/utils/formatters";
+import { REV_COLORS, SPEND_COLORS } from "./fiscalColors";
 
 /**
  * Fiscal-flow sankey (ported from the design prototype `bcomponents.jsx`):
@@ -15,32 +16,6 @@ export interface FlowItem {
   label: string;
   value: number;
 }
-
-// Data-viz ramps — high neighbor contrast (chart exception to design tokens).
-const REV_COLORS = [
-  "#3b82f6",
-  "#f59e0b",
-  "#14b8a6",
-  "#22d3ee",
-  "#a855f7",
-  "#fb923c",
-  "#38bdf8",
-  "#f472b6",
-  "#a3e635",
-  "#d8b25e",
-  "#94a3b8",
-];
-const SPEND_COLORS = [
-  "#3b82f6",
-  "#eab308",
-  "#14b8a6",
-  "#f97316",
-  "#8b5cf6",
-  "#06b6d4",
-  "#ec4899",
-  "#84cc16",
-  "#94a3b8",
-];
 
 /**
  * Compact a line label for the narrow sankey label columns: drop the

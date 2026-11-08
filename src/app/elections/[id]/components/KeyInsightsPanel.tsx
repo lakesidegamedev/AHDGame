@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { STATE_NAMES, STATE_REGIONS, type StateResult } from "./generalElectionHelpers";
+import { STATE_REGIONS, computeStateResults } from "./generalElectionHelpers";
 import type { CandidateDetail, GeneralVotes } from "./ElectionDetailTypes";
 import { formatVotes } from "./ElectionDetailHelpers";
 
@@ -17,40 +17,10 @@ export function KeyInsightsPanel({
   colorMap: Map<string, string>;
   electoralVotes?: Record<string, number>;
 }) {
-  const stateResults = useMemo(() => {
-    if (!tally.stateVoteData) return [];
-
-    const results: StateResult[] = [];
-    for (const [stateId, data] of Object.entries(tally.stateVoteData)) {
-      const stateVotes = Object.entries(data.votesByCandidate);
-      if (stateVotes.length === 0) continue;
-
-      const sorted = stateVotes.sort((a, b) => b[1] - a[1]);
-      const winnerId = sorted[0][0];
-      const winner = candidates.find((c) => c.id === winnerId);
-      if (!winner) continue;
-
-      const totalVotes = stateVotes.reduce((sum, [, votes]) => sum + votes, 0);
-      const winnerVotes = sorted[0][1];
-      const secondVotes = sorted[1]?.[1] ?? 0;
-      const winnerPct = totalVotes > 0 ? (winnerVotes / totalVotes) * 100 : 0;
-      const margin = totalVotes > 0 ? ((winnerVotes - secondVotes) / totalVotes) * 100 : 0;
-
-      results.push({
-        stateId,
-        stateName: STATE_NAMES[stateId] || stateId,
-        ev: tally.evByState?.[stateId] ?? 0,
-        winnerId,
-        winnerName: winner.characterName,
-        winnerColor: colorMap.get(winnerId)!,
-        margin,
-        winnerPct,
-        totalVotes,
-      });
-    }
-
-    return results;
-  }, [tally.stateVoteData, tally.evByState, candidates, colorMap]);
+  const stateResults = useMemo(
+    () => computeStateResults(tally.stateVoteData, tally.evByState, candidates, colorMap),
+    [tally.stateVoteData, tally.evByState, candidates, colorMap]
+  );
 
   const closestStates = useMemo(
     () => [...stateResults].sort((a, b) => a.margin - b.margin).slice(0, 5),

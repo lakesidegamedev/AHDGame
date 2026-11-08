@@ -11,45 +11,12 @@ import type {
   NationalCommitteeElection,
   GameState,
 } from "@/lib/db/types";
-
-interface StateElectionIssue {
-  _id: string;
-  type: "state";
-  stateId: string;
-  partyId: string;
-  position: string;
-  status: string;
-  hasStartTurn: boolean;
-  hasEndTurn: boolean;
-  hasDurationTurns: boolean;
-}
-
-interface NationalElectionIssue {
-  _id: string;
-  type: "national";
-  partyId: string;
-  countryId: string;
-  position: string;
-  status: string;
-  hasStartTurn: boolean;
-  hasEndTurn: boolean;
-  hasDurationTurns: boolean;
-  hasCountryId: boolean;
-}
-
-interface CommitteeElectionIssue {
-  _id: string;
-  type: "committee";
-  partyId: string;
-  countryId: string;
-  status: string;
-  hasStartTurn: boolean;
-  hasEndTurn: boolean;
-  hasDurationTurns: boolean;
-  hasCountryId: boolean;
-}
-
-type ElectionIssue = StateElectionIssue | NationalElectionIssue | CommitteeElectionIssue;
+import type {
+  CommitteeElectionIssue,
+  ElectionIssue,
+  NationalElectionIssue,
+  StateElectionIssue,
+} from "@/lib/admin/partyElectionIssues";
 
 /**
  * GET /api/admin/heal/party-elections

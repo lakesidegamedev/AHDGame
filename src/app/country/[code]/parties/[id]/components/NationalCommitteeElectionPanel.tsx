@@ -7,6 +7,7 @@ import { partyApiUrl } from "@/lib/urls";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import type { CommitteeElection } from "./types";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { ElectionClockBadge } from "./ElectionClockBadge";
 
 // Renders "Available in 5h 23m" / "Available in 47m" from a positive
 // remaining-ms value. Mirrors the helper in NationalElectionPanel.tsx.
@@ -157,32 +158,13 @@ export function NationalCommitteeElectionPanel({
             </div>
 
             <div className="shrink-0 text-right">
-              {isVoting ? (
-                <div className="flex flex-col items-end">
-                  <span className="text-body-sm font-medium text-muted">Time remaining</span>
-                  <span
-                    className={`text-lg font-bold tabular-nums leading-none mt-1 ${
-                      remaining <= 24
-                        ? "text-red-400"
-                        : remaining <= 48
-                          ? "text-yellow-400"
-                          : "text-foreground"
-                    }`}
-                  >
-                    {remaining}t
-                  </span>
-                </div>
-              ) : (
-                <span
-                  className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border ${
-                    election.status === "completed"
-                      ? "bg-green-500/10 text-green-500 border-green-500/20"
-                      : "bg-muted/10 text-muted border-muted/20"
-                  }`}
-                >
-                  {election.status === "completed" ? "Completed" : election.status}
-                </span>
-              )}
+              <ElectionClockBadge
+                isVoting={isVoting}
+                remaining={remaining}
+                status={election.status}
+                urgentAt={24}
+                warnAt={48}
+              />
             </div>
           </div>
         </div>
