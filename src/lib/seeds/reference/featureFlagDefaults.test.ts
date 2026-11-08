@@ -44,6 +44,7 @@ function flagFieldsOf(file: string, iface: string): string[] {
 
 const LADDER_TOPS: Record<string, string | number> = {
   producerTariffStage: 1,
+  outputBasis: "value_added",
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
   nppEntryViabilityMode: "enforce",
@@ -112,6 +113,13 @@ describe("fresh-world flag policy", () => {
     for (const key of Object.keys(FRESH_WORLD_GAME_CONFIG_FLAGS)) {
       expect(NON_GAMEPLAY_GAME_CONFIG_FIELDS).not.toHaveProperty(key);
     }
+  });
+
+  it("seeds value-added output growth for fresh worlds and only on insert for top-ups", () => {
+    expect(FRESH_WORLD_GAME_CONFIG_FLAGS.outputBasis).toBe("value_added");
+    const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
+    expect(flags).toHaveProperty("outputBasis", "value_added");
+    expect(settings).not.toHaveProperty("outputBasis");
   });
 
   it("is what the reference gameConfig seeds", () => {

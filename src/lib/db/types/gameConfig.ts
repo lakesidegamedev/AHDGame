@@ -351,6 +351,11 @@ export interface GameConfig {
    */
   producerTariffStage?: 0 | 1;
   /**
+   * Basis of the regional output growth signal. Fresh worlds seed
+   * "value_added"; absent or unknown reads as "gross", the legacy basis.
+   */
+  outputBasis?: "gross" | "value_added";
+  /**
    * Funded producer market: >= 1 judges whether a cash-short company's run
    * pays for itself (the sales advance) with its inputs at last turn's
    * clearing price, never above the bid ceiling, instead of at the ceiling.

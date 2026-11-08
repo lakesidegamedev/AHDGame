@@ -108,6 +108,9 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   // Import tariffs in the funded producer market. Fresh worlds only: a running
   // world switches it on as a deliberate staged change.
   producerTariffStage: 1,
+  // Growth signal measured as value added. A running world keeps gross output
+  // so a basis switch cannot show up as a recession.
+  outputBasis: "value_added",
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;

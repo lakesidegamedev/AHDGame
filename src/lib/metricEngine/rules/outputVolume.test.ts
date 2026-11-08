@@ -7,6 +7,8 @@ import {
   outputHistorySpanTurns,
   intermediateShare,
   valueAddedOutput,
+  outputVolumeOnBasis,
+  resolveOutputBasis,
 } from "./outputVolume";
 
 describe("constant-price production", () => {
@@ -159,5 +161,59 @@ describe("value added versus gross output", () => {
     expect(valueAddedOutput({ ...s, ...{ soldUnits: 10 } }, 48)).toBe(valueAddedOutput(s, 48));
     // No price argument exists on the basis: price-only changes cannot move it.
     expect(valueAddedOutput(s, 48)).toBe(valueAddedOutput({ ...s }, 49));
+  });
+});
+
+describe("output basis marker", () => {
+  const sector = { sectorType: "retail" as const, producedUnits: 100 };
+
+  it("reads only an explicit value_added marker as value added", () => {
+    expect(resolveOutputBasis("value_added")).toBe("value_added");
+    expect(resolveOutputBasis("gross")).toBe("gross");
+    expect(resolveOutputBasis(undefined)).toBe("gross");
+    expect(resolveOutputBasis("VALUE_ADDED")).toBe("gross");
+    expect(resolveOutputBasis(1)).toBe("gross");
+  });
+
+  it("leaves the legacy basis byte for byte equal to gross output", () => {
+    for (const sectorType of CORPORATION_TYPES) {
+      const s = { sectorType, producedUnits: 137 };
+      expect(outputVolumeOnBasis(s, 48, resolveOutputBasis(undefined))).toBe(
+        constantPriceOutput(s, 48)
+      );
+    }
+  });
+
+  it("measures a fresh world on value added", () => {
+    const gross = constantPriceOutput(sector, 48)!;
+    const added = outputVolumeOnBasis(sector, 48, "value_added")!;
+    expect(added).toBe(valueAddedOutput(sector, 48));
+    expect(added).toBeLessThan(gross);
+  });
+
+  it("returns null when production is unobserved on either basis", () => {
+    const missing = { sectorType: "retail" as const };
+    expect(outputVolumeOnBasis(missing, 48, "gross")).toBeNull();
+    expect(outputVolumeOnBasis(missing, 48, "value_added")).toBeNull();
+  });
+
+  it("gives different growth on the two bases for uneven lane growth", () => {
+    const mk = (tech: number, retail: number) => [
+      { sectorType: "technology" as const, producedUnits: tech },
+      { sectorType: "retail" as const, producedUnits: retail },
+    ];
+    const total = (rows: ReturnType<typeof mk>, basis: "gross" | "value_added") =>
+      rows.reduce((sum, row) => sum + outputVolumeOnBasis(row, 48, basis)!, 0);
+    const before = mk(100, 100);
+    const after = mk(120, 100);
+    const growth = (basis: "gross" | "value_added") =>
+      (total(after, basis) / total(before, basis) - 1) * 100;
+    expect(growth("value_added")).not.toBeCloseTo(growth("gross"), 3);
+    // Uniform growth is basis independent.
+    const uniform = mk(103, 103);
+    expect(total(uniform, "gross") / total(before, "gross")).toBeCloseTo(
+      total(uniform, "value_added") / total(before, "value_added"),
+      9
+    );
   });
 });
