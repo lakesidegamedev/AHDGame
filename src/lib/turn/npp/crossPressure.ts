@@ -23,6 +23,7 @@ import type {
   StateBill,
   StateDemographics,
 } from "@/lib/db/types";
+import { projectArchetypeValuesToBuckets } from "@/lib/demographics/archetypeBucketMap";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { economicSystemReformDirection } from "@/lib/economy/economicSystemReformRules";
 import { isNewGenerationType } from "@/lib/politicalLegislation/project";
@@ -301,7 +302,7 @@ export function computePartyLineForce(
 
 /**
  * District force: population-weighted approval of the bill's selected policy
- * option across the archetypes present in the NPP's home state.
+ * option across the buckets present in the NPP's home state.
  */
 export function computeDistrictForce(
   bill: CrossPressureBill,
@@ -315,25 +316,29 @@ export function computeDistrictForce(
   const option = legislationType.policyOptions?.find((o) => o.id === provision.policyOptionId);
   if (!option) return 0;
 
-  const approvals = option.archetypeApprovals ?? option.groupApprovals;
+  const approvals = option.bucketApprovals;
   if (!approvals) return 0;
 
   const groups = homeStateDemographics.groups;
   if (!groups) return 0;
 
+  const populations: Record<string, number> = {};
   let totalPop = 0;
-  for (const archetypeId of Object.keys(groups)) {
-    const group = groups[archetypeId];
-    if (group && Number.isFinite(group.population)) totalPop += group.population;
+  for (const [groupId, group] of Object.entries(groups)) {
+    if (group && Number.isFinite(group.population) && group.population > 0) {
+      populations[groupId] = group.population;
+      totalPop += group.population;
+    }
   }
   if (totalPop <= 0) return 0;
 
+  // Bucket mass of the state's electorate. Interim weighting source until the
+  // state's census marginals are threaded to the NPP vote callers.
+  const bucketMass = projectArchetypeValuesToBuckets(populations, homeStateDemographics.countryId);
   let weighted = 0;
-  for (const [archetypeId, approval] of Object.entries(approvals)) {
+  for (const [bucket, approval] of Object.entries(approvals)) {
     if (typeof approval !== "number" || !Number.isFinite(approval)) continue;
-    const group = groups[archetypeId];
-    if (!group) continue;
-    weighted += (group.population / totalPop) * approval;
+    weighted += ((bucketMass[bucket] ?? 0) / totalPop) * approval;
   }
   return clamp100(weighted);
 }

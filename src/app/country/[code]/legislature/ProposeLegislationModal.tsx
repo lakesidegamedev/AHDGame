@@ -86,8 +86,7 @@ interface LegislationTypeOption {
     effectDirection: number;
     economic?: number;
     social?: number;
-    archetypeApprovals?: Record<string, number>;
-    groupApprovals?: Record<string, number>;
+    bucketApprovals?: Record<string, number>;
     /** National minimum wage laws, minimumWageLawStage on: the wage floor this option sets. */
     wageFloorKaitz?: number;
   }[];
@@ -1083,8 +1082,7 @@ function LegacyProposeLegislationModal({
                           <PolicyEffectIndicators
                             effectTargetsWeighted={lt.effectTargetsWeighted}
                             effectDirection={row.effectDirection}
-                            archetypeApprovals={selectedOption?.archetypeApprovals}
-                            groupApprovals={selectedOption?.groupApprovals}
+                            bucketApprovals={selectedOption?.bucketApprovals}
                             policyDomain={lt.policyDomain}
                             currentPolicyIndex={
                               currentPolicies[row.legislationTypeId] ??

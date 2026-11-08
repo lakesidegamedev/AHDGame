@@ -33,7 +33,7 @@ export interface PolicyOptionInput {
   /** Per-option social-axis score override (-5..+5). Auto-derived from stance if absent. */
   social?: number;
   /** Pass-through to LegislationPolicyOption. */
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   /** Pass-through for minimum-wage types. */
   minimumWageRate?: number;
 }
@@ -105,7 +105,7 @@ export function policyOptions(
       effectDirection,
       economic,
       social,
-      ...(o.archetypeApprovals !== undefined ? { archetypeApprovals: o.archetypeApprovals } : {}),
+      ...(o.bucketApprovals !== undefined ? { bucketApprovals: o.bucketApprovals } : {}),
       ...(o.minimumWageRate !== undefined ? { minimumWageRate: o.minimumWageRate } : {}),
     };
   });
