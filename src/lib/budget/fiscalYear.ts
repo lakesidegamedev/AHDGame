@@ -38,6 +38,7 @@ import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { getNationalDocId, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { resolvePipelineGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { smoothNationalGdp } from "@/lib/metricEngine/gdpLevel";
+import { GDP_SMOOTHING_INERTIA, smoothNationalGdpPerTurn } from "@/lib/metricEngine/priceLevel";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import {
   getSharedFiscalYearStartTurnInYear,
@@ -78,9 +79,6 @@ import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 // Pulling the anchor from country-systems makes the rule source explicit now, while
 // preserving existing behavior until a later wave teaches the engine divergent calendars.
 export const FISCAL_YEAR_START_TURN_IN_YEAR = getSharedFiscalYearStartTurnInYear();
-
-/** EMA weight on the prior national GDP when smoothing for debt-to-GDP (design §5.4). */
-const GDP_SMOOTHING_INERTIA = 0.7;
 
 /**
  * Check if the current turn marks the end of a fiscal year.
@@ -338,6 +336,17 @@ export async function processFiscalYear(
           ? countryStateGdpMillions * 1_000_000
           : newGdp * (1 + economicFactors.gdpGrowth / 100));
       newGdpSmoothed = smoothNationalGdp(federalBudget.gdpSmoothed, newGdp, GDP_SMOOTHING_INERTIA);
+      if (backgroundGdp === null && countryStateGdpMillions > 0) {
+        // One basis for every budget GDP reader: the per-turn smoothed level the
+        // metric engine keeps current, stepped once more from the live sum.
+        newGdpSmoothed = smoothNationalGdpPerTurn(
+          federalBudget.gdpSmoothed ?? federalBudget.gdp,
+          newGdp,
+          GDP_SMOOTHING_INERTIA,
+          TURNS_PER_YEAR
+        );
+        newGdp = newGdpSmoothed;
+      }
 
       await db.collection<FederalBudget>("federalBudget").updateOne(
         { _id: federalBudget._id },

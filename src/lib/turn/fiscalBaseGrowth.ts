@@ -161,7 +161,7 @@ export async function processFiscalBaseGrowth(
       // Same states this country's per-state base growth already filters below —
       // computed here first so the federal gravity pull (guardrail against the
       // wage/trade-vs-GDP structural drift, see taxBaseGdpShareBaseline) has a
-      // live current-GDP figure without waiting for the annual `budget.gdp` sync.
+      // live current-GDP figure rather than the smoothed `budget.gdp` basis.
       const countryStates = states.filter(
         (s) => s.countryId === countryId && !NATIONAL_SCOPE_IDS.has(String(s._id))
       );
@@ -253,7 +253,7 @@ export async function processFiscalBaseGrowth(
         const currentOther = budget.revenue?.other;
         // Divided by `budget.gdp`, NOT the live regional roll-up used for the tax
         // -base gravity above. `calculateFederalRevenue` multiplies this share by
-        // `budget.gdp`, and the two figures differ (the fiscal-close snapshot runs
+        // `budget.gdp`, and the two figures differ (the smoothed basis runs
         // behind the live sum), so healing against the live figure would shift
         // `other` by that ratio on the very first turn instead of preserving it.
         // Same denominator in and out is what makes the heal value-neutral.

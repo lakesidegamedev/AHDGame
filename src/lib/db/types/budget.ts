@@ -606,7 +606,7 @@ export interface FederalBudget {
   spending: FederalSpending;
   debt: FederalDebt;
   surplus: number;
-  gdp: number; // National GDP (A1 SSOT = Σ regional state.gdp × 1M, set at fiscal close)
+  gdp: number; // National GDP (A1 SSOT = Σ regional state.gdp × 1M, refreshed each turn, smoothed, nominal)
   /**
    * Labour system minimum wage, expressed as a Kaitz ratio (minimum wage ÷
    * median wage), 0–1. Absent/0 = no minimum wage. Set by the admin route and
@@ -643,6 +643,12 @@ export interface FederalBudget {
   /** EMA-smoothed national GDP — debt-to-GDP / sovereign-default read this so
    *  year-over-year GDP swings can't trip a default threshold (design §5.4). */
   gdpSmoothed?: number;
+  /**
+   * Cumulative price level, 1 at world start (absent reads as 1). Compounds each
+   * turn by the country's inflation rate; `state.gdp` is real output times this.
+   * Written by the metric engine phase; scaled with the currency on redenomination.
+   */
+  priceIndex?: number;
   debtToGdpRatio: number;
   creditRating: CreditRating;
   sovereignRiskAnchor?: SovereignRiskAnchor;
