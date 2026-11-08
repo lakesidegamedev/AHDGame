@@ -31,6 +31,7 @@ import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { getNotificationBundleUserIds } from "@/lib/notifications/notificationBundle";
 import { getClientIp } from "@/lib/utils/network";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
+import { resolveStaffRole } from "@/lib/staff/rules";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
 
 function getPatreonAdPreference(
@@ -108,6 +109,10 @@ export const GET = withNoStore(async () => {
     // authority: an old token from before a demotion must not re-grant here.
     const isAdmin = user?.isAdmin === true || user?.role === "admin";
     const isModerator = isAdmin || user?.role === "moderator";
+    // Read-only staff. Deliberately separate from isModerator so no
+    // moderator-gated gameplay bypass opens for it.
+    const staffRole = resolveStaffRole(user);
+    const isJuniorDev = staffRole === "junior_dev";
 
     // Clear expired Patreon benefits inline — avoids 2 extra DB reads from clearExpiredPatreonBenefits
     if (
@@ -328,6 +333,8 @@ export const GET = withNoStore(async () => {
             !!isAdmin || isPatreonActive(user?.patreonTier ?? null, user?.patreonExpiresAt ?? null),
           isAdmin: isAdmin || false,
           isModerator: isModerator || false,
+          isJuniorDev,
+          staffRole,
           role: user?.role ?? "player",
           theme: user?.theme ?? undefined,
           statusBarLayout: user?.statusBarLayout ?? undefined,

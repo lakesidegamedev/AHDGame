@@ -1,4 +1,5 @@
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { resolveStaffRole } from "@/lib/staff/rules";
 import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
 import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
@@ -733,6 +734,8 @@ export async function GET() {
           isAdmin: authUser.isAdmin ?? false,
           isModerator:
             (authUser.isAdmin ?? false) || user.role === "moderator" || user.role === "admin",
+          isJuniorDev: authUser.isJuniorDev === true,
+          staffRole: resolveStaffRole(user),
           forexEnabled,
           rpgStatsEnabled,
           canSeeCampaignManager,

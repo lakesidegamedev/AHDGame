@@ -125,7 +125,12 @@ function encodeRole(value: unknown, present: boolean): TaggedValue {
   if (typeof value !== "string")
     throw new SourceSecuritySnapshotError("invalid account snapshot state");
   if (value.length === 0) return { t: "empty" };
-  if (value === "admin" || value === "moderator" || value === "player") {
+  if (
+    value === "admin" ||
+    value === "moderator" ||
+    value === "junior_dev" ||
+    value === "player"
+  ) {
     return { t: "role", v: value };
   }
   throw new SourceSecuritySnapshotError("invalid account snapshot state");

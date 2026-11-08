@@ -818,7 +818,7 @@ describe("resetGameWorld", () => {
     expect(users.deleteMany).toHaveBeenCalledTimes(1);
     expect(users.deleteMany).toHaveBeenCalledWith({
       isAdmin: { $ne: true },
-      role: { $nin: ["admin", "moderator"] },
+      role: { $nin: ["admin", "moderator", "junior_dev"] },
       isBanned: { $ne: true },
     });
     // Survivors lost every character, so the one-character limit must not
