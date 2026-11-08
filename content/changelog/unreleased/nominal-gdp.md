@@ -6,7 +6,7 @@ summary: >-
   measured in current prices, so debt, revenue and deficits are compared with a
   GDP that grows as fast as they do. Reported growth is still the real rate.
 tags: [economy, budget]
-badges: [improvement]
+badges: [minor]
 areas: [backend]
 ---
 

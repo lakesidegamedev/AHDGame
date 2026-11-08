@@ -10,6 +10,7 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { StateMetrics, GameConfig } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
 import type { FederalBudget } from "@/lib/db/types/budget";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { isLabourMacroEnabled } from "@/lib/labour/featureFlag";
 import { getEraEnvelope } from "@/lib/era/metricCatalog";
 import { resolveGameYear } from "@/lib/era/era";
@@ -600,16 +601,9 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   const fxByCurrency = await loadValuationFxRates(db);
   // National state-ownership concentration (SOCI) per country — lagged command signal.
   const sociByCountry = new Map<string, number>();
-  const budgets = await db
-    .collection<{
-      _id: string;
-      countryId?: string;
-      stateOwnershipConcentration?: number;
-      priceIndex?: number;
-      gdp?: number;
-      gdpSmoothed?: number;
-      economicFactors?: { inflationRate?: number };
-    }>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find(
       {},
       {
@@ -1448,5 +1442,5 @@ async function advanceBudgetGdpBasis(
     }
     ops.push({ updateOne: { filter: { _id: budgetId as never }, update: { $set } } });
   }
-  if (ops.length > 0) await db.collection<FederalBudget>("federalBudget").bulkWrite(ops);
+  if (ops.length > 0) await (await getFederalBudgetCollection(db)).bulkWrite(ops);
 }
