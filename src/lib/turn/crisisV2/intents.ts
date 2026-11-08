@@ -1,3 +1,4 @@
+import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Db } from "mongodb";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
@@ -59,7 +60,8 @@ async function applyGdpLoss(db: Db, stateIds: string[], fractions: number[]): Pr
   let factor = 1;
   for (const fraction of fractions) factor *= 1 - Math.max(0, Math.min(0.95, Math.abs(fraction)));
   if (factor >= 1 || stateIds.length === 0) return;
-  await db.collection("states").updateMany({ _id: { $in: stateIds } } as never, {
+  const states = await getStatesCollection(db);
+  await states.updateMany({ _id: { $in: stateIds } } as never, {
     $mul: { gdp: factor },
   });
 }
