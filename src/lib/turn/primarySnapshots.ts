@@ -301,13 +301,6 @@ export async function recordPrimarySnapshots(
       campaignRulesVersion: Number(version),
     });
     const electorate = state.votingEligiblePopulation ?? state.population;
-    const liveTurnouts = resolveTurnout(
-      electorate,
-      demographics,
-      demographicCategoryDocs,
-      turnoutDoc,
-      { preset: snapshotGameState?.preset, ...eraYear }
-    ).byGroup;
     const substrate = buildGranularElectorateSubstrate({
       countryId: country,
       stateId: regionId,
@@ -318,9 +311,7 @@ export async function recordPrimarySnapshots(
       turnoutDoc,
       statePopulation: electorate,
       demographics,
-      categories: demographicCategoryDocs,
       enriched: [],
-      liveTurnouts,
       demographicDefaults: defaultsByRegion.get(regionId),
     });
     if (substrate) campaignSubstrates.set(key, substrate);

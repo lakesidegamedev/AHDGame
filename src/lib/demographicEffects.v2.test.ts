@@ -1154,7 +1154,6 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alPristine,
-      categories: [],
       enriched,
       demographicDefaults: alPristine,
     })!;
@@ -1166,7 +1165,6 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alDefaultsAfter,
-      categories: [],
       enriched,
       demographicDefaults: alDefaultsAfter,
     })!;
@@ -1441,7 +1439,6 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alPristine,
-      categories: [],
       enriched: [],
       demographicDefaults: alPristine,
     })!;
@@ -1455,7 +1452,6 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alDefaultsAfter,
-      categories: [],
       enriched: [],
       demographicDefaults: alDefaultsAfter,
     })!;

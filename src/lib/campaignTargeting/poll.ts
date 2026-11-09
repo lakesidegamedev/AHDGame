@@ -5,7 +5,6 @@
  */
 
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
 import {
   calcPrimaryScore,
   primarySharePctSoftmax,
@@ -73,13 +72,6 @@ export async function projectCampaignPoll(
     ...audience.context,
     campaignRulesVersion: election.campaignRulesVersion ?? 0,
     turnoutDoc: turnoutForElection(turnoutDoc, election),
-    liveTurnouts: resolveTurnout(
-      audience.context.statePopulation,
-      audience.context.demographics,
-      audience.context.categories,
-      turnoutForElection(turnoutDoc, election),
-      audience.context
-    ).byGroup,
     enriched,
   });
   if (!substrate?.campaignCells) return null;

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types/demographics";
+import type { StateDemographics } from "@/lib/db/types/demographics";
 import type { DemographicEffect } from "@/lib/db/types/legislation";
 // Side-effect import — populates stateCensusData so real Layer-1 cells derive.
 import "@/lib/seeds/stateDemographics";
@@ -141,10 +141,6 @@ describe("bucket drift on the live demographics doc", () => {
 });
 
 describe("bucket drift reaches the granular vote path", () => {
-  const categories: DemographicCategory[] = [
-    { _id: "voterGroups", name: "Voter Groups", defaultWeight: 100, groups: [] },
-  ];
-
   function substrateFor(overrides?: Partial<StateDemographics>) {
     clearGranularElectorateCache();
     return buildGranularElectorateSubstrate({
@@ -153,7 +149,6 @@ describe("bucket drift reaches the granular vote path", () => {
       preset: "2019-default",
       statePopulation: 1_000_000,
       demographics: demographics(overrides),
-      categories,
       demographicDefaults: null,
       enriched: [],
     });

@@ -8,7 +8,7 @@
  * one year's cells for another year.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { StateDemographics } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import {
   buildGranularElectorateSubstrate,
@@ -18,7 +18,6 @@ import {
 } from "./granularElectorate";
 import { resetEraInterpolationFallbacks } from "@/lib/seeds/eraInterpolation";
 
-const LEGACY_CATEGORIES: DemographicCategory[] = [];
 const LEGACY_DEMOGRAPHICS = {
   _id: "AL",
   countryId: "US",
@@ -222,7 +221,6 @@ describe("substrate input threading", () => {
         turnoutDoc: null,
         statePopulation: 1_000_000,
         demographics: LEGACY_DEMOGRAPHICS,
-        categories: LEGACY_CATEGORIES,
         enriched: [candidate("l", "democrat", -2, -2), candidate("r", "republican", 2, 2)],
         year,
         startingYear: 1953,

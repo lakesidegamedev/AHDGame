@@ -877,8 +877,6 @@ export async function accumulatePresidentVoteTurn(
         turnoutDoc,
         statePopulation: electorate,
         demographics,
-        categories,
-        liveTurnouts,
         enriched,
         partyGroupFavorabilityByKey,
         demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,

@@ -21,7 +21,7 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import "@/lib/seeds/stateDemographics";
-import type { DemographicCategory, Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
+import type { Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import {
   buildGranularElectorateSubstrate,
@@ -37,7 +37,6 @@ import { conditionedOffsetsAtAnchor } from "@/lib/seeds/demographicCategories";
 
 const DEEP_SOUTH = ["AL", "MS", "SC", "LA", "GA", "AR"] as const;
 
-const EMPTY_CATEGORIES: DemographicCategory[] = [];
 const EMPTY_ENRICHED: EnrichedCandidate[] = [];
 
 function stubDemographics(stateId: string): StateDemographics {
@@ -56,7 +55,6 @@ function substrate(
     turnoutDoc: null,
     statePopulation: 1_000_000,
     demographics: demo,
-    categories: EMPTY_CATEGORIES,
     enriched: EMPTY_ENRICHED,
     demographicDefaults: overlay ? { ...demo, layer1PositionOverrides: overlay } : null,
   });

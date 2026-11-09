@@ -38,7 +38,8 @@ import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocL
 import { getCountryState } from "@/lib/countryState";
 import { allocateBlocListSeats } from "@/lib/turn/election/blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
+import { eraYearContextFromGameState } from "@/lib/era/context";
+import { censusMedianVoter } from "./censusMedianVoter";
 import { ObjectId } from "mongodb";
 import type {
   Election,
@@ -54,7 +55,6 @@ import type {
   StatePartyOrg,
   StateRegistrationPool,
   ElectionVoteTally,
-  DemographicCategory,
   State,
   StateDemographics,
 } from "@/lib/db/types";
@@ -99,11 +99,7 @@ import {
   resolveSingleSeatLegislativeIncumbent,
   isSingleSeatLegislativeRace,
 } from "@/lib/electionEngine/singleSeatIncumbency";
-import {
-  computeMedianVoter,
-  computeNationalEvWeightedMedian,
-  usesEvWeightedNationalMedian,
-} from "@/lib/electionEngine/medianVoter";
+import { usesEvWeightedNationalMedian } from "@/lib/electionEngine/medianVoter";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import {
   buildMidtermOppositionModifierByParty,
@@ -1015,16 +1011,19 @@ export async function _enrichElection(
         ? [election.state]
         : [];
 
-    const [fundsMap, seatShareMap, categories, allDemographics] = await Promise.all([
+    const [fundsMap, seatShareMap, allDemographics, allDefaults] = await Promise.all([
       getFundsByPartyForElection(electionOid, db),
       getIncumbentSeatShareByParty(election, db),
       demographicsQueryStateIds.length > 0
-        ? loadDemographicCategories(db)
-        : Promise.resolve([] as DemographicCategory[]),
-      demographicsQueryStateIds.length > 0
         ? db
             .collection<StateDemographics>("stateDemographics")
-            .find({ _id: { $in: demographicsQueryStateIds } })
+            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
+            .toArray()
+        : Promise.resolve([] as StateDemographics[]),
+      demographicsQueryStateIds.length > 0
+        ? db
+            .collection<StateDemographics>("demographicDefaults")
+            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
             .toArray()
         : Promise.resolve([] as StateDemographics[]),
     ]);
@@ -1064,24 +1063,15 @@ export async function _enrichElection(
       }
     }
 
-    if (categories.length > 0 && allDemographics.length > 0) {
-      if (useEvWeightedMedian) {
-        const evEntries = allDemographics
-          .map((d) => ({
-            demographics: d,
-            ev: evByState[d._id as string] ?? 0,
-          }))
-          .filter((e) => e.ev > 0);
-        if (evEntries.length > 0) {
-          medianVoter = computeNationalEvWeightedMedian(evEntries, categories);
-        }
-      } else if (election.state) {
-        const stateDemographics = allDemographics.find((d) => d._id === election.state);
-        if (stateDemographics) {
-          medianVoter = computeMedianVoter(stateDemographics, categories);
-        }
-      }
-    }
+    medianVoter = censusMedianVoter({
+      countryId,
+      preset: gameState?.preset,
+      eraYear: eraYearContextFromGameState(gameState),
+      demographics: allDemographics,
+      defaults: allDefaults,
+      evByState: useEvWeightedMedian ? evByState : null,
+      stateId: election.state ?? undefined,
+    });
 
     // Coattails inputs for the persuasion-drivers card (mirrors the turn
     // engine; display values here). Both are nominal-share multipliers

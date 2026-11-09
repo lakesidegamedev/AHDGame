@@ -1135,7 +1135,6 @@ describe("recordPrimarySnapshots", () => {
           groups: {},
           lastUpdated: new Date(0),
         },
-        categories: [],
         enriched: [],
       })!.campaignCells!;
       const [dimension, bucket] = Object.entries(cells[0].buckets)[0];

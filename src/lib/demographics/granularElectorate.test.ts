@@ -131,7 +131,6 @@ function buildSubstrate(overrides?: {
     turnoutDoc: overrides?.turnoutDoc ?? null,
     statePopulation: 1_000_000,
     demographics: LEGACY_DEMOGRAPHICS,
-    categories: LEGACY_CATEGORIES,
     enriched: overrides?.enriched ?? [
       makeCandidate("left", "democrat", -2, -2),
       makeCandidate("right", "republican", 2, 2),
@@ -326,7 +325,6 @@ describe("layer1PositionOverrides — durable era-checkpoint base-value shift", 
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: LEGACY_DEMOGRAPHICS,
-      categories: LEGACY_CATEGORIES,
       enriched: [],
       demographicDefaults: defaultsWithOverlay,
     })!;
@@ -472,7 +470,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: { ...LEGACY_DEMOGRAPHICS, _id: "AL" },
-      categories: LEGACY_CATEGORIES,
       enriched: [],
     })!;
     const withOverlay = buildGranularElectorateSubstrate({
@@ -482,7 +479,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: { ...LEGACY_DEMOGRAPHICS, _id: "AL" },
-      categories: LEGACY_CATEGORIES,
       enriched: [],
       demographicDefaults: defaultsWithOverlay,
     })!;
@@ -529,7 +525,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: LEGACY_DEMOGRAPHICS,
-      categories: LEGACY_CATEGORIES,
       enriched,
     })!;
 
@@ -541,7 +536,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: LEGACY_DEMOGRAPHICS,
-      categories: LEGACY_CATEGORIES,
       enriched,
       demographicDefaults: { ...LEGACY_DEMOGRAPHICS, layer1TurnoutOverrides: overlay },
     })!;
@@ -705,7 +699,6 @@ describe("buildGranularElectorateSubstrate", () => {
       preset: "2019-default",
       turnoutDoc: null,
       statePopulation: 1_000_000,
-      categories: LEGACY_CATEGORIES,
       enriched: [],
     };
     const base = buildGranularElectorateSubstrate({

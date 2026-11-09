@@ -147,7 +147,6 @@ describe("targeted ad route and command integration", () => {
           groups: {},
           lastUpdated: new Date(0),
         },
-        categories: [],
         demographicDefaults: null,
         enriched: [],
         year: null,

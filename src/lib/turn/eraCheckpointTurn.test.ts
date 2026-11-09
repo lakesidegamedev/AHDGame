@@ -487,7 +487,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alPristine,
-      categories: [],
       enriched,
       demographicDefaults: alPristine, // no overlay — pre-realignment baseline
     })!;
@@ -499,7 +498,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alDefaultsAfter,
-      categories: [],
       enriched,
       demographicDefaults: alDefaultsAfter, // live === defaults: lean-delta fold pinned at 0
     })!;
@@ -588,7 +586,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alPristine,
-      categories: [],
       enriched: [],
       demographicDefaults: alPristine,
     })!;
@@ -600,7 +597,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alDefaultsAfter,
-      categories: [],
       enriched: [],
       demographicDefaults: alDefaultsAfter,
     })!;
@@ -691,7 +687,6 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: ohPristine,
-      categories: [],
       enriched: [],
       demographicDefaults: ohPristine,
     })!;
@@ -703,7 +698,6 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: oh,
-      categories: [],
       enriched: [],
       demographicDefaults: oh,
     })!;

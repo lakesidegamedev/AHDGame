@@ -52,7 +52,6 @@ export function calculateStateLeanForCache(
     turnoutDoc: context.turnoutDoc,
     statePopulation: 1,
     demographics,
-    categories,
     demographicDefaults: context.demographicDefaults,
     year: context.year,
     startingYear: context.startingYear,

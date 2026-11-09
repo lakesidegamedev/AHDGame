@@ -450,8 +450,6 @@ export async function accumulateVoteTurn(
       turnoutDoc,
       statePopulation: electorate,
       demographics,
-      categories,
-      liveTurnouts,
       enriched,
       partyGroupFavorabilityByKey,
       demographicDefaults,
