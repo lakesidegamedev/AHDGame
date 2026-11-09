@@ -120,6 +120,27 @@ describe("reset over a world holding every known leftover", () => {
     expect(text).toMatch(/preserved-field imperialCharacters: .* cashOnHand/);
   });
 
+  it("ages fixed-id collections by createdAt and exempts kept reference collections", async () => {
+    const resetStartedAt = new Date();
+    const fixedOldId = new ObjectId("60b15e11a4be27f200000000");
+    memory = createInMemoryDb();
+    memory.seed("enactedLaws", [{ _id: fixedOldId }]);
+    memory.seed("corporations", [{ _id: fixedOldId, createdAt: resetStartedAt }]);
+    memory.seed("achievements", [{ _id: fixedOldId, createdAt: OLD_WORLD_AT }]);
+
+    const violations = await runResidueScan(memory as unknown as Db, {
+      resetStartedAt,
+      expectedTurn: 1,
+      resetWorldId: null,
+      referenceReplaced: true,
+    });
+
+    const text = violations.map(formatResidueViolation).join("\n");
+    expect(text).not.toContain("predates-reset enactedLaws");
+    expect(text).not.toContain("predates-reset corporations");
+    expect(text).not.toContain("predates-reset achievements");
+  });
+
   it("removes all of it, passes the scan and leaves the turn system free to start", async () => {
     const result = await resetFixtureWorld();
 
