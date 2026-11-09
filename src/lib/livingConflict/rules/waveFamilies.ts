@@ -38,6 +38,9 @@ export const EMPTY_WAVE_SIGNALS: WaveSignals = {
   debtToGdp: null,
   tension: null,
   yearFraction: null,
+  orbitalOperators: null,
+  personalisedMediaOperators: null,
+  sovereignCrisis: null,
 };
 
 /** Position in the year, 0..1, from the turn number. */

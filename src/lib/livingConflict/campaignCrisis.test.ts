@@ -38,6 +38,7 @@ import {
   YUGOSLAV_ESCALATION_CAPACITY_DESTRUCTION,
   planCapacityDestruction,
 } from "./rules/capacityDestruction";
+import { waveFamilyKeys } from "./rules/waveFamilyTables";
 import { YUGOSLAV_REFUGEE_RECEPTION } from "./rules/refugeeReception";
 import { planCrisisSanctions } from "../livingConflict/sanctions/rules";
 import { vietnamWorldPressure } from "./worldPressure";
@@ -76,6 +77,19 @@ describe("living-conflict campaign definitions", () => {
     expect(
       convertLivingConflictDef(LIVING_CONFLICT_DEFS.russia_ukraine_security).spillover.length
     ).toBeGreaterThan(0);
+  });
+
+  it("links every wave family to at least one crisis template, with unique link ids", () => {
+    ensureLegacyCrisisContent();
+    for (const key of waveFamilyKeys()) {
+      const links = CAMPAIGN_SPILLOVER[key];
+      expect(links?.length, key).toBeGreaterThan(0);
+      expect(new Set(links.map((l) => l.id)).size, key).toBe(links.length);
+      for (const l of links) {
+        expect(l.transmission, `${key}/${l.id}`).toBeGreaterThan(0);
+        expect(l.transmission, `${key}/${l.id}`).toBeLessThanOrEqual(1);
+      }
+    }
   });
 
   it("lists the authored rule modules of the campaigns that carry them", () => {
