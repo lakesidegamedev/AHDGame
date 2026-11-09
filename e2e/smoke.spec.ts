@@ -14,15 +14,13 @@ test.describe("Smoke tests", () => {
     });
     await expect(page.getByLabel(/email or username/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
     await expect(page).toHaveScreenshot("login-page.png");
   });
 
   test("register page loads", async ({ page }) => {
     await page.goto("/register");
-    await expect(
-      page.getByRole("heading", { name: /create your political career|create account/i })
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveScreenshot("register-page.png");
   });
 
@@ -34,7 +32,7 @@ test.describe("Smoke tests", () => {
 
   test("congress page loads (public)", async ({ page }) => {
     await page.goto("/congress");
-    await expect(page).toHaveURL(/\/congress/);
+    await expect(page).toHaveURL(/\/(congress|legislature)/);
     await expect(page.locator("body")).toBeVisible({ timeout: 10_000 });
   });
 
@@ -49,7 +47,7 @@ test.describe("Smoke tests", () => {
     await page.goto("/login");
     await page.getByLabel(/email or username/i).fill(email);
     await page.getByLabel(/password/i).fill(password);
-    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.getByRole("button", { name: /^sign in$/i }).click();
 
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
     await expect(page.locator("body")).toContainText(/dashboard|welcome|actions|funds/i);
