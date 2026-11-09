@@ -4,6 +4,7 @@ import type {
   StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
+import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 import {
@@ -259,4 +260,34 @@ export function buildNationalSubstrate(input: NationalSubstrateInput): GranularS
   const merged = mergeRegionalSubstrates(parts, input.nationalDemographics);
   if (!merged) throw new Error(`No census electorate for ${input.countryId}`);
   return merged;
+}
+
+export interface NationalRegionDocs {
+  stateMap: Map<string, State>;
+  demographicsMap: Map<string, StateDemographics>;
+  turnoutByState: Map<string, StateDemographicTurnout>;
+  demographicDefaultsByState: Map<string, StateDemographics>;
+}
+
+/** Regional docs for a nationwide contest run outside the batched turn preload. */
+export async function loadNationalRegionDocs(
+  db: Db,
+  countryId: CountryId
+): Promise<NationalRegionDocs> {
+  const states = await db
+    .collection<State>("states")
+    .find({ countryId, _id: { $ne: countryId } })
+    .toArray();
+  const filter = { countryId, _id: { $in: states.map((state) => state._id) } };
+  const [demographics, turnout, defaults] = await Promise.all([
+    db.collection<StateDemographics>("stateDemographics").find(filter).toArray(),
+    db.collection<StateDemographicTurnout>("stateDemographicTurnout").find(filter).toArray(),
+    db.collection<StateDemographics>("demographicDefaults").find(filter).toArray(),
+  ]);
+  return {
+    stateMap: new Map(states.map((row) => [row._id as string, row])),
+    demographicsMap: new Map(demographics.map((row) => [row._id as string, row])),
+    turnoutByState: new Map(turnout.map((row) => [row._id as string, row])),
+    demographicDefaultsByState: new Map(defaults.map((row) => [row._id as string, row])),
+  };
 }

@@ -17,7 +17,7 @@ import {
   type RaceCampaignEffectsMemo,
 } from "@/lib/campaigns/raceCampaignEffects";
 import { getStateLean } from "@/lib/utils/demographics";
-import { buildNationalSubstrate } from "./nationwideElectorate";
+import { buildNationalSubstrate, loadNationalRegionDocs } from "./nationwideElectorate";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 import { getDb } from "@/lib/mongodb";
@@ -469,14 +469,15 @@ export async function accumulateVoteTurn(
       effPartyGroupFavorabilityByKey =
         substrate.partyGroupFavorabilityByKey ?? partyGroupFavorabilityByKey;
       participationSummary = substrate.participationSummary;
-    } else if (stateId === electionCountryId && options?.preload) {
+    } else if (stateId === electionCountryId) {
+      const regional = options?.preload ?? (await loadNationalRegionDocs(db, electionCountryId));
       const national = buildNationalSubstrate({
         countryId: electionCountryId,
         nationalDemographics: demographics,
-        stateMap: options.preload.stateMap,
-        demographicsMap: options.preload.demographicsMap,
-        turnoutByState: options.preload.turnoutByState,
-        demographicDefaultsByState: options.preload.demographicDefaultsByState,
+        stateMap: regional.stateMap,
+        demographicsMap: regional.demographicsMap,
+        turnoutByState: regional.turnoutByState,
+        demographicDefaultsByState: regional.demographicDefaultsByState,
         election,
         currentTurn: turnNumber,
         preset,

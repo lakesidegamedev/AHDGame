@@ -514,6 +514,19 @@ describe("accumulateVoteTurn — vote accumulation", () => {
         existingTallyVotes: { [withdrawn]: 60, [active._id.toHexString()]: 30 },
         voteResult: { [active._id.toHexString()]: 100 },
       });
+      if (tier === "list") {
+        // A nationwide list tier counts the census cells of every region.
+        const region = { ...makeState(), _id: "CEN", countryId: "RU", population: 1_000_000 };
+        const rows = (docs: unknown[]) => ({ toArray: vi.fn().mockResolvedValue(docs) });
+        db.collectionMocks.states.find.mockReturnValue(rows([region]));
+        db.collectionMocks.stateDemographics.find.mockReturnValue(
+          rows([{ ...makeDemographics(), _id: "CEN", countryId: "RU" }])
+        );
+        for (const name of ["stateDemographicTurnout", "demographicDefaults"]) {
+          db.collection(name);
+          db.collectionMocks[name].find.mockReturnValue(rows([]));
+        }
+      }
       const previous = await db.collectionMocks.electionVoteTallies.findOne();
       previous.candidateNames[withdrawn] = "Withdrawn nominee";
       previous.candidateParties[withdrawn] = "2";
@@ -708,7 +721,6 @@ describe("accumulateVoteTurn — vote accumulation", () => {
 
     const existingVotes = opts.existingTallyVotes ?? {};
     const enriched = opts.candidates.map((c) => makeEnriched(c._id.toString()));
-    const totalPool = opts.totalPool ?? 100_000;
     const voteResult =
       opts.voteResult ?? Object.fromEntries(enriched.map((e) => [e.candidateId, 5000]));
     const sharesPct =

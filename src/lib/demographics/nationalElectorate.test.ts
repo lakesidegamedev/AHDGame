@@ -6,8 +6,8 @@ import type { GranularElectorateUnit, GranularSubstrate } from "./granularElecto
 import { mergeRegionalSubstrates } from "./nationalElectorate";
 
 const national: StateDemographics = {
-  _id: "XX",
-  countryId: "XX",
+  _id: "IE",
+  countryId: "IE",
   categoryWeights: {},
   groups: {},
   lastUpdated: new Date(0),
@@ -191,7 +191,7 @@ describe("buildNationalSubstrate", () => {
   });
   const base = (stateMap: Map<string, State>, demographicsMap: Map<string, StateDemographics>) => ({
     countryId: "IE" as const,
-    nationalDemographics: { ...national, _id: "IE", countryId: "IE" },
+    nationalDemographics: national,
     stateMap,
     demographicsMap,
     turnoutByState: new Map(),
