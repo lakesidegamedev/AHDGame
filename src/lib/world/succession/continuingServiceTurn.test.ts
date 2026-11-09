@@ -155,6 +155,20 @@ describe("continuing federation service transaction", () => {
       successorContributionsMinor: { BY: 38, UA: 74 },
     });
   });
+  it("counts a carried arrears balance once, not again every turn", async () => {
+    const { db, oldId } = scenario();
+    await db
+      .collection("macroCountries")
+      .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    await run(db);
+    await db.collection("bonds").updateOne({ _id: oldId }, { $set: { matured: true } });
+    for (const turn of [92, 93, 94]) await run(db, turn);
+    expect(
+      await db
+        .collection("federationFiscalAccounts")
+        .findOne({ _id: `${applicationId}:UA` as never })
+    ).toMatchObject({ cumulativeArrearsMinor: 37 });
+  });
   it("recovers arrears after maturity without calling successors for new Russian bonds", async () => {
     const { db, oldId } = scenario();
     await db

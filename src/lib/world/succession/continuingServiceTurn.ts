@@ -267,9 +267,14 @@ export async function materializeContinuingFederationServiceTurn(input: {
             (account.cumulativeContributionMinor ?? 0) +
               (plan.successorContributionsMinor[account.entityId] ?? 0)
           ),
+          // Arrears are a carried balance, so count only this turn's new shortfall.
           cumulativeArrearsMinor: safeMinor(
             (account.cumulativeArrearsMinor ?? 0) +
-              (plan.successorArrearsMinor[account.entityId] ?? 0)
+              Math.max(
+                0,
+                (plan.successorArrearsMinor[account.entityId] ?? 0) -
+                  (previous?.successorArrearsMinor[account.entityId] ?? 0)
+              )
           ),
         },
       },
