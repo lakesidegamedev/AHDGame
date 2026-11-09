@@ -122,6 +122,16 @@ describe("fresh-world flag policy", () => {
     expect(settings).not.toHaveProperty("outputBasis");
   });
 
+  it("seeds the operational switches on for fresh worlds and only on insert for top-ups", () => {
+    const switches = ["priceLevelEnabled", "fiscalStabilizerEnabled", "crisisV2EmergentEnabled"];
+    const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
+    for (const key of switches) {
+      expect(FRESH_WORLD_GAME_CONFIG_FLAGS).toHaveProperty(key, true);
+      expect(flags).toHaveProperty(key, true);
+      expect(settings).not.toHaveProperty(key);
+    }
+  });
+
   it("is what the reference gameConfig seeds", () => {
     expect(referenceGameConfig).toMatchObject(FRESH_WORLD_GAME_CONFIG_FLAGS);
     expect(referenceGameConfig.treasuryCashLedgerEnabled).toBe(true);

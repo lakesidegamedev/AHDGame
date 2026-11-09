@@ -37,6 +37,7 @@ import { compoundGdpLevel } from "./gdpLevel";
 import {
   GDP_SMOOTHING_INERTIA,
   advancePriceIndex,
+  PRICE_INDEX_BASE,
   resolvePriceIndex,
   smoothNationalGdpPerTurn,
   toNominalOutput,
@@ -394,6 +395,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
           projection: {
             labourSystemMode: 1,
             privateBankingEnabled: 1,
+            priceLevelEnabled: 1,
           },
         }
       )
@@ -428,6 +430,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     labourConfig?.privateBankingEnabled === true
   );
   const labourMacroEnabled = await isLabourMacroEnabled(labourConfig ?? null);
+  const priceLevelEnabled = labourConfig?.priceLevelEnabled === true;
 
   // Resolve a country's prime rate: live central-bank doc → config default.
   const primeRateByBankId = new Map<string, number>();
@@ -626,7 +629,10 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   for (const b of budgets) {
     const cid = b.countryId || (b._id === "federal" ? "US" : b._id);
     budgetIdByCountry.set(cid, b._id);
-    priceIndexBefore.set(cid, resolvePriceIndex(b.priceIndex));
+    priceIndexBefore.set(
+      cid,
+      priceLevelEnabled ? resolvePriceIndex(b.priceIndex) : PRICE_INDEX_BASE
+    );
     smoothedGdpBefore.set(cid, b.gdpSmoothed ?? b.gdp);
     // An unseeded budget has no inflation to compound.
     inflationByCountry.set(cid, b.economicFactors?.inflationRate ?? 0);
@@ -637,7 +643,9 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   for (const [cid, before] of priceIndexBefore) {
     priceIndexAfter.set(
       cid,
-      advancePriceIndex(before, inflationByCountry.get(cid) ?? 0, TURNS_PER_YEAR)
+      priceLevelEnabled
+        ? advancePriceIndex(before, inflationByCountry.get(cid) ?? 0, TURNS_PER_YEAR)
+        : PRICE_INDEX_BASE
     );
   }
   const realGdpOf = (s: { countryId: string; gdp?: number }) =>
@@ -1401,12 +1409,14 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     await db.collection<State>("states").bulkWrite(stateOps);
   }
   await settleCapacityObligations(db, settledCapacityIds);
-  await advanceBudgetGdpBasis(db, {
-    budgetIdByCountry,
-    priceIndexAfter,
-    smoothedGdpBefore,
-    nominalGdpMillionsByCountry: nominalGdpByCountry,
-  });
+  if (priceLevelEnabled) {
+    await advanceBudgetGdpBasis(db, {
+      budgetIdByCountry,
+      priceIndexAfter,
+      smoothedGdpBefore,
+      nominalGdpMillionsByCountry: nominalGdpByCountry,
+    });
+  }
   return realStates.length;
 }
 

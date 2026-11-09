@@ -33,6 +33,7 @@ import {
   calculateDecisionDurationReduction,
 } from "@/lib/crises/interactionEngine";
 import { getGameState } from "@/lib/gameState";
+import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { ensureCampaignCrisisContent } from "@/lib/livingConflict/campaignCrisis";
 import { applyCrisisTurnEffects, finalizeResolvedCrises } from "./crisisTurn";
 import { ensureLegacyCrisisContent } from "./crisisV2/legacyContent";
@@ -289,6 +290,21 @@ async function openApproved(
   return docs.length;
 }
 
+/** Operational switch: absent or false stops the detectors; open crises still step. */
+async function loadEmergentEnabled(db: Db): Promise<boolean> {
+  try {
+    const config = await db
+      .collection<GameConfig>("gameConfig")
+      .findOne({ _id: "default" }, { projection: { crisisV2EmergentEnabled: 1 } });
+    return config?.crisisV2EmergentEnabled === true;
+  } catch (error) {
+    logger.warn(COMPONENT, "emergent switch unreadable; detectors held off", {
+      error: String(error),
+    });
+    return false;
+  }
+}
+
 async function openNewCrises(
   db: Db,
   turn: number,
@@ -487,6 +503,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
+  const emergentEnabled = await loadEmergentEnabled(db);
   ensureBuiltinCrisisHolderProviders();
   if (crises.length > 0) await runNppCrisisResponse(db, turn);
   const world: World =
@@ -783,7 +800,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   } catch (error) {
     logger.error(COMPONENT, "scar pass failed", error);
   }
-  result.opened = await openNewCrises(db, turn, stillActive);
-  result.opened += (await runCrisisSpillover(db, turn)).opened;
+  result.opened = emergentEnabled ? await openNewCrises(db, turn, stillActive) : 0;
+  if (emergentEnabled) result.opened += (await runCrisisSpillover(db, turn)).opened;
   return result;
 }
