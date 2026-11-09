@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Nigeria geo-political zone demographics using the 8 NG voter archetypes.
@@ -11,7 +11,7 @@ import type { StateDemographics } from "@/lib/db/types";
  * comes from mix weight, not exclusion. STATIC fallback used when the Layer-1
  * positions flag is off.
  */
-export const ngRegionDemographics: StateDemographics[] = [
+export const ngRegionDemographics: CensusGroupView[] = [
   // ── North-West ──────────────────────────────────────────────────────────────
 
   // North-West: Hausa-Fulani caliphate heartland; overwhelmingly Muslim and

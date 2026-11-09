@@ -21,7 +21,7 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import "@/lib/seeds/stateDemographics";
-import type { Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
+import type { Layer1PositionOverlay, CensusGroupView } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import {
   buildGranularElectorateSubstrate,
@@ -39,8 +39,8 @@ const DEEP_SOUTH = ["AL", "MS", "SC", "LA", "GA", "AR"] as const;
 
 const EMPTY_ENRICHED: EnrichedCandidate[] = [];
 
-function stubDemographics(stateId: string): StateDemographics {
-  return { _id: stateId, countryId: "US", groups: {} } as unknown as StateDemographics;
+function stubDemographics(stateId: string): CensusGroupView {
+  return { _id: stateId, countryId: "US", groups: {} } as unknown as CensusGroupView;
 }
 
 function substrate(

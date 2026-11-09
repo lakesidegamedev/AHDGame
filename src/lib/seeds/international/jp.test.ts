@@ -18,7 +18,7 @@
  *
  * The test harness mirrors the real game pipeline:
  *   getJpModel(era) → deriveCountryGroupLean/Populations/Turnout
- *   → StateDemographics → calculateStateLean → getDisplayLean
+ *   → CensusGroupView → calculateStateLean → getDisplayLean
  */
 
 import { describe, it, expect } from "vitest";
@@ -30,7 +30,7 @@ import {
 } from "./derive";
 import { jpDemographicCategories } from "@/lib/countries/jp/data/jpDemographicCategories";
 import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ function getRegionDisplayLean(region: string, era: EraId): number {
 
   const pops = deriveCountryGroupPopulations(model, censusConfig);
 
-  const groups: StateDemographics["groups"] = {};
+  const groups: CensusGroupView["groups"] = {};
   for (const gid of jpGroupIds) {
     const lean = deriveCountryGroupLean(model, gid, censusConfig);
     const turnout = deriveCountryGroupTurnout(model, gid);
@@ -54,7 +54,7 @@ function getRegionDisplayLean(region: string, era: EraId): number {
     };
   }
 
-  const demographics: StateDemographics = {
+  const demographics: CensusGroupView = {
     _id: region,
     countryId: "JP",
     categoryWeights: { jp_voterGroups: 100 },

@@ -21,7 +21,7 @@ import type {
   DemographicCategory,
   Layer1PositionOverlay,
   Layer1TurnoutOverlay,
-  StateDemographics,
+  CensusGroupView,
   StateDemographicTurnout,
 } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
@@ -84,7 +84,7 @@ const LEGACY_CATEGORIES: DemographicCategory[] = [
   },
 ];
 
-const LEGACY_DEMOGRAPHICS: StateDemographics = {
+const LEGACY_DEMOGRAPHICS: CensusGroupView = {
   _id: "CT",
   countryId: "US",
   categoryWeights: { voterGroups: 100 },
@@ -314,7 +314,7 @@ describe("layer1PositionOverrides — durable era-checkpoint base-value shift", 
     const overlay: Layer1PositionOverlay = {
       age: { senior: { economicLean: 3, socialLean: 0 } },
     };
-    const defaultsWithOverlay: StateDemographics = {
+    const defaultsWithOverlay: CensusGroupView = {
       ...LEGACY_DEMOGRAPHICS,
       layer1PositionOverrides: overlay,
     };
@@ -459,7 +459,7 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
 
   it("flows into buildGranularElectorateSubstrate via demographicDefaults.layer1TurnoutOverrides", () => {
     const overlay: Layer1TurnoutOverlay = { race: { black: 25 } };
-    const defaultsWithOverlay: StateDemographics = {
+    const defaultsWithOverlay: CensusGroupView = {
       ...LEGACY_DEMOGRAPHICS,
       _id: "AL",
       layer1TurnoutOverrides: overlay,
@@ -689,7 +689,7 @@ describe("buildGranularElectorateSubstrate", () => {
   });
 
   it("folds live-doc bucket overlay drift onto unit leans", () => {
-    const live: StateDemographics = {
+    const live: CensusGroupView = {
       ...LEGACY_DEMOGRAPHICS,
       layer1PositionOverrides: { age: { senior: { economicLean: 2, socialLean: 0 } } },
     };
@@ -836,7 +836,7 @@ describe("granular substrate through the vote engine", () => {
         })),
       },
     ];
-    const twelveDemographics: StateDemographics = {
+    const twelveDemographics: CensusGroupView = {
       _id: "CT",
       countryId: "US",
       categoryWeights: { voterGroups: 100 },

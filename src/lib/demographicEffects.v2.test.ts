@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
-import type { StateDemographics } from "@/lib/db/types/demographics";
+import type { CensusGroupView } from "@/lib/db/types/demographics";
 import type { DemographicEffect } from "@/lib/db/types/legislation";
 // Side-effect import: populates stateCensusData so real Layer-1 cells derive.
 import "@/lib/seeds/stateDemographics";
@@ -54,7 +54,7 @@ function makeLegTypeMap(
   return map;
 }
 
-function makeDemographics(overrides?: Partial<StateDemographics>): StateDemographics {
+function makeDemographics(overrides?: Partial<CensusGroupView>): CensusGroupView {
   return {
     _id: "PA",
     countryId: "US",
@@ -298,8 +298,8 @@ function createPersistingFakeDb(fixtures: {
   states: Array<{ _id: string; countryId: string }>;
   statePolicies: Array<Record<string, unknown>>;
   legislationTypes: Array<Record<string, unknown>>;
-  stateDemographics: StateDemographics[];
-  demographicDefaults: StateDemographics[];
+  stateDemographics: CensusGroupView[];
+  demographicDefaults: CensusGroupView[];
   gameState: Record<string, unknown>;
 }) {
   const stores = {
@@ -517,8 +517,8 @@ describe("subtractDurableShifts", () => {
 
 // ─── The turn phase ─────────────────────────────────────────────────────────
 
-function stateDoc(id: string, countryId = "US"): StateDemographics {
-  return makeDemographics({ _id: id, countryId: countryId as StateDemographics["countryId"] });
+function stateDoc(id: string, countryId = "US"): CensusGroupView {
+  return makeDemographics({ _id: id, countryId: countryId as CensusGroupView["countryId"] });
 }
 
 const law = (id: string, effects: Array<Record<string, unknown>>) => ({
@@ -547,8 +547,8 @@ function world(opts: {
   stateIds?: string[];
   policies?: Array<Record<string, unknown>>;
   laws?: Array<Record<string, unknown>>;
-  docs?: StateDemographics[];
-  defaults?: StateDemographics[];
+  docs?: CensusGroupView[];
+  defaults?: CensusGroupView[];
   countryId?: string;
 }) {
   const stateIds = opts.stateIds ?? ["AL"];
@@ -570,7 +570,7 @@ const overlay = (
   bucket: string,
   axis = "economicLean"
 ) => {
-  const d = doc as StateDemographics;
+  const d = doc as CensusGroupView;
   return file === "lean"
     ? (d.layer1PositionOverrides?.[dim]?.[bucket] as Record<string, number> | undefined)?.[axis]
     : d.layer1TurnoutOverrides?.[dim]?.[bucket];
@@ -596,7 +596,7 @@ describe("processAllStateDemographics", () => {
     const updated = await processAllStateDemographics(db);
 
     expect(updated).toBe(1);
-    const doc = stores.stateDemographics.get("AL") as unknown as StateDemographics;
+    const doc = stores.stateDemographics.get("AL") as unknown as CensusGroupView;
     expect(overlay(doc, "lean", "race", "white")).toBeCloseTo(LEAN_SHIFT_RATE_PER_TURN, 9);
     expect(overlay(doc, "turnout", "age", "young")).toBeCloseTo(TURNOUT_SHIFT_RATE_PER_TURN, 9);
     expect(doc.groups).toEqual({});
@@ -613,7 +613,7 @@ describe("processAllStateDemographics", () => {
       policies: [policyOn("AL", "temp-law")],
     });
     await runTurns(db, 30);
-    const doc = stores.stateDemographics.get("AL") as unknown as StateDemographics;
+    const doc = stores.stateDemographics.get("AL") as unknown as CensusGroupView;
     const census = censusStateLean(doc, {
       countryId: "US",
       stateId: "AL",
@@ -663,7 +663,7 @@ describe("processAllStateDemographics", () => {
       ],
     });
     await expect(processAllStateDemographics(db)).resolves.toBe(1);
-    const doc = stores.stateDemographics.get("ZZ1") as unknown as StateDemographics;
+    const doc = stores.stateDemographics.get("ZZ1") as unknown as CensusGroupView;
     expect(doc.cachedEconomicLean).toBeUndefined();
   });
 

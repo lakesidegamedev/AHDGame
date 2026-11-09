@@ -176,7 +176,6 @@ export function buildNationwideElectoratePreload(
       _id: countryId,
       countryId,
       categoryWeights: {},
-      groups: {},
       cachedEconomicLean: weightedAverage(
         countryDemographics.map((row) => ({
           value: row.cachedEconomicLean,

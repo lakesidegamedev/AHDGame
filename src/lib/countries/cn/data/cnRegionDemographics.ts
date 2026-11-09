@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * China macro-region demographic composition using the 7 CN voter archetypes.
@@ -11,7 +11,7 @@ import type { StateDemographics } from "@/lib/db/types";
  * `categoryWeights: { cn_voterGroups: 100 }` references the profile in
  * cnDemographicCategories.ts.
  */
-export const cnRegionDemographics: StateDemographics[] = [
+export const cnRegionDemographics: CensusGroupView[] = [
   // ── Dongbei (Northeast) ────────────────────────────────────────────────────
   // Aging rust belt with heavy industrial worker concentration and legacy
   // state enterprise party cadre presence. Low youth retention.

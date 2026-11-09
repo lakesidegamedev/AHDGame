@@ -24,7 +24,7 @@ import {
   type PrimaryCalendarFamily,
 } from "@/lib/constants/primaryCalendar";
 import { allocateDelegates, type AllocationMethod } from "@/lib/primaryDelegateAllocation";
-import type { DemographicCategory, StateDemographics, StateDemographicGroup } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
 import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
 
 // ─── Fixtures: demographics + states (matches election-simulation.ts shape) ─
@@ -80,7 +80,7 @@ const STATES: SimState[] = [
 const TOTAL_EV = STATES.reduce((a, s) => a + s.ev, 0);
 const ELECTORAL_MAJORITY = Math.floor(TOTAL_EV / 2) + 1;
 
-function demographicsForState(s: SimState): StateDemographics {
+function demographicsForState(s: SimState): CensusGroupView {
   const isBlue = s.bloc === "blue";
   const isRed = s.bloc === "red";
   const isSwing = s.bloc === "swing";
@@ -117,7 +117,7 @@ function demographicsForState(s: SimState): StateDemographics {
     _id: s.id,
     categoryWeights: { income: 50, geography: 50 },
     groups,
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 }
 
 // ─── Candidates + per-party org/funds ──────────────────────────────────────

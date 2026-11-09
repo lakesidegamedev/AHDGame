@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * UK region demographics using UK voter archetypes.
@@ -13,7 +13,7 @@ import type { StateDemographics } from "@/lib/db/types";
  *
  * Group IDs match `uk_voterGroups` in ukDemographicCategories.ts.
  */
-export const ukRegionDemographics: StateDemographics[] = [
+export const ukRegionDemographics: CensusGroupView[] = [
   // ── London ─────────────────────────────────────────────────────────────────
   // Young, diverse, progressive, heavy public sector. Overwhelmingly Labour/LD.
   {

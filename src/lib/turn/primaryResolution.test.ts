@@ -1135,7 +1135,6 @@ describe("recordPrimarySnapshots", () => {
           _id: "DUB",
           countryId: "IE",
           categoryWeights: {},
-          groups: {},
           lastUpdated: new Date(0),
         },
         enriched: [],
@@ -1523,7 +1522,7 @@ describe("accumulateGeneralElectionVotes", () => {
       votingEligiblePopulation: 320,
       votingSystem: "fptp",
     });
-    expect(options?.preload?.demographicsMap.get("IE")?.groups).toEqual({});
+    expect(options?.preload?.demographicsMap.get("IE")).not.toHaveProperty("groups");
     expect(options?.preload?.statePartyOrgsByState.get("IE")?.[0]?.organization).toBeCloseTo(65);
     expect(options?.preload?.turnoutByState.get("IE")?.modifiers.ie_voterGroups.urban).toBeCloseTo(
       1
@@ -1659,7 +1658,7 @@ describe("accumulateGeneralElectionVotes", () => {
       votingEligiblePopulation: 250,
       votingSystem: "fptp",
     });
-    expect(options?.preload?.demographicsMap.get("RU")?.groups).toEqual({});
+    expect(options?.preload?.demographicsMap.get("RU")).not.toHaveProperty("groups");
     expect(options?.preload?.statePartyOrgsByState.get("RU")?.[0]?.organization).toBeCloseTo(65);
     expect(options?.preload?.turnoutByState.get("RU")?.modifiers.ie_voterGroups.urban).toBeCloseTo(
       1

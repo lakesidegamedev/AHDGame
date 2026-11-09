@@ -3,7 +3,7 @@ import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import { ORG_WEIGHT_EXPONENT } from "./electionFormulaFactors";
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 // ─── Test fixtures ──────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ function makeCategory(): DemographicCategory {
   } as DemographicCategory;
 }
 
-function makeDemographics(overrides?: Partial<StateDemographics>): StateDemographics {
+function makeDemographics(overrides?: Partial<CensusGroupView>): CensusGroupView {
   return {
     _id: "PA",
     categoryWeights: { ideology: 100 },
@@ -57,7 +57,7 @@ function makeDemographics(overrides?: Partial<StateDemographics>): StateDemograp
       conservative: { population: 50, turnout: 60, economicLean: 3, socialLean: 3 },
     },
     ...overrides,
-  } as StateDemographics;
+  } as CensusGroupView;
 }
 
 const emptyOrgMap = new Map<string, number>();

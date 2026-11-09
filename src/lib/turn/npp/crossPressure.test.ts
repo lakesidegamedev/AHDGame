@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Bill, BillWhip, LegislationType, NPP, StateDemographics } from "@/lib/db/types";
+import type { Bill, BillWhip, LegislationType, NPP, CensusGroupView } from "@/lib/db/types";
 import {
   computeCrossPressureForces,
   computeDistrictForce,
@@ -236,7 +236,7 @@ describe("computeWhipForce", () => {
 });
 
 describe("computeDistrictForce", () => {
-  function makeStateDemographics(stateId = "OH", countryId: "US" | "UK" = "US"): StateDemographics {
+  function makeStateDemographics(stateId = "OH", countryId: "US" | "UK" = "US"): CensusGroupView {
     return {
       _id: stateId,
       countryId,
@@ -446,7 +446,7 @@ describe("computeCrossPressureForces (integration)", () => {
     });
     const legType = makeTaxType();
     legType.policyOptions![0].bucketApprovals = { "age:young": 100 };
-    const demographics: StateDemographics = {
+    const demographics: CensusGroupView = {
       _id: "OH",
       countryId: "US",
       categoryWeights: {},

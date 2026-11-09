@@ -144,7 +144,6 @@ describe("targeted ad route and command integration", () => {
           _id: "CA",
           countryId: "US",
           categoryWeights: {},
-          groups: {},
           lastUpdated: new Date(0),
         },
         demographicDefaults: null,

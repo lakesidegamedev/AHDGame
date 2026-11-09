@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import type { StateDemographics } from "@/lib/db/types/demographics";
+import type { CensusGroupView } from "@/lib/db/types/demographics";
 import { buildDemographicUpdates, processAllStateDemographics } from "@/lib/demographicEffects";
 import {
   MEDIA_PULL_AXIS_SPAN,
@@ -14,7 +14,7 @@ import {
 
 const FIXED_DATE = new Date("2026-01-01T00:00:00Z");
 
-function demographics(overrides?: Partial<StateDemographics>): StateDemographics {
+function demographics(overrides?: Partial<CensusGroupView>): CensusGroupView {
   return {
     _id: "PA",
     countryId: "US",
@@ -157,7 +157,7 @@ describe("processAllStateDemographics media pull", () => {
     project: vi.fn().mockReturnThis(),
   });
 
-  function seed(opts: { flag: boolean; stored?: StateDemographics["mediaOpinionPull"] }) {
+  function seed(opts: { flag: boolean; stored?: CensusGroupView["mediaOpinionPull"] }) {
     db = createMockDb();
     for (const n of [
       "states",

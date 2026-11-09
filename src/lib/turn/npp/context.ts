@@ -88,7 +88,7 @@ export interface NPPContext {
   // runtime; the full type is preserved here so consumers don't need narrower
   // signatures. Read-only fields actually present:
   //   legislationTypeMap → _id, policyOptions
-  //   stateDemographicsMap → _id, groups
+  //   stateDemographicsMap → _id, countryId
   //   statesById → _id, countryId
   // Adding field accesses elsewhere requires extending the projection in
   // loadNPPContext or moving to a separate (unprojected) load.
@@ -441,7 +441,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
       .toArray() as Promise<LegislationType[]>,
     db
       .collection<StateDemographics>("stateDemographics")
-      .find({}, { projection: { _id: 1, groups: 1 } })
+      .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray() as Promise<StateDemographics[]>,
     db
       .collection<State>("states")

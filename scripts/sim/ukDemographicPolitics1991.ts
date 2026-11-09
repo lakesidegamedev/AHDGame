@@ -13,7 +13,7 @@ import { calculateStateLean } from "@/lib/utils/demographics";
 import { getSocialPositionName } from "@/lib/utils/politics";
 import { calcAppeal } from "@/lib/utils/demographicAppeal";
 import { deriveGranularElectorateUnits } from "@/lib/demographics/granularElectorate";
-import type { Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
+import type { Layer1PositionOverlay, CensusGroupView } from "@/lib/db/types";
 
 // Frozen pre-fix social inputs. Economic/census/composition/turnout inputs are
 // unchanged by this PR and remain read from the model, never reimplemented.
@@ -51,10 +51,10 @@ const after = buildModelRegionDemographics(treatment);
 const population = Object.fromEntries(
   ukRegions1991.map((region) => [region._id, region.population])
 );
-const lean = (doc: StateDemographics) => calculateStateLean(doc, ukDemographicCategories);
+const lean = (doc: CensusGroupView) => calculateStateLean(doc, ukDemographicCategories);
 const round = (value: number) => Math.round(value * 100) / 100;
 const fmt = (value: number) => value.toFixed(2);
-const means = (docs: StateDemographics[], gbOnly = false) => {
+const means = (docs: CensusGroupView[], gbOnly = false) => {
   const rows = docs.filter((doc) => !gbOnly || doc._id !== "NIR");
   const total = rows.reduce((sum, doc) => sum + population[String(doc._id)], 0);
   const economic =
@@ -77,7 +77,7 @@ interface Voter {
   economicLean: number;
   socialLean: number;
 }
-const groups = (doc: StateDemographics): Voter[] =>
+const groups = (doc: CensusGroupView): Voter[] =>
   Object.values(doc.groups).map((group) => ({
     weight: group.population * (group.turnout ?? 55),
     economicLean: group.economicLean,
@@ -142,7 +142,7 @@ console.log(
 console.log("| --- | --- | --- | --- | --- | --- | --- |");
 for (let i = 0; i < after.length; i++) {
   const vectors = [liveBefore[i], releaseBefore[i], cleanBefore[i], after[i]].map(lean);
-  const total = (doc: StateDemographics) =>
+  const total = (doc: CensusGroupView) =>
     Object.values(doc.groups).reduce((sum, group) => sum + group.population, 0);
   assert(Math.abs(total(after[i]) - 100) < 0.05);
   assert.equal(vectors[2].economicLean, vectors[3].economicLean);

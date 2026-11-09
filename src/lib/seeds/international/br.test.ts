@@ -21,7 +21,7 @@
  *
  * The test harness mirrors the real game pipeline:
  *   getBrModel(era) → deriveCountryGroupPopulations / deriveCountryGroupLean
- *   → StateDemographics → calculateStateLean → getDisplayLean
+ *   → CensusGroupView → calculateStateLean → getDisplayLean
  */
 
 import { describe, it, expect } from "vitest";
@@ -33,7 +33,7 @@ import {
 } from "./derive";
 import { brDemographicCategories } from "@/lib/seeds/br/brDemographicCategories";
 import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ function getRegionDisplayLean(region: string, era: EraId): number {
 
   const pops = deriveCountryGroupPopulations(model, censusConfig);
 
-  const groups: StateDemographics["groups"] = {};
+  const groups: CensusGroupView["groups"] = {};
   for (const gid of brGroupIds) {
     const lean = deriveCountryGroupLean(model, gid, censusConfig);
     const turnout = deriveCountryGroupTurnout(model, gid);
@@ -57,7 +57,7 @@ function getRegionDisplayLean(region: string, era: EraId): number {
     };
   }
 
-  const demographics: StateDemographics = {
+  const demographics: CensusGroupView = {
     _id: region,
     countryId: "BR",
     categoryWeights: { br_voterGroups: 100 },
@@ -258,8 +258,8 @@ describe("1979 era — structural checks only (dictatorship era)", () => {
     const config1979 = model1979.census["SUL"];
     const config2019 = model2019.census["SUL"];
 
-    const groups1979: StateDemographics["groups"] = {};
-    const groups2019: StateDemographics["groups"] = {};
+    const groups1979: CensusGroupView["groups"] = {};
+    const groups2019: CensusGroupView["groups"] = {};
 
     for (const gid of brGroupIds) {
       const lean1979 = deriveCountryGroupLean(model1979, gid, config1979);
@@ -278,14 +278,14 @@ describe("1979 era — structural checks only (dictatorship era)", () => {
       };
     }
 
-    const dem1979: StateDemographics = {
+    const dem1979: CensusGroupView = {
       _id: "SUL",
       countryId: "BR",
       categoryWeights: { br_voterGroups: 100 },
       groups: groups1979,
       lastUpdated: new Date(),
     };
-    const dem2019: StateDemographics = {
+    const dem2019: CensusGroupView = {
       _id: "SUL",
       countryId: "BR",
       categoryWeights: { br_voterGroups: 100 },
