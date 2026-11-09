@@ -50,11 +50,30 @@ const SLUGS_2040 = [
   "digitalCurrencyLegalTender",
   "sovereignWealthFundMandate",
 ];
+const SLUGS_2045 = ["longevityCare", "fossilFuelSunset", "digitalSelfOwnership", "waterSecurity"];
+const SLUGS_2050 = [
+  "advancedAiOversight",
+  "lifelongPensionAccount",
+  "zeroCarbonEconomy",
+  "spaceResources",
+];
+/** Laws that close to new bills, and the year they close. */
+const UNTIL_BY_SLUG = new Map<string, number>([
+  ["automationTax", 2040],
+  ["coalPhaseOut", 2045],
+  ["dataProtectionOverhaul", 2045],
+  ["basicIncomePilot", 2045],
+  ["aiLiabilityTransparency", 2050],
+  ["pensionAgeIndexation", 2050],
+  ["cleanPowerStandard", 2050],
+]);
 const FROM_BY_SLUG = new Map<string, number>([
   ...SLUGS_2027.map((slug) => [slug, 2027] as const),
   ...SLUGS_2030.map((slug) => [slug, 2030] as const),
   ...SLUGS_2035.map((slug) => [slug, 2035] as const),
   ...SLUGS_2040.map((slug) => [slug, 2040] as const),
+  ...SLUGS_2045.map((slug) => [slug, 2045] as const),
+  ...SLUGS_2050.map((slug) => [slug, 2050] as const),
 ]);
 /** Laws that raise revenue, and the first rung that does. */
 const REVENUE_FROM_LEVEL = new Map<string, number>([
@@ -80,11 +99,16 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
   const laws = BOOKS[countryId];
   const cc = countryId.toLowerCase();
 
-  it("authors the 2027, 2030, 2035 and 2040 bands as national secondaries seeded at level 0", () => {
+  it("authors the 2027 to 2050 bands as national secondaries seeded at level 0", () => {
     expect(laws.map((law) => law.id)).toEqual(
-      [...SLUGS_2027, ...SLUGS_2030, ...SLUGS_2035, ...SLUGS_2040].map(
-        (slug) => `${cc}.sec.${slug}`
-      )
+      [
+        ...SLUGS_2027,
+        ...SLUGS_2030,
+        ...SLUGS_2035,
+        ...SLUGS_2040,
+        ...SLUGS_2045,
+        ...SLUGS_2050,
+      ].map((slug) => `${cc}.sec.${slug}`)
     );
     for (const law of laws) {
       expect(law.countryId).toBe(countryId);
@@ -93,8 +117,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       expect(law.baselineLevel).toBe(0);
       expect(law.levels).toHaveLength(5);
       const slug = slugOf(law);
-      // Only the automation tax retires: the automation dividend replaces it.
-      expect(law.window?.until).toBe(slug === "automationTax" ? 2040 : undefined);
+      expect(law.window?.until).toBe(UNTIL_BY_SLUG.get(slug));
       expect(law.window?.from).toBe(FROM_BY_SLUG.get(slug));
     }
     expect(getEraCatalog(countryId)).toBe(laws);
@@ -238,7 +261,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
 
   it("splits by band in a 2027 world: 2027 laws open, later laws hidden", () => {
     const ids2027 = SLUGS_2027.map((slug) => `${cc}.sec.${slug}`);
-    const ids2030 = [...SLUGS_2030, ...SLUGS_2035, ...SLUGS_2040].map(
+    const ids2030 = [...SLUGS_2030, ...SLUGS_2035, ...SLUGS_2040, ...SLUGS_2045, ...SLUGS_2050].map(
       (slug) => `${cc}.sec.${slug}`
     );
     expect(ids2027.every((id) => isLegislationTypeFileable(id, 2027))).toBe(true);
@@ -318,7 +341,7 @@ describe("seed projection", () => {
   });
 
   it("authors each spec once for both countries", () => {
-    expect(MODERN_ERA_LAW_SPECS).toHaveLength(24);
-    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(24);
+    expect(MODERN_ERA_LAW_SPECS).toHaveLength(32);
+    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(32);
   });
 });

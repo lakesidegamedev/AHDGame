@@ -60,12 +60,19 @@ describe("untilYear: filing closes, enacted laws stay in force", () => {
   }
 
   it("ships with only the retirements that have a named successor", () => {
+    const prefixes = ["cn", "de", "ie", "jp"];
+    const slugs = [
+      "automation_tax",
+      "coal_phase_out",
+      "data_protection_overhaul",
+      "basic_income_pilot",
+      "ai_liability_act",
+      "pension_age_indexation",
+      "clean_power_standard",
+    ];
     expect(Object.keys(LEGISLATION_ERA_UNTIL).sort()).toEqual(
       [
-        "cn_automation_tax",
-        "de_automation_tax",
-        "ie_automation_tax",
-        "jp_automation_tax",
+        ...prefixes.flatMap((prefix) => slugs.map((slug) => `${prefix}_${slug}`)),
         "jp_work_culture_reform",
       ].sort()
     );

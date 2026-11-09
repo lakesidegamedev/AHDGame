@@ -85,6 +85,6 @@ describe("getCatalog", () => {
           .map((l) => l.id)
       );
     }
-    expect(getCatalog("US", 2040).map((l) => l.id)).toEqual(getCatalog("US").map((l) => l.id));
+    expect(getCatalog("US", 2050).map((l) => l.id)).toEqual(getCatalog("US").map((l) => l.id));
   });
 });
