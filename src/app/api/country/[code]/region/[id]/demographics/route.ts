@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { GameState, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { bucketProfileLean, getBucketProfileForRegion } from "@/lib/demographics/bucketProfile";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 
@@ -26,11 +27,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const [state, gameState] = await Promise.all([
       db.collection<State>("states").findOne({ _id: stateId, countryId }),
-      db.collection<GameState>("gameState").findOne(
-        { _id: "current" },
-        {
-          projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 },
-        }
+      getGameStateCollection(db).then((games) =>
+        games.findOne(
+          { _id: "current" },
+          { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
+        )
       ),
     ]);
     if (!state) {
