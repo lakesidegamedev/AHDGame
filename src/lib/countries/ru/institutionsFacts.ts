@@ -423,7 +423,6 @@ export const RU_CONFIG: CountryConfig = {
     viceChair: "Second Secretary",
     committee: "Politburo",
   },
-  demographicProfileId: "su_archetypes",
   hasLeaderConfidenceModel: true,
   mapOverlay: "partyOrg",
   centralBank: {

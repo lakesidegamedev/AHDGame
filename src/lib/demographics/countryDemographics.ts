@@ -1,9 +1,7 @@
 import type { DemographicCategory } from "@/lib/db/types";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { LAYER1_DEMOGRAPHICS } from "@/lib/demographics/usDemographics";
 import { DEMOGRAPHIC_LABELS as US_GROUP_LABELS } from "@/lib/seeds/demographicLabels";
-import { demographicCategories as usVoterArchetypeCategories } from "@/lib/seeds/voterArchetypeCategories";
 import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
 import { jpDemographicCategories } from "@/lib/countries/jp/data/jpDemographicCategories";
 import { deDemographicCategories } from "@/lib/seeds/de/deDemographicCategories";
@@ -80,37 +78,21 @@ interface ProfileEntry {
   categories: CanvassCategory[];
 }
 
-/** Registry keyed by demographicProfileId. */
-const PROFILE_REGISTRY: Record<string, () => ProfileEntry> = {
-  uk_archetypes: () => ({
-    categories: fromSeed(ukDemographicCategories),
-  }),
-  jp_archetypes: () => ({
-    categories: fromSeed(jpDemographicCategories),
-  }),
-  de_archetypes: () => ({
-    categories: fromSeed(deDemographicCategories),
-  }),
-  ie_archetypes: () => ({
-    categories: fromSeed(ieDemographicCategories),
-  }),
-  cn_archetypes: () => ({
-    categories: fromSeed(cnDemographicCategories),
-  }),
-  br_archetypes: () => ({
-    categories: fromSeed(brDemographicCategories),
-  }),
-  dd_archetypes: () => ({
-    categories: fromSeed(ddDemographicCategories),
-  }),
+/** Seeded canvassing categories by country; every other country uses the US Layer-1 set. */
+const SEEDED_CATEGORIES: Partial<Record<CountryId, () => ProfileEntry>> = {
+  UK: () => ({ categories: fromSeed(ukDemographicCategories) }),
+  SCO: () => ({ categories: fromSeed(ukDemographicCategories) }),
+  WAL: () => ({ categories: fromSeed(ukDemographicCategories) }),
+  JP: () => ({ categories: fromSeed(jpDemographicCategories) }),
+  DE: () => ({ categories: fromSeed(deDemographicCategories) }),
+  IE: () => ({ categories: fromSeed(ieDemographicCategories) }),
+  CN: () => ({ categories: fromSeed(cnDemographicCategories) }),
+  BR: () => ({ categories: fromSeed(brDemographicCategories) }),
+  DD: () => ({ categories: fromSeed(ddDemographicCategories) }),
 };
 
 function resolveProfile(countryId: string | undefined): ProfileEntry {
-  const profileId = countryId
-    ? getCountryClientConfig(countryId as CountryId)?.demographicProfileId
-    : undefined;
-  const entry = profileId ? PROFILE_REGISTRY[profileId] : undefined;
-  // US (us_archetypes) and any unknown/unseeded profile (incl. ng_archetypes) → US default.
+  const entry = countryId ? SEEDED_CATEGORIES[countryId.toUpperCase() as CountryId] : undefined;
   return entry ? entry() : { categories: buildUsCategories() };
 }
 
@@ -133,54 +115,8 @@ export function resolveCanvassGroup(
   return { economicLean: group.economicLean, socialLean: group.socialLean, categoryKey };
 }
 
-// ─── Voter-archetype layer ────────────────────────────────────────────────────
-//
-// Distinct from the canvassing layer above: polls, the legislation policy-effect
-// system, and admin tooling key off VOTER ARCHETYPES. For the US that is the
-// 12-archetype `voterGroups` scheme (young_renters, evangelicals, …) — NOT the
-// Layer-1 demographics (race/age/…) the canvassing UI uses. For every other
-// country the archetypes are the same seed voter groups the canvassing layer
-// returns, so only the US branch differs.
-
-/** All countries that have a voter-archetype scheme (US + seeded international). */
-const ARCHETYPE_COUNTRY_IDS = ["US", "UK", "JP", "DE", "IE", "CN", "BR", "DD"] as const;
-
-/**
- * Voter-archetype categories for a country. US → the 12 `voterGroups` archetypes;
- * UK/JP/DE/IE/CN/BR/DD → their seed voter groups; unknown/NG → US archetypes.
- */
-export function getVoterArchetypeCategoriesForCountry(
-  countryId: string | undefined
-): CanvassCategory[] {
-  const profileId = countryId
-    ? getCountryClientConfig(countryId as CountryId)?.demographicProfileId
-    : undefined;
-  const entry = profileId ? PROFILE_REGISTRY[profileId] : undefined;
-  // US (us_archetypes) and any unknown/unseeded profile → US 12-archetype voterGroups.
-  return entry ? entry().categories : fromSeed(usVoterArchetypeCategories);
-}
-
-/** Deduped {id, name} archetype options across all countries (admin dropdowns). */
-export function getAllVoterArchetypeOptions(): { id: string; name: string }[] {
-  const seen = new Set<string>();
-  const options: { id: string; name: string }[] = [];
-  for (const countryId of ARCHETYPE_COUNTRY_IDS) {
-    for (const category of getVoterArchetypeCategoriesForCountry(countryId)) {
-      for (const group of category.groups) {
-        if (!seen.has(group.id)) {
-          seen.add(group.id);
-          options.push({ id: group.id, name: group.name });
-        }
-      }
-    }
-  }
-  return options;
-}
-
-/** Set of every valid archetype group id across all countries (poll-cache invalidation). */
-export function getAllVoterArchetypeIds(): Set<string> {
-  return new Set(getAllVoterArchetypeOptions().map((o) => o.id));
-}
+/** Countries whose canvassing categories are seeded explicitly. */
+const CANVASS_COUNTRY_IDS = ["US", "UK", "JP", "DE", "IE", "CN", "BR", "DD"] as const;
 
 /**
  * All valid demographic category keys across countries: US Layer-1 dimensions
@@ -189,7 +125,7 @@ export function getAllVoterArchetypeIds(): Set<string> {
  */
 export function getAllDemographicCategoryKeys(): string[] {
   const seen = new Set<string>();
-  for (const countryId of ARCHETYPE_COUNTRY_IDS) {
+  for (const countryId of CANVASS_COUNTRY_IDS) {
     for (const category of getDemographicCategoriesForCountry(countryId)) {
       seen.add(category.key);
     }

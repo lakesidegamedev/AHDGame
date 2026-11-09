@@ -14,7 +14,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *   defaultSocialLean:   -5 (progressive / liberal) to +5 (traditional / authoritarian)
  *   defaultTurnout:      baseline participation rate (German Bundestag avg ~76.6% in 2021)
  *
- * demographicProfileId: "de_archetypes"
  */
 export const DE_GROUP_EN_LABELS: Record<string, string> = {
   katholische_konservative: "Catholic Conservatives",

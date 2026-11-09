@@ -54,35 +54,35 @@ interface SimState {
   name: string;
   pop: number; // millions of eligible voters
   ev: number;
-  archetype: "blue" | "red" | "swing";
+  bloc: "blue" | "red" | "swing";
   lean: number; // -3 (deep blue) … +3 (deep red); drives state-lean multiplier
 }
 
 const STATES: SimState[] = [
-  { id: "CA", name: "California", pop: 25, ev: 54, archetype: "blue", lean: -2.0 },
-  { id: "TX", name: "Texas", pop: 19, ev: 40, archetype: "red", lean: 1.5 },
-  { id: "FL", name: "Florida", pop: 15, ev: 30, archetype: "red", lean: 0.8 },
-  { id: "NY", name: "New York", pop: 13, ev: 28, archetype: "blue", lean: -1.8 },
-  { id: "PA", name: "Pennsylvania", pop: 9, ev: 19, archetype: "swing", lean: -0.1 },
-  { id: "IL", name: "Illinois", pop: 9, ev: 19, archetype: "blue", lean: -1.4 },
-  { id: "OH", name: "Ohio", pop: 8, ev: 17, archetype: "red", lean: 0.7 },
-  { id: "GA", name: "Georgia", pop: 7, ev: 16, archetype: "swing", lean: 0.2 },
-  { id: "NC", name: "North Carolina", pop: 7, ev: 16, archetype: "swing", lean: 0.3 },
-  { id: "MI", name: "Michigan", pop: 7, ev: 15, archetype: "swing", lean: -0.2 },
-  { id: "AZ", name: "Arizona", pop: 5, ev: 11, archetype: "swing", lean: 0.1 },
-  { id: "WI", name: "Wisconsin", pop: 4, ev: 10, archetype: "swing", lean: -0.1 },
-  { id: "MN", name: "Minnesota", pop: 4, ev: 10, archetype: "blue", lean: -1.0 },
-  { id: "OK", name: "Oklahoma", pop: 3, ev: 7, archetype: "red", lean: 2.0 },
-  { id: "KS", name: "Kansas", pop: 2, ev: 6, archetype: "red", lean: 1.8 },
+  { id: "CA", name: "California", pop: 25, ev: 54, bloc: "blue", lean: -2.0 },
+  { id: "TX", name: "Texas", pop: 19, ev: 40, bloc: "red", lean: 1.5 },
+  { id: "FL", name: "Florida", pop: 15, ev: 30, bloc: "red", lean: 0.8 },
+  { id: "NY", name: "New York", pop: 13, ev: 28, bloc: "blue", lean: -1.8 },
+  { id: "PA", name: "Pennsylvania", pop: 9, ev: 19, bloc: "swing", lean: -0.1 },
+  { id: "IL", name: "Illinois", pop: 9, ev: 19, bloc: "blue", lean: -1.4 },
+  { id: "OH", name: "Ohio", pop: 8, ev: 17, bloc: "red", lean: 0.7 },
+  { id: "GA", name: "Georgia", pop: 7, ev: 16, bloc: "swing", lean: 0.2 },
+  { id: "NC", name: "North Carolina", pop: 7, ev: 16, bloc: "swing", lean: 0.3 },
+  { id: "MI", name: "Michigan", pop: 7, ev: 15, bloc: "swing", lean: -0.2 },
+  { id: "AZ", name: "Arizona", pop: 5, ev: 11, bloc: "swing", lean: 0.1 },
+  { id: "WI", name: "Wisconsin", pop: 4, ev: 10, bloc: "swing", lean: -0.1 },
+  { id: "MN", name: "Minnesota", pop: 4, ev: 10, bloc: "blue", lean: -1.0 },
+  { id: "OK", name: "Oklahoma", pop: 3, ev: 7, bloc: "red", lean: 2.0 },
+  { id: "KS", name: "Kansas", pop: 2, ev: 6, bloc: "red", lean: 1.8 },
 ];
 
 const TOTAL_EV = STATES.reduce((a, s) => a + s.ev, 0);
 const ELECTORAL_MAJORITY = Math.floor(TOTAL_EV / 2) + 1;
 
 function demographicsForState(s: SimState): StateDemographics {
-  const isBlue = s.archetype === "blue";
-  const isRed = s.archetype === "red";
-  const isSwing = s.archetype === "swing";
+  const isBlue = s.bloc === "blue";
+  const isRed = s.bloc === "red";
+  const isSwing = s.bloc === "swing";
 
   const pop: Record<string, number> = {
     low_inc: isRed ? 28 : isBlue ? 35 : 30,
@@ -170,8 +170,8 @@ interface PartyOrg {
   org: number;
 }
 function partyOrgForState(s: SimState, party: string): PartyOrg {
-  const isBlue = s.archetype === "blue";
-  const isRed = s.archetype === "red";
+  const isBlue = s.bloc === "blue";
+  const isRed = s.bloc === "red";
   if (party === "DEM") return { org: isBlue ? 75 : isRed ? 30 : 50 };
   if (party === "REP") return { org: isRed ? 75 : isBlue ? 25 : 50 };
   // Third-party / independent: weak everywhere

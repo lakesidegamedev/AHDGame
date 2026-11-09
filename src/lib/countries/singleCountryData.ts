@@ -121,11 +121,6 @@ export const ACKNOWLEDGED_OUTSIDE: ReadonlyArray<{
   // The reason names the shared exports, so the entry goes false the day they
   // part company.
   {
-    file: "src/lib/demographics/countryDemographics.ts",
-    country: "US",
-    why: "Nine exports of cross-country machinery -- getDemographicCategoriesForCountry, resolveCanvassGroup, CanvassGroup, CanvassCategory -- which every country's canvassing reads. The US appears only as the default branch.",
-  },
-  {
     file: "src/lib/constants/sectorSeedEra.ts",
     country: "US",
     why: "Mixed: US_NATIONAL_SEED_GDP_BY_ERA is United States data, while getEraNominalScale and MODERN_MIN_UNOWNED_SECTOR_REVENUE are the era-scaling machinery every country's sector seeding runs through. Bucket A: the GDP table moves, the scaler stays.",

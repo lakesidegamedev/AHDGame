@@ -115,7 +115,6 @@ export const CS_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "cs_archetypes",
   centralBank: {
     name: "State Bank of Czechoslovakia",
     abbreviation: "SBČS",

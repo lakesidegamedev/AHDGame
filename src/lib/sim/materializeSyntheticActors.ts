@@ -382,15 +382,15 @@ export async function materializeSyntheticActors(
   const livePartyKeys = new Set(
     persistedParties.map((p) => `${p.countryId ?? "US"}:${String(p.sequentialId)}`)
   );
-  const persistedOrgs = (await db
+  const persistedOrgs = await db
     .collection("statePartyOrg")
-    .find({})
-    .toArray()) as unknown as Array<{
-    _id: string;
-    stateId: string;
-    partyId: string;
-    countryId?: string;
-  }>;
+    .find<{
+      _id: string;
+      stateId: string;
+      partyId: string;
+      countryId?: string;
+    }>({})
+    .toArray();
   const seatedOrgs = persistedOrgs
     .filter(
       (org) =>

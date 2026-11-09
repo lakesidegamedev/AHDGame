@@ -103,7 +103,6 @@ export const YU_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "yu_archetypes",
   centralBank: {
     name: "National Bank of Yugoslavia",
     abbreviation: "NBY",

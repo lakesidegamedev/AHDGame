@@ -22,13 +22,13 @@ export async function loadUsPoliticalStateIds(db: Db): Promise<{
     .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
   const preset = gameState?.preset;
   const currentYear = gameState?.currentYear ?? Number.POSITIVE_INFINITY;
-  const admissionBearing = (await db
+  const admissionBearing = await db
     .collection<State>("states")
-    .find(
+    .find<{ _id: string; admittedYear?: number }>(
       { countryId: "US", admittedYear: { $type: NUMERIC_BSON_TYPE } },
       { projection: { _id: 1, admittedYear: 1 } }
     )
-    .toArray()) as unknown as Array<{ _id: string; admittedYear?: number }>;
+    .toArray();
   const admittedIds = new Set(admittedStateIdsAsOf(admissionBearing, currentYear));
   const politicalIds = new Set<string>([...Object.keys(getHouseSeats(preset)), ...admittedIds]);
   const residentPoliticalIds = new Set<string>([

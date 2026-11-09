@@ -4,7 +4,7 @@
  * Does not touch states, parties, users, characters, or other collections.
  *
  * Flow: Base census data (race, education, wealth, age, ideology) per state
- * is defined in stateDemographics.ts and DERIVED into 12 voter archetype groups
+ * is defined in stateDemographics.ts and DERIVED into voter groups
  * at seed time. The DB stores the final 12 groups per state, not the raw base layer.
  *
  * Run this if political lean shows as "Centrist/Moderate" for all states —
@@ -24,7 +24,7 @@ import type { DemographicCategory, State, StateDemographics } from "../../src/li
 async function main() {
   console.log("Seed: Demographics (categories + state demographics)\n");
   console.log(
-    "  Base census data (race, education, wealth, age, ideology) → 12 voter archetypes per state"
+    "  Base census data (race, education, wealth, age, ideology) → voter groups per state"
   );
   console.log(
     "  Weights = pop × turnout × categoryWeight; turnout derived from age/education per group\n"
@@ -33,16 +33,14 @@ async function main() {
   const db = await connectDb();
 
   try {
-    // Upsert demographic categories (12 voter archetypes)
+    // Upsert demographic categories (voter groups)
     for (const category of demographicCategories) {
       await db
         .collection<DemographicCategory>("demographicCategories")
         .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
     }
     const groupsCount = demographicCategories.reduce((s, c) => s + (c.groups?.length ?? 0), 0);
-    console.log(
-      `Upserted ${demographicCategories.length} category (${groupsCount} voter archetypes).`
-    );
+    console.log(`Upserted ${demographicCategories.length} category (${groupsCount} voter groups).`);
 
     // Upsert state demographics and demographicDefaults (game reset restores from defaults)
     for (const sd of stateDemographics) {

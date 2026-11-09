@@ -136,7 +136,6 @@ export const DE_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "de_archetypes",
   centralBank: {
     name: "European Central Bank",
     abbreviation: "ECB",

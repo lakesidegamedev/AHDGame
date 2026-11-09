@@ -105,7 +105,6 @@ export const GR_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "gr_archetypes",
   centralBank: {
     name: "Bank of Greece",
     abbreviation: "BoG",

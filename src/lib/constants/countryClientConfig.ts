@@ -91,7 +91,6 @@ export interface CountryClientConfig {
   /** "market" = tradable bourse; "stateRegister" = command-economy enterprise register. */
   exchangeKind?: "market" | "stateRegister";
   financeMinisterCabinetId?: string;
-  demographicProfileId: string;
   regionalBillAssentTitle?: string;
   rulingPartyId?: number;
   opsVoteMultipliers?: OpsVoteMultipliers;
@@ -153,7 +152,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Federal Grants",
     exchangeName: "NYSE",
     financeMinisterCabinetId: "secretary_of_treasury",
-    demographicProfileId: "us_archetypes",
     majorPartyIds: ["democrat", "republican"],
     partyCreationNPPs: {
       statesRequired: 4,
@@ -289,7 +287,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Westminster Funding",
     exchangeName: "FTSE",
     financeMinisterCabinetId: "chancellor",
-    demographicProfileId: "uk_archetypes",
     regionalBillAssentTitle: "First Minister",
     majorPartyIds: ["LAB", "CON"],
     partyCreationNPPs: {
@@ -402,7 +399,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Federal Grants",
     exchangeName: "DAX",
     financeMinisterCabinetId: "finance_minister",
-    demographicProfileId: "de_archetypes",
     regionalBillAssentTitle: "Minister-President",
     majorPartyIds: ["spd", "cdu"],
     partyCreationNPPs: {
@@ -518,7 +514,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "National Transfers",
     exchangeName: "Nikkei",
     financeMinisterCabinetId: "finance_minister",
-    demographicProfileId: "jp_archetypes",
     majorPartyIds: ["ldp", "cdp"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -644,7 +639,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Exchequer Grants",
     exchangeName: "ISEQ",
     financeMinisterCabinetId: "minister_for_finance",
-    demographicProfileId: "ie_archetypes",
     regionalBillAssentTitle: "Cathaoirleach",
     majorPartyIds: ["fine_gael", "fianna_fail"],
     partyCreationNPPs: {
@@ -779,7 +773,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Scottish Block Grant",
     exchangeName: "FTSE",
     financeMinisterCabinetId: "financeSecretary",
-    demographicProfileId: "uk_archetypes",
     regionalBillAssentTitle: "Provost",
     majorPartyIds: ["SNP", "LAB"],
     partyCreationNPPs: {
@@ -886,7 +879,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Welsh Block Grant",
     exchangeName: "FTSE",
     financeMinisterCabinetId: "financeSecretary",
-    demographicProfileId: "uk_archetypes",
     regionalBillAssentTitle: "Leader",
     majorPartyIds: ["PC", "LAB"],
     partyCreationNPPs: {
@@ -993,7 +985,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Federal Transfers",
     exchangeName: "B3",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "br_archetypes",
     majorPartyIds: ["pt", "pl"],
     partyCreationNPPs: {
       statesRequired: 3,
@@ -1115,7 +1106,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Central Government Transfers",
     exchangeName: "SSE",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "cn_archetypes",
     rulingPartyId: 1,
     hasLeaderConfidenceModel: true,
     majorPartyIds: ["ccp"],
@@ -1243,7 +1233,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     centralGovernmentLabel: "Federal Allocations",
     exchangeName: "NGX",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "ng_archetypes",
     majorPartyIds: ["apc", "pdp"],
     partyCreationNPPs: {
       statesRequired: 3,
@@ -1373,7 +1362,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "OT",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "hu_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["mszmp"],
     partyCreationNPPs: {
@@ -1475,7 +1463,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "PKPG",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "pl_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["pzpr"],
     partyCreationNPPs: {
@@ -1577,7 +1564,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "CSP",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "ro_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["pcr"],
     partyCreationNPPs: {
@@ -1680,7 +1666,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "SZP",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "yu_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["skj"],
     partyCreationNPPs: {
@@ -1776,7 +1761,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "DKP",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "bg_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["bkp"],
     partyCreationNPPs: {
@@ -1878,7 +1862,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "GOSPLAN BSSR",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "by_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["cpb"],
     partyCreationNPPs: {
@@ -1981,7 +1964,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "SPK",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "cs_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["ksc"],
     partyCreationNPPs: {
@@ -2084,7 +2066,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "GOSPLAN URSR",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "ua_archetypes",
     rulingPartyId: 1,
     majorPartyIds: ["kpu"],
     partyCreationNPPs: {
@@ -2187,7 +2168,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "GOSPLAN SSR",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "bal_archetypes",
     majorPartyIds: ["cpsu_baltic"],
     partyCreationNPPs: {
       statesRequired: 1,
@@ -2290,7 +2270,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "GOSPLAN",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "su_archetypes",
     rulingPartyId: 1,
     hasLeaderConfidenceModel: true,
     majorPartyIds: ["cpsu"],
@@ -2430,7 +2409,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "FRF",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "fr_archetypes",
     majorPartyIds: ["fr_rpr", "fr_ps"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -2540,7 +2518,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "ITL",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "it_archetypes",
     majorPartyIds: ["it_dc", "it_pci"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -2650,7 +2627,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "ESP",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "es_archetypes",
     majorPartyIds: ["es_ucd", "es_psoe"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -2761,7 +2737,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "SEK",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "se_archetypes",
     majorPartyIds: ["se_sap", "se_m"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -2859,7 +2834,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "TRL",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "tr_archetypes",
     majorPartyIds: ["tr_ap", "tr_chp"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -2970,7 +2944,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "GRD",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "gr_archetypes",
     majorPartyIds: ["gr_nd", "gr_pasok"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -3060,7 +3033,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "ATS",
     centralGovernmentLabel: "Federal Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "at_archetypes",
     majorPartyIds: ["at_spo", "at_ovp"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -3157,7 +3129,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "FIM",
     centralGovernmentLabel: "State Budget",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "fi_archetypes",
     majorPartyIds: ["fi_sdp", "fi_kesk"],
     partyCreationNPPs: {
       statesRequired: 2,
@@ -3250,7 +3221,6 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     exchangeName: "VVB",
     exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
-    demographicProfileId: "dd_archetypes",
     rulingPartyId: 1,
     hasLeaderConfidenceModel: true,
     majorPartyIds: ["sed"],

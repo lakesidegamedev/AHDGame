@@ -114,7 +114,6 @@ export const AT_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "at_archetypes",
   centralBank: {
     name: "Oesterreichische Nationalbank",
     abbreviation: "OeNB",

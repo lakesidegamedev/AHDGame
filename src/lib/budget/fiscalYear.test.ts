@@ -289,6 +289,7 @@ function makeDb(options: {
   resetPrograms?: Record<string, unknown>[];
   gameState?: Record<string, unknown> | null;
   countryGameStates?: Record<string, unknown>[];
+  gameConfig?: Record<string, unknown> | null;
 }) {
   const {
     federalBudget = makeFederalBudget(),
@@ -299,6 +300,7 @@ function makeDb(options: {
     resetPrograms = [],
     gameState = null,
     countryGameStates = [],
+    gameConfig = null,
   } = options;
   const resolvedFederalBudgets = federalBudgets ?? (federalBudget === null ? [] : [federalBudget]);
 
@@ -377,6 +379,10 @@ function makeDb(options: {
           return {
             findOne: vi.fn().mockResolvedValue(gameState),
           };
+        case "gameConfig":
+          return {
+            findOne: vi.fn().mockResolvedValue(gameConfig),
+          };
         case "federalBudgetSnapshots":
           return {
             replaceOne: federalBudgetSnapshotReplaceOne,
@@ -454,7 +460,13 @@ describe("processFiscalYear", () => {
   describe("fiscal stabilizer (#5703)", () => {
     // Italy-like books: revenue 652, programme spending 925, interest 1,551
     // on GDP 2,455 (billions). Primary deficit 11% of GDP.
-    function italyWorld(over: { countryId?: string; enabledForPlayers?: boolean } = {}) {
+    function italyWorld(
+      over: {
+        countryId?: string;
+        enabledForPlayers?: boolean;
+        gameConfig?: Record<string, unknown> | null;
+      } = {}
+    ) {
       const countryId = over.countryId ?? "IT";
       vi.mocked(calculateFederalRevenue).mockResolvedValue({
         incomeTax: 300e9,
@@ -506,6 +518,8 @@ describe("processFiscalYear", () => {
           },
         }),
         gameState: { _id: "current", nppAutonomyLevel: "v6" },
+        gameConfig:
+          over.gameConfig === undefined ? { fiscalStabilizerEnabled: true } : over.gameConfig,
         countryGameStates: [
           {
             _id: countryId,
@@ -543,6 +557,24 @@ describe("processFiscalYear", () => {
         expect.anything()
       );
       expect(restructureForInterestSpiral).toHaveBeenCalledWith(db, "IT", 760, expect.any(Number));
+    });
+
+    it.each([
+      ["off", { fiscalStabilizerEnabled: false }],
+      ["absent", {}],
+      ["an unseeded config", null],
+    ])("runs no package and no restructuring when the switch is %s", async (_label, gameConfig) => {
+      const db = italyWorld({ gameConfig });
+      await processFiscalYear(db as unknown as Db, 2006, 760);
+
+      const closeWrite = db._federalBudgetUpdateOne.mock.calls.find(
+        (c: unknown[]) => "fiscalYear" in ((c[1] as { $set: object }).$set ?? {})
+      );
+      const spending = (closeWrite![1] as { $set: { spending: { total: number } } }).$set.spending;
+      expect(spending.total).toBe(2_476e9);
+      expect(db._federalBudgetBulkWrite).not.toHaveBeenCalled();
+      expect(createSystemNewsPost).not.toHaveBeenCalled();
+      expect(restructureForInterestSpiral).not.toHaveBeenCalled();
     });
 
     it("leaves a player-run country's budget exactly as its laws price it", async () => {

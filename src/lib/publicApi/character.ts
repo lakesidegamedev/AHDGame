@@ -162,9 +162,9 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
     if (corp.ceoId) ceoCorpMap.set(corp.ceoId.toString(), corp.name);
   }
 
-  const investorSnapshot = (await db
+  const investorSnapshot = await db
     .collection<{ _id: string }>("investorRankingSnapshots")
-    .findOne({ _id: "global" })) as unknown as InvestorRankingSnapshot | null;
+    .findOne<InvestorRankingSnapshot>({ _id: "global" });
 
   const portfolioValues = new Map<string, number>();
   const investorRankMap = new Map<string, number>();

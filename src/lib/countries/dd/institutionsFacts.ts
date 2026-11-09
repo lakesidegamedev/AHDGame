@@ -152,7 +152,6 @@ export const DD_CONFIG: CountryConfig = {
     viceChair: "Second Secretary",
     committee: "Politburo",
   },
-  demographicProfileId: "dd_archetypes",
   hasLeaderConfidenceModel: true,
   priorityProfile: {
     countryId: "CN",

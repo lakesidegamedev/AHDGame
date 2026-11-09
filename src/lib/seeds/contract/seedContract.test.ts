@@ -174,16 +174,6 @@ describe("generated data files", () => {
     extra["2019-default"].US = extra["2019-default"].JP;
     expect(dataFileGaps(boards, extra).length).toBeGreaterThan(0);
   });
-
-  it("rejects composition weights that do not sum to 1", () => {
-    const weights = file("data:composition-weights");
-    const bad = copy(weights.load()) as Record<string, Record<string, { w: number }[]>>;
-    const archetype = Object.keys(bad.UK)[0];
-    bad.UK[archetype][0].w += 0.1;
-    expect(dataFileGaps(weights, bad)).toEqual([
-      { dataset: "data:composition-weights", detail: `UK.${archetype}: weights must sum to 1` },
-    ]);
-  });
 });
 
 describe("reset preflight", () => {

@@ -111,6 +111,11 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   // Growth signal measured as value added. A running world keeps gross output
   // so a basis switch cannot show up as a recession.
   outputBasis: "value_added",
+  // Operational switches for systems that change a running world. A running
+  // world has them absent (off) until an operator turns them on.
+  priceLevelEnabled: true,
+  fiscalStabilizerEnabled: true,
+  crisisV2EmergentEnabled: true,
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;

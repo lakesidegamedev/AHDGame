@@ -112,7 +112,6 @@ export const UKR_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "ua_archetypes",
   centralBank: {
     name: "State Bank (Gosbank)",
     abbreviation: "Gosbank",

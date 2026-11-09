@@ -8,7 +8,7 @@
  *
  * Forces: ideology (NPP ideology aligned to the policy option vector), whip
  * (party + caucus whip, gated by loyalty/stubbornness), district (policy
- * option archetype approvals weighted by home state), donors (donor base
+ * option bucket approvals weighted by home state), donors (donor base
  * multiplied by the same policy alignment as ideology).
  */
 import { complianceFromPersonality } from "./complianceRules";

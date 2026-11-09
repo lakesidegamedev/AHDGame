@@ -83,7 +83,7 @@ async function main() {
   console.log(`   ✓ Upserted ${ukParties.length} UK parties.`);
 
   // ── 3. UK Demographic Categories ──────────────────────────────────────────
-  console.log("3. Seeding UK demographic categories (voter archetypes)...");
+  console.log("3. Seeding UK demographic categories (voter groups)...");
   for (const category of ukDemographicCategories) {
     await db
       .collection<DemographicCategory>("demographicCategories")
@@ -91,7 +91,7 @@ async function main() {
   }
   const groupCount = ukDemographicCategories.reduce((s, c) => s + c.groups.length, 0);
   console.log(
-    `   ✓ Upserted ${ukDemographicCategories.length} category (${groupCount} UK voter archetypes).`
+    `   ✓ Upserted ${ukDemographicCategories.length} category (${groupCount} UK voter groups).`
   );
 
   // ── 4. UK Region Demographics ──────────────────────────────────────────────
@@ -165,7 +165,7 @@ async function main() {
   console.log("\n=== UK Seed Complete ===");
   console.log(
     `Regions: ${ukRegions.length}, Parties: ${ukParties.length}, ` +
-      `Archetypes: ${groupCount}, Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
+      `Groups: ${groupCount}, Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
   );
 }
 

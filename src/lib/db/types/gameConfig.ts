@@ -361,6 +361,25 @@ export interface GameConfig {
    */
   outputBasis?: "gross" | "value_added";
   /**
+   * Operational switch for the price level. True compounds each country's
+   * `priceIndex` by its inflation and keeps `state.gdp` and the budget GDP
+   * basis nominal. Fresh worlds seed true; absent or false holds the index at 1
+   * and leaves the budget GDP basis on its fiscal-close snapshot.
+   */
+  priceLevelEnabled?: boolean;
+  /**
+   * Operational switch for the NPP fiscal stabilizer and the interest-spiral
+   * sovereign restructuring. True runs both at fiscal-year close. Fresh worlds
+   * seed true; absent or false skips both.
+   */
+  fiscalStabilizerEnabled?: boolean;
+  /**
+   * Operational switch for emergent crisis detection (crisis v2). True lets the
+   * detectors open new crises. Crises already open keep stepping and resolving
+   * either way. Fresh worlds seed true; absent or false opens none.
+   */
+  crisisV2EmergentEnabled?: boolean;
+  /**
    * Funded producer market: >= 1 judges whether a cash-short company's run
    * pays for itself (the sales advance) with its inputs at last turn's
    * clearing price, never above the bid ceiling, instead of at the ceiling.

@@ -11,7 +11,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  * defaultSocialLean:   -5 (progressive/liberal) to +5 (conservative/traditional)
  * defaultTurnout:      baseline participation rate (Japan avg ~53% in 2021 lower house)
  *
- * demographicProfileId: "jp_archetypes"
  */
 export const jpDemographicCategories: DemographicCategory[] = [
   {

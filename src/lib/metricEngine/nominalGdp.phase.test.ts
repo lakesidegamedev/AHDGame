@@ -14,6 +14,8 @@ interface WorldOptions {
   inflationRate: number;
   budgetGdp?: number;
   budgetGdpSmoothed?: number;
+  /** gameConfig.priceLevelEnabled; the suite default is on, undefined here means absent. */
+  priceLevelEnabled?: boolean | "absent";
 }
 
 /** One US region with a budget; returns the captured state and budget writes. */
@@ -27,6 +29,14 @@ function seedWorld(db: MockDb, opts: WorldOptions): { states: Op[]; budgets: Op[
   };
   db.collection("gameState");
   db.collectionMocks.gameState!.findOne = vi.fn().mockResolvedValue(null);
+  db.collection("gameConfig");
+  db.collectionMocks.gameConfig!.findOne = vi
+    .fn()
+    .mockResolvedValue(
+      opts.priceLevelEnabled === "absent"
+        ? {}
+        : { priceLevelEnabled: opts.priceLevelEnabled ?? true }
+    );
   setupCollection("states", [
     {
       _id: "s_us",
@@ -151,4 +161,34 @@ it("keeps real capital invariant when nominal investment scales with the price l
     setOf(base.states, "s_us").capitalStock,
     6
   );
+});
+
+describe("price level switch", () => {
+  it.each([
+    ["off", false],
+    ["absent", "absent" as const],
+  ])(
+    "holds the index at 1 and leaves the budget GDP basis alone when the switch is %s",
+    async (_l, flag) => {
+      const written = await run({
+        gdp: 5_000_000,
+        priceIndex: 2,
+        inflationRate: 6,
+        budgetGdp: 4_000_000_000_000,
+        budgetGdpSmoothed: 4_000_000_000_000,
+        priceLevelEnabled: flag,
+      });
+      const flat = await run({ gdp: 5_000_000, inflationRate: 0, priceLevelEnabled: flag });
+      expect(written.budgets).toHaveLength(0);
+      expect(setOf(written.states, "s_us").gdp).toBeCloseTo(setOf(flat.states, "s_us").gdp!, -6);
+    }
+  );
+
+  it("compounds the index and refreshes the budget basis when the switch is on", async () => {
+    const written = await run({ gdp: 5_000_000, inflationRate: 6, priceLevelEnabled: true });
+    expect(setOf(written.budgets, "federal").priceIndex).toBeCloseTo(
+      1.06 ** (1 / TURNS_PER_YEAR),
+      12
+    );
+  });
 });

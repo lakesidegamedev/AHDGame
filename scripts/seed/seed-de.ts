@@ -93,7 +93,7 @@ async function main() {
   console.log(`   ✓ Upserted ${deParties.length} DE parties.`);
 
   // ── 3. DE Demographic Categories ──────────────────────────────────────────
-  console.log("3. Seeding DE demographic categories (12 voter archetypes)...");
+  console.log("3. Seeding DE demographic categories (voter groups)...");
   for (const category of deDemographicCategories) {
     await db
       .collection<DemographicCategory>("demographicCategories")
@@ -101,7 +101,7 @@ async function main() {
   }
   const groupCount = deDemographicCategories.reduce((s, c) => s + c.groups.length, 0);
   console.log(
-    `   ✓ Upserted ${deDemographicCategories.length} category (${groupCount} DE voter archetypes).`
+    `   ✓ Upserted ${deDemographicCategories.length} category (${groupCount} DE voter groups).`
   );
 
   // ── 4. DE Region Demographics ─────────────────────────────────────────────
@@ -210,7 +210,7 @@ async function main() {
   console.log("\n=== DE Seed Complete ===");
   console.log(
     `Bundesländer: ${deRegions.length}, Parties: ${deParties.length}, ` +
-      `Archetypes: ${groupCount}, Party Orgs: ${deStatePartyOrgs.length}, ` +
+      `Groups: ${groupCount}, Party Orgs: ${deStatePartyOrgs.length}, ` +
       `Metrics: ${deStateMetrics.length}, Baselines: ${deStateBaselines.length}, ` +
       `Legislation Types: ${deLegislationTypes.length}`
   );

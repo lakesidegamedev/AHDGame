@@ -75,18 +75,18 @@ interface WarContext {
 async function buildWarContext(db: Db): Promise<WarContext> {
   // Projection passed as a find option rather than via the cursor's .project(), which is
   // this codebase's house style and does not require a cursor implementation of it.
-  const conflicts = (await getConflictsCollection(db)
-    .find(
+  const conflicts = await getConflictsCollection(db)
+    .find<{
+      _id?: unknown;
+      sideA?: { countries?: string[] };
+      sideB?: { countries?: string[] };
+      region?: RegionCode;
+      extendedRegions?: RegionCode[];
+    }>(
       { status: { $in: [...FIGHTING_CONFLICT_STATUSES] } },
       { projection: { "sideA.countries": 1, "sideB.countries": 1, region: 1, extendedRegions: 1 } }
     )
-    .toArray()) as unknown as Array<{
-    _id?: unknown;
-    sideA?: { countries?: string[] };
-    sideB?: { countries?: string[] };
-    region?: RegionCode;
-    extendedRegions?: RegionCode[];
-  }>;
+    .toArray();
 
   const hostility = new Map<string, Set<string>>();
   const link = (a: string, b: string) => {
@@ -179,9 +179,9 @@ export function stationOf(
  * contest last turn's positions.
  */
 export async function processNavairTurn(db: Db, turn: number): Promise<NavairTurnResult> {
-  const units = (await getMilitaryUnitsCollection(db)
-    .find({ domain: { $in: ["naval", "air"] } })
-    .toArray()) as unknown as NavairUnit[];
+  const units = await getMilitaryUnitsCollection(db)
+    .find<NavairUnit>({ domain: { $in: ["naval", "air"] } })
+    .toArray();
 
   if (!units.length) {
     return {
