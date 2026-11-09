@@ -15,6 +15,15 @@ export function continuingContributionRiskLoss(callMinor: number, arrearsMinor: 
   return callMinor > 0 ? Math.min(0.02, (arrearsMinor / callMinor) * 0.02) : 0;
 }
 
+/** Unpaid part of this turn's new share; payments clear carried arrears first. */
+export function newContinuingArrearsMinor(
+  callMinor: number,
+  priorMinor: number,
+  paidMinor: number
+): number {
+  return callMinor - priorMinor - Math.max(0, paidMinor - priorMinor);
+}
+
 export function planContinuingDebtService(input: {
   finances: SuccessionFinancialPlan;
   dueMinor: number;

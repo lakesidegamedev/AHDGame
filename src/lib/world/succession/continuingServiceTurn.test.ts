@@ -189,4 +189,55 @@ describe("continuing federation service transaction", () => {
     await expect(run(db)).rejects.toThrow("unchanged");
     expect(await db.collection("federationContinuingServiceTurns").countDocuments()).toBe(0);
   });
+  it("does not re-add carried arrears to cumulative arrears each turn", async () => {
+    const { db, oldId } = scenario();
+    await db.collection("bonds").updateOne({ _id: oldId }, { $set: { matured: true } });
+    await db
+      .collection("macroCountries")
+      .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    await db
+      .collection("federationFiscalAccounts")
+      .updateOne(
+        { _id: `${applicationId}:UA` as never },
+        { $set: { cumulativeArrearsMinor: 9_000_000_000_000_000 } }
+      );
+    await db.collection("federationContinuingServiceTurns").insertOne({
+      applicationId,
+      turn: 90,
+      successorArrearsMinor: { BY: 0, UA: 24_434_355_626_221 },
+    } as never);
+    const result = await run(db);
+    expect(result).toMatchObject({
+      creditorDueMinor: 0,
+      successorArrearsMinor: { BY: 0, UA: 24_434_355_626_221 },
+    });
+    expect(
+      await db
+        .collection("federationFiscalAccounts")
+        .findOne({ _id: `${applicationId}:UA` as never })
+    ).toMatchObject({ cumulativeArrearsMinor: 9_000_000_000_000_000 });
+  });
+  it("adds exactly the newly unpaid share to cumulative arrears", async () => {
+    const { db } = scenario();
+    await db
+      .collection("macroCountries")
+      .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    await db
+      .collection("federationFiscalAccounts")
+      .updateOne(
+        { _id: `${applicationId}:UA` as never },
+        { $set: { cumulativeArrearsMinor: 500 } }
+      );
+    await db.collection("federationContinuingServiceTurns").insertOne({
+      applicationId,
+      turn: 90,
+      successorArrearsMinor: { BY: 0, UA: 1000 },
+    } as never);
+    await run(db);
+    expect(
+      await db
+        .collection("federationFiscalAccounts")
+        .findOne({ _id: `${applicationId}:UA` as never })
+    ).toMatchObject({ cumulativeArrearsMinor: 537 });
+  });
 });

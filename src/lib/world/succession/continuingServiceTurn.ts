@@ -32,6 +32,7 @@ import { planLegacyBondDue } from "./rules/legacyService";
 import { planLegacyMacroBudget } from "./rules/legacyMacroBudget";
 import {
   continuingContributionRiskLoss,
+  newContinuingArrearsMinor,
   planContinuingDebtService,
 } from "./rules/continuingService";
 
@@ -269,7 +270,11 @@ export async function materializeContinuingFederationServiceTurn(input: {
           ),
           cumulativeArrearsMinor: safeMinor(
             (account.cumulativeArrearsMinor ?? 0) +
-              (plan.successorArrearsMinor[account.entityId] ?? 0)
+              newContinuingArrearsMinor(
+                plan.successorCallsMinor[account.entityId] ?? 0,
+                previous?.successorArrearsMinor?.[account.entityId] ?? 0,
+                plan.successorContributionsMinor[account.entityId] ?? 0
+              )
           ),
         },
       },

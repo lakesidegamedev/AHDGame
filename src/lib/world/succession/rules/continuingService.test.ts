@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { planSuccessionFinances } from "./financialSettlement";
-import { continuingContributionRiskLoss, planContinuingDebtService } from "./continuingService";
+import {
+  continuingContributionRiskLoss,
+  newContinuingArrearsMinor,
+  planContinuingDebtService,
+} from "./continuingService";
 const finances = planSuccessionFinances({
   settlementId: "su-1991",
   sourceEntityId: "RU",
@@ -76,5 +80,12 @@ describe("continuing issuer debt contributions", () => {
         priorArrearsMinor: { UA: Number.MAX_SAFE_INTEGER, BY: 0 },
       })
     ).toThrow();
+  });
+  it("adds only the unpaid part of this turn's new call to cumulative arrears", () => {
+    expect(newContinuingArrearsMinor(1035, 1000, 0)).toBe(35);
+    expect(newContinuingArrearsMinor(1035, 1000, 20)).toBe(35);
+    expect(newContinuingArrearsMinor(1035, 1000, 1010)).toBe(25);
+    expect(newContinuingArrearsMinor(1035, 1000, 1035)).toBe(0);
+    expect(newContinuingArrearsMinor(1000, 1000, 0)).toBe(0);
   });
 });
