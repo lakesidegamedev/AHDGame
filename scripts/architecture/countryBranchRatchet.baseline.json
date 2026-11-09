@@ -234,7 +234,6 @@
     "src/lib/referendum/processReferendumLifecycle.ts": 1,
     "src/lib/referendum/requestReferendum.ts": 1,
     "src/lib/referendum/secede/rules/standupElections.ts": 1,
-    "src/lib/referendum/secede/secededDemographicPatterns.ts": 2,
     "src/lib/referendum/secede/secedeRegion.ts": 2,
     "src/lib/referendum/transfer/carryNorthernIrelandMPs.ts": 2,
     "src/lib/referendum/transfer/reseedJoinedRegionElections.ts": 2,

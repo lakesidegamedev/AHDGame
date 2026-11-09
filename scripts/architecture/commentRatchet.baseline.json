@@ -10773,10 +10773,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/referendum/secede/apportionDemographics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/referendum/secede/expandToSubRegions.ts": {
       "longBlocks": 1,
       "narrativeLines": 0

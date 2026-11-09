@@ -17,8 +17,6 @@ import type { FanoutScope } from "./fanoutPolicy";
 import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
 import { gdpWeights, partitionByGdp, populationWeights, splitCountVector } from "./apportion";
 import { getPath, setPath, scaleDeep } from "./docScale";
-import { apportionDemographicShares, type DemographicGroups } from "./apportionDemographics";
-import { getSecededDemographicPattern } from "./secededDemographicPatterns";
 
 export interface FanoutContext {
   countryId: SecedingCountryId;
@@ -88,31 +86,6 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
       return clonePerSubRegion(db, scope, ctx, (clone) => {
         if (scope.collection === "politicalMetrics") delete clone.residuals;
       });
-
-    case "apportionShares": {
-      // Voter-archetype split: replace each sub-region's `groups` with a
-      // per-region tilt off the live aggregate (preset pattern). Falls back to a
-      // verbatim copy when no pattern is registered for this nation/preset.
-      const pattern = getSecededDemographicPattern(ctx.countryId, ctx.preset);
-      const agg = await readAggregate(db, scope.collection, ctx.countryId);
-      if (!pattern || !agg || agg.groups == null) {
-        return clonePerSubRegion(db, scope, ctx, () => {});
-      }
-      const apportioned = apportionDemographicShares(
-        agg.groups as DemographicGroups,
-        pattern,
-        ctx.popWeights
-      );
-      return clonePerSubRegion(db, scope, ctx, (clone, subId) => {
-        if (apportioned[subId]) {
-          clone.groups = apportioned[subId];
-          // The differentiated groups no longer match the aggregate's cached
-          // doc-level leans — drop them so any reader recomputes from groups.
-          delete clone.cachedEconomicLean;
-          delete clone.cachedSocialLean;
-        }
-      });
-    }
 
     case "scaleCounts": {
       const agg = await readAggregate(db, scope.collection, ctx.countryId);
