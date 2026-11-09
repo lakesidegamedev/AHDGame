@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateShiftImpacts } from "./archetypeAffinities";
+import { calculateShiftImpacts } from "./policyShiftImpacts";
 
 /**
  * CN bills must come back in CHINA'S bucket vocabulary

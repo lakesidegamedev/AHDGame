@@ -13,7 +13,7 @@ import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
  *
  * Called when a bill is enacted (signed into law or veto overridden).
  * Updates the active policy for the state/federal level, records initial policy reactions,
- * and applies archetype approval impacts to legislators who voted for the bill.
+ * and applies bucket approval impacts to legislators who voted for the bill.
  *
  * ## Currency convention (v0.2.6)
  *
@@ -77,7 +77,7 @@ import { recordEnactedLaw } from "@/lib/budget/enactedLaws";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { generateDiscordEventCard } from "@/lib/discord/eventCard";
 import { billChamberVoteSplits } from "@/lib/charts/voteSplitChart";
-import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
+import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
 import { taxSliderRateLabel } from "@/lib/politicalLegislation/taxSlider";
 import {
@@ -706,7 +706,7 @@ export async function onBillEnacted(
   }
 
   const resolvedCountry = await getResolvedCountry();
-  // UK-only archetype routing hook (unchanged behavior for non-UK)
+  // UK-only bucket routing hook (unchanged behavior for non-UK)
   const billCountryId = resolvedCountry ?? undefined;
 
   const nationalScopeCountry = inferCountryIdFromStateId(stateId);
@@ -889,7 +889,7 @@ export async function onBillEnacted(
 
 /**
  * Process a single provision and create/update the StatePolicy record.
- * Also applies archetype approval impacts to legislators who voted FOR the bill.
+ * Also applies bucket approval impacts to legislators who voted FOR the bill.
  */
 async function processProvisionEnactment(
   db: Db,
@@ -961,7 +961,7 @@ async function processProvisionEnactment(
   // hardcoded 3, which is out of bounds for any type with <4 options). An
   // out-of-bounds index makes optionScores[oldIndex] undefined, which drops
   // calculateShiftImpacts onto the legacy bare-index path that inverts every
-  // archetype-approval sign for right→left-ordered option sets. Clamping keeps
+  // bucket-approval sign for right→left-ordered option sets. Clamping keeps
   // it on the curated-score path so signs stay correct.
   const optionCount = lt?.policyOptions?.length ?? 0;
   const centerIndex = optionCount ? Math.floor(optionCount / 2) : 3;
@@ -1091,7 +1091,7 @@ async function processProvisionEnactment(
     }
   }
 
-  // Calculate and apply archetype approval impacts based on policy shift
+  // Calculate and apply bucket approval impacts based on policy shift
   if (!corporateRateHandled && lt?.policyDomain && forVoters.length > 0) {
     const impacts = calculateShiftImpacts(
       lt.policyDomain,
@@ -1105,16 +1105,16 @@ async function processProvisionEnactment(
     );
 
     if (Object.keys(impacts).length > 0) {
-      await applyArchetypeImpactsToVoters(db, forVoters, impacts);
+      await applyBucketImpactsToVoters(db, forVoters, impacts);
     }
   }
 }
 
 /**
- * Apply archetype approval impacts to a list of character IDs.
+ * Apply bucket approval impacts to a list of character IDs.
  * Handles both player characters and NPPs.
  */
-async function applyArchetypeImpactsToVoters(
+async function applyBucketImpactsToVoters(
   db: Db,
   voterIds: string[],
   impacts: Record<string, number>
@@ -1123,8 +1123,8 @@ async function applyArchetypeImpactsToVoters(
 
   // Build the $inc updates
   const incUpdates: Record<string, number> = {};
-  for (const [archetypeId, impact] of Object.entries(impacts)) {
-    incUpdates[`bucketApprovals.${archetypeId}`] = impact;
+  for (const [bucketId, impact] of Object.entries(impacts)) {
+    incUpdates[`bucketApprovals.${bucketId}`] = impact;
   }
 
   // Convert string IDs to ObjectIds, filtering invalid ones

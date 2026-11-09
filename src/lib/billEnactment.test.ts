@@ -30,7 +30,7 @@ vi.mock("@/lib/discord/eventCard", () => ({
   generateDiscordEventCard: vi.fn().mockResolvedValue("https://cdn.test/event.png"),
 }));
 
-vi.mock("@/lib/archetypeAffinities", () => ({
+vi.mock("@/lib/policyShiftImpacts", () => ({
   calculateShiftImpacts: vi.fn().mockReturnValue({}),
 }));
 
@@ -56,7 +56,7 @@ vi.mock("@/lib/budget/costs", () => ({
 
 import { getDb } from "@/lib/mongodb";
 import { recordEnactedLaw } from "@/lib/budget/enactedLaws";
-import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
+import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
 import { sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { generateDiscordEventCard } from "@/lib/discord/eventCard";
 

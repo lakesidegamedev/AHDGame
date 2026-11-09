@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DOMAIN_BUCKET_AFFINITIES } from "./bucketAffinities";
-import { calculateShiftImpacts } from "./archetypeAffinities";
+import { calculateShiftImpacts } from "./policyShiftImpacts";
 
 describe("bucket affinity tables", () => {
   it("are keyed only by dim:bucket with finite values", () => {

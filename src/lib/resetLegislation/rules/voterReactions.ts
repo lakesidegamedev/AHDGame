@@ -1,7 +1,7 @@
 /** Game-calibrated v2 political positions, shared by previews, voting and enactment. */
 import { bucketAffinitiesFor } from "@/lib/bucketAffinities";
 import type { LawChoice } from "./eligibility";
-import type { PolicyDomain } from "@/lib/archetypeAffinities";
+import type { PolicyDomain } from "@/lib/policyShiftImpacts";
 import { familyApprovalAffinities } from "./voterApprovalProfiles";
 
 type Axis = "economic" | "social";

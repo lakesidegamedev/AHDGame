@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
+import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 
 /**
