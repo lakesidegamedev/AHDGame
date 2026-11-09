@@ -1765,9 +1765,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // Drives the Prospect modal's success-odds / yield preview (corp-side
         // prospecting math is a pure function of rdScore).
         rdScore: corporation.rdScore ?? 0,
-        // The launch command refuses companies whose own type is not
-        // extraction, so the sector page only offers Prospect when this is true.
-        canProspect: corpCanProspect(corporation),
+        // The launch command accepts extraction-typed companies and any company
+        // with an extraction sector in the state; this panel only renders on an
+        // extraction sector, so viewing one is enough to offer Prospect.
+        canProspect: corpCanProspect(corporation) || sector.sectorType === "extraction",
         ...(governorConfig?.mediaEditorialEnabled === true && sector.sectorType === "media"
           ? { mediaEditorialEnabled: true, editorialStance }
           : {}),
