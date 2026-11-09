@@ -116,7 +116,6 @@ export const BAL_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "bal_archetypes",
   centralBank: {
     name: "State Bank (Gosbank)",
     abbreviation: "Gosbank",

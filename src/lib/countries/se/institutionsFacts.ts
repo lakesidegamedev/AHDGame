@@ -111,7 +111,6 @@ export const SE_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "se_archetypes",
   centralBank: {
     name: "Sveriges Riksbank",
     abbreviation: "Riksbank",

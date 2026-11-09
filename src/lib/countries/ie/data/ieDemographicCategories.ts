@@ -10,7 +10,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * Scales: defaultEconomicLean and defaultSocialLean run -5 to +5;
  * defaultTurnout is baseline participation (Dáil elections avg ~62%).
- * demographicProfileId: "ie_archetypes"
  */
 export const ieDemographicCategories: DemographicCategory[] = [
   {

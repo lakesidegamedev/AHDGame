@@ -9,7 +9,7 @@ import type {
   OfficeType,
 } from "@/lib/db/types";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
-import type { ArchetypeRegionCensus } from "@/lib/seeds/regionCensusData";
+import type { IntlRegionCensus } from "@/lib/seeds/regionCensusData";
 import type { CountryId } from "@/lib/constants/countries";
 
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
@@ -113,7 +113,7 @@ export interface SerializedGovernor {
   nppSequentialId?: number | null;
 }
 
-export type { Layer1Config, ArchetypeRegionCensus };
+export type { Layer1Config, IntlRegionCensus };
 
 export interface TurnoutResponse {
   stateId: string;
@@ -134,7 +134,7 @@ export interface StatePageTabsProps {
   npps: NPPDisplaySimple[];
   demographics: SerializedStateDemographics | null;
   categories: DemographicCategory[];
-  censusData: Layer1Config | ArchetypeRegionCensus | null;
+  censusData: Layer1Config | IntlRegionCensus | null;
   calculatedLeans: { economicLean: number; socialLean: number } | null;
   partyOrg: PartyOrgDisplay[];
   turnoutData?: TurnoutResponse | null;

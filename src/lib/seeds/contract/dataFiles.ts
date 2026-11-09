@@ -5,8 +5,6 @@
  */
 
 import type { z } from "zod";
-import { compositionWeightsSchema } from "@/lib/demographics/compositionWeightsSchema";
-import { COMPOSITION_WEIGHTS } from "@/lib/demographics/compositionWeights";
 import { nonPlayableBoardsSchema } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
 import type { SeedContractGap } from "./seedContractError";
@@ -24,11 +22,6 @@ export const SEED_DATA_FILES: readonly SeedDataFile[] = [
     id: "data:non-playable-boards",
     schema: nonPlayableBoardsSchema,
     load: getNonPlayableBoards,
-  },
-  {
-    id: "data:composition-weights",
-    schema: compositionWeightsSchema,
-    load: () => COMPOSITION_WEIGHTS,
   },
 ];
 

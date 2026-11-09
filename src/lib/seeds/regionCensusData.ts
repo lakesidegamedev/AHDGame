@@ -4,8 +4,8 @@ import type { ResetPresetId } from "@/lib/seeds/presetSelector";
 import { selectPresetBundleOptional } from "@/lib/seeds/presetSelector";
 // 1979-era census bundles (authored for the 1979 reset).
 
-/** Archetype-style Layer-1 census (UK/JP/DE/IE/CN/BR). */
-export interface ArchetypeRegionCensus {
+/** Layer-1 census for countries with their own dimensions (UK/JP/DE/IE/CN/BR). */
+export interface IntlRegionCensus {
   ethnicity: Record<string, number>;
   age: Record<string, number>;
   education: Record<string, number>;
@@ -13,7 +13,7 @@ export interface ArchetypeRegionCensus {
   urbanization: Record<string, number>;
 }
 
-export type RegionCensus = Layer1Config | ArchetypeRegionCensus;
+export type RegionCensus = Layer1Config | IntlRegionCensus;
 
 type PresetBundles = Partial<Record<ResetPresetId, Record<string, RegionCensus>>>;
 

@@ -105,7 +105,6 @@ export const FI_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "fi_archetypes",
   centralBank: {
     name: "Bank of Finland",
     abbreviation: "BoF",

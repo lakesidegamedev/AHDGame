@@ -130,7 +130,6 @@ export const FR_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "fr_archetypes",
   centralBank: {
     name: "Banque de France",
     abbreviation: "BdF",

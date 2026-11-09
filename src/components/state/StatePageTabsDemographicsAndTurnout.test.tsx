@@ -77,7 +77,7 @@ describe("DemographicsAndTurnoutTab electorate dossier", () => {
               _id: "voterGroups",
               name: "Voter Groups",
               groups: [
-                { id: "g1", name: "Test Archetype", defaultEconomicLean: 1, defaultSocialLean: -1 },
+                { id: "g1", name: "Test Group", defaultEconomicLean: 1, defaultSocialLean: -1 },
               ],
             },
           ] as unknown as DemographicCategory[]
@@ -133,7 +133,7 @@ describe("DemographicsAndTurnoutTab electorate dossier", () => {
     // Bucket labels, not archetype names — the roster row and the dossier heading.
     expect(screen.getAllByText("White voters").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Black voters").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Test Archetype")).toBeNull();
+    expect(screen.queryByText("Test Group")).toBeNull();
     // Real projection band + preferred-party tile render in the default Simple view.
     expect(screen.getByText("State projection")).toBeTruthy();
     expect(screen.getByText("Leaning toward")).toBeTruthy();
@@ -171,7 +171,7 @@ describe("DemographicsAndTurnoutTab electorate dossier", () => {
               _id: "voterGroups",
               name: "Voter Groups",
               groups: [
-                { id: "g1", name: "Test Archetype", defaultEconomicLean: 1, defaultSocialLean: -1 },
+                { id: "g1", name: "Test Group", defaultEconomicLean: 1, defaultSocialLean: -1 },
               ],
             },
           ] as unknown as DemographicCategory[]
@@ -185,7 +185,7 @@ describe("DemographicsAndTurnoutTab electorate dossier", () => {
     await waitFor(() =>
       expect(screen.getByText(/No electorate breakdown for this region yet/)).toBeTruthy()
     );
-    expect(screen.queryByText("Test Archetype")).toBeNull();
-    expect(screen.queryByText("Polling Archetypes")).toBeNull();
+    expect(screen.queryByText("Test Group")).toBeNull();
+    expect(screen.queryByText("Polling Groups")).toBeNull();
   });
 });

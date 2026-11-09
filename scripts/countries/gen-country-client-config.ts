@@ -69,7 +69,6 @@ const CLIENT_FIELDS: { readonly [key: string]: Projection } = {
   exchangeName: true,
   exchangeKind: true,
   financeMinisterCabinetId: true,
-  demographicProfileId: true,
   regionalBillAssentTitle: true,
   rulingPartyId: true,
   opsVoteMultipliers: true,
@@ -445,7 +444,6 @@ export interface CountryClientConfig {
   /** "market" = tradable bourse; "stateRegister" = command-economy enterprise register. */
   exchangeKind?: "market" | "stateRegister";
   financeMinisterCabinetId?: string;
-  demographicProfileId: string;
   regionalBillAssentTitle?: string;
   rulingPartyId?: number;
   opsVoteMultipliers?: OpsVoteMultipliers;

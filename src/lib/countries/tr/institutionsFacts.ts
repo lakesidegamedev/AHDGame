@@ -130,7 +130,6 @@ export const TR_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "tr_archetypes",
   centralBank: {
     name: "Central Bank of the Republic of Turkey",
     abbreviation: "TCMB",

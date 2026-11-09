@@ -2,9 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   getDemographicCategoriesForCountry,
   resolveCanvassGroup,
-  getVoterArchetypeCategoriesForCountry,
-  getAllVoterArchetypeIds,
-  getAllVoterArchetypeOptions,
   getAllDemographicCategoryKeys,
 } from "./countryDemographics";
 
@@ -69,48 +66,6 @@ describe("countryDemographics SSOT", () => {
       categoryKey: "race",
     });
     expect(resolveCanvassGroup("US", "race", "komeito_faithful")).toBeNull();
-  });
-});
-
-describe("countryDemographics — voter-archetype layer", () => {
-  it("returns the US 12-archetype voterGroups for US (not Layer-1 demographics)", () => {
-    const cats = getVoterArchetypeCategoriesForCountry("US");
-    expect(cats).toHaveLength(1);
-    expect(cats[0].key).toBe("voterGroups");
-    const ids = cats[0].groups.map((g) => g.id);
-    expect(ids).toContain("young_renters");
-    expect(ids).toContain("soccer_moms");
-    // Must NOT be the Layer-1 canvassing shape:
-    expect(ids).not.toContain("white");
-  });
-
-  it("returns the seed voter groups for non-US countries (same as canvassing)", () => {
-    const cats = getVoterArchetypeCategoriesForCountry("JP");
-    expect(cats).toHaveLength(1);
-    expect(cats[0].key).toBe("jp_voterGroups");
-    expect(cats[0].groups.map((g) => g.id)).toContain("komeito_faithful");
-  });
-
-  it("falls back to US archetypes for unknown / non-seeded countries", () => {
-    const cats = getVoterArchetypeCategoriesForCountry("NG");
-    expect(cats[0].key).toBe("voterGroups");
-    expect(cats[0].groups.map((g) => g.id)).toContain("young_renters");
-  });
-
-  it("getAllVoterArchetypeIds is the union across every country", () => {
-    const ids = getAllVoterArchetypeIds();
-    expect(ids.has("young_renters")).toBe(true); // US
-    expect(ids.has("new_britons")).toBe(true); // UK
-    expect(ids.has("komeito_faithful")).toBe(true); // JP
-    expect(ids.has("white")).toBe(false); // Layer-1, not an archetype
-  });
-
-  it("getAllVoterArchetypeOptions returns deduped {id,name} entries", () => {
-    const opts = getAllVoterArchetypeOptions();
-    const ids = opts.map((o) => o.id);
-    expect(new Set(ids).size).toBe(ids.length); // no duplicates
-    const young = opts.find((o) => o.id === "young_renters");
-    expect(young?.name).toBe("Young Renters");
   });
 });
 

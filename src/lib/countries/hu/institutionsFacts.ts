@@ -115,7 +115,6 @@ export const HU_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "hu_archetypes",
   centralBank: {
     name: "Hungarian National Bank",
     abbreviation: "MNB",

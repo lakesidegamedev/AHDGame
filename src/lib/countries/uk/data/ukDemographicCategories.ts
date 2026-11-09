@@ -9,7 +9,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  * right / conservative); defaultTurnout is baseline participation (UK 2019 GE
  * ~67%). Engine is identical to US, only group definitions differ.
  *
- * demographicProfileId: "uk_archetypes"
  */
 export const ukDemographicCategories: DemographicCategory[] = [
   {

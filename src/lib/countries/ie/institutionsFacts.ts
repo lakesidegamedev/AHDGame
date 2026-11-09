@@ -160,7 +160,6 @@ export const IE_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "ie_archetypes",
   executiveTermLimit: {
     officeKey: "uachtaran",
     maxTermsPerCharacter: 2,

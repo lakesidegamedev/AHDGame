@@ -413,15 +413,6 @@ export interface CountryConfig {
     committee?: string;
   };
 
-  // ── Demographics ───────────────────────────────────────────────────────────
-  /**
-   * ID of the demographic profile used for voter archetypes in this country.
-   * Corresponds to a set of DemographicCategory documents in the DB.
-   * US: "us_archetypes" (12 voterGroups)
-   * UK: "uk_archetypes" (12 UK-specific voterGroups)
-   */
-  demographicProfileId: string;
-
   /**
    * Optional executive term-limit rule for this country.
    * Applies to the configured executive office holder, not to the player account.
