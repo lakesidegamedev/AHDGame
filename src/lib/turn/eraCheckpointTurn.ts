@@ -10,8 +10,7 @@
  * channels the granular vote path reads, archetype-level writes are
  * invisible to it.
  *
- * Counter-pressure still reads ARCHETYPES; bill shifts are projected onto
- * buckets via `archetypeValuesToBuckets` before netting.
+ * Counter-pressure reads the bill shifts keyed on the same `dim:bucket`.
  *
  * Ordering: MUST run strictly after `processAllStateDemographics` in the same
  * turn, awaited, never in the same `Promise.all`, both write
@@ -24,7 +23,6 @@ import type { DocketCase } from "@/lib/db/types/scotus";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { getActivePoliciesForState, type LegislationTypeMap } from "@/lib/policyEffects";
 import { calculateDemographicShiftsByTarget } from "@/lib/demographicEffects";
-import { archetypeValuesToBuckets } from "@/lib/demographics/archetypeBucketMap";
 import { calendarTurn, type CalendarClock } from "@/lib/utils/gameDate";
 import {
   applyDurableBucketShift,
@@ -200,17 +198,10 @@ export async function processEraCheckpointsTurn(
         const rawDelta = computeCheckpointRawDelta(target, checkpoint);
 
         if (target.dim && target.bucket) {
-          // BUCKET target — direct Layer-1 targeting, no archetype proxy.
-          // Granular-path only (there is no archetype to carry it on the
-          // legacy live doc). Counter-pressure projects EVERY active
-          // legislative archetype shift for this axis onto the SAME bucket
-          // via the shared map, so a player's legislation still nets against
-          // it even though it's authored against archetypes, not buckets.
-          const projectedCounterShifts = archetypeValuesToBuckets(
-            counterShifts[target.axis],
-            countryId
-          );
-          const counterShiftPerTurn = projectedCounterShifts[`${target.dim}:${target.bucket}`] ?? 0;
+          // Bucket target: direct Layer-1 targeting. Legislation shifts keyed
+          // on the same bucket net against the checkpoint pull.
+          const counterShiftPerTurn =
+            counterShifts[target.axis][`${target.dim}:${target.bucket}`] ?? 0;
           const netDelta = applyCounterPressure(rawDelta, counterShiftPerTurn);
 
           const axis = target.axis;

@@ -125,7 +125,7 @@ describe("buildGranularPollPayload", () => {
     expect(shares.undecided).toBeCloseTo(0.16, 5);
   });
 
-  it("projects archetype approvals onto matching cell buckets before the approval curve", () => {
+  it("applies bucket approvals to matching cells before the approval curve", () => {
     const payload = buildGranularPollPayload({
       config: ctConfig(),
       era: "2019",
@@ -133,7 +133,7 @@ describe("buildGranularPollPayload", () => {
         economicPosition: 0,
         socialPosition: 0,
         favorability: 50,
-        bucketApprovals: { retirees: 40 },
+        bucketApprovals: { "age:senior": 28 },
         politicalInfluence: 50,
       },
       opponents: [makeOpponent({ economicPosition: 0, socialPosition: 0 })],

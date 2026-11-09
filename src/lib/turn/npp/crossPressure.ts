@@ -23,7 +23,7 @@ import type {
   StateBill,
   StateDemographics,
 } from "@/lib/db/types";
-import { projectArchetypeValuesToBuckets } from "@/lib/demographics/archetypeBucketMap";
+import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { economicSystemReformDirection } from "@/lib/economy/economicSystemReformRules";
 import { isNewGenerationType } from "@/lib/politicalLegislation/project";
@@ -301,6 +301,35 @@ export function computePartyLineForce(
 }
 
 /**
+ * Share of the state's electorate in each `dim:bucket`, from the region census.
+ * Each dimension sums to 1, so shares are divided by the dimension count to
+ * keep the total mass at 1. Ideology and the authored `positions` table are not cell dimensions and are skipped.
+ */
+function censusBucketShares(
+  state: Pick<StateDemographics, "_id" | "countryId">
+): Record<string, number> | null {
+  const census = getRegionCensusData(state.countryId, state._id, undefined) as Record<
+    string,
+    Record<string, unknown>
+  > | null;
+  if (!census) return null;
+  const dims = Object.entries(census).filter(
+    (entry): entry is [string, Record<string, number>] =>
+      entry[0] !== "ideology" && Object.values(entry[1]).every((v) => typeof v === "number")
+  );
+  if (dims.length === 0) return null;
+  const shares: Record<string, number> = {};
+  for (const [dim, buckets] of dims) {
+    const total = Object.values(buckets).reduce((sum, v) => sum + (v > 0 ? v : 0), 0);
+    if (total <= 0) continue;
+    for (const [bucket, v] of Object.entries(buckets)) {
+      if (v > 0) shares[`${dim}:${bucket}`] = v / total / dims.length;
+    }
+  }
+  return shares;
+}
+
+/**
  * District force: population-weighted approval of the bill's selected policy
  * option across the buckets present in the NPP's home state.
  */
@@ -319,26 +348,12 @@ export function computeDistrictForce(
   const approvals = option.bucketApprovals;
   if (!approvals) return 0;
 
-  const groups = homeStateDemographics.groups;
-  if (!groups) return 0;
-
-  const populations: Record<string, number> = {};
-  let totalPop = 0;
-  for (const [groupId, group] of Object.entries(groups)) {
-    if (group && Number.isFinite(group.population) && group.population > 0) {
-      populations[groupId] = group.population;
-      totalPop += group.population;
-    }
-  }
-  if (totalPop <= 0) return 0;
-
-  // Bucket mass of the state's electorate. Interim weighting source until the
-  // state's census marginals are threaded to the NPP vote callers.
-  const bucketMass = projectArchetypeValuesToBuckets(populations, homeStateDemographics.countryId);
+  const bucketShare = censusBucketShares(homeStateDemographics);
+  if (!bucketShare) return 0;
   let weighted = 0;
   for (const [bucket, approval] of Object.entries(approvals)) {
     if (typeof approval !== "number" || !Number.isFinite(approval)) continue;
-    weighted += ((bucketMass[bucket] ?? 0) / totalPop) * approval;
+    weighted += (bucketShare[bucket] ?? 0) * approval;
   }
   return clamp100(weighted);
 }

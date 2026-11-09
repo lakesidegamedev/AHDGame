@@ -1,9 +1,7 @@
 /**
  * Japan's domain affinities, in the Layer-1 census-bucket vocabulary.
  *
- * These are the output of running Japan's archetype table through
- * `archetypeValuesToBuckets`, the same projection the vote engine applies at
- * read time, so they are behaviour-identical to the archetype tables.
+ * Keys are `dim:bucket` strings the vote engine reads directly.
  *
  * The registry type cannot catch a mistake here: keys are plain strings, so a
  * misspelled domain or bucket is not a type error. It projects onto nothing

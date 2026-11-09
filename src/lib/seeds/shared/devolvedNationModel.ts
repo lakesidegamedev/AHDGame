@@ -127,8 +127,7 @@ function ukEraCensus(era: EraId): Record<string, UKRegionLayer1> {
  *
  * Positions, turnout rates and composition are deliberately shared. Scotland
  * and Wales use the UK's twelve voter groups, so authoring separate tables would
- * be a second copy of the same judgement calls, free to drift — the mistake
- * `archetypeBucketMap.ts` already made once.
+ * be a second copy of the same judgement calls, free to drift.
  */
 export function makeDevolvedNationModel(
   countryId: string,

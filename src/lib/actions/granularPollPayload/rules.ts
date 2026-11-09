@@ -1,21 +1,11 @@
 /**
- * Candidate approval in granular polls. Archetype approval is projected into
- * demographic buckets and modifies appeal through the election engine's
- * favorability calculation; see applyCandidateApprovalWeight.
+ * Candidate approval in granular polls. Bucket approval modifies appeal through
+ * the election engine's favorability calculation; see applyCandidateApprovalWeight.
  */
-import { projectArchetypeValuesToBuckets } from "@/lib/demographics/archetypeBucketMap";
 import { calcEffectiveFavorability } from "@/lib/electionEngine/voteCalculations";
 import { approvalScalar, calcAppeal, MAX_APPEAL } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI } from "@/lib/utils/normalizeNPI";
 import { applyVoteReachFloor } from "@/lib/electionEngine/electionFormulaFactors";
-
-/** Project authoritative archetype approvals into the active country's cell vocabulary. */
-export function projectCandidateApprovalBuckets(
-  bucketApprovals: Record<string, number> | undefined,
-  countryId: string
-): Record<string, number> {
-  return projectArchetypeValuesToBuckets(bucketApprovals ?? {}, countryId);
-}
 
 /** Apply the vote engine's effective-favorability and approval kernels to a cell. */
 function applyCandidateApprovalWeight(
@@ -24,11 +14,11 @@ function applyCandidateApprovalWeight(
   approvalBuckets: Record<string, number>,
   cellBuckets: Record<string, string>
 ): number {
-  const archetypeApproval = Object.entries(cellBuckets).reduce(
+  const bucketApproval = Object.entries(cellBuckets).reduce(
     (sum, [dimension, bucket]) => sum + (approvalBuckets[`${dimension}:${bucket}`] ?? 0),
     0
   );
-  const effectiveFavorability = calcEffectiveFavorability(favorability ?? 50, archetypeApproval);
+  const effectiveFavorability = calcEffectiveFavorability(favorability ?? 50, bucketApproval);
   return appeal * approvalScalar(effectiveFavorability);
 }
 

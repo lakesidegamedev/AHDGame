@@ -894,6 +894,8 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
         magnitude: 1,
         permanent: true,
       },
+      { dim: "race", bucket: "white", target: "economicLean", direction: 1, permanent: true },
+      { dim: "race", bucket: "white", target: "socialLean", direction: 1, permanent: true },
     ],
   };
 
@@ -1227,14 +1229,10 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
         magnitude: 1,
         permanent: true,
       },
+      { dim: "race", bucket: "black", target: "turnout", direction: 1, permanent: true },
     ],
   };
 
-  // union_trades is the 1953-preset archetype carrying the race:black
-  // Layer-1 weight (see `ARCHETYPE_BUCKET_MAP` / `SOUTHERN_REALIGNMENT_CHECKPOINT`'s
-  // doc comment) — the same archetype-proxy convention this project already
-  // uses for Black-voter-targeted checkpoints, reused here for the
-  // legislation channel's worked example.
   function alTurnoutDemographics(): StateDemographics {
     return {
       _id: "AL",
@@ -1398,6 +1396,14 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
       _id: "landmark-voting-rights-act-strong",
       demographicEffects: [
         { groupId: "union_trades", target: "turnout", direction: 1, magnitude: 3, permanent: true },
+        {
+          dim: "race",
+          bucket: "black",
+          target: "turnout",
+          direction: 1,
+          magnitude: 3,
+          permanent: true,
+        },
       ],
     };
     const strongPolicy = {

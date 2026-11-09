@@ -362,9 +362,7 @@ export async function accumulateVoteTurn(
   // SHARES are invariant to this basis (the F-4 guarantee), only magnitude differs.
   const electorate = state.votingEligiblePopulation ?? state.population;
 
-  const campaignContact = demographicsV2Active
-    ? campaignContactByBucket(turnoutDoc, election.countryId ?? "US")
-    : {};
+  const campaignContact = demographicsV2Active ? campaignContactByBucket(turnoutDoc) : {};
   turnoutDoc = turnoutForElection(turnoutDoc, election) ?? null;
   // GOTV/canvassing/suppression from turnoutDoc overlay the static demographic turnouts.
   const { totalPool: resolvedTotalPool, byGroup: liveTurnouts } = resolveTurnout(

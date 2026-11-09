@@ -10,9 +10,8 @@
  * `deriveGranularCells[Generic]`) instead of the 12 mutually-exclusive voter
  * archetypes. This module builds a drop-in SUBSTRATE for the existing engines:
  * a synthetic `DemographicCategory[]` + `StateDemographics` + `liveTurnouts`
- * whose "groups" are coalesced cells, plus archetype-keyed inputs
- * (`bucketApprovals`, `partyGroupFavorability`) remapped onto those cells
- * via the static `ARCHETYPE_BUCKET_MAP`.
+ * whose "groups" are coalesced cells, plus bucket-keyed inputs
+ * (`bucketApprovals`, `partyGroupFavorability`) remapped onto those cells.
  *
  * The vote-distribution engines (`voteDistribution.ts`,
  * `voteDistributionSwingFlow.ts`) are NOT modified: they iterate whatever
@@ -52,10 +51,7 @@
  * modifiers fold in as:
  *  - US dim-keyed modifiers (`modifiers.race.white = -9.6`) — added directly
  *    to the bucket rate before cell derivation (native granularity).
- *  - Archetype-keyed modifiers (`modifiers.voterGroups.retirees = +4`) —
- *    projected onto buckets via `ARCHETYPE_BUCKET_MAP` (pp × weight), then
- *    added to bucket rates.
- *  - Non-US worlds — archetype ids have no bucket mapping, so the state's
+ *  - Non-US worlds — the state's
  *    AGGREGATE live-vs-static turnout ratio (from the legacy resolver) scales
  *    every cell uniformly: total GOTV magnitude is preserved, per-group
  *    targeting granularity is not (documented limitation).
@@ -65,26 +61,16 @@
  *
  * APPROVAL / FAVORABILITY COMPOSITION (documented choice)
  * -------------------------------------------------------
- * archetype value → buckets (× mapping weight, summed across archetypes) →
  * unit value = Σ over "dim:key" of bucketWeight × bucketValue, clamped to
- * [-100, 100]. Since each archetype's mapping weights sum to 1, a cell matching
- * ALL of an archetype's buckets receives the full archetype value; partial
- * matches receive a proportional fraction.
+ * [-100, 100].
  *
  * LEGISLATION-DRIVEN LEAN DRIFT (documented choice)
  * -------------------------------------------------
- * The v2 legislation channel (`demographicEffects` lean targets) mutates the
- * live archetype doc's per-group leans, which the legacy engine reads
- * directly. Cell leans, by contrast, derive from era positions + census. To
- * keep that channel influential under the flag, the per-archetype lean DELTA
- * (live doc − `demographicDefaults` seeded snapshot) is projected onto
- * buckets via ARCHETYPE_BUCKET_MAP and added to unit leans (clamped to
- * [-5, 5]). Turnout drift on the live doc is deliberately NOT folded — for US
- * Layer-1 states the legacy `resolveTurnout` already rebuilds archetype
- * turnout from census baselines and ignores stored drift, so folding it would
- * DIVERGE from legacy, not match it. Population drift is not folded either
- * (cell shares are census-marginal-raked; the channel is capped at ~0.1%/turn
- * — documented limitation).
+ * Cell leans derive from era positions + census. Bucket-targeted legislation
+ * drift lives on the live doc's Layer-1 overlay and is folded onto unit leans
+ * (clamped to [-5, 5]). Population drift is not folded (cell shares are
+ * census-marginal-raked; the channel is capped at ~0.1%/turn — documented
+ * limitation).
  *
  * DURABLE BASE-VALUE SHIFTS: ERA CHECKPOINTS (`layer1PositionOverrides`)
  * -----------------------------------------------------------------------
@@ -124,6 +110,7 @@
  * the type doc on `Layer1TurnoutOverlay` (`src/lib/db/types/demographics.ts`).
  */
 
+import { isBucketTarget } from "./turnoutTarget";
 import { clamp } from "@/lib/numeric/rules";
 import {
   targetedAdBonuses,
@@ -161,7 +148,6 @@ import {
 } from "./granularCells";
 import { conditionedOffsetsAtAnchor } from "@/lib/seeds/demographicCategories";
 import { getConditionedOffsetsForYear } from "@/lib/seeds/eraPositionsForYear";
-import { archetypeValuesToBuckets } from "./archetypeBucketMap";
 import {
   getCountrySubstrateForYear,
   getUsSubstrateForYear,
@@ -304,29 +290,21 @@ export interface GranularSubstrate {
 /**
  * Separate modern campaign contact from the ordinary turnout baseline. The
  * contact ledger is written by the canvassing transaction and decays with the
- * modern campaign turnout snapshot. Legacy archetype targets are projected
- * into the country's native Layer-1 bucket vocabulary.
+ * modern campaign turnout snapshot.
  */
 export function campaignContactByBucket(
-  turnoutDoc: StateDemographicTurnout | null | undefined,
-  countryId: string
+  turnoutDoc: StateDemographicTurnout | null | undefined
 ): Record<string, number> {
   if (!turnoutDoc?.campaignContactModifiers) return {};
   const direct: Record<string, number> = {};
-  const archetypes: Record<string, number> = {};
-  const dimensions = new Set([...Object.keys(turnoutDoc.campaignContactModifiers)]);
-  for (const dimension of dimensions) {
+  for (const dimension of Object.keys(turnoutDoc.campaignContactModifiers)) {
+    if (dimension === "voterGroups") continue;
     const campaign = turnoutDoc.campaignContactModifiers[dimension] ?? {};
     for (const bucket of Object.keys(campaign)) {
       const delta = campaign[bucket] ?? 0;
       if (!Number.isFinite(delta) || delta === 0) continue;
-      if (dimension === "voterGroups") archetypes[bucket] = delta;
-      else direct[`${dimension}:${bucket}`] = delta;
+      direct[`${dimension}:${bucket}`] = delta;
     }
-  }
-  const projected = archetypeValuesToBuckets(archetypes, countryId);
-  for (const [bucket, delta] of Object.entries(projected)) {
-    direct[bucket] = (direct[bucket] ?? 0) + delta;
   }
   return direct;
 }
@@ -447,10 +425,6 @@ function buildUsTurnoutRates(
   turnoutOverlay?: Layer1TurnoutOverlay | null,
   yearCtx?: EraYearContext
 ): Record<GranularDim, Record<string, number>> {
-  // Archetype-keyed modifiers (current US format) → bucket pp deltas.
-  const archetypeModifiers = turnoutDoc?.modifiers?.voterGroups ?? {};
-  const bucketDeltas = archetypeValuesToBuckets(archetypeModifiers);
-
   let eraRates: Record<string, Record<string, number>> | null = null;
   if (yearCtx?.year != null) {
     try {
@@ -473,7 +447,7 @@ function buildUsTurnoutRates(
     const dimModifiers = turnoutDoc?.modifiers?.[dim] ?? {};
     const out: Record<string, number> = {};
     for (const [key, baseline] of Object.entries(baselines)) {
-      out[key] = baseline + (dimModifiers[key] ?? 0) + (bucketDeltas[`${dim}:${key}`] ?? 0);
+      out[key] = baseline + (dimModifiers[key] ?? 0);
     }
     rates[dim] = applyTurnoutRateOverlay(out, turnoutOverlay?.[dim]);
   }
@@ -791,17 +765,17 @@ export function deriveGranularElectorateUnits(
 // ─── Archetype-keyed → unit-keyed remapping ─────────────────────────────────
 
 /**
- * Remap archetype-keyed values (approvals, favorability deltas) onto units.
- * Linear in bucket membership, so it is exact under cell coalescing.
+ * Remap `dim:bucket`-keyed values (approvals, favorability deltas) onto units.
+ * Linear in bucket membership, so it is exact under cell coalescing. Keys that
+ * are not buckets and non-finite values are ignored.
  */
-export function remapArchetypeValuesToUnits(
-  valuesByArchetype: Record<string, number>,
-  units: GranularElectorateUnit[],
-  /** Selects the bucket vocabulary — see `archetypeValuesToBuckets`. */
-  countryId?: string
+export function bucketValuesToUnits(
+  bucketValues: Record<string, number>,
+  units: GranularElectorateUnit[]
 ): Record<string, number> {
-  const bucketValues = archetypeValuesToBuckets(valuesByArchetype, countryId);
-  const keys = Object.keys(bucketValues);
+  const keys = Object.keys(bucketValues).filter(
+    (k) => isBucketTarget(k) && Number.isFinite(bucketValues[k]) && bucketValues[k] !== 0
+  );
   const out: Record<string, number> = {};
   if (keys.length === 0) return out;
   for (const unit of units) {
@@ -813,30 +787,6 @@ export function remapArchetypeValuesToUnits(
     if (v !== 0) out[unit.id] = clamp(v, -100, 100);
   }
   return out;
-}
-
-/**
- * Per-archetype lean deltas: live doc − seeded snapshot. Captures the v2
- * legislation lean channel (plus any admin edit) so it can be projected onto
- * cell buckets. Groups missing from either doc, or with non-finite values,
- * contribute nothing.
- */
-function computeArchetypeLeanDeltas(
-  live: StateDemographics,
-  defaults: StateDemographics | null | undefined
-): { economic: Record<string, number>; social: Record<string, number> } {
-  const economic: Record<string, number> = {};
-  const social: Record<string, number> = {};
-  if (!defaults?.groups) return { economic, social };
-  for (const [groupId, liveGroup] of Object.entries(live.groups)) {
-    const defGroup = defaults.groups[groupId];
-    if (!defGroup) continue;
-    const dEcon = (liveGroup.economicLean ?? 0) - (defGroup.economicLean ?? 0);
-    const dSoc = (liveGroup.socialLean ?? 0) - (defGroup.socialLean ?? 0);
-    if (Number.isFinite(dEcon) && dEcon !== 0) economic[groupId] = dEcon;
-    if (Number.isFinite(dSoc) && dSoc !== 0) social[groupId] = dSoc;
-  }
-  return { economic, social };
 }
 
 /** Merge a `dim → bucket → axis` overlay into a `"dim:bucket" → value` delta map. */
@@ -924,16 +874,11 @@ export function buildGranularElectorateSubstrate(
     ? 1
     : aggregateTurnoutRatio(input.demographics, input.categories, input.liveTurnouts);
 
-  // Legislation-driven lean drift (live − seeded, see module header) projected
-  // onto buckets, then folded into unit leans below.
-  const leanDeltas = computeArchetypeLeanDeltas(input.demographics, input.demographicDefaults);
-  const econBucketDeltas = archetypeValuesToBuckets(leanDeltas.economic, input.countryId);
-  const socBucketDeltas = archetypeValuesToBuckets(leanDeltas.social, input.countryId);
-  // Bucket-targeted legislation drifts the SAME two axes, but stores its
-  // deviation directly on the live doc's Layer-1 overlay rather than on an
-  // archetype group (no archetype exists to carry it — see
-  // `addBucketDriftUpdates` in `demographicEffects.ts`). Same fold, same
-  // place; only the source of the bucket deltas differs. The DEFAULTS doc's
+  // Legislation-driven lean drift (see module header), folded into unit leans below.
+  const econBucketDeltas: Record<string, number> = {};
+  const socBucketDeltas: Record<string, number> = {};
+  // Bucket-targeted legislation stores its deviation on the live doc's Layer-1
+  // overlay (see `addBucketDriftUpdates` in `demographicEffects.ts`). The DEFAULTS doc's
   // overlay is the durable channel and is already applied inside the
   // derivation above, so folding it again here would double-count it.
   addOverlayDeltas(econBucketDeltas, input.demographics.layer1PositionOverrides, "economicLean");
@@ -1122,7 +1067,7 @@ export function buildGranularElectorateSubstrate(
   const enriched = input.enriched.map((ec) => {
     const approvals =
       ec.bucketApprovals && Object.keys(ec.bucketApprovals).length > 0
-        ? remapArchetypeValuesToUnits(ec.bucketApprovals, units, input.countryId)
+        ? bucketValuesToUnits(ec.bucketApprovals, units)
         : ec.bucketApprovals;
     if (
       !usesCampaignAds(input, input.enriched) ||
@@ -1154,7 +1099,7 @@ export function buildGranularElectorateSubstrate(
     return applySalience({ ...ec, bucketApprovals: approvals, targetedAdBonuses: byUnit });
   });
 
-  // Address-driven `${party}:${archetype}` favorability deltas → `${party}:${unit}`.
+  // Address-driven `${party}:${dim}:${bucket}` favorability deltas → `${party}:${unit}`.
   let partyGroupFavorabilityByKey = input.partyGroupFavorabilityByKey;
   if (partyGroupFavorabilityByKey && partyGroupFavorabilityByKey.size > 0) {
     const byParty = new Map<string, Record<string, number>>();
@@ -1162,14 +1107,14 @@ export function buildGranularElectorateSubstrate(
       const sep = key.indexOf(":");
       if (sep <= 0) continue;
       const party = key.slice(0, sep);
-      const archetypeId = key.slice(sep + 1);
+      const bucketKey = key.slice(sep + 1);
       const rec = byParty.get(party) ?? {};
-      rec[archetypeId] = (rec[archetypeId] ?? 0) + delta;
+      rec[bucketKey] = (rec[bucketKey] ?? 0) + delta;
       byParty.set(party, rec);
     }
     const remapped = new Map<string, number>();
-    for (const [party, valuesByArchetype] of byParty) {
-      const unitValues = remapArchetypeValuesToUnits(valuesByArchetype, units, input.countryId);
+    for (const [party, valuesByBucket] of byParty) {
+      const unitValues = bucketValuesToUnits(valuesByBucket, units);
       for (const [unitId, v] of Object.entries(unitValues)) {
         remapped.set(`${party}:${unitId}`, v);
       }

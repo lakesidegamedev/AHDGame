@@ -297,10 +297,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "scripts/migrations/2026-08-19-archetype-values-to-buckets.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "scripts/migrations/2026-08-19-backfill-political-legislation-types.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
@@ -7489,18 +7485,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/demographics/archetypeBucketCoverage.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/demographics/archetypeBucketMap.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 1
-    },
-    "src/lib/demographics/archetypeDropVisibility.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/demographics/birthRateLever.legislation.sim.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -7530,10 +7514,6 @@
       "narrativeLines": 1
     },
     "src/lib/demographics/cohortVector.perf.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/demographics/countryArchetypeBuckets.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
