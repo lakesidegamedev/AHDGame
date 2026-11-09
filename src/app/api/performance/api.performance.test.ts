@@ -8,6 +8,11 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Fixture dbs carry no census rows; strict tiers are covered in governmentApproval.censusTier.test.ts.
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: async () => ({ fullSimulationIds: [] }),
+}));
+
 const NATIONAL_METRICS_THRESHOLD_MS = 500;
 const MAP_OVERVIEW_THRESHOLD_MS = 400;
 const ELECTIONS_LIST_THRESHOLD_MS = 500;
