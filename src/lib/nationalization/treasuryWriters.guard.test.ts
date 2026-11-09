@@ -90,11 +90,11 @@ const REGISTRY: Record<string, Registered> = {
     witness: [{ kind: "flow", flows: ["index_listing_lobbying"] }],
   },
   "src/lib/nationalization/privatizeAsset.ts": {
-    writers: ["creditTreasuryProceeds"],
+    writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "flow", flows: ["privatization_ipo"] }],
   },
   "src/lib/nationalization/privatizationAuction.ts": {
-    writers: ["creditTreasuryProceeds"],
+    writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "flow", flows: ["privatization_auction_proceeds"] }],
   },
 };
@@ -159,6 +159,7 @@ const TREASURY_WRITER = writerPattern([
   "debitTreasuryCompensation",
   "debitTreasury",
   "creditTreasuryProceedsFromAnchor",
+  "creditTreasuryProceedsPaired",
   "creditTreasuryProceeds",
   "coverSoeOperatingLoss",
   "debitTreasurySoeCapex",

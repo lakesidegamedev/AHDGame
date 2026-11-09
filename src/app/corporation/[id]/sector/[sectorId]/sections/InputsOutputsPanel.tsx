@@ -99,6 +99,25 @@ export default function InputsOutputsPanel({
   const showsInputShortfall =
     commodities.throughput?.bindingInput != null &&
     ((inputIdleShare ?? 0) > 0.005 || (throttleApplied != null && throttleApplied < 0.999));
+  // The input rows that fell short, so each one can be marked and linked to its
+  // sellers. A row is short when the world market could not cover its demand
+  // or when the engine named it the binding input for the shortfall below.
+  // Without this the run report said "the Inputs list names the missing input"
+  // while no row was marked unless the callout's own thresholds passed.
+  const bindingCommodity = commodities.throughput?.bindingInput ?? null;
+  const shortInputs = new Set(
+    commodities.demands
+      .filter(
+        (f) =>
+          (f.inputAvailability != null && f.inputAvailability < 0.999) ||
+          (showsInputShortfall && f.commodity === bindingCommodity)
+      )
+      .map((f) => f.commodity)
+  );
+  // The settlement can lose units to inputs while no row is short on the world
+  // market (the shortfall is what this plant could buy locally). Say so rather
+  // than leave the list silent.
+  const unmarkedInputStop = shortInputs.size === 0 && (inputIdleShare ?? 0) > 0.005;
   const inputBillSharePct =
     plants.pnl && plants.pnl.revenueAnchor > 0
       ? (plants.pnl.inputsAnchor / plants.pnl.revenueAnchor) * 100
@@ -189,6 +208,12 @@ export default function InputsOutputsPanel({
                   key={f.commodity}
                   flow={{ ...f, units: f.units * inputUnitScale }}
                   priceText={price(f.billedUnitPrice ?? f.marketPrice)}
+                  short={shortInputs.has(f.commodity)}
+                  offers={
+                    shortInputs.has(f.commodity) ? (
+                      <InputOffersHint flow={f} variant="short" />
+                    ) : null
+                  }
                   right={
                     f.inputAvailability != null && f.inputAvailability < 0.999 ? (
                       <InfoTooltip
@@ -218,7 +243,19 @@ export default function InputsOutputsPanel({
               ))}
             </ul>
           )}
-          {costliest && <InputOffersHint flow={costliest} />}
+          {unmarkedInputStop && (
+            <p
+              data-unmarked-input-stop
+              className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground"
+            >
+              Part of your run stopped for lack of inputs, but no input above is short on the world
+              market. The gap is in what this plant could actually buy where it stands, so check the
+              sellers offering each input before you pick a contract.
+            </p>
+          )}
+          {costliest && !shortInputs.has(costliest.commodity) && (
+            <InputOffersHint flow={costliest} />
+          )}
           {showsInputShortfall && commodities.throughput?.bindingInput && (
             <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
               Last turn, short supply of{" "}
@@ -514,14 +551,25 @@ function FlowRow({
   priceText,
   right,
   badge,
+  short = false,
+  offers = null,
 }: {
   flow: CommodityFlow;
   priceText: string;
   right: React.ReactNode;
   badge: React.ReactNode;
+  /** Input rows only: this input fell short last turn. */
+  short?: boolean;
+  /** Input rows only: link to the sellers of a short input. */
+  offers?: React.ReactNode;
 }) {
   return (
-    <li className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-card-border bg-background/40 px-3 py-2">
+    <li
+      data-short-input={short ? flow.commodity : undefined}
+      className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-2 ${
+        short ? "border-warning/50 bg-warning/10" : "border-card-border bg-background/40"
+      }`}
+    >
       <Link
         href={`/commodity/${flow.commodity}`}
         className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-body-xs font-bold transition-opacity hover:opacity-80 ${flow.colors}`}
@@ -561,12 +609,18 @@ function FlowRow({
           </p>
         )}
       </InfoTooltip>
+      {short && (
+        <span className="shrink-0 rounded bg-warning/20 px-1.5 py-0.5 text-body-xs font-semibold text-warning">
+          Ran short
+        </span>
+      )}
       {badge && <span className="shrink-0">{badge}</span>}
       <span className="shrink-0 text-body-sm tabular-nums text-muted">
         <span className="font-semibold text-foreground">{fmtUnits(flow.units, 1)}</span> ·{" "}
         {priceText}
       </span>
       {right && <span className="shrink-0">{right}</span>}
+      {offers && <span className="shrink-0">{offers}</span>}
     </li>
   );
 }

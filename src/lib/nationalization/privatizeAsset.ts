@@ -17,7 +17,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { isStateOwned, ensurePrimaryNationalCorporation } from "./nationalCorporation";
 import { assertPrivateEnterprisePermitted } from "@/lib/economy/queries/privateEnterpriseGate";
 import { computeSpunOutShareStructure } from "./privatizationShares";
-import { creditTreasuryProceeds } from "./treasury";
+import { creditTreasuryProceedsPaired } from "./treasury";
 import { loadTreasuryCashContext } from "./treasuryLedger";
 import { applyPrivatizationConsequences } from "./consequences/apply";
 import { recordNationalizationLedger } from "./ledger";
@@ -456,8 +456,13 @@ export async function privatizeAsset(
     });
   } else {
     // No buyer pays for the float: the proceeds are an explicit, named mint.
-    await creditTreasuryProceeds(db, params.countryId, structure.proceedsLocal, now, {
+    await creditTreasuryProceedsPaired(db, {
+      countryId: params.countryId,
+      now,
       flow: "privatization_ipo",
+      key: `privatization-ipo:${newCorpId.toHexString()}`,
+      site: "privatizeAsset",
+      amountLocal: structure.proceedsLocal,
       // The caller's turn is the clock on the executive route; the context resolves
       // the turn whose snapshot will hold this cash on every path.
       ledger: { context: await loadTreasuryCashContext(db) },

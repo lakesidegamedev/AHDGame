@@ -114,7 +114,7 @@ function fixesFor(
     fixes.push({
       key: "inputs",
       title: "Find the missing input",
-      body: `Part of the run stopped because an input ran short. The Inputs list below names it; a supplier contract or your own production of it removes the stop.`,
+      body: `Part of the run stopped because an input ran short. The Inputs list below marks each input that ran short and links to who sells it; a supplier contract or your own production of it removes the stop.`,
       units: inputs,
     });
   const staffing = unitsOf("staffing");
