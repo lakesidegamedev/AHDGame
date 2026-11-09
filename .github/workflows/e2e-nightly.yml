@@ -89,6 +89,8 @@ jobs:
         env:
           MONGODB_URI: mongodb://127.0.0.1:27992/e2e?replicaSet=e2eReplica&directConnection=true
           AUTH_SECRET: e2e-only-secret-not-used-anywhere-else
+          ADMIN_REGISTRATION_KEY: e2e-only-admin-key
+          CRON_SECRET: e2e-only-cron-secret
           NEXT_TELEMETRY_DISABLED: "1"
       # Snapshot baselines are not committed, so image comparisons are skipped.
       - name: Run Playwright specs
