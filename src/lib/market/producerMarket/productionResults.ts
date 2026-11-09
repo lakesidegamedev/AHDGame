@@ -155,13 +155,19 @@ export function buildProducerOperatingResults({
       Math.max(0, p.labourCost - paid.labour) + Math.max(0, p.otherOperatingCost - paid.operating)
     );
   };
+  const plansByAccount = new Map<string, ProductionPlan[]>();
+  for (const p of plans) {
+    const owned = plansByAccount.get(p.accountId);
+    if (owned) owned.push(p);
+    else plansByAccount.set(p.accountId, [p]);
+  }
   for (const id of salesAdvance.keys()) {
+    const ownPlans = plansByAccount.get(id) ?? [];
     // Read after the input true-up, which already forgave the unmade share.
-    const deferred = plans.reduce((sum, p) => (p.accountId === id ? sum + unpaidBills(p) : sum), 0);
+    const deferred = ownPlans.reduce((sum, p) => sum + unpaidBills(p), 0);
     const fraction = deferredBillFraction(settledCash.get(id) ?? 0, deferred);
     if (!(fraction > 0)) continue;
-    for (const p of plans) {
-      if (p.accountId !== id) continue;
+    for (const p of ownPlans) {
       const paid = payments.get(p.id)!;
       const labour = Math.max(0, p.labourCost - paid.labour) * fraction;
       const operating = Math.max(0, p.otherOperatingCost - paid.operating) * fraction;
