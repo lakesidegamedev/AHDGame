@@ -45,7 +45,90 @@ export interface MockDb {
   collectionMocks: Record<string, MockCollection>;
 }
 
+/**
+ * Build a mock collection whose members are created on first access.
+ *
+ * Vitest tracks every `vi.fn()` through a WeakRef, and a WeakRef target stays
+ * alive until the current macrotask ends. Eagerly building ~25 mocks per
+ * collection pinned thousands of them per Db in microtask-only suites and ran
+ * the worker out of heap. A member that is never touched costs nothing.
+ * Members stay assignable, enumerable and own properties, so tests can still
+ * override, spread or spy on them exactly as before.
+ */
+function lazyObject<T extends object>(factories: { [K in keyof T]: () => T[K] }): T {
+  const target = {} as T;
+  for (const key of Object.keys(factories) as Array<keyof T>) {
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: true,
+      get() {
+        const value = factories[key]();
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value,
+        });
+        return value;
+      },
+      set(value: T[keyof T]) {
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value,
+        });
+      },
+    });
+  }
+  return target;
+}
+
 function createMockCollection(): MockCollection {
+  let cursorCache: ReturnType<typeof buildCursor> | undefined;
+  let aggregateCursorCache: ReturnType<typeof buildAggregateCursor> | undefined;
+  const getCursor = () => (cursorCache ??= buildCursor());
+  let indexCursorCache: { toArray: AnyMockFn } | undefined;
+  const getIndexCursor = () => (indexCursorCache ??= { toArray: vi.fn().mockResolvedValue([]) });
+  const getAggregateCursor = () => (aggregateCursorCache ??= buildAggregateCursor());
+
+  return lazyObject<MockCollection>({
+    findOne: () => vi.fn().mockResolvedValue(null),
+    find: () => vi.fn().mockImplementation(getCursor),
+    findOneAndUpdate: () => vi.fn().mockResolvedValue(null),
+    findOneAndDelete: () => vi.fn().mockResolvedValue(null),
+    insertOne: () => vi.fn().mockResolvedValue({ insertedId: "507f1f77bcf86cd799439011" }),
+    insertMany: () => vi.fn().mockResolvedValue({ insertedIds: {} }),
+    updateOne: () => vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1 }),
+    updateMany: () => vi.fn().mockResolvedValue({ modifiedCount: 0 }),
+    replaceOne: () =>
+      vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1, upsertedCount: 0 }),
+    deleteOne: () => vi.fn().mockResolvedValue({ deletedCount: 1 }),
+    deleteMany: () => vi.fn().mockResolvedValue({ deletedCount: 0 }),
+    drop: () => vi.fn().mockResolvedValue(true),
+    countDocuments: () => vi.fn().mockResolvedValue(0),
+    distinct: () => vi.fn().mockResolvedValue([]),
+    aggregate: () => vi.fn().mockImplementation(getAggregateCursor),
+    // `upsertedCount`/`upsertedIds` are part of the real BulkWriteResult, and
+    // seeders that batch their upserts read `upsertedCount` to report how many
+    // docs they created. Omitting it made those read `undefined` and log 0.
+    bulkWrite: () =>
+      vi.fn().mockResolvedValue({
+        modifiedCount: 0,
+        matchedCount: 0,
+        upsertedCount: 0,
+        upsertedIds: {},
+        insertedCount: 0,
+        deletedCount: 0,
+      }),
+    createIndex: () => vi.fn().mockResolvedValue("index-name"),
+    // Real listIndexes() returns a cursor; tests override with actual index
+    // descriptions when the code under test inspects them.
+    listIndexes: () => vi.fn().mockImplementation(getIndexCursor),
+  });
+}
+
+function buildCursor() {
   const cursor = {
     toArray: vi.fn().mockResolvedValue([]),
     sort: vi.fn().mockReturnThis(),
@@ -71,7 +154,10 @@ function createMockCollection(): MockCollection {
       }
     },
   };
+  return cursor;
+}
 
+function buildAggregateCursor() {
   const aggregateCursor = {
     toArray: vi.fn().mockResolvedValue([]),
     async *[Symbol.asyncIterator]() {
@@ -81,41 +167,7 @@ function createMockCollection(): MockCollection {
       }
     },
   };
-
-  return {
-    findOne: vi.fn().mockResolvedValue(null),
-    find: vi.fn().mockReturnValue(cursor),
-    findOneAndUpdate: vi.fn().mockResolvedValue(null),
-    findOneAndDelete: vi.fn().mockResolvedValue(null),
-    insertOne: vi.fn().mockResolvedValue({ insertedId: "507f1f77bcf86cd799439011" }),
-    insertMany: vi.fn().mockResolvedValue({ insertedIds: {} }),
-    updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1 }),
-    updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
-    replaceOne: vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1, upsertedCount: 0 }),
-    deleteOne: vi.fn().mockResolvedValue({ deletedCount: 1 }),
-    deleteMany: vi.fn().mockResolvedValue({ deletedCount: 0 }),
-    drop: vi.fn().mockResolvedValue(true),
-    countDocuments: vi.fn().mockResolvedValue(0),
-    distinct: vi.fn().mockResolvedValue([]),
-    aggregate: vi.fn().mockReturnValue(aggregateCursor),
-    // `upsertedCount`/`upsertedIds` are part of the real BulkWriteResult, and
-    // seeders that batch their upserts read `upsertedCount` to report how many
-    // docs they created. Omitting it made those read `undefined` and log 0.
-    bulkWrite: vi.fn().mockResolvedValue({
-      modifiedCount: 0,
-      matchedCount: 0,
-      upsertedCount: 0,
-      upsertedIds: {},
-      insertedCount: 0,
-      deletedCount: 0,
-    }),
-    createIndex: vi.fn().mockResolvedValue("index-name"),
-    // Real listIndexes() returns a cursor; tests override with actual index
-    // descriptions when the code under test inspects them.
-    listIndexes: vi.fn().mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    }),
-  };
+  return aggregateCursor;
 }
 
 /**
