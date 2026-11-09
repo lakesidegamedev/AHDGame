@@ -6,7 +6,7 @@ import type { GameState } from "@/lib/db/types/gameState";
  *
  * Every fresh world (bootstrap or reset) starts with every gameplay flag ON at
  * the top of its rollout ladder, except entries in FRESH_WORLD_FLAG_EXCLUSIONS
- * (NPP autonomy stays at v4). FeatureFlagDefaults.test.ts reads GameState and
+ * (NPP autonomy starts at v6, the live world's level). FeatureFlagDefaults.test.ts reads GameState and
  * GameConfig and fails when a flag is in neither preset nor the non-gameplay
  * lists, so new flags cannot ship silently.
  *
@@ -18,9 +18,9 @@ import type { GameState } from "@/lib/db/types/gameState";
 /** Gameplay flags held below their maximum on fresh worlds, and why. */
 export const FRESH_WORLD_FLAG_EXCLUSIONS = {
   nppAutonomyLevel: {
-    value: "v4",
+    value: "v6",
     reason:
-      "NPP v5 (persistent governing goals) is the one owner-excluded flag. Fresh worlds seed v4, the top of the ladder below v5.",
+      "Fresh worlds seed NPP engine 6 (v6), the same level the live world runs. It is held as a named policy because it is a level, not an on/off flag.",
   },
 } as const;
 

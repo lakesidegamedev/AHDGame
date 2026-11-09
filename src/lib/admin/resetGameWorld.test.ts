@@ -416,7 +416,7 @@ describe("resetGameWorld", () => {
     });
     assertSetFields(db.collectionMocks.gameState.updateOne, { ...DEFAULT_GAME_STATE_FLAGS });
     assertSetFields(db.collectionMocks.gameState.updateOne, {
-      nppAutonomyLevel: "v4",
+      nppAutonomyLevel: "v6",
       sectorTechTreesEnabled: true,
       coldWarEnabled: true,
     });

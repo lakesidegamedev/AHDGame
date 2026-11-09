@@ -55,9 +55,9 @@ const LADDER_TOPS: Record<string, string | number> = {
 };
 
 describe("fresh-world flag policy", () => {
-  it("excludes only NPP v5", () => {
+  it("seeds NPP autonomy at v6", () => {
     expect(Object.keys(FRESH_WORLD_FLAG_EXCLUSIONS)).toEqual(["nppAutonomyLevel"]);
-    expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyLevel).toBe("v4");
+    expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyLevel).toBe("v6");
     expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyEnabled).toBe(true);
   });
 

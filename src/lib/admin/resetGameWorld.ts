@@ -620,7 +620,7 @@ export async function resetGameWorld(
     playerTransfersPaused: false,
     updatedAt: now,
     // A reset is a fresh world: every gameplay flag takes the fresh-world preset
-    // (all on, NPP autonomy at v4), whatever the outgoing world ran with.
+    // (all on, NPP autonomy at v6), whatever the outgoing world ran with.
     ...DEFAULT_GAME_STATE_FLAGS,
     startingPartiesMode: startingParties,
     metricsSystemVersion: selectedVersions.metrics,

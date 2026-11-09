@@ -55,9 +55,9 @@ describe("initializeGameState", () => {
       forexEnabled: true,
       playerRandomEventsEnabled: true,
       autoDisastersEnabled: true,
-      // Fresh-world policy: every gameplay flag on, NPP autonomy at v4.
+      // Fresh-world policy: every gameplay flag on, NPP autonomy at v6.
       sectorTechTreesEnabled: true,
-      nppAutonomyLevel: "v4",
+      nppAutonomyLevel: "v6",
       nppAutonomyEnabled: true,
     });
     // Full feature set now defaults on for fresh worlds (2026-07-20). This
