@@ -1,8 +1,9 @@
 import type { Db } from "mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
-import type { State, StateDemographics, DemographicCategory } from "@/lib/db/types";
+import { censusStateLean } from "@/lib/demographics/censusLean";
+import type { GameState, State, StateDemographics } from "@/lib/db/types";
+import { eraYearContextFromGameState } from "@/lib/era/context";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { calculateStateLean, getDisplayLean, getLeanLabel } from "@/lib/utils/demographics";
+import { getDisplayLean, getLeanLabel } from "@/lib/utils/demographics";
 import {
   getLeanLabelHex,
   getSocialLeanLabelHex,
@@ -26,49 +27,57 @@ export async function computeLeanMap(
   db: Db,
   countryId: CountryId
 ): Promise<Record<string, MapLeanState>> {
-  const [allStates, allDemographics, demographicCategories] = await Promise.all([
+  const [allStates, allDemographics, gameState] = await Promise.all([
     db.collection<State>("states").find({ countryId }).toArray(),
     db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
-    loadDemographicCategories(db),
+    db
+      .collection<GameState>("gameState")
+      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
   ]);
-
-  const stateMap = new Map(allStates.map((s) => [s._id, s]));
+  const era = {
+    preset: gameState?.preset ?? null,
+    ...eraYearContextFromGameState(gameState),
+  };
 
   if (countryId === COUNTRY_CONFIGS.UK.id || countryId === COUNTRY_CONFIGS.DE.id) {
-    return buildLeanUK(allStates, allDemographics, demographicCategories, stateMap);
+    return buildLeanUK(countryId, allStates, allDemographics, era);
   }
-  return buildLeanUS(allStates, allDemographics, demographicCategories, stateMap);
+  return buildLeanUS(countryId, allStates, allDemographics, era);
 }
 
-async function buildLeanUS(
+type EraLeanContext = { preset: string | null; year: number | null; startingYear: number | null };
+
+/** Cached lean when stored, else the census electorate's; a region with neither is an error. */
+function regionLean(
+  countryId: CountryId,
+  state: State,
+  demo: StateDemographics | undefined,
+  era: EraLeanContext
+): { economicLean: number; socialLean: number } {
+  if (state.cachedEconomicLean != null && state.cachedSocialLean != null) {
+    return { economicLean: state.cachedEconomicLean, socialLean: state.cachedSocialLean };
+  }
+  if (!demo) throw new Error(`No census electorate for ${countryId} region ${state._id}`);
+  return censusStateLean(demo, { countryId, stateId: state._id, ...era });
+}
+
+function buildLeanUS(
+  countryId: CountryId,
   allStates: State[],
   allDemographics: StateDemographics[],
-  demographicCategories: DemographicCategory[],
-  _stateMap: Map<string, State>
-): Promise<Record<string, MapLeanState>> {
+  era: EraLeanContext
+): Record<string, MapLeanState> {
   const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
   const result: Record<string, MapLeanState> = {};
 
   for (const state of allStates) {
     const stateId = state._id;
-    const demo = demoByState.get(stateId);
-    let economicLean: number;
-    let socialLean: number;
-
-    if (state.cachedEconomicLean != null && state.cachedSocialLean != null) {
-      economicLean = state.cachedEconomicLean;
-      socialLean = state.cachedSocialLean;
-    } else if (demo && demographicCategories.length > 0) {
-      const c = calculateStateLean(demo, demographicCategories);
-      economicLean = c.economicLean;
-      socialLean = c.socialLean;
-    } else {
-      const { ELECTION_2020_MARGIN, marginToLean } = await import("@/lib/data/2020ElectionResults");
-      const margin = ELECTION_2020_MARGIN[stateId];
-      const lean = margin !== undefined ? marginToLean(margin) : 0;
-      economicLean = lean;
-      socialLean = lean;
-    }
+    const { economicLean, socialLean } = regionLean(
+      countryId,
+      state,
+      demoByState.get(stateId),
+      era
+    );
 
     const displayLean = getDisplayLean(economicLean, socialLean);
     const label = getLeanLabel(displayLean);
@@ -97,33 +106,24 @@ async function buildLeanUS(
   return result;
 }
 
-async function buildLeanUK(
+function buildLeanUK(
+  countryId: CountryId,
   allStates: State[],
   allDemographics: StateDemographics[],
-  demographicCategories: DemographicCategory[],
-  _stateMap: Map<string, State>
-): Promise<Record<string, MapLeanState>> {
+  era: EraLeanContext
+): Record<string, MapLeanState> {
   const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
   const result: Record<string, MapLeanState> = {};
 
   for (const state of allStates) {
     const stateId = state._id;
     const regionId = stateId;
-    const demo = demoByState.get(stateId);
-    let economicLean: number;
-    let socialLean: number;
-
-    if (state.cachedEconomicLean != null && state.cachedSocialLean != null) {
-      economicLean = state.cachedEconomicLean;
-      socialLean = state.cachedSocialLean;
-    } else if (demo && demographicCategories.length > 0) {
-      const c = calculateStateLean(demo, demographicCategories);
-      economicLean = c.economicLean;
-      socialLean = c.socialLean;
-    } else {
-      economicLean = 0;
-      socialLean = 0;
-    }
+    const { economicLean, socialLean } = regionLean(
+      countryId,
+      state,
+      demoByState.get(stateId),
+      era
+    );
 
     const displayLean = getDisplayLean(economicLean, socialLean);
     const label = getLeanLabel(displayLean);

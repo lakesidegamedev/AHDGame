@@ -9,10 +9,11 @@ import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { State, StateDemographics, DemographicCategory, GameState } from "@/lib/db/types";
+import type { State, StateDemographics, GameState } from "@/lib/db/types";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { resolveGameYear } from "@/lib/era/era";
-import { calculateStateLean } from "@/lib/utils/demographics";
+import { censusStateLean } from "@/lib/demographics/censusLean";
+import { eraYearContextFromGameState } from "@/lib/era/context";
 import { getUkEconomicLeanLabelHex, getSocialLeanLabelHex } from "@/lib/utils/politics";
 import {
   BASE_APPROVAL,
@@ -47,9 +48,8 @@ export interface MapOverviewResponse {
  * Countries whose map renders the labelled left/right lean colour scale.
  * Everything else renders neutral grey.
  *
- * NG is intentionally excluded: it has no archetype category entry, so this
- * set matches the behaviour of the previous derivation. Whether NG should
- * carry the scale is a separate call.
+ * NG is intentionally excluded: whether it should carry the scale is a
+ * separate call.
  */
 const LEAN_SCALE_COUNTRIES = new Set<CountryId>(["UK", "DE"]);
 
@@ -69,12 +69,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     const db = await getDb();
 
-    const [allStates, allDemographics, demographicCategories] = await Promise.all([
+    const [allStates, allDemographics] = await Promise.all([
       db.collection<State>("states").find({ countryId }).toArray(),
       db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
-      // Load every category and let each region's `categoryWeights` select which
-      // apply (`calculateStateLean`), avoiding a hardcoded archetype fallback.
-      db.collection<DemographicCategory>("demographicCategories").find({}).toArray(),
     ]);
 
     const stateIds = allStates.map((s) => s._id);
@@ -112,13 +109,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       if (state.cachedEconomicLean != null && state.cachedSocialLean != null) {
         economicLean = state.cachedEconomicLean;
         socialLean = state.cachedSocialLean;
-      } else if (demographics && demographicCategories.length > 0) {
-        const calculated = calculateStateLean(demographics, demographicCategories);
+      } else if (demographics) {
+        const calculated = censusStateLean(demographics, {
+          countryId,
+          stateId,
+          preset,
+          ...eraYearContextFromGameState(presetDoc),
+        });
         economicLean = calculated.economicLean;
         socialLean = calculated.socialLean;
       } else {
-        economicLean = 0;
-        socialLean = 0;
+        throw new Error(`No census electorate for ${countryId} region ${stateId}`);
       }
 
       const regionId = stateId;

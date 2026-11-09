@@ -15,8 +15,20 @@ function mockDb() {
         return {
           find: vi.fn().mockReturnValue({
             toArray: vi.fn().mockResolvedValue([
-              { _id: "BW", name: "Baden-Württemberg", countryId: "DE" },
-              { _id: "BY", name: "Bavaria", countryId: "DE" },
+              {
+                _id: "BW",
+                name: "Baden-Württemberg",
+                countryId: "DE",
+                cachedEconomicLean: 1,
+                cachedSocialLean: -1,
+              },
+              {
+                _id: "BY",
+                name: "Bavaria",
+                countryId: "DE",
+                cachedEconomicLean: 1,
+                cachedSocialLean: -1,
+              },
             ]),
           }),
         };
