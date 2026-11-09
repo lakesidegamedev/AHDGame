@@ -109,7 +109,78 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
           </div>
         </header>
 
+        <Section title="Country briefs" testId="background-briefs">
+          {view.briefs.length > 0 ? (
+            <ul className="space-y-4">
+              {view.briefs.map((brief) => (
+                <li key={brief.id} className="space-y-1 text-body-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-semibold text-foreground">{brief.headline}</span>
+                    <span className="text-muted">
+                      {rawTurnToLarpDate(brief.turn, startingYear, clock)}
+                    </span>
+                  </div>
+                  <p className="text-muted">{brief.body}</p>
+                  <ul className="flex flex-wrap gap-2">
+                    {brief.actions.map((action) => (
+                      <li key={action.kind}>
+                        <Link
+                          className="rounded-md border border-card-border px-2 py-1 text-foreground hover:bg-background"
+                          href={action.href}
+                        >
+                          {action.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-body text-muted">
+              No briefs yet. The country reports on debt, elections, its currency and its budget as
+              they change.
+            </p>
+          )}
+        </Section>
+
         <div className="grid gap-6 lg:grid-cols-2">
+          <Section title="Public finances" testId="background-fiscal">
+            {view.fiscal ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-x-10 gap-y-4">
+                  <Stat
+                    label="Interest spiral"
+                    value={`${view.fiscal.interestSpiralYears} of ${view.fiscal.spiralLimitYears} years`}
+                  />
+                  <Stat
+                    label="Programmes left"
+                    value={percent(view.fiscal.programmesRemainingPercent, 0)}
+                  />
+                  <Stat label="Tax rises so far" value={percent(view.fiscal.taxRisePercent, 1)} />
+                </div>
+                <p className="text-body-sm text-muted">
+                  The spiral counts fiscal years in which debt interest took more than half of
+                  revenue. At {view.fiscal.spiralLimitYears} the country restructures its debt and
+                  bondholders take a haircut.
+                </p>
+                {view.fiscal.lastPackage ? (
+                  <p data-testid="background-austerity" className="text-body-sm">
+                    Austerity package, fiscal year {view.fiscal.lastPackage.fiscalYear}:{" "}
+                    {percent(view.fiscal.lastPackage.size)} of GDP (tax{" "}
+                    {percent(view.fiscal.lastPackage.taxRise)}, spending cuts{" "}
+                    {percent(view.fiscal.lastPackage.spendingCut)}), costing the government{" "}
+                    {view.fiscal.lastPackage.approvalCost.toFixed(1)} points of approval.
+                  </p>
+                ) : (
+                  <p className="text-body-sm text-muted">No austerity package so far.</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-body text-muted">No fiscal record yet.</p>
+            )}
+          </Section>
+
           <Section title="Government" testId="background-government">
             {politics ? (
               <div className="space-y-3">

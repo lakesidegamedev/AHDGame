@@ -6,6 +6,7 @@ import { getExecutiveIdentity } from "@/lib/constants/institutionIdentity";
 import { getExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { getDb } from "@/lib/mongodb";
 import WhiteHouseClient from "@/app/whitehouse/WhiteHouseClient";
+import { LeaderLegacyPanel } from "@/components/government/LeaderLegacyPanel";
 import { ParliamentaryExecutiveHub } from "./ParliamentaryExecutiveHub";
 import { OnePartyExecutiveHub } from "./OnePartyExecutiveHub";
 
@@ -60,29 +61,42 @@ export default async function ExecutivePage({ params }: PageProps) {
     runtime.governmentType === "parliamentaryMonarchy" ||
     runtime.governmentType === "parliamentaryRepublic"
   ) {
-    return <ParliamentaryExecutiveHub countryId={countryId} />;
+    return (
+      <>
+        <ParliamentaryExecutiveHub countryId={countryId} />
+        <LeaderLegacyPanel countryCode={countryId} />
+      </>
+    );
   }
 
   if (runtime.governmentType === "onePartyState") {
-    return <OnePartyExecutiveHub countryId={countryId} />;
+    return (
+      <>
+        <OnePartyExecutiveHub countryId={countryId} />
+        <LeaderLegacyPanel countryCode={countryId} />
+      </>
+    );
   }
 
   // presidential — the only remaining government type.
   return (
-    <WhiteHouseClient
-      countryId={countryId}
-      // The shell no longer imports the registry: the page already holds the
-      // full config, so the four display strings ride in as props instead.
-      chrome={{
-        countryName: config.name,
-        governmentType: config.governmentType,
-        executiveIdentity: getExecutiveIdentity(countryId),
-        executiveTermLimit: getExecutiveTermLimit(countryId),
-        isUs: config.id === "US",
-        legislatureName: config.legislature.name,
-        legislaturePath: config.legislature.path,
-        upperChamberShort: config.legislature.upperChamber?.shortName ?? "Senate",
-      }}
-    />
+    <>
+      <WhiteHouseClient
+        countryId={countryId}
+        // The shell no longer imports the registry: the page already holds the
+        // full config, so the four display strings ride in as props instead.
+        chrome={{
+          countryName: config.name,
+          governmentType: config.governmentType,
+          executiveIdentity: getExecutiveIdentity(countryId),
+          executiveTermLimit: getExecutiveTermLimit(countryId),
+          isUs: config.id === "US",
+          legislatureName: config.legislature.name,
+          legislaturePath: config.legislature.path,
+          upperChamberShort: config.legislature.upperChamber?.shortName ?? "Senate",
+        }}
+      />
+      <LeaderLegacyPanel countryCode={countryId} />
+    </>
   );
 }

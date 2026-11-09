@@ -161,4 +161,24 @@ describe("restructureForInterestSpiral", () => {
     expect(result.ok).toBe(true);
     expect(w.decisions[0]._id).toBeInstanceOf(ObjectId);
   });
+
+  it("restructures a background country on the count its caller carries, and leaves the budget counter alone", async () => {
+    // A background budget has no fiscalConsolidation block: the macro document owns the count.
+    const w = world({ ...ITALY });
+    const result = await restructureForInterestSpiral(w.db, "IT", 760, 1_000, {
+      countedYears: 2,
+    });
+
+    expect(result).toEqual({ ok: true, bondsAffected: 4 });
+    expect(emitInterestSpiralCrisisNews).toHaveBeenCalledWith("IT", 760, 2);
+    expect(w.row().fiscalConsolidation).toBeUndefined();
+    expect(w.row().sovereignCrisisState).toBe("recovering");
+  });
+
+  it("still refuses a caller-counted restructuring while another crisis owns the country", async () => {
+    const w = world({ ...ITALY, sovereignCrisisState: "recovering" });
+    expect(await restructureForInterestSpiral(w.db, "IT", 760, 1_000, { countedYears: 2 })).toEqual(
+      { ok: false, reason: "crisis-in-progress" }
+    );
+  });
 });

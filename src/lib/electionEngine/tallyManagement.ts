@@ -111,6 +111,7 @@ import {
   deriveGroupLeans,
 } from "@/lib/countries/uk/manifesto/electionManifestoResolver";
 import { loadActiveCrisisBlameShifts } from "@/lib/events/substrate/countryModifiers";
+import { loadActiveLeaderLegacyShifts } from "@/lib/government/leaderLegacy";
 import { buildCrisisBlameModifierByParty, type CrisisBlameShift } from "./crisisBlame";
 import { buildCurrentRegistrationBaseline } from "./electionFormulaFactors";
 import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
@@ -718,9 +719,11 @@ export async function accumulateVoteTurn(
       : undefined,
     // Credit and blame for how office holders handled recent crises.
     isGeneralElection
-      ? memoized(memo?.crisisBlameByCountry, electionCountryId, () =>
-          loadActiveCrisisBlameShifts(db, electionCountryId, turnNumber)
-        )
+      ? memoized(memo?.crisisBlameByCountry, electionCountryId, async () => [
+          ...(await loadActiveCrisisBlameShifts(db, electionCountryId, turnNumber)),
+          // A departed leader's legacy rides the same bounded party shift.
+          ...(await loadActiveLeaderLegacyShifts(db, electionCountryId, turnNumber)),
+        ])
       : undefined,
   ]);
   // Party renewal bounds the ratchet: past half the seats, no further shield.
