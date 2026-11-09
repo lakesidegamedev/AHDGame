@@ -50,6 +50,17 @@ export function splitCountVector(
   const out: Record<string, number[]> = {};
   for (const id of ids) out[id] = new Array(vec.length).fill(0);
   for (let i = 0; i < vec.length; i++) {
+    if (!Number.isSafeInteger(vec[i])) {
+      // Live cohort flows contain fractional expected residents. Rounding each
+      // cohort up during a border change creates people, unlike the integer seed path.
+      let used = 0;
+      for (const [index, id] of ids.entries()) {
+        const value = index === ids.length - 1 ? vec[i] - used : vec[i] * weights[id];
+        out[id][i] = value;
+        used += value;
+      }
+      continue;
+    }
     const alloc = largestRemainderAllocate(vec[i], weights);
     for (const id of ids) out[id][i] = alloc[id] ?? 0;
   }

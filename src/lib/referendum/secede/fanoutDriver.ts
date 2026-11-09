@@ -8,6 +8,7 @@
 import { BSON, ObjectId } from "mongodb";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { splitExtractionFields } from "./rules/extraction";
+import { splitRegionalFinance } from "./rules/regionalFinance";
 import { ENERGY_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetEnergy";
 import { INFRA_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetInfra";
 import type { Db } from "mongodb";
@@ -28,6 +29,8 @@ export interface FanoutContext {
   capital: string;
   /** Game's reset preset (GameState.preset) — selects the era demographic pattern. */
   preset?: string;
+  sectorLocations?: Record<string, string>;
+  resourceWeights?: Record<string, Record<string, number>>;
 }
 
 export function buildFanoutContext(
@@ -71,6 +74,8 @@ async function clonePerSubRegion(
     const clone = BSON.EJSON.parse(BSON.EJSON.stringify(agg)) as AggDoc;
     clone._id = s._id;
     clone.countryId = ctx.countryId;
+    if (clone.stateId === ctx.countryId) clone.stateId = s._id;
+    if (clone.regionId === ctx.countryId) clone.regionId = s._id;
     clone.updatedAt = now;
     mutate(clone, s._id);
     return clone;
@@ -131,7 +136,9 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
 
     case "scaleNumeric":
       return clonePerSubRegion(db, scope, ctx, (clone, subId) => {
-        const w = ctx.gdpWeights[subId] ?? 0;
+        const w =
+          (scope.collection === "regionalBudgets" ? ctx.popWeights : ctx.gdpWeights)[subId] ?? 0;
+        Object.assign(clone, splitRegionalFinance(clone, ctx.countryId, subId, w));
         for (const field of scope.scaleFields ?? []) {
           const v = getPath(clone, field);
           if (v !== undefined) setPath(clone, field, scaleDeep(v, w));
@@ -154,11 +161,22 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
         outputBase?: number;
       }>;
       if (docs.length === 0) return 0;
-      const buckets = partitionByGdp(
-        docs,
-        (d) => d.revenue ?? d.capacityBase ?? d.outputBase ?? 1,
-        ctx.seeds
-      );
+      const buckets =
+        ctx.sectorLocations && ["corporateSectors", "unownedSectors"].includes(scope.collection)
+          ? Object.fromEntries(
+              ctx.seeds.map((seed) => [
+                seed._id,
+                docs.filter(
+                  (doc) =>
+                    ctx.sectorLocations![`${scope.collection}:${String(doc._id)}`] === seed._id
+                ),
+              ])
+            )
+          : partitionByGdp(
+              docs,
+              (d) => d.revenue ?? d.capacityBase ?? d.outputBase ?? 1,
+              ctx.seeds
+            );
       const now = new Date();
       const ops = Object.entries(buckets).flatMap(([subId, items]) =>
         items.map((item) => ({
@@ -218,22 +236,38 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
         }
       }
       const rows = docs.flatMap((doc) =>
-        ctx.seeds.map((seed) => ({
-          ...doc,
-          _id: new ObjectId(),
-          stateId: seed._id,
-          countryId: ctx.countryId,
-          ...splitExtractionFields(
-            doc,
-            ctx.gdpWeights[seed._id],
-            ctx.countryId,
-            seed._id,
-            scope.policy === "splitCapacity"
-          ),
-          ...(scope.policy === "splitContracts" && doc.status === "active"
-            ? { signingFeeAttemptKey: undefined }
-            : {}),
-        }))
+        ctx.seeds
+          .filter(
+            (seed) =>
+              scope.policy === "splitCapacity" ||
+              (ctx.resourceWeights?.[String(doc.resource)]?.[seed._id] ??
+                ctx.gdpWeights[seed._id]) > 0
+          )
+          .map((seed) => ({
+            ...doc,
+            _id: new ObjectId(),
+            stateId: seed._id,
+            countryId: ctx.countryId,
+            ...splitExtractionFields(
+              doc,
+              scope.policy === "splitContracts"
+                ? (ctx.resourceWeights?.[String(doc.resource)]?.[seed._id] ??
+                    ctx.gdpWeights[seed._id])
+                : ctx.gdpWeights[seed._id],
+              ctx.countryId,
+              seed._id,
+              scope.policy === "splitCapacity",
+              Object.fromEntries(
+                Object.entries(ctx.resourceWeights ?? {}).map(([resource, weights]) => [
+                  resource,
+                  weights[seed._id] ?? 0,
+                ])
+              )
+            ),
+            ...(scope.policy === "splitContracts" && doc.status === "active"
+              ? { signingFeeAttemptKey: undefined }
+              : {}),
+          }))
       );
       await coll.insertMany(rows);
       await coll.deleteMany({ stateId: ctx.countryId });

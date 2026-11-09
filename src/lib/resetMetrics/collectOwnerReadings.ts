@@ -666,7 +666,11 @@ export async function collectResetMetricOwnerReadings(
           };
         }
         if (due.has("57")) {
-          const readiness = nationalForceReadiness(unitsByCountry.get(board.countryId) ?? [], turn);
+          const readiness = nationalForceReadiness(
+            unitsByCountry.get(board.countryId) ?? [],
+            turn,
+            board.countryId === "SCO" || board.countryId === "WAL"
+          );
           if (readiness !== null) {
             updates["57"] = {
               ...board.observations["57"]!,
