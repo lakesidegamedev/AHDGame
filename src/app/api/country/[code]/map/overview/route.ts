@@ -19,6 +19,7 @@ import {
   BASE_APPROVAL,
   calculateStateApproval,
   computeNationalAveragesFromMetrics,
+  loadElectorateGroups,
   weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
@@ -146,9 +147,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // Compute approval per region — electorate-weighted (P6d), reusing the
     // already-loaded demographics (composite key matches weightingFor).
     const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
-    const groupsByState = new Map(
-      allDemographics.map((d) => [`${d.countryId}:${d._id}`, Object.values(d.groups ?? {})])
-    );
+    const groupsByState = await loadElectorateGroups(db, { countryId });
     // SP4: playable countries score from the hybrid political base.
     const politicalBases = isPoliticalApprovalCountry(countryId, true)
       ? await loadPoliticalApprovalBases(db, countryId)

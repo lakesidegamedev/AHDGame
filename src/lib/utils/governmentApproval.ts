@@ -27,6 +27,7 @@ import { actingAppointmentsEnabled } from "@/lib/cabinet/actingEligibility";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { resolveGameYear } from "@/lib/era/era";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getHeadOfGovernmentReference } from "@/lib/api/headOfGovernmentReference";
 import {
@@ -47,7 +48,8 @@ import {
   applyModifiers,
   type ActiveModifier,
 } from "@/lib/utils/approvalModifiers";
-import { getEraContext } from "@/lib/era/context";
+import { electorateUnitsByRegion } from "@/lib/demographics/electorateWeights";
+import { eraYearContextFromGameState, getEraContext } from "@/lib/era/context";
 import { isMetricActive } from "@/lib/era/metricCatalog";
 import { getActiveNationalAddressModifier } from "@/lib/governorOffice/address/activeAddressModifiers";
 import { getActiveOrgStatementModifiersByCountry } from "@/lib/internationalOrganizations/jointStatement";
@@ -285,20 +287,37 @@ export function effectiveMetricWeight(
 }
 
 /**
- * P6d — load each state's demographic groups for electorate-weighted approval,
- * keyed by `${countryId}:${stateId}` so a cross-country state-ID collision
- * (CN HB / DE HB) never returns the wrong electorate. Pass a Mongo filter to
- * scope the read (e.g. `{ countryId }` or `{ _id: { $in: stateIds }, countryId }`).
+ * P6d — each state's census electorate as voter units for electorate-weighted
+ * approval, keyed by `${countryId}:${stateId}` so a cross-country state-ID
+ * collision (CN HB / DE HB) never returns the wrong electorate. A state without
+ * census cells has no entry and its approval stays unweighted. Pass a Mongo
+ * filter to scope the read (e.g. `{ countryId }` or `{ _id: { $in: stateIds }, countryId }`).
  */
 export async function loadElectorateGroups(
   db: Db,
   filter: Record<string, unknown> = {}
 ): Promise<Map<string, StateDemographicGroup[]>> {
-  const docs = await db
-    .collection<StateDemographics>("stateDemographics")
-    .find(filter, { projection: { _id: 1, countryId: 1, groups: 1 } })
-    .toArray();
-  return new Map(docs.map((d) => [`${d.countryId}:${d._id}`, Object.values(d.groups ?? {})]));
+  const projection = {
+    _id: 1,
+    countryId: 1,
+    layer1PositionOverrides: 1,
+    layer1TurnoutOverrides: 1,
+  };
+  const [docs, defaultDocs, gameState] = await Promise.all([
+    db.collection<StateDemographics>("stateDemographics").find(filter, { projection }).toArray(),
+    db.collection<StateDemographics>("demographicDefaults").find(filter, { projection }).toArray(),
+    getGameStateCollection(db).then((col) =>
+      col.findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+      )
+    ),
+  ]);
+  return electorateUnitsByRegion(
+    docs,
+    new Map(defaultDocs.map((d) => [`${d.countryId}:${d._id}`, d])),
+    { preset: gameState?.preset, ...eraYearContextFromGameState(gameState) }
+  );
 }
 
 /** Build the optional `weighting` arg for a state from a composite-keyed group map. */
@@ -679,19 +698,16 @@ export async function snapshotApprovalHistory(
   const { preset, year } = await getEraContext(db);
 
   const stateIds = await statesCol.distinct("_id", { countryId });
-  const [allMetrics, allStates, allDemographics] = await Promise.all([
+  const [allMetrics, allStates, groupsByState] = await Promise.all([
     // Scope the metrics fetch to the same country so a cross-country state-ID
     // collision (CN HB / DE HB) can't pull in another country's metrics.
     // SP5: merged two-store view (macro + political halves).
     findMergedRegionMetricsMany(db, { _id: { $in: stateIds }, countryId }),
     statesCol.find({ countryId }, { projection: { _id: 1, population: 1 } }).toArray(),
-    // P6d: per-state demographic groups drive the electorate-weighted approval.
+    // P6d: per-state census electorate drives the electorate-weighted approval.
     // Scoped by countryId like the metrics fetch above so a cross-country
     // state-ID collision (CN HB / DE HB) can't pull the wrong electorate.
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({ _id: { $in: stateIds }, countryId }, { projection: { _id: 1, groups: 1 } })
-      .toArray(),
+    loadElectorateGroups(db, { _id: { $in: stateIds }, countryId }),
   ]);
 
   // The war block is computed BEFORE the metrics guard below, and persisted on
@@ -739,9 +755,6 @@ export async function snapshotApprovalHistory(
   }
 
   const statePopMap = new Map(allStates.map((s) => [s._id, s.population ?? 0]));
-  const groupsByState = new Map<string, StateDemographicGroup[]>(
-    allDemographics.map((d) => [d._id, Object.values(d.groups ?? {})])
-  );
   const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
   // SP4: playable countries score their metric base from the hybrid political
   // model — one provider call per snapshot, applied as baseOverride so
@@ -758,7 +771,6 @@ export async function snapshotApprovalHistory(
   // redistricting flag is off or the country has no district docs).
   const fairnessModifiersByState = await getActiveFairnessGapModifiers(db, countryId);
   const stateApprovals = allMetrics.map((m) => {
-    const groups = groupsByState.get(m._id);
     return {
       stateId: m._id,
       approval: calculateStateApproval(
@@ -768,7 +780,7 @@ export async function snapshotApprovalHistory(
           ...(addressModifiersByState.get(m._id) ?? []),
           ...(fairnessModifiersByState.get(m._id) ?? []),
         ],
-        groups && groups.length > 0 ? { groups } : undefined,
+        weightingFor(groupsByState, countryId, String(m._id)),
         preset,
         year,
         isPoliticalApprovalCountry(countryId, true)

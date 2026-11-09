@@ -4,7 +4,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { State, StateApprovalHistory, GameState } from "@/lib/db/types";
-import type { StateDemographics } from "@/lib/db/types/demographics";
 import { resolveGameYear } from "@/lib/era/era";
 import { getActiveAddressApprovalModifiers } from "@/lib/governorOffice/address/activeAddressModifiers";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -14,6 +13,8 @@ import {
   computeStateApprovalBase,
   computeNationalAveragesFromMetrics,
   buildFlatMetrics,
+  loadElectorateGroups,
+  weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
@@ -117,11 +118,11 @@ export async function GET(
     );
     // P6d: this region's demographic groups, so the displayed approval matches
     // the electorate-weighted value the per-turn snapshot stores.
-    const demographicsDoc = await db
-      .collection<StateDemographics>("stateDemographics")
-      .findOne({ _id: stateId, countryId: resolvedCountryId }, { projection: { groups: 1 } });
-    const regionGroups = Object.values(demographicsDoc?.groups ?? {});
-    const weighting = regionGroups.length > 0 ? { groups: regionGroups } : undefined;
+    const groupsByState = await loadElectorateGroups(db, {
+      _id: stateId,
+      countryId: resolvedCountryId,
+    });
+    const weighting = weightingFor(groupsByState, resolvedCountryId, stateId);
     // SP4: playable countries score from the hybrid political base.
     let metricModifiers;
     let baseOverride: number | undefined;
