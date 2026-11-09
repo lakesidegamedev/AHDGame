@@ -52,6 +52,17 @@ describe("GeneralProfileClient (per-character)", () => {
     expect(screen.getByText("Command Style")).toBeTruthy();
   });
 
+  // A general has no branch of their own: the defence holder assigns units of any branch.
+  it("does not show a Branch tile or label a general with a branch", () => {
+    renderClient({ general: commissioned() });
+    expect(screen.queryByText("BRANCH")).toBeNull();
+    expect(screen.getByText("RANK")).toBeTruthy();
+    expect(screen.getByText("LEVEL")).toBeTruthy();
+    fireEvent.click(screen.getByText("History"));
+    expect(screen.getByText("Commissioned")).toBeTruthy();
+    expect(screen.queryByText(/Commissioned ·/)).toBeNull();
+  });
+
   // Specialisation is a derived best-fit label, not a stored choice.
   it("shows the derived specialisation and fit for a trained general", () => {
     // ar1 + ar2 → armor is the best fit (2 of armor's 3 seed nodes).
