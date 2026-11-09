@@ -140,10 +140,11 @@ const CASES: Case[] = [
     election: {
       countryId: "RU",
       electionType: "dumaDeputy",
-      state: "MOW",
+      state: "CEN",
       russianDumaRound: { registeredVoters: 900_000 } as unknown as Election["russianDumaRound"],
     },
     candidates: ["1", "2", "3", "4"].map((p) => ({ party: p })),
+    preset: "1991-default",
     maps: ["totalVotes"],
   },
   {
@@ -151,7 +152,7 @@ const CASES: Case[] = [
     election: {
       countryId: "RU",
       electionType: "federationCouncilMember",
-      state: "MOW",
+      state: "CEN",
       russianCouncilRound: {
         registeredVoters: 900_000,
       } as unknown as Election["russianCouncilRound"],
@@ -163,6 +164,7 @@ const CASES: Case[] = [
         registrationOrder: i + 1,
       } as unknown as ElectionCandidate["russianCouncilNomination"],
     })),
+    preset: "1991-default",
     maps: ["totalVotes"],
   },
 ];

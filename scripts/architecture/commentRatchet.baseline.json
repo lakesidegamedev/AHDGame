@@ -7705,10 +7705,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/resolvedTurnout.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/electionEngine/singleSeatIncumbency.ts": {
       "longBlocks": 2,
       "narrativeLines": 1

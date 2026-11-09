@@ -48,7 +48,6 @@ vi.mock("./voteDistributionSwingFlow", () => ({
 
 vi.mock("./resolvedTurnout", () => ({
   resolveTurnout: vi.fn(),
-  buildLiveTurnouts: vi.fn(),
   // Registered-voter gate: no pool doc in these fixtures, so passthrough — the
   // real function is identity when `unregistered` is absent.
   scalePoolToRegistered: (pool: number) => pool,
@@ -463,7 +462,12 @@ describe("accumulateVoteTurn — vote accumulation", () => {
       _id: electionId,
       countryId: "RU",
       electionType: "president",
+      state: "CEN",
       russianPresidentialRound: { round: 1, mandateSinceTurn: 1, registeredVoters: 100 },
+    });
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      preset: "1991-default",
     });
     await setupHappyPath({
       electionId,
@@ -1989,28 +1993,13 @@ describe("accumulateVoteTurn — granular electorate substrate", () => {
     expect(popSum).toBeCloseTo(100, 3);
   });
 
-  it("a state with no Layer-1 census passes its fixtures through untouched", async () => {
-    const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
-    const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
-
-    // The substrate keys on `election.state`, and PA has a real Layer-1 census —
-    // which is why this can no longer lean on an absent flag. `ZZ` has none, so
-    // buildGranularElectorateSubstrate returns null and the fixtures survive.
+  it("throws when a regional contest has no census electorate", async () => {
     const { electionId } = await setupForFlag({
       gameState: { _id: "current" },
       state: "ZZ",
     });
-    await accumulateVoteTurn(electionId, 1, new Date());
-
-    const call =
-      vi.mocked(distributeVotesBySwingFlow).mock.calls[0] ??
-      vi.mocked(distributeVotesByGroupLevelAllocation).mock.calls[0];
-    expect(call).toBeDefined();
-    const [, , totalPool, , demographics, categories] = call;
-    // The exact fixture objects pass through — no substitution.
-    expect(categories).toHaveLength(1);
-    expect(categories[0]._id).toBe("ideology");
-    expect(Object.keys(demographics.groups).sort()).toEqual(["conservative", "liberal"]);
-    expect(totalPool).toBe(600_000);
+    await expect(accumulateVoteTurn(electionId, 1, new Date())).rejects.toThrow(
+      /No census electorate/
+    );
   });
 });
