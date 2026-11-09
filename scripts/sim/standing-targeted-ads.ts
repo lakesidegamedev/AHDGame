@@ -53,7 +53,6 @@ function project(
       categoryWeights: {},
       lastUpdated: new Date(0),
     },
-    categories: [],
     enriched: [a, candidate("b")],
   })!;
   const allocate = general ? distributeVotesBySwingFlow : distributeVotesByGroupLevelAllocation;

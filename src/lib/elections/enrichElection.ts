@@ -38,8 +38,8 @@ import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocL
 import { getCountryState } from "@/lib/countryState";
 import { allocateBlocListSeats } from "@/lib/turn/election/blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
-import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { eraYearContextFromGameState } from "@/lib/era/context";
+import { censusMedianVoter } from "./censusMedianVoter";
 import { ObjectId } from "mongodb";
 import type {
   Election,
@@ -99,11 +99,7 @@ import {
   resolveSingleSeatLegislativeIncumbent,
   isSingleSeatLegislativeRace,
 } from "@/lib/electionEngine/singleSeatIncumbency";
-import {
-  computeMedianVoter,
-  computeNationalEvWeightedMedian,
-  usesEvWeightedNationalMedian,
-} from "@/lib/electionEngine/medianVoter";
+import { usesEvWeightedNationalMedian } from "@/lib/electionEngine/medianVoter";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import {
   buildMidtermOppositionModifierByParty,
@@ -1067,41 +1063,15 @@ export async function _enrichElection(
       }
     }
 
-    if (allDemographics.length > 0) {
-      const defaultsByState = new Map(allDefaults.map((d) => [d._id as string, d]));
-      const eraYear = eraYearContextFromGameState(gameState);
-      // The median is read off the same census cells the vote engine counts.
-      const medianFor = (demographics: StateDemographics) => {
-        const substrate = buildGranularElectorateSubstrate({
-          countryId,
-          stateId: demographics._id as string,
-          preset: gameState?.preset,
-          ...eraYear,
-          statePopulation: 1,
-          demographics,
-          demographicDefaults: defaultsByState.get(demographics._id as string) ?? null,
-          enriched: [],
-        });
-        return substrate
-          ? computeMedianVoter(substrate.demographics, substrate.categories, substrate.liveTurnouts)
-          : null;
-      };
-      if (useEvWeightedMedian) {
-        const evEntries = allDemographics.flatMap((d) => {
-          const ev = evByState[d._id as string] ?? 0;
-          const median = ev > 0 ? medianFor(d) : null;
-          return median ? [{ median, ev }] : [];
-        });
-        if (evEntries.length > 0) {
-          medianVoter = computeNationalEvWeightedMedian(evEntries);
-        }
-      } else if (election.state) {
-        const stateDemographics = allDemographics.find((d) => d._id === election.state);
-        if (stateDemographics) {
-          medianVoter = medianFor(stateDemographics) ?? undefined;
-        }
-      }
-    }
+    medianVoter = censusMedianVoter({
+      countryId,
+      preset: gameState?.preset,
+      eraYear: eraYearContextFromGameState(gameState),
+      demographics: allDemographics,
+      defaults: allDefaults,
+      evByState: useEvWeightedMedian ? evByState : null,
+      stateId: election.state ?? undefined,
+    });
 
     // Coattails inputs for the persuasion-drivers card (mirrors the turn
     // engine; display values here). Both are nominal-share multipliers

@@ -13,27 +13,12 @@ import { targetedAdBonuses } from "@/lib/campaignTargeting/rules";
 import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/electionEngine/types";
 import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
 import { personalStatTenureRetentionForCandidate } from "@/lib/electionEngine/rules/tenureRetention";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { StateDemographics } from "@/lib/db/types";
 
 const SOURCE_REVISION = "98ffb6ded3a4110e94598e98ce582ad2c0ba9eeb";
 const stateId = "CT";
 const countryId = "US";
 const population = 100_000;
-const legacyCategories = [
-  {
-    _id: "legacy-all",
-    name: "Legacy substrate placeholder",
-    groups: [
-      {
-        id: "legacy-all",
-        name: "All voters",
-        defaultEconomicLean: 0,
-        defaultSocialLean: 0,
-        defaultTurnout: 60,
-      },
-    ],
-  },
-] as unknown as DemographicCategory[];
 const legacyDemographics = {
   _id: stateId,
   categoryWeights: { "legacy-all": 100 },
@@ -180,8 +165,6 @@ for (const office of offices) {
             currentTurn,
             statePopulation: population,
             demographics: legacyDemographics,
-            categories: legacyCategories,
-            liveTurnouts: { "legacy-all": 60 },
             enriched: candidates,
             cache: "shared",
           });

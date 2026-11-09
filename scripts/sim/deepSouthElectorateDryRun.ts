@@ -95,7 +95,6 @@ function substrate(stateId: string, overlay?: Layer1PositionOverlay): GranularEl
     turnoutDoc: null,
     statePopulation: 1_000_000,
     demographics: demo,
-    categories: [],
     enriched: [],
     demographicDefaults: overlay ? { ...demo, layer1PositionOverrides: overlay } : null,
   });
