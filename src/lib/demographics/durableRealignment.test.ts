@@ -9,11 +9,8 @@ import { describe, it, expect } from "vitest";
 import type { StateDemographics } from "@/lib/db/types/demographics";
 import {
   applyDurableStep,
-  applyDurableGroupShift,
   applyDurableBucketShift,
   readLayer1Overlay,
-  applyDurableTurnoutStep,
-  applyDurableGroupTurnoutShift,
   applyDurableBucketTurnoutShift,
   readLayer1TurnoutOverlay,
   type DurableShiftAccumulators,
@@ -30,19 +27,6 @@ describe("applyDurableStep (lean axis, -5..5)", () => {
   it("clamps to the shared -5..5 axis", () => {
     expect(applyDurableStep(4.5, 3)).toBe(5);
     expect(applyDurableStep(-4.5, -3)).toBe(-5);
-  });
-});
-
-describe("applyDurableTurnoutStep (archetype turnout, 0..100)", () => {
-  it("is a no-op for a zero delta", () => {
-    expect(applyDurableTurnoutStep(55, 0)).toBe(55);
-  });
-  it("clamps to the real 0-100 percentage scale — NOT the ±5 lean axis", () => {
-    expect(applyDurableTurnoutStep(97, 10)).toBe(100);
-    expect(applyDurableTurnoutStep(3, -10)).toBe(0);
-  });
-  it("does not clamp a legitimate mid-range value", () => {
-    expect(applyDurableTurnoutStep(40, 15)).toBe(55);
   });
 });
 
@@ -77,37 +61,8 @@ describe("readLayer1Overlay / readLayer1TurnoutOverlay", () => {
   });
 });
 
-describe("applyDurableGroupShift (lean, group-keyed)", () => {
-  it("writes both live and default group keys and stacks within one turn's acc", () => {
-    const acc = makeAcc();
-    applyDurableGroupShift("retirees", "economicLean", 1, { live: 2, default: 2 }, acc);
-    expect(acc.liveUpdates["groups.retirees.economicLean"]).toBe(3);
-    expect(acc.defaultUpdates["groups.retirees.economicLean"]).toBe(3);
-
-    // A second target landing on the SAME group+axis within the same turn
-    // sums rather than clobbers.
-    applyDurableGroupShift("retirees", "economicLean", 0.5, { live: 2, default: 2 }, acc);
-    expect(acc.liveUpdates["groups.retirees.economicLean"]).toBe(3.5);
-  });
-
-  it("is a no-op when netDelta is 0", () => {
-    const acc = makeAcc();
-    applyDurableGroupShift("retirees", "economicLean", 0, { live: 2, default: 2 }, acc);
-    expect(acc.liveUpdates).toEqual({});
-    expect(acc.defaultUpdates).toEqual({});
-  });
-
-  it("skips the default write when no default value is present, but only the live key is written", () => {
-    const acc = makeAcc();
-    applyDurableGroupShift("retirees", "economicLean", 1, { live: 2, default: undefined }, acc);
-    expect(acc.liveUpdates["groups.retirees.economicLean"]).toBe(3);
-    expect(acc.defaultUpdates["groups.retirees.economicLean"]).toBeUndefined();
-    expect(acc.defaultUpdates).toEqual({});
-  });
-});
-
 describe("applyDurableBucketShift (lean, exact dim/bucket)", () => {
-  it("writes only the overlay key, never a live/archetype key", () => {
+  it("writes only the overlay key, never a live key", () => {
     const acc = makeAcc();
     applyDurableBucketShift("race", "black", "economicLean", 1.5, () => 0, acc);
     expect(acc.defaultUpdates["layer1PositionOverrides.race.black.economicLean"]).toBe(1.5);
@@ -119,45 +74,25 @@ describe("applyDurableBucketShift (lean, exact dim/bucket)", () => {
     applyDurableBucketShift("race", "black", "economicLean", 1, () => 2, acc);
     expect(acc.defaultUpdates["layer1PositionOverrides.race.black.economicLean"]).toBe(3);
   });
-});
 
-// ─── Turnout channel — the Voting Rights Act's mechanism ───────────────────
-
-describe("applyDurableGroupTurnoutShift (turnout, group-keyed)", () => {
-  it("writes groups.<id>.turnout on both live and default, clamped to 0-100 (not the lean ±5 axis)", () => {
+  it("stacks several targets landing on the same bucket within one turn", () => {
     const acc = makeAcc();
-    applyDurableGroupTurnoutShift("union_trades", 50, { live: 60, default: 60 }, acc);
-    // 60 + 50 = 110, clamped to 100 — proves this uses the turnout clamp, not
-    // the lean clamp (which would have clamped to 5).
-    expect(acc.liveUpdates["groups.union_trades.turnout"]).toBe(100);
-    expect(acc.defaultUpdates["groups.union_trades.turnout"]).toBe(100);
+    applyDurableBucketShift("race", "black", "economicLean", 1, () => 2, acc);
+    applyDurableBucketShift("race", "black", "economicLean", 0.5, () => 2, acc);
+    expect(acc.defaultUpdates["layer1PositionOverrides.race.black.economicLean"]).toBe(3.5);
   });
 
   it("is a no-op when netDelta is 0", () => {
     const acc = makeAcc();
-    applyDurableGroupTurnoutShift("union_trades", 0, { live: 60, default: 60 }, acc);
-    expect(acc.liveUpdates).toEqual({});
+    applyDurableBucketShift("race", "black", "economicLean", 0, () => 2, acc);
     expect(acc.defaultUpdates).toEqual({});
-  });
-
-  it("skips the default write when no default value is present, but only the live key is written", () => {
-    const acc = makeAcc();
-    applyDurableGroupTurnoutShift("union_trades", 10, { live: 40, default: undefined }, acc);
-    expect(acc.liveUpdates["groups.union_trades.turnout"]).toBe(50);
-    expect(acc.defaultUpdates["groups.union_trades.turnout"]).toBeUndefined();
-    expect(acc.defaultUpdates).toEqual({});
-  });
-
-  it("stacks multiple targets landing on the same group+turnout within one turn", () => {
-    const acc = makeAcc();
-    applyDurableGroupTurnoutShift("union_trades", 5, { live: 40, default: 40 }, acc);
-    applyDurableGroupTurnoutShift("union_trades", 3, { live: 40, default: 40 }, acc);
-    expect(acc.liveUpdates["groups.union_trades.turnout"]).toBe(48);
   });
 });
 
+// ─── Turnout channel — the Voting Rights Act's mechanism ───────────────────
+
 describe("applyDurableBucketTurnoutShift (turnout, exact dim/bucket — the VRA checkpoint's channel)", () => {
-  it("writes only the layer1TurnoutOverrides key, never a live/archetype key", () => {
+  it("writes only the layer1TurnoutOverrides key, never a live key", () => {
     const acc = makeAcc();
     applyDurableBucketTurnoutShift("race", "black", 20, () => 0, acc);
     expect(acc.defaultUpdates["layer1TurnoutOverrides.race.black"]).toBe(20);

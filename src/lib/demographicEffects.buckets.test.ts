@@ -1,6 +1,6 @@
 /**
  * Bucket-targeted legislation effects — the `{ dim, bucket }` channel that
- * replaces `groupId` on `DemographicEffect`.
+ * is how `DemographicEffect` targets the electorate.
  *
  * The point of the channel is that it reaches the granular vote path directly
  * rather than through an archetype's fuzzy bucket projection, so the tests
@@ -70,10 +70,10 @@ describe("demographicEffectTargetKey", () => {
     ).toBe("education:no_college");
   });
 
-  it("keys a legacy archetype target as its groupId", () => {
-    expect(demographicEffectTargetKey({ groupId: "union_trades", direction: 1 })).toBe(
-      "union_trades"
-    );
+  it("has no key for an effect that names only a voter group", () => {
+    expect(
+      demographicEffectTargetKey({ groupId: "union_trades", target: "economicLean", direction: 1 })
+    ).toBeNull();
   });
 
   it("refuses a bucket target on the population channel", () => {
@@ -100,7 +100,7 @@ describe("bucket drift on the live demographics doc", () => {
     const shifts = calculateDemographicShiftsByTarget([policy(3)], legTypeMap(effects));
     expect(shifts.economicLean["education:no_college"]).toBeCloseTo(LEAN_SHIFT_RATE_PER_TURN, 10);
 
-    const updates = buildDemographicUpdates(demographics(), shifts, new Map());
+    const updates = buildDemographicUpdates(demographics(), shifts);
     expect(updates["layer1PositionOverrides.education.no_college.economicLean"]).toBeCloseTo(
       LEAN_SHIFT_RATE_PER_TURN,
       10
@@ -117,7 +117,7 @@ describe("bucket drift on the live demographics doc", () => {
         },
       },
     });
-    const updates = buildDemographicUpdates(atCap, shifts, new Map());
+    const updates = buildDemographicUpdates(atCap, shifts);
     expect(updates["layer1PositionOverrides.education.no_college.economicLean"]).toBeUndefined();
   });
 
@@ -128,11 +128,11 @@ describe("bucket drift on the live demographics doc", () => {
         education: { no_college: { economicLean: stored, socialLean: 0 } },
       },
     });
-    const updates = buildDemographicUpdates(
-      drifted,
-      { population: {}, economicLean: {}, socialLean: {}, turnout: {} },
-      new Map()
-    );
+    const updates = buildDemographicUpdates(drifted, {
+      economicLean: {},
+      socialLean: {},
+      turnout: {},
+    });
     expect(updates["layer1PositionOverrides.education.no_college.economicLean"]).toBeCloseTo(
       stored * (1 - LEAN_TURNOUT_DECAY_RATE_PER_TURN),
       10
