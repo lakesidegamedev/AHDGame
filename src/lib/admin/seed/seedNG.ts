@@ -146,7 +146,7 @@ export async function seedNGDemographics(
   }
   for (const raw of ngRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "NG") : raw;
-    const { _id, ...demoData } = demo;
+    const { _id, groups: _groups, ...demoData } = demo;
     await db
       .collection<StateDemographics>("stateDemographics")
       .updateOne({ _id }, { $set: demoData }, { upsert: true });

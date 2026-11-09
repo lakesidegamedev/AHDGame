@@ -112,7 +112,7 @@ export async function seedRUDemographics(
   }
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
-    const { _id, ...demoData } = raw;
+    const { _id, groups: _groups, ...demoData } = raw;
     await db
       .collection<StateDemographics>("stateDemographics")
       .updateOne({ _id }, { $set: demoData }, { upsert: true });
@@ -121,7 +121,7 @@ export async function seedRUDemographics(
   // Derive the electorate lean onto the states docs. Without this the regions
   // read as "lean not yet derived" and drop out of policy-distance scoring.
   const { persistRegionLeans } = await import("@/lib/admin/seed/persistRegionLeans");
-  const leanCount = await persistRegionLeans(db, regionDemographics, ruDemographicCategories);
+  const leanCount = await persistRegionLeans(db, regionDemographics, preset);
 
   // Turnout modifier rows (spec §5.1) — one per region, all modifiers 0.
   // The reset branch above already clears them; this fills the gap where they

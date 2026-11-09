@@ -7,9 +7,12 @@ import type {
 } from "@/lib/db/types";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
-import { calculateStateLean } from "@/lib/utils/demographics";
+import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import { STATE_IDS } from "@/lib/constants/states";
 import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
+
+/** The static US bundle seeded here is the 2019 census. */
+const US_STATIC_PRESET = "2019-default";
 
 export async function seedDemographics(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
@@ -47,7 +50,7 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
   const demoTime = new Date();
   const stateDemoUpserts: AnyBulkWriteOperation<StateDemographics>[] = stateDemographics.map(
     (sd) => {
-      const { _id, ...sdData } = sd;
+      const { _id, groups: _groups, ...sdData } = sd;
       return {
         updateOne: {
           filter: { _id },
@@ -58,7 +61,12 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
     }
   );
   const stateLeanOps: AnyBulkWriteOperation<State>[] = stateDemographics.map((sd) => {
-    const calculatedLean = calculateStateLean(sd, demographicCategories);
+    const calculatedLean = calculateStateLeanForCache(sd, [], {
+      countryId: "US",
+      stateId: sd._id,
+      preset: US_STATIC_PRESET,
+      demographicDefaults: sd,
+    });
     return {
       updateOne: {
         filter: { _id: sd._id },

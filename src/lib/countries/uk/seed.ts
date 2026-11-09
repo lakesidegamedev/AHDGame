@@ -163,7 +163,7 @@ export async function seedUKDemographics(
   const { default: ukRegionDemographicsStatic } =
     await import("@/lib/seeds/uk/ukRegionDemographics");
   const { ukDemographicTurnout } = await import("@/lib/seeds/uk/ukDemographicTurnout");
-  const { calculateStateLean } = await import("@/lib/utils/demographics");
+  const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
   const { ukRegionDemographics1991 } = is1991
     ? await import("./data/ukRegionDemographics1991")
@@ -199,18 +199,19 @@ export async function seedUKDemographics(
   // their selected era. Reapplying a modern-to-1991 transform distorts shares
   // and rounds away population, so persist the selected bundle directly.
   for (const sd of ukRegionDemographics) {
-    const { _id, ...sdData } = sd;
+    const { _id, groups: _groups, ...sdData } = sd;
     await db
       .collection<StateDemographics>("stateDemographics")
       .updateOne({ _id }, { $set: sdData }, { upsert: true });
     await db
       .collection<StateDemographics>("demographicDefaults")
       .updateOne({ _id }, { $set: sdData }, { upsert: true });
-    const allCategories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-    const lean = calculateStateLean(sd, allCategories);
+    const lean = calculateStateLeanForCache(sd, [], {
+      countryId: "UK",
+      stateId: sd._id,
+      preset,
+      demographicDefaults: sd,
+    });
     await db.collection<State>("states").updateOne(
       { _id: sd._id },
       {

@@ -1,30 +1,29 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
-import { calculateStateLean } from "@/lib/utils/demographics";
+import type { State, StateDemographics } from "@/lib/db/types";
+import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
 
 /**
- * Derive each region's electorate lean from its seeded demographics and write it
- * onto the `states` document.
- *
- * Seeding `stateDemographics` alone is not enough: `cachedEconomicLean` /
- * `cachedSocialLean` are what `getStateLean` reads, what the region pickers
- * display, and, via policy distance, what the election engine weighs. A country
- * that seeds demographics but skips this step contributes nothing to that
- * calculation and renders as "lean not yet derived".
- *
- * Returns the number of regions written.
+ * Writes each region's census lean onto its `states` document. Policy distance,
+ * region pickers and `getStateLean` read that cache, so a seeded country without
+ * it renders as "lean not yet derived". A region with no census is skipped, not
+ * written as neutral. Returns the number of regions written.
  */
 export async function persistRegionLeans(
   db: Db,
   regionDemographics: StateDemographics[],
-  categories: DemographicCategory[]
+  preset: string
 ): Promise<number> {
-  if (regionDemographics.length === 0 || categories.length === 0) return 0;
-
   const now = new Date();
-  const ops: AnyBulkWriteOperation<State>[] = regionDemographics.map((sd) => {
-    const lean = calculateStateLean(sd, categories);
-    return {
+  const ops: AnyBulkWriteOperation<State>[] = [];
+  for (const sd of regionDemographics) {
+    const lean = censusCachedStateLean(sd, {
+      countryId: sd.countryId,
+      stateId: sd._id,
+      preset,
+      demographicDefaults: sd,
+    });
+    if (!lean) continue;
+    ops.push({
       updateOne: {
         filter: { _id: sd._id },
         update: {
@@ -35,8 +34,9 @@ export async function persistRegionLeans(
           },
         },
       },
-    };
-  });
+    });
+  }
+  if (ops.length === 0) return 0;
 
   await db.collection<State>("states").bulkWrite(ops, { ordered: false });
   return ops.length;

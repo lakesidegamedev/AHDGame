@@ -54,7 +54,7 @@ export async function seedSuccessorDemographics1991(
   );
   const rows = models.flatMap((model) => buildModelRegionDemographics(model));
   await db.collection<StateDemographics>("stateDemographics").bulkWrite(
-    rows.map(({ _id, ...row }) => ({
+    rows.map(({ _id, groups: _groups, ...row }) => ({
       updateOne: { filter: { _id }, update: { $set: row }, upsert: true },
     }))
   );

@@ -114,7 +114,7 @@ export async function seedEasternBlocCountry(
   const model = getCountryLayer1Model(countryId, era);
   if (model) {
     for (const raw of buildModelRegionDemographics(model)) {
-      const { _id, ...demoData } = raw;
+      const { _id, groups: _groups, ...demoData } = raw;
       await db
         .collection<StateDemographics>("stateDemographics")
         .updateOne({ _id }, { $set: demoData }, { upsert: true });

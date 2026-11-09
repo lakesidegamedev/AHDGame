@@ -111,7 +111,7 @@ export async function seedModern2019(
     if (demographics.length !== regions.length)
       throw new Error(`2019 ${countryId} demographic regions do not match seeded regions`);
     await db.collection<StateDemographics>("stateDemographics").bulkWrite(
-      demographics.map(({ _id, ...data }) => ({
+      demographics.map(({ _id, groups: _groups, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
     );
