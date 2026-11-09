@@ -13,6 +13,7 @@ import { processUnownedSectorGrowth } from "@/lib/turn/unownedSectorGrowth";
 import { processMetricDecay } from "@/lib/turn/metricDecay";
 import { processSubsidyBudget } from "@/lib/turn/subsidyBudgetTurn";
 import { processRegionalBudgets } from "@/lib/turn/regionalBudget";
+import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { processJPRegionalBudgets } from "@/lib/turn/jpRegionalBudget";
 import {
   LAENDER_MODEL_COUNTRIES,
@@ -157,16 +158,25 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
               `skipped: regional budgets run every ${regionalBudgetCadence} turns`
             )
             .then(() => null);
-    const ukRegionalBudgetPromise = runRegionalBudgetPhase("regionalBudgetProcessing", () =>
-      processRegionalBudgets(
-        db,
-        newTurn,
-        regionalBudgetCadence,
-        gameState.regionalLegislationFinanceEnabled === true,
-        resetSystemVersionsForCountry(gameState, RESET_V2_READY, "UK").legislation === "v2",
-        typeof gameState.resetWorldId === "string" ? gameState.resetWorldId : undefined
-      )
-    );
+    const ukRegionalBudgetPromise = runRegionalBudgetPhase("regionalBudgetProcessing", async () => {
+      const countries = (await getRegisteredCountryIds(db)).filter(
+        (id): id is "UK" | "SCO" | "WAL" => id === "UK" || id === "SCO" || id === "WAL"
+      );
+      let regionsProcessed = 0;
+      for (const country of countries) {
+        const result = await processRegionalBudgets(
+          db,
+          newTurn,
+          regionalBudgetCadence,
+          gameState.regionalLegislationFinanceEnabled === true,
+          resetSystemVersionsForCountry(gameState, RESET_V2_READY, country).legislation === "v2",
+          typeof gameState.resetWorldId === "string" ? gameState.resetWorldId : undefined,
+          country
+        );
+        regionsProcessed += result.regionsProcessed;
+      }
+      return { regionsProcessed };
+    });
     const jpRegionalBudgetPromise = runRegionalBudgetPhase("jpRegionalBudgetProcessing", () =>
       processJPRegionalBudgets(
         db,

@@ -3,6 +3,12 @@ import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import { regionalizeOpeningReferences } from "@/lib/resetLegislation/rules/regionalizeOpeningReferences";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
 import type { SecedingCountryId } from "../subRegions";
+import { fiscalOwnerReadings, type FiscalOwnerInput } from "@/lib/resetMetrics/rules/fiscalOwner";
+import {
+  clearCountrySources,
+  splitHousingState,
+  inheritedRegionalObservation,
+} from "./metricContinuity";
 
 export interface SuccessorRegionSeed {
   id: string;
@@ -14,6 +20,8 @@ export function buildSuccessorMetricRows(input: {
   aggregate: ResetMetricSnapshot;
   national: ResetMetricSnapshot;
   regions: readonly SuccessorRegionSeed[];
+  turn?: number;
+  fiscal?: FiscalOwnerInput;
 }): ResetMetricSnapshot[] {
   const { aggregate, countryId, regions } = input;
   const national = input.national;
@@ -22,24 +30,76 @@ export function buildSuccessorMetricRows(input: {
   if (aggregate.scope !== "regional" || regions.length === 0) {
     throw new Error(`${countryId} metric promotion requires a regional aggregate and sub-regions`);
   }
+  const turn = input.turn ?? aggregate.asOfTurn;
+  const population = regions.reduce((sum, row) => sum + row.population, 0);
+  const weights = Object.fromEntries(regions.map((row) => [row.id, row.population / population]));
+  const housing = aggregate.housingState
+    ? splitHousingState(aggregate.housingState, countryId, weights)
+    : {};
+  const fiscal = fiscalOwnerReadings(input.fiscal ?? {});
+  const values: Record<string, number | null> = {
+    "07": fiscal.priceChange,
+    "09": fiscal.balanceToGdp,
+    "10": fiscal.debtToGdp,
+    "57": 0,
+  };
+  const observations = Object.fromEntries(
+    Object.entries(national.observations).map(([id, source]) => {
+      const derived = values[id] !== undefined && values[id] !== null;
+      return [
+        id,
+        {
+          ...source,
+          value: derived ? values[id]! : source.value,
+          status: derived ? ("derived" as const) : ("proxy" as const),
+          source: derived
+            ? "Successor sovereign budget and empty opening force roster"
+            : "Inherited shared-currency and energy-network conditions at independence",
+          note: derived
+            ? "Recomputed for the successor, not the UK's force or fiscal position."
+            : "Inherited starting estimate, not a measurement of the new sovereign. Successor owners update it from current funding and conditions.",
+          lastUpdatedTurn: turn,
+        },
+      ];
+    })
+  );
+  const history = (readings: ResetMetricSnapshot["observations"]) =>
+    Object.fromEntries(
+      Object.entries(readings).map(([id, row]) => [id, [{ turn, value: row.value! }]])
+    );
   return [
-    {
+    clearCountrySources({
       ...national,
       _id: `${countryId}:national`,
       countryId,
       scope: "national",
       regionId: undefined,
-      observations: structuredClone(national.observations),
-      history: structuredClone(national.history),
-    },
-    ...regions.map((region) => ({
-      ...aggregate,
-      _id: `${countryId}:${region.id}`,
-      countryId,
-      regionId: region.id,
-      observations: structuredClone(aggregate.observations),
-      history: structuredClone(aggregate.history),
-    })),
+      sourceTurn: turn,
+      asOfTurn: turn,
+      observations,
+      openingValues: Object.fromEntries(
+        Object.entries(observations).map(([id, row]) => [id, row.value!])
+      ),
+      history: history(observations),
+    }),
+    ...regions.map((region) =>
+      clearCountrySources({
+        ...aggregate,
+        _id: `${countryId}:${region.id}`,
+        countryId,
+        regionId: region.id,
+        sourceTurn: turn,
+        asOfTurn: turn,
+        observations: Object.fromEntries(
+          Object.entries(aggregate.observations).map(([id, row]) => [
+            id,
+            inheritedRegionalObservation(row, weights[region.id]),
+          ])
+        ),
+        history: history(aggregate.observations),
+        ...(housing[region.id] ? { housingState: housing[region.id] } : {}),
+      })
+    ),
   ];
 }
 
