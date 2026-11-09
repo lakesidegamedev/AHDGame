@@ -8,15 +8,15 @@ import { calcAppeal, MAX_APPEAL } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI } from "@/lib/utils/normalizeNPI";
 
 /**
- * Calculate effective favorability for a specific archetype.
- * effectiveFavorability = favorability + archetypeApproval * 0.5
+ * Calculate effective favorability for a specific bucket.
+ * effectiveFavorability = favorability + bucketApproval * 0.5
  * Clamped to 0-100 range.
  */
 export function calcEffectiveFavorability(
   baseFavorability: number,
-  archetypeApproval: number | undefined
+  bucketApproval: number | undefined
 ): number {
-  const adjustment = (archetypeApproval ?? 0) * 0.5;
+  const adjustment = (bucketApproval ?? 0) * 0.5;
   return Math.max(0, Math.min(100, baseFavorability + adjustment));
 }
 

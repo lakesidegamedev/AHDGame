@@ -6,10 +6,9 @@
  * The Leihstimme is a CDU/CSU voter lending the FDP a second vote to clear
  * the 5% hurdle.
  *
- * The model is PARTY-TO-PARTY, not by demographic archetype. Archetypes are a
- * retired vocabulary, the vote tally stores only `totalVotes` per candidate
- * (no per-bucket breakdown), and ticket splitting is measured as
- * party-to-party shares, not archetype shares.
+ * The model is PARTY-TO-PARTY, not by demographic bucket. The vote tally
+ * stores only `totalVotes` per candidate (no per-bucket breakdown), and ticket
+ * splitting is measured as party-to-party shares.
  *
  * Rates are era-scoped: the two-vote ballot only began in 1953, and
  * deliberate splitting plus FDP lending are features of 1961 onward. Rates

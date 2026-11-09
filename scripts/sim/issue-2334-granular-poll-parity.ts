@@ -97,7 +97,7 @@ function makeCandidate(
   party: string,
   favorability: number,
   isNPP: boolean,
-  archetypeApprovals: Record<string, number>
+  bucketApprovals: Record<string, number>
 ): EnrichedCandidate {
   return {
     candidateId,
@@ -113,7 +113,7 @@ function makeCandidate(
     politicalInfluence: 50,
     nationalInfluence: 50,
     support: 50,
-    archetypeApprovals,
+    bucketApprovals,
     infamy: 0,
   };
 }
@@ -220,7 +220,7 @@ for (const office of offices) {
             economicPosition: player.charEP,
             socialPosition: player.charSP,
             favorability: player.favorability,
-            archetypeApprovals: player.archetypeApprovals,
+            archetypeApprovals: player.bucketApprovals,
             politicalInfluence: player.politicalInfluence,
             nationalInfluence: player.nationalInfluence,
           },
@@ -232,7 +232,7 @@ for (const office of offices) {
               economicPosition: opponent.charEP,
               socialPosition: opponent.charSP,
               favorability: opponent.favorability,
-              archetypeApprovals: opponent.archetypeApprovals,
+              archetypeApprovals: opponent.bucketApprovals,
               politicalInfluence: opponent.politicalInfluence,
               nationalInfluence: opponent.nationalInfluence,
               isNPP: opponent.isNPP,

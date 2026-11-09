@@ -270,7 +270,7 @@ function twoCandidates(nationalInfluenceC1: number): EnrichedCandidate[] {
       charSP: -1,
       partyEcon: -1,
       partySocial: -1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate,
     {
@@ -285,7 +285,7 @@ function twoCandidates(nationalInfluenceC1: number): EnrichedCandidate[] {
       charSP: 1,
       partyEcon: 1,
       partySocial: 1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate,
   ];

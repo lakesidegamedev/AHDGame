@@ -58,7 +58,7 @@ function candidate(
     charSP: positions[1],
     partyEcon: positions[0],
     partySocial: positions[1],
-    archetypeApprovals: {},
+    bucketApprovals: {},
     infamy: 0,
     ...extra,
   } as EnrichedCandidate;

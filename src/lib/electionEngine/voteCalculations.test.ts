@@ -54,15 +54,15 @@ function makeDemographics(overrides?: Partial<StateDemographics>): StateDemograp
 // ─── calcEffectiveFavorability ──────────────────────────────────────────────
 
 describe("calcEffectiveFavorability", () => {
-  it("returns base favorability when archetype approval is 0", () => {
+  it("returns base favorability when bucket approval is 0", () => {
     expect(calcEffectiveFavorability(50, 0)).toBe(50);
   });
 
-  it("adds 50% of archetype approval to base", () => {
+  it("adds 50% of bucket approval to base", () => {
     expect(calcEffectiveFavorability(50, 20)).toBe(60); // 50 + 20*0.5
   });
 
-  it("subtracts when archetype approval is negative", () => {
+  it("subtracts when bucket approval is negative", () => {
     expect(calcEffectiveFavorability(50, -40)).toBe(30); // 50 - 20
   });
 

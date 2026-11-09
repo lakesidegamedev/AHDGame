@@ -25,7 +25,7 @@
  *    candidateFit or reach.
  *  - The demographic axis is the granular (dimension, bucket) census substrate;
  *    `bucketAppeal` aggregates per-cell contributions via `bucketWeights`.
- *    Archetypes are never read or emitted here.
+ *    Only bucket keys are read or emitted here.
  */
 
 export type FactorKey =

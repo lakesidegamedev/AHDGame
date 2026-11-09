@@ -133,14 +133,14 @@ export function distributeVotesByGroupLevelAllocation(
         const appeal = options?.presidentialPrimaryNationalReach
           ? sharpenPrimaryAppeal(rawAppeal)
           : rawAppeal;
-        const archetypeApproval = ec.archetypeApprovals?.[group.id] ?? 0;
+        const bucketApproval = ec.bucketApprovals?.[group.id] ?? 0;
         // State-scoped favourability adjustment (local attacks). Clamped into
         // the same 0..100 band favorability itself lives in, so a stacked
         // attack cannot drive a candidate negative.
         const favDelta = options?.favorabilityDeltaByCandidate?.[ec.candidateId] ?? 0;
         const stateFavorability =
           favDelta === 0 ? ec.favorability : Math.max(0, Math.min(100, ec.favorability + favDelta));
-        const effectiveFav = calcEffectiveFavorability(stateFavorability, archetypeApproval);
+        const effectiveFav = calcEffectiveFavorability(stateFavorability, bucketApproval);
         const approval = approvalScalar(effectiveFav);
         // General elections: Org enters via the diminishing-returns curve
         // (`orgVoteWeight` = normalized state share ^ ORG_WEIGHT_EXPONENT), which

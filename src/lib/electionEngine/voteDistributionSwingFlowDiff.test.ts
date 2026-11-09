@@ -84,7 +84,7 @@ function candidate(party: string, support: number, ep: number, sp: number): Enri
     charSP: sp,
     partyEcon: ep,
     partySocial: sp,
-    archetypeApprovals: {},
+    bucketApprovals: {},
     infamy: 0,
   } as EnrichedCandidate;
 }

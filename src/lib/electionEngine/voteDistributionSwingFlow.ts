@@ -126,10 +126,10 @@ function appealWeight(
     ec.partySocial
   );
 
-  const archetypeApproval = ec.archetypeApprovals?.[groupId] ?? 0;
+  const bucketApproval = ec.bucketApprovals?.[groupId] ?? 0;
   const effectiveFav = calcEffectiveFavorability(
     Math.max(0, ec.favorability * tenureRetention),
-    archetypeApproval
+    bucketApproval
   );
   const approval = approvalScalar(effectiveFav);
 
@@ -498,7 +498,7 @@ export function distributeVotesBySwingFlow(
   // Within each party, candidates keep their pre-swing share of the
   // party's appeal-weighted votes. Single-candidate FPTP families: this is
   // a no-op (one candidate gets the full party total). Multi-candidate
-  // proportional families: per-candidate Support / archetype variation
+  // proportional families: per-candidate Support variation
   // still influences the within-party split.
   for (const ec of enriched) {
     const partyNominal = partyAppealVotes.get(ec.party) ?? 0;
