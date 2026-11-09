@@ -681,10 +681,13 @@ async function buildBriefing(args: {
 
       if (isGeneralPhase) {
         const { electoralVoteUnits } = await loadApportionment(db, preset, gameState?.currentYear);
-        const stateDocs = (await db
+        const stateDocs = await db
           .collection("states")
-          .find({ countryId: election.countryId ?? "US" }, { projection: { _id: 1, name: 1 } })
-          .toArray()) as unknown as Array<{ _id: string; name: string }>;
+          .find<{ _id: string; name: string }>(
+            { countryId: election.countryId ?? "US" },
+            { projection: { _id: 1, name: 1 } }
+          )
+          .toArray();
         const stateNameById: Record<string, string> = {};
         for (const s of stateDocs) stateNameById[s._id] = s.name;
         path = buildTippingPath({

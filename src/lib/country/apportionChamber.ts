@@ -145,10 +145,10 @@ export async function rescaleRegionDelegations(
   const { regionId, countryId } = params;
   const now = params.now ?? new Date();
 
-  const officials = (await db
+  const officials = await db
     .collection("electedOfficials")
-    .find({ countryId, state: regionId })
-    .toArray()) as unknown as Array<ChamberOfficial & { officeType: string }>;
+    .find<ChamberOfficial & { officeType: string }>({ countryId, state: regionId })
+    .toArray();
   if (officials.length === 0) return 0;
 
   const byOffice = new Map<string, Array<ChamberOfficial & { officeType: string }>>();

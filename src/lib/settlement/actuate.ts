@@ -525,16 +525,16 @@ async function retireNationalRemnants(
   const { absorbed, survivor, rulingPartyId } = params;
   const now = new Date();
 
-  const remnants = (await db
+  const remnants = await db
     .collection("electedOfficials")
-    .find({ countryId: absorbed })
-    .toArray()) as unknown as Array<{
-    _id: ObjectId;
-    officeType: string;
-    characterId?: ObjectId | null;
-    nppId?: ObjectId | null;
-    party?: string;
-  }>;
+    .find<{
+      _id: ObjectId;
+      officeType: string;
+      characterId?: ObjectId | null;
+      nppId?: ObjectId | null;
+      party?: string;
+    }>({ countryId: absorbed })
+    .toArray();
 
   for (const official of remnants) {
     const target = remapOffice(absorbed, survivor, official.officeType);
@@ -594,15 +594,15 @@ async function retireNationalRemnants(
   // defeated it.
   //
   // Read BEFORE the delete, because the rows are how the holders are found.
-  const ministers = (await db
+  const ministers = await db
     .collection("cabinetMembers")
-    .find({ countryId: absorbed })
-    .toArray()) as unknown as Array<{
-    characterId?: ObjectId | null;
-    nppId?: ObjectId | null;
-    party?: string;
-    appointedTurn?: number;
-  }>;
+    .find<{
+      characterId?: ObjectId | null;
+      nppId?: ObjectId | null;
+      party?: string;
+      appointedTurn?: number;
+    }>({ countryId: absorbed })
+    .toArray();
   await db.collection("cabinetMembers").deleteMany({ countryId: absorbed });
   await clearCabinetPointers(db, ministers, now);
   for (const minister of ministers) {
@@ -755,10 +755,13 @@ async function adoptChallengerSettlement(
       .map((id) => Number(id))
       .filter((id) => Number.isInteger(id))
   );
-  const survivorParties = (await db
+  const survivorParties = await db
     .collection("politicalParties")
-    .find({ countryId: params.survivor }, { projection: { sequentialId: 1 } })
-    .toArray()) as unknown as Array<{ sequentialId?: number }>;
+    .find<{ sequentialId?: number }>(
+      { countryId: params.survivor },
+      { projection: { sequentialId: 1 } }
+    )
+    .toArray();
   const toleratedPartyIds = survivorParties
     .map((party) => party.sequentialId)
     .filter(
