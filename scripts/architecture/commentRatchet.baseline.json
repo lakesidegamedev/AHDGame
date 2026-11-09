@@ -3857,6 +3857,10 @@
       "longBlocks": 2,
       "narrativeLines": 1
     },
+    "src/lib/banking/constructionBatchCompletion.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/banking/creditBands.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2

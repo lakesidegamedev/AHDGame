@@ -12,7 +12,11 @@ import type { Db } from "mongodb";
 import type { UKBudget } from "../types/ukBudget";
 
 /** In-memory ukBudgets + ukGovernment (for the confidence hit) fake. */
-function fakeDb(seed?: Partial<UKBudget>, confidenceGauge = 100) {
+function fakeDb(
+  seed?: Partial<UKBudget>,
+  confidenceGauge = 100,
+  governmentConfidenceEnabled = true
+) {
   const budgets: UKBudget[] = [];
   if (seed) budgets.push({ fiscalYear: 1953, status: "draft", ...seed } as UKBudget);
   const gov: { confidenceGauge?: number } = { confidenceGauge };
@@ -49,7 +53,13 @@ function fakeDb(seed?: Partial<UKBudget>, confidenceGauge = 100) {
       Object.assign(gov, u.$set);
     },
   };
-  const collection = vi.fn((name: string) => (name === "ukBudgets" ? budgetsCol : govCol));
+  const collection = vi.fn((name: string) =>
+    name === "gameConfig"
+      ? { findOne: async () => ({ governmentConfidenceEnabled }) }
+      : name === "ukBudgets"
+        ? budgetsCol
+        : govCol
+  );
   return { db: { collection } as unknown as Db, budgets, gov };
 }
 
@@ -199,6 +209,16 @@ describe("tableBudgetWithBill", () => {
 });
 
 describe("applyBudgetOutcome", () => {
+  it.each([true, false])(
+    "resolves passed=%s without changing frozen confidence",
+    async (passed) => {
+      const { db, budgets, gov } = fakeDb({ status: "tabled", ...valid }, 50, false);
+      const result = await applyBudgetOutcome(db, { fiscalYear: 1953, passed, now: new Date() });
+      expect(result.ok).toBe(true);
+      expect(budgets[0].status).toBe(passed ? "passed" : "defeated");
+      expect(gov.confidenceGauge).toBe(50);
+    }
+  );
   it("a passed Budget restores government confidence once", async () => {
     const { db, gov } = fakeDb({ status: "tabled", ...valid } as Partial<UKBudget>, 50);
     await applyBudgetOutcome(db, { fiscalYear: 1953, passed: true, now: new Date() });

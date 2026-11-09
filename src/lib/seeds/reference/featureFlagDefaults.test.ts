@@ -203,3 +203,14 @@ it("preserves the Discord creation requirement across resets and reference top-u
   expect(halves.flags).toEqual({ discordLinkRequiredForCharacter: true });
   expect(halves.settings).not.toHaveProperty("discordLinkRequiredForCharacter");
 });
+
+it("preserves the confidence freeze operator setting across resets and top-ups", () => {
+  expect(FRESH_WORLD_GAME_CONFIG_FLAGS).not.toHaveProperty("governmentConfidenceEnabled");
+  expect(NON_GAMEPLAY_GAME_CONFIG_FIELDS.governmentConfidenceEnabled).toContain(
+    "survives world resets"
+  );
+  expect(splitFreshWorldGameConfigFlags({ governmentConfidenceEnabled: true })).toEqual({
+    flags: { governmentConfidenceEnabled: true },
+    settings: {},
+  });
+});

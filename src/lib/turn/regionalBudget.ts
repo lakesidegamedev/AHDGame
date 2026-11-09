@@ -68,13 +68,6 @@ export interface BudgetCalculationResult {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-/**
- * Fallback share, as a percentage, for a region the Chancellor's allocation map
- * omits (100/12 ≈ 8.33%). With NO allocation map at all the grant is split
- * population-proportionally instead, so this is not an even-split constant.
- */
-const UK_REGION_COUNT = 12;
-
 /** `states.gdp` is stored in millions of local currency; costs and revenue are absolute. */
 const GDP_MILLIONS = 1_000_000;
 
@@ -273,10 +266,11 @@ export async function processRegionalBudgets(
   turnsElapsed = 1,
   regionalFinanceEnabled = false,
   resetLegislationV2Enabled = false,
-  resetWorldId?: string
+  resetWorldId?: string,
+  countryId: "UK" | "SCO" | "WAL" = "UK"
 ): Promise<{ regionsProcessed: number }> {
   // 1. Fetch all UK regions
-  const ukRegions = await db.collection<State>("states").find({ countryId: "UK" }).toArray();
+  const ukRegions = await db.collection<State>("states").find({ countryId }).toArray();
 
   if (ukRegions.length === 0) return { regionsProcessed: 0 };
 
@@ -293,7 +287,7 @@ export async function processRegionalBudgets(
           .collection<ResetLawProgramDocument>("resetLawPrograms")
           .find(
             {
-              country: "UK",
+              country: countryId,
               worldId: resetWorldId,
               scope: "regional",
               regionId: { $in: ukRegions.map((region) => String(region._id)) },
@@ -336,7 +330,7 @@ export async function processRegionalBudgets(
   //    baseline. Live UK carries stateGrants = 0 with baselineStateGrants =
   //    £250M, so reading only the enacted line would unfund every region.
   const nationalBudget = await db.collection<FederalBudget>("federalBudget").findOne(
-    { _id: getNationalBudgetId("UK") },
+    { _id: getNationalBudgetId(countryId) },
     {
       projection: {
         spending: 1,
@@ -381,7 +375,7 @@ export async function processRegionalBudgets(
   // Read Chancellor allocation percentages from cabinet settings
   const chancellorSetting = await db
     .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: "UK_chancellor" });
+    .findOne({ _id: `${countryId}_chancellor` });
   const allocationPercents = chancellorSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;
@@ -408,7 +402,7 @@ export async function processRegionalBudgets(
     const commercialBaseline =
       existingBudget?.commercialValueBaseline ?? DEFAULT_COMMERCIAL_VALUE_PER_CAPITA;
     const chancellorAllocation = allocationPercents
-      ? ((allocationPercents[region._id] ?? 100 / UK_REGION_COUNT) / 100) * grantPool
+      ? ((allocationPercents[region._id] ?? 100 / ukRegions.length) / 100) * grantPool
       : null;
 
     // b. Calculate total budget
@@ -556,14 +550,14 @@ export async function processRegionalBudgets(
     // g. Upsert the RegionalBudget document
     const budgetDoc: RegionalBudget = {
       _id: region._id,
-      countryId: "UK",
+      countryId,
       turn: turnNumber,
       councilTaxRevenue: budgetResult.councilTaxRevenue,
       businessRatesRevenue: budgetResult.businessRatesRevenue,
       westminsterGrant: budgetResult.westminsterGrant,
       totalBudget: budgetResult.totalBudget,
       enactedBillCosts,
-      ...(regionalFinanceEnabled || regionResetPrograms.length > 0
+      ...(regionalFinanceEnabled || resetLegislationV2Enabled || regionResetPrograms.length > 0
         ? {
             fundedBillCosts,
             unfundedBillCosts,

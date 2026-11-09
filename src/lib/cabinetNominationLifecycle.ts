@@ -185,7 +185,8 @@ async function seatConfirmedVicePresident(
   db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
   nom: CabinetNomination,
   now: Date,
-  currentTurn: number
+  currentTurn: number,
+  nomineeUserId: ObjectId | undefined
 ): Promise<void> {
   const countryId = nom.countryId ?? "US";
 
@@ -255,6 +256,14 @@ async function seatConfirmedVicePresident(
       $push: { careerHistory: vpCareer },
     }
   );
+  try {
+    if (nomineeUserId) {
+      const { checkOfficeHeldAchievements } = await import("@/lib/achievements/triggers");
+      await checkOfficeHeldAchievements(nomineeUserId, nom.nomineeCharacterId, "vicePresident");
+    }
+  } catch (e) {
+    console.error("VP achievement check failed:", e);
+  }
   if (existingVp?.characterId && !existingVp.characterId.equals(nom.nomineeCharacterId)) {
     await captureOfficeTransition({
       db,
@@ -509,7 +518,7 @@ export async function processCabinetNominationLifecycle(
     } else if (passed) {
       // VP nominations seat the character as VP; all other positions create a CabinetMember.
       if (nom.positionId === "vicePresident") {
-        await seatConfirmedVicePresident(db, nom, now, currentTurn);
+        await seatConfirmedVicePresident(db, nom, now, currentTurn, nomineeChar?.userId);
       } else {
         // Confirm: create or replace cabinet member
         const oldSeatHolder = priorCabinetBySeat.get(`${nom.countryId ?? "US"}:${nom.positionId}`);

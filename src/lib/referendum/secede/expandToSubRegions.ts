@@ -18,6 +18,8 @@ import { SUB_REGION_SEEDS, CAPITAL_SUBREGION, type SecedingCountryId } from "./s
 import { expandLiveRegions } from "./rules/liveRegions";
 import { SECEDE_FANOUT, type FanoutPolicy } from "./fanoutPolicy";
 import { applyFanout, buildFanoutContext } from "./fanoutDriver";
+import { planSectorFanout } from "./planSectorFanout";
+import { migrateProducerWallets } from "./migrateProducerWallets";
 
 export interface ExpandToSubRegionsResult {
   inserted: number;
@@ -48,8 +50,10 @@ export async function expandToSubRegions(
   // The reset preset selects the era demographic pattern (1991 vs 2019).
   const gameState = await db
     .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    .findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   const ctx = buildFanoutContext(countryId, seeds, gameState?.preset);
+  await planSectorFanout(db, ctx, gameState?.currentTurn ?? 0);
+  await migrateProducerWallets(db, countryId, liveRegions, gameState?.currentTurn ?? 0);
   const fannedOut: ExpandToSubRegionsResult["fannedOut"] = [];
   for (const scope of SECEDE_FANOUT) {
     const writes = await applyFanout(db, scope, ctx);

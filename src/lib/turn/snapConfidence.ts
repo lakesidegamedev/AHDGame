@@ -3,6 +3,7 @@
  * after a full dissolution election and records it once per snap election.
  */
 import type { Db } from "mongodb";
+import { isGovernmentConfidenceEnabled } from "@/lib/government/confidence/featureFlag";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { snapConfidenceReset } from "./rules/snapConfidence";
 
@@ -32,6 +33,7 @@ export async function resetCompletedSnapConfidence(
     }
   }
   if (latest.size === 0) return;
+  const enabled = await isGovernmentConfidenceEnabled(db);
   const operations = [...latest.values()].map((event) => {
     const reset = snapConfidenceReset(event.startTurn)!;
     return {
@@ -43,22 +45,30 @@ export async function resetCompletedSnapConfidence(
             { confidenceSnapStartTurn: { $lt: reset.startTurn } },
           ],
         },
-        update: {
-          $set: {
-            confidenceGauge: reset.value,
-            confidenceSnapStartTurn: reset.startTurn,
-            confidenceGaugeUpdatedAt: now,
-            updatedAt: now,
-          },
-          $push: {
-            confidenceGaugeHistory: {
-              $each: [
-                { turn: event.turn, value: reset.value, at: now, reason: "snapElectionCompleted" },
-              ],
-              $slice: -500,
-            },
-          },
-        },
+        // Consume the snap marker while frozen so resuming cannot replay its boost.
+        update: enabled
+          ? {
+              $set: {
+                confidenceGauge: reset.value,
+                confidenceSnapStartTurn: reset.startTurn,
+                confidenceGaugeUpdatedAt: now,
+                updatedAt: now,
+              },
+              $push: {
+                confidenceGaugeHistory: {
+                  $each: [
+                    {
+                      turn: event.turn,
+                      value: reset.value,
+                      at: now,
+                      reason: "snapElectionCompleted",
+                    },
+                  ],
+                  $slice: -500,
+                },
+              },
+            }
+          : { $set: { confidenceSnapStartTurn: reset.startTurn } },
       },
     };
   });

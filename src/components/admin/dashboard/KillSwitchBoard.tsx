@@ -43,6 +43,18 @@ type SwitchDef = PatchSwitchDef | TurnSwitchDef;
 
 const SWITCHES: SwitchDef[] = [
   {
+    key: "government-confidence",
+    kind: "patch",
+    url: "/api/admin/government-confidence",
+    label: "Government confidence",
+    desc: "Freeze the confidence gauge at its current value in every country. Drift, event changes and gauge-triggered dissolution pause. Normal no-confidence votes continue. Default frozen.",
+    confirmWhen: true,
+    confirmText:
+      "Resume Government Confidence changes in every country? Existing values and history will be retained.",
+    onLabel: "Active",
+    offLabel: "Frozen",
+  },
+  {
     key: "government-contracts",
     kind: "patch",
     url: "/api/admin/government-contracts",
