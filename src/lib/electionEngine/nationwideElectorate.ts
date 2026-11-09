@@ -5,6 +5,7 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import type { Db } from "mongodb";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import type { CountryId } from "@/lib/constants/countries";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 import {
@@ -274,8 +275,9 @@ export async function loadNationalRegionDocs(
   db: Db,
   countryId: CountryId
 ): Promise<NationalRegionDocs> {
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find({ countryId, _id: { $ne: countryId } })
     .toArray();
   const filter = { countryId, _id: { $in: states.map((state) => state._id) } };
