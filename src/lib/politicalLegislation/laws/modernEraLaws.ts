@@ -7,12 +7,16 @@
  * nuclear licensing), the 2035 band (climate adaptation fund, managed retreat,
  * basic income pilot, gene editing, space traffic) and the 2040 band
  * (automation dividend, four-day week, digital currency, sovereign wealth
- * fund). The same laws exist in the legacy catalogue for DE, JP, CN and IE
- * (seeds/shared/modernEraLegislation.ts).
+ * fund), the 2045 band (longevity care, fossil fuel sunset, digital
+ * self-ownership, water security) and the 2050 band (advanced AI oversight,
+ * lifelong pension account, zero carbon economy, space resources). The 2045 and
+ * 2050 bands also reach RU and DD. The same laws exist in the legacy catalogue
+ * for DE, JP, CN and IE (seeds/shared/modernEraLegislation.ts).
  *
  * Every law carries an era `window`: it cannot be filed before its first year,
  * and an enacted one stays in force whatever the year. The automation tax also
- * closes to new bills in 2040, when the automation dividend replaces it. They are national only.
+ * closes to new bills in 2040, when the automation dividend replaces it; later
+ * retirements name their successor in `successor`. They are national only.
  * A `both` law with a window would need year-aware regional read fallbacks
  * (see regionalDefaults.test.ts), so zoning and heat standards have no state
  * variant.
@@ -34,8 +38,9 @@
 
 import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../../politicalMetrics/types";
 import type { LawLevel, PoliticalLaw } from "../types";
+import { LATE_BAND_SPECS } from "./modernEraLawsLate";
 
-type ModernLawCountry = "US" | "UK";
+type ModernLawCountry = "US" | "UK" | "RU" | "DD";
 
 /** Text that differs by country; a plain string is shared. */
 type Copy = string | { US: string; UK: string };
@@ -47,30 +52,34 @@ interface LevelSpec {
   revenue?: number;
 }
 
-interface ModernLawSpec {
+export interface ModernLawSpec {
   slug: string;
-  from: 2027 | 2030 | 2035 | 2040;
+  from: 2027 | 2030 | 2035 | 2040 | 2045 | 2050;
   /** First year no new bill may file the law; an enacted one stays in force. */
   until?: number;
+  /** Slug of the law that takes over new filing when this one closes. */
+  successor?: string;
   category: PoliticalMetricCategoryId;
   /** Winners first (the first entry sets the law's lean), then the payer. */
   targets: Array<{ metricId: PoliticalMetricId; weight: number }>;
-  budgetKeyOverride?: { US: string; UK: string };
-  title: { US: string; UK: string };
-  description: { US: string; UK: string };
+  budgetKeyOverride?: Partial<Record<ModernLawCountry, string>>;
+  title: Copy;
+  description: Copy;
   /** Levels 1 to 4; level 0 is the shared "no statute" rung below. */
   levels: [LevelSpec, LevelSpec, LevelSpec, LevelSpec];
   noStatute: Copy;
 }
 
 const pick = (copy: Copy, countryId: ModernLawCountry): string =>
-  typeof copy === "string" ? copy : copy[countryId];
+  typeof copy === "string" ? copy : copy[countryId as keyof typeof copy];
 
-export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
+const EARLIER_BAND_SPECS: readonly ModernLawSpec[] = [
   // ── 2027 ────────────────────────────────────────────────────────────────
   {
     slug: "aiLiabilityTransparency",
     from: 2027,
+    until: 2050,
+    successor: "advancedAiOversight",
     category: "governance",
     targets: [
       { metricId: "governance.integrity", weight: 0.45 },
@@ -117,6 +126,8 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   {
     slug: "dataProtectionOverhaul",
     from: 2027,
+    until: 2045,
+    successor: "digitalSelfOwnership",
     category: "governance",
     targets: [
       { metricId: "order.dueProcess", weight: 0.45 },
@@ -394,6 +405,8 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   {
     slug: "coalPhaseOut",
     from: 2027,
+    until: 2045,
+    successor: "fossilFuelSunset",
     category: "environment",
     targets: [
       { metricId: "environment.urbanAir", weight: 0.5 },
@@ -440,6 +453,8 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   {
     slug: "cleanPowerStandard",
     from: 2027,
+    until: 2050,
+    successor: "zeroCarbonEconomy",
     category: "environment",
     targets: [
       { metricId: "environment.stewardship", weight: 0.45 },
@@ -488,6 +503,7 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
     // The automation dividend replaces it: from 2040 the levy is filed as part
     // of the dividend, and an automation tax already in force stays in force.
     until: 2040,
+    successor: "automationDividend",
     category: "economy",
     targets: [
       { metricId: "economy.workerSecurity", weight: 0.45 },
@@ -673,6 +689,8 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   {
     slug: "pensionAgeIndexation",
     from: 2030,
+    until: 2050,
+    successor: "lifelongPensionAccount",
     category: "economy",
     budgetKeyOverride: { US: "socialSecurity", UK: "statePensions" },
     targets: [
@@ -862,6 +880,8 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   {
     slug: "basicIncomePilot",
     from: 2035,
+    until: 2045,
+    successor: "automationDividend",
     category: "economy",
     budgetKeyOverride: { US: "socialSecurity", UK: "welfare" },
     targets: [
@@ -1195,6 +1215,11 @@ export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   },
 ];
 
+export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
+  ...EARLIER_BAND_SPECS,
+  ...LATE_BAND_SPECS,
+];
+
 function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLaw {
   const levels = [
     { name: "No Statute", description: pick(spec.noStatute, countryId) },
@@ -1210,14 +1235,16 @@ function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLa
     countryId,
     kind: "secondary",
     targets: spec.targets.map((target) => ({ ...target })),
-    title: spec.title[countryId],
-    description: spec.description[countryId],
+    title: pick(spec.title, countryId),
+    description: pick(spec.description, countryId),
     category: spec.category,
     allowedScope: "national",
     baselineLevel: 0,
     window: { from: spec.from, ...(spec.until !== undefined ? { until: spec.until } : {}) },
     levels,
-    ...(spec.budgetKeyOverride ? { budgetKeyOverride: spec.budgetKeyOverride[countryId] } : {}),
+    ...(spec.budgetKeyOverride?.[countryId]
+      ? { budgetKeyOverride: spec.budgetKeyOverride[countryId] }
+      : {}),
   };
 }
 
@@ -1228,3 +1255,15 @@ export const US_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec
 export const UK_MODERN_ERA_LAWS: PoliticalLaw[] = MODERN_ERA_LAW_SPECS.map((spec) =>
   buildLaw(spec, "UK")
 );
+
+/** First year of the bands that RU and DD also carry. */
+export const SHARED_BAND_FROM_YEAR = 2045;
+
+const sharedBand = (country: "RU" | "DD"): PoliticalLaw[] =>
+  MODERN_ERA_LAW_SPECS.filter((spec) => spec.from >= SHARED_BAND_FROM_YEAR).map((spec) =>
+    buildLaw(spec, country)
+  );
+
+export const RU_MODERN_ERA_LAWS: PoliticalLaw[] = sharedBand("RU");
+
+export const DD_MODERN_ERA_LAWS: PoliticalLaw[] = sharedBand("DD");

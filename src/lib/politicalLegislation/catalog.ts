@@ -17,7 +17,12 @@ import { RU_LAWS } from "./laws/ruLaws";
 import { UK_LAWS } from "./laws/ukLaws";
 import { US_LAWS } from "./laws/usLaws";
 import { US_STATE_TAX_LAWS } from "./laws/usStateTaxLaws";
-import { UK_MODERN_ERA_LAWS, US_MODERN_ERA_LAWS } from "./laws/modernEraLaws";
+import {
+  DD_MODERN_ERA_LAWS,
+  RU_MODERN_ERA_LAWS,
+  UK_MODERN_ERA_LAWS,
+  US_MODERN_ERA_LAWS,
+} from "./laws/modernEraLaws";
 import type { LawCountryId, PoliticalLaw } from "./types";
 
 /** Locked core catalogs (topology / RU↔DD cost parity). */
@@ -35,20 +40,22 @@ const REGIONAL_SIDECARS: Partial<Record<LawCountryId, PoliticalLaw[]>> = {
 };
 
 /**
- * National laws that open in a later era (2027 and 2030 bands). Kept out of the
+ * National laws that open in a later era (2027 to 2050 bands). Kept out of the
  * locked core so its topology and secondary-touch rules stay as reviewed; every
  * one carries a `window`, so filing opens by year.
  */
 const ERA_SIDECARS: Partial<Record<LawCountryId, PoliticalLaw[]>> = {
   US: US_MODERN_ERA_LAWS,
   UK: UK_MODERN_ERA_LAWS,
+  RU: RU_MODERN_ERA_LAWS,
+  DD: DD_MODERN_ERA_LAWS,
 };
 
 const CATALOGS: Record<LawCountryId, PoliticalLaw[]> = {
   US: [...CORE_CATALOGS.US, ...US_STATE_TAX_LAWS, ...US_MODERN_ERA_LAWS],
   UK: [...CORE_CATALOGS.UK, ...UK_MODERN_ERA_LAWS],
-  RU: CORE_CATALOGS.RU,
-  DD: [...CORE_CATALOGS.DD, ...DD_LAND_LAWS],
+  RU: [...CORE_CATALOGS.RU, ...RU_MODERN_ERA_LAWS],
+  DD: [...CORE_CATALOGS.DD, ...DD_LAND_LAWS, ...DD_MODERN_ERA_LAWS],
 };
 
 // Explicit anchors for all program laws make era coverage inspectable.

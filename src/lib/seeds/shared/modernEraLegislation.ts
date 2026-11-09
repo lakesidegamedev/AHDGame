@@ -9,7 +9,7 @@ type CountryScope = NonNullable<LegislationType["countryScope"]>;
 type ChamberKey = LegislationType["positions"][number]["chamber"];
 
 /**
- * Law types that first become fileable in 2027, 2030, 2035 or 2040, generated
+ * Law types that first become fileable in 2027, 2030, 2035, 2040, 2045 or 2050, generated
  * for every legacy-catalog legislature that runs the full simulation in a
  * modern world. A law with an `until` year stops taking new bills that year
  * (LEGISLATION_ERA_UNTIL); one already enacted stays in force.
@@ -106,9 +106,11 @@ interface ModernEraLaw {
   /** Id suffix after the country prefix. */
   slug: string;
   /** First fileable calendar year. */
-  from: 2027 | 2030 | 2035 | 2040;
+  from: 2027 | 2030 | 2035 | 2040 | 2045 | 2050;
   /** First year no new bill may file the law; an enacted one stays in force. */
   until?: number;
+  /** Slug of the law that takes over new filing when this one closes. */
+  successor?: string;
   name: string;
   description: string;
   explanation: string;
@@ -146,6 +148,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "ai_liability_act",
     from: 2027,
+    until: 2050,
+    successor: "advanced_ai_oversight",
     name: "AI Liability and Transparency Act",
     description:
       "Sets who answers for harm caused by artificial intelligence systems and what developers must disclose",
@@ -208,6 +212,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "data_protection_overhaul",
     from: 2027,
+    until: 2045,
+    successor: "digital_self_ownership",
     name: "Data Protection Overhaul",
     description: "Rewrites how companies and the state may collect, share and sell personal data",
     explanation:
@@ -552,6 +558,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "coal_phase_out",
     from: 2027,
+    until: 2045,
+    successor: "fossil_fuel_sunset",
     name: "Coal Power Phase-Out",
     description: "Sets a date by which coal power must close and who pays for the closures",
     explanation:
@@ -611,6 +619,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "clean_power_standard",
     from: 2027,
+    until: 2050,
+    successor: "zero_carbon_economy",
     name: "Clean Power Standard",
     description: "Requires a set share of the country's power to come from clean sources",
     explanation:
@@ -669,6 +679,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
     from: 2030,
     // The automation dividend replaces it for new bills from 2040.
     until: 2040,
+    successor: "automation_dividend",
     name: "Automation Tax",
     description: "Sets whether firms pay a levy when they replace workers with robots and software",
     explanation:
@@ -900,6 +911,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "pension_age_indexation",
     from: 2030,
+    until: 2050,
+    successor: "lifelong_pension_account",
     name: "Pension Age Indexation Act",
     description: "Sets whether the state pension age rises with life expectancy",
     explanation:
@@ -1132,6 +1145,8 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
   {
     slug: "basic_income_pilot",
     from: 2035,
+    until: 2045,
+    successor: "automation_dividend",
     name: "Universal Basic Income Pilot",
     description: "Tests paying a regular cash income with no conditions",
     explanation:
@@ -1510,6 +1525,439 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
         name: "State Holdings Sell-Off",
         explanation:
           "Any state investment holdings are sold, and the state is barred from building new ones.",
+      },
+    ],
+  },
+  // ── 2045 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "longevity_care_act",
+    from: 2045,
+    name: "Longevity Care Act",
+    description: "Sets how the state pays for care in a very long old age",
+    explanation:
+      "This act decides who pays for care in the last decades of life, when many people live past ninety. A public care system gives older people good care and eases the load on families, but it costs taxpayers and employers. Leaving care to families and private insurance costs the state little, but the cost lands on children and on the oldest and poorest.",
+    policyDomain: "healthcare",
+    subCategory: "Elder care",
+    committee: "Health",
+    budgetLine: "welfare",
+    gdpCostFractions: [0.005, 0.003, 0.0013, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "healthcare", metricId: "elderCareQuality", weight: 0.4 },
+      { metricCategoryId: "healthcare", metricId: "lifeExpectancy", weight: 0.25 },
+      { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
+    ],
+    demographicEffects: [{ dim: "age", bucket: "senior", target: "economicLean", direction: 0.3 }],
+    options: [
+      {
+        name: "Universal Long-Term Care",
+        explanation:
+          "Care at home and in care homes is free for everyone who needs it, paid for from general taxes.",
+      },
+      {
+        name: "Care Insurance for All",
+        explanation:
+          "Everyone pays into a national care insurance fund that covers most of the cost of care.",
+      },
+      {
+        name: "Means-Tested Care Cap",
+        explanation:
+          "The state caps what any person pays for care in a lifetime and pays the rest for people with little savings.",
+      },
+      {
+        name: "No Care Statute",
+        explanation: "Care is paid for under existing health and welfare rules.",
+      },
+      {
+        name: "Family Care Allowances",
+        explanation: "Families who care for an older relative at home get a small tax allowance.",
+      },
+      {
+        name: "Private Care Insurance",
+        explanation: "People buy their own care insurance, and the state sets only minimum terms.",
+      },
+      {
+        name: "Care Market Freedom",
+        explanation: "The state pays for no long-term care, and care homes set their own prices.",
+      },
+    ],
+  },
+  {
+    slug: "fossil_fuel_sunset",
+    from: 2045,
+    name: "Fossil Fuel Sunset Act",
+    description: "Sets a date after which fossil fuels may no longer be burned for power and heat",
+    explanation:
+      "This act decides whether the country sets a final date for burning coal, oil and gas for electricity and heating. A hard date ends most carbon emissions and pushes clean power to finish the job, but bills rise for households and firms that depend on fossil fuels. From the year this act opens it replaces the coal power phase-out for new bills.",
+    policyDomain: "environment",
+    subCategory: "Fossil fuels",
+    committee: "Environment and Energy",
+    budgetLine: "industry",
+    gdpCostFractions: [0.004, 0.0025, 0.001, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.4 },
+      { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.25 },
+      { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "Immediate Fossil Ban",
+        explanation:
+          "Burning fossil fuels for power and heat is banned within a few years, with a state fund helping households switch.",
+      },
+      {
+        name: "Fixed Sunset Date",
+        explanation:
+          "A fixed date ends fossil fuel use for power and heat, with help for affected workers and regions.",
+      },
+      {
+        name: "Declining Fossil Quota",
+        explanation: "Each year the amount of fossil fuel that may be burned for power falls.",
+      },
+      {
+        name: "No Sunset Statute",
+        explanation: "Fossil fuels fall under existing climate and energy law.",
+      },
+      {
+        name: "Gas Bridge Rule",
+        explanation: "Gas plants may keep running as backup with no end date.",
+      },
+      {
+        name: "Fossil Capacity Guarantee",
+        explanation:
+          "The state guarantees enough fossil backup capacity to keep power on at all times.",
+      },
+      {
+        name: "Fuel Freedom Act",
+        explanation: "No public body may set a closing date for any power plant or heating fuel.",
+      },
+    ],
+  },
+  {
+    slug: "digital_self_ownership",
+    from: 2045,
+    name: "Digital Self-Ownership Act",
+    description: "Gives people ownership of their data, identity and likeness online",
+    explanation:
+      "This act decides whether people own their personal data, their digital identity and their image and voice, and can move or withdraw them at will. Strong ownership protects people from tracking and from fake copies of themselves, but it burdens firms that build services on data. From the year this act opens it replaces the data protection overhaul for new bills.",
+    policyDomain: "technology",
+    subCategory: "Digital rights",
+    committee: "Digital Affairs",
+    budgetLine: "technology",
+    gdpCostFractions: [0.0008, 0.0005, 0.0002, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "governance", metricId: "civilLiberties", weight: 0.4 },
+      { metricCategoryId: "governance", metricId: "publicTrust", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "rdIntensity", weight: -0.25 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
+    ],
+    demographicEffects: [{ dim: "age", bucket: "young", target: "socialLean", direction: 0.2 }],
+    options: [
+      {
+        name: "Personal Data Ownership",
+        explanation:
+          "Every person owns their data, face and voice. Firms need paid consent to use them and must delete them on request.",
+      },
+      {
+        name: "Portable Digital Identity",
+        explanation:
+          "Each person holds a digital identity they control and can carry from one service to another.",
+      },
+      {
+        name: "Likeness Protection",
+        explanation:
+          "Faking a person's face or voice without consent is a civil and criminal wrong.",
+      },
+      {
+        name: "No Ownership Statute",
+        explanation: "Personal data is covered by existing data protection and privacy law.",
+      },
+      {
+        name: "Consent Through Terms",
+        explanation: "Firms may use data on the terms people accept when they sign up.",
+      },
+      {
+        name: "Data Licensing Market",
+        explanation: "People may sell the right to use their data, and firms trade it freely.",
+      },
+      {
+        name: "Data Freedom Act",
+        explanation: "No rule may limit how firms collect or share data that people made public.",
+      },
+    ],
+  },
+  {
+    slug: "water_security_act",
+    from: 2045,
+    name: "Water Security Act",
+    description: "Plans for droughts, floods and shrinking water supplies",
+    explanation:
+      "This act decides how the state secures drinking and farm water as rainfall becomes less reliable. A national plan builds storage, repairs leaking pipes and protects rivers, so towns and farms keep water in dry years, but bills rise and projects take land. Leaving water to local suppliers costs less now and leaves the country exposed in a long drought.",
+    policyDomain: "environment",
+    subCategory: "Water",
+    committee: "Environment and Energy",
+    budgetLine: "environment",
+    gdpCostFractions: [0.005, 0.003, 0.0012, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "environment", metricId: "climateResilience", weight: 0.35 },
+      { metricCategoryId: "environment", metricId: "naturalDisasterPreparedness", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "propertyValueIndex", weight: -0.1 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "National Water Grid",
+        explanation:
+          "The state builds reservoirs, recycling plants and a national grid that moves water between regions.",
+      },
+      {
+        name: "River Basin Authorities",
+        explanation:
+          "Regional authorities plan water for each river basin and may order cuts in a drought.",
+      },
+      {
+        name: "Leakage and Reuse Targets",
+        explanation: "Suppliers must cut leaks and reuse more water by set dates.",
+      },
+      {
+        name: "No Water Statute",
+        explanation: "Water follows existing utility and environment law.",
+      },
+      {
+        name: "Tradable Water Rights",
+        explanation: "Farms and firms may buy and sell their water allowances.",
+      },
+      {
+        name: "Supplier Self-Regulation",
+        explanation: "Water companies set their own drought plans and report them yearly.",
+      },
+      {
+        name: "Water Market Freedom",
+        explanation: "Water is priced by the market, and the state sets no supply targets.",
+      },
+    ],
+  },
+  // ── 2050 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "advanced_ai_oversight",
+    from: 2050,
+    name: "Advanced AI Oversight Act",
+    description: "Sets rules for the most capable AI systems",
+    explanation:
+      "This act decides how the state oversees AI systems that can plan and act on their own. A strong regulator tests the most capable systems before release and can switch them off, which protects trust and security, but it slows research and drives some firms away. From the year this act opens it replaces the AI liability act for new bills.",
+    policyDomain: "technology",
+    subCategory: "Artificial intelligence",
+    committee: "Digital Affairs",
+    budgetLine: "technology",
+    gdpCostFractions: [0.0015, 0.0009, 0.0004, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "governance", metricId: "publicTrust", weight: 0.35 },
+      { metricCategoryId: "governance", metricId: "militaryReadiness", weight: 0.25 },
+      { metricCategoryId: "economic", metricId: "rdIntensity", weight: -0.3 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "Public AI Safety Authority",
+        explanation:
+          "A national authority tests every highly capable system before release and may order it shut down.",
+      },
+      {
+        name: "Mandatory Safety Testing",
+        explanation:
+          "Developers of highly capable systems must pass independent safety tests before release.",
+      },
+      {
+        name: "Incident Reporting",
+        explanation: "Developers must report serious failures of capable systems within days.",
+      },
+      {
+        name: "No Oversight Statute",
+        explanation: "Capable AI systems are covered by general liability and consumer law.",
+      },
+      {
+        name: "Voluntary Safety Pledges",
+        explanation:
+          "Developers publish their own safety commitments, backed by state endorsement.",
+      },
+      {
+        name: "Open Research Licence",
+        explanation:
+          "AI research is free of state testing, and the state only reviews completed harm.",
+      },
+      {
+        name: "AI Freedom Act",
+        explanation:
+          "No public body may test, license or restrict an AI system before it causes harm.",
+      },
+    ],
+  },
+  {
+    slug: "lifelong_pension_account",
+    from: 2050,
+    name: "Lifelong Pension Account Act",
+    description:
+      "Replaces a fixed retirement age with a personal account that people draw on when they choose",
+    explanation:
+      "This act decides whether pensions are built around a personal account that every worker carries for life and can start drawing from at an age they choose. Flexible retirement suits people who live and work much longer, and a funded account is more secure for the young, but the state tops up the accounts of low earners, and some workers retire poorer. From the year this act opens it replaces pension age indexation for new bills.",
+    policyDomain: "social",
+    subCategory: "Pensions",
+    committee: "Labour and Social Affairs",
+    budgetLine: "welfare",
+    gdpCostFractions: [0.005, 0.003, 0.0012, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "healthcare", metricId: "elderCareQuality", weight: 0.35 },
+      { metricCategoryId: "economic", metricId: "consumerConfidence", weight: 0.25 },
+      { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+    ],
+    demographicEffects: [
+      { dim: "income", bucket: "low", target: "economicLean", direction: 0.3 },
+      { dim: "age", bucket: "young", target: "economicLean", direction: 0.2 },
+    ],
+    options: [
+      {
+        name: "Guaranteed Lifelong Account",
+        explanation:
+          "Every worker gets a state-backed account with a guaranteed minimum, drawn at any age from sixty on.",
+      },
+      {
+        name: "Topped-Up Personal Account",
+        explanation: "The state adds to the accounts of low earners and carers every year.",
+      },
+      {
+        name: "Flexible Retirement Window",
+        explanation:
+          "Workers may retire within a wide age window, with a smaller pension if they leave early.",
+      },
+      {
+        name: "No Pension Account Statute",
+        explanation: "Pensions follow the existing retirement age and funding rules.",
+      },
+      {
+        name: "Opt-In Personal Accounts",
+        explanation: "Workers may pay part of their pension tax into a private account.",
+      },
+      {
+        name: "Private Pension Choice",
+        explanation:
+          "Workers choose between the state pension and a private account, with no top-ups.",
+      },
+      {
+        name: "Pension Privatisation",
+        explanation:
+          "The state pension is replaced by compulsory private accounts with no guarantee.",
+      },
+    ],
+  },
+  {
+    slug: "zero_carbon_economy",
+    from: 2050,
+    name: "Zero Carbon Economy Act",
+    description: "Makes net zero emissions a legal limit for the whole economy",
+    explanation:
+      "This act decides whether the last emissions from industry, transport, farming and buildings are capped by law. A binding zero limit finishes the energy transition and cleans the air, but it adds cost to nearly everything. From the year this act opens it replaces the clean power standard for new bills.",
+    policyDomain: "environment",
+    subCategory: "Climate",
+    committee: "Environment and Energy",
+    budgetLine: "industry",
+    gdpCostFractions: [0.005, 0.003, 0.0013, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.4 },
+      { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.3 },
+      { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.25 },
+      { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
+    ],
+    options: [
+      {
+        name: "Binding Zero Limit",
+        explanation:
+          "A legal limit of zero net emissions applies to every sector, with fines on firms that miss it.",
+      },
+      {
+        name: "Sector Carbon Budgets",
+        explanation: "Each sector gets a falling carbon budget that reaches zero by a fixed date.",
+      },
+      {
+        name: "Transition Grants",
+        explanation: "The state pays firms and farms to clean up their last emissions.",
+      },
+      {
+        name: "No Zero Carbon Statute",
+        explanation: "Emissions follow existing climate law.",
+      },
+      {
+        name: "Net Zero Aspiration",
+        explanation: "The state states a goal of net zero but sets no limit.",
+      },
+      {
+        name: "Offset Market Rule",
+        explanation: "Firms may meet any target by buying carbon offsets at home or abroad.",
+      },
+      {
+        name: "Emissions Cap Ban",
+        explanation: "No public body may set a legal limit on emissions from the whole economy.",
+      },
+    ],
+  },
+  {
+    slug: "space_resources_act",
+    from: 2050,
+    name: "Space Resources Act",
+    description: "Sets who may mine the Moon and asteroids and who owns what they bring back",
+    explanation:
+      "This act decides whether firms and the state may mine the Moon and asteroids and who owns the metals and water they bring back. A licensing system opens a new industry and secures supplies of rare metals, but it costs a regulator and risks disputes with other powers. Leaving space mining unregulated is cheap now and invites conflict later.",
+    policyDomain: "technology",
+    subCategory: "Space",
+    committee: "Digital Affairs",
+    budgetLine: "technology",
+    gdpCostFractions: [0.003, 0.0018, 0.0008, 0, 0, 0, 0],
+    effects: [
+      { metricCategoryId: "economic", metricId: "rdIntensity", weight: 0.35 },
+      { metricCategoryId: "economic", metricId: "tradeGrowth", weight: 0.25 },
+      { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.25 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.1 },
+    ],
+    options: [
+      {
+        name: "State Space Mining Corporation",
+        explanation:
+          "A state corporation mines the Moon and asteroids and sells what it brings back.",
+      },
+      {
+        name: "Licensed Public Partnerships",
+        explanation:
+          "Firms mine under state licence and share part of their output with a public fund.",
+      },
+      {
+        name: "Claims Registry",
+        explanation:
+          "Firms may register claims to mine and keep what they bring back, with safety duties.",
+      },
+      {
+        name: "No Space Mining Statute",
+        explanation: "Space mining falls under general space and trade law.",
+      },
+      {
+        name: "Treaty-Only Approach",
+        explanation:
+          "The state allows mining only under international agreements still to be made.",
+      },
+      {
+        name: "Open Space Claims",
+        explanation: "Firms may claim and sell space resources with basic safety checks.",
+      },
+      {
+        name: "Space Mining Freedom",
+        explanation:
+          "Space mining is unregulated, and the state takes no share and sets no duties.",
       },
     ],
   },

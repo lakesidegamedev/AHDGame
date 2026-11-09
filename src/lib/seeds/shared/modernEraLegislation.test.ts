@@ -58,12 +58,27 @@ const BAND_2040 = [
   "sovereign_wealth_fund_mandate",
 ];
 
-describe("2027 to 2040 law types", () => {
+const BAND_2045 = [
+  "longevity_care_act",
+  "fossil_fuel_sunset",
+  "digital_self_ownership",
+  "water_security_act",
+];
+const BAND_2050 = [
+  "advanced_ai_oversight",
+  "lifelong_pension_account",
+  "zero_carbon_economy",
+  "space_resources_act",
+];
+
+describe("2027 to 2050 law types", () => {
   it("authors exactly the four bands, for every covered legislature", () => {
     expect(MODERN_ERA_LAWS.filter((l) => l.from === 2027).map((l) => l.slug)).toEqual(BAND_2027);
     expect(MODERN_ERA_LAWS.filter((l) => l.from === 2030).map((l) => l.slug)).toEqual(BAND_2030);
     expect(MODERN_ERA_LAWS.filter((l) => l.from === 2035).map((l) => l.slug)).toEqual(BAND_2035);
     expect(MODERN_ERA_LAWS.filter((l) => l.from === 2040).map((l) => l.slug)).toEqual(BAND_2040);
+    expect(MODERN_ERA_LAWS.filter((l) => l.from === 2045).map((l) => l.slug)).toEqual(BAND_2045);
+    expect(MODERN_ERA_LAWS.filter((l) => l.from === 2050).map((l) => l.slug)).toEqual(BAND_2050);
     expect(MODERN_ERA_TYPE_IDS).toHaveLength(
       MODERN_ERA_LAWS.length * MODERN_ERA_LEGISLATURE_SPECS.length
     );
@@ -102,7 +117,7 @@ describe("2027 to 2040 law types", () => {
     for (const id of MODERN_ERA_TYPE_IDS) {
       const { from, until } = lawBySlug.get(slugOf(id))!;
       expect(isLegislationTypeFileable(id, 2027), id).toBe(from === 2027);
-      for (const year of [2030, 2035, 2040, 2050]) {
+      for (const year of [2030, 2035, 2040, 2045, 2050, 2059]) {
         const open = year >= from && (until === undefined || year < until);
         expect(isLegislationTypeFileable(id, year), `${id} @ ${year}`).toBe(open);
       }
