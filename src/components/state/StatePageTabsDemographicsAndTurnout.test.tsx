@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { DemographicsAndTurnoutTab } from "./StatePageTabsDemographicsAndTurnout";
 import type { SerializedStateDemographics, Layer1Config } from "./StatePageTabsTypes";
-import type { DemographicCategory } from "@/lib/db/types";
 
 const popPayload = {
   population: 5000000,
@@ -35,7 +34,6 @@ describe("DemographicsAndTurnoutTab empty-state", () => {
       <DemographicsAndTurnoutTab
         stateId="XX"
         demographics={null}
-        categories={[]}
         censusData={null}
         turnoutData={null}
         countryId="US"
@@ -70,17 +68,6 @@ describe("DemographicsAndTurnoutTab electorate dossier", () => {
             groups: { g1: { population: 100, economicLean: 1.2, socialLean: -0.8, turnout: 62 } },
             lastUpdated: null,
           } as unknown as SerializedStateDemographics
-        }
-        categories={
-          [
-            {
-              _id: "voterGroups",
-              name: "Voter Groups",
-              groups: [
-                { id: "g1", name: "Test Group", defaultEconomicLean: 1, defaultSocialLean: -1 },
-              ],
-            },
-          ] as unknown as DemographicCategory[]
         }
         censusData={{ race: { white: 60, black: 40 } } as unknown as Layer1Config}
         turnoutData={null}
@@ -164,17 +151,6 @@ describe("DemographicsAndTurnoutTab electorate dossier", () => {
             groups: { g1: { population: 100, economicLean: 1.2, socialLean: -0.8, turnout: 62 } },
             lastUpdated: null,
           } as unknown as SerializedStateDemographics
-        }
-        categories={
-          [
-            {
-              _id: "voterGroups",
-              name: "Voter Groups",
-              groups: [
-                { id: "g1", name: "Test Group", defaultEconomicLean: 1, defaultSocialLean: -1 },
-              ],
-            },
-          ] as unknown as DemographicCategory[]
         }
         censusData={{ race: { white: 60, black: 40 } } as unknown as Layer1Config}
         turnoutData={null}

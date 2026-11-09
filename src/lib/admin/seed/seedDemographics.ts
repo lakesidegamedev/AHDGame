@@ -1,11 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type {
-  DemographicCategory,
-  StateDemographics,
-  StateDemographicTurnout,
-  State,
-} from "@/lib/db/types";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import type { StateDemographics, StateDemographicTurnout, State } from "@/lib/db/types";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import { STATE_IDS } from "@/lib/constants/states";
@@ -16,9 +10,6 @@ const US_STATIC_PRESET = "2019-default";
 
 export async function seedDemographics(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .deleteMany({ _id: "voterGroups" });
     const usIds = [...STATE_IDS];
     await db.collection<StateDemographics>("stateDemographics").deleteMany({ _id: { $in: usIds } });
     await db
@@ -27,24 +18,6 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
     await db
       .collection<StateDemographicTurnout>("stateDemographicTurnout")
       .deleteMany({ _id: { $in: usIds } });
-  }
-
-  const categoryOps: AnyBulkWriteOperation<DemographicCategory>[] = demographicCategories.map(
-    (category) => {
-      const { _id, ...categoryData } = category;
-      return {
-        updateOne: {
-          filter: { _id },
-          update: { $set: categoryData },
-          upsert: true,
-        },
-      };
-    }
-  );
-  if (categoryOps.length > 0) {
-    await db.collection<DemographicCategory>("demographicCategories").bulkWrite(categoryOps, {
-      ordered: false,
-    });
   }
 
   const demoTime = new Date();
@@ -132,6 +105,6 @@ export async function seedDemographics(db: Db, reset: boolean, log: (msg: string
       .bulkWrite(turnoutOps, { ordered: false });
   }
   log(
-    `Seeded ${demographicCategories.length} demographic categories, ${stateDemographics.length} state demographics, ${usStateIds.length} US turnout docs`
+    `Seeded ${stateDemographics.length} state demographics, ${usStateIds.length} US turnout docs`
   );
 }

@@ -4,7 +4,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -95,18 +94,8 @@ export async function seedJPDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "jp_voterGroups" as never });
     await db.collection("stateDemographics").deleteMany({ countryId: "JP" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "JP" });
-  }
-
-  const { jpDemographicCategories } =
-    await import("@/lib/countries/jp/data/jpDemographicCategories");
-  for (const cat of jpDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
 
   const { jpRegionDemographics: jpRegionDemographicsStatic } =
@@ -152,7 +141,7 @@ export async function seedJPDemographics(
   }
 
   log(
-    `Seeded JP demographics (preset: ${preset}, ${jpDemographicCategories.length} categories, ${jpRegionDemographics.length} regions, ${jpDemographicTurnout.length} turnout)`
+    `Seeded JP demographics (preset: ${preset}, ${jpRegionDemographics.length} regions, ${jpDemographicTurnout.length} turnout)`
   );
 }
 

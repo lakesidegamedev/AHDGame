@@ -129,14 +129,6 @@ describe("country coverage: China seed completeness", () => {
     expect(cnGovernmentFormation.countryId).toBe("CN");
   });
 
-  it("CN: demographic categories exist", async () => {
-    const { cnDemographicCategories } = await import("@/lib/seeds/cn/cnDemographicCategories");
-    expect(cnDemographicCategories.length).toBeGreaterThan(0);
-    for (const cat of cnDemographicCategories) {
-      expect(cat._id).toBeTruthy();
-    }
-  });
-
   it("CN: region demographics cover all 7 macro-regions", async () => {
     const { cnRegionDemographics } = await import("@/lib/seeds/cn/cnRegionDemographics");
     expect(cnRegionDemographics.length).toBe(7);
@@ -254,7 +246,6 @@ describe("country coverage: RU (Soviet Union) seed surfaces", () => {
 
   it("RU: turnout rows cover all 17 regions with the su_voterGroups group ids", async () => {
     const { ruDemographicTurnout } = await import("@/lib/seeds/ru/ruDemographicTurnout");
-    const { ruDemographicCategories } = await import("@/lib/seeds/ru/ruDemographicCategories");
     const { ruRegions1953 } = await import("@/lib/seeds/ru/ruRegions1953");
 
     expect(ruDemographicTurnout).toHaveLength(ruRegions1953.length);
@@ -263,23 +254,19 @@ describe("country coverage: RU (Soviet Union) seed surfaces", () => {
       expect(turnoutIds.has(region._id), `missing turnout for ${region._id}`).toBe(true);
     }
 
-    // Modifier keys must match the seeded demographic category's group ids —
-    // a drifted key would silently zero out GOTV effects for that group.
-    const category = ruDemographicCategories.find((c) => c._id === "su_voterGroups");
-    expect(category).toBeDefined();
-    const groupIds = new Set(category!.groups.map((g) => g.id));
-    for (const row of ruDemographicTurnout) {
-      for (const key of Object.keys(row.modifiers.su_voterGroups)) {
-        expect(groupIds.has(key), `turnout key "${key}" not a su_voterGroups group`).toBe(true);
-      }
-    }
+    // Every row carries the same modifier keys, so a drifted key in one region
+    // cannot silently zero out GOTV effects for that group there.
+    const keysOf = (row: (typeof ruDemographicTurnout)[number]) =>
+      Object.keys(row.modifiers.su_voterGroups).sort();
+    const expected = keysOf(ruDemographicTurnout[0]);
+    expect(expected.length).toBeGreaterThan(0);
+    for (const row of ruDemographicTurnout) expect(keysOf(row)).toEqual(expected);
   });
 });
 
 describe("country coverage: DD (East Germany) seed surfaces", () => {
   it("DD: turnout rows cover every Land with the dd_voterGroups group ids (ticket #1121)", async () => {
     const { ddDemographicTurnout } = await import("@/lib/seeds/dd/ddDemographicTurnout");
-    const { ddDemographicCategories } = await import("@/lib/seeds/dd/ddDemographicCategories");
     const { ddRegions1953 } = await import("@/lib/seeds/dd/ddRegions1953");
 
     expect(ddDemographicTurnout).toHaveLength(ddRegions1953.length);
@@ -288,15 +275,13 @@ describe("country coverage: DD (East Germany) seed surfaces", () => {
       expect(turnoutIds.has(region._id), `missing turnout for ${region._id}`).toBe(true);
     }
 
-    const category = ddDemographicCategories.find((c) => c._id === "dd_voterGroups");
-    expect(category).toBeDefined();
-    const groupIds = new Set(category!.groups.map((g) => g.id));
+    const keysOf = (row: (typeof ddDemographicTurnout)[number]) =>
+      Object.keys(row.modifiers.dd_voterGroups).sort();
+    const expected = keysOf(ddDemographicTurnout[0]);
+    expect(expected.length).toBeGreaterThan(0);
     for (const row of ddDemographicTurnout) {
       expect(row.countryId).toBe("DD");
-      expect(row.modifiers.dd_voterGroups).toBeDefined();
-      for (const key of Object.keys(row.modifiers.dd_voterGroups)) {
-        expect(groupIds.has(key), `turnout key "${key}" not a dd_voterGroups group`).toBe(true);
-      }
+      expect(keysOf(row)).toEqual(expected);
     }
   });
 

@@ -4,7 +4,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StateMetrics,
@@ -105,17 +104,8 @@ export async function seedNGDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "ng_voterGroups" as never });
     await db.collection("stateDemographics").deleteMany({ countryId: "NG" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "NG" });
-  }
-
-  const { ngDemographicCategories } = await import("@/lib/seeds/ng/ngDemographicCategories");
-  for (const cat of ngDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
 
   const { ngRegionDemographics: ngRegionDemographicsStatic } =
@@ -161,7 +151,7 @@ export async function seedNGDemographics(
   }
 
   log(
-    `Seeded NG demographics (preset: ${preset}, ${ngDemographicCategories.length} categories, ${ngRegionDemographics.length} regions, ${ngDemographicTurnout.length} turnout)`
+    `Seeded NG demographics (preset: ${preset}, ${ngRegionDemographics.length} regions, ${ngDemographicTurnout.length} turnout)`
   );
 }
 

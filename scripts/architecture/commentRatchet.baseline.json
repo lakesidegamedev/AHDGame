@@ -3313,10 +3313,6 @@
       "longBlocks": 2,
       "narrativeLines": 2
     },
-    "src/lib/admin/seed/persistRegionLeans.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/admin/seed/politicalLegislationReset.e2e.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 2
@@ -5737,10 +5733,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/data/deDemographicCategories.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/de/data/deLandtag.ts": {
       "longBlocks": 2,
       "narrativeLines": 0
@@ -7458,12 +7450,8 @@
       "narrativeLines": 1
     },
     "src/lib/demographicEffects.ts": {
-      "longBlocks": 4,
+      "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/demographicEffects.v2.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/demographics/birthRateLever.legislation.sim.test.ts": {
       "longBlocks": 1,
@@ -7478,10 +7466,6 @@
       "narrativeLines": 0
     },
     "src/lib/demographics/bucketLabelScaffolding.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/demographics/cachedStateLean.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7502,12 +7486,12 @@
       "narrativeLines": 2
     },
     "src/lib/demographics/durableRealignment.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/lib/demographics/eraCheckpoints.ts": {
       "longBlocks": 5,
-      "narrativeLines": 4
+      "narrativeLines": 3
     },
     "src/lib/demographics/granularCells.ts": {
       "longBlocks": 1,
@@ -7698,7 +7682,7 @@
       "narrativeLines": 0
     },
     "src/lib/electionEngine/medianVoter.ts": {
-      "longBlocks": 2,
+      "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/lib/electionEngine/persuasionDrivers.ts": {

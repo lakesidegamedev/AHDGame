@@ -2,13 +2,12 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { huRegions } from "@/lib/seeds/hu/huRegions";
 import { huRegions1953 } from "@/lib/seeds/hu/huRegions1953";
 import { huParties } from "@/lib/seeds/hu/huParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
 } from "@/lib/seeds/shared/easternBlocMetrics";
 
-/** Hungary seed config — metrics/baselines/categories from the shared builders.
+/** Hungary seed config — metrics/baselines from the shared builders.
  *  1953: Rákosi Stalinist period — forced industrialization, near-zero press freedom.
  *  1979: "happiest barracks" — relatively liberal; higher press freedom. */
 export function getHuSeedConfig(preset: string): EasternBlocSeedConfig {
@@ -90,10 +89,8 @@ export function getHuSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "HU",
-    categoryId: "hu_voterGroups",
     regions,
     parties: huParties,
-    categories: makeEasternBlocCategories("hu_voterGroups", "Hungary Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

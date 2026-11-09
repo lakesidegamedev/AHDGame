@@ -334,12 +334,7 @@ describe("reset drop scoping", () => {
 
   it("leaves only genuinely global reference data unscoped", () => {
     const global = RESET_DROP_COLLECTIONS.filter((e) => e.scope === "global").map((e) => e.name);
-    expect(global.sort()).toEqual([
-      "demographicCategories",
-      "formulaGrants",
-      "legislationTypes",
-      "policies",
-    ]);
+    expect(global.sort()).toEqual(["formulaGrants", "legislationTypes", "policies"]);
   });
 
   it("explains every entry that is not scoped by countryId", () => {

@@ -8,7 +8,7 @@ import type { CensusGroupView } from "@/lib/db/types";
  * mix, not archetype-specific lean variation.
  *
  * `categoryWeights: { ie_voterGroups: 100 }` references the profile defined
- * in ieDemographicCategories.ts.
+ * in the country Layer-1 model.
  *
  * Design principle: Dublin has more urban_professional, young_urban, and
  * new_irish; rural regions have more rural_traditional, retirees, and

@@ -4,7 +4,7 @@
  * one is stored.
  */
 import type { StateDemographics } from "@/lib/db/types";
-import { calculateStateLean, type CalculatedLean } from "@/lib/utils/demographics";
+import { electorateMeanLean, type ElectorateLean } from "./electorateLean";
 import { buildGranularElectorateSubstrate } from "./granularElectorate";
 
 export interface CensusLeanContext {
@@ -18,7 +18,7 @@ export interface CensusLeanContext {
 export function censusStateLean(
   demographics: StateDemographics,
   context: CensusLeanContext
-): CalculatedLean {
+): ElectorateLean {
   const substrate = buildGranularElectorateSubstrate({
     countryId: context.countryId,
     stateId: context.stateId,
@@ -32,5 +32,5 @@ export function censusStateLean(
   if (!substrate) {
     throw new Error(`No census electorate for ${context.countryId} region ${context.stateId}`);
   }
-  return calculateStateLean(substrate.demographics, substrate.categories);
+  return electorateMeanLean(substrate.electorate);
 }

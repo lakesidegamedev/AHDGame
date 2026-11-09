@@ -1,9 +1,8 @@
 import type { CountryLayer1Model } from "@/lib/seeds/international/types";
 import type { EraId } from "@/lib/seeds/presetSelector";
-import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * Shared Layer-1 model + demographic-category builders for the Warsaw-Pact
+ * Shared Layer-1 model builder for the Warsaw-Pact
  * one-party states. Six standard command-economy archetypes; the country's own
  * census (and titular-ethnicity keys) drive the per-region outcome. Leans run:
  *   economicLean -5 (plan/socialist) … +5 (market/reform)
@@ -23,15 +22,6 @@ export const EASTERN_BLOC_GROUP_IDS = [
   "religious_traditional",
   "youth",
 ] as const;
-
-const GROUP_NAMES: Record<string, string> = {
-  party_nomenklatura: "Party Nomenklatura",
-  industrial_worker: "Industrial Worker",
-  collective_farmer: "Collective Farmer",
-  intelligentsia: "Technical Intelligentsia",
-  religious_traditional: "Religious / Traditional",
-  youth: "Youth",
-};
 
 const DEFAULT_LEANS = {
   party_nomenklatura: { economicLean: -3, socialLean: 2 },
@@ -248,22 +238,4 @@ export function makeEasternBlocModel(
     defaultLeans: DEFAULT_LEANS as unknown as CountryLayer1Model["defaultLeans"],
     census,
   };
-}
-
-/** Build the matching demographic-category doc for the standard 6 archetypes. */
-export function makeEasternBlocCategories(categoryId: string, name: string): DemographicCategory[] {
-  return [
-    {
-      _id: categoryId,
-      name,
-      defaultWeight: 100,
-      groups: EASTERN_BLOC_GROUP_IDS.map((id) => ({
-        id,
-        name: GROUP_NAMES[id],
-        defaultEconomicLean: DEFAULT_LEANS[id].economicLean,
-        defaultSocialLean: DEFAULT_LEANS[id].socialLean,
-        defaultTurnout: 94,
-      })),
-    },
-  ];
 }

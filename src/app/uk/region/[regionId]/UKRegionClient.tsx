@@ -18,7 +18,7 @@ import { RelocateButton } from "@/components/RelocateButton";
 import { UKRegionPageTabs } from "@/components/uk/UKRegionPageTabs";
 import { ApprovalTooltip } from "@/components/ApprovalTooltip";
 import { regionUrl, regionApprovalUrl } from "@/lib/urls";
-import type { State, StateDemographics, DemographicCategory } from "@/lib/db/types";
+import type { State, StateDemographics } from "@/lib/db/types";
 import type {
   PartyOrgDisplay,
   SerializedPlayer,
@@ -65,7 +65,6 @@ interface UKRegionClientProps {
       })
     | null;
   demographics: (Omit<StateDemographics, "lastUpdated"> & { lastUpdated: string | null }) | null;
-  categories: DemographicCategory[];
   censusData: RegionCensus | null;
   partyOrg: PartyOrgDisplay[];
   calculatedLeans: { economicLean: number; socialLean: number } | null;
@@ -115,7 +114,6 @@ export default function UKRegionClient({
   nation,
   state,
   demographics,
-  categories,
   censusData,
   partyOrg,
   calculatedLeans,
@@ -287,7 +285,6 @@ export default function UKRegionClient({
           region={region}
           state={state}
           demographics={demographics}
-          categories={categories}
           censusData={censusData}
           partyOrg={partyOrg}
           calculatedLeans={calculatedLeans}

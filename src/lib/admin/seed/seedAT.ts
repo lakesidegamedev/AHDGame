@@ -1,12 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
-import type {
-  State,
-  PoliticalParty,
-  DemographicCategory,
-  StateDemographics,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { State, PoliticalParty, StateDemographics, StateMetrics } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -85,16 +79,8 @@ export async function seedATDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "at_voterGroups" as never });
     await db.collection("stateDemographics").deleteMany({ countryId: "AT" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "AT" });
-  }
-  const { atDemographicCategories } = await import("@/lib/seeds/at/atDemographicCategories");
-  for (const cat of atDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");

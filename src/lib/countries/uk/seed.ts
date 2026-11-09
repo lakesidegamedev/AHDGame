@@ -4,7 +4,6 @@ import { ObjectId, type Db } from "mongodb";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -159,7 +158,6 @@ export async function seedUKDemographics(
     await db.collection("demographicDefaults").deleteMany({ countryId: "UK" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "UK" });
   }
-  const { ukDemographicCategories } = await import("@/lib/seeds/uk/ukDemographicCategories");
   const { default: ukRegionDemographicsStatic } =
     await import("@/lib/seeds/uk/ukRegionDemographics");
   const { ukDemographicTurnout } = await import("@/lib/seeds/uk/ukDemographicTurnout");
@@ -189,12 +187,6 @@ export async function seedUKDemographics(
     );
   }
 
-  for (const category of ukDemographicCategories) {
-    const { _id, ...categoryData } = category;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: categoryData }, { upsert: true });
-  }
   // Both the authored 1991 fallback and the Layer-1 bundle already describe
   // their selected era. Reapplying a modern-to-1991 transform distorts shares
   // and rounds away population, so persist the selected bundle directly.
@@ -230,7 +222,7 @@ export async function seedUKDemographics(
       .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
   }
   log(
-    `Seeded UK demographics (preset: ${preset}): ${ukDemographicCategories.length} categories, ${ukRegionDemographics.length} region demographics, ${ukDemographicTurnout.length} turnout`
+    `Seeded UK demographics (preset: ${preset}): ${ukRegionDemographics.length} region demographics, ${ukDemographicTurnout.length} turnout`
   );
 }
 

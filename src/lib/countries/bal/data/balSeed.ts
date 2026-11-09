@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { balRegions } from "@/lib/seeds/bal/balRegions";
 import { balRegions1953 } from "@/lib/seeds/bal/balRegions1953";
 import { balParties } from "@/lib/seeds/bal/balParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -67,10 +66,8 @@ export function getBalSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "BAL",
-    categoryId: "bal_voterGroups",
     regions,
     parties: balParties,
-    categories: makeEasternBlocCategories("bal_voterGroups", "Baltics Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

@@ -50,7 +50,12 @@ const REFERENCE: CollectionEntry[] = [
   },
   { name: "states", category: "reference", seededBy: "runCoreSeed" },
   { name: "policies", category: "reference", seededBy: "runCoreSeed" },
-  { name: "demographicCategories", category: "reference", seededBy: "runCoreSeed" },
+  {
+    name: "demographicCategories",
+    category: "reference",
+    notes:
+      "Retired: voter-group categories are gone, the electorate is read from the census. Kept so live databases with stragglers stay classified and a rebuild clears them; the entry can be removed once production is purged.",
+  },
   { name: "stateDemographics", category: "reference", seededBy: "runCoreSeed" },
   { name: "demographicDefaults", category: "reference", seededBy: "runCoreSeed" },
   { name: "stateDemographicTurnout", category: "reference", seededBy: "runCoreSeed" },

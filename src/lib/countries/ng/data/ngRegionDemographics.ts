@@ -5,7 +5,7 @@ import type { CensusGroupView } from "@/lib/db/types";
  *
  * Each region sets the population share of each archetype (summing to 100%)
  * plus baseline lean and turnout values. `categoryWeights: { ng_voterGroups: 100 }`
- * references the profile in ngDemographicCategories.ts.
+ * references the profile in the country Layer-1 model.
  *
  * Every archetype has a non-zero population in every zone: regional character
  * comes from mix weight, not exclusion. STATIC fallback used when the Layer-1

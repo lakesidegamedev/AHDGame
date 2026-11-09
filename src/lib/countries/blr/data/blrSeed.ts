@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { blrRegions } from "@/lib/seeds/blr/blrRegions";
 import { blrRegions1953 } from "@/lib/seeds/blr/blrRegions1953";
 import { blrParties } from "@/lib/seeds/blr/blrParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -104,10 +103,8 @@ export function getBlrSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "BLR",
-    categoryId: "blr_voterGroups",
     regions,
     parties: blrParties,
-    categories: makeEasternBlocCategories("blr_voterGroups", "Belarus Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

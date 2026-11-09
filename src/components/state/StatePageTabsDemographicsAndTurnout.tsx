@@ -8,7 +8,6 @@ import { LocalTime } from "@/components/time/LocalTime";
 import { LivePopulationPanel } from "@/components/demographics/LivePopulationPanel";
 import { ElectorateDossier } from "./demographics/ElectorateDossier";
 import type { BucketProfileSection } from "@/lib/demographics/bucketProfile";
-import type { DemographicCategory } from "@/lib/db/types";
 import type { RegionPartyPosition } from "@/lib/demographics/preferredParty";
 import type {
   SerializedStateDemographics,
@@ -581,7 +580,6 @@ export function DemographicsAndTurnoutTab({
 }: {
   stateId: string;
   demographics: SerializedStateDemographics | null;
-  categories: DemographicCategory[];
   censusData: Layer1Config | IntlRegionCensus | null;
   /**
    * Per-bucket electorate profile, computed server-side from the same granular

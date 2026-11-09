@@ -3,7 +3,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StateMetrics,
@@ -74,17 +73,8 @@ export async function seedCNDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "cn_voterGroups" as never });
     await db.collection("stateDemographics").deleteMany({ countryId: "CN" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "CN" });
-  }
-
-  const { cnDemographicCategories } = await import("@/lib/seeds/cn/cnDemographicCategories");
-  for (const cat of cnDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
 
   const { cnRegionDemographics: cnRegionDemographicsStatic } =
@@ -130,7 +120,7 @@ export async function seedCNDemographics(
   }
 
   log(
-    `Seeded CN demographics (preset: ${preset}, ${cnDemographicCategories.length} categories, ${cnRegionDemographics.length} regions, ${cnDemographicTurnout.length} turnout)`
+    `Seeded CN demographics (preset: ${preset}, ${cnRegionDemographics.length} regions, ${cnDemographicTurnout.length} turnout)`
   );
 }
 

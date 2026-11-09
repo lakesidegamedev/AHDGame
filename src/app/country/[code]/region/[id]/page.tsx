@@ -131,7 +131,7 @@ async function renderUKRegion(regionCode: string) {
       ),
   ]);
 
-  const { demographics, categories } = demographicsData;
+  const { demographics } = demographicsData;
   const governmentApproval = approvalData?.approval ?? null;
   const approvalBase = approvalData?.baseApproval ?? null;
   const approvalModifiers = approvalData?.modifiers ?? [];
@@ -277,7 +277,6 @@ async function renderUKRegion(regionCode: string) {
         nation={nation}
         state={serializedState}
         demographics={serializedDemographics}
-        categories={categories}
         censusData={censusData}
         partyOrg={serializedPartyOrg}
         calculatedLeans={calculatedLeans}
@@ -432,7 +431,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
   const governmentApproval = approvalData?.approval ?? null;
   const approvalBaseScore = approvalData?.baseApproval ?? null;
   const approvalModifiers = approvalData?.modifiers ?? [];
-  const { demographics, categories } = demographicsData;
+  const { demographics } = demographicsData;
 
   // Calculate state leans from demographics or fallback to legacy/cached values
   let calculatedLeans =
@@ -629,7 +628,6 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
             players={serializedPlayers}
             npps={serializedNPPs}
             demographics={serializedDemographics}
-            categories={categories}
             censusData={getRegionCensusData(countryId, state._id, activePreset)}
             calculatedLeans={calculatedLeans}
             regionParties={regionParties}

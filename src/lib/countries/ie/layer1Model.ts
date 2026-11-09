@@ -180,7 +180,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from ieDemographicCategories.ts) ─────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ─────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   urban_professional: { economicLean: 2, socialLean: -2 },

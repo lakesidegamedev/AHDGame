@@ -69,7 +69,6 @@ export function StatePageTabs({
   players,
   npps,
   demographics,
-  categories,
   censusData,
   calculatedLeans,
   partyOrg,
@@ -231,7 +230,6 @@ export function StatePageTabs({
           <DemographicsAndTurnoutTab
             stateId={state._id}
             demographics={demographics}
-            categories={categories}
             censusData={censusData}
             turnoutData={turnoutData ?? null}
             countryId={state.countryId}

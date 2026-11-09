@@ -1,11 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type {
-  DemographicCategory,
-  PoliticalParty,
-  State,
-  StateDemographics,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { PoliticalParty, State, StateDemographics, StatePartyOrg } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
@@ -14,7 +8,6 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { prunePresetMismatchedDefaultParties } from "@/lib/seeds/ensureDefaultParties";
 import { getCountryLayer1Model, buildModelRegionDemographics } from "@/lib/seeds/international";
 import { getSuccessor1991Model } from "@/lib/seeds/international/successor1991";
-import { deriveCountryGroupTurnout } from "@/lib/seeds/international/derive";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import { metricsToBaselines } from "./seedModernTransitionCountries";
 import { PARTY_ROSTERS_2019 } from "@/lib/seeds/partyRosters2019";
@@ -87,31 +80,11 @@ export async function seedModern2019(
     const model =
       countryId === "BG" ? getSuccessor1991Model("BG") : getCountryLayer1Model(countryId, "2027");
     if (!model) throw new Error(`Missing democratic voter model for ${countryId}`);
-    const category: DemographicCategory = {
-      _id: model.categoryId,
-      name: `${countryId} 2019 voter groups`,
-      defaultWeight: 100,
-      groups: model.groupIds.map((id) => {
-        const lean = model.defaultLeans[id];
-        if (!lean) throw new Error(`Missing ${countryId} voter lean for ${id}`);
-        return {
-          id,
-          name: id.replaceAll("_", " "),
-          defaultEconomicLean: lean.economicLean,
-          defaultSocialLean: lean.socialLean,
-          defaultTurnout: deriveCountryGroupTurnout(model, id),
-        };
-      }),
-    };
-    const { _id: categoryId, ...categoryData } = category;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: categoryId }, { $set: categoryData }, { upsert: true });
     const demographics = buildModelRegionDemographics(model);
     if (demographics.length !== regions.length)
       throw new Error(`2019 ${countryId} demographic regions do not match seeded regions`);
     await db.collection<StateDemographics>("stateDemographics").bulkWrite(
-      demographics.map(({ _id, groups: _groups, ...data }) => ({
+      demographics.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
     );

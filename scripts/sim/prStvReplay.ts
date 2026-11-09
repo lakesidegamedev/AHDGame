@@ -434,26 +434,6 @@ async function main() {
       population: 100_000,
       votingSystem: "proportional",
     });
-    await db.collection("demographicCategories").insertOne({
-      _id: "ideology" as never,
-      name: "Synthetic ideology",
-      groups: [
-        {
-          id: "left",
-          name: "Left",
-          defaultEconomicLean: -2,
-          defaultSocialLean: 0,
-          defaultTurnout: 60,
-        },
-        {
-          id: "right",
-          name: "Right",
-          defaultEconomicLean: 2,
-          defaultSocialLean: 0,
-          defaultTurnout: 60,
-        },
-      ],
-    });
     await db.collection("stateDemographics").insertOne({
       _id: "DUB" as never,
       countryId: "IE",

@@ -1,9 +1,7 @@
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import type {
   State,
   StateDemographics,
-  DemographicCategory,
   StatePartyOrg,
   PoliticalParty,
   ElectedOfficial,
@@ -43,7 +41,7 @@ export function toIsoStringOrNull(value: Date | string | null | undefined): stri
   return typeof value === "string" ? value : null;
 }
 
-/** Per-country voter-group category ids for region demographics (not US `find({})`). */
+/** Per-country geography registry ids kept for the country snapshot harness. */
 export const REGION_DEMOGRAPHIC_CATEGORY_IDS: Partial<Record<CountryId, string[]>> = {
   UK: UK_GEOGRAPHY.demographicCategoryIds,
   JP: JP_GEOGRAPHY.demographicCategoryIds,
@@ -122,23 +120,13 @@ export async function getCurrentPartyNav(
 export async function getRegionDemographics(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const categoryFilter = REGION_DEMOGRAPHIC_CATEGORY_IDS[countryId];
-
-    const [demographics, categories] = await Promise.all([
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .findOne({ _id: stateId, countryId: countryId }),
-      categoryFilter
-        ? db
-            .collection<DemographicCategory>("demographicCategories")
-            .find({ _id: { $in: categoryFilter } })
-            .toArray()
-        : loadDemographicCategories(db),
-    ]);
-    return { demographics, categories };
+    const demographics = await db
+      .collection<StateDemographics>("stateDemographics")
+      .findOne({ _id: stateId, countryId: countryId });
+    return { demographics };
   } catch (error) {
     console.error("Error fetching demographics:", error);
-    return { demographics: null, categories: [] };
+    return { demographics: null };
   }
 }
 

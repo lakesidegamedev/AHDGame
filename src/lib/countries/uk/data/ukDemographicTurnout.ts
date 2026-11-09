@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * UK region demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV or canvassing boosts applied yet.
- * Keys match the UK voter group IDs defined in ukDemographicCategories.ts.
+ * Keys match the UK voter group IDs defined in the country Layer-1 model.
  *
  * The category key is "uk_voterGroups" to match the UK demographic profile ID
  * and to avoid collision with US "voterGroups" category.

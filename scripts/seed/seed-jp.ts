@@ -34,7 +34,7 @@ async function main() {
   // The actual seed data files exist at:
   //   src/lib/countries/jp/data/jpRegions.ts
   //   src/lib/countries/jp/data/jpParties.ts
-  //   src/lib/countries/jp/data/jpDemographicCategories.ts
+  //   src/lib/countries/jp/data/the country Layer-1 model
   //   src/lib/countries/jp/data/jpRegionDemographics.ts
   //   src/lib/countries/jp/data/jpDemographicTurnout.ts
   //   src/lib/countries/jp/data/jpStateMetrics.ts

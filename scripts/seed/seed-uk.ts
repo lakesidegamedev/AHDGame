@@ -4,7 +4,6 @@
  * Seeding order (dependency-safe):
  *   1. UK regions (states collection, countryId: "UK")
  *   2. UK political parties (politicalParties collection)
- *   3. UK demographic categories (demographicCategories collection)
  *   4. UK region demographics (stateDemographics + demographicDefaults collections)
  *   5. UK demographic turnout modifiers (stateDemographicTurnout collection)
  *   6. UK state party orgs (statePartyOrg collection — one per region × party)
@@ -21,7 +20,6 @@ import { connectDb, closeDb } from "../utils/db";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   CensusGroupView,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -29,7 +27,6 @@ import type {
 } from "../../src/lib/db/types";
 import { ukRegions } from "../../src/lib/seeds/uk/ukRegions";
 import { ukParties } from "../../src/lib/seeds/uk/ukParties";
-import { ukDemographicCategories } from "../../src/lib/seeds/uk/ukDemographicCategories";
 import { ukRegionDemographics } from "../../src/lib/seeds/uk/ukRegionDemographics";
 import { ukDemographicTurnout } from "../../src/lib/seeds/uk/ukDemographicTurnout";
 import { ukStateMetrics } from "../../src/lib/seeds/uk/ukStateMetrics";
@@ -81,18 +78,6 @@ async function main() {
     }
   }
   console.log(`   ✓ Upserted ${ukParties.length} UK parties.`);
-
-  // ── 3. UK Demographic Categories ──────────────────────────────────────────
-  console.log("3. Seeding UK demographic categories (voter groups)...");
-  for (const category of ukDemographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-  }
-  const groupCount = ukDemographicCategories.reduce((s, c) => s + c.groups.length, 0);
-  console.log(
-    `   ✓ Upserted ${ukDemographicCategories.length} category (${groupCount} UK voter groups).`
-  );
 
   // ── 4. UK Region Demographics ──────────────────────────────────────────────
   console.log("4. Seeding UK region demographics...");
@@ -166,7 +151,7 @@ async function main() {
   console.log("\n=== UK Seed Complete ===");
   console.log(
     `Regions: ${ukRegions.length}, Parties: ${ukParties.length}, ` +
-      `Groups: ${groupCount}, Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
+      `Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
   );
 }
 

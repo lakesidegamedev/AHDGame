@@ -1,9 +1,9 @@
 import {
-  editorConfigFromSeed,
-  computeDerivedComposition,
-  editorConfigFromCountryModel,
-  computeDerivedCompositionGeneric,
-} from "@/lib/positionEditor/derive";
+  groupConfigFromSeed,
+  groupLeanUs,
+  groupConfigFromCountryModel,
+  groupLeanGeneric,
+} from "./groupModelLeans";
 import { stateCensusData } from "@/lib/seeds/stateCensusData";
 import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
 import { stateCensusData1979 } from "@/lib/seeds/stateCensusData1979";
@@ -30,14 +30,14 @@ const US_CENSUS: Record<EraId, Record<string, Layer1Config>> = {
 };
 
 /**
- * Derive per-region econ/social/display leans using the SAME path as the preset
- * route and the live seed. US uses the US engine; others use the generic path.
+ * Derive per-region econ/social/display leans using the authored voter-group
+ * composition model, which the calibration anchors were written against.
  */
 export function deriveRegionLeans(country: string, era: EraId): RegionLean[] {
   if (country === "US") {
     return Object.entries(US_CENSUS[era]).map(([stateId, cfg]) => {
-      const ed = editorConfigFromSeed(stateId, "US", era, cfg);
-      const d = computeDerivedComposition(ed);
+      const ed = groupConfigFromSeed(stateId, "US", era, cfg);
+      const d = groupLeanUs(ed);
       return {
         regionId: stateId,
         economic: d.stateEconomicLean,
@@ -49,8 +49,8 @@ export function deriveRegionLeans(country: string, era: EraId): RegionLean[] {
   const model = getCountryLayer1Model(country, era);
   if (!model) return [];
   return Object.keys(model.census).map((regionId) => {
-    const ed = editorConfigFromCountryModel(model, regionId, era, {});
-    const d = computeDerivedCompositionGeneric(ed);
+    const ed = groupConfigFromCountryModel(model, regionId, era, {});
+    const d = groupLeanGeneric(ed);
     return {
       regionId,
       economic: d.stateEconomicLean,

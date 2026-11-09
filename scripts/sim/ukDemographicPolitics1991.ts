@@ -6,14 +6,13 @@
 import assert from "node:assert/strict";
 import { getUkModel } from "@/lib/countries/uk/layer1Model";
 import { ukRegions1991 } from "@/lib/countries/uk/data/ukRegions1991";
-import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
 import { buildModelRegionDemographics } from "@/lib/seeds/international/derive";
 import { applyEra1991DemographicAdjustments } from "@/lib/seeds/reference/stateDemographics1991";
 import { calculateStateLean } from "@/lib/utils/demographics";
 import { getSocialPositionName } from "@/lib/utils/politics";
 import { calcAppeal } from "@/lib/utils/demographicAppeal";
 import { deriveGranularElectorateUnits } from "@/lib/demographics/granularElectorate";
-import type { Layer1PositionOverlay, CensusGroupView } from "@/lib/db/types";
+import type { Layer1PositionOverlay, CensusGroupView, DemographicCategory } from "@/lib/db/types";
 
 // Frozen pre-fix social inputs. Economic/census/composition/turnout inputs are
 // unchanged by this PR and remain read from the model, never reimplemented.
@@ -29,6 +28,20 @@ const LEGACY_SOCIAL = {
 };
 
 const treatment = getUkModel("1991");
+const ukDemographicCategories = [
+  {
+    _id: treatment.categoryId,
+    name: "UK voter groups",
+    defaultWeight: 100,
+    groups: treatment.groupIds.map((id) => ({
+      id,
+      name: id,
+      defaultEconomicLean: 0,
+      defaultSocialLean: 0,
+      defaultTurnout: 55,
+    })),
+  },
+] as unknown as DemographicCategory[];
 const baseline = structuredClone(treatment);
 const oldSocialOverlay: Layer1PositionOverlay = {};
 for (const [dim, entries] of Object.entries(LEGACY_SOCIAL)) {

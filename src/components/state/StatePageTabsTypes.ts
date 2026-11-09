@@ -5,7 +5,6 @@ import type {
   ElectedOfficial,
   Character,
   StateDemographics,
-  DemographicCategory,
   OfficeType,
 } from "@/lib/db/types";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
@@ -133,7 +132,6 @@ export interface StatePageTabsProps {
   players: SerializedPlayer[];
   npps: NPPDisplaySimple[];
   demographics: SerializedStateDemographics | null;
-  categories: DemographicCategory[];
   censusData: Layer1Config | IntlRegionCensus | null;
   calculatedLeans: { economicLean: number; socialLean: number } | null;
   partyOrg: PartyOrgDisplay[];

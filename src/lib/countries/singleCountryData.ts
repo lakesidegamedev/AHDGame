@@ -145,6 +145,11 @@ export const ACKNOWLEDGED_OUTSIDE: ReadonlyArray<{
     country: "US",
     why: "One exported function, deriveRegionLeans. Engine code that happens to default to the US, not a table of US facts.",
   },
+  {
+    file: "src/lib/seeds/calibration/groupModelLeans.ts",
+    country: "US",
+    why: "Calibration-only group-model arithmetic that serves every country's anchors; the US census tables it reads are imported, not held here. Goes with the group model.",
+  },
 
   // ---- United States client surfaces. Bucket E: they RENDER it, they do not own it. ----
   {
