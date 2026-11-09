@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useGameEvents } from "@/hooks/useGameEvents";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -17,34 +18,13 @@ export interface CountryMacroHistoryPayload {
 
 type MetricId = "population" | "gdp" | "gdpPerCapita";
 
-interface MetricConfig {
-  id: MetricId;
-  label: string;
-  help: string;
-  color: string;
-}
-
 const METRIC_ORDER: readonly MetricId[] = ["population", "gdp", "gdpPerCapita"];
 
-const METRIC_CONFIG: Record<MetricId, MetricConfig> = {
-  population: {
-    id: "population",
-    label: "Population",
-    help: "people",
-    color: "var(--color-secondary, #06b6d4)",
-  },
-  gdp: {
-    id: "gdp",
-    label: "GDP",
-    help: "local currency",
-    color: "var(--color-success, #22c55e)",
-  },
-  gdpPerCapita: {
-    id: "gdpPerCapita",
-    label: "GDP per capita",
-    help: "local currency",
-    color: "var(--color-primary, #ef4444)",
-  },
+/** Series colour per metric; every label comes from the `economyHistory` catalog. */
+const METRIC_COLOR: Record<MetricId, string> = {
+  population: "var(--color-secondary, #06b6d4)",
+  gdp: "var(--color-success, #22c55e)",
+  gdpPerCapita: "var(--color-primary, #ef4444)",
 };
 
 const WIDTH = 640;
@@ -72,8 +52,13 @@ function metricValue(point: NationalMacroPoint, metric: MetricId): number | null
   return point.gdpPerCapita;
 }
 
-function formatMetricValue(value: number, metric: MetricId, prefix: string): string {
-  if (metric === "population") return `${compactNumber(value)} people`;
+function formatMetricValue(
+  value: number,
+  metric: MetricId,
+  prefix: string,
+  peopleUnit: string
+): string {
+  if (metric === "population") return `${compactNumber(value)} ${peopleUnit}`;
   return `${prefix}${compactNumber(value)}`;
 }
 
@@ -98,21 +83,36 @@ export function NationalHistoryPanel({
   countryId: CountryId;
   compact?: boolean;
 }) {
+  const t = useTranslations("economyHistory");
   const [metric, setMetric] = useState<MetricId>("gdp");
   const [hovered, setHovered] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // The turn this page last saw complete. Sending it keeps the refetch out of
+  // the cache entry a client filled before that turn finished, and every client
+  // that saw the same turn asks for the same URL, so the edge still shares one
+  // body per turn rather than one per client.
+  const [untilTurn, setUntilTurn] = useState<number | null>(null);
   const [state, setState] = useState<{
     status: "loading" | "error" | "ready";
     data: CountryMacroHistoryPayload | null;
   }>({ status: "loading", data: null });
 
-  useGameEvents(() => setRefreshKey((key) => key + 1), ["turn_complete"]);
+  useGameEvents(
+    (event) => {
+      const turn = event.payload.turn;
+      if (typeof turn === "number" && Number.isFinite(turn)) setUntilTurn(turn);
+      setRefreshKey((key) => key + 1);
+    },
+    ["turn_complete"]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
+    const query = new URLSearchParams({ turns: "120" });
+    if (untilTurn !== null) query.set("until", String(untilTurn));
     // A refetch keeps the previous series on screen instead of flashing a
     // skeleton; country changes are detected from the payload itself.
-    fetch(`/api/country/${countryId.toLowerCase()}/economy/history?turns=120`, {
+    fetch(`/api/country/${countryId.toLowerCase()}/economy/history?${query.toString()}`, {
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("failed"))))
@@ -125,10 +125,10 @@ export function NationalHistoryPanel({
         setState({ status: "error", data: null });
       });
     return () => controller.abort();
-  }, [countryId, refreshKey]);
+  }, [countryId, refreshKey, untilTurn]);
 
   const prefix = getCurrencyPrefix(countryId);
-  const config = METRIC_CONFIG[metric];
+  const color = METRIC_COLOR[metric];
   // A payload for another country is treated as absent: a refetch for a country
   // the panel has already left must not leak its numbers under the new prefix.
   const data = state.data?.countryId === countryId.toUpperCase() ? state.data : null;
@@ -155,12 +155,11 @@ export function NationalHistoryPanel({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-foreground">
-            National history <span className="font-normal text-muted">· every recorded turn</span>
+            {t("title")} <span className="font-normal text-muted">· {t("recorded")}</span>
           </h3>
           {!compact && (
             <p className="mt-0.5 text-[11px] text-muted">
-              Population, GDP and GDP per capita in {data?.currencyCode ?? "local currency"},
-              aggregated from every region.
+              {t("blurb", { currency: data?.currencyCode ?? t("unit.localCurrency") })}
             </p>
           )}
         </div>
@@ -171,7 +170,7 @@ export function NationalHistoryPanel({
                 compact ? "text-base" : "text-lg"
               }`}
             >
-              {formatMetricValue(latest.value, metric, prefix)}
+              {formatMetricValue(latest.value, metric, prefix, t("unit.people"))}
             </span>
             {change !== null && (
               <span
@@ -179,7 +178,7 @@ export function NationalHistoryPanel({
                   change >= 0 ? "text-success" : "text-error"
                 }`}
               >
-                {signedPercent(change)} over window
+                {t("change", { change: signedPercent(change) })}
               </span>
             )}
           </div>
@@ -188,13 +187,13 @@ export function NationalHistoryPanel({
 
       <div className={`flex flex-wrap items-center gap-1.5 ${compact ? "mt-2" : "mt-3"}`}>
         {METRIC_ORDER.map((id) => {
-          const entry = METRIC_CONFIG[id];
-          const active = entry.id === metric;
+          const entryColor = METRIC_COLOR[id];
+          const active = id === metric;
           return (
             <button
-              key={entry.id}
+              key={id}
               type="button"
-              onClick={() => setMetric(entry.id)}
+              onClick={() => setMetric(id)}
               aria-pressed={active}
               className={`rounded-md border font-medium transition-colors ${
                 compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
@@ -207,15 +206,19 @@ export function NationalHistoryPanel({
               <span
                 className="mr-1.5 inline-block h-2 w-2 rounded-full"
                 style={{
-                  backgroundColor: active ? entry.color : "transparent",
-                  border: `1.5px solid ${entry.color}`,
+                  backgroundColor: active ? entryColor : "transparent",
+                  border: `1.5px solid ${entryColor}`,
                 }}
               />
-              {entry.label}
+              {t(`metric.${id}`)}
             </button>
           );
         })}
-        {!compact && <span className="ml-auto text-[10px] text-muted">{config.help}</span>}
+        {!compact && (
+          <span className="ml-auto text-[10px] text-muted">
+            {metric === "population" ? t("unit.people") : t("unit.localCurrency")}
+          </span>
+        )}
       </div>
 
       {state.status === "error" ? (
@@ -224,13 +227,13 @@ export function NationalHistoryPanel({
             compact ? "mt-3 px-4 py-4 text-xs" : "mt-4 px-4 py-6 text-sm"
           }`}
         >
-          Could not load national history for this country.
+          {t("error")}
           <button
             type="button"
             onClick={() => setRefreshKey((key) => key + 1)}
             className="ml-2 font-semibold text-primary hover:underline"
           >
-            Retry
+            {t("retry")}
           </button>
         </div>
       ) : loading ? (
@@ -245,15 +248,15 @@ export function NationalHistoryPanel({
             compact ? "mt-3 h-24 px-4 text-xs" : "mt-4 h-40 px-6 text-sm"
           }`}
         >
-          Not enough recorded history yet. One point is stored per completed turn, so this chart
-          fills in as the world runs.
+          {t("empty")}
         </div>
       ) : (
         <MacroChart
           entries={plotted}
           metric={metric}
-          color={config.color}
+          color={color}
           prefix={prefix}
+          peopleUnit={t("unit.people")}
           hovered={hovered}
           onHover={setHovered}
           compact={compact}
@@ -268,6 +271,7 @@ function MacroChart({
   metric,
   color,
   prefix,
+  peopleUnit,
   hovered,
   onHover,
   compact,
@@ -276,10 +280,12 @@ function MacroChart({
   metric: MetricId;
   color: string;
   prefix: string;
+  peopleUnit: string;
   hovered: number | null;
   onHover: (index: number | null) => void;
   compact: boolean;
 }) {
+  const t = useTranslations("economyHistory");
   const height = compact ? COMPACT_HEIGHT : HEIGHT;
   const padLeft = compact ? COMPACT_PAD : PAD_LEFT;
   const padRight = compact ? COMPACT_PAD : PAD_RIGHT;
@@ -315,7 +321,7 @@ function MacroChart({
         viewBox={`0 0 ${WIDTH} ${height}`}
         className="h-auto w-full"
         role="img"
-        aria-label={`${METRIC_CONFIG[metric].label} across ${entries.length} recorded turns`}
+        aria-label={t("chartLabel", { metric: t(`metric.${metric}`), turns: entries.length })}
         onMouseLeave={() => onHover(null)}
       >
         <defs>
@@ -412,7 +418,7 @@ function MacroChart({
                 fontSize={10}
                 className="fill-muted"
               >
-                T{entry.point.turn}
+                {t("turnAxis", { turn: entry.point.turn })}
               </text>
             );
           })}
@@ -421,11 +427,11 @@ function MacroChart({
       {hoveredEntry && (
         <div className="pointer-events-none absolute right-2 top-1 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs shadow-card">
           <span className="text-muted">
-            Turn {hoveredEntry.point.turn}
+            {t("turn", { turn: hoveredEntry.point.turn })}
             {hoveredEntry.point.year !== null ? ` · ${hoveredEntry.point.year}` : ""} ·{" "}
           </span>
           <span className="font-semibold tabular-nums" style={{ color }}>
-            {formatMetricValue(hoveredEntry.value, metric, prefix)}
+            {formatMetricValue(hoveredEntry.value, metric, prefix, peopleUnit)}
           </span>
         </div>
       )}
