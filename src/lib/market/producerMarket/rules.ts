@@ -1,4 +1,5 @@
 import { ProducerSupplyPool } from "./supplyPoolRules";
+import { bookKey } from "./bookKey";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
 import { nextAutoAsk } from "./autoAskRules";
@@ -349,8 +350,6 @@ function unique<T extends { id: string }>(rows: readonly T[], label: string): vo
 }
 
 const compareId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-const bookKey = (commodity: string, book: string) => JSON.stringify([commodity, book]);
-
 /** One pure clearing pass. Seller receipts, buyer charges and observed prices share the same trades. */
 export function settleProducerMarket(input: {
   /** Host-owned deadline, checked within a clearing before any persistent writes. */
@@ -1065,6 +1064,7 @@ export function settleProducerMarket(input: {
         eligible: eligibleSetOf(order),
         quantityGroup,
         wanted,
+        orderLimitId: JSON.stringify(["order", order.id]),
         accountLimitId: JSON.stringify(["account", order.accountId]),
         spendLimitId: order.spendGroup && JSON.stringify(["spend", order.spendGroup.id]),
         quantityLimitId:
@@ -1182,7 +1182,7 @@ export function settleProducerMarket(input: {
         const shares = capSharedShares(
           proposals.map((p) => p.units),
           proposals.map(({ m }) => [
-            { id: JSON.stringify(["order", m.order.id]), units: capOf(m) },
+            { id: m.orderLimitId, units: capOf(m) },
             {
               id: m.accountLimitId,
               units: price > 0 ? budgets.get(m.order.accountId)! / price : Infinity,
