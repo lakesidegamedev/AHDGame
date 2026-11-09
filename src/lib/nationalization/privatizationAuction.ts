@@ -22,7 +22,7 @@ import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { createNotification } from "@/lib/notifications";
 import { logWireEvent, wireHeadlineCorpPrivatized } from "@/lib/wireEvent";
 import { resolveNationalCorporationForSector } from "./nationalCorporation";
-import { creditTreasuryProceeds } from "./treasury";
+import { creditTreasuryProceedsPaired } from "./treasury";
 import {
   loadTreasuryCashContext,
   witnessTreasuryCash,
@@ -490,8 +490,13 @@ export async function resolveNationalizationAuction(
   }
 
   // The winner's escrow already left the bidder → credit the treasury that amount.
-  await creditTreasuryProceeds(db, auction.countryId, winner.amount, now, {
+  await creditTreasuryProceedsPaired(db, {
+    countryId: auction.countryId,
+    now,
     flow: "privatization_auction_proceeds",
+    key: `privatization-auction:${auction._id.toHexString()}`,
+    site: "privatizationAuction:resolve",
+    amountLocal: winner.amount,
     ledger,
   });
 
