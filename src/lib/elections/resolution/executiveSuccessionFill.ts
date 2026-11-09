@@ -10,6 +10,8 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { CountryId } from "@/lib/constants/countries";
+import { getCountryLeaderStatesCollection } from "@/lib/db/collections/countryLeaderState";
+import { getCountryStateCollection } from "@/lib/db/collections/countryState";
 import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
@@ -23,6 +25,7 @@ import type {
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import {
+  ownsPresidentialBallot,
   pickSuccessor,
   seededRng,
   SUCCESSION_ELECTION_FILING_TURNS,
@@ -33,6 +36,8 @@ import {
 } from "@/lib/elections/rules/successionFill";
 import { vacateNonExecutiveOfficesForExecutive } from "@/lib/elections/vacateOfficesForExecutive";
 import { processSuccessions } from "@/lib/elections/resolution/executiveSuccession";
+import { buildNewLeaderState } from "@/lib/turn/rulingPartyConfidence";
+import type { CountryLeaderState } from "@/lib/db/types/countryLeaderState";
 import { logger } from "@/lib/observability/logger";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 
@@ -46,17 +51,6 @@ export interface SuccessionFillResult {
 interface DueFill {
   countryId: CountryId;
   succession: ExecutiveSuccessionState;
-}
-
-/** Presets where a country's presidency already runs on its own constitutional ballot machinery. */
-const OWN_PRESIDENTIAL_BALLOT_PRESETS: Readonly<Partial<Record<CountryId, readonly string[]>>> = {
-  RU: ["1991-default"],
-};
-
-function ownsPresidentialBallot(countryId: CountryId, preset: string | undefined): boolean {
-  return (
-    preset !== undefined && OWN_PRESIDENTIAL_BALLOT_PRESETS[countryId]?.includes(preset) === true
-  );
 }
 
 function buildSpecialPresidentElection(
@@ -146,7 +140,10 @@ async function holdSuccessionVotes(
   const officials = await getElectedOfficialsCollection(db);
   const countryIds = due.map((d) => d.countryId);
   const offices = [...new Set(due.map((d) => d.succession.office))];
-  const [rows, legislators] = await Promise.all([
+  const confidenceCountryIds = due
+    .filter((d) => d.succession.fill === "party_vote")
+    .map((d) => d.countryId);
+  const [rows, legislators, confidenceStates] = await Promise.all([
     officials
       .find(
         { officeType: { $in: offices }, countryId: { $in: countryIds } },
@@ -160,23 +157,37 @@ async function holdSuccessionVotes(
           nppId: { $ne: null },
           officeType: { $nin: [...getExecutiveOfficeKeys()] },
         },
-        { projection: { countryId: 1, nppId: 1, party: 1 } }
+        { projection: { countryId: 1, nppId: 1, characterId: 1, characterName: 1, party: 1 } }
       )
       .toArray(),
+    confidenceCountryIds.length === 0
+      ? Promise.resolve([])
+      : getCountryStateCollection(db)
+          .find(
+            { _id: { $in: confidenceCountryIds }, hasLeaderConfidenceModel: true },
+            { projection: { _id: 1 } }
+          )
+          .toArray(),
   ]);
+  const hasConfidenceModel = new Set<string>(confidenceStates.map((c) => String(c._id)));
 
   const officialOps: AnyBulkWriteOperation<ElectedOfficial>[] = [];
   const nppOps: AnyBulkWriteOperation<NPP>[] = [];
   const govOps: AnyBulkWriteOperation<GovernmentFormation>[] = [];
+  const leaderOps: AnyBulkWriteOperation<CountryLeaderState>[] = [];
   const winners: ObjectId[] = [];
   for (const { countryId, succession } of due) {
     const row = rows.find((r) => r.officeType === succession.office && r.countryId === countryId);
     if (!row || row.characterId != null || row.nppId != null) continue;
     const seen = new Set<string>();
+    const names = new Map<string, string>();
     const candidates: SuccessorCandidate[] = [];
     for (const l of legislators) {
-      if (l.countryId !== countryId || !l.nppId || !l.party || seen.has(String(l.nppId))) continue;
+      // Only autonomous politicians are ever picked; a player never wins a vote.
+      if (l.countryId !== countryId || !l.nppId || l.characterId != null) continue;
+      if (!l.party || seen.has(String(l.nppId))) continue;
       seen.add(String(l.nppId));
+      names.set(String(l.nppId), l.characterName ?? "");
       candidates.push({ id: String(l.nppId), party: l.party });
     }
     const winner = pickSuccessor(
@@ -208,9 +219,31 @@ async function holdSuccessionVotes(
         },
       },
     });
+    const installsLeader = hasConfidenceModel.has(countryId);
     govOps.push({
-      updateOne: { filter: { _id: countryId }, update: { $unset: { succession: "" } } },
+      updateOne: {
+        filter: { _id: countryId },
+        update: {
+          $unset: { succession: "" },
+          ...(installsLeader
+            ? { $set: { pmNppId: nppId, pmCharacterId: null, pmName: names.get(winner.id) ?? "" } }
+            : {}),
+        },
+      },
     });
+    if (installsLeader) {
+      const state = buildNewLeaderState(
+        countryId,
+        { kind: "npp", id: nppId },
+        succession.office,
+        winner.party,
+        currentTurn,
+        now
+      );
+      leaderOps.push({
+        replaceOne: { filter: { _id: state._id }, replacement: state, upsert: true },
+      });
+    }
     winners.push(nppId);
     logger.info("Turn", `${succession.fill} seated a new ${succession.office} in ${countryId}`);
   }
@@ -218,6 +251,9 @@ async function holdSuccessionVotes(
   await officials.bulkWrite(officialOps, { ordered: false });
   await (await getNppsCollection(db)).bulkWrite(nppOps, { ordered: false });
   await getGovernmentFormationsCollection(db).bulkWrite(govOps, { ordered: false });
+  if (leaderOps.length > 0) {
+    await getCountryLeaderStatesCollection(db).bulkWrite(leaderOps, { ordered: false });
+  }
   for (const nppId of winners) {
     try {
       await vacateNonExecutiveOfficesForExecutive(db, { nppId }, now);

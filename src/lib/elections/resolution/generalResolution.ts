@@ -26,6 +26,7 @@ import {
 } from "@/lib/utils/electionLabels";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { resolvePresidentElection } from "@/lib/elections/resolution/presidentResolution";
+import { usesTwoRoundSpecialPresident } from "@/lib/elections/rules/twoRoundPresident";
 import { resolveNGPresidentElection } from "@/lib/elections/resolution/ngPresidentResolution";
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
 import {
@@ -198,6 +199,25 @@ export async function resolveOneGeneralElection(
       });
       await voidDebateSessionsForElection(db, election._id, now);
       return { resolved: true, newsOutcomes: [] };
+    }
+
+    if (
+      election.electionType === "special_president" &&
+      usesTwoRoundSpecialPresident(election.countryId)
+    ) {
+      const { resolveSpecialPresidentElection } =
+        await import("@/lib/elections/resolution/specialPresidentResolution");
+      const certified = await resolveSpecialPresidentElection(
+        db,
+        election,
+        tally ?? null,
+        now,
+        currentTurn
+      );
+      if (certified) {
+        await voidDebateSessionsForElection(db, election._id, now);
+        return { resolved: true, newsOutcomes: [] };
+      }
     }
 
     if (tally?.finalized && election.electionType !== "president") {

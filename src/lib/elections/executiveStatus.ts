@@ -4,6 +4,7 @@ import { getGameStateCollection } from "@/lib/db/collections";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import {
   executiveStatusPayload,
+  ownsPresidentialBallot,
   type ExecutiveStatusPayload,
 } from "@/lib/elections/rules/successionFill";
 
@@ -18,8 +19,12 @@ export async function loadExecutiveStatus(
       { projection: { status: 1, caretaker: 1, succession: 1 } }
     ),
     getGameStateCollection(db).then((col) =>
-      col.findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      col.findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } })
     ),
   ]);
-  return executiveStatusPayload(gov, gameState?.currentTurn ?? 0);
+  return executiveStatusPayload(
+    gov,
+    gameState?.currentTurn ?? 0,
+    ownsPresidentialBallot(countryId, gameState?.preset)
+  );
 }

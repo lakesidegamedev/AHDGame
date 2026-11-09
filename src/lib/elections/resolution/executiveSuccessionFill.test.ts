@@ -11,6 +11,8 @@ const m = vi.hoisted(() => ({
   nppBulk: vi.fn(),
   preset: vi.fn(),
   vacate: vi.fn(),
+  stateFind: vi.fn(),
+  leaderBulk: vi.fn(),
 }));
 
 vi.mock("@/lib/db/collections/governmentFormation", () => ({
@@ -24,6 +26,12 @@ vi.mock("@/lib/db/collections/electedOfficials", () => ({
 }));
 vi.mock("@/lib/db/collections/npps", () => ({
   getNppsCollection: async () => ({ bulkWrite: m.nppBulk }),
+}));
+vi.mock("@/lib/db/collections/countryState", () => ({
+  getCountryStateCollection: () => ({ find: m.stateFind }),
+}));
+vi.mock("@/lib/db/collections/countryLeaderState", () => ({
+  getCountryLeaderStatesCollection: () => ({ bulkWrite: m.leaderBulk }),
 }));
 vi.mock("@/lib/db/collections/gameState", () => ({ getGameStatePreset: m.preset }));
 vi.mock("@/lib/elections/vacateOfficesForExecutive", () => ({
@@ -75,6 +83,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.preset.mockResolvedValue("2027-default");
   m.vacate.mockResolvedValue(undefined);
+  m.stateFind.mockReturnValue({ toArray: async () => [] });
 });
 
 describe("special presidential election", () => {
@@ -178,5 +187,77 @@ describe("legislature and party votes", () => {
     world({ govs: [{ _id: "CN", succession: partyVote }], officials: [premierRow] });
     expect((await processSuccessionFills(db, 130, now)).voted).toBe(0);
     expect(m.govBulk).not.toHaveBeenCalled();
+  });
+
+  it("never seats a player, even one with a larger bloc", async () => {
+    const player = (party: string) => ({
+      countryId: "CN",
+      officeType: "npcDelegate",
+      nppId: new ObjectId(),
+      characterId: new ObjectId(),
+      party,
+    });
+    const npp = legislator("2");
+    world({
+      govs: [{ _id: "CN", succession: partyVote }],
+      officials: [premierRow, player("1"), player("1"), player("1"), npp],
+    });
+    await processSuccessionFills(db, 130, now);
+    const seated = m.officialBulk.mock.calls[0]![0][0].updateOne.update.$set;
+    expect(seated.nppId).toEqual(npp.nppId);
+    expect(seated.isNPP).toBe(true);
+    expect(seated.characterId).toBeNull();
+    const query = m.officialFind.mock.calls.at(-1)![0];
+    expect(query.nppId).toEqual({ $ne: null });
+  });
+
+  it("leaves the office empty when only players sit in the legislature", async () => {
+    world({
+      govs: [{ _id: "CN", succession: partyVote }],
+      officials: [
+        premierRow,
+        { ...legislator("1"), characterId: new ObjectId() },
+        { ...legislator("1"), characterId: new ObjectId() },
+      ],
+    });
+    expect((await processSuccessionFills(db, 130, now)).voted).toBe(0);
+    expect(m.officialBulk).not.toHaveBeenCalled();
+  });
+
+  it("starts fresh leader confidence for a party-state leader", async () => {
+    m.stateFind.mockReturnValue({ toArray: async () => [{ _id: "CN" }] });
+    const npp = { ...legislator("1"), characterName: "New Leader" };
+    world({ govs: [{ _id: "CN", succession: partyVote }], officials: [premierRow, npp] });
+    await processSuccessionFills(db, 130, now);
+    const update = m.govBulk.mock.calls[0]![0][0].updateOne.update;
+    expect(update.$unset).toEqual({ succession: "" });
+    expect(update.$set).toEqual({
+      pmNppId: npp.nppId,
+      pmCharacterId: null,
+      pmName: "New Leader",
+    });
+    const state = m.leaderBulk.mock.calls[0]![0][0].replaceOne.replacement;
+    expect(state).toMatchObject({
+      _id: `CN_npp_${String(npp.nppId)}`,
+      countryId: "CN",
+      leaderNppId: npp.nppId,
+      leaderCharacterId: null,
+      leaderOfficeType: "premier",
+      governingPartyId: "1",
+      partyConfidence: 75,
+      startedAtTurn: 130,
+      renewalCount: 0,
+      confidenceHistory: [],
+    });
+  });
+
+  it("writes no confidence state where the country has no confidence model", async () => {
+    world({
+      govs: [{ _id: "CN", succession: partyVote }],
+      officials: [premierRow, legislator("1")],
+    });
+    await processSuccessionFills(db, 130, now);
+    expect(m.leaderBulk).not.toHaveBeenCalled();
+    expect(m.govBulk.mock.calls[0]![0][0].updateOne.update).toEqual({ $unset: { succession: "" } });
   });
 });

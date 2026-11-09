@@ -19,6 +19,7 @@ export function ExecutiveStatusBanner({ status }: { status: ExecutiveStatusPaylo
           <strong>{STAGE_LABEL[status.succession.stage]}:</strong> {status.succession.summary}
         </p>
       )}
+      {status.succession?.note && <p className="text-sm text-muted">{status.succession.note}</p>}
       {status.caretaker && (
         <p className="text-sm text-foreground">
           <strong>Caretaker government:</strong> limited powers until a new government forms.

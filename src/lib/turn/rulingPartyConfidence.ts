@@ -67,24 +67,17 @@ function trimHistory(history: LeaderConfidenceHistoryEntry[]): LeaderConfidenceH
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
 
-/**
- * Install a new leader with fresh confidence (75).
- * Overwrites any existing state for this leader.
- */
-export async function installNewLeader(
-  db: Db,
+/** The fresh confidence record for a newly installed leader. */
+export function buildNewLeaderState(
   countryId: CountryId,
   leaderCharacterId: LeaderReference,
   leaderOfficeType: string,
   governingPartyId: string | null,
-  currentTurn: number
-): Promise<CountryLeaderState> {
-  const coll = getCountryLeaderStatesCollection(db);
-  const now = new Date();
-  const _id = leaderStateId(countryId, leaderCharacterId);
-
-  const state: CountryLeaderState = {
-    _id,
+  currentTurn: number,
+  now: Date
+): CountryLeaderState {
+  return {
+    _id: leaderStateId(countryId, leaderCharacterId),
     countryId,
     ...leaderStateIdentity(leaderCharacterId),
     leaderOfficeType,
@@ -97,8 +90,31 @@ export async function installNewLeader(
     createdAt: now,
     updatedAt: now,
   };
+}
 
-  await coll.replaceOne({ _id }, state, { upsert: true });
+/**
+ * Install a new leader with fresh confidence (75).
+ * Overwrites any existing state for this leader.
+ */
+export async function installNewLeader(
+  db: Db,
+  countryId: CountryId,
+  leaderCharacterId: LeaderReference,
+  leaderOfficeType: string,
+  governingPartyId: string | null,
+  currentTurn: number
+): Promise<CountryLeaderState> {
+  const state = buildNewLeaderState(
+    countryId,
+    leaderCharacterId,
+    leaderOfficeType,
+    governingPartyId,
+    currentTurn,
+    new Date()
+  );
+  await getCountryLeaderStatesCollection(db).replaceOne({ _id: state._id }, state, {
+    upsert: true,
+  });
   return state;
 }
 
