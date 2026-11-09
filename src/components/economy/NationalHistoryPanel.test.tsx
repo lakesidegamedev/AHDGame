@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NationalHistoryPanel } from "./NationalHistoryPanel";
 
 vi.mock("@/hooks/useGameEvents", () => ({ useGameEvents: () => {} }));
@@ -59,6 +59,47 @@ describe("NationalHistoryPanel", () => {
     // The full panel labels the ends of the window; the sparkline drops them.
     expect(screen.queryByText("T1")).toBeNull();
     expect(screen.getByRole("img").getAttribute("aria-label")).toContain("GDP across 3");
+  });
+
+  it("ignores a late response for a country the panel no longer shows", async () => {
+    const deferred: { resolve: (response: Response) => void } = { resolve: () => {} };
+    const usResponse = new Promise<Response>((resolve) => {
+      deferred.resolve = resolve;
+    });
+    const japanPayload = {
+      ...payload,
+      countryId: "JP",
+      currencyCode: "JPY",
+      points: [
+        { turn: 1, year: 1991, gdpMillions: 9_000_000, population: 100_000_000, gdpPerCapita: 10 },
+        {
+          turn: 2,
+          year: 1991,
+          gdpMillions: 9_990_000,
+          population: 101_000_000,
+          gdpPerCapita: 10.9,
+        },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) =>
+        String(input).includes("/us/")
+          ? usResponse
+          : Promise.resolve(new Response(JSON.stringify(japanPayload), { status: 200 }))
+      )
+    );
+
+    const { rerender } = render(<NationalHistoryPanel countryId="US" />);
+    rerender(<NationalHistoryPanel countryId="JP" />);
+    expect(await screen.findByText(/9\.99T/)).toBeTruthy();
+
+    // The country the panel moved away from resolves after the switch.
+    await act(async () => {
+      deferred.resolve(new Response(JSON.stringify(payload), { status: 200 }));
+    });
+    expect(screen.queryByText(/1\.20T/)).toBeNull();
+    expect(screen.getByText(/9\.99T/)).toBeTruthy();
   });
 
   it("explains a thin series instead of drawing a flat zero line", async () => {

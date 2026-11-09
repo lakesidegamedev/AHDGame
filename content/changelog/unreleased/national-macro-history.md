@@ -18,13 +18,10 @@ areas: [frontend, backend]
 - The country overview page shows the same series as a compact sparkline under
   the country description, so the trend is visible without opening the economy
   page. Both forms share one component and one request.
-- The series comes from `macroTelemetry`, which already stores national and
-  regional GDP and population once per completed turn. There are no new turn
-  writes, no schema changes and no balance changes: this is a read path only.
-- Each series read is two projected queries against the existing unique
-  `(world, country, region, metric, turn)` index, bounded to the requested
-  window (120 turns by default, 480 maximum), then thinned to at most 180
-  plotted points. The panel loads after the masthead so first paint is
-  unchanged.
+- History comes from the levels the world already records once per completed
+  turn, so the hourly turn gains no extra work, and there are no schema or
+  balance changes.
+- The panel shows the last 120 turns and builds itself after the masthead, so
+  first paint is unchanged.
 - Turns without a recorded value stay absent rather than being drawn as zero,
   and a thin window shows a coverage message instead of a flat line.

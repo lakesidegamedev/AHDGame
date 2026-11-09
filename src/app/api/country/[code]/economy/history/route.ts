@@ -30,7 +30,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       countryId,
       Number.isFinite(parsedTurns) ? parsedTurns : MACRO_HISTORY_DEFAULT_TURNS
     );
-    return NextResponse.json(history);
+    // Every open overview or economy page refetches this on turn completion,
+    // so let the edge absorb a burst of identical reads during one turn.
+    return NextResponse.json(history, {
+      headers: {
+        "Cache-Control": "public, max-age=15, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     return handleRouteError(error);
   }

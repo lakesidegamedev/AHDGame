@@ -38,6 +38,18 @@ describe("buildNationalMacroSeries", () => {
     expect(points[0].gdpPerCapita).toBeNull();
   });
 
+  it("drops per capita instead of dividing by a zero or missing population", () => {
+    const points = buildNationalMacroSeries({
+      gdp: [
+        { turn: 1, value: 500 },
+        { turn: 2, value: 600 },
+      ],
+      population: [{ turn: 1, value: 0 }],
+    });
+    expect(points.map((point) => point.population)).toEqual([null, null]);
+    expect(points.map((point) => point.gdpPerCapita)).toEqual([null, null]);
+  });
+
   it("skips non-finite and negative GDP samples instead of flattening them to zero", () => {
     const points = buildNationalMacroSeries({
       gdp: [

@@ -116,7 +116,10 @@ export function NationalHistoryPanel({
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("failed"))))
-      .then((data: CountryMacroHistoryPayload) => setState({ status: "ready", data }))
+      .then((payload: CountryMacroHistoryPayload) => {
+        if (controller.signal.aborted) return;
+        setState({ status: "ready", data: payload });
+      })
       .catch(() => {
         if (controller.signal.aborted) return;
         setState({ status: "error", data: null });
@@ -126,17 +129,19 @@ export function NationalHistoryPanel({
 
   const prefix = getCurrencyPrefix(countryId);
   const config = METRIC_CONFIG[metric];
-  const dataMatchesCountry = state.data?.countryId === countryId.toUpperCase();
-  const loading = state.status === "loading" || (state.status === "ready" && !dataMatchesCountry);
+  // A payload for another country is treated as absent: a refetch for a country
+  // the panel has already left must not leak its numbers under the new prefix.
+  const data = state.data?.countryId === countryId.toUpperCase() ? state.data : null;
+  const loading = state.status === "loading" || (state.status === "ready" && data === null);
 
   const plotted = useMemo(() => {
-    const points = state.data?.points ?? [];
+    const points = data?.points ?? [];
     return points
       .map((point) => ({ point, value: metricValue(point, metric) }))
       .filter((entry): entry is { point: NationalMacroPoint; value: number } => {
         return entry.value !== null && Number.isFinite(entry.value);
       });
-  }, [state.data, metric]);
+  }, [data, metric]);
 
   const change = seriesChangePercent(plotted.map((entry) => entry.value));
   const latest = plotted.at(-1) ?? null;
@@ -154,7 +159,7 @@ export function NationalHistoryPanel({
           </h3>
           {!compact && (
             <p className="mt-0.5 text-[11px] text-muted">
-              Population, GDP and GDP per capita in {state.data?.currencyCode ?? "local currency"},
+              Population, GDP and GDP per capita in {data?.currencyCode ?? "local currency"},
               aggregated from every region.
             </p>
           )}
@@ -228,7 +233,7 @@ export function NationalHistoryPanel({
             Retry
           </button>
         </div>
-      ) : loading && !dataMatchesCountry ? (
+      ) : loading ? (
         <div
           className={`animate-pulse rounded-lg bg-card-muted/60 ${
             compact ? "mt-3 h-24" : "mt-4 h-48"

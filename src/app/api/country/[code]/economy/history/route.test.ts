@@ -33,6 +33,9 @@ describe("GET /api/country/[code]/economy/history", () => {
     const body = await response.json();
     expect(body.currencyCode).toBe("USD");
     expect(body.points).toHaveLength(1);
+    expect(response.headers.get("cache-control")).toBe(
+      "public, max-age=15, s-maxage=60, stale-while-revalidate=120"
+    );
     expect(mocks.build).toHaveBeenCalledWith({}, "US", 120);
   });
 
