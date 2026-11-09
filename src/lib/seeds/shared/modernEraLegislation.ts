@@ -1546,6 +1546,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "healthcare", metricId: "lifeExpectancy", weight: 0.25 },
       { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.2 },
       { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
     ],
     demographicEffects: [{ dim: "age", bucket: "senior", target: "economicLean", direction: 0.3 }],
     options: [
@@ -1599,6 +1600,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.3 },
       { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.25 },
       { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
     ],
     options: [
       {
@@ -1651,6 +1653,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "governance", metricId: "publicTrust", weight: 0.3 },
       { metricCategoryId: "economic", metricId: "rdIntensity", weight: -0.25 },
       { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
     ],
     demographicEffects: [{ dim: "age", bucket: "young", target: "socialLean", direction: 0.2 }],
     options: [
@@ -1704,6 +1707,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "environment", metricId: "naturalDisasterPreparedness", weight: 0.3 },
       { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.2 },
       { metricCategoryId: "economic", metricId: "propertyValueIndex", weight: -0.1 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
     ],
     options: [
       {
@@ -1756,6 +1760,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "governance", metricId: "militaryReadiness", weight: 0.25 },
       { metricCategoryId: "economic", metricId: "rdIntensity", weight: -0.3 },
       { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
     ],
     options: [
       {
@@ -1807,7 +1812,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
     budgetLine: "welfare",
     gdpCostFractions: [0.005, 0.003, 0.0012, 0, 0, 0, 0],
     effects: [
-      { metricCategoryId: "social", metricId: "incomeInequality", weight: 0.35 },
+      { metricCategoryId: "healthcare", metricId: "elderCareQuality", weight: 0.35 },
       { metricCategoryId: "economic", metricId: "consumerConfidence", weight: 0.25 },
       { metricCategoryId: "economic", metricId: "laborParticipation", weight: -0.2 },
       { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.15 },
@@ -1868,6 +1873,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "environment", metricId: "energyTransitionProgress", weight: 0.3 },
       { metricCategoryId: "economic", metricId: "costOfLiving", weight: -0.25 },
       { metricCategoryId: "economic", metricId: "manufacturingCompetitiveness", weight: -0.2 },
+      { metricCategoryId: "economic", metricId: "economicFreedom", weight: -0.15 },
     ],
     options: [
       {
