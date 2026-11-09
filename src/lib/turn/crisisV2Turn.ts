@@ -60,6 +60,7 @@ import { ensureBuiltinCrisisV2Content } from "./crisisV2/builtins";
 import { deliverPending, owedDelivery, type DeliveryTarget } from "./crisisV2/pendingDelivery";
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { processCrisisScars } from "./crisisV2/scarsShell";
+import { stanceIntents } from "@/lib/crises/v2/stanceLevers";
 import { routeEffectIntents } from "./crisisV2/intents";
 import { loadDetectorWorld } from "./crisisV2/detectors";
 import { runNppCrisisResponse } from "./crisisV2/nppResponse";
@@ -676,6 +677,14 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
           }
         }
 
+        await routeStanceConsequences(db, {
+          crisisId: crisis._id,
+          turn,
+          accepted: step.accepted,
+          rows,
+          stateIdsByCountry: world.stateIdsByCountry,
+        });
+
         if (scripted) {
           // Authored effects keep their original writers, so size and scoping
           // match what the crisis did before it ran on v2.
@@ -796,4 +805,35 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   result.opened = emergentEnabled ? await openNewCrises(db, turn, stillActive) : 0;
   if (emergentEnabled) result.opened += (await runCrisisSpillover(db, turn)).opened;
   return result;
+}
+
+/**
+ * Sends each accepted stance pull's package (bonds, banks, jobs, approval,
+ * election swing) to the country the holder acted for. The turn claim already
+ * fences replays, and a pull is accepted once, so a package lands once.
+ */
+async function routeStanceConsequences(
+  db: Db,
+  args: {
+    crisisId: ObjectId;
+    turn: number;
+    accepted: readonly { use: { leverId: string; holderId: string; intensity?: number } }[];
+    rows: readonly CrisisLeverUse[];
+    stateIdsByCountry: ReadonlyMap<string, string[]>;
+  }
+): Promise<void> {
+  for (const { use } of args.accepted) {
+    const intents = stanceIntents(use.leverId, use.intensity ?? 1);
+    if (intents.length === 0) continue;
+    const countryId = args.rows.find(
+      (row) => row.leverId === use.leverId && row.holderId === use.holderId
+    )?.countryId;
+    if (!countryId) continue;
+    await routeEffectIntents(db, intents, {
+      stateIds: args.stateIdsByCountry.get(countryId) ?? [],
+      countryIds: [countryId],
+      crisisId: args.crisisId,
+      turn: args.turn,
+    });
+  }
 }

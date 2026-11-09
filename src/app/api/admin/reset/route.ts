@@ -191,7 +191,9 @@ async function handleStreamingReset(
       const send = (event: object) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-        } catch {}
+        } catch {
+          // Client disconnected mid-stream; the reset itself keeps running.
+        }
       };
 
       try {

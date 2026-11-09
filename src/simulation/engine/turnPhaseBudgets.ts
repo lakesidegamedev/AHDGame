@@ -30,6 +30,9 @@ export const DEFAULT_PHASE_ROUND_TRIP_BUDGET = 500;
 export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   // One expiry update, one projected read, two batched releases and one completion update.
   governmentContractExpiry: 10,
+  // Four batched reads, one briefs upsert, one memory write, and a wire event plus a
+  // news post per brief (at most a handful a tick). Idle turns cost none.
+  countryBriefs: 60,
   // Live turns 233-235 measured 41/9 commands including telemetry and cursor
   // reads. Debt-scan wrap adds at most one command; keep modest headroom.
   playerIncomeTax: 45,

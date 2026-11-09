@@ -1014,6 +1014,18 @@ export const RUNTIME: CollectionEntry[] = [
 
   // Per-country / per-state runtime + histories.
   { name: "countryLeaderStates", category: "runtime" },
+  {
+    name: "leaderLegacies",
+    category: "runtime",
+    notes:
+      "One row per departed head of government: legacy score, its inputs and the decaying party shifts it gives. Turn-indexed, so it resets with the world.",
+  },
+  {
+    name: "countryBriefs",
+    category: "runtime",
+    notes:
+      "Background country briefs posted to the wire and the country page. Turn-indexed, so it resets with the world.",
+  },
   { name: "characterStateOrg", category: "runtime" },
   {
     name: "primaryStateActions",

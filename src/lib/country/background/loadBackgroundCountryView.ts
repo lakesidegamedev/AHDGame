@@ -9,9 +9,12 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { MACRO_COUNTRIES_COLLECTION } from "@/lib/db/collections/macroCountries";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { getCountryBriefsCollection } from "@/lib/db/collections/countryBriefs";
+import { BRIEFS_ON_PAGE } from "./rules/countryBriefs";
 import {
   buildBilateralTrade,
   buildEconomyView,
+  buildFiscalView,
   buildPoliticsView,
   type BackgroundCountryView,
   type CommodityFlows,
@@ -25,7 +28,7 @@ const MAX_CRISES = 5;
 
 type MacroDoc = Pick<
   MacroCountryState,
-  "entityId" | "population" | "nationalPolitics" | "nationalIndex"
+  "entityId" | "population" | "nationalPolitics" | "nationalIndex" | "nationalFiscal"
 >;
 
 interface BudgetDoc {
@@ -98,14 +101,20 @@ export async function loadBackgroundCountryView(
   db: Db,
   countryId: CountryId
 ): Promise<BackgroundCountryView> {
-  const [macro, budget, fx, snapshot, tariffs, bonds, indexFund, memberships, crises] =
+  const [macro, budget, fx, snapshot, tariffs, bonds, indexFund, memberships, crises, briefs] =
     await Promise.all([
-      db
-        .collection<MacroDoc>(MACRO_COUNTRIES_COLLECTION)
-        .findOne(
-          { entityId: countryId },
-          { projection: { entityId: 1, population: 1, nationalPolitics: 1, nationalIndex: 1 } }
-        ),
+      db.collection<MacroDoc>(MACRO_COUNTRIES_COLLECTION).findOne(
+        { entityId: countryId },
+        {
+          projection: {
+            entityId: 1,
+            population: 1,
+            nationalPolitics: 1,
+            nationalIndex: 1,
+            nationalFiscal: 1,
+          },
+        }
+      ),
       db.collection<BudgetDoc>("federalBudget").findOne(
         { _id: getNationalBudgetId(countryId) },
         {
@@ -170,6 +179,9 @@ export async function loadBackgroundCountryView(
           }
         )
         .toArray(),
+      getCountryBriefsCollection(db)
+        .find({ countryId }, { sort: { turn: -1 }, limit: BRIEFS_ON_PAGE })
+        .toArray(),
     ]);
 
   const politics = macro?.nationalPolitics ?? null;
@@ -228,5 +240,14 @@ export async function loadBackgroundCountryView(
       })
       .sort((a, b) => a.shortName.localeCompare(b.shortName)),
     crises: crises.map((c) => ({ id: c._id.toString(), name: c.name, startTurn: c.startTurn })),
+    fiscal: buildFiscalView(macro?.nationalFiscal),
+    briefs: briefs.map((b) => ({
+      id: b._id,
+      kind: b.kind,
+      headline: b.headline,
+      body: b.body,
+      turn: b.turn,
+      actions: b.actions,
+    })),
   };
 }

@@ -43,6 +43,8 @@ import type { LeaderReference } from "@/lib/government/leaderReference";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
+import { recordLeaderDeparture } from "@/lib/government/leaderLegacy";
+import { logger } from "@/lib/observability/logger";
 import {
   evaluateModifiers,
   applyModifiers,
@@ -740,6 +742,7 @@ export async function snapshotApprovalHistory(
         warExhaustionConflictId: 1,
         headOfGovernmentKey: 1,
         headOfGovernmentSinceTurn: 1,
+        approvalRating: 1,
       },
     }
   );
@@ -894,6 +897,23 @@ export async function snapshotApprovalHistory(
     tenure = advanceHeadTenure(storedTenure, headKey, turn, seed);
   } catch {
     // keep the stored tenure
+  }
+  // A head who has just left office gets a legacy. It must never block the
+  // snapshot, and a retry writes nothing twice (the row id is stable).
+  if (storedTenure?.key && storedTenure.key !== tenure.key) {
+    try {
+      await recordLeaderDeparture(db, {
+        countryId,
+        leaderKey: storedTenure.key,
+        sinceTurn: storedTenure.sinceTurn,
+        nextKey: tenure.key,
+        turn,
+        exitApproval:
+          typeof approvalDoc?.approvalRating === "number" ? approvalDoc.approvalRating : null,
+      });
+    } catch (err) {
+      logger.error("Approval", `Leader legacy failed for ${countryId}`, err);
+    }
   }
   // The honeymoon lasts the head of government's whole term (owner).
   const countryConfig = getCountryConfig(countryId, gameStateDoc?.preset);

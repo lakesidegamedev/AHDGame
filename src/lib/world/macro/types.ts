@@ -6,6 +6,7 @@ import type { BackgroundFiscalState } from "./rules/backgroundBudget";
 import type { NationalIndexState } from "./rules/nationalIndex";
 import type { NationalPoliticsState } from "./rules/nationalPolitics";
 import type { MacroForeignPolicyState } from "./rules/foreignPolicy";
+import type { BriefMemory } from "@/lib/country/background/rules/countryBriefs";
 
 /** Aggregate sector slice for a sphere-macro (Tier-2) country. */
 export interface MacroSectorState {
@@ -125,6 +126,8 @@ export interface MacroCountryState {
    * kernel tick.
    */
   foreignPolicy?: MacroForeignPolicyState;
+  /** 2027 background countries only: what the country briefs last saw (see `countryBriefs`). */
+  briefMemory?: BriefMemory;
   dataQuality: MacroCountryDataQuality;
   lastMacroTickTurn: number | null;
   createdAt: Date;

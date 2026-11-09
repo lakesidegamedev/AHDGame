@@ -45,6 +45,8 @@ import {
   listActiveFunds,
   listServiceableFunds,
   updateFundNav,
+  updateFundNavsBulk,
+  type FundNavUpdate,
   insertFundSnapshotsBulk,
   setFundStatus,
   insertFundTransactionsBulk,
@@ -119,6 +121,65 @@ export {
 export type { FundCronResult, RebalanceOutcome } from "./fundCronRebalance";
 
 // ── Types ─────────────────────────────────────────────────────────────
+
+type NavPreparation =
+  | {
+      kind: "ready";
+      fund: IndexFund;
+      bondPrincipalAnchor: number;
+      queuedUnits: number;
+      warning?: string;
+      navUpdate: FundNavUpdate;
+      statusChange?: { status: IndexFund["status"]; reason?: IndexFund["pauseReason"] };
+    }
+  | { kind: "collapsed"; error: string }
+  | { kind: "error"; error: string };
+
+/**
+ * Persist the NAV of every fund that finished Pass 1a. One unordered bulk write
+ * replaces one update per fund; the stored fields are identical. If the batch
+ * fails, every fund falls back to its own update so a single bad document only
+ * turns its own fund into an error, as before. Status flips follow the NAV
+ * write and stay per fund (they are rare).
+ */
+async function publishReadyFundNavs(db: Db, prepared: NavPreparation[]): Promise<NavPreparation[]> {
+  const ready = prepared.flatMap((p) => (p.kind === "ready" ? [p] : []));
+  if (ready.length === 0) return prepared;
+  const failed = new Map<string, string>();
+  try {
+    await updateFundNavsBulk(
+      db,
+      ready.map((p) => ({ fundId: p.fund._id, update: p.navUpdate }))
+    );
+  } catch {
+    for (const p of ready) {
+      try {
+        await updateFundNav(db, p.fund._id, p.navUpdate);
+      } catch (err) {
+        failed.set(p.fund._id.toString(), err instanceof Error ? err.message : String(err));
+      }
+    }
+  }
+  const statusFailed = new Map<string, string>();
+  for (const p of ready) {
+    if (!p.statusChange || failed.has(p.fund._id.toString())) continue;
+    try {
+      if (p.statusChange.reason) {
+        await setFundStatus(db, p.fund._id, p.statusChange.status, p.statusChange.reason);
+      } else {
+        await setFundStatus(db, p.fund._id, p.statusChange.status);
+      }
+    } catch (err) {
+      statusFailed.set(p.fund._id.toString(), err instanceof Error ? err.message : String(err));
+    }
+  }
+  return prepared.map((p): NavPreparation => {
+    if (p.kind !== "ready") return p;
+    const id = p.fund._id.toString();
+    const message = failed.get(id) ?? statusFailed.get(id);
+    return message === undefined ? p : { kind: "error", error: `Fund ${p.fund.slug}: ${message}` };
+  });
+}
 
 /**
  * Run the full index-fund cron cycle.
@@ -289,17 +350,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   // funds compete for shared public float there, so its ordering is part of
   // the economic result and must remain deterministic.
   const navReadyFundIds: IndexFund["_id"][] = [];
-  type NavPreparation =
-    | {
-        kind: "ready";
-        fund: IndexFund;
-        bondPrincipalAnchor: number;
-        queuedUnits: number;
-        warning?: string;
-      }
-    | { kind: "collapsed"; error: string }
-    | { kind: "error"; error: string };
-  const navPreparations = await boundedParallelMap(
+  const preparedNavs = await boundedParallelMap(
     funds,
     INDEX_FUND_NAV_CONCURRENCY,
     async (fund): Promise<NavPreparation> => {
@@ -357,17 +408,6 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           unitSupply: workingFund.unitSupply,
         });
 
-        await updateFundNav(db, workingFund._id, {
-          quotedNav: newNav,
-          backingRatio: backing.backingRatio,
-        });
-
-        if (backing.shouldAutoPause) {
-          await setFundStatus(db, workingFund._id, "paused", backing.pauseReason);
-        } else if (workingFund.status === "paused" && workingFund.pauseReason === "backing_ratio") {
-          await setFundStatus(db, workingFund._id, "active");
-        }
-
         // NAV persistence only changes fields already known in this pass. Keep
         // the in-memory fund in sync instead of reading the full document back,
         // and reuse the bond-principal snapshot loaded for every fund above.
@@ -381,6 +421,12 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           fund: refreshedFund,
           bondPrincipalAnchor,
           queuedUnits: queuedRedemptionUnits,
+          navUpdate: { quotedNav: newNav, backingRatio: backing.backingRatio },
+          ...(backing.shouldAutoPause
+            ? { statusChange: { status: "paused" as const, reason: backing.pauseReason } }
+            : workingFund.status === "paused" && workingFund.pauseReason === "backing_ratio"
+              ? { statusChange: { status: "active" as const } }
+              : {}),
           ...(backing.shouldAutoPause
             ? {
                 warning: `Fund ${workingFund.slug} auto-paused: backing ratio ${backing.backingRatio.toFixed(4)}`,
@@ -393,6 +439,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       }
     }
   );
+  // Publish every ready fund's NAV in one bulk write instead of one update per
+  // fund. If the batch fails, fall back to the per-fund writes so one bad
+  // document still only costs its own fund.
+  const navPreparations = await publishReadyFundNavs(db, preparedNavs);
   mark("pass1a-nav");
 
   try {

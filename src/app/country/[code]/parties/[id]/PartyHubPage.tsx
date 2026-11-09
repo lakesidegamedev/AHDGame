@@ -44,6 +44,7 @@ import type {
 } from "./components/types";
 import { POSITIONS, fmt as nationalFmt } from "./components/helpers";
 import { PartyPageSkeleton } from "./PartyPageSkeleton";
+import { usePartyHubLoaders } from "./usePartyHubLoaders";
 import { resolveTreasuryPermissions } from "./treasuryPermissions";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { resolveScopeSwitcherRegionId } from "./resolveScopeSwitcherRegion";
@@ -488,98 +489,28 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     "us";
   const partiesListHref = `/country/${backCountry}/parties`;
 
-  const fetchUser = useCallback(async () => {
-    try {
-      const r = await fetch("/api/auth/me", { credentials: "same-origin" });
-      if (r.ok) {
-        const d = await r.json();
-        setUser(d.user);
-      }
-    } catch {}
-  }, []);
-
-  const fetchParty = useCallback(async () => {
-    try {
-      const url = partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id);
-      const r = await fetch(url, { credentials: "same-origin" });
-      if (r.ok) {
-        const d = await r.json();
-        setParty(d);
-        const memberStates = [
-          ...new Set(
-            (d.members ?? [])
-              .map((m: { homeState?: string }) => m.homeState)
-              .filter(Boolean) as string[]
-          ),
-        ];
-        setLinkedStateIds(memberStates);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, [id, requestedCountry]);
-
-  const fetchLinkedStates = useCallback(async () => {
-    try {
-      const r = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/state-parties`,
-        { credentials: "same-origin" }
-      );
-      if (r.ok) {
-        const d = await r.json();
-        const ids = (d.rows ?? [])
-          .filter((row: { hasPresence?: boolean }) => row.hasPresence)
-          .map((row: { regionId: string }) => row.regionId);
-        if (ids.length > 0) setLinkedStateIds(ids);
-      }
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchElections = useCallback(async () => {
-    try {
-      const r = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/election`,
-        { credentials: "same-origin" }
-      );
-      if (r.ok) setElectionData(await r.json());
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchCommittee = useCallback(async () => {
-    try {
-      const r = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/committee`,
-        { credentials: "same-origin" }
-      );
-      if (r.ok) setCommitteeData(await r.json());
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchEligibleStates = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/npp-influence-states`,
-        { credentials: "same-origin" }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setEligibleStates(data.states ?? []);
-      }
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchAnalytics = useCallback(async () => {
-    try {
-      const analyticsUrl = modViewEnabled
-        ? `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/analytics?modView=1`
-        : `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/analytics`;
-      const response = await fetch(analyticsUrl, { credentials: "same-origin" });
-      if (!response.ok) return;
-      const payload = (await response.json()) as PartyAnalyticsPayload;
-      setAnalyticsData(payload);
-    } catch {}
-  }, [id, requestedCountry, modViewEnabled]);
+  const {
+    fetchUser,
+    fetchParty,
+    fetchLinkedStates,
+    fetchElections,
+    fetchCommittee,
+    fetchEligibleStates,
+    fetchAnalytics,
+  } = usePartyHubLoaders({
+    id,
+    requestedCountry,
+    modViewEnabled,
+    setUser,
+    setParty,
+    setLinkedStateIds,
+    setElectionData,
+    setCommitteeData,
+    setEligibleStates,
+    setAnalyticsData,
+    setLoading,
+    setMsg,
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -1413,6 +1344,7 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
     stateParty,
     currentTurn,
     loading,
+    loadError,
     fetchUser,
     fetchStateParty,
     taxRate,
@@ -1445,6 +1377,10 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   const [nppSubtab, setNppSubtab] = useState<"recruitment" | "management">("recruitment");
   const [msg, setMsg] = useState("");
   const [analyticsData, setAnalyticsData] = useState<StatePartyAnalyticsPayload | null>(null);
+
+  useEffect(() => {
+    if (loadError) setMsg("✗ Could not load state party data. Check your connection and refresh.");
+  }, [loadError]);
 
   const treasury = useStatePartyTreasuryActions({
     countryCode,
@@ -1561,7 +1497,11 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   if (!stateParty) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted">State party not found.</div>
+        <div className="text-muted">
+          {loadError
+            ? "Could not load this state party. Check your connection and refresh."
+            : "State party not found."}
+        </div>
       </div>
     );
   }

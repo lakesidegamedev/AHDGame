@@ -37,6 +37,8 @@ import { officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { createNPP, type NPPGenerationContext } from "@/lib/npp/generator";
 import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
 import { createSystemNewsPost } from "@/lib/news";
+import { loadLegacyApprovalPoints } from "@/lib/government/leaderLegacy";
+import { legacyAdjustedApproval } from "@/lib/government/rules/leaderLegacy";
 import { mergePartyInto } from "./proposals";
 import {
   FOUNDING_BENCH_SIZE,
@@ -178,7 +180,7 @@ export async function processPartyRenewal(
   if (due.size === 0) return summary;
   const dueCountries = [...due.keys()];
 
-  const [tallies, parties, officials, formations, approvals] = await Promise.all([
+  const [tallies, parties, officials, formations, approvals, legacyPoints] = await Promise.all([
     db
       .collection<ElectionVoteTally>("electionVoteTallies")
       .find(
@@ -227,6 +229,8 @@ export async function processPartyRenewal(
       .collection<GovernmentApproval>("governmentApprovals")
       .find({ _id: { $in: dueCountries } }, { projection: { approvalRating: 1 } })
       .toArray(),
+    // A departed leader's legacy colours how the governing party's record reads.
+    loadLegacyApprovalPoints(db, dueCountries, currentTurn),
   ]);
 
   const electionCountry = new Map<string, CountryId>();
@@ -269,7 +273,10 @@ export async function processPartyRenewal(
     const snapshot: RenewalCycleSnapshot = {
       cycle,
       governingPartyId: formation?.governingPartyId ?? president?.party ?? null,
-      approval: approvalByCountry.get(countryId) ?? null,
+      approval: legacyAdjustedApproval(
+        approvalByCountry.get(countryId) ?? null,
+        legacyPoints.get(`${countryId}|${formation?.governingPartyId ?? president?.party ?? ""}`)
+      ),
       parties: positions.map(({ partyId }) => ({
         partyId,
         voteShare: voteShares.get(partyId) ?? 0,

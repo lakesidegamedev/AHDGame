@@ -155,6 +155,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "corpPortfolioSnapshot",
   "stockExchangeSnapshot",
   "investorRankingSnapshot",
+  "countryBriefs",
   "wealthListSnapshot",
   "moneySupplySnapshot",
   "ledgerBalanceSnapshot",

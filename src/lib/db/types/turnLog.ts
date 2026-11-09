@@ -122,6 +122,8 @@ export interface TurnLog {
       speakerVotesCast: number;
     } | null;
 
+    countryBriefs?: { countries: number; briefs: number } | null;
+
     nppPartyRenewal?: {
       countries: number;
       splinters: number;

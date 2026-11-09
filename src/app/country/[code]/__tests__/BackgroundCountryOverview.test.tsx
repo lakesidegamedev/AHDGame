@@ -120,6 +120,39 @@ const FULL_VIEW: BackgroundCountryView = {
     { id: "NATO", name: "North Atlantic Treaty Organization", shortName: "NATO" },
   ],
   crises: [{ id: "64b0000000000000000000aa", name: "Farm Strike", startTurn: 12 }],
+  fiscal: {
+    interestSpiralYears: 1,
+    spiralLimitYears: 2,
+    programmesRemainingPercent: 96,
+    taxRisePercent: 2.5,
+    lastPackage: {
+      fiscalYear: 2029,
+      turn: 300,
+      size: 1.4,
+      taxRise: 0.6,
+      spendingCut: 0.8,
+      approvalCost: 3.2,
+    },
+  },
+  briefs: [
+    {
+      id: "FR:austerity:300",
+      kind: "austerity",
+      headline: "France announces an austerity package",
+      body: "France will consolidate its budget.",
+      turn: 300,
+      actions: [
+        { kind: "bonds", label: "Buy FR bonds", href: "/bond/64b0000000000000000000bb" },
+        {
+          kind: "index_fund",
+          label: "Buy France National Index",
+          href: "/stockmarket/fr/fund/fr-national",
+        },
+        { kind: "currency", label: "Trade EUR", href: "/country/fr/forex" },
+        { kind: "trade", label: "World trade", href: "/world/trade" },
+      ],
+    },
+  ],
 };
 
 const EMPTY_VIEW: BackgroundCountryView = {
@@ -140,6 +173,8 @@ const EMPTY_VIEW: BackgroundCountryView = {
   nationalIndex: null,
   alliances: [],
   crises: [],
+  fiscal: null,
+  briefs: [],
 };
 
 function show(view: BackgroundCountryView, name: string) {
@@ -177,6 +212,23 @@ describe("BackgroundCountryOverview", () => {
     expect(screen.getByTestId("background-invest").textContent).toContain("France National Index");
     expect(screen.getByTestId("background-alliances").textContent).toContain("NATO");
     expect(screen.getByTestId("background-crises").textContent).toContain("Farm Strike");
+  });
+
+  it("shows the briefs with their actions and the fiscal state", () => {
+    show(FULL_VIEW, "France");
+    const briefs = screen.getByTestId("background-briefs");
+    expect(briefs.textContent).toContain("France announces an austerity package");
+    expect(briefs.textContent).toContain("Buy FR bonds");
+    expect(briefs.textContent).toContain("Trade EUR");
+    const fiscal = screen.getByTestId("background-fiscal");
+    expect(fiscal.textContent).toContain("1 of 2 years");
+    expect(screen.getByTestId("background-austerity").textContent).toContain("fiscal year 2029");
+  });
+
+  it("explains an empty brief list and a missing fiscal record", () => {
+    show(EMPTY_VIEW, "Poland");
+    expect(screen.getByTestId("background-briefs").textContent).toContain("No briefs yet");
+    expect(screen.getByTestId("background-fiscal").textContent).toContain("No fiscal record");
   });
 
   it("renders placeholders when the politics, market and investing data are not there yet", () => {

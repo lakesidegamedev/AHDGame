@@ -123,6 +123,8 @@ describe("closeBackgroundFiscalYear", () => {
     const second = close(first.fiscal, 0, 300);
     expect(second.restructure).toBe(true);
     expect(second.fiscal.interestSpiralYears).toBe(0);
+    // The reset count is stored; the years that tripped it are reported separately.
+    expect(second.interestSpiralYears).toBe(2);
   });
 });
 

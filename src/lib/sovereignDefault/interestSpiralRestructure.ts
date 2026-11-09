@@ -27,11 +27,21 @@ export interface InterestSpiralRestructureResult {
 /** States from which a new crisis may fire; later ones already own the country. */
 const FIREABLE_STATES: readonly SovereignCrisisState[] = ["normal", "warning"];
 
+export interface InterestSpiralRestructureOptions {
+  /**
+   * Spiral years counted by the caller. Background countries track the count in
+   * their macro fiscal state and never write it onto the budget, so they pass it
+   * here; full countries leave it unset and the budget's own counter is read.
+   */
+  spiralYears?: number;
+}
+
 export async function restructureForInterestSpiral(
   db: Db,
   countryCode: CountryId,
   currentTurn: number,
-  realtimeMs: number
+  realtimeMs: number,
+  options: InterestSpiralRestructureOptions = {}
 ): Promise<InterestSpiralRestructureResult> {
   const budgetId = getNationalBudgetId(countryCode);
   const budgets = db.collection<FederalBudget>("federalBudget");
@@ -40,7 +50,7 @@ export async function restructureForInterestSpiral(
     { projection: { sovereignCrisisState: 1, "fiscalConsolidation.interestSpiralYears": 1 } }
   );
   if (!budget) return { ok: false, reason: "no-budget" };
-  const spiralYears = budget.fiscalConsolidation?.interestSpiralYears ?? 0;
+  const spiralYears = options.spiralYears ?? budget.fiscalConsolidation?.interestSpiralYears ?? 0;
   if (!shouldRestructureForInterest(spiralYears)) return { ok: false, reason: "not-due" };
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
   if (!FIREABLE_STATES.includes(state)) return { ok: false, reason: "crisis-in-progress" };

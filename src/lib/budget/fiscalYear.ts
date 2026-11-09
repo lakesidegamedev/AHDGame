@@ -202,6 +202,9 @@ export async function processFiscalYear(
   );
   const processedBudgetIds = new Set<string>();
   const interestSpiralCountries = new Set<string>();
+  // Background countries keep their spiral count in macro state, so the years
+  // that tripped the restructuring travel with the country to the restructure call.
+  const backgroundSpiralYears = new Map<string, number>();
   // Stabilizer state is written in one batch after the loop, never per country.
   const stabilizerWrites: AnyBulkWriteOperation<FederalBudget>[] = [];
   const consolidationNews: Array<{
@@ -498,7 +501,10 @@ export async function processFiscalYear(
           update: { $set: { nationalFiscal: closed.fiscal } },
         },
       });
-      if (fiscalStabilizerEnabled && closed.restructure) interestSpiralCountries.add(countryId);
+      if (fiscalStabilizerEnabled && closed.restructure) {
+        interestSpiralCountries.add(countryId);
+        backgroundSpiralYears.set(countryId, closed.interestSpiralYears);
+      }
       if (closed.package) {
         backgroundPackage = {
           fiscalYear: newFiscalYear,
@@ -741,7 +747,9 @@ export async function processFiscalYear(
     // resolution; this only fires one for a country still outside a crisis.
     if (interestSpiralCountries.has(countryId)) {
       try {
-        await restructureForInterestSpiral(db, countryId, currentTurn, realtimeMs);
+        await restructureForInterestSpiral(db, countryId, currentTurn, realtimeMs, {
+          spiralYears: backgroundSpiralYears.get(countryId),
+        });
       } catch (err) {
         console.error(`[FiscalYear] Interest-spiral restructuring failed for ${countryId}:`, err);
       }

@@ -193,26 +193,52 @@ export async function updateFundConstituents(
   );
 }
 
-/** Update fund NAV and backing ratio. */
-export async function updateFundNav(
-  db: Db,
-  fundId: ObjectId,
-  update: {
-    quotedNav: number;
-    backingRatio?: number;
-    unitSupply?: number;
-    cashAnchor?: number;
-  }
-): Promise<void> {
+export interface FundNavUpdate {
+  quotedNav: number;
+  backingRatio?: number;
+  unitSupply?: number;
+  cashAnchor?: number;
+}
+
+function fundNavSet(update: FundNavUpdate, updatedAt: Date): Record<string, unknown> {
   const $set: Record<string, unknown> = {
     quotedNav: update.quotedNav,
-    updatedAt: new Date(),
+    updatedAt,
   };
   if (update.backingRatio !== undefined) $set.backingRatio = update.backingRatio;
   if (update.unitSupply !== undefined) $set.unitSupply = update.unitSupply;
   if (update.cashAnchor !== undefined) $set.cashAnchor = update.cashAnchor;
+  return $set;
+}
 
-  await db.collection<IndexFund>(FUND_COLLECTION).updateOne({ _id: fundId }, { $set });
+/** Update fund NAV and backing ratio. */
+export async function updateFundNav(
+  db: Db,
+  fundId: ObjectId,
+  update: FundNavUpdate
+): Promise<void> {
+  await db
+    .collection<IndexFund>(FUND_COLLECTION)
+    .updateOne({ _id: fundId }, { $set: fundNavSet(update, new Date()) });
+}
+
+/**
+ * Write many funds' NAV and backing ratio in one bulk command. Each entry
+ * carries the same `$set` as `updateFundNav`, so the stored documents match
+ * the per-fund path exactly.
+ */
+export async function updateFundNavsBulk(
+  db: Db,
+  entries: ReadonlyArray<{ fundId: ObjectId; update: FundNavUpdate }>
+): Promise<void> {
+  if (entries.length === 0) return;
+  const now = new Date();
+  await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(
+    entries.map(({ fundId, update }) => ({
+      updateOne: { filter: { _id: fundId }, update: { $set: fundNavSet(update, now) } },
+    })),
+    { ordered: false }
+  );
 }
 
 /**
