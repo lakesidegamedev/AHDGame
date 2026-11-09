@@ -7,7 +7,7 @@ import {
   getCorpFxRate,
 } from "@/lib/currency/corporationCapital";
 import { loadTreasuryCashContext } from "./treasuryLedger";
-import { creditTreasuryProceedsFromAnchor } from "./treasury";
+import { creditTreasuryProceedsFromAnchor, creditTreasuryProceedsPaired } from "./treasury";
 
 export interface CompensationClawbackResult {
   /** ₳ recovered from the corporation's cash and credited to the treasury. */
@@ -160,12 +160,27 @@ export async function completeCompensationRecovery(
   }
 
   if (paidAnchor > 0) {
-    await creditTreasuryProceedsFromAnchor(db, countryId as CountryId, paidAnchor, now, {
-      flow: "nationalization_compensation",
-      ledger: { context: await loadTreasuryCashContext(db) },
-      site: "clawbackCompensation",
-      onceKey: key,
-    });
+    const ledger = { context: await loadTreasuryCashContext(db) };
+    // A recovery debited before the funded ledger was on still has to land: the
+    // corporation already paid, so the Treasury credit carries a named mint.
+    if (ledger.context?.treasuryCashLedgerEnabled) {
+      await creditTreasuryProceedsPaired(db, {
+        countryId: countryId as CountryId,
+        now,
+        flow: "nationalization_compensation",
+        key: `clawback:${corporationId.toHexString()}:${key}`,
+        site: "clawbackCompensation",
+        amountAnchor: paidAnchor,
+        ledger,
+      });
+    } else {
+      await creditTreasuryProceedsFromAnchor(db, countryId as CountryId, paidAnchor, now, {
+        flow: "nationalization_compensation",
+        ledger,
+        site: "clawbackCompensation",
+        onceKey: key,
+      });
+    }
   }
 
   const owedAnchor = Math.max(0, anchor - paidAnchor);
