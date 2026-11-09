@@ -1,5 +1,4 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
-import { getStatesCollection } from "@/lib/db/collections/states";
 import { logger } from "@/lib/observability/logger";
 import { logWireEvent } from "@/lib/wireEvent";
 import type {
@@ -62,6 +61,7 @@ import { deliverPending, owedDelivery, type DeliveryTarget } from "./crisisV2/pe
 import { ensureBuiltinCrisisHolderProviders } from "./crisisV2/holderProviders";
 import { processCrisisScars } from "./crisisV2/scarsShell";
 import { routeEffectIntents } from "./crisisV2/intents";
+import { loadDetectorWorld } from "./crisisV2/detectors";
 import { runNppCrisisResponse } from "./crisisV2/nppResponse";
 import { runCrisisSpillover } from "./crisisV2/spillover";
 import {
@@ -116,20 +116,13 @@ const LIVE_PROJECTION = {
   v2: 1,
 } as const;
 
-async function loadWorld(db: Db): Promise<World> {
-  const statesCollection = await getStatesCollection(db);
-  const states = await statesCollection
-    .find({}, { projection: { _id: 1, countryId: 1 } })
-    .toArray();
-  const stateIdsByCountry = new Map<string, string[]>();
-  const countryByState = new Map<string, string>();
-  for (const state of states) {
-    const ids = stateIdsByCountry.get(state.countryId) ?? [];
-    ids.push(state._id);
-    stateIdsByCountry.set(state.countryId, ids);
-    countryByState.set(state._id, state.countryId);
-  }
-  return { allStateIds: states.map((s) => s._id), stateIdsByCountry, countryByState };
+async function loadWorld(db: Db, turn: number): Promise<World> {
+  const shared = await loadDetectorWorld(db, turn);
+  return {
+    allStateIds: shared.allStateIds as string[],
+    stateIdsByCountry: shared.inputs.stateIdsByCountry as Map<string, string[]>,
+    countryByState: shared.countryByState as Map<string, string>,
+  };
 }
 
 function crisisCountryIds(crisis: LiveCrisis, world: World): string[] {
@@ -456,7 +449,7 @@ async function retryClosedDeliveries(db: Db, turn: number): Promise<void> {
       )
       .toArray()) as LiveCrisis[];
     if (closed.length === 0) return;
-    const world = await loadWorld(db);
+    const world = await loadWorld(db, turn);
     for (const crisis of closed) {
       const def = getCrisisDefinition(crisis.v2.definitionId);
       if (!def) continue;
@@ -508,7 +501,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   if (crises.length > 0) await runNppCrisisResponse(db, turn);
   const world: World =
     crises.length > 0
-      ? await loadWorld(db)
+      ? await loadWorld(db, turn)
       : { allStateIds: [], stateIdsByCountry: new Map(), countryByState: new Map() };
   const result: CrisisV2TurnResult = { processed: 0, failed: 0, resolved: 0, opened: 0 };
   const stillActive: DirectorActiveCrisis[] = [];
