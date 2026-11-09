@@ -28,6 +28,7 @@ import { syncAllPartyChairHeadsOfState } from "@/lib/turn/partyChairHeadOfState"
 import { processCrisisTurn } from "@/lib/turn/crisisTurn";
 import { notifyCrisisChanges } from "@/lib/crises/inboxAlerts";
 import { processCrisisV2Turn } from "@/lib/turn/crisisV2Turn";
+import { processFrontierRaces } from "@/lib/frontierRaces/service";
 import { processMinisterialOrders } from "@/lib/turn/ministerialOrderProcessing";
 import { processNavairTurn } from "@/lib/navair/turn";
 import { processIntelligenceTurn } from "@/lib/turn/intelligenceTurn";
@@ -118,6 +119,10 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       // Same stateMetrics writers as crisisTurn, so it stays inside this chain.
       const crisisV2Result = await runtime.runPhase("crisisV2Turn", () =>
         processCrisisV2Turn(db, newTurn)
+      );
+      // Winners and licences write approval through the same state writers.
+      const frontierRaceResult = await runtime.runPhase("frontierRaces", () =>
+        processFrontierRaces(db, newTurn)
       );
       // Intelligence upkeep resolves before navair, so a later phase's sabotage
       // lands on the dispositions this turn actually fights on. Note the honest
@@ -372,6 +377,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       : null;
     phaseResults.crisisTurn = { crisisesProcessed: crisisResult ?? 0 };
     phaseResults.crisisV2Turn = crisisV2Result ?? null;
+    phaseResults.frontierRaces = frontierRaceResult ?? null;
     phaseResults.ministerialOrders = ministerialOrdersResult ?? null;
     (phaseResults as Record<string, unknown>).navairOperations = navairResult ?? null;
     phaseResults.topSectorsRecompute = topSectorsResult ?? null;

@@ -83,7 +83,7 @@ export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResu
   );
   const current = await races.findOne({ _id: def.id });
   if (current?.winner) return fail("closed", "This programme already has a winner");
-  if (raceStatus(def, era.year, null) !== "open") {
+  if (raceStatus(def, era.year ?? 0, null) !== "open") {
     return fail("not_open", `Funding opens in ${def.opensYear}`);
   }
 
@@ -182,7 +182,7 @@ export async function processFrontierRaces(db: Db, turn: number): Promise<Fronti
 
   for (const def of FRONTIER_RACES) {
     const doc = byId.get(def.id);
-    if (!doc || era.year < def.opensYear) continue;
+    if (!doc || (era.year ?? 0) < def.opensYear) continue;
 
     if (!doc.winner) {
       const outcome = resolveRace(doc.contributions, def.threshold, turn);
@@ -329,7 +329,7 @@ export async function loadFrontierRaceViews(db: Db): Promise<FrontierRaceView[]>
       method: def.method,
       opensYear: def.opensYear,
       threshold: def.threshold,
-      status: raceStatus(def, era.year, doc?.winner),
+      status: raceStatus(def, era.year ?? 0, doc?.winner),
       winner: doc?.winner
         ? { name: winnerName ?? "Unknown", points: doc.winner.points, turn: doc.winner.turn }
         : null,

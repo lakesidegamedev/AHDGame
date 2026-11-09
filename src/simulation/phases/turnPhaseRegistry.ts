@@ -127,7 +127,6 @@ import { processNpcBankPolicyTurn } from "@/lib/banking/npcBanks";
 import { processBankingTurn } from "@/lib/turn/bankingTurn";
 import { processSavingsShadowTurn } from "@/lib/savings/shadow";
 import { runPensionTurn } from "@/lib/pensions/pensionTurn";
-import { processFrontierRaces } from "@/lib/frontierRaces/service";
 import { processBankSolvencyTurn } from "@/lib/turn/bankSolvencyTurn";
 import { runParliamentaryGovernmentConfidencePhase } from "./parliamentaryGovernmentConfidencePhase";
 import { processBankSupervision } from "@/lib/banking/supervision";
@@ -514,13 +513,6 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             schemesInvesting: pensionResult.investing.schemesInvesting,
           };
         }
-
-        // Frontier programme races: name winners, then issue licences whose
-        // sunset has run. Reads three race documents and writes only on a result.
-        const frontierRaceResult = await runtime.runPhase("frontierRaces", () =>
-          processFrontierRaces(context.db, newTurn)
-        );
-        if (frontierRaceResult) phaseResults.frontierRaces = frontierRaceResult;
 
         // Resource prospecting resolution, runs AFTER corporationTurn (so this
         // turn's corp state/rdScore is settled) and BEFORE commodityPrices (so a
