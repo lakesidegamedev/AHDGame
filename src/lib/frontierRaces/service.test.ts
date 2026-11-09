@@ -21,6 +21,11 @@ vi.mock("@/lib/campaigns/campaignCurrency", async () => {
     loadCampaignCurrencyRates: async () => (rates.JPY ? { JPY: rates.JPY } : {}),
   };
 });
+vi.mock("@/lib/db/collections/federalBudget", () => ({
+  getFederalBudgetCollection: async () => ({
+    findOne: async () => ({ treasuryBalance: budgetDoc.balance }),
+  }),
+}));
 vi.mock("@/lib/era/context", () => ({ getEraContext: async () => ({ year: era.year }) }));
 vi.mock("@/lib/observability/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -122,11 +127,9 @@ function makeDb(initial: Doc[] = [], corp?: { _id: ObjectId; rdScore: number; na
         ? racesCol
         : name === "corporations"
           ? corpsCol
-          : name === "federalBudget"
-            ? { findOne: async () => ({ treasuryBalance: budgetDoc.balance }) }
-            : name === "gameState"
-              ? { findOne: async () => ({ preset: undefined }) }
-              : statesCol,
+          : name === "gameState"
+            ? { findOne: async () => ({ preset: undefined }) }
+            : statesCol,
   };
   return { db: db as never, races, corpUpdates };
 }

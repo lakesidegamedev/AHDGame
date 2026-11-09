@@ -14,6 +14,7 @@ import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getFrontierRacesCollection } from "@/lib/db/collections/frontierRaces";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import type { FrontierRaceState } from "@/lib/db/types/frontierRace";
@@ -85,13 +86,8 @@ export async function quoteCountryCost(
   countryId: string,
   points: number
 ): Promise<CountryCostQuote> {
-  const [rates, state] = await Promise.all([
-    loadCampaignCurrencyRates(db),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
-  ]);
-  const preset = state?.preset;
+  const [rates, era] = await Promise.all([loadCampaignCurrencyRates(db), getEraContext(db)]);
+  const preset = era.preset ?? undefined;
   const anchor = countryOrderCost(points);
   return {
     anchor,
@@ -134,9 +130,9 @@ export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResu
     name = config.name;
     const { local: cost } = await quoteCountryCost(db, args.entityId, points);
     // Legacy treasuries may go negative, so refuse to fund on debt in either mode.
-    const budget = await db
-      .collection<{ treasuryBalance?: number }>("federalBudget")
-      .findOne({ countryId: args.entityId } as never, { projection: { treasuryBalance: 1 } });
+    const budget = await (
+      await getFederalBudgetCollection(db)
+    ).findOne({ countryId: args.entityId as CountryId }, { projection: { treasuryBalance: 1 } });
     if ((budget?.treasuryBalance ?? 0) < cost) {
       return fail("cannot_pay", "The treasury cannot cover this order");
     }
