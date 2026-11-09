@@ -13,7 +13,7 @@
  * so it can be iterated on without touching the production suite.
  */
 
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/electionEngine/constants";
@@ -262,7 +262,7 @@ function runGeneralScenario(sc: GeneralScenario): GeneralResult {
       totalPool,
       totalPool,
       state.pop * 1_000_000,
-      electorateFromStoredGroups(demos, CATEGORIES),
+      electorateFromFixture(demos, CATEGORIES),
       partyOrgByParty,
       options
     );
@@ -408,7 +408,7 @@ function runPaGeneralMatchup(args: { demOrgLevel?: number; demHomeState?: string
     totalPool,
     totalPool,
     pa.pop * 1_000_000,
-    electorateFromStoredGroups(demos, CATEGORIES),
+    electorateFromFixture(demos, CATEGORIES),
     partyOrgByParty,
     options
   );
@@ -466,7 +466,7 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
     const state = STATES.find((s) => s.id === stateId);
     if (!state) continue;
     const primaryElectorate = shiftElectorateForPrimary(
-      electorateFromStoredGroups(demographicsForState(state), CATEGORIES),
+      electorateFromFixture(demographicsForState(state), CATEGORIES),
       sc.partyPosition
     );
 

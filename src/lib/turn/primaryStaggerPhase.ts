@@ -11,7 +11,6 @@ import { primaryWinMomentumFromTally } from "@/lib/elections/primaryRegional/rul
 import { loadPrimaryFieldOffices } from "@/lib/elections/primaryRegional/fieldOffices";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type {
@@ -311,8 +310,7 @@ export async function runPrimaryStaggerWaveIfDue(
   }
 
   const waveStates = wave.states;
-  const [categories, states, demographics, partyOrgs, turnoutDocs] = await Promise.all([
-    loadDemographicCategories(db),
+  const [states, demographics, partyOrgs, turnoutDocs] = await Promise.all([
     (await getStatesCollection(db)).find({ _id: { $in: waveStates } }).toArray(),
     db
       .collection<StateDemographics>("stateDemographics")
@@ -510,7 +508,6 @@ export async function runPrimaryStaggerWaveIfDue(
       stateIds: waveStates,
       stateMap,
       demographicsMap,
-      categories,
       statePartyOrgs: orgMap,
       partyPosition: {
         economicPosition: party?.economicPosition ?? 0,

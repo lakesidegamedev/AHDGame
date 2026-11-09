@@ -36,7 +36,6 @@ import type {
 import { projectPrimaryByState, type ProjectionResult } from "@/lib/primaryProjection";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
 import { fetchEnrichedCandidates } from "@/lib/electionEngine";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { getTravelActionCost } from "@/lib/constants/states";
 import {
   TRAVEL_STATE_IDS,
@@ -214,8 +213,7 @@ export async function loadPrimaryPartyData(
     };
   });
 
-  const [categoriesDocs, statesDocs, demographicsDocs, enriched] = await Promise.all([
-    loadDemographicCategories(db),
+  const [statesDocs, demographicsDocs, enriched] = await Promise.all([
     db
       .collection<State>("states")
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
@@ -279,7 +277,6 @@ export async function loadPrimaryPartyData(
     stateIds: TRAVEL_STATE_IDS,
     stateMap,
     demographicsMap,
-    categories: categoriesDocs,
     statePartyOrgs: orgMap,
     stateActions: liveStateActions,
     currentTurn: gameTime.currentTurn,

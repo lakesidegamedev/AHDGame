@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { computeMedianVoter, computeNationalEvWeightedMedian } from "./medianVoter";
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
 
@@ -68,9 +68,7 @@ function makeDemographics(overrides: Partial<StateDemographics["groups"]> = {}):
 
 describe("computeMedianVoter", () => {
   it("returns (0, 0) for mirror-symmetric demographics", () => {
-    const out = computeMedianVoter(
-      electorateFromStoredGroups(makeDemographics(), makeCategories())
-    );
+    const out = computeMedianVoter(electorateFromFixture(makeDemographics(), makeCategories()));
     expect(out.ep).toBeCloseTo(0);
     expect(out.sp).toBeCloseTo(0);
   });
@@ -83,7 +81,7 @@ describe("computeMedianVoter", () => {
       prog: { population: 20, turnout: 60, economicLean: 0, socialLean: -1 },
       trad: { population: 80, turnout: 60, economicLean: 0, socialLean: 1 },
     });
-    const out = computeMedianVoter(electorateFromStoredGroups(demo, makeCategories()));
+    const out = computeMedianVoter(electorateFromFixture(demo, makeCategories()));
     expect(out.ep).toBeGreaterThan(0);
     expect(out.sp).toBeGreaterThan(0);
   });
@@ -95,7 +93,7 @@ describe("computeMedianVoter", () => {
       prog: { population: 80, turnout: 60, economicLean: 0, socialLean: -1 },
       trad: { population: 20, turnout: 60, economicLean: 0, socialLean: 1 },
     });
-    const out = computeMedianVoter(electorateFromStoredGroups(demo, makeCategories()));
+    const out = computeMedianVoter(electorateFromFixture(demo, makeCategories()));
     expect(out.ep).toBeLessThan(0);
     expect(out.sp).toBeLessThan(0);
   });
@@ -105,8 +103,8 @@ describe("computeMedianVoter", () => {
     // traditionals stay at 30% — the median should shift left socially.
     const demo = makeDemographics();
     const categories = makeCategories();
-    const baseline = computeMedianVoter(electorateFromStoredGroups(demo, categories));
-    const shifted = computeMedianVoter(electorateFromStoredGroups(demo, categories), {
+    const baseline = computeMedianVoter(electorateFromFixture(demo, categories));
+    const shifted = computeMedianVoter(electorateFromFixture(demo, categories), {
       prog: 90,
       trad: 30,
       low: 60,
@@ -121,7 +119,7 @@ describe("computeMedianVoter", () => {
   it("returns (0, 0) when categoryWeights are all zero (empty mix)", () => {
     const demo = makeDemographics();
     demo.categoryWeights = { income: 0, social: 0 };
-    const out = computeMedianVoter(electorateFromStoredGroups(demo, makeCategories()));
+    const out = computeMedianVoter(electorateFromFixture(demo, makeCategories()));
     expect(out.ep).toBe(0);
     expect(out.sp).toBe(0);
   });
@@ -133,7 +131,7 @@ describe("computeMedianVoter", () => {
       prog: { population: 0, turnout: 60, economicLean: 0, socialLean: -1 },
       trad: { population: 0, turnout: 60, economicLean: 0, socialLean: 1 },
     });
-    const out = computeMedianVoter(electorateFromStoredGroups(demo, makeCategories()));
+    const out = computeMedianVoter(electorateFromFixture(demo, makeCategories()));
     expect(out.ep).toBeCloseTo(0);
     expect(out.sp).toBeCloseTo(0);
   });
@@ -143,7 +141,7 @@ describe("computeMedianVoter", () => {
     // Strip the state-level leans from one group — should still read
     // defaultEconomicLean / defaultSocialLean from the category.
     demo.groups.high = { population: 50, turnout: 60 } as StateDemographics["groups"][string];
-    const out = computeMedianVoter(electorateFromStoredGroups(demo, makeCategories()));
+    const out = computeMedianVoter(electorateFromFixture(demo, makeCategories()));
     // Should still net to (0, 0) since defaults are the same as state leans.
     expect(out.ep).toBeCloseTo(0);
     expect(out.sp).toBeCloseTo(0);

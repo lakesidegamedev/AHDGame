@@ -237,6 +237,7 @@ export function StatePageTabs({
             countryId={state.countryId}
             regionParties={regionParties}
             bucketProfile={bucketProfile}
+            population={state.population}
             isAdmin={isAdmin}
           />
         );

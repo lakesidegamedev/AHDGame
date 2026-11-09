@@ -2,7 +2,8 @@
  * Debug endpoint for demographic lean calculation.
  * GET /api/debug/demographics?state=CA
  *
- * Returns raw data and calculation steps to diagnose why leans show as Center.
+ * Returns the cached leans next to the lean read from the region census, to
+ * diagnose why leans show as Center.
  * Only available to admins or when NODE_ENV !== "production".
  */
 
@@ -10,9 +11,11 @@ import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
-import type { StateDemographics, DemographicCategory, State } from "@/lib/db/types";
+import type { GameState, State, StateDemographics } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { calculateStateLean, getStateLean } from "@/lib/utils/demographics";
+import { getStateLean } from "@/lib/utils/demographics";
+import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
+import { eraYearContextFromGameState } from "@/lib/era/context";
 
 // GET /api/debug/demographics — Debug demographic lean calculation for a given state; admin-only in production.
 // Auth: requireAdmin
@@ -34,19 +37,24 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
 
-    const [demographics, categories, state] = await Promise.all([
+    const [demographics, defaults, state, gameState] = await Promise.all([
       db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
-      db.collection<DemographicCategory>("demographicCategories").find({}).toArray(),
+      db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
       db.collection<State>("states").findOne({ _id: stateId, countryId }),
+      db
+        .collection<GameState>("gameState")
+        .findOne(
+          { _id: "current" },
+          { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
+        ),
     ]);
 
     const debug: Record<string, unknown> = {
       stateId,
       hasDemographics: !!demographics,
-      categoriesCount: categories.length,
       hasState: !!state,
       statePoliticalLean: state ? getStateLean(state) : null,
-      stateCachedLeans: (state as { cachedEconomicLean?: number; cachedSocialLean?: number })
+      stateCachedLeans: state
         ? {
             economic: (state as { cachedEconomicLean?: number }).cachedEconomicLean,
             social: (state as { cachedSocialLean?: number }).cachedSocialLean,
@@ -63,100 +71,19 @@ export async function GET(request: Request) {
       });
     }
 
-    if (categories.length === 0) {
-      // eslint-disable-next-line local/no-uncoded-error-response -- diagnostic payload answered with 200, not an error response
-      return NextResponse.json({
-        ...debug,
-        error: "No demographic categories in DB (run seed:demographics)",
-        calculatedLeans: null,
-      });
-    }
-
-    // Run calculation and capture per-category breakdown
-    const categoryBreakdown: Array<{
-      id: string;
-      weight: number;
-      popSum: number;
-      categoryEconomic: number;
-      categorySocial: number;
-      groupsFound: number;
-      groupsTotal: number;
-    }> = [];
-
-    const categoryWeights = demographics.categoryWeights;
-    const groups = demographics.groups;
-
-    let totalEconomicLean = 0;
-    let totalSocialLean = 0;
-
-    for (const category of categories) {
-      // Only count categories this region explicitly weights — no
-      // `defaultWeight` fallback — so the debug breakdown matches
-      // `calculateStateLean` / `computeMedianVoter` (which the vote engine
-      // uses). A category absent from `categoryWeights` contributes 0.
-      const rawCatWeight = categoryWeights?.[category._id as keyof typeof categoryWeights];
-      const effectiveWeight = rawCatWeight != null ? Number(rawCatWeight) : 0;
-
-      let categoryEconomic = 0;
-      let categorySocial = 0;
-      let categoryPopSum = 0;
-      let groupsFound = 0;
-
-      for (const group of category.groups) {
-        const stateGroup = groups?.[group.id];
-        if (!stateGroup) continue;
-        groupsFound++;
-
-        const pop = Number(stateGroup.population) || 0;
-        categoryPopSum += pop;
-
-        const economicLean =
-          typeof stateGroup.economicLean === "number"
-            ? stateGroup.economicLean
-            : (group.defaultEconomicLean ?? 0);
-        const socialLean =
-          typeof stateGroup.socialLean === "number"
-            ? stateGroup.socialLean
-            : (group.defaultSocialLean ?? 0);
-
-        categoryEconomic += pop * economicLean;
-        categorySocial += pop * socialLean;
-      }
-
-      if (categoryPopSum > 0) {
-        categoryEconomic /= categoryPopSum;
-        categorySocial /= categoryPopSum;
-      }
-
-      totalEconomicLean += (effectiveWeight / 100) * categoryEconomic;
-      totalSocialLean += (effectiveWeight / 100) * categorySocial;
-
-      categoryBreakdown.push({
-        id: category._id,
-        weight: effectiveWeight,
-        popSum: categoryPopSum,
-        categoryEconomic: Math.round(categoryEconomic * 100) / 100,
-        categorySocial: Math.round(categorySocial * 100) / 100,
-        groupsFound,
-        groupsTotal: category.groups.length,
-      });
-    }
-
-    const calculatedLeans = {
-      economicLean: Math.round(totalEconomicLean * 100) / 100,
-      socialLean: Math.round(totalSocialLean * 100) / 100,
-    };
-
-    // Verify against actual function
-    const actualResult = calculateStateLean(demographics, categories);
+    const censusLean = censusCachedStateLean(demographics, {
+      countryId,
+      stateId,
+      preset: gameState?.preset,
+      demographicDefaults: defaults,
+      ...eraYearContextFromGameState(gameState),
+    });
 
     return NextResponse.json({
       ...debug,
-      categoryBreakdown,
-      calculatedLeans,
-      actualCalculateStateLeanResult: actualResult,
-      sampleGroupKeys: demographics.groups ? Object.keys(demographics.groups).slice(0, 10) : [],
-      sampleCategoryIds: categories.map((c) => c._id),
+      categoryWeights: demographics.categoryWeights ?? null,
+      calculatedLeans: censusLean,
+      hasCensus: censusLean !== null,
     });
   } catch (error) {
     return handleRouteError(error);

@@ -15,7 +15,7 @@
  * harness in #4F is for.
  */
 
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, expect, it } from "vitest";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
@@ -263,7 +263,7 @@ describe("§7.3.2 swing-flow per-race-family integration", () => {
           1_000_000,
           1_000_000,
           1_000_000,
-          electorateFromStoredGroups(symmetricDemographics, symmetricCategories),
+          electorateFromFixture(symmetricDemographics, symmetricCategories),
           family.orgs,
           baseOptions
         );
@@ -284,7 +284,7 @@ describe("§7.3.2 swing-flow per-race-family integration", () => {
           1_000_000,
           1_000_000,
           1_000_000,
-          electorateFromStoredGroups(symmetricDemographics, symmetricCategories),
+          electorateFromFixture(symmetricDemographics, symmetricCategories),
           family.orgs,
           baseOptions
         );
@@ -300,7 +300,7 @@ describe("§7.3.2 swing-flow per-race-family integration", () => {
           1_000_000,
           1_000_000,
           1_000_000,
-          electorateFromStoredGroups(symmetricDemographics, symmetricCategories),
+          electorateFromFixture(symmetricDemographics, symmetricCategories),
           family.orgs,
           baseOptions
         );
@@ -309,7 +309,7 @@ describe("§7.3.2 swing-flow per-race-family integration", () => {
           1_000_000,
           1_000_000,
           1_000_000,
-          electorateFromStoredGroups(symmetricDemographics, symmetricCategories),
+          electorateFromFixture(symmetricDemographics, symmetricCategories),
           family.orgs,
           baseOptions
         );

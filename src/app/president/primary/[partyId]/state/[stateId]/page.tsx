@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getDb } from "@/lib/mongodb";
 import type {
   Campaign,
-  DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
@@ -191,23 +189,21 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     };
   });
 
-  const [categoriesDocs, stateDoc, demographicsDoc, enriched, apportionmentPreset] =
-    await Promise.all([
-      loadDemographicCategories(db),
-      db
-        .collection<State>("states")
-        .find({ _id: { $in: ALL_STATE_IDS } })
-        .toArray(),
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .find({ _id: { $in: ALL_STATE_IDS } })
-        .toArray(),
-      enrichedPromise,
-      db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" })
-        .then((gs) => gs?.preset),
-    ]);
+  const [stateDoc, demographicsDoc, enriched, apportionmentPreset] = await Promise.all([
+    db
+      .collection<State>("states")
+      .find({ _id: { $in: ALL_STATE_IDS } })
+      .toArray(),
+    db
+      .collection<StateDemographics>("stateDemographics")
+      .find({ _id: { $in: ALL_STATE_IDS } })
+      .toArray(),
+    enrichedPromise,
+    db
+      .collection<{ _id: string; preset?: string }>("gameState")
+      .findOne({ _id: "current" })
+      .then((gs) => gs?.preset),
+  ]);
   const stateMap = new Map(stateDoc.map((doc) => [doc._id as string, doc]));
   if (!stateMap.has(stateId)) stateMap.set(stateId, state);
   const demographicsMap = new Map(demographicsDoc.map((doc) => [doc._id as string, doc]));
@@ -234,7 +230,6 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     stateIds: ALL_STATE_IDS,
     stateMap,
     demographicsMap,
-    categories: categoriesDocs,
     statePartyOrgs: orgMap,
     partyPosition: {
       economicPosition: party.economicPosition,

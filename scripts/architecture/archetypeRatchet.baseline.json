@@ -4,7 +4,6 @@
     "src/app/api/admin/country/[code]/settings/route.test.ts": 1,
     "src/app/api/admin/country/[code]/settings/route.ts": 4,
     "src/app/api/admin/demographics/reseed/route.ts": 1,
-    "src/app/api/admin/demographics/route.ts": 1,
     "src/app/api/admin/position-editor/preset/route.ts": 4,
     "src/app/api/admin/seed/route.ts": 6,
     "src/app/api/country/[code]/executive/cabinet/[positionId]/infra/infra.route.test.ts": 3,

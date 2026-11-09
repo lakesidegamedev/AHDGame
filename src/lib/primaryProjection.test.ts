@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { projectPrimaryByState } from "./primaryProjection";
 import type { EnrichedCandidate } from "@/lib/electionEngine";
-import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
+import type { State, StateDemographics, StateDemographicTurnout } from "@/lib/db/types";
+import type { CampaignProjectionContext } from "@/lib/campaignTargeting/audience";
+import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
 
 function makeCandidate(id: string, overrides: Partial<EnrichedCandidate> = {}): EnrichedCandidate {
   return {
@@ -38,34 +40,24 @@ function makeDemographics(id: string): StateDemographics {
     _id: id,
     countryId: "US",
     categoryWeights: { voterGroups: 100 },
-    groups: {
-      all: {
-        population: 10_000_000,
-        economicLean: -1,
-        socialLean: -1,
-        turnout: 60,
-      },
-    },
+    groups: {},
     lastUpdated: new Date(),
   };
 }
 
-const categories: DemographicCategory[] = [
-  {
-    _id: "voterGroups",
-    name: "Voter Groups",
-    defaultWeight: 100,
-    groups: [
-      {
-        id: "all",
-        name: "All voters",
-        defaultEconomicLean: -1,
-        defaultSocialLean: -1,
-        defaultTurnout: 60,
-      },
-    ],
-  } as unknown as DemographicCategory,
-];
+function makeContext(turnout: StateDemographicTurnout[] = []): CampaignProjectionContext {
+  return {
+    campaignRulesVersion: 0,
+    currentTurn: 0,
+    preset: "2019-default",
+    year: 2019,
+    startingYear: 2019,
+    turnoutByState: new Map(turnout.map((doc) => [doc._id, doc])),
+    defaultsByState: new Map(),
+  };
+}
+
+const campaignContext = makeContext();
 
 const partyPosition = { economicPosition: -2, socialPosition: -2 };
 
@@ -96,7 +88,7 @@ describe("projectPrimaryByState — GE-style per-state simulation", () => {
       stateIds: ["CA"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -128,7 +120,7 @@ describe("projectPrimaryByState — GE-style per-state simulation", () => {
       stateIds: ["CA"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: orgs,
       partyPosition,
     });
@@ -159,7 +151,7 @@ describe("projectPrimaryByState — GE-style per-state simulation", () => {
       stateIds: ["OH", "TX"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -189,7 +181,7 @@ describe("projectPrimaryByState — GE-style per-state simulation", () => {
       stateIds: ["IA"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -205,7 +197,7 @@ describe("projectPrimaryByState — GE-style per-state simulation", () => {
       stateIds: ["XX"],
       stateMap: new Map(),
       demographicsMap: new Map(),
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -236,7 +228,7 @@ describe("home-state surge", () => {
       stateIds: ["IA", "OH"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -280,7 +272,7 @@ describe("home-state surge", () => {
       stateIds: ["IA"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -293,7 +285,7 @@ describe("home-state surge", () => {
       stateIds: ["IA"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
     });
@@ -342,7 +334,7 @@ describe("vote suppression", () => {
       stateIds: ["IA", "OH"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext,
       statePartyOrgs: new Map(),
       partyPosition,
       ...extra,
@@ -406,13 +398,21 @@ describe("vote suppression", () => {
 
 describe("turnout modifiers", () => {
   // GOTV, canvassing and turnout suppression all reach the vote through
-  // `stateDemographicTurnout`. The stagger has always read it; the board never
-  // did, so every one of those effects moved the result and left the
-  // projection showing the old number.
+  // `stateDemographicTurnout`; the projection reads that doc through the census
+  // substrate like the stagger does.
   const stateMap = new Map([["IA", makeState("IA")]]);
   const demographicsMap = new Map([["IA", makeDemographics("IA")]]);
+  const raceBucket = Object.keys(DEMOGRAPHIC_TURNOUT_RATES.race)[0];
 
-  function project(extra: Record<string, unknown> = {}) {
+  function turnoutDoc(stateId: string, delta: number): StateDemographicTurnout {
+    return {
+      _id: stateId,
+      countryId: "US",
+      modifiers: { race: { [raceBucket]: delta } },
+    } as unknown as StateDemographicTurnout;
+  }
+
+  function project(context: CampaignProjectionContext) {
     return projectPrimaryByState({
       candidates: [makeCandidate("a"), makeCandidate("b")],
       candidateMeta: [
@@ -422,28 +422,25 @@ describe("turnout modifiers", () => {
       stateIds: ["IA"],
       stateMap,
       demographicsMap,
-      categories,
+      campaignContext: context,
       statePartyOrgs: new Map(),
       partyPosition,
-      ...extra,
     });
   }
 
-  it("responds when a group's turnout is pulled down", () => {
-    // The fixture has one group, so this scales the whole state's pool rather
-    // than shifting the balance between candidates. The point is that the
-    // projection reads the channel at all.
-    const base = project();
-    const damped = project({ liveTurnouts: { IA: { all: 10 } } });
+  it("is finite and deterministic", () => {
+    const first = project(campaignContext);
+    expect(project(campaignContext)).toEqual(first);
+    for (const votes of Object.values(first.byState.IA)) expect(Number.isFinite(votes)).toBe(true);
+  });
+
+  it("responds when a bucket's turnout is pulled down", () => {
+    const base = project(campaignContext);
+    const damped = project(makeContext([turnoutDoc("IA", -40)]));
     expect(damped.byState.IA.a).toBeLessThan(base.byState.IA.a);
   });
 
-  it("is unchanged when no turnout map is passed", () => {
-    // Every caller that has not been updated must behave exactly as before.
-    expect(project({ liveTurnouts: undefined })).toEqual(project());
-  });
-
-  it("ignores a turnout map that names no state the projection is running", () => {
-    expect(project({ liveTurnouts: { NH: { all: 10 } } })).toEqual(project());
+  it("ignores a turnout doc for a state the projection is not running", () => {
+    expect(project(makeContext([turnoutDoc("NH", -40)]))).toEqual(project(campaignContext));
   });
 });

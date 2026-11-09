@@ -27,7 +27,7 @@
  * No DB, no network. All inputs are local fixtures.
  */
 
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
 import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
@@ -307,7 +307,7 @@ function runGeneralScenario(sc: GeneralScenario): GeneralResult {
       totalPool, // effectiveTurnPool — single-shot, all in this call
       totalPool, // totalPool
       state.pop * 1_000_000, // statePopulation
-      electorateFromStoredGroups(demos, CATEGORIES),
+      electorateFromFixture(demos, CATEGORIES),
       partyOrgByParty,
       options
     );
@@ -400,7 +400,7 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
     const state = STATES.find((s) => s.id === stateId);
     if (!state) continue;
 
-    const baseElectorate = electorateFromStoredGroups(demographicsForState(state), CATEGORIES);
+    const baseElectorate = electorateFromFixture(demographicsForState(state), CATEGORIES);
     const primaryElectorate =
       sc.applyPrimaryShift === false
         ? baseElectorate

@@ -9,7 +9,6 @@ import {
 } from "@/lib/electionEngine/constants";
 
 vi.mock("@/lib/electionEngine", () => ({ fetchEnrichedCandidates: vi.fn() }));
-vi.mock("@/lib/demographics/categoryCatalog", () => ({ loadDemographicCategories: vi.fn() }));
 vi.mock("@/lib/primaryRegionalBonusLoader", () => ({ loadRegionalBonusMaps: vi.fn() }));
 vi.mock("@/lib/primaryProjection", () => ({ projectPrimaryByState: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn() }));
@@ -112,9 +111,6 @@ beforeEach(async () => {
 
   const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
   vi.mocked(fetchEnrichedCandidates).mockResolvedValue([] as never);
-
-  const { loadDemographicCategories } = await import("@/lib/demographics/categoryCatalog");
-  vi.mocked(loadDemographicCategories).mockResolvedValue([] as never);
 
   const { loadRegionalBonusMaps } = await import("@/lib/primaryRegionalBonusLoader");
   vi.mocked(loadRegionalBonusMaps).mockResolvedValue({
