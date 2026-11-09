@@ -6,6 +6,9 @@ import { UK_JR_SURPRISE_TEMPLATES } from "@/lib/countries/uk/judicialReview/surp
 import { UK_JR_SURPRISE_SPAWN_PROBABILITY_PER_TURN } from "@/lib/countries/uk/judicialReview/surpriseSpawn";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/country/countryTier", () => ({
+  getFullSimulationCountryIds: vi.fn().mockResolvedValue(["UK", "US"]),
+}));
 vi.mock("@/lib/billEnactment", () => ({ onBillEnacted: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/news", () => ({ createSystemNewsPost: vi.fn().mockResolvedValue(undefined) }));
 
@@ -43,11 +46,20 @@ describe("processUkJrSurpriseTurn", () => {
     expect(onBillEnacted).not.toHaveBeenCalled();
   });
 
+  it("does nothing in a world where the UK is not a full simulation country", async () => {
+    const { getFullSimulationCountryIds } = await import("@/lib/country/countryTier");
+    vi.mocked(getFullSimulationCountryIds).mockResolvedValueOnce(["US"] as never);
+    const { processUkJrSurpriseTurn } = await import("./ukJrSurpriseTurn");
+    const result = await processUkJrSurpriseTurn(10, db as unknown as Db, 0, 0);
+    expect(result.spawned).toBe(false);
+    expect(db.collectionMocks["ukJudicialReviewCases"]!.insertOne).not.toHaveBeenCalled();
+  });
+
   it("spawns, resolves via left-leaning ruling party, and enacts with uk_judicial_review_surprise source", async () => {
     db.collectionMocks["ukJudicialReviewCases"]!.find.mockReturnValue(cursor([]));
     db.collectionMocks["governmentFormations"]!.findOne.mockResolvedValue({
       status: "formed",
-      rulingPartyId: "1",
+      governingPartyId: "1",
     });
     db.collectionMocks["politicalParties"]!.findOne.mockResolvedValue({
       sequentialId: 1,

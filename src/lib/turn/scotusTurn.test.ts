@@ -18,6 +18,9 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
+vi.mock("./scotusNppNominationTurn", () => ({
+  processScotusNppNominations: vi.fn().mockResolvedValue({ nominated: 0 }),
+}));
 vi.mock("@/lib/billEnactment", () => ({ onBillEnacted: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/congress/governmentVoteBreakdown", () => ({
   computeCabinetNominationTally: vi
