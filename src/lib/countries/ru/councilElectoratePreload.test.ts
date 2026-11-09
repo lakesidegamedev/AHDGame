@@ -6,7 +6,6 @@ import { bindBallotElectorate as bind } from "@/lib/electionEngine/ballotElector
 
 function fixture() {
   const preload = {
-    categories: [],
     stateMap: new Map([
       ["CEN", { _id: "CEN", population: 10000, votingEligiblePopulation: 7500 } as State],
       ["VOL", { _id: "VOL", population: 8000, votingEligiblePopulation: 6000 } as State],

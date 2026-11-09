@@ -22,14 +22,14 @@ import { describe, expect, it } from "vitest";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 interface Fixture {
   name: string;
   candidates: EnrichedCandidate[];
   orgs: Map<string, number>;
   regs: Map<string, number>;
-  demographics: StateDemographics;
+  demographics: CensusGroupView;
 }
 
 // All fixtures share these category definitions (income-based grouping
@@ -58,7 +58,7 @@ const categories: DemographicCategory[] = [
   } as unknown as DemographicCategory,
 ];
 
-function demographics(blueWeight: number): StateDemographics {
+function demographics(blueWeight: number): CensusGroupView {
   // blueWeight is the fraction of the state's voters in the low-income
   // (Dem-leaning) bucket. 0.5 = balanced. >0.5 = blue-leaning state.
   // <0.5 = red-leaning state.
@@ -69,7 +69,7 @@ function demographics(blueWeight: number): StateDemographics {
       low: { population: blueWeight * 100, turnout: 55, economicLean: -1, socialLean: 0 },
       high: { population: (1 - blueWeight) * 100, turnout: 65, economicLean: 1, socialLean: 0 },
     },
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 }
 
 function candidate(party: string, support: number, ep: number, sp: number): EnrichedCandidate {

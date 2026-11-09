@@ -7,7 +7,7 @@
  * region and this folds them together.
  */
 import type { ElectorateUnit } from "./electorateUnit";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView, StateDemographics } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import {
   GRANULAR_CATEGORY_ID,
@@ -109,7 +109,7 @@ export function mergeRegionalSubstrates(
 
   const units: GranularElectorateUnit[] = [];
   const electorate: ElectorateUnit[] = [];
-  const groups: StateDemographics["groups"] = {};
+  const groups: CensusGroupView["groups"] = {};
   const liveTurnouts: Record<string, number> = {};
   const categoryGroups: GranularSubstrate["categories"][number]["groups"] = [];
   merged.forEach((acc, index) => {

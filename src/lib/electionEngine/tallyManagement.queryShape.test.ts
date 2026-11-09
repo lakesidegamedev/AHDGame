@@ -27,7 +27,7 @@ import type {
   Election,
   ElectionCandidate,
   ElectionVoteTally,
-  StateDemographics,
+  CensusGroupView,
   State,
   DemographicCategory,
 } from "@/lib/db/types";
@@ -120,7 +120,7 @@ function makeEnriched(candidateId: string): EnrichedCandidate {
   };
 }
 
-function makeDemographics(): StateDemographics {
+function makeDemographics(): CensusGroupView {
   return {
     _id: "PA",
     countryId: "US",

@@ -113,6 +113,25 @@
       }
     },
     "sectorInvestment": {
+      "fundedAdvice": {
+        "title": "Funded buyer demand",
+        "titleTurn": "Funded buyer demand, turn {turn, number, ::group-off}",
+        "unknown": "Not measured",
+        "caption": "Orders and deliveries in commodity units per day",
+        "outputMarket": "Output / market",
+        "funded": "Funded",
+        "delivered": "Delivered",
+        "unfilled": "Unfilled",
+        "regional": "Regional",
+        "national": "National",
+        "scopeNote": "Units per day. National figures include regional buyers; do not add the rows. Only markets this output can serve are shown. International orders are not included in this domestic estimate.",
+        "salesNote": "Unfilled orders are not guaranteed sales at your price. Existing idle capacity and queued builds can reach these buyers first. Mixed-output plants may sell one product while another remains unsold.",
+        "limits": "Funded demand and expansion limits",
+        "someUnfilled": "Funded buyers remain unfilled for at least one output. The table shows each market separately. Automatic sizing also allows for existing capacity, queued builds and every output in this plant's mix.",
+        "someUnknown": "Some funded demand figures have not been measured for this market yet. Missing figures do not mean there are no buyers.",
+        "noneUnfilled": "No unfilled funded domestic orders were recorded for these outputs in this turn. This is not an estimate of international demand or sales you could win from competitors.",
+        "noLocalCompetitors": "No competitors of this sector type are listed in this region. This does not establish buyer demand or exclude competitors in a shared national market."
+      },
       "advertisingCampaignsCounted": "Advertising campaigns counted: {units}/day ({factor} media output factor)",
       "advertisingCampaignsLabel": "Advertising campaigns counted",
       "advertisingCampaignsValue": "{units}/day ({factor} factor)",
@@ -1088,6 +1107,9 @@
       "heldByCashHelp": "You sold everything you made, but your company could not pay for the whole run, so your {sites} are held below their plan, not ramping up. Add cash or cut costs to run the full plan."
     },
     "commodityMarket": {
+      "supplyOfferedPerDay": "offered per day",
+      "supplyIncludesStock": "includes unsold stock",
+      "supplyOfferedExplanation": "Supply is what producers put up for sale each turn: the stock they could not sell earlier plus what they plan to make now. Stock that stays unsold is counted again every turn, so this can be well above what is actually produced. Producer rankings below use capacity and consumer rankings use estimated plant inputs, so they will not add up to this figure.",
       "substitutionOrders": "plus {units} substitution orders",
       "substitutionOrdersExplanation": "Households placed these after their first choice sold out. They are not counted as demand here, so they do not make this good read as short."
     },

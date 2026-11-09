@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { State, StateDemographics } from "@/lib/db/types";
+import type { State, CensusGroupView } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import { buildNationalSubstrate } from "@/lib/electionEngine/nationwideElectorate";
 import type { GranularElectorateUnit, GranularSubstrate } from "./granularElectorate";
 import { mergeRegionalSubstrates } from "./nationalElectorate";
 
-const national: StateDemographics = {
+const national: CensusGroupView = {
   _id: "IE",
   countryId: "IE",
   categoryWeights: {},
@@ -189,14 +189,14 @@ describe("buildNationalSubstrate", () => {
       stateSenateSeats: 0,
       region: "Synthetic",
     }) as State;
-  const demographicsFor = (id: string): StateDemographics => ({
+  const demographicsFor = (id: string): CensusGroupView => ({
     _id: id,
     countryId: "IE",
     categoryWeights: {},
     groups: {},
     lastUpdated: new Date(0),
   });
-  const base = (stateMap: Map<string, State>, demographicsMap: Map<string, StateDemographics>) => ({
+  const base = (stateMap: Map<string, State>, demographicsMap: Map<string, CensusGroupView>) => ({
     countryId: "IE" as const,
     nationalDemographics: national,
     stateMap,

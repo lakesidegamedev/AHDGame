@@ -119,6 +119,7 @@ import {
 import type {
   DemographicCategory,
   Layer1PositionOverlay,
+  CensusGroupView,
   Layer1TurnoutOverlay,
   StateDemographics,
 } from "@/lib/db/types";
@@ -272,7 +273,7 @@ export interface GranularSubstrate {
    * Group-shaped view of the same units, kept only for the lean and weighting
    * helpers that still read stored-group rows.
    */
-  demographics: StateDemographics;
+  demographics: CensusGroupView;
   categories: DemographicCategory[];
   liveTurnouts: Record<string, number>;
   /** Weighted turnout pool over units (replaces `resolveTurnout().totalPool`). */
@@ -897,7 +898,7 @@ export function buildGranularElectorateSubstrate(
   const liveTurnouts: Record<string, number> = {};
   const participationLedgers: Record<string, ParticipationLedger> = {};
   const electorate: ElectorateUnit[] = [];
-  const groups: StateDemographics["groups"] = {};
+  const groups: CensusGroupView["groups"] = {};
   const categoryGroups: DemographicCategory["groups"] = [];
   let pool = 0;
   for (const unit of units) {
@@ -969,7 +970,7 @@ export function buildGranularElectorateSubstrate(
       groups: categoryGroups,
     },
   ];
-  const demographics: StateDemographics = {
+  const demographics: CensusGroupView = {
     ...input.demographics,
     categoryWeights: { [GRANULAR_CATEGORY_ID]: 100 },
     groups,

@@ -1256,6 +1256,7 @@ export async function runFundedProducerTurn(
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       laneClearingPrices,
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
+      ...(settled.result.regionalBooks ? { regionalBuildBooks: settled.result.regionalBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
       ...(restartOn && pressureNow
         ? {

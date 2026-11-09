@@ -27,6 +27,12 @@ const PlannedEconomyPanel = dynamic(
   () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
   { ssr: false }
 );
+// The multi-turn history chart fetches its own series and sits below the fold,
+// so it loads after the masthead and pulse strip rather than with first paint.
+const NationalHistoryPanel = dynamic(
+  () => import("@/components/economy/NationalHistoryPanel").then((m) => m.NationalHistoryPanel),
+  { ssr: false }
+);
 
 /**
  * National Economic Outlook page client — masthead with verdict seal and the
@@ -177,6 +183,8 @@ export function EconomyOutlookClient() {
                 </div>
               </div>
             </div>
+
+            <NationalHistoryPanel countryId={countryId} />
           </>
         )}
       </main>

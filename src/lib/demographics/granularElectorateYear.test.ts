@@ -8,7 +8,7 @@
  * one year's cells for another year.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import {
   buildGranularElectorateSubstrate,
@@ -22,7 +22,7 @@ const LEGACY_DEMOGRAPHICS = {
   _id: "AL",
   countryId: "US",
   groups: {},
-} as unknown as StateDemographics;
+} as unknown as CensusGroupView;
 
 function candidate(id: string, party: string, ep: number, sp: number): EnrichedCandidate {
   return {

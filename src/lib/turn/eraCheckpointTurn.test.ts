@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { StateDemographics } from "@/lib/db/types/demographics";
+import type { CensusGroupView } from "@/lib/db/types/demographics";
 import type { DocketCase } from "@/lib/db/types/scotus";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
@@ -91,8 +91,8 @@ function createFakeDb(fixtures: {
   docketCases: DocketCase[];
   legislationTypes: LegislationType[];
   statePolicies: StatePolicy[];
-  stateDemographics: StateDemographics[];
-  demographicDefaults: StateDemographics[];
+  stateDemographics: CensusGroupView[];
+  demographicDefaults: CensusGroupView[];
   macroMetrics?: Array<{ _id: string } & Record<string, unknown>>;
 }) {
   const collections = {
@@ -118,7 +118,7 @@ function makeGroup(economicLean: number, socialLean: number) {
   return { population: 20, economicLean, socialLean, turnout: 60 };
 }
 
-function makeStateDemographics(stateId: string): StateDemographics {
+function makeStateDemographics(stateId: string): CensusGroupView {
   return {
     _id: stateId,
     countryId: "US",
@@ -155,7 +155,7 @@ const DECIDED_DIVERGED_CASE: DocketCase = {
 
 /** `demographicDefaults.layer1PositionOverrides[dim][bucket][axis]`, or 0. */
 function overlay(
-  doc: StateDemographics,
+  doc: CensusGroupView,
   dim: string,
   bucket: string,
   axis: "economicLean" | "socialLean"
@@ -637,7 +637,7 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
   };
 
   function overlayValue(
-    doc: StateDemographics,
+    doc: CensusGroupView,
     dim: string,
     bucket: string,
     axis: "economicLean" | "socialLean"

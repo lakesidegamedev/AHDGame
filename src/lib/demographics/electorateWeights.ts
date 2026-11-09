@@ -32,7 +32,6 @@ export function electorateUnitsByRegion(
       demographics: {
         ...doc,
         categoryWeights: {},
-        groups: {},
         lastUpdated: new Date(0),
       },
       demographicDefaults: (defaults.get(`${doc.countryId}:${doc._id}`) ??

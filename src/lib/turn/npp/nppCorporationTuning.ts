@@ -77,7 +77,7 @@ export const NPP_REINVEST_MAINTENANCE_CASH_SHARE = 0.25;
 
 // Anchor-denominated rails gate expansion, dividends, and growth capex. Their
 // ratios preserve a cash buffer while fitting the 1953 economy scale.
-export const CASH_FLOOR = 250_000; // Never spend below this
+export const CASH_FLOOR = 200_000; // Never spend below this
 export const EXPANSION_COST = 500_000;
 export const EXPANSION_MIN_CASH = 625_000; // Need this much above floor to expand
 export const EXPANSION_MIN_MARGIN = 15; // Corp-level avg margin must be healthy
@@ -124,7 +124,7 @@ export const NPP_FOUNDING_HEADROOM_SHARE = 0.5;
 export const NPP_EXTRACTION_FOUNDING_MAX_FACILITIES = 8;
 
 // Archetypes may scale the rails but never remove the minimum buffer.
-export const SAFE_CASH_FLOOR_MIN = 125_000; // an aggressive floor still leaves a buffer
+export const SAFE_CASH_FLOOR_MIN = 100_000; // an aggressive floor still leaves a buffer
 export const MAX_DIVIDEND_RATE = 12; // cap any archetype-boosted payout
 
 /** Default archetype for corps whose CEO NPP can't be resolved (legacy / mid-migration). */

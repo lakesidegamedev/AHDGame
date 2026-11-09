@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * UK region demographics, 1991 era.
@@ -23,7 +23,7 @@ import type { StateDemographics } from "@/lib/db/types";
  *   the South West and southern England.
  * - Turnout still healthy (77.7% at the 1992 GE).
  */
-export const ukRegionDemographics1991: StateDemographics[] = [
+export const ukRegionDemographics1991: CensusGroupView[] = [
   // ── London ─────────────────────────────────────────────────────────────────
   // Docklands redevelopment, Big Bang finance boom and bust, growing graduate
   // professional class; inner boroughs solidly Labour, suburbs Tory.

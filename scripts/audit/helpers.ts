@@ -15,7 +15,7 @@ import {
   distributeVotesByGroupLevelAllocation,
 } from "../../src/lib/electionEngine";
 import type { EnrichedCandidate } from "../../src/lib/electionEngine";
-import type { StateDemographics } from "../../src/lib/db/types/demographics";
+import type { CensusGroupView } from "../../src/lib/db/types/demographics";
 
 export { normalizeNPI } from "../../src/lib/utils/normalizeNPI";
 export { calcAppeal, approvalScalar, MAX_APPEAL } from "../../src/lib/utils/demographicAppeal";
@@ -38,7 +38,7 @@ export { calculateStateLean } from "../../src/lib/utils/demographics";
 
 export const categories = demographicCategories;
 
-export const STATE_DEMOGRAPHICS: Record<string, StateDemographics> = {};
+export const STATE_DEMOGRAPHICS: Record<string, CensusGroupView> = {};
 for (const sd of stateDemographics) {
   STATE_DEMOGRAPHICS[sd._id] = sd;
 }

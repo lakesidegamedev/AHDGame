@@ -552,7 +552,7 @@ export async function buildRegionEconomyResponse({
           identity.industryModel,
           identity.mediaDiscriminator
         ).supply ?? {};
-      const countryShared = supplyMixSharesCountryDemand(supplyMix);
+      const countryShared = supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
       room = {
         units: buildRoomUnits(
           buildRoom.demandGapUnits(supplyMix, stateId, state.countryId ?? countryId),

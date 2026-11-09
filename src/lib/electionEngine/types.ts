@@ -3,7 +3,6 @@
  */
 
 import type {
-  DemographicCategory,
   State,
   StateDemographics,
   StateDemographicTurnout,
@@ -458,7 +457,6 @@ export interface AccumulateVoteTurnPreload {
    * from the map keep the full pool (no registration data seeded).
    */
   registrationPoolByState?: Map<string, StateRegistrationPool>;
-  categories: DemographicCategory[];
   stateMap: Map<string, State>;
   demographicsMap: Map<string, StateDemographics>;
   statePartyOrgsByState: Map<string, StatePartyOrg[]>;

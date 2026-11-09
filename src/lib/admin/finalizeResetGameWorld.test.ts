@@ -5,7 +5,7 @@ import type { ResetGameWorldResult } from "@/lib/admin/resetGameWorld";
 import { getPresetById } from "@/lib/constants/historicalSeats";
 import { jpRegions1991 } from "@/lib/countries/jp/data/jpRegions1991";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * These behaviours used to live in `resetGameWorld` and are tested here because
@@ -88,7 +88,7 @@ describe("finalizeResetGameWorld", () => {
       countryId: "JP",
       categoryWeights: { jp: 100 },
       groups: {},
-    } as unknown as StateDemographics;
+    } as unknown as CensusGroupView;
     const expected = censusCachedStateLean(demo, {
       countryId: "JP",
       stateId: regionId,

@@ -24,7 +24,7 @@ import {
   INCUMBENCY_BUDGET,
 } from "./persuasionDrivers";
 import type { EnrichedCandidate } from "./types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 // Two-party FPTP fixture: Dem vs Rep in a single state with two
 // demographic groups. Identical position / Support / influence — only
@@ -90,7 +90,7 @@ function fixtureCategories(): DemographicCategory[] {
   ];
 }
 
-function fixtureDemographics(): StateDemographics {
+function fixtureDemographics(): CensusGroupView {
   // Equal turnout + mirror leans across the two groups so symmetric
   // (Dem at (-1,-1), Rep at (+1,+1)) candidates net to identical
   // statewide appeal. Asymmetric turnout would bias toward whichever
@@ -102,7 +102,7 @@ function fixtureDemographics(): StateDemographics {
       low: { population: 50, turnout: 60, economicLean: -1, socialLean: 0 },
       high: { population: 50, turnout: 60, economicLean: 1, socialLean: 0 },
     },
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 }
 
 describe("transferableShare curve", () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { State, StateDemographics } from "@/lib/db/types";
+import type { State, CensusGroupView } from "@/lib/db/types";
 import { computeLeanMap } from "@/lib/map/leanService";
 import { censusStateLean } from "./censusLean";
 
-const demographics = (id: string): StateDemographics => ({
+const demographics = (id: string): CensusGroupView => ({
   _id: id,
   countryId: "IE",
   categoryWeights: {},
@@ -36,7 +36,7 @@ describe("censusStateLean", () => {
 });
 
 describe("computeLeanMap", () => {
-  const dbWith = (states: Partial<State>[], docs: StateDemographics[]) =>
+  const dbWith = (states: Partial<State>[], docs: CensusGroupView[]) =>
     ({
       collection: (name: string) => ({
         find: () => ({ toArray: async () => (name === "states" ? states : docs) }),

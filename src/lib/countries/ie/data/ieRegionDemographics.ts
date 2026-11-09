@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Ireland planning region demographic composition using the 8 IE voter archetypes.
@@ -15,7 +15,7 @@ import type { StateDemographics } from "@/lib/db/types";
  * small_business; the Border region has a markedly higher border_communities
  * share.
  */
-export const ieRegionDemographics: StateDemographics[] = [
+export const ieRegionDemographics: CensusGroupView[] = [
   // ── Leinster ───────────────────────────────────────────────────────────────
 
   // Dublin: Ireland's capital and economic hub — tech FDI, finance, young

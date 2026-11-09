@@ -10,7 +10,7 @@ import {
   type Layer1Config,
 } from "@/lib/seeds/stateDemographicsPure";
 import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
-import type { StateDemographics, DemographicCategory } from "@/lib/db/types";
+import type { CensusGroupView, DemographicCategory } from "@/lib/db/types";
 import type { EditorStateConfig, EditorLayer1Config, DerivedComposition, EraId } from "./types";
 import type { CountryLayer1Model } from "@/lib/seeds/international/types";
 
@@ -350,7 +350,7 @@ export function computeDerivedComposition(
   };
   const populations = deriveGroupPopulations(seed, era, override);
 
-  const groups: StateDemographics["groups"] = {};
+  const groups: CensusGroupView["groups"] = {};
   const rows = comp.groupIds.map((id) => {
     const lean = deriveGroupLeanFromLayer1(id, seed, era, positionsOverride, override, cfg.stateId);
     const turnout = deriveGroupTurnout(
@@ -390,9 +390,9 @@ export function computeDerivedComposition(
     turnout: r.turnout,
   }));
 
-  const stateDemo: StateDemographics = {
+  const stateDemo: CensusGroupView = {
     _id: cfg.stateId,
-    countryId: cfg.countryId as StateDemographics["countryId"],
+    countryId: cfg.countryId as CensusGroupView["countryId"],
     categoryWeights: { voterGroups: 100 },
     groups,
     lastUpdated: new Date(),

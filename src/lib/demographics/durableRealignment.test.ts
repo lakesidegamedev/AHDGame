@@ -6,7 +6,7 @@
  * a durable shift reaches both vote paths identically.
  */
 import { describe, it, expect } from "vitest";
-import type { StateDemographics } from "@/lib/db/types/demographics";
+import type { CensusGroupView } from "@/lib/db/types/demographics";
 import {
   applyDurableStep,
   applyDurableBucketShift,
@@ -40,13 +40,13 @@ describe("readLayer1Overlay / readLayer1TurnoutOverlay", () => {
       categoryWeights: {},
       groups: {},
       lastUpdated: new Date(),
-    } as StateDemographics;
+    } as CensusGroupView;
     expect(readLayer1Overlay(defaults, "race", "white", "economicLean")).toBe(0);
     expect(readLayer1TurnoutOverlay(defaults, "race", "black")).toBe(0);
   });
 
   it("reads the stored value when present", () => {
-    const defaults: StateDemographics = {
+    const defaults: CensusGroupView = {
       _id: "AL",
       countryId: "US",
       categoryWeights: {},

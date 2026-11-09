@@ -19,7 +19,7 @@ import type {
   Election,
   ElectionCandidate,
   ElectionVoteTally,
-  StateDemographics,
+  CensusGroupView,
   State,
   DemographicCategory,
 } from "@/lib/db/types";
@@ -134,7 +134,7 @@ function makeEnriched(
   };
 }
 
-function makeDemographics(): StateDemographics {
+function makeDemographics(): CensusGroupView {
   return {
     _id: "PA",
     countryId: "US",
@@ -1531,7 +1531,6 @@ describe("accumulateVoteTurn — preload option", () => {
 
     const preloadedState = makeState();
     const preloadedDemographics = makeDemographics();
-    const preloadedCategories = [makeCategory()];
 
     vi.mocked(getStateApprovalForElection).mockResolvedValue(50);
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue([makeEnriched(candidateId)]);
@@ -1552,7 +1551,6 @@ describe("accumulateVoteTurn — preload option", () => {
       preload: {
         stateMap: new Map([["PA", preloadedState]]),
         demographicsMap: new Map([["PA", preloadedDemographics]]),
-        categories: preloadedCategories,
         statePartyOrgsByState: new Map(),
         turnoutByState: new Map(),
         turnMemo,

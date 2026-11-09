@@ -22,10 +22,10 @@ interface FixtureCategory {
  * census. Production code reads the census substrate only.
  */
 export function electorateFromFixture(
-  demographics: { categoryWeights: Record<string, number | undefined>; groups: object },
+  demographics: { categoryWeights: Record<string, number | undefined>; groups?: object },
   categories: readonly FixtureCategory[]
 ): ElectorateUnit[] {
-  const stored = demographics.groups as Record<string, FixtureGroup | undefined>;
+  const stored = (demographics.groups ?? {}) as Record<string, FixtureGroup | undefined>;
   const units: ElectorateUnit[] = [];
   for (const category of categories) {
     const categoryWeight = demographics.categoryWeights[category._id] ?? 0;

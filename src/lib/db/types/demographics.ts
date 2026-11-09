@@ -83,7 +83,6 @@ export interface StateDemographics {
   _id: string;
   countryId: CountryId;
   categoryWeights: CategoryWeights;
-  groups: Record<string, StateDemographicGroup>;
   cachedEconomicLean?: number;
   cachedSocialLean?: number;
   lastUpdated: Date;
@@ -113,4 +112,13 @@ export interface StateDemographics {
     slantSocial?: number;
     strength: number;
   };
+}
+
+/**
+ * Group-shaped view of a region's census units, built by the census substrate
+ * and the seed generators for the lean and weighting helpers. It is never
+ * stored: persisted `stateDemographics` documents carry no group rows.
+ */
+export interface CensusGroupView extends StateDemographics {
+  groups: Record<string, StateDemographicGroup>;
 }

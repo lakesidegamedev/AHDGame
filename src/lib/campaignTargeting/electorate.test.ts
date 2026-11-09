@@ -32,7 +32,6 @@ const input: GranularSubstrateInput = {
     _id: "PA",
     countryId: "US",
     categoryWeights: {},
-    groups: {},
     lastUpdated: new Date(0),
   },
   enriched: [candidate("A"), candidate("B")],

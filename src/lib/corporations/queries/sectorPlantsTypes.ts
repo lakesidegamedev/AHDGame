@@ -149,6 +149,9 @@ export interface SectorPlantsSection {
   demandGapUnits: number;
   /** Conservative construction-capacity room after idle capacity and queues; excludes latent demand. */
   measuredDemandGapUnits?: number | null;
+  /** Cash-backed orders in each output's actual market. National rows include the region. */
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
   /**
    * True when this sector's own demand throttle bound last turn. Its idle
    * capacity is what buyers' room fills first (output can climb by the probe

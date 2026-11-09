@@ -11,7 +11,7 @@ import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation, calcStateTurnout } from "@/lib/electionEngine";
 import type { EnrichedCandidate } from "@/lib/electionEngine";
-import type { StateDemographics, DemographicCategory } from "@/lib/db/types";
+import type { CensusGroupView, DemographicCategory } from "@/lib/db/types";
 
 // Test data: Simplified demographics
 const TEST_CATEGORIES: DemographicCategory[] = [
@@ -45,7 +45,7 @@ const TEST_CATEGORIES: DemographicCategory[] = [
   },
 ];
 
-const TEST_DEMOGRAPHICS: StateDemographics = {
+const TEST_DEMOGRAPHICS: CensusGroupView = {
   _id: "TEST_STATE",
   countryId: "US",
   categoryWeights: { voterGroups: 100 },

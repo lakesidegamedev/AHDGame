@@ -17,25 +17,25 @@ import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine";
 import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine";
-import type { StateDemographics, DemographicCategory } from "@/lib/db/types";
+import type { CensusGroupView, DemographicCategory } from "@/lib/db/types";
 
 // ─── FPTP vote-splitting (spoiler effect) ────────────────────────────────────
 //
-// We need a minimal StateDemographics / DemographicCategory setup.
+// We need a minimal CensusGroupView / DemographicCategory setup.
 // One category, one group, population 100%, turnout 100%, neutral lean (0,0).
 
 function makeDemographics(): {
-  demographics: StateDemographics;
+  demographics: CensusGroupView;
   categories: DemographicCategory[];
 } {
-  const demographics: StateDemographics = {
+  const demographics: CensusGroupView = {
     _id: "TX",
     stateId: "TX",
     categoryWeights: { ideology: 100 },
     groups: {
       moderate: { population: 100, economicLean: 0, socialLean: 0, turnout: 100 },
     },
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 
   const categories: DemographicCategory[] = [
     {
