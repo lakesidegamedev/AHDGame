@@ -174,6 +174,18 @@ async function incTreasuryBalance(
   return (result?.matchedCount ?? 0) > 0;
 }
 
+/** The country's Treasury account identity, for receipts that must freeze the exact document. */
+async function loadTreasuryAccount(
+  db: Db,
+  countryId: CountryId
+): Promise<{ _id: FederalBudget["_id"] }> {
+  const treasury = await db
+    .collection<FederalBudget>("federalBudget")
+    .findOne({ countryId }, { projection: { _id: 1 } });
+  if (!treasury) throw new Error(`Treasury for ${countryId} is unavailable`);
+  return treasury;
+}
+
 /** Resolve the denomination of the persisted treasury, including 2027 EUR budgets. */
 export async function loadTreasuryCurrency(db: Db, countryId: CountryId): Promise<CurrencyCode> {
   const budget = await db
@@ -562,10 +574,7 @@ export async function collectFundedCorporationPayment(
     treasuryCurrency
   );
   if (!(treasuryAmount > 0)) return 0;
-  const treasury = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: input.countryId }, { projection: { _id: 1 } });
-  if (!treasury) throw new Error(`Treasury for ${input.countryId} is unavailable`);
+  const treasury = await loadTreasuryAccount(db, input.countryId);
 
   const key = `treasury-corporation-payment:${input.key}`;
   const settled = await settleTransition(db, {
@@ -840,10 +849,7 @@ export async function remitToTreasury(
     }).anchorRate;
     const amountAnchor = amount / corporationRate;
     const treasuryAmount = roundSavingsAmount(amountAnchor * treasuryRate, treasuryCurrency);
-    const treasury = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: input.countryId }, { projection: { _id: 1 } });
-    if (!treasury) throw new Error(`Treasury for ${input.countryId} is unavailable`);
+    const treasury = await loadTreasuryAccount(db, input.countryId);
     const settled = await settleTransition(db, {
       key,
       kind: "soe_profit_remittance",
