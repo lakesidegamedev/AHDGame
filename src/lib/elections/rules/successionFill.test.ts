@@ -4,6 +4,7 @@ import {
   describeSuccession,
   executiveStatusPayload,
   largestBlocParty,
+  ownsPresidentialBallot,
   pickSuccessor,
   seededRng,
   successionFillAction,
@@ -94,6 +95,16 @@ describe("executive status payload", () => {
       caretaker
     );
     expect(executiveStatusPayload({ status: "formed", caretaker }, 10).caretaker).toBeNull();
+  });
+
+  it("flags a presidency that runs on its own constitutional ballot", () => {
+    const gov = { succession: vacancy("RU", "presidential") };
+    expect(executiveStatusPayload(gov, 101, true).succession?.note).toContain("own constitutional");
+    expect(executiveStatusPayload(gov, 101).succession?.note).toBeNull();
+    expect(ownsPresidentialBallot("RU", "1991-default")).toBe(true);
+    expect(ownsPresidentialBallot("RU", "2027-default")).toBe(false);
+    expect(ownsPresidentialBallot("FR", "1991-default")).toBe(false);
+    expect(ownsPresidentialBallot("RU", undefined)).toBe(false);
   });
 
   it("is empty when the office is held", () => {

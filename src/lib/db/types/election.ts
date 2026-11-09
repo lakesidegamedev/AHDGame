@@ -33,6 +33,9 @@ export interface Election {
   brazilPresidentialRound?: 1 | 2;
   brazilPresidentialMode?: "plurality" | "indirect" | "majority";
   brazilPresidentialPredecessorId?: ObjectId;
+  /** Round of a two-round special presidential election; absent means round one. */
+  specialPresidentRound?: 1 | 2;
+  specialPresidentPredecessorId?: ObjectId;
   /** A modern Hungarian vacancy ballot freezes one existing district and electorate. */
   hungarianModernByElection?: {
     receiptId: string;

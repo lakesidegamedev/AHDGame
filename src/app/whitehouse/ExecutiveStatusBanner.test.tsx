@@ -14,6 +14,7 @@ const succession = {
   actingUntilTurn: 169,
   fillByTurn: 337,
   summary: "Office vacant. Prime Minister is acting until a special election.",
+  note: null,
 };
 
 afterEach(cleanup);
@@ -30,6 +31,20 @@ describe("ExecutiveStatusBanner", () => {
     render(<ExecutiveStatusBanner status={{ succession, caretaker: null }} />);
     expect(screen.getByTestId("executive-status-banner").textContent).toContain(
       "Prime Minister is acting"
+    );
+  });
+
+  it("shows the note when the office is filled by its own ballot", () => {
+    render(
+      <ExecutiveStatusBanner
+        status={{
+          succession: { ...succession, note: "Filled through its own constitutional ballot." },
+          caretaker: null,
+        }}
+      />
+    );
+    expect(screen.getByTestId("executive-status-banner").textContent).toContain(
+      "own constitutional ballot"
     );
   });
 

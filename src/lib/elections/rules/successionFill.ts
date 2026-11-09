@@ -14,6 +14,20 @@ export const SUCCESSION_ELECTION_GENERAL_TURNS = 24;
 /** After a special election resolves with the office still empty, wait this long before another. */
 export const SUCCESSION_ELECTION_RETRY_COOLDOWN_TURNS = 48;
 
+/** Presets where a country's presidency already runs on its own constitutional ballot machinery. */
+const OWN_PRESIDENTIAL_BALLOT_PRESETS: Readonly<Record<string, readonly string[]>> = {
+  RU: ["1991-default"],
+};
+
+export function ownsPresidentialBallot(countryId: string, preset: string | undefined): boolean {
+  return (
+    preset !== undefined && OWN_PRESIDENTIAL_BALLOT_PRESETS[countryId]?.includes(preset) === true
+  );
+}
+
+const OWN_BALLOT_NOTE =
+  "This presidency is filled through its own constitutional ballot, so no special election is scheduled here.";
+
 export type SuccessionFillAction = "none" | "spawn_election" | "hold_vote";
 
 /** Deterministic rng from a string seed, so the same vacancy and turn always elect the same member. */
@@ -110,6 +124,8 @@ export interface SuccessionView {
   fillByTurn: number;
   /** Short line for a status strip. */
   summary: string;
+  /** Extra line when the office is not filled by the usual route, null otherwise. */
+  note: string | null;
 }
 
 const FILL_PHRASE: Record<SuccessionFill, string> = {
@@ -123,7 +139,8 @@ const FILL_PHRASE: Record<SuccessionFill, string> = {
 /** The player-facing description of an open succession. */
 export function describeSuccession(
   succession: SuccessionViewInput,
-  currentTurn: number
+  currentTurn: number,
+  ownBallot = false
 ): SuccessionView {
   const stage = successionStage(succession, currentTurn);
   const phrase = FILL_PHRASE[succession.fill];
@@ -142,6 +159,7 @@ export function describeSuccession(
     actingUntilTurn: succession.actingUntilTurn,
     fillByTurn: succession.fillByTurn,
     summary,
+    note: ownBallot && succession.fill === "direct_election" ? OWN_BALLOT_NOTE : null,
   };
 }
 
@@ -159,10 +177,11 @@ export interface ExecutiveStatusDocument extends CaretakerGovernmentView {
 /** The succession and caretaker state a hub or API consumer needs, from the government document. */
 export function executiveStatusPayload(
   gov: ExecutiveStatusDocument | null | undefined,
-  currentTurn: number
+  currentTurn: number,
+  ownBallot = false
 ): ExecutiveStatusPayload {
   return {
-    succession: gov?.succession ? describeSuccession(gov.succession, currentTurn) : null,
+    succession: gov?.succession ? describeSuccession(gov.succession, currentTurn, ownBallot) : null,
     caretaker: isCaretakerActive(gov) ? (gov?.caretaker ?? null) : null,
   };
 }

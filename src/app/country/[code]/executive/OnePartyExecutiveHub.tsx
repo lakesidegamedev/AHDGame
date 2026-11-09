@@ -27,6 +27,8 @@ import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { getCountryState } from "@/lib/countryState";
 import { ParliamentaryGovernmentActions } from "./components/ParliamentaryGovernmentActions";
 import { ExecutiveTabsClient } from "./ExecutiveTabsClient";
+import { ExecutiveStatusBanner } from "@/app/whitehouse/ExecutiveStatusBanner";
+import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { formationTurnToLarpDate } from "@/lib/government/formationDate";
 import {
   checkAppointmentEligibility,
@@ -891,6 +893,9 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       quickLinksMode="hub"
       countryId={countryId}
     >
+      <ExecutiveStatusBanner
+        status={executiveStatusPayload(govFormation, executiveGameTime.currentTurn)}
+      />
       <ExecutiveTabsClient
         countryId={countryId}
         viewerIsLeader={viewerIsLeader}
