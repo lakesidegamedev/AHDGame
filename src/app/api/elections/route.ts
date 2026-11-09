@@ -58,7 +58,7 @@ async function handleGet(request: Request) {
         (election.countryId ?? "US") as CountryId
       );
 
-      const isNational = ["president", "primeMinister", "uachtaran"].includes(
+      const isNational = ["president", "special_president", "primeMinister", "uachtaran"].includes(
         election.electionType
       );
       return NextResponse.json({

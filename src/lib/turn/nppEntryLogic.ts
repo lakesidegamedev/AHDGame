@@ -3,7 +3,10 @@
  */
 
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
-import { isElectionTypeEntryBlocked } from "@/lib/elections/nationwideExecutive";
+import {
+  isElectionTypeEntryBlocked,
+  isPresidentialElectionType,
+} from "@/lib/elections/nationwideExecutive";
 import { getRacePriority } from "@/lib/turn/rules/nppElectionPriority";
 
 export {
@@ -77,7 +80,7 @@ export function shouldEnterPrimary(
   now: Date
 ): boolean {
   // NPPs may not enter presidential races
-  if (election.electionType === "president") return false;
+  if (isPresidentialElectionType(election.electionType)) return false;
   if (isElectionTypeEntryBlocked(election.electionType)) return false;
 
   // Check cooldown for this specific election
@@ -108,7 +111,7 @@ export function shouldDefendPrimary(
   election: Election,
   existingCandidates: ElectionCandidate[]
 ): boolean {
-  if (election.electionType === "president") return false;
+  if (isPresidentialElectionType(election.electionType)) return false;
   if (isElectionTypeEntryBlocked(election.electionType)) return false;
 
   const alreadyActiveForSeat = existingCandidates.some(
@@ -132,7 +135,7 @@ export function selectBestPrimary(
   // NPPs are barred from presidential primaries (see shouldEnterPrimary)
   // and from any race type whose resolver isn't production-ready.
   const eligibleElections = elections.filter((e) => {
-    if (e.electionType === "president") return false;
+    if (isPresidentialElectionType(e.electionType)) return false;
     if (isElectionTypeEntryBlocked(e.electionType)) return false;
     // All other elections (including UK commons) are regional - homeState must match
     return e.state === npp.homeState;

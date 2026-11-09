@@ -26,6 +26,7 @@ import {
 import {
   isElectionTypeEntryBlocked,
   isNationwideDirectExecutiveElection,
+  isPresidentialElectionType,
 } from "@/lib/elections/nationwideExecutive";
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
@@ -114,7 +115,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
   // countries keep the block, except bound Russian direct first-round ballots.
   const presidentCountryIds = new Set<CountryId>(
     ctx.openPrimaries
-      .filter((p) => p.electionType === "president")
+      .filter((p) => isPresidentialElectionType(p.electionType))
       .map((p) => (p.countryId ?? "US") as CountryId)
   );
   const autonomyPresidentCountries = new Set<string>();
@@ -134,9 +135,11 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
         (p.hungarianAssemblyRound?.round === 2 || p.hungarianAssemblyRound?.byElection))
     )
       return false;
-    if (p.electionType === "president") {
+    if (isPresidentialElectionType(p.electionType)) {
       return (
-        (p.countryId === "RU" && p.russianPresidentialRound?.round === 1) ||
+        (p.electionType === "president" &&
+          p.countryId === "RU" &&
+          p.russianPresidentialRound?.round === 1) ||
         autonomyPresidentCountries.has((p.countryId ?? "US") as CountryId)
       );
     }
@@ -735,7 +738,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
     engine6Countries.has(primary.countryId ?? "US");
   const challengerCountryIds = new Set<CountryId>(
     openPrimaries
-      .filter((p) => p.electionType !== "president" || challengesPresidency(p))
+      .filter((p) => !isPresidentialElectionType(p.electionType) || challengesPresidency(p))
       .map((p) => (p.countryId ?? "US") as CountryId)
   );
   const v3ChallengerCountries = new Set<string>();
@@ -759,7 +762,7 @@ export async function processElectionEntry(ctx: NPPContext): Promise<number> {
 
     for (const primary of openPrimaries) {
       const primaryCountryId = (primary.countryId ?? "US") as CountryId;
-      const presidential = primary.electionType === "president";
+      const presidential = isPresidentialElectionType(primary.electionType);
       if (presidential && !challengesPresidency(primary)) continue;
       if (presidential && playerCountryFlags.get(primaryCountryId)) continue;
       if (!v3ChallengerCountries.has(primaryCountryId)) continue;

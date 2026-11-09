@@ -45,6 +45,8 @@ export function electionTitle(e: ElectionDetail): string {
       return "Gubernatorial Race";
     case "president":
       return "Presidential Race";
+    case "special_president":
+      return "Special Presidential Election";
     case "commons": {
       const descriptor = UK_REGION_DESCRIPTOR[e.state] ?? US_STATE_NAMES[e.state] ?? e.state;
       const seats = e.totalSeats && e.totalSeats > 1 ? ` · ${e.totalSeats} seats` : "";
@@ -91,7 +93,9 @@ export function electionTitle(e: ElectionDetail): string {
  * and the route metadata all read from here.
  */
 export function electionPageTitle(e: ElectionDetail, electionYear: number | null): string {
-  const national = ["president", "commons", "uachtaran"].includes(e.electionType);
+  const national = ["president", "special_president", "commons", "uachtaran"].includes(
+    e.electionType
+  );
   if (national) return `${electionYear} ${electionTitle(e)}`;
   return `${electionYear} ${US_STATE_NAMES[e.state] ?? e.regionName ?? e.state} ${electionTitle(e)}`;
 }

@@ -182,6 +182,29 @@ export function getSuccessionRule(countryId: string, governmentType: string): Su
   return found;
 }
 
+/** Turns the unavailable-deputy fallback waits for a special election to be called. */
+const NO_DEPUTY_ACTING_TURNS = 24;
+/** Turns after the vacancy by which the unavailable-deputy fallback must have filled the office. */
+const NO_DEPUTY_FILL_WITHIN_TURNS = 240;
+
+/**
+ * Rule for a permanent-deputy presidency whose deputy cannot take over: the
+ * deputy seat is empty too (a double vacancy) or the deputy is barred from the
+ * office. With no one in line the office goes to a special presidential
+ * election, so it always fills instead of waiting for the next regular one.
+ */
+export function deputyUnavailableRule(base: SuccessionRule): SuccessionRule {
+  if (base.fill !== "deputy_permanent") return base;
+  return {
+    ...base,
+    actingOffice: null,
+    actingLabel: "Cabinet (no successor in line)",
+    actingTurns: NO_DEPUTY_ACTING_TURNS,
+    fill: "direct_election",
+    fillWithinTurns: NO_DEPUTY_FILL_WITHIN_TURNS,
+  };
+}
+
 export function openExecutiveVacancy(rule: SuccessionRule, vacatedTurn: number): ExecutiveVacancy {
   return {
     rule,

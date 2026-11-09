@@ -28,7 +28,7 @@ export interface MyRaceWidgetData {
   countryId?: string | null;
 }
 
-const NATIONAL_TYPES = new Set(["president", "primeMinister", "uachtaran"]);
+const NATIONAL_TYPES = new Set(["president", "special_president", "primeMinister", "uachtaran"]);
 
 /**
  * The viewer's current race: the same candidacy, vote tally and label the

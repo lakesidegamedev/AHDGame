@@ -514,9 +514,12 @@ export async function GET() {
                   (election.countryId ?? character.countryId) as CountryId
                 );
 
-          const isNational = ["president", "primeMinister", "uachtaran"].includes(
-            election.electionType
-          );
+          const isNational = [
+            "president",
+            "special_president",
+            "primeMinister",
+            "uachtaran",
+          ].includes(election.electionType);
           activeElection = {
             id: election._id.toString(),
             seatId: election.seatId ?? undefined,
