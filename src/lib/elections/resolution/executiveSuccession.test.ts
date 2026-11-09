@@ -130,11 +130,9 @@ describe("processExecutiveSuccession", () => {
       ]
     );
     promote.mockResolvedValue(false);
-    govFindOne.mockResolvedValue({
-      succession: { fill: "deputy_permanent", vacatedTurn: 90 },
-    });
     await processExecutiveSuccession(db, 100, now);
-    const replan = govUpdateOne.mock.calls[0]![1].$set;
+    const lastOps = govBulkWrite.mock.calls.at(-1)![0];
+    const replan = lastOps[0].updateOne.update.$set;
     expect(replan["succession.fill"]).toBe("direct_election");
     expect(replan["succession.fillByTurn"]).toBeGreaterThan(90);
   });

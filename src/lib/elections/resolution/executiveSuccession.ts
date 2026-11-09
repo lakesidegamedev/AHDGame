@@ -196,26 +196,34 @@ export async function processExecutiveSuccession(
     result.promoted = promoted.length;
   }
   // A deputy who is seated but barred from the office (term limit) cannot take over either.
+  const barredDocs =
+    barred.length > 0
+      ? await govCol.find({ _id: { $in: barred } }, { projection: { succession: 1 } }).toArray()
+      : [];
+  const barredOps: typeof ops = [];
+  const openByCountry = new Map(barredDocs.map((d) => [String(d._id), d.succession]));
   for (const countryId of barred) {
     const base = rules.get(countryId)?.rule;
-    const open = (await govCol.findOne({ _id: countryId }, { projection: { succession: 1 } }))
-      ?.succession;
+    const open = openByCountry.get(countryId);
     if (!base || open?.fill !== "deputy_permanent") continue;
     const rule = deputyUnavailableRule(base);
     const vacancy = openExecutiveVacancy(rule, open.vacatedTurn);
-    await govCol.updateOne(
-      { _id: countryId },
-      {
-        $set: {
-          "succession.fill": rule.fill,
-          "succession.actingLabel": rule.actingLabel,
-          "succession.actingUntilTurn": vacancy.actingUntilTurn,
-          "succession.fillByTurn": vacancy.fillByTurn,
-          updatedAt: now,
+    barredOps.push({
+      updateOne: {
+        filter: { _id: countryId },
+        update: {
+          $set: {
+            "succession.fill": rule.fill,
+            "succession.actingLabel": rule.actingLabel,
+            "succession.actingUntilTurn": vacancy.actingUntilTurn,
+            "succession.fillByTurn": vacancy.fillByTurn,
+            updatedAt: now,
+          },
         },
-      }
-    );
+      },
+    });
   }
+  if (barredOps.length > 0) await govCol.bulkWrite(barredOps, { ordered: false });
   return result;
 }
 
