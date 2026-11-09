@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { censusStateLean } from "@/lib/demographics/censusLean";
-import type { GameState, State, StateDemographics } from "@/lib/db/types";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import type { State, StateDemographics } from "@/lib/db/types";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getDisplayLean, getLeanLabel } from "@/lib/utils/demographics";
@@ -30,9 +31,12 @@ export async function computeLeanMap(
   const [allStates, allDemographics, gameState] = await Promise.all([
     db.collection<State>("states").find({ countryId }).toArray(),
     db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
+    getGameStateCollection(db).then((col) =>
+      col.findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+      )
+    ),
   ]);
   const era = {
     preset: gameState?.preset ?? null,
