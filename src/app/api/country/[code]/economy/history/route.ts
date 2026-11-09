@@ -9,8 +9,8 @@ interface RouteParams {
   params: Promise<{ code: string }>;
 }
 
-// GET /api/country/[code]/economy/history?turns=120 - national GDP, GDP per
-// capita and population, one point per completed turn for every country.
+// GET /api/country/[code]/economy/history?turns=120&until=740 - national GDP,
+// GDP per capita and population, one point per completed turn for every country.
 // Auth: public. Read-only: served from durable macro telemetry, no turn work.
 // Errors: 400
 export async function GET(request: Request, { params }: RouteParams) {
@@ -21,14 +21,22 @@ export async function GET(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid country code");
     }
 
-    const rawTurns = new URL(request.url).searchParams.get("turns");
+    const searchParams = new URL(request.url).searchParams;
+    const rawTurns = searchParams.get("turns");
     const parsedTurns = rawTurns === null ? Number.NaN : Number(rawTurns);
+    // The turn the caller last saw complete. It bounds the series, and because
+    // it stays in the URL it is also the cache key: every client reacting to
+    // the same turn shares one entry, and none of them accepts a body cached
+    // before that turn finished.
+    const rawUntil = searchParams.get("until");
+    const parsedUntil = rawUntil === null ? Number.NaN : Number(rawUntil);
 
     const db = await getDb();
     const history = await buildCountryMacroHistory(
       db,
       countryId,
-      Number.isFinite(parsedTurns) ? parsedTurns : MACRO_HISTORY_DEFAULT_TURNS
+      Number.isFinite(parsedTurns) ? parsedTurns : MACRO_HISTORY_DEFAULT_TURNS,
+      Number.isFinite(parsedUntil) ? parsedUntil : null
     );
     // Every open overview or economy page refetches this on turn completion,
     // so let the edge absorb a burst of identical reads during one turn.

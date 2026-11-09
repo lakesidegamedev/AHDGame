@@ -32,6 +32,7 @@ const NAMESPACES = [
   "contests",
   "governmentConfidence",
   "legislation",
+  "economyHistory",
 ] as const;
 
 function englishCatalog(): AbstractIntlMessages {
@@ -68,11 +69,14 @@ describe("clientNamespacesForPath", () => {
     expect(clientNamespacesForPath("/country/us/map/")).toEqual(["elections", "nav", "tutorial"]);
     expect(clientNamespacesForPath("/country/uk/budget")).toEqual(["nav", "tutorial"]);
     expect(clientNamespacesForPath("/country/jp/legislature")).toContain("parties");
+    expect(clientNamespacesForPath("/country/us/economy")).toContain("economyHistory");
   });
 
   it("keeps the family union for a country page without its own rule", () => {
     const union = clientNamespacesForPath("/country/us");
     expect(union).toContain("corporations");
+    // The overview page renders the compact sparkline from the same catalog.
+    expect(union).toContain("economyHistory");
     expect(clientNamespacesForPath("/country/us/some-new-page")).toEqual(union);
     // A pattern only matches its own shape.
     expect(clientNamespacesForPath("/country/us/map/extra")).toEqual(union);
