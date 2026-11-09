@@ -232,12 +232,12 @@ function computeShiftsByTarget(
       continue;
     }
 
-    // Normalize policy strength to -1 to +1 range
-    // policy.economic ranges from -3 to +3
-    const strength = policy.economic / 3;
-
     for (const effect of legType.demographicEffects) {
       if (!include(effect)) continue;
+      // Normalize policy strength to -1 to +1 range (score ranges -3 to +3;
+      // seeds use up to ±5). Economic score unless the effect opts into social.
+      const strength =
+        (effect.strengthAxis === "social" ? (policy.social ?? 0) : policy.economic) / 3;
       const target: DemographicEffectTarget = effect.target ?? "population";
       // Calculate shift amount:
       // - effect.direction: base rate of change (-1 to +1)
