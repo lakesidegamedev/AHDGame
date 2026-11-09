@@ -75,7 +75,8 @@ describe("succession table coverage by era", () => {
       for (const id of getPresetEnablementCountries(preset) ?? []) {
         if (id === "US") continue;
         const types = new Set([getCountryConfig(id, preset).governmentType]);
-        if (id === "RU" && preset === "1991-default") {
+        const settled = id === "RU" && preset === "1991-default";
+        if (settled && RU_RUSSIAN_1991.config?.governmentType) {
           types.add(RU_RUSSIAN_1991.config.governmentType);
         }
         for (const type of types) {
