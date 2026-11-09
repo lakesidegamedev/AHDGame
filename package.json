@@ -137,7 +137,7 @@
     "pg": "^8.23.1",
     "polygon-clipping": "^0.15.7",
     "posthog-js": "1.438.22",
-    "posthog-node": "^5.56.2",
+    "posthog-node": "^5.61.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-markdown": "^10.1.0",
