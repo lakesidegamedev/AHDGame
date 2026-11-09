@@ -40,9 +40,7 @@ async function main() {
         .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
     }
     const groupsCount = demographicCategories.reduce((s, c) => s + (c.groups?.length ?? 0), 0);
-    console.log(
-      `Upserted ${demographicCategories.length} category (${groupsCount} voter groups).`
-    );
+    console.log(`Upserted ${demographicCategories.length} category (${groupsCount} voter groups).`);
 
     // Upsert state demographics and demographicDefaults (game reset restores from defaults)
     for (const sd of stateDemographics) {
