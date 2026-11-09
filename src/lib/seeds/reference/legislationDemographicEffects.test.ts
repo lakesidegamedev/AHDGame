@@ -23,6 +23,7 @@ import { turnoutTargetIdsForCountry } from "@/lib/demographics/turnoutTargets";
 const TARGETS_BY_COUNTRY = new Map<string, Set<string>>([
   ["US", turnoutTargetIdsForCountry("US")],
   ["UK", turnoutTargetIdsForCountry("UK")],
+  ["JP", turnoutTargetIdsForCountry("JP")],
 ]);
 
 /** Every other prefix resolves to its own electorate, falling back to the US one. */

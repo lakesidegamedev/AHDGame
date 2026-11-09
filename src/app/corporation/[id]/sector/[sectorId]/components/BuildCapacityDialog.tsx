@@ -15,6 +15,7 @@ import {
 } from "@/lib/corporations/rules/operatingReserve";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
+import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
 import type {
   ConstructionFinanceChoice,
   ConstructionFinanceRequest,
@@ -437,6 +438,7 @@ export default function BuildCapacityDialog({
           />
         </div>
 
+        <FundedBuildDemand rows={plants.buildDemand} turn={plants.buildDemandTurn} />
         {/* Demand warnings remain visible, including markets with no room. */}
         <div
           className={`flex gap-2 rounded-lg border p-3 ${
@@ -450,18 +452,28 @@ export default function BuildCapacityDialog({
           )}
           <div className="min-w-0">
             <h3 className="mb-1 text-body-sm font-semibold text-foreground">
-              {t(
-                sectorType === "logistics"
-                  ? "freightDemand"
-                  : plants.measuredDemandGapUnits == null
-                    ? "measuredDemandTitle"
-                    : preview.overHeadroom
-                      ? "beyondDemand"
-                      : "withinDemand"
-              )}
+              {plants.buildDemand
+                ? t("fundedAdvice.limits")
+                : t(
+                    sectorType === "logistics"
+                      ? "freightDemand"
+                      : plants.measuredDemandGapUnits == null
+                        ? "measuredDemandTitle"
+                        : preview.overHeadroom
+                          ? "beyondDemand"
+                          : "withinDemand"
+                  )}
             </h3>
             <p className="text-body-sm text-foreground">
-              {sectorType === "logistics" ? (
+              {plants.buildDemand ? (
+                <>
+                  {plants.buildDemand.some((row) => (row.unmet ?? 0) > 0)
+                    ? t("fundedAdvice.someUnfilled")
+                    : plants.buildDemand.some((row) => row.unmet == null)
+                      ? t("fundedAdvice.someUnknown")
+                      : t("fundedAdvice.noneUnfilled")}
+                </>
+              ) : sectorType === "logistics" ? (
                 <>
                   Freight demand is the state&apos;s combined bulk and special cargo load. Both draw
                   from one shared fleet, and special cargo uses three times as much TEU per unit.

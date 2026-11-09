@@ -38,7 +38,9 @@ import { upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { loadReachableBooks, bookFor } from "@/lib/trade/queries/loadReachableBooks";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { isStateScopedCommodity, commodityDemandGap } from "@/lib/market/commodityMarketScope";
-import { latentTopUpForState, latentTopUpForCountry } from "@/lib/market/latentShortageSignal";
+import { legacyBuildDemandGap } from "@/lib/corporations/rules/legacyBuildDemandGap";
+import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
+import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import {
   type CommodityType,
   commodityMixWeight,
@@ -522,34 +524,23 @@ export async function buildSectorDetailPlantsTier({
       (sum, d) => sum + (d.units > 0 ? d.units * (d.billedUnitPrice ?? d.marketPrice) : 0),
       0
     );
-    // True buyers' room for THIS sector's outputs, in sector output units.
-    // `headroomUnits` (the unowned pool) measures claimable market SHARE,
-    // under a clearing glut it reads tens of thousands of "room" while every
-    // leg goes unsold, which a player would read as demand.
-    //
-    // Scoped to the sector's HOME COUNTRY reachable book, which is the book
-    // the clearing engine actually settles this sector against (see
-    // market/tradePartition). The world aggregate counts embargoed and
-    // untraded supply the sector can neither buy from nor lose a sale to, so
-    // it can call a real shortage oversupplied. Falls back to the aggregate
-    // when no book is persisted.
+    // Funded domestic buyers determine demand room, independently of unclaimed
+    // market share. Older worlds retain their reachable-book estimate.
     const reachableBooks = await loadReachableBooks(db, currentTurn);
+    const fundedBuild = await loadFundedBuildDemand(db, gameState);
+    const buildDemand = fundedBuild?.rows(effectiveSupply, sector.stateId, sectorCountryId);
+    const fundedGap = new Map(buildDemand?.map((row) => [row.commodity, row.unmet]));
     const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
     const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
-      // Demand audit step 1: restore the 1.5x-cap-hidden demand to the
-      // sector gap the player reads. Zero below the cap (quote unchanged).
-      const doc = priceDocByCommodity.get(gapCommodity);
-      const latentDemandTopUp = doc
-        ? isStateScopedCommodity(gapCommodity)
-          ? latentTopUpForState(doc, sector.stateId)
-          : latentTopUpForCountry(doc, sectorCountryId)
-        : 0;
-      return commodityDemandGap({
+      if (fundedBuild) return fundedGap.get(gapCommodity) ?? 0;
+      return legacyBuildDemandGap({
+        price: priceDocByCommodity.get(gapCommodity),
+        stateId: sector.stateId,
+        countryId: sectorCountryId,
         commodity: gapCommodity,
         stateBalance: stateBalances.get(gapCommodity),
         reachableBook: bookFor(reachableBooks, sectorCountryId, gapCommodity),
         globalBalance: globalBalances.get(gapCommodity),
-        latentDemandTopUp,
       });
     });
 
@@ -625,6 +616,7 @@ export async function buildSectorDetailPlantsTier({
       .filter(([, rate]) => (rate ?? 0) > 0)
       .every(([commodity]) => {
         const key = commodity as CommodityType;
+        if (fundedBuild) return fundedBuild.turn === currentTurn && fundedGap.get(key) != null;
         return isStateScopedCommodity(key)
           ? priceDocByCommodity.get(key)?.turn === currentTurn
           : !!bookFor(reachableBooks, sectorCountryId, key);
@@ -633,13 +625,15 @@ export async function buildSectorDetailPlantsTier({
       .filter(([, rate]) => (rate ?? 0) > 0)
       .map(([commodity]) => {
         const key = commodity as CommodityType;
-        const gap = commodityDemandGap({
-          commodity: key,
-          stateBalance: stateBalances.get(key),
-          reachableBook: bookFor(reachableBooks, sectorCountryId, key),
-          globalBalance: globalBalances.get(key),
-          latentDemandTopUp: 0,
-        });
+        const gap = fundedBuild
+          ? (fundedGap.get(key) ?? 0)
+          : commodityDemandGap({
+              commodity: key,
+              stateBalance: stateBalances.get(key),
+              reachableBook: bookFor(reachableBooks, sectorCountryId, key),
+              globalBalance: globalBalances.get(key),
+              latentDemandTopUp: 0,
+            });
         return {
           weight: commodityMixWeight(effectiveSupply, COMMODITY_BASE_PRICES, key),
           gap: expansionGapAfterExistingCapacity(
@@ -648,7 +642,7 @@ export async function buildSectorDetailPlantsTier({
               .filter(
                 (candidate) =>
                   (candidate.supply?.[key] ?? 0) > 0 &&
-                  (isStateScopedCommodity(key)
+                  (isStateScopedCommodity(key) && !(fundedBuild && isCountryBookCommodity(key))
                     ? candidate.stateId === sector.stateId
                     : candidate.countryId === sectorCountryId)
               )
@@ -869,6 +863,8 @@ export async function buildSectorDetailPlantsTier({
       ),
       demandGapUnits,
       measuredDemandGapUnits,
+      buildDemand,
+      buildDemandTurn: fundedBuild?.turn,
       // Every producer's capacity in this cell (the focal sector included),
       // so "Unclaimed share" reads the same pool `headroomUnits` measures.
       retoolHint,

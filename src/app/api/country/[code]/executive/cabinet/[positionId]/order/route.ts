@@ -7,11 +7,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getCabinetMechanics } from "@/lib/constants/cabinetMechanics";
-import {
-  resolveMinisterialRemaining,
-  refundMinisterialAction,
-  spendMinisterialAction,
-} from "@/lib/cabinet/ministerialActionPool";
+import { officeActionPool } from "@/lib/resetCabinet/actionPool";
 import { getMinisterialOrders } from "@/lib/constants/cabinetOrders";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { resolveMetricPath } from "@/lib/cabinet/resolveMetricPath";
@@ -109,12 +105,13 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Shared UK pool: both offices of a dual holder spend one balance (issue
     // #2049). The legacy per-row backfill lives inside the resolver.
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
+    const gameState = await getGameState();
+    const pool = officeActionPool(db, gameState, countryId, member!);
+    const actions = await pool.remaining();
     if (actions < 1) {
       return errorResponse(400, "No ministerial actions remaining");
     }
 
-    const gameState = await getGameState();
     const currentTurn = gameState?.currentTurn ?? 1;
 
     const ordersCol = getMinisterialOrdersCollection(db);
@@ -139,7 +136,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       regionId: e.scope === "regional" ? targetRegionId : undefined,
     }));
 
-    const spend = await spendMinisterialAction(db, countryId, member!);
+    const spend = await pool.spend();
     if (!spend.ok) {
       return errorResponse(409, "No ministerial actions remaining");
     }
@@ -161,7 +158,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         createdAt: new Date(),
       });
     } catch (error) {
-      await refundMinisterialAction(db, countryId, member!);
+      await pool.refund();
       throw error;
     }
 

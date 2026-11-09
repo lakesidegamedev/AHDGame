@@ -38,6 +38,14 @@ export interface FundedCountryBookRow {
   spilloverRequested?: number;
 }
 
+/** Compact regional-only market measurements, in settlement units per turn. */
+export interface FundedRegionalBookRow {
+  stateId: string;
+  commodity: string;
+  funded: number;
+  filled: number;
+}
+
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Deterministic order so a persisted book and its digest do not depend on Map insertion. */

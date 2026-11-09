@@ -1,4 +1,5 @@
 import type { LegislationType } from "@/lib/db/types/legislation";
+import { withJpLeanEffects } from "./jpLeanEffects";
 import {
   policyOptions,
   taxRateOptions,
@@ -66,7 +67,7 @@ function weightedTargets(
 //  TAX TYPES (7 — 5 national + 2 regional, 11 brackets each)
 // ═════════════════════════════════════════════════════════════════════════════
 
-export const jpLegislationTypes: LegislationType[] = [
+const jpLegislationTypesBase: LegislationType[] = [
   // ── A1. National Income Tax ──────────────────────────────────────────────
   // Center: 25% | Range: 0-50% | Increments: 5%
   {
@@ -6163,3 +6164,6 @@ export const jpLegislationTypes: LegislationType[] = [
     isPermanent: true,
   },
 ];
+
+/** Base types plus rule-attached lean effects (see jpLeanEffects.ts). */
+export const jpLegislationTypes: LegislationType[] = withJpLeanEffects(jpLegislationTypesBase);

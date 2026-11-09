@@ -260,17 +260,23 @@ export function buildSharedAuthArtifactFlags(
       }
 
       const exactAccountCount = fingerprintMatches.size + 1; // matched others + this user
-      // Only escalate when at least one shared fingerprint carries real entropy;
-      // a cluster matched solely on a degenerate/fallback hash isn't ring evidence.
-      const hasStrongFingerprint = [...sharedFingerprints].some(
-        (fingerprint) => !isDegenerateFingerprint(fingerprint)
+      // Escalation needs ONE fingerprint held by 3+ accounts, i.e. a device a
+      // group actually shares. `exactAccountCount` is the union of matches across
+      // different fingerprints, so an account that collides on unrelated hashes
+      // with unrelated people would otherwise reach high with no single
+      // fingerprint shared beyond a pair. Degenerate/fallback hashes are never
+      // ring evidence.
+      const hasCrowdedFingerprint = [...sharedFingerprints].some(
+        (fingerprint) =>
+          !isDegenerateFingerprint(fingerprint) &&
+          (fingerprintToUsers.get(fingerprint)?.length ?? 0) >= 3
       );
       flags.push({
         type: "shared_fingerprint",
         // A real fingerprint shared by 3+ accounts is a strong alt-ring signal;
         // two accounts (e.g. a shared family computer) or degenerate-only matches
         // stay at medium.
-        severity: exactAccountCount >= 3 && hasStrongFingerprint ? "high" : "medium",
+        severity: hasCrowdedFingerprint ? "high" : "medium",
         detail: `Shared ${sharedFingerprints.size} browser fingerprint${sharedFingerprints.size === 1 ? "" : "s"} with ${formatUsernameList([...fingerprintMatches.values()].map((match) => match.username))}`,
         detectedAt: now,
         evidence: {
