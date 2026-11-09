@@ -59,6 +59,18 @@ describe("runEraCrossing (phase)", () => {
     expect(createSystemNewsPost).not.toHaveBeenCalled();
   });
 
+  it("does nothing when the era kill switch is explicitly off", async () => {
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2010,
+      eraSystemEnabled: false,
+    });
+    const result = await runEraCrossing(db as unknown as Db);
+    expect(result.ran).toBe(false);
+    expect(db.collection("gameState").updateOne).not.toHaveBeenCalled();
+    expect(createSystemNewsPost).not.toHaveBeenCalled();
+  });
+
   it("stamps era + guard year and posts news on a decade year", async () => {
     db.collection("gameState").findOne.mockResolvedValue({
       _id: "current",

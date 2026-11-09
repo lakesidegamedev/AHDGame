@@ -9,6 +9,7 @@ export async function processAutoDisasterTurn(
   turn: number,
   preloadedGameState?: {
     autoCrisisPaused?: boolean;
+    autoDisastersEnabled?: boolean;
     startingYear?: number;
   }
 ): Promise<void> {
@@ -17,6 +18,8 @@ export async function processAutoDisasterTurn(
   });
   // Temporary pause: stay enabled but spawn nothing new this turn.
   if (preloadedGameState?.autoCrisisPaused === true) return;
+  // Emergency kill switch. The system ships on, so only an explicit false stops it.
+  if (preloadedGameState?.autoDisastersEnabled === false) return;
 
   // Enumerate via the canonical access helper, not a raw
   // `countryGameStates.find({ isActive: true })`: those docs are created lazily

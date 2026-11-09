@@ -42,6 +42,18 @@ it("spawns for a due country", async () => {
   );
 });
 
+it("spawns nothing when the auto disasters kill switch is off", async () => {
+  db.collectionMocks["crises"]!.findOne.mockResolvedValue(null);
+  db.collectionMocks["states"]!.find.mockReturnValue({
+    project: vi.fn().mockReturnThis(),
+    toArray: vi.fn().mockResolvedValue([{ _id: "S1", countryId: "BR", regionType: "region" }]),
+  });
+
+  await processAutoDisasterTurn(db as unknown as Db, 144, { autoDisastersEnabled: false });
+
+  expect(db.collectionMocks["crises"]!.insertOne).not.toHaveBeenCalled();
+});
+
 it("keeps measuring climate while crisis spawning is paused", async () => {
   db.collection("states").find.mockReturnValue({
     project: vi.fn().mockReturnThis(),

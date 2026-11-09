@@ -71,7 +71,7 @@ export async function GET() {
     const startingYear = gameState?.startingYear ?? STARTING_YEAR;
     // Surface the auto-disaster master flag so the admin client can render its
     // On/Off toggle with the correct current state.
-    const autoDisastersEnabled = gameState?.autoDisastersEnabled === true;
+    const autoDisastersEnabled = gameState?.autoDisastersEnabled !== false;
     const autoCrisisPaused = gameState?.autoCrisisPaused === true;
 
     // Auto-crisis catalog + live cooldown status for the Auto Crisis admin tab.

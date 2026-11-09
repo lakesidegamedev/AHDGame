@@ -61,7 +61,12 @@ type FeatureGateBooleanKey = (typeof FEATURE_GATE_BOOLEAN_KEYS)[number];
  * For these keys, absent and `true` both read enabled; only an explicit `false`
  * disables.
  */
-export const FEATURE_GATE_DEFAULT_ON: ReadonlySet<string> = new Set(["nppCorpStrategyEnabled"]);
+export const FEATURE_GATE_DEFAULT_ON: ReadonlySet<string> = new Set([
+  "nppCorpStrategyEnabled",
+  "livingConflictsEnabled",
+  "autoDisastersEnabled",
+  "eraSystemEnabled",
+]);
 
 export const FEATURE_GATE_VERSION_SYSTEMS = RESET_SYSTEMS;
 
