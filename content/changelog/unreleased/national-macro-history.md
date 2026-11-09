@@ -15,6 +15,9 @@ areas: [frontend, backend]
 - The country economy page gains a "National history" panel with three series:
   total population, national GDP and GDP per capita. Every country has it,
   including economy-only nations that have no playable government.
+- The country overview page shows the same series as a compact sparkline under
+  the country description, so the trend is visible without opening the economy
+  page. Both forms share one component and one request.
 - The series comes from `macroTelemetry`, which already stores national and
   regional GDP and population once per completed turn. There are no new turn
   writes, no schema changes and no balance changes: this is a read path only.

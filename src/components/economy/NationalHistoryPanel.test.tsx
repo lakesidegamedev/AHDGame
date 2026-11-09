@@ -53,6 +53,14 @@ describe("NationalHistoryPanel", () => {
     );
   });
 
+  it("renders the compact sparkline form without axis labels", async () => {
+    render(<NationalHistoryPanel countryId="US" compact />);
+    expect(await screen.findByText("$1.20T")).toBeTruthy();
+    // The full panel labels the ends of the window; the sparkline drops them.
+    expect(screen.queryByText("T1")).toBeNull();
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("GDP across 3");
+  });
+
   it("explains a thin series instead of drawing a flat zero line", async () => {
     mockFetch({ ...payload, points: [payload.points[0]] });
     render(<NationalHistoryPanel countryId="US" />);
