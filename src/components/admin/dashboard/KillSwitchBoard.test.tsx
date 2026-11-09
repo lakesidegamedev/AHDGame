@@ -42,3 +42,38 @@ describe("Government contracts kill-switch card", () => {
     );
   });
 });
+
+describe("Government Confidence kill switch", () => {
+  it("shows Frozen and confirms explicitly resuming the gauge", async () => {
+    const confirm = vi.fn(() => true);
+    const fetch = vi.fn(
+      async (_url: string, init?: RequestInit) =>
+        new Response(
+          JSON.stringify(
+            init?.method === "PATCH"
+              ? { success: true, enabled: JSON.parse(init.body as string).enabled }
+              : { enabled: false, mode: "off" }
+          ),
+          { status: 200 }
+        )
+    );
+    vi.stubGlobal("confirm", confirm);
+    vi.stubGlobal("fetch", fetch);
+    render(<KillSwitchBoard />);
+    const card = await screen.findByRole("button", { name: /Government confidence/ });
+    await within(card).findByText("Frozen");
+    fireEvent.click(card);
+    await within(card).findByText("Active");
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/admin/government-confidence",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ enabled: true }) })
+    );
+    fireEvent.click(card);
+    await within(card).findByText("Frozen");
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/admin/government-confidence",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ enabled: false }) })
+    );
+  });
+});
