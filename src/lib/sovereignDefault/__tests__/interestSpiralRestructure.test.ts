@@ -130,6 +130,25 @@ describe("restructureForInterestSpiral", () => {
     expect((after.fiscalConsolidation as Row).interestSpiralYears).toBe(0);
   });
 
+  it("restructures a background country from the macro counter its budget never stores", async () => {
+    // Background budgets carry no fiscalConsolidation block: the count lives in
+    // the macro fiscal state, so the caller passes the years that tripped it.
+    const w = world({ ...ITALY });
+    const result = await restructureForInterestSpiral(w.db, "IT", 760, 1_000, { spiralYears: 2 });
+
+    expect(result).toEqual({ ok: true, bondsAffected: 4 });
+    expect(emitInterestSpiralCrisisNews).toHaveBeenCalledWith("IT", 760, 2);
+    expect(w.row().sovereignCrisisState).toBe("recovering");
+  });
+
+  it("still ignores a background country whose passed count is below the threshold", async () => {
+    const w = world({ ...ITALY });
+    expect(await restructureForInterestSpiral(w.db, "IT", 760, 1_000, { spiralYears: 1 })).toEqual({
+      ok: false,
+      reason: "not-due",
+    });
+  });
+
   it("waits until the second spiral year", async () => {
     const w = world({ ...ITALY, fiscalConsolidation: { interestSpiralYears: 1 } });
     expect(await restructureForInterestSpiral(w.db, "IT", 760, 1_000)).toEqual({

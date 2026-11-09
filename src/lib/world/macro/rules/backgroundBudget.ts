@@ -193,6 +193,8 @@ export function closeBackgroundFiscalYear(input: {
   fiscal: BackgroundFiscalState;
   package: FiscalConsolidationPackage | null;
   restructure: boolean;
+  /** Spiral years that triggered the restructuring, before the stored count resets to 0. */
+  interestSpiralYears: number;
 } {
   const position =
     input.governmentEconomicPosition === null
@@ -262,5 +264,5 @@ export function closeBackgroundFiscalYear(input: {
     interestSpiralYears: restructure ? 0 : interestSpiralYears,
     lastDebtToGdpRatio: finite(input.debtToGdpRatio, 0),
   };
-  return { fiscal, package: pkg, restructure };
+  return { fiscal, package: pkg, restructure, interestSpiralYears };
 }

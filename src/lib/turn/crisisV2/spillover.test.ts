@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
 import { makeDefinition } from "@/lib/crises/v2/testFixtures";
 import type { CrisisInstance } from "@/lib/crises/v2/types";
+import { legacyDefinitionId } from "@/lib/crises/v2/legacyConvert";
+import { SPILLOVER_FALLBACK_DURATION_TURNS } from "@/lib/crises/v2/spilloverShell";
+import { ALL_CRISIS_TEMPLATES } from "@/lib/crises/templates";
 import { registerCrisisDefinition, resetCrisisV2RegistryForTests } from "./registry";
 
 vi.mock("@/lib/country/countryTier", () => ({
@@ -87,6 +90,57 @@ describe("spillover shell", () => {
       { crisisId: source._id.toString(), definitionId: "source", linkId: "trade" },
     ]);
     expect(JSON.stringify(writes.bulk)).toContain(child._id.toString());
+  });
+
+  it("gives a spilled scripted crisis a finite length so it can end", async () => {
+    registerCrisisDefinition(
+      makeDefinition({
+        id: "target",
+        scope: "national",
+        pacing: { kind: "scripted", durationTurns: null },
+      })
+    );
+    const writes = { inserted: [] as Doc[], bulk: [] as unknown[] };
+    await runCrisisSpillover(makeDb([sourceDoc("DE", 80)], writes) as never, 20);
+    const child = writes.inserted[0] as Doc & { durationTurns: number | null };
+    expect(child.durationTurns).toBe(SPILLOVER_FALLBACK_DURATION_TURNS);
+  });
+
+  it("carries the authored length and effects of a legacy target template", async () => {
+    const key = "banking_crisis";
+    const template = (ALL_CRISIS_TEMPLATES as Record<string, { effects: unknown[] }>)[key];
+    registerCrisisDefinition(
+      makeDefinition({
+        id: legacyDefinitionId(key),
+        scope: "national",
+        pacing: { kind: "scripted", durationTurns: 36 },
+      })
+    );
+    registerCrisisDefinition(
+      makeDefinition({
+        ...SOURCE_DEF,
+        spillover: [
+          {
+            id: "trade",
+            channel: "trade",
+            targetDefinitionId: legacyDefinitionId(key),
+            minSeverity: 30,
+            transmission: 1,
+          },
+        ],
+      })
+    );
+    const writes = { inserted: [] as Doc[], bulk: [] as unknown[] };
+    await runCrisisSpillover(makeDb([sourceDoc("DE", 80)], writes) as never, 20);
+    const child = writes.inserted[0] as Doc & {
+      durationTurns: number | null;
+      effects: unknown[];
+      templateKey?: string;
+    };
+    expect(child.durationTurns).toBe(36);
+    expect(child.effects).toEqual(template.effects);
+    expect(child.effects.length).toBeGreaterThan(0);
+    expect(child.templateKey).toBe(key);
   });
 
   it("treats a background country as a source of spillover", async () => {
