@@ -22,7 +22,10 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { creditTreasuryProceedsFromAnchor } from "@/lib/nationalization/treasury";
+import {
+  collectFundedCorporationPayment,
+  creditTreasuryProceedsFromAnchor,
+} from "@/lib/nationalization/treasury";
 import { createNotification } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { resolveFormalizedGroups } from "./groupMembership";
@@ -164,21 +167,39 @@ export async function applyTransferPricingAudit(
       // An unaffordable assessment is not waived — it is taken as far as the
       // balance goes and the exposure clock resets either way, so a corp cannot
       // dodge by running its cash down.
-      const debit = await atomicallyDebitCorpLiquidCapital(db, liable._id, localAmount, {
-        corporateObligation: true,
+      const fundedPaid = await collectFundedCorporationPayment(db, {
+        countryId: assessment.claimantCountryId as CountryId,
+        corpId: liable._id,
+        corpCurrency: (resolveCorpLiquidCurrencyCode(liable as Corporation) ??
+          "USD") as CurrencyCode,
+        amountLocal: localAmount,
+        key: `transfer-pricing:${premium.agreementId}:${currentTurn}`,
+        now,
+        flow: "regulatory_fine",
+        site: "transferPricing:applyAudit",
       });
-      const collected = debit.ok ? localAmount : 0;
+      let collected = 0;
+      if (fundedPaid === null) {
+        const debit = await atomicallyDebitCorpLiquidCapital(db, liable._id, localAmount, {
+          corporateObligation: true,
+        });
+        collected = debit.ok ? localAmount : 0;
+        if (collected > 0) {
+          // `collected` is in the LIABLE CORP's currency, and transfer pricing is the
+          // cross-border case, so the claimant country must be credited the amount
+          // converted into its own currency.
+          await creditTreasuryProceedsFromAnchor(
+            db,
+            assessment.claimantCountryId as CountryId,
+            corpLiquidCapitalToAnchor(collected, liable as Corporation, fxRate),
+            now,
+            { flow: "regulatory_fine" }
+          );
+        }
+      } else if (fundedPaid > 0) {
+        collected = localAmount;
+      }
       if (collected > 0) {
-        // `collected` is in the LIABLE CORP's currency, and transfer pricing is the
-        // cross-border case, so the claimant country must be credited the amount
-        // converted into its own currency.
-        await creditTreasuryProceedsFromAnchor(
-          db,
-          assessment.claimantCountryId as CountryId,
-          corpLiquidCapitalToAnchor(collected, liable as Corporation, fxRate),
-          now,
-          { flow: "regulatory_fine" }
-        );
         await emitTx(db, {
           type: "corp_fine",
           turn: currentTurn,
