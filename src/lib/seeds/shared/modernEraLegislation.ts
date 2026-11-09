@@ -1593,7 +1593,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
     policyDomain: "environment",
     subCategory: "Fossil fuels",
     committee: "Environment and Energy",
-    budgetLine: "environment",
+    budgetLine: "industry",
     gdpCostFractions: [0.004, 0.0025, 0.001, 0, 0, 0, 0],
     effects: [
       { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.4 },
@@ -1866,7 +1866,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
     policyDomain: "environment",
     subCategory: "Climate",
     committee: "Environment and Energy",
-    budgetLine: "environment",
+    budgetLine: "industry",
     gdpCostFractions: [0.005, 0.003, 0.0013, 0, 0, 0, 0],
     effects: [
       { metricCategoryId: "environment", metricId: "carbonEmissions", weight: 0.4 },
@@ -1923,7 +1923,7 @@ export const MODERN_ERA_LAWS: readonly ModernEraLaw[] = [
       { metricCategoryId: "economic", metricId: "rdIntensity", weight: 0.35 },
       { metricCategoryId: "economic", metricId: "tradeGrowth", weight: 0.25 },
       { metricCategoryId: "economic", metricId: "regulatoryBurden", weight: -0.25 },
-      { metricCategoryId: "governance", metricId: "publicTrust", weight: -0.1 },
+      { metricCategoryId: "economic", metricId: "investorConfidence", weight: -0.1 },
     ],
     options: [
       {
