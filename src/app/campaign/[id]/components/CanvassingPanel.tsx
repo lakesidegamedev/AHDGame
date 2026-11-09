@@ -39,12 +39,11 @@ const ELIGIBILITY_MESSAGE: Record<"needs_travel" | "needs_primary_campaign", str
   needs_primary_campaign: "Set your primary campaign state to canvass voters there",
 };
 
-const SOURCE_DESCRIPTION: Record<CanvassSource, (isRegionBased: boolean) => string> = {
-  home: (isRegionBased) =>
-    `Boost turnout for specific demographics in your home ${isRegionBased ? "region" : "state"}.`,
-  travel: () => "Boost turnout for specific demographics in your travel state.",
-  primaryCampaign: () => "Boost turnout for specific demographics in your primary campaign state.",
-  runningMateSurrogate: () =>
+const SOURCE_DESCRIPTION: Record<CanvassSource, string> = {
+  home: "Boost turnout for specific demographics in your home state or region.",
+  travel: "Boost turnout for specific demographics in your travel state.",
+  primaryCampaign: "Boost turnout for specific demographics in your primary campaign state.",
+  runningMateSurrogate:
     "Boost turnout for the ticket in the state you are campaigning in as running mate. Spends a shared surrogate action.",
 };
 
@@ -313,9 +312,7 @@ export function CanvassingPanel({
   }
 
   const activeStateId = eligibility.stateId;
-  const description = SOURCE_DESCRIPTION[eligibility.source](
-    (countryId ?? "US").toUpperCase() !== "US"
-  );
+  const description = SOURCE_DESCRIPTION[eligibility.source];
   const costSuffix = `${totalActionsCost} action${totalActionsCost !== 1 ? "s" : ""}, ${formatFull(totalFundsCost)}`;
 
   function quantityStyle(active: boolean, enabled: boolean): React.CSSProperties {
