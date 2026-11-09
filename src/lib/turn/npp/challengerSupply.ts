@@ -32,7 +32,12 @@ import { getChallengerSupplyPolicy } from "./rules/challengerSupply";
  * contested. Multi-seat chambers normally field both parties via incumbent
  * defense, but a vacant chamber has no incumbent supply.
  */
-const CONTESTABLE_SINGLE_SEAT = ["governor", "special_governor", "senate"] as const;
+const CONTESTABLE_SINGLE_SEAT = [
+  "governor",
+  "special_governor",
+  "special_president",
+  "senate",
+] as const;
 
 /**
  * One-party-state MULTI-SEAT sub-national congress types that also need a
@@ -194,7 +199,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
   const partyDocs = await db
     .collection<PoliticalParty>("politicalParties")
     .find(
-      { defunct: { $ne: true }, regimeStatus: { $ne: "banned" } },
+      { isDefunct: { $ne: true }, regimeStatus: { $ne: "banned" } },
       {
         projection: {
           sequentialId: 1,

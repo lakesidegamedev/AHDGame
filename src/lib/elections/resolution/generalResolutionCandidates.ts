@@ -18,6 +18,7 @@ import {
   type CountryId,
 } from "@/lib/constants/countries";
 import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
+import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive";
 import { applyConversionVotePenalty } from "./conversionTerms";
 
 /** Loads the candidates, drops the ineligible ones and adjusts the vote totals to match. */
@@ -121,7 +122,7 @@ export async function loadGeneralElectionCandidates({
   // so this applies only where the country config is presidential.
   const executiveIneligibleCandidateIds = new Set<string>();
   if (
-    election.electionType !== "president" &&
+    !isPresidentialElectionType(election.electionType) &&
     isPresidentialGovernmentType(
       COUNTRY_CONFIGS[(election.countryId ?? "US") as CountryId]?.governmentType
     )

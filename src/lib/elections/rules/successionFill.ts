@@ -30,6 +30,31 @@ const OWN_BALLOT_NOTE =
 
 export type SuccessionFillAction = "none" | "spawn_election" | "hold_vote";
 
+/**
+ * Whether a vote that finds no autonomous candidate may seat a newly generated
+ * one. Not before the fill is overdue: candidates can still appear until then.
+ */
+export function mayGenerateSuccessor(succession: OpenSuccession, currentTurn: number): boolean {
+  return successionStage(succession, currentTurn) === "overdue";
+}
+
+/**
+ * An overdue election-filled office whose special election is not running (it
+ * resolved empty, or was never called) is filled by a vote instead, so a
+ * vacancy cannot outlast its deadline for ever.
+ */
+export function needsForcedFill(
+  succession: OpenSuccession,
+  currentTurn: number,
+  electionLive: boolean
+): boolean {
+  return (
+    succession.fill === "direct_election" &&
+    !electionLive &&
+    successionStage(succession, currentTurn) === "overdue"
+  );
+}
+
 /** Deterministic rng from a string seed, so the same vacancy and turn always elect the same member. */
 export function seededRng(seed: string): () => number {
   let h = 2166136261;
@@ -91,6 +116,20 @@ export function largestBlocParty(candidates: readonly SuccessorCandidate[]): str
     }
   }
   return best;
+}
+
+/**
+ * Party for a generated successor when no autonomous legislator can be picked:
+ * the largest bloc among every legislator (players included), else the party
+ * that last held the office, else the first default party.
+ */
+export function pickFallbackParty(
+  legislatorParties: readonly string[],
+  lastHolderParty: string | undefined,
+  defaultParties: readonly string[]
+): string | null {
+  const bloc = largestBlocParty(legislatorParties.map((party, i) => ({ id: String(i), party })));
+  return bloc ?? lastHolderParty ?? defaultParties[0] ?? null;
 }
 
 /** Picks the winner of a legislature or party vote from the largest bloc. Null with no candidates. */

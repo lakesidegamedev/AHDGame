@@ -121,7 +121,7 @@ describe("fillUncontestedByElections", () => {
   });
 
   it("fills a special presidential election with the previous president's party", async () => {
-    m.access.mockResolvedValue({ FR: { registered: true, enabledForPlayers: true } });
+    m.access.mockResolvedValue({ FR: { registered: true, enabledForPlayers: false } });
     m.partyFind.mockReturnValue(toArray([{ sequentialId: 1, countryId: "FR", isDefault: true }]));
     m.officialFind.mockReturnValue(toArray([{ countryId: "FR", party: "1" }]));
     m.electionFind.mockReturnValue(
@@ -132,5 +132,31 @@ describe("fillUncontestedByElections", () => {
     expect(m.create).toHaveBeenCalledWith(
       expect.objectContaining({ state: "FR", party: "1", countryId: "FR" })
     );
+  });
+
+  it("keeps a player country's special presidential election for players", async () => {
+    m.access.mockResolvedValue({ FR: { registered: true, enabledForPlayers: true } });
+    m.partyFind.mockReturnValue(toArray([{ sequentialId: 1, countryId: "FR", isDefault: true }]));
+    m.officialFind.mockReturnValue(toArray([{ countryId: "FR", party: "1" }]));
+    m.nppFind.mockReturnValue(
+      toArray([{ _id: new ObjectId(), name: "Free", party: "1", countryId: "FR" }])
+    );
+    m.electionFind.mockReturnValue(
+      toArray([race({ electionType: "special_president", state: "FR", countryId: "FR" })])
+    );
+
+    expect(await fillUncontestedByElections(db(), 100, now)).toBe(0);
+    expect(m.create).not.toHaveBeenCalled();
+  });
+
+  it("excludes folded parties from the fallback party choice", async () => {
+    m.access.mockResolvedValue({ FR: { registered: true, enabledForPlayers: false } });
+    m.partyFind.mockReturnValue(toArray([]));
+    m.electionFind.mockReturnValue(
+      toArray([race({ electionType: "special_president", state: "FR", countryId: "FR" })])
+    );
+    await fillUncontestedByElections(db(), 100, now);
+    expect(m.partyFind.mock.calls[0]![0]).toMatchObject({ isDefunct: { $ne: true } });
+    expect(m.partyFind.mock.calls[0]![0]).not.toHaveProperty("defunct");
   });
 });

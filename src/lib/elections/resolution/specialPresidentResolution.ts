@@ -12,6 +12,8 @@ import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { initElectionVoteTally } from "@/lib/electionEngine/tallyManagement";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
+import type { CountryId } from "@/lib/constants/countries";
+import { postSuccessionNews } from "@/lib/elections/resolution/successionNews";
 import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import {
   decideTwoRoundPresident,
@@ -135,6 +137,11 @@ export async function resolveSpecialPresidentElection(
       vpCharId: winner.runningMateId,
       now,
       turn,
+    });
+    await postSuccessionNews(election.countryId as CountryId, {
+      event: "seated",
+      office: "president",
+      ...(winner.characterName ? { holderName: winner.characterName } : {}),
     });
   }
   await db

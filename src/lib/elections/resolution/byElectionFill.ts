@@ -121,7 +121,7 @@ export async function fillUncontestedByElections(
     await getPoliticalPartiesCollection(db)
   )
     .find(
-      { countryId: { $in: countries }, defunct: { $ne: true }, regimeStatus: { $ne: "banned" } },
+      { countryId: { $in: countries }, isDefunct: { $ne: true }, regimeStatus: { $ne: "banned" } },
       {
         projection: {
           sequentialId: 1,

@@ -91,3 +91,24 @@ describe("succession table coverage by era", () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe("deputyUnavailableRule", () => {
+  it("sends a permanent-deputy presidency to a special election", async () => {
+    const { deputyUnavailableRule } = await import("./executiveSuccession");
+    const base = getSuccessionRule("US", "presidential");
+    expect(base.fill).toBe("deputy_permanent");
+    const rule = deputyUnavailableRule(base);
+    expect(rule).toMatchObject({
+      office: "president",
+      fill: "direct_election",
+      actingOffice: null,
+    });
+    expect(rule.fillWithinTurns).toBeGreaterThan(rule.actingTurns);
+  });
+
+  it("leaves every other rule alone", async () => {
+    const { deputyUnavailableRule } = await import("./executiveSuccession");
+    const fr = getSuccessionRule("FR", "presidential");
+    expect(deputyUnavailableRule(fr)).toBe(fr);
+  });
+});

@@ -13,6 +13,9 @@ const m = vi.hoisted(() => ({
   vacate: vi.fn(),
   stateFind: vi.fn(),
   leaderBulk: vi.fn(),
+  partyFind: vi.fn(),
+  nppCreate: vi.fn(),
+  news: vi.fn(),
 }));
 
 vi.mock("@/lib/db/collections/governmentFormation", () => ({
@@ -33,6 +36,13 @@ vi.mock("@/lib/db/collections/countryState", () => ({
 vi.mock("@/lib/db/collections/countryLeaderState", () => ({
   getCountryLeaderStatesCollection: () => ({ bulkWrite: m.leaderBulk }),
 }));
+vi.mock("@/lib/db/collections/politicalParties", () => ({
+  getPoliticalPartiesCollection: async () => ({ find: m.partyFind }),
+}));
+vi.mock("@/lib/npp/generator", () => ({
+  openNppCreationBatch: () => ({ create: m.nppCreate, close: vi.fn() }),
+}));
+vi.mock("@/lib/elections/resolution/successionNews", () => ({ postSuccessionNews: m.news }));
 vi.mock("@/lib/db/collections/gameState", () => ({ getGameStatePreset: m.preset }));
 vi.mock("@/lib/elections/vacateOfficesForExecutive", () => ({
   vacateNonExecutiveOfficesForExecutive: m.vacate,
@@ -84,6 +94,7 @@ beforeEach(() => {
   m.preset.mockResolvedValue("2027-default");
   m.vacate.mockResolvedValue(undefined);
   m.stateFind.mockReturnValue({ toArray: async () => [] });
+  m.partyFind.mockReturnValue({ toArray: async () => [] });
 });
 
 describe("special presidential election", () => {
@@ -207,7 +218,7 @@ describe("legislature and party votes", () => {
     expect(seated.nppId).toEqual(npp.nppId);
     expect(seated.isNPP).toBe(true);
     expect(seated.characterId).toBeNull();
-    const query = m.officialFind.mock.calls.at(-1)![0];
+    const query = m.officialFind.mock.calls.find(([q]) => q.nppId)![0];
     expect(query.nppId).toEqual({ $ne: null });
   });
 
@@ -259,5 +270,137 @@ describe("legislature and party votes", () => {
     await processSuccessionFills(db, 130, now);
     expect(m.leaderBulk).not.toHaveBeenCalled();
     expect(m.govBulk.mock.calls[0]![0][0].updateOne.update).toEqual({ $unset: { succession: "" } });
+  });
+});
+
+describe("succession fallbacks", () => {
+  const premierRow = {
+    _id: new ObjectId(),
+    countryId: "CN",
+    officeType: "premier",
+    characterId: null,
+    nppId: null,
+  };
+  const partyVote = succession({
+    office: "premier",
+    fill: "party_vote",
+    actingUntilTurn: 124,
+    fillByTurn: 172,
+  });
+
+  beforeEach(() => {
+    m.nppCreate.mockImplementation(async (input: { party: string }) => ({
+      _id: new ObjectId(),
+      name: "Generated Leader",
+      party: input.party,
+    }));
+  });
+
+  it("waits for candidates until the vote is overdue, then seats a generated member", async () => {
+    m.partyFind.mockReturnValue({
+      toArray: async () => [{ countryId: "CN", sequentialId: 7, isDefault: true }],
+    });
+    world({ govs: [{ _id: "CN", succession: partyVote }], officials: [premierRow] });
+
+    expect((await processSuccessionFills(db, 130, now)).voted).toBe(0);
+    expect(m.nppCreate).not.toHaveBeenCalled();
+
+    const result = await processSuccessionFills(db, 173, now);
+    expect(result.voted).toBe(1);
+    expect(m.nppCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ party: "7", countryId: "CN" })
+    );
+    const seated = m.officialBulk.mock.calls[0]![0][0].updateOne.update.$set;
+    expect(seated.isNPP).toBe(true);
+    expect(seated.party).toBe("7");
+    expect(m.news).toHaveBeenCalledWith(
+      "CN",
+      expect.objectContaining({ event: "seated", holderName: "Generated Leader" })
+    );
+  });
+
+  it("generates a member of the largest bloc when only players sit in the legislature", async () => {
+    const player = (party: string) => ({
+      countryId: "CN",
+      officeType: "npcDelegate",
+      nppId: new ObjectId(),
+      characterId: new ObjectId(),
+      party,
+    });
+    m.officialFind.mockImplementation((query: Record<string, any>) => ({
+      toArray: async () => {
+        if (query.officeType?.$in) return [premierRow];
+        if (query.nppId) return [];
+        return [player("3"), player("3"), player("4")];
+      },
+    }));
+    m.govFind.mockReturnValue({ toArray: async () => [{ _id: "CN", succession: partyVote }] });
+    m.electionFind.mockReturnValue({ toArray: async () => [] });
+    expect((await processSuccessionFills(db, 173, now)).voted).toBe(1);
+    expect(m.nppCreate).toHaveBeenCalledWith(expect.objectContaining({ party: "3" }));
+  });
+
+  it("fills an overdue election office by vote when its special election resolved empty", async () => {
+    const president = {
+      _id: new ObjectId(),
+      countryId: "FR",
+      officeType: "president",
+      characterId: null,
+      nppId: null,
+    };
+    const legislator = {
+      countryId: "FR",
+      officeType: "nationalAssembly",
+      nppId: new ObjectId(),
+      party: "5",
+    };
+    m.preset.mockResolvedValue("2027-default");
+    world({
+      govs: [{ _id: "FR", succession: succession({ vacatedTurn: 0, fillByTurn: 100 }) }],
+      officials: [president, legislator],
+    });
+    // No live election; the last special election resolved empty inside its cooldown.
+    m.electionFind.mockReturnValueOnce({ toArray: async () => [] });
+    m.electionFind.mockReturnValueOnce({ toArray: async () => [{ countryId: "FR" }] });
+    const result = await processSuccessionFills(db, 500, now);
+    expect(result).toEqual({ spawned: 0, voted: 1 });
+    const seated = m.officialBulk.mock.calls[0]![0][0].updateOne;
+    expect(seated.filter._id).toBe(president._id);
+    expect(seated.update.$set.nppId).toEqual(legislator.nppId);
+  });
+
+  it("does not force a vote on an overdue office while its special election is running", async () => {
+    const president = {
+      _id: new ObjectId(),
+      countryId: "FR",
+      officeType: "president",
+      characterId: null,
+      nppId: null,
+    };
+    m.preset.mockResolvedValue("2027-default");
+    world({
+      govs: [{ _id: "FR", succession: succession({ vacatedTurn: 0, fillByTurn: 100 }) }],
+      officials: [president],
+      elections: [{ countryId: "FR" }],
+    });
+    expect(await processSuccessionFills(db, 500, now)).toEqual({ spawned: 0, voted: 0 });
+  });
+
+  it("opens the election for a mid-term Russian vacancy once its first ballot has resolved", async () => {
+    m.preset.mockResolvedValue("1991-default");
+    world({ govs: [{ _id: "RU", succession: succession({}) }] });
+    // Every elections query returns the resolved first ballot.
+    m.electionFind.mockReturnValueOnce({ toArray: async () => [{ countryId: "RU" }] });
+    m.electionFind.mockReturnValue({ toArray: async () => [] });
+    expect((await processSuccessionFills(db, 300, now)).spawned).toBe(1);
+  });
+
+  it("announces a newly opened special election", async () => {
+    world({ govs: [{ _id: "FR", succession: succession({}) }] });
+    await processSuccessionFills(db, 300, now);
+    expect(m.news).toHaveBeenCalledWith(
+      "FR",
+      expect.objectContaining({ event: "election_opened" })
+    );
   });
 });

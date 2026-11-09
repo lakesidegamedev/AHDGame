@@ -111,3 +111,33 @@ describe("executive status payload", () => {
     expect(executiveStatusPayload(null, 10)).toEqual({ succession: null, caretaker: null });
   });
 });
+
+describe("succession fallbacks", () => {
+  const cnVote = () => vacancy("CN", "onePartyState");
+  const frElection = () => vacancy("FR", "presidential");
+
+  it("only generates a successor once the fill is overdue", async () => {
+    const { mayGenerateSuccessor } = await import("./successionFill");
+    const s = cnVote();
+    expect(mayGenerateSuccessor(s, s.fillByTurn)).toBe(false);
+    expect(mayGenerateSuccessor(s, s.fillByTurn + 1)).toBe(true);
+  });
+
+  it("forces a fill only for an overdue election office with no special election running", async () => {
+    const { needsForcedFill } = await import("./successionFill");
+    const s = frElection();
+    expect(needsForcedFill(s, s.fillByTurn + 1, false)).toBe(true);
+    expect(needsForcedFill(s, s.fillByTurn + 1, true)).toBe(false);
+    expect(needsForcedFill(s, s.fillByTurn, false)).toBe(false);
+    const vote = cnVote();
+    expect(needsForcedFill(vote, vote.fillByTurn + 1, false)).toBe(false);
+  });
+
+  it("picks a fallback party from the largest bloc, then the last holder, then a default", async () => {
+    const { pickFallbackParty } = await import("./successionFill");
+    expect(pickFallbackParty(["2", "3", "3"], "9", ["1"])).toBe("3");
+    expect(pickFallbackParty([], "9", ["1"])).toBe("9");
+    expect(pickFallbackParty([], undefined, ["1", "2"])).toBe("1");
+    expect(pickFallbackParty([], undefined, [])).toBeNull();
+  });
+});

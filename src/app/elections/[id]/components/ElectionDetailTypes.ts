@@ -184,6 +184,7 @@ export type ElectionType =
   | "stateSenate"
   | "governor"
   | "president"
+  | "special_president"
   | "commons"
   | "primeMinister"
   | "regionalCouncil"

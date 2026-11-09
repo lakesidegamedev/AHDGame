@@ -12,6 +12,7 @@ interface LayoutProps {
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "Presidential Election",
+  special_president: "Special Presidential Election",
   senate: "Senate Election",
   house: "House Election",
   governor: "Governor Election",
@@ -55,7 +56,9 @@ export async function generateMetadata({
   const typeLabel = ELECTION_TYPE_LABELS[election.electionType] ?? "Election";
   const stateStr =
     election.state &&
-    !["president", "commons", "primeMinister", "uachtaran"].includes(election.electionType)
+    !["president", "special_president", "commons", "primeMinister", "uachtaran"].includes(
+      election.electionType
+    )
       ? ` — ${election.state}`
       : "";
   const title = `${typeLabel}${stateStr} | A House Divided`;

@@ -1,4 +1,5 @@
 import type { ElectionDisplay } from "@/lib/db/types";
+import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive";
 import { getMappableRegions, type RegionMapData } from "@/components/CountryMapPaths";
 import { isCompetitiveElection, leaderColor } from "../electionsHelpers";
 
@@ -53,7 +54,8 @@ export function filterElections(
       }
     }
     if (hideUpcoming && e.status === "upcoming") return false;
-    if (competitive && e.electionType !== "president" && !isCompetitiveElection(e)) return false;
+    if (competitive && !isPresidentialElectionType(e.electionType) && !isCompetitiveElection(e))
+      return false;
     if (primary === "in" && !e.inPrimary) return false;
     if (primary === "out" && e.inPrimary) return false;
     if (contest === "uncontested" && !isUncontestedElection(e)) return false;
@@ -68,7 +70,7 @@ export function filterElections(
  */
 export function filterByRegion(elections: ElectionDisplay[], region: string): ElectionDisplay[] {
   if (!region) return elections;
-  return elections.filter((e) => e.state === region || e.electionType === "president");
+  return elections.filter((e) => e.state === region || isPresidentialElectionType(e.electionType));
 }
 
 /** Group elections by region, dropping empties and floating the national group first. */

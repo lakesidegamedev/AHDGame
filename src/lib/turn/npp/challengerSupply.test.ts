@@ -575,3 +575,23 @@ describe("player-country challenger supply safeguards", () => {
     expect(await processChallengerGeneration(new Date())).toBe(0);
   });
 });
+
+describe("getChallengerSupplyPolicy for the special presidential election", () => {
+  it("keeps a player country's special presidential election for players", async () => {
+    const { getChallengerSupplyPolicy } = await import("./rules/challengerSupply");
+    const players = { registered: true, enabledForPlayers: true };
+    expect(getChallengerSupplyPolicy(players, "special_president")).toEqual({
+      canReuse: false,
+      canGenerate: false,
+    });
+    expect(getChallengerSupplyPolicy(players, "president").canReuse).toBe(false);
+    expect(getChallengerSupplyPolicy(players, "special_governor").canReuse).toBe(true);
+  });
+
+  it("still supplies challengers in a country without players", async () => {
+    const { getChallengerSupplyPolicy } = await import("./rules/challengerSupply");
+    expect(
+      getChallengerSupplyPolicy({ registered: true, enabledForPlayers: false }, "special_president")
+    ).toEqual({ canReuse: true, canGenerate: true });
+  });
+});
