@@ -4629,7 +4629,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/cabinetEstates.ts": {
+    "src/lib/constants/cabinetEstatesTables.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -4753,7 +4753,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/exchangeRegistry.ts": {
+    "src/lib/constants/exchangeRegistryTables.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -4765,7 +4765,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/constants/historicalSeats.ts": {
+    "src/lib/constants/historicalSeatsTables.ts": {
       "longBlocks": 19,
       "narrativeLines": 9
     },
