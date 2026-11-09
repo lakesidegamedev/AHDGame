@@ -43,6 +43,7 @@ import { computeParliamentaryGovernmentTally } from "@/lib/congress/governmentVo
 import { resolveCountryOfficeLayout } from "@/lib/countries/rules/officeLayout";
 import { SNAP_ELECTION_LIMIT, SNAP_ELECTION_COOLDOWN_TURNS } from "@/lib/turn/snapElection";
 import { getConfidenceConsequenceLevel } from "@/lib/turn/rulingPartyPriorities";
+import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -93,9 +94,16 @@ async function handlePresidential(countryId: CountryId) {
       .collection<ElectedOfficial>("electedOfficials")
       .findOne({ countryId, officeType: "vicePresident" }),
   ]);
-  const [president, vicePresident] = await Promise.all([
+  const [president, vicePresident, govFormation, gameState] = await Promise.all([
     resolveExecutiveHolder(db, presidentOfficial),
     resolveExecutiveHolder(db, vicePresidentOfficial),
+    getGovernmentFormationsCollection(db).findOne(
+      { _id: countryId },
+      { projection: { status: 1, caretaker: 1, succession: 1 } }
+    ),
+    db
+      .collection<{ _id: string; currentTurn: number }>("gameState")
+      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
   ]);
 
   const myCharacter = authUser
@@ -121,6 +129,7 @@ async function handlePresidential(countryId: CountryId) {
     isAdmin: authUser?.isAdmin ?? false,
     isPresident,
     isVicePresident,
+    executiveStatus: executiveStatusPayload(govFormation, gameState?.currentTurn ?? 0),
   });
 }
 
@@ -622,5 +631,6 @@ async function handleParliamentary(countryId: CountryId) {
     snapElectionsRemaining,
     snapCooldownTurnsRemaining,
     rulingPartyConfidence,
+    executiveStatus: executiveStatusPayload(govFormation, executiveGameTime.currentTurn),
   });
 }

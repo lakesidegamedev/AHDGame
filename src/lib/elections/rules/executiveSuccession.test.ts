@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRY_CONFIGS, COUNTRY_ORDER } from "@/lib/constants/countries";
-import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
+import { COUNTRY_CONFIGS, COUNTRY_ORDER, getCountryConfig } from "@/lib/constants/countries";
+import { RU_RUSSIAN_1991 } from "@/lib/countries/ru/russian1991Config";
+import { getPresetEnablementCountries } from "@/lib/admin/seed/seedCountryGameStates";
+import { PM_VACANCY_DEADLINE_TURNS, SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 import {
   getSuccessionRule,
   getSuccessionRuleKeys,
   openExecutiveVacancy,
+  successionRuleKey,
   successionStage,
 } from "./executiveSuccession";
 
@@ -62,5 +65,28 @@ describe("vacancy timetable", () => {
     expect(successionStage(vacancy, vacancy.actingUntilTurn + 1)).toBe("awaiting_fill");
     expect(successionStage(vacancy, vacancy.fillByTurn)).toBe("awaiting_fill");
     expect(successionStage(vacancy, vacancy.fillByTurn + 1)).toBe("overdue");
+  });
+});
+
+describe("succession table coverage by era", () => {
+  it("has a rule for every country and government type each shipping preset can produce", () => {
+    const missing: string[] = [];
+    for (const preset of SEED_PRESET_IDS) {
+      for (const id of getPresetEnablementCountries(preset) ?? []) {
+        if (id === "US") continue;
+        const types = new Set([getCountryConfig(id, preset).governmentType]);
+        if (id === "RU" && preset === "1991-default") {
+          types.add(RU_RUSSIAN_1991.config.governmentType);
+        }
+        for (const type of types) {
+          try {
+            getSuccessionRule(id, type);
+          } catch {
+            missing.push(`${preset} ${successionRuleKey(id, type)}`);
+          }
+        }
+      }
+    }
+    expect(missing).toEqual([]);
   });
 });

@@ -136,7 +136,7 @@ import { processExpiredBannedShareholders } from "@/lib/account/processExpiredBa
 import { processInactiveShareholderShares } from "@/lib/account/processInactiveShareholderShares";
 import { processInactiveCeoCorpShares } from "@/lib/account/processInactiveCeoCorpShares";
 import { processPartyInfluenceTurn } from "@/lib/turn/partyInfluenceTurn";
-import { processSuccessions } from "@/lib/elections/resolution/executiveSuccession";
+import { processSuccessionsAndFills } from "@/lib/elections/resolution/executiveSuccessionFill";
 import { processImpeachmentLifecycle } from "@/lib/turn/impeachmentLifecycle";
 import { processByElectionsWithFill } from "@/lib/elections/resolution/byElectionFill";
 import { processCommonsByElectionWatcher } from "@/lib/turn/commonsByElections";
@@ -1586,7 +1586,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           processImpeachmentLifecycle(db, newTurn, gameNow)
         );
         await runtime.runPhase("presidentialSuccession", () =>
-          processSuccessions(db, newTurn, gameNow)
+          processSuccessionsAndFills(db, newTurn, gameNow)
         );
       },
     },

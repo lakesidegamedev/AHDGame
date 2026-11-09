@@ -14,6 +14,7 @@ export const ANALYTICS_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "stateSenate",
   "governor",
   "special_governor",
+  "special_president",
   // UK
   "commons",
   "snap_commons",

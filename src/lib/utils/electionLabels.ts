@@ -20,6 +20,7 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   stateSenate: "State Senate",
   governor: "Governor",
   special_governor: "Governor By-Election",
+  special_president: "Special Presidential Election",
   president: "President",
   // UK offices
   commons: "Parliamentary",
@@ -82,6 +83,7 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   stateSenate: "State Senate",
   governor: "Governor",
   special_governor: "Gov. By-Election",
+  special_president: "Special Pres. Election",
   president: "President",
   commons: "Parliamentary",
   snap_commons: "Snap Commons",
@@ -300,6 +302,7 @@ const SNAP_TO_REGULAR: Readonly<Record<string, string>> = {
  */
 const SPECIAL_TO_REGULAR: Readonly<Record<string, string>> = {
   special_commons: "commons",
+  special_president: "president",
 };
 
 /** By-election types that fill seats of `regularType` (e.g. `commons`). */

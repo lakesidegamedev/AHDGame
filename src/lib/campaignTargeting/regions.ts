@@ -17,7 +17,7 @@ async function standingAdRegions(db: Db, owner: Character) {
       {
         _id: { $in: candidates.map((candidate) => candidate.electionId) },
         countryId: owner.countryId,
-        electionType: { $in: ["president", "uachtaran"] },
+        electionType: { $in: ["president", "uachtaran", "special_president"] },
         status: "active",
       },
       { projection: { _id: 1 } }

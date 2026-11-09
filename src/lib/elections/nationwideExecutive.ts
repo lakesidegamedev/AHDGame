@@ -15,6 +15,7 @@
 const NATIONWIDE_DIRECT_EXECUTIVE_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "president", // US
   "uachtaran", // IE
+  "special_president", // vacancy fill for a directly elected presidency
 ]);
 
 /**

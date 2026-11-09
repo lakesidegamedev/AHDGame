@@ -41,6 +41,8 @@ export const DEFAULT_DURATIONS: Record<
   // Governor by-election (mid-term vacancy fill) — 24-turn filing/primary and 24-turn general; the
   // spawner sets timing directly, this entry just registers the type.
   special_governor: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // Special presidential election (vacancy fill): 24-turn filing window, 24-turn general; the spawner sets timing directly.
+  special_president: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // Commons by-election: compressed race but WITH filing/primary window so candidates can file. Mirrors regular Commons 24h + 24h split.
   special_commons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // CN NPC Delegate elections (5-year cycle, 48h election window)

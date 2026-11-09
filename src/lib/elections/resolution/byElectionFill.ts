@@ -1,5 +1,6 @@
 /**
- * Fill guarantee for uncontested by-elections (Commons and governors).
+ * Fill guarantee for uncontested by-elections (Commons, governors and special
+ * presidential elections).
  *
  * Just before a by-election's filing window closes with no candidate, an NPP of
  * the seat's previous party is entered, so the seat is not left empty through
@@ -30,6 +31,7 @@ import { processByElectionWatcher } from "@/lib/turn/byElections";
 
 const SPECIAL_COMMONS = "special_commons";
 const SPECIAL_GOVERNOR = "special_governor";
+const SPECIAL_PRESIDENT = "special_president";
 
 /** Previous party per race: Commons from the claimed vacancies, governors from the vacated row. */
 async function loadPreviousParties(db: Db, races: Election[]): Promise<Map<string, string>> {
@@ -65,6 +67,21 @@ async function loadPreviousParties(db: Db, races: Election[]): Promise<Map<strin
       if (typeof row?.party === "string" && row.party) previous.set(String(race._id), row.party);
     }
   }
+  const presidentRaces = races.filter((r) => r.electionType === SPECIAL_PRESIDENT);
+  if (presidentRaces.length > 0) {
+    const rows = await (
+      await getElectedOfficialsCollection(db)
+    )
+      .find(
+        { officeType: "president", countryId: { $in: presidentRaces.map((r) => r.countryId) } },
+        { projection: { countryId: 1, party: 1 } }
+      )
+      .toArray();
+    for (const race of presidentRaces) {
+      const row = rows.find((o) => o.countryId === race.countryId);
+      if (typeof row?.party === "string" && row.party) previous.set(String(race._id), row.party);
+    }
+  }
   return previous;
 }
 
@@ -77,7 +94,7 @@ export async function fillUncontestedByElections(
   const elections = await getElectionsCollection(db);
   const closing = await elections
     .find({
-      electionType: { $in: [SPECIAL_COMMONS, SPECIAL_GOVERNOR] },
+      electionType: { $in: [SPECIAL_COMMONS, SPECIAL_GOVERNOR, SPECIAL_PRESIDENT] },
       status: "active",
       primaryEndTurn: { $gt: currentTurn, $lte: currentTurn + BY_ELECTION_FILL_LEAD_TURNS },
     })
