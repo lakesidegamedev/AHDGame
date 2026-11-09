@@ -60,6 +60,8 @@ describe("runCaretakerMinisters NPP resignation hook (issue #859)", () => {
   let db: MockDb;
   beforeEach(() => {
     db = createMockDb();
+    db.collection("gameConfig");
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ governmentConfidenceEnabled: true });
     atLeastMock.mockReset();
     atLeastMock.mockResolvedValue(true);
   });
@@ -96,6 +98,18 @@ describe("runCaretakerMinisters NPP resignation hook (issue #859)", () => {
       value: 76,
       reason: "ministerResigned",
     });
+  });
+
+  it("still vacates a resigning caretaker while confidence is frozen", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ governmentConfidenceEnabled: false });
+    const { doc } = caretakerDoc({ countryId: "UK", positionId: "chancellor" });
+    seedCaretaker(db, doc as unknown as Record<string, unknown>);
+    const result = await runCaretakerMinisters(db as unknown as Db, "UK", 100, now, {
+      rng: () => 0,
+    });
+    expect(result.ran).toBe(true);
+    expect(db.collectionMocks.cabinetMembers.deleteOne).toHaveBeenCalled();
+    expectNoGaugeWrite();
   });
 
   it("resignation is deterministic in the injected rng (pass keeps the seat)", async () => {

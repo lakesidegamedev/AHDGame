@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { isGovernmentConfidenceEnabled } from "@/lib/government/confidence/featureFlag";
 import type { CountryId } from "@/lib/constants/countries";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getUKGovernmentCollection } from "@/lib/db/collections/ukGovernment";
@@ -27,11 +28,10 @@ const MAX_CONFIDENCE_HISTORY_POINTS = 500;
  * Persistence + application for parliamentary-government confidence. Wraps
  * the pure gauge arithmetic around the canonical per-country government doc.
  *
- * SAFETY: automatic dissolution when the gauge bottoms out is gated behind
- * `UK_CONFIDENCE_GAUGE_DISSOLUTION=1` (default off). Until then the gauge accrues
- * and persists (observable), but never itself fires a general election — the
- * irreversible consequence stays off until reviewed/enabled. `isDissolutionDue`
- * still reports the condition regardless, for surfacing.
+ * The global gameConfig.governmentConfidenceEnabled switch defaults frozen.
+ * Frozen gauges preserve values/history and never request gauge dissolution.
+ * When active, automatic gauge dissolution additionally requires the existing
+ * UK_CONFIDENCE_GAUGE_DISSOLUTION=1 environment setting.
  */
 
 export function isConfidenceDissolutionEnabled(): boolean {
@@ -160,6 +160,8 @@ export async function applyConfidenceEventToGov(
   countryId: CountryId = "UK"
 ): Promise<GaugeUpdate> {
   const current = await getConfidenceGauge(db, countryId);
+  if (!(await isGovernmentConfidenceEnabled(db)))
+    return { value: current, dissolutionDue: false, dissolutionEnabled: false };
   const value = applyConfidenceEvent(current, event);
   await writeGauge(db, value, now, event.kind, turn, countryId);
   const dissolutionDue = isDissolutionTriggered(value);
@@ -184,6 +186,8 @@ export async function tickConfidenceForGov(
 ): Promise<GaugeUpdate> {
   const countryId = opts.countryId ?? COUNTRY_CONFIGS.UK.id;
   const current = await getConfidenceGauge(db, countryId);
+  if (!(await isGovernmentConfidenceEnabled(db)))
+    return { value: current, dissolutionDue: false, dissolutionEnabled: false };
   const value = tickConfidence(current, opts);
   await writeGauge(db, value, opts.now, "turn", opts.turn, countryId);
   const dissolutionDue = isDissolutionTriggered(value);
@@ -202,6 +206,7 @@ export async function resetConfidenceGauge(
   countryId: CountryId = COUNTRY_CONFIGS.UK.id
 ): Promise<number> {
   const previous = await getConfidenceGauge(db, countryId);
+  if (!(await isGovernmentConfidenceEnabled(db))) return previous;
   const value = confidenceAfterGovernmentFormation(previous);
   await writeGauge(db, value, now, "governmentFormed", turn, countryId);
   return value;
@@ -215,7 +220,7 @@ export async function tickParliamentaryGovernmentConfidence(
   db: Db,
   opts: { countryIds: CountryId[]; now: Date; turn: number; preset?: string }
 ): Promise<Array<{ countryId: CountryId; value: number }>> {
-  if (opts.countryIds.length === 0) return [];
+  if (opts.countryIds.length === 0 || !(await isGovernmentConfidenceEnabled(db))) return [];
   const [governments, approvals] = await Promise.all([
     getGovernmentFormationsCollection(db)
       .find(
