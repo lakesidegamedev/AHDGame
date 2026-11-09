@@ -45,12 +45,24 @@ export interface ConsequenceResult {
   electionShifts: number;
 }
 
-function clampedApproval(delta: number) {
+const WITNESS_CAP = 200;
+
+/**
+ * Approval is additive, so the effect and its witness land in one document
+ * update: the filter refuses a write whose witness is already on the document.
+ */
+function witnessedApproval(delta: number, witness: string) {
   return [
     {
       $set: {
         approvalRating: {
           $max: [0, { $min: [100, { $add: [{ $ifNull: ["$approvalRating", 50] }, delta] }] }],
+        },
+        appliedCrisisEffects: {
+          $slice: [
+            { $concatArrays: [{ $ifNull: ["$appliedCrisisEffects", []] }, [witness]] },
+            -WITNESS_CAP,
+          ],
         },
       },
     },
@@ -65,9 +77,10 @@ function shiftId(crisisId: ObjectId, countryId: string, partyId: string, region:
 }
 
 /**
- * Ordered bulk write that records a receipt for every op it applied. If an op
- * fails, the ones before it have landed and are receipted, so a retry resumes
- * at the failure instead of repeating additive writes.
+ * Ordered bulk write whose ops are each guarded by a witness on the target
+ * document, so repeating any op, after a crash before the receipt save or an
+ * error that never said what landed, changes nothing. Receipts only save the
+ * round trip; the witness is the authority.
  */
 async function writeReceipted<T extends Document>(
   collection: Collection<T>,
@@ -93,7 +106,7 @@ async function writeReceipted<T extends Document>(
  * carry one (national approval for the head of state, state approval for a
  * governor) and into a bounded, expiring vote-share shift for each holder's
  * party in the places the crisis reached. Approval is additive, so each write
- * is keyed and skipped on a retry once its receipt is recorded; the shift ids
+ * carries a witness on the document it changes, so a retry cannot repeat it; the shift ids
  * are stable so a repeat run overwrites nothing new.
  */
 export async function settleCrisisConsequences(
@@ -153,12 +166,16 @@ export async function settleCrisisConsequences(
   for (const [countryId, delta] of nationalApproval) {
     const key = `national:${countryId}`;
     if (Math.abs(delta) < 0.01 || receipts?.done.has(key)) continue;
+    const witness = `${targets.crisisId.toHexString()}:${key}`;
     nationalOps.push({
       key,
       op: {
         updateOne: {
-          filter: { _id: countryId as GovernmentApproval["_id"] },
-          update: clampedApproval(delta),
+          filter: {
+            _id: countryId as GovernmentApproval["_id"],
+            appliedCrisisEffects: { $ne: witness },
+          },
+          update: witnessedApproval(delta, witness),
         },
       },
     });
@@ -167,12 +184,17 @@ export async function settleCrisisConsequences(
   for (const [stateId, { countryId, delta }] of stateApproval) {
     const key = `state:${stateId}`;
     if (Math.abs(delta) < 0.01 || receipts?.done.has(key)) continue;
+    const witness = `${targets.crisisId.toHexString()}:${key}`;
     stateOps.push({
       key,
       op: {
         updateOne: {
-          filter: { _id: stateId, countryId: countryId as StateApprovalHistory["countryId"] },
-          update: clampedApproval(delta),
+          filter: {
+            _id: stateId,
+            countryId: countryId as StateApprovalHistory["countryId"],
+            appliedCrisisEffects: { $ne: witness },
+          },
+          update: witnessedApproval(delta, witness),
         },
       },
     });

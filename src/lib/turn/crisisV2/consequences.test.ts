@@ -72,7 +72,7 @@ describe("settleCrisisConsequences", () => {
       40
     );
     expect(result).toEqual({ approvalWrites: 1, electionShifts: 1 });
-    expect(approvalUpdates[0].filter).toEqual({ _id: "US" });
+    expect(approvalUpdates[0].filter).toMatchObject({ _id: "US" });
     const delta = JSON.stringify(approvalUpdates[0].update);
     expect(delta).toContain("-");
     const ops = (modifierWrites.mock.calls[0] as unknown as [unknown[]])[0] as {
@@ -112,7 +112,7 @@ describe("settleCrisisConsequences", () => {
       40
     );
     expect(approvalUpdates).toHaveLength(0);
-    expect(stateUpdates[0].filter).toEqual({ _id: "TX", countryId: "US" });
+    expect(stateUpdates[0].filter).toMatchObject({ _id: "TX", countryId: "US" });
     const ops = (modifierWrites.mock.calls[0] as unknown as [unknown[]])[0] as {
       updateOne: { update: { $setOnInsert: { pct: number; regionIds: string[] } } };
     }[];
@@ -192,5 +192,133 @@ describe("settleCrisisConsequences", () => {
       { done: new Set(), mark: (key) => void marked.push(key) }
     );
     expect(marked).toEqual(["national:US"]);
+  });
+
+  describe("exactly-once approval delivery", () => {
+    type Op = {
+      updateOne: {
+        filter: { _id: string; appliedCrisisEffects: { $ne: string } };
+        update: [
+          {
+            $set: {
+              appliedCrisisEffects: { $slice: [{ $concatArrays: [unknown, [string]] }, number] };
+            };
+          },
+        ];
+      };
+    };
+
+    /** In-memory approval store that honours the witness guard in each filter. */
+    function witnessStore(characters: Record<string, unknown>[], failure?: () => unknown) {
+      const witnesses = new Map<string, string[]>([["US", []]]);
+      const applied: string[] = [];
+      let calls = 0;
+      const approvals = {
+        bulkWrite: async (ops: Op[]) => {
+          calls += 1;
+          for (const [index, { updateOne }] of ops.entries()) {
+            const injected = failure?.();
+            if (injected === "beforeWrite")
+              throw Object.assign(new Error("boom"), { writeErrors: [{ index }] });
+            const seen = witnesses.get(updateOne.filter._id) ?? [];
+            const witness =
+              updateOne.update[0].$set.appliedCrisisEffects.$slice[0].$concatArrays[1][0];
+            if (!seen.includes(updateOne.filter.appliedCrisisEffects.$ne)) {
+              witnesses.set(updateOne.filter._id, [...seen, witness]);
+              applied.push(updateOne.filter._id);
+            }
+            if (injected === "afterWrite") throw new Error("connection reset");
+          }
+        },
+      };
+      const db = {
+        collection(name: string) {
+          if (name === "characters") return { find: () => ({ toArray: async () => characters }) };
+          if (name === "governmentApprovals") return approvals;
+          if (name === "stateApprovalHistory") return { bulkWrite: async () => ({}) };
+          if (name === "countryModifiers") return { bulkWrite: async () => ({}) };
+          throw new Error(`unexpected ${name}`);
+        },
+      };
+      return { db: db as never, applied, calls: () => calls };
+    }
+
+    const setup = () => {
+      const president = new ObjectId();
+      return {
+        characters: [{ _id: president, countryId: "US", party: "red" }],
+        instance: { ledger: idle(president.toString(), "headOfState") },
+        target: targets(),
+      };
+    };
+
+    it("guards each write with a witness keyed to the crisis and the office", async () => {
+      const { characters, instance, target } = setup();
+      const { db } = witnessStore(characters);
+      const writes: Op[] = [];
+      const spy = db as unknown as {
+        collection: (n: string) => { bulkWrite: (o: Op[]) => unknown };
+      };
+      const original = spy.collection("governmentApprovals").bulkWrite;
+      spy.collection("governmentApprovals").bulkWrite = async (ops) => {
+        writes.push(...ops);
+        return original(ops);
+      };
+      await settleCrisisConsequences(db, instance, target, 40);
+      expect(writes[0].updateOne.filter.appliedCrisisEffects.$ne).toBe(
+        `${target.crisisId.toHexString()}:national:US`
+      );
+    });
+
+    it("does not repeat a write when the process died after it landed and before the receipt", async () => {
+      const { characters, instance, target } = setup();
+      const store = witnessStore(characters);
+      await settleCrisisConsequences(store.db, instance, target, 40, {
+        done: new Set(),
+        mark: () => {},
+      });
+      await settleCrisisConsequences(store.db, instance, target, 41, {
+        done: new Set(),
+        mark: () => {},
+      });
+      expect(store.applied).toEqual(["US"]);
+    });
+
+    it("applies once when an ambiguous network error hid a write that had landed", async () => {
+      const { characters, instance, target } = setup();
+      let first = true;
+      const store = witnessStore(characters, () => {
+        if (!first) return undefined;
+        first = false;
+        return "afterWrite";
+      });
+      const marked: string[] = [];
+      const receipts = { done: new Set<string>(), mark: (key: string) => void marked.push(key) };
+      await expect(
+        settleCrisisConsequences(store.db, instance, target, 40, receipts)
+      ).rejects.toThrow("connection reset");
+      expect(marked).toEqual([]);
+      await settleCrisisConsequences(store.db, instance, target, 41, receipts);
+      expect(store.applied).toEqual(["US"]);
+      expect(marked).toEqual(["national:US"]);
+    });
+
+    it("applies once when the write failed outright and is retried", async () => {
+      const { characters, instance, target } = setup();
+      let first = true;
+      const store = witnessStore(characters, () => {
+        if (!first) return undefined;
+        first = false;
+        return "beforeWrite";
+      });
+      const receipts = { done: new Set<string>(), mark: () => {} };
+      await expect(
+        settleCrisisConsequences(store.db, instance, target, 40, receipts)
+      ).rejects.toThrow("boom");
+      expect(store.applied).toEqual([]);
+      await settleCrisisConsequences(store.db, instance, target, 41, receipts);
+      expect(store.applied).toEqual(["US"]);
+      expect(store.calls()).toBe(2);
+    });
   });
 });
