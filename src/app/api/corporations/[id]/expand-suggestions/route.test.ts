@@ -802,6 +802,30 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     });
   });
 
+  it("does not rank mixed Telecom output as thousands of fully sellable hubs when software is filled", async () => {
+    seedPlantsMarket({ worldEpochId: "funded" });
+    await corpOverride({ type: "telecommunications" });
+    db.collection("producerMarketOutcomes").findOne.mockResolvedValue({
+      turn: 10,
+      books: [
+        { countryId: "US", commodity: "software", funded: 442352, filled: 483414 },
+        { countryId: "US", commodity: "network_services", funded: 101859, filled: 0 },
+      ],
+      regionalBuildBooks: [],
+    });
+    const response = await GET(makeRequest("sectorType=telecommunications&mode=unowned"), ctx());
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.suggestions[0].roomToBuildUnits).toBe(0);
+    expect(data.countryDemandEstimates[0].headroomUnits).toBe(0);
+    expect(
+      data.suggestions[0].buildDemand.find(
+        (r: { commodity: string; scope: string }) =>
+          r.commodity === "network_services" && r.scope === "national"
+      ).capacityUnits
+    ).toBeGreaterThan(0);
+  });
+
   it("refuses with insufficient_capital when cash is short of the founding charge", async () => {
     seedPlantsMarket();
     await corpOverride({ liquidCapital: 0 });

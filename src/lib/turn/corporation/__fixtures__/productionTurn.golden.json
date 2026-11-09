@@ -11,12 +11,12 @@
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1265017.0223127205,
+    "householdSpend": 1265017.0223127196,
     "publicSpend": 43750,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "0a37c7a84a287179ad0a46044774804c32af237c4dac388474405bb63a14ff7d"
+    "sha256": "4bdbfdcdee118364fc6d4a9a31aba89238e10a379468200aef8eb0f54e1b93bb"
   },
   "clearing": {
     "sectorsWithClearing": 420,
@@ -37,5 +37,17 @@
     "marketShareBySectorId": 420,
     "nationalDominanceShareBySectorId": 420,
     "sha256": "cd14af7a30f120d3b8a0c363e6478edfaac376802537b657f30d77818ec4ae3e"
+  },
+  "historicalShadow": {
+    "plants": 420,
+    "skipped": 0,
+    "prices": 16,
+    "nextPrices": 27,
+    "householdSpend": 1265017.0223127205,
+    "publicSpend": 43750,
+    "accounts": 70,
+    "carriedPlants": 420,
+    "payables": 0,
+    "sha256": "0a37c7a84a287179ad0a46044774804c32af237c4dac388474405bb63a14ff7d"
   }
 }

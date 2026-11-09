@@ -8,6 +8,11 @@ import {
   isStateScopedCommodity,
 } from "../../src/lib/market/rules/commodityMarketScope";
 
+import {
+  sizeBuildDemand,
+  fullMixBuildRoom,
+} from "../../src/lib/corporations/rules/buildDemandCapacity";
+
 const results = [];
 for (const [countryId, stateId] of [
   ["US", "TX"],
@@ -78,6 +83,19 @@ for (const [countryId, stateId] of [
     telecom.find((r) => r.commodity === "network_services" && r.scope === "national")?.unmet,
     7
   );
+  const sized = sizeBuildDemand({
+    rows: telecom,
+    supply: { network_services: 1, software: 1 },
+    outputMultiplier: 1,
+    countryId,
+    stateId,
+    producers: [],
+  });
+  assert.equal(fullMixBuildRoom(sized), 0);
+  assert.ok(
+    sized.find((r) => r.commodity === "network_services" && r.scope === "national")!
+      .capacityUnits! > 0
+  );
   results.push({
     countryId,
     commodities: COMMODITY_TYPES.length,
@@ -85,6 +103,8 @@ for (const [countryId, stateId] of [
     constructionUnmet: 7,
     telecomNetworkUnmet: 7,
     softwareUnmet: 0,
+    mixedOutputRoom: fullMixBuildRoom(sized),
+    networkOnlyOpportunity: true,
   });
 }
 console.log(

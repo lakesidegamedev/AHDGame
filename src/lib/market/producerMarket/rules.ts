@@ -82,7 +82,7 @@ export interface PurchaseOrder {
   /**
    * Shares each price level of the ordinary pass with the other flagged orders
    * of the same priority on the same book, pro rata to what each still wants
-   * (always for producer inputs; gameConfig.producerPublicFairShareStage for
+   * (always for producer inputs and households; gameConfig.producerPublicFairShareStage for
    * public buyers). Absent = the
    * order takes the level whole when it comes up in id order.
    */
