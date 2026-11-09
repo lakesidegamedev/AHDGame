@@ -885,11 +885,6 @@
     "src/app/api/character/reallocate-stats/route.ts": {
       "characters": 2
     },
-    "src/app/api/character/relocate-with-corp/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 5,
-      "states": 1
-    },
     "src/app/api/character/relocate/route.ts": {
       "states": 1
     },
@@ -935,15 +930,6 @@
       "politicalParties": 2,
       "states": 3,
       "untyped": 5
-    },
-    "src/app/api/client-status/route.ts": {
-      "characters": 2,
-      "corporations": 4,
-      "electedOfficials": 1,
-      "elections": 1,
-      "politicalParties": 1,
-      "states": 1,
-      "untyped": 2
     },
     "src/app/api/client/account/route.ts": {
       "characters": 1,
@@ -1480,12 +1466,6 @@
     "src/app/api/country/[code]/executive/peace/route.ts": {
       "federalBudget": 1
     },
-    "src/app/api/country/[code]/executive/route.ts": {
-      "characters": 7,
-      "electedOfficials": 7,
-      "gameState": 3,
-      "politicalParties": 4
-    },
     "src/app/api/country/[code]/executive/vice-president/action/route.ts": {
       "characters": 1,
       "electedOfficials": 1
@@ -1806,9 +1786,6 @@
       "states": 1
     },
     "src/app/api/country/[code]/parties/[id]/whippable-bills/route.ts": {
-      "electedOfficials": 1
-    },
-    "src/app/api/country/[code]/parties/[id]/whippable-leadership/route.ts": {
       "electedOfficials": 1
     },
     "src/app/api/country/[code]/parties/history/route.ts": {
@@ -2149,10 +2126,6 @@
       "politicalParties": 2,
       "untyped": 2
     },
-    "src/app/api/discord-bot/tickets/route.ts": {
-      "characters": 1,
-      "corporations": 1
-    },
     "src/app/api/elections/[id]/campaigns/route.ts": {
       "characters": 2,
       "npps": 1,
@@ -2321,10 +2294,6 @@
     },
     "src/app/api/index-petitions/route.ts": {
       "corporations": 1
-    },
-    "src/app/api/investment-funds/[slug]/redeem/route.ts": {
-      "characters": 2,
-      "untyped": 10
     },
     "src/app/api/investment-funds/[slug]/route.ts": {
       "corporations": 3
@@ -2792,11 +2761,6 @@
       "corporations": 1,
       "states": 1
     },
-    "src/app/country/[code]/executive/aras/page.tsx": {
-      "characters": 3,
-      "electedOfficials": 1,
-      "politicalParties": 1
-    },
     "src/app/country/[code]/executive/OnePartyExecutiveHub.tsx": {
       "characters": 4,
       "electedOfficials": 4,
@@ -2808,6 +2772,11 @@
       "electedOfficials": 2,
       "gameState": 1,
       "politicalParties": 3
+    },
+    "src/app/country/[code]/executive/aras/page.tsx": {
+      "characters": 3,
+      "electedOfficials": 1,
+      "politicalParties": 1
     },
     "src/app/country/[code]/page.tsx": {
       "elections": 1
@@ -3202,13 +3171,13 @@
       "politicalParties": 1,
       "states": 1
     },
-    "src/lib/admin/seed/seedAchievements.ts": {
-      "characters": 1,
-      "untyped": 6
-    },
     "src/lib/admin/seed/seedAT.ts": {
       "politicalParties": 3,
       "states": 2,
+      "untyped": 6
+    },
+    "src/lib/admin/seed/seedAchievements.ts": {
+      "characters": 1,
       "untyped": 6
     },
     "src/lib/admin/seed/seedBG2027.ts": {
@@ -3229,14 +3198,14 @@
       "states": 2,
       "untyped": 6
     },
-    "src/lib/admin/seed/seedCabinetEstates.ts": {
-      "states": 1,
-      "untyped": 1
-    },
     "src/lib/admin/seed/seedCN.ts": {
       "politicalParties": 3,
       "states": 2,
       "untyped": 6
+    },
+    "src/lib/admin/seed/seedCabinetEstates.ts": {
+      "states": 1,
+      "untyped": 1
     },
     "src/lib/admin/seed/seedCnStatePartyOrg.ts": {
       "untyped": 1
@@ -3264,9 +3233,6 @@
       "states": 3,
       "untyped": 7
     },
-    "src/lib/admin/seed/seedDdStatePartyOrg.ts": {
-      "untyped": 1
-    },
     "src/lib/admin/seed/seedDE.ts": {
       "electedOfficials": 4,
       "npps": 2,
@@ -3274,8 +3240,16 @@
       "states": 3,
       "untyped": 7
     },
+    "src/lib/admin/seed/seedDdStatePartyOrg.ts": {
+      "untyped": 1
+    },
     "src/lib/admin/seed/seedDemographics.ts": {
       "states": 1
+    },
+    "src/lib/admin/seed/seedES.ts": {
+      "politicalParties": 3,
+      "states": 2,
+      "untyped": 6
     },
     "src/lib/admin/seed/seedEasternBloc.ts": {
       "federalBudget": 2,
@@ -3295,12 +3269,12 @@
       "states": 1,
       "untyped": 1
     },
-    "src/lib/admin/seed/seedES.ts": {
+    "src/lib/admin/seed/seedFI.ts": {
       "politicalParties": 3,
       "states": 2,
       "untyped": 6
     },
-    "src/lib/admin/seed/seedFI.ts": {
+    "src/lib/admin/seed/seedFR.ts": {
       "politicalParties": 3,
       "states": 2,
       "untyped": 6
@@ -3308,18 +3282,13 @@
     "src/lib/admin/seed/seedForex.ts": {
       "gameState": 1
     },
-    "src/lib/admin/seed/seedFR.ts": {
+    "src/lib/admin/seed/seedGR.ts": {
       "politicalParties": 3,
       "states": 2,
       "untyped": 6
     },
     "src/lib/admin/seed/seedGameConfig.ts": {
       "untyped": 1
-    },
-    "src/lib/admin/seed/seedGR.ts": {
-      "politicalParties": 3,
-      "states": 2,
-      "untyped": 6
     },
     "src/lib/admin/seed/seedHU.ts": {
       "politicalParties": 4,
@@ -3332,14 +3301,14 @@
       "states": 2,
       "untyped": 7
     },
-    "src/lib/admin/seed/seedInfraProjects.ts": {
-      "states": 1,
-      "untyped": 1
-    },
     "src/lib/admin/seed/seedIT.ts": {
       "politicalParties": 3,
       "states": 2,
       "untyped": 6
+    },
+    "src/lib/admin/seed/seedInfraProjects.ts": {
+      "states": 1,
+      "untyped": 1
     },
     "src/lib/admin/seed/seedLegislationTypes.ts": {
       "untyped": 2
@@ -3365,9 +3334,6 @@
       "states": 2,
       "untyped": 7
     },
-    "src/lib/admin/seed/seedNationalManpower.ts": {
-      "states": 1
-    },
     "src/lib/admin/seed/seedNG.ts": {
       "electedOfficials": 2,
       "gameState": 1,
@@ -3375,6 +3341,9 @@
       "politicalParties": 3,
       "states": 2,
       "untyped": 7
+    },
+    "src/lib/admin/seed/seedNationalManpower.ts": {
+      "states": 1
     },
     "src/lib/admin/seed/seedNgBudgets.ts": {
       "untyped": 1
@@ -3428,12 +3397,12 @@
       "states": 1,
       "untyped": 3
     },
+    "src/lib/admin/seed/seedStateSectorSpecializations.ts": {
+      "states": 3
+    },
     "src/lib/admin/seed/seedStates.ts": {
       "states": 2,
       "untyped": 1
-    },
-    "src/lib/admin/seed/seedStateSectorSpecializations.ts": {
-      "states": 3
     },
     "src/lib/admin/seed/seedSuccessorBudgets1991.ts": {
       "federalBudget": 2,
@@ -4027,6 +3996,28 @@
       "electedOfficials": 1,
       "untyped": 2
     },
+    "src/lib/campaignTargeting/audience.ts": {
+      "gameState": 2,
+      "states": 2
+    },
+    "src/lib/campaignTargeting/commands.ts": {
+      "characters": 5,
+      "elections": 1,
+      "npps": 1
+    },
+    "src/lib/campaignTargeting/nationalAds.ts": {
+      "states": 1
+    },
+    "src/lib/campaignTargeting/poll.ts": {
+      "elections": 1
+    },
+    "src/lib/campaignTargeting/regions.ts": {
+      "elections": 1,
+      "states": 1
+    },
+    "src/lib/campaignTargeting/standingCommands.ts": {
+      "characters": 5
+    },
     "src/lib/campaigns/access.ts": {
       "characters": 2,
       "untyped": 2
@@ -4090,28 +4081,6 @@
     "src/lib/campaigns/statePresenceAccess.ts": {
       "characters": 1
     },
-    "src/lib/campaignTargeting/audience.ts": {
-      "gameState": 2,
-      "states": 2
-    },
-    "src/lib/campaignTargeting/commands.ts": {
-      "characters": 5,
-      "elections": 1,
-      "npps": 1
-    },
-    "src/lib/campaignTargeting/nationalAds.ts": {
-      "states": 1
-    },
-    "src/lib/campaignTargeting/poll.ts": {
-      "elections": 1
-    },
-    "src/lib/campaignTargeting/regions.ts": {
-      "elections": 1,
-      "states": 1
-    },
-    "src/lib/campaignTargeting/standingCommands.ts": {
-      "characters": 5
-    },
     "src/lib/canvassing/campaignContext.ts": {
       "elections": 1
     },
@@ -4158,6 +4127,11 @@
       "politicalParties": 2,
       "untyped": 6
     },
+    "src/lib/character/relocateWithCorp.ts": {
+      "corporateSectors": 1,
+      "corporations": 5,
+      "states": 1
+    },
     "src/lib/character/relocationCampaigns.ts": {
       "elections": 1
     },
@@ -4187,6 +4161,15 @@
     "src/lib/charts/parliamentChart.ts": {
       "electedOfficials": 1,
       "politicalParties": 1
+    },
+    "src/lib/client/clientStatus.ts": {
+      "characters": 2,
+      "corporations": 4,
+      "electedOfficials": 1,
+      "elections": 1,
+      "politicalParties": 1,
+      "states": 1,
+      "untyped": 2
     },
     "src/lib/client/widgetExtras.ts": {
       "untyped": 1
@@ -4620,6 +4603,9 @@
       "gameState": 3,
       "states": 1
     },
+    "src/lib/corporations/commands/takeSupplyListing.ts": {
+      "corporations": 1
+    },
     "src/lib/corporations/commands/takeovers/hostileTakeover.ts": {
       "characters": 2,
       "corporateSectors": 5,
@@ -4627,9 +4613,6 @@
       "gameState": 1,
       "states": 1,
       "untyped": 2
-    },
-    "src/lib/corporations/commands/takeSupplyListing.ts": {
-      "corporations": 1
     },
     "src/lib/corporations/commands/techTree/abandonTechDecade.ts": {
       "corporations": 1
@@ -5542,6 +5525,12 @@
     "src/lib/country/background/loadBackgroundCountryView.ts": {
       "federalBudget": 1
     },
+    "src/lib/country/executiveOverview.ts": {
+      "characters": 7,
+      "electedOfficials": 7,
+      "gameState": 3,
+      "politicalParties": 4
+    },
     "src/lib/country/mergeCountry.ts": {
       "corporateSectors": 2,
       "corporations": 2,
@@ -5901,6 +5890,12 @@
       "characters": 1,
       "elections": 1
     },
+    "src/lib/elections/presidential/presidentialElectionEngine.ts": {
+      "characters": 1,
+      "elections": 2,
+      "gameState": 2,
+      "states": 2
+    },
     "src/lib/elections/primaryPartyDetail.ts": {
       "characters": 3,
       "gameState": 1,
@@ -5921,6 +5916,112 @@
       "electedOfficials": 1,
       "gameState": 1
     },
+    "src/lib/elections/resolution/bgOrdinaryEligibility.ts": {
+      "characters": 1,
+      "elections": 2,
+      "npps": 1
+    },
+    "src/lib/elections/resolution/contingentActingPresidency.ts": {
+      "characters": 2,
+      "npps": 1
+    },
+    "src/lib/elections/resolution/contingentHouseVoteClose.ts": {
+      "characters": 2,
+      "elections": 1,
+      "npps": 1
+    },
+    "src/lib/elections/resolution/contingentHouseVoteNotices.ts": {
+      "characters": 1,
+      "electedOfficials": 1,
+      "politicalParties": 1
+    },
+    "src/lib/elections/resolution/contingentHouseVoteStandings.ts": {
+      "characters": 1,
+      "npps": 1
+    },
+    "src/lib/elections/resolution/electionNotifications.ts": {
+      "politicalParties": 1
+    },
+    "src/lib/elections/resolution/electionResolution.ts": {
+      "electedOfficials": 2,
+      "elections": 2,
+      "states": 1,
+      "untyped": 1
+    },
+    "src/lib/elections/resolution/electionSpawning.ts": {
+      "elections": 4,
+      "gameState": 1
+    },
+    "src/lib/elections/resolution/finalizedElectionCleanup.ts": {
+      "untyped": 1
+    },
+    "src/lib/elections/resolution/generalResolution.ts": {
+      "characters": 5,
+      "electedOfficials": 7,
+      "elections": 6,
+      "npps": 4
+    },
+    "src/lib/elections/resolution/generalResolutionAftermath.ts": {
+      "elections": 5,
+      "untyped": 2
+    },
+    "src/lib/elections/resolution/generalResolutionCandidates.ts": {
+      "characters": 2,
+      "npps": 2
+    },
+    "src/lib/elections/resolution/generalResolutionHelpers.ts": {
+      "characters": 5,
+      "electedOfficials": 10,
+      "elections": 3,
+      "npps": 4,
+      "untyped": 2
+    },
+    "src/lib/elections/resolution/generalResolutionWinners.ts": {
+      "electedOfficials": 5
+    },
+    "src/lib/elections/resolution/independenceDesireHook.ts": {
+      "electedOfficials": 1,
+      "politicalParties": 1
+    },
+    "src/lib/elections/resolution/loadContingentElectionData.ts": {
+      "characters": 1,
+      "electedOfficials": 2,
+      "npps": 2,
+      "politicalParties": 1
+    },
+    "src/lib/elections/resolution/ngPresidentAccumulation.ts": {
+      "characters": 1,
+      "states": 1
+    },
+    "src/lib/elections/resolution/ngPresidentResolution.ts": {
+      "characters": 1,
+      "electedOfficials": 1,
+      "untyped": 2
+    },
+    "src/lib/elections/resolution/presidentExecutiveSeating.ts": {
+      "characters": 11,
+      "electedOfficials": 6,
+      "npps": 5
+    },
+    "src/lib/elections/resolution/presidentResolution.ts": {
+      "characters": 3,
+      "electedOfficials": 2,
+      "npps": 2,
+      "untyped": 3
+    },
+    "src/lib/elections/resolution/presidentResolutionMessaging.ts": {
+      "characters": 7,
+      "npps": 2,
+      "politicalParties": 1
+    },
+    "src/lib/elections/resolution/presidentialTenureLedger.ts": {
+      "gameState": 1
+    },
+    "src/lib/elections/resolution/snapElection.ts": {
+      "gameState": 1,
+      "states": 1,
+      "untyped": 1
+    },
     "src/lib/elections/resolveElection.ts": {
       "characters": 2,
       "elections": 4,
@@ -5937,16 +6038,22 @@
     "src/lib/elections/responseCredit.ts": {
       "untyped": 2
     },
+    "src/lib/elections/scheduling/engine.ts": {
+      "elections": 10,
+      "gameState": 1,
+      "states": 1,
+      "untyped": 3
+    },
+    "src/lib/elections/scheduling/shared.ts": {
+      "elections": 19,
+      "states": 5
+    },
     "src/lib/elections/stateAttackSpend.ts": {
       "characters": 1
     },
     "src/lib/elections/stateTravelOptions.ts": {
       "gameState": 1,
       "states": 1
-    },
-    "src/lib/elections/vacatedBlocSeats.ts": {
-      "electedOfficials": 2,
-      "untyped": 1
     },
     "src/lib/elections/vacateOfficesForExecutive.ts": {
       "electedOfficials": 2
@@ -5955,6 +6062,10 @@
       "characters": 1,
       "politicalParties": 2,
       "untyped": 2
+    },
+    "src/lib/elections/vacatedBlocSeats.ts": {
+      "electedOfficials": 2,
+      "untyped": 1
     },
     "src/lib/elections/withdrawBannedCandidates.ts": {
       "characters": 1,
@@ -6298,6 +6409,10 @@
     },
     "src/lib/indexFunds/queuedPayoutSettlement.ts": {
       "untyped": 3
+    },
+    "src/lib/indexFunds/redeemFundShares.ts": {
+      "characters": 2,
+      "untyped": 10
     },
     "src/lib/indexFunds/sponsorship/charterFund.ts": {
       "corporateSectors": 1,
@@ -7036,6 +7151,26 @@
       "characters": 5,
       "politicalParties": 4
     },
+    "src/lib/nationalMetrics.ts": {
+      "federalBudget": 1,
+      "gameState": 2,
+      "states": 1
+    },
+    "src/lib/nationalPartyElectionNotifications.ts": {
+      "characters": 9,
+      "politicalParties": 1
+    },
+    "src/lib/nationalPartyElections.ts": {
+      "characters": 1,
+      "gameState": 1,
+      "politicalParties": 6,
+      "untyped": 2
+    },
+    "src/lib/nationalPartyQuorum.ts": {
+      "characters": 1,
+      "politicalParties": 1,
+      "untyped": 1
+    },
     "src/lib/nationalization/auctionListing.ts": {
       "characters": 1,
       "corporateSectors": 1,
@@ -7175,26 +7310,6 @@
     "src/lib/nationalization/treasuryLedger.ts": {
       "federalBudget": 1,
       "gameState": 1
-    },
-    "src/lib/nationalMetrics.ts": {
-      "federalBudget": 1,
-      "gameState": 2,
-      "states": 1
-    },
-    "src/lib/nationalPartyElectionNotifications.ts": {
-      "characters": 9,
-      "politicalParties": 1
-    },
-    "src/lib/nationalPartyElections.ts": {
-      "characters": 1,
-      "gameState": 1,
-      "politicalParties": 6,
-      "untyped": 2
-    },
-    "src/lib/nationalPartyQuorum.ts": {
-      "characters": 1,
-      "politicalParties": 1,
-      "untyped": 1
     },
     "src/lib/nativePush/devices.ts": {
       "untyped": 1
@@ -7584,6 +7699,9 @@
       "electedOfficials": 1,
       "npps": 1
     },
+    "src/lib/partyWhips/whippableLeadership.ts": {
+      "electedOfficials": 1
+    },
     "src/lib/patreon/staffUserSearch.ts": {
       "characters": 2
     },
@@ -7667,12 +7785,6 @@
       "characters": 5,
       "electedOfficials": 1,
       "gameState": 3
-    },
-    "src/lib/elections/presidential/presidentialElectionEngine.ts": {
-      "characters": 1,
-      "elections": 2,
-      "gameState": 2,
-      "states": 2
     },
     "src/lib/primaryRegionalBonusLoader.ts": {
       "characters": 1,
@@ -8446,6 +8558,10 @@
       "characters": 1,
       "politicalParties": 1
     },
+    "src/lib/support/discordTicketCommands.ts": {
+      "characters": 1,
+      "corporations": 1
+    },
     "src/lib/tariffs/reconcileTariffs.ts": {
       "federalBudget": 1
     },
@@ -8500,10 +8616,6 @@
     "src/lib/turn/atomicClaim.ts": {
       "untyped": 1
     },
-    "src/lib/turn/automationDetection.ts": {
-      "characters": 1,
-      "untyped": 1
-    },
     "src/lib/turn/autoReelectionEntry.ts": {
       "untyped": 1
     },
@@ -8512,14 +8624,18 @@
       "gameState": 1,
       "untyped": 3
     },
+    "src/lib/turn/automationDetection.ts": {
+      "characters": 1,
+      "untyped": 1
+    },
+    "src/lib/turn/bankSolvencyTurn.ts": {
+      "corporations": 2
+    },
     "src/lib/turn/bankingTurn.ts": {
       "characters": 2,
       "corporateSectors": 1,
       "corporations": 6,
       "untyped": 1
-    },
-    "src/lib/turn/bankSolvencyTurn.ts": {
-      "corporations": 2
     },
     "src/lib/turn/billLifecycle/configs/oneParty.ts": {
       "characters": 1
@@ -8767,107 +8883,6 @@
       "politicalParties": 2,
       "states": 1
     },
-    "src/lib/elections/resolution/bgOrdinaryEligibility.ts": {
-      "characters": 1,
-      "elections": 2,
-      "npps": 1
-    },
-    "src/lib/elections/resolution/contingentActingPresidency.ts": {
-      "characters": 2,
-      "npps": 1
-    },
-    "src/lib/elections/resolution/contingentHouseVoteClose.ts": {
-      "characters": 2,
-      "elections": 1,
-      "npps": 1
-    },
-    "src/lib/elections/resolution/contingentHouseVoteNotices.ts": {
-      "characters": 1,
-      "electedOfficials": 1,
-      "politicalParties": 1
-    },
-    "src/lib/elections/resolution/contingentHouseVoteStandings.ts": {
-      "characters": 1,
-      "npps": 1
-    },
-    "src/lib/elections/resolution/electionNotifications.ts": {
-      "politicalParties": 1
-    },
-    "src/lib/elections/resolution/electionSpawning.ts": {
-      "elections": 4,
-      "gameState": 1
-    },
-    "src/lib/elections/resolution/finalizedElectionCleanup.ts": {
-      "untyped": 1
-    },
-    "src/lib/elections/resolution/generalResolution.ts": {
-      "characters": 5,
-      "electedOfficials": 7,
-      "elections": 6,
-      "npps": 4
-    },
-    "src/lib/elections/resolution/generalResolutionAftermath.ts": {
-      "elections": 5,
-      "untyped": 2
-    },
-    "src/lib/elections/resolution/generalResolutionCandidates.ts": {
-      "characters": 2,
-      "npps": 2
-    },
-    "src/lib/elections/resolution/generalResolutionHelpers.ts": {
-      "characters": 5,
-      "electedOfficials": 10,
-      "elections": 3,
-      "npps": 4,
-      "untyped": 2
-    },
-    "src/lib/elections/resolution/generalResolutionWinners.ts": {
-      "electedOfficials": 5
-    },
-    "src/lib/elections/resolution/independenceDesireHook.ts": {
-      "electedOfficials": 1,
-      "politicalParties": 1
-    },
-    "src/lib/elections/resolution/loadContingentElectionData.ts": {
-      "characters": 1,
-      "electedOfficials": 2,
-      "npps": 2,
-      "politicalParties": 1
-    },
-    "src/lib/elections/resolution/ngPresidentAccumulation.ts": {
-      "characters": 1,
-      "states": 1
-    },
-    "src/lib/elections/resolution/ngPresidentResolution.ts": {
-      "characters": 1,
-      "electedOfficials": 1,
-      "untyped": 2
-    },
-    "src/lib/elections/resolution/presidentExecutiveSeating.ts": {
-      "characters": 11,
-      "electedOfficials": 6,
-      "npps": 5
-    },
-    "src/lib/elections/resolution/presidentialTenureLedger.ts": {
-      "gameState": 1
-    },
-    "src/lib/elections/resolution/presidentResolution.ts": {
-      "characters": 3,
-      "electedOfficials": 2,
-      "npps": 2,
-      "untyped": 3
-    },
-    "src/lib/elections/resolution/presidentResolutionMessaging.ts": {
-      "characters": 7,
-      "npps": 2,
-      "politicalParties": 1
-    },
-    "src/lib/elections/resolution/electionResolution.ts": {
-      "electedOfficials": 2,
-      "elections": 2,
-      "states": 1,
-      "untyped": 1
-    },
     "src/lib/turn/elections/electionHalfTick.ts": {
       "gameState": 1
     },
@@ -9054,14 +9069,14 @@
     "src/lib/turn/nuclearProductionTurn.ts": {
       "gameState": 1
     },
+    "src/lib/turn/parliamentSeatsSnapshot.ts": {
+      "electedOfficials": 1,
+      "untyped": 1
+    },
     "src/lib/turn/parliamentaryGovernment.ts": {
       "characters": 1,
       "gameState": 7,
       "untyped": 9
-    },
-    "src/lib/turn/parliamentSeatsSnapshot.ts": {
-      "electedOfficials": 1,
-      "untyped": 1
     },
     "src/lib/turn/partyActionGeneration.ts": {
       "characters": 1,
@@ -9101,16 +9116,6 @@
     "src/lib/turn/partyTierTurn.ts": {
       "gameState": 1,
       "politicalParties": 2
-    },
-    "src/lib/elections/scheduling/engine.ts": {
-      "elections": 10,
-      "gameState": 1,
-      "states": 1,
-      "untyped": 3
-    },
-    "src/lib/elections/scheduling/shared.ts": {
-      "elections": 19,
-      "states": 5
     },
     "src/lib/turn/politicalMetricsDynamics.ts": {
       "states": 1
@@ -9173,11 +9178,6 @@
       "characters": 5,
       "electedOfficials": 2,
       "npps": 2
-    },
-    "src/lib/elections/resolution/snapElection.ts": {
-      "gameState": 1,
-      "states": 1,
-      "untyped": 1
     },
     "src/lib/turn/state/topSectorsRecompute.ts": {
       "corporateSectors": 1,
