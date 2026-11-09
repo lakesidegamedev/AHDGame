@@ -161,6 +161,8 @@ describe("getCorporationSectorDetail", () => {
     expect(data.sector.sectorType).toBe("technology");
     expect(data.sector.stateId).toBe("CA");
     expect(data.isCeo).toBe(false);
+    // A company that is not extraction-typed is never offered the Prospect action.
+    expect(data.corporation.canProspect).toBe(false);
     // The withheld figures are labelled so the client shows "why" rather than a
     // bare ", " that reads as $0. Anonymous viewer of a private corp → signed-out.
     expect(data.financialVisibility).toEqual({ hidden: true, reason: "signed-out" });

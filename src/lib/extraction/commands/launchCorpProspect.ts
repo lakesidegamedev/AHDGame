@@ -18,6 +18,8 @@ import {
   PROSPECT_MAX_ACTIVE_PER_INITIATOR,
   prospectCostAnchor,
   prospectCostMultiplier,
+  corpCanProspect,
+  PROSPECT_NOT_EXTRACTION_MESSAGE,
 } from "@/lib/constants/prospecting";
 
 export interface CorpProspectCosts {
@@ -50,11 +52,11 @@ export async function launchCorpProspect(
 ): Promise<LaunchCorpProspectResult> {
   const { stateId, resource } = args;
 
-  if (corporation.type !== "extraction" && corporation.secondaryType !== "extraction") {
+  if (!corpCanProspect(corporation)) {
     return {
       ok: false,
       status: 400,
-      error: "Only corporations with an extraction sector can prospect.",
+      error: PROSPECT_NOT_EXTRACTION_MESSAGE,
     };
   }
 
