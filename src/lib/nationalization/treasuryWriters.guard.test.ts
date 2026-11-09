@@ -78,15 +78,15 @@ const REGISTRY: Record<string, Registered> = {
     witness: [{ kind: "flow", flows: ["regulatory_fine"] }],
   },
   "src/lib/corporations/subsidiaries/commands/spinOff.ts": {
-    writers: ["creditTreasuryProceeds"],
+    writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "own-row", txTypes: ["gov_tax_revenue"] }],
   },
   "src/lib/indexFunds/sponsorship/charterFund.ts": {
-    writers: ["creditTreasuryProceeds"],
+    writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "own-row", txTypes: ["gov_tax_revenue"] }],
   },
   "src/lib/corporations/commands/founding/foundCorporation.ts": {
-    writers: ["creditTreasuryProceeds"],
+    writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "own-row", txTypes: ["corp_capital_seed"] }],
   },
   "src/lib/indexFunds/petitions/service.ts": {

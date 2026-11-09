@@ -530,6 +530,26 @@ export async function creditTreasuryProceedsFromAnchor(
   return amount;
 }
 
+/** Flows whose payer's own rows evidence the cash, so the Treasury leg adds no witness of its own. */
+export type PayerEvidencedProceedsFlow =
+  | "incorporation_fee"
+  | "founding_confidence_premium"
+  | "index_fund_charter_fee";
+
+type PairedProceedsFlow =
+  | "privatization_ipo"
+  | "privatization_auction_proceeds"
+  | "nationalization_compensation"
+  | PayerEvidencedProceedsFlow;
+
+function isWitnessedProceedsFlow(flow: PairedProceedsFlow): flow is TreasuryCashFlow {
+  return (
+    flow !== "incorporation_fee" &&
+    flow !== "founding_confidence_premium" &&
+    flow !== "index_fund_charter_fee"
+  );
+}
+
 /**
  * Credit Treasury proceeds whose payer already parted with the cash outside
  * the Treasury ledger (a bid escrow, an IPO float that no buyer funds). Under
@@ -546,7 +566,7 @@ export async function creditTreasuryProceedsPaired(
   input: {
     countryId: CountryId;
     now: Date;
-    flow: "privatization_ipo" | "privatization_auction_proceeds" | "nationalization_compensation";
+    flow: PairedProceedsFlow;
     key: string;
     site: string;
     amountLocal?: number;
@@ -572,10 +592,14 @@ export async function creditTreasuryProceedsPaired(
   amount = Math.round(amount);
   if (!(amount > 0)) return 0;
   if (!funded || !context) {
-    await creditTreasuryProceeds(db, input.countryId, amount, input.now, {
-      flow: input.flow,
-      ledger: input.ledger,
-    });
+    // Fee flows are already evidenced by the payer's own rows, so the plain credit must not witness them again.
+    await creditTreasuryProceeds(
+      db,
+      input.countryId,
+      amount,
+      input.now,
+      isWitnessedProceedsFlow(input.flow) ? { flow: input.flow, ledger: input.ledger } : undefined
+    );
     return amount;
   }
 
