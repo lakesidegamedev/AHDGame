@@ -358,10 +358,10 @@ async function carryOfficials(
     return { officialsRemapped: 0, officialsRetired: dropped?.deletedCount ?? 0 };
   }
 
-  const officials = (await db
+  const officials = await db
     .collection("electedOfficials")
-    .find({ countryId: fromCountryId, state: regionId })
-    .toArray()) as unknown as CarriedOfficial[];
+    .find<CarriedOfficial>({ countryId: fromCountryId, state: regionId })
+    .toArray();
 
   // THE OFFICE ONLY, NOT THE SEAT COUNT. The chamber they are joining is sized
   // from the region's `houseDistricts` / `stateSenateSeats`, and this runs BEFORE

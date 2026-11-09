@@ -238,18 +238,18 @@ export async function loadPartyChoicesFor(
   const out = new Map<CountryId, PeaceTermPartyChoice[]>(wanted.map((id) => [id, []]));
   if (wanted.length === 0) return out;
 
-  const parties = (await db
+  const parties = await db
     .collection("politicalParties")
-    .find(
+    .find<{
+      countryId?: CountryId;
+      sequentialId?: number;
+      name?: string;
+      abbreviation?: string;
+    }>(
       { countryId: { $in: wanted } },
       { projection: { countryId: 1, sequentialId: 1, name: 1, abbreviation: 1 } }
     )
-    .toArray()) as unknown as Array<{
-    countryId?: CountryId;
-    sequentialId?: number;
-    name?: string;
-    abbreviation?: string;
-  }>;
+    .toArray();
 
   for (const party of parties) {
     if (typeof party.sequentialId !== "number" || !Number.isInteger(party.sequentialId)) continue;

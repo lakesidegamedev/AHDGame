@@ -133,13 +133,13 @@ async function driveDdSurvey(
     .findOne({ _id: new ObjectId(minister.characterIdHex) });
   if (!character?.userId) return;
   if (!COUNTRY_CONFIGS.DD?.financeMinisterCabinetId) return;
-  const caps = (await db
+  const caps = await db
     .collection("stateResourceCapacity")
-    .find({ countryId: "DD" })
-    .toArray()) as unknown as Array<{
-    stateId: string;
-    resources?: Record<string, number>;
-  }>;
+    .find<{
+      stateId: string;
+      resources?: Record<string, number>;
+    }>({ countryId: "DD" })
+    .toArray();
   const attempts: Array<{ stateId: string; resource: string }> = [];
   for (const cap of caps) {
     for (const [resource, amount] of Object.entries(cap.resources ?? {})) {

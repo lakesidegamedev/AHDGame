@@ -246,10 +246,10 @@ async function transferOrRetireOrgMemberships(
   toCountryId: CountryId,
   currentTurn: number
 ): Promise<void> {
-  const memberships = (await db
+  const memberships = await db
     .collection("organizationMemberships")
-    .find({ countryId: fromCountryId })
-    .toArray()) as unknown as Array<{ organizationId: string }>;
+    .find<{ organizationId: string }>({ countryId: fromCountryId })
+    .toArray();
   if (memberships.length === 0) return;
 
   const preset = await getGameStatePresetOrDefault(db);
@@ -327,15 +327,15 @@ async function sweepNationalStrays(
   // policy, colliding or not.
   const tariffWinner = absorbedTariffsWin ? fromCountryId : toCountryId;
   const tariffLoser = absorbedTariffsWin ? toCountryId : fromCountryId;
-  const winningTariffs = (await db
+  const winningTariffs = await db
     .collection("tariffs")
-    .find({ countryId: tariffWinner })
-    .toArray()) as unknown as Array<{
-    scopeType: string;
-    targetSectorType?: unknown;
-    targetOriginCountryId?: unknown;
-    targetCorporationId?: unknown;
-  }>;
+    .find<{
+      scopeType: string;
+      targetSectorType?: unknown;
+      targetOriginCountryId?: unknown;
+      targetCorporationId?: unknown;
+    }>({ countryId: tariffWinner })
+    .toArray();
   if (winningTariffs.length > 0) {
     // One $or delete for every colliding scope, not a round trip per tariff.
     // An explicit null in each key matches both a missing and a null field, so
@@ -490,9 +490,7 @@ async function mergeNationalCorporations(
   if (strandedIds.length > 0) {
     const pair = await loadFxScalePair(db, fromCountryId, toCountryId);
     if (pair.kind === "convert") {
-      const stranded = (await corps
-        .find({ _id: { $in: strandedIds } })
-        .toArray()) as unknown as Corporation[];
+      const stranded = await corps.find<Corporation>({ _id: { $in: strandedIds } }).toArray();
       for (const corp of stranded) {
         await convertCorpCurrency(db, corp, pair.newCurrency, pair.fxByCurrency, now, true);
       }
@@ -712,11 +710,11 @@ async function cancelAbsorbedElections(
   const live = { status: { $in: ["active", "upcoming"] as const } };
 
   // 1. Every live race still keyed to the country being absorbed.
-  const strays = (await db
+  const strays = await db
     .collection<{ _id: import("mongodb").ObjectId }>("elections")
     .find({ countryId: fromCountryId, ...live })
-    .project({ _id: 1 })
-    .toArray()) as unknown as Array<{ _id: import("mongodb").ObjectId }>;
+    .project<{ _id: import("mongodb").ObjectId }>({ _id: 1 })
+    .toArray();
 
   // 2. Live races on the SURVIVOR whose electionType belongs to the dissolved
   //    constitution — they arrived through the region re-key. The office remap
@@ -728,11 +726,11 @@ async function cancelAbsorbedElections(
   //    machinery would not re-run.
   const table = officeRemapFor(fromCountryId, toCountryId);
   const absorbedTypes = new Set(table ? Object.keys(table) : []);
-  const survivorLive = (await db
+  const survivorLive = await db
     .collection<{ _id: import("mongodb").ObjectId; electionType: string }>("elections")
     .find({ countryId: toCountryId, ...live })
-    .project({ _id: 1, electionType: 1 })
-    .toArray()) as unknown as Array<{ _id: import("mongodb").ObjectId; electionType: string }>;
+    .project<{ _id: import("mongodb").ObjectId; electionType: string }>({ _id: 1, electionType: 1 })
+    .toArray();
   const foreign = survivorLive.filter((e) => absorbedTypes.has(e.electionType));
 
   const ids = [...strays, ...foreign].map((e) => e._id);

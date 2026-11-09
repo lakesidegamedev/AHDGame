@@ -68,10 +68,10 @@ export async function mergePartiesIntoCountry(
     return { ...empty, ok: false, error: "A country cannot absorb its own parties." };
   }
 
-  const parties = (await db
+  const parties = await db
     .collection<PoliticalParty>("politicalParties")
-    .find({ countryId: fromCountryId })
-    .toArray()) as unknown as PartyDoc[];
+    .find<PartyDoc>({ countryId: fromCountryId })
+    .toArray();
 
   // ALREADY MIGRATED. A re-run after a partial failure finds nothing left in the
   // source, and must still hand its caller the map -- `adoptChallengerSettlement`
@@ -79,10 +79,10 @@ export async function mergePartiesIntoCountry(
   // there installs the WRONG party rather than failing loudly. Rebuilt from the
   // `mergedFrom` stamp, which is the whole reason the stamp is written.
   if (parties.length === 0) {
-    const alreadyMoved = (await db
+    const alreadyMoved = await db
       .collection<PoliticalParty>("politicalParties")
-      .find({ countryId: toCountryId, "mergedFrom.countryId": fromCountryId })
-      .toArray()) as unknown as PartyDoc[];
+      .find<PartyDoc>({ countryId: toCountryId, "mergedFrom.countryId": fromCountryId })
+      .toArray();
     if (alreadyMoved.length === 0) return empty;
     // A re-run after a partial failure may have moved the docs but died before
     // the money converted — the stamp filter inside makes this a no-op when it

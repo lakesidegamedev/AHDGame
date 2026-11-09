@@ -593,9 +593,9 @@ export async function computeWarApproval(
     // the public can see is gone. `navalApprovalEffect` is a cost only, bounded
     // at -1, and returns 0 for a country with no navy, so a landlocked power is
     // neither rewarded nor punished for ships it never had.
-    const navalUnits = (await getMilitaryUnitsCollection(db)
-      .find({ countryId, domain: "naval" })
-      .toArray()) as unknown as NavairUnit[];
+    const navalUnits = await getMilitaryUnitsCollection(db)
+      .find<NavairUnit>({ countryId, domain: "naval" })
+      .toArray();
     const navalEffect = navalApprovalEffect(navalUnits);
 
     return settle({
