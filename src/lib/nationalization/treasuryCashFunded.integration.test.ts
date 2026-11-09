@@ -542,6 +542,52 @@ describe("funded Treasury corporation transfers", () => {
     expect(db.collection("federalBudget").docs[0]).toMatchObject({ treasuryCashLocal: 35 });
   });
 
+  it.each(["incorporation_fee", "founding_confidence_premium", "index_fund_charter_fee"] as const)(
+    "lands the %s in spendable cash once under the funded ledger",
+    async (flow) => {
+      const { db } = world();
+      const input = {
+        countryId: "CN" as const,
+        now: new Date(),
+        flow,
+        key: `${flow}-1`,
+        site: "test",
+        amountLocal: 15,
+      };
+
+      expect(await creditTreasuryProceedsPaired(db as unknown as Db, input)).toBe(15);
+      expect(await creditTreasuryProceedsPaired(db as unknown as Db, input)).toBe(15);
+
+      expect(db.collection("federalBudget").docs[0]).toMatchObject({
+        treasuryCashLocal: 25,
+        treasuryBalance: 25,
+      });
+      expect(db.collection("bankMoneyMoves").docs).toHaveLength(1);
+    }
+  );
+
+  it("keeps a payer-evidenced fee off the shadow ledger when the funded ledger is off", async () => {
+    const { db } = world();
+    await db
+      .collection("gameConfig")
+      .updateOne({ _id: "default" }, { $set: { treasuryCashLedgerEnabled: false } });
+    const credited = await creditTreasuryProceedsPaired(db as unknown as Db, {
+      countryId: "CN",
+      now: new Date(),
+      flow: "incorporation_fee",
+      key: "fee-1",
+      site: "test",
+      amountLocal: 15,
+    });
+
+    expect(credited).toBe(15);
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 10,
+      treasuryBalance: 25,
+    });
+    expect(db.collection("bankMoneyMoves").docs).toEqual([]);
+  });
+
   it("falls back to the plain proceeds credit when the funded ledger is off", async () => {
     const { db } = world();
     await db

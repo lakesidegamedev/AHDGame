@@ -37,7 +37,7 @@ import {
   refundCorpLiquidCapital,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { creditTreasuryProceeds } from "@/lib/nationalization/treasury";
+import { creditTreasuryProceedsPaired } from "@/lib/nationalization/treasury";
 import {
   isEligibleAsSubsidiaryParent,
   subsidiaryCeoBlockMessage,
@@ -343,7 +343,14 @@ export async function spinOff(
     // to the parent's country treasury, and both legs are ledgered for
     // money-conservation checks.
     const feeCurrency = (parentCurrency ?? "USD") as CurrencyCode;
-    const feeToTreasury = await creditTreasuryProceeds(db, parent.countryId, costLocal, now);
+    const feeToTreasury = await creditTreasuryProceedsPaired(db, {
+      countryId: parent.countryId,
+      amountLocal: costLocal,
+      now,
+      flow: "incorporation_fee",
+      key: `spin-off-fee:${newCorpId.toHexString()}`,
+      site: "spinOff.incorporationFee",
+    });
     await Promise.all([
       emitTx(db, {
         type: "corp_capital_seed",
