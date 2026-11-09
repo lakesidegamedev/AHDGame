@@ -2,12 +2,13 @@ import { loadNationalApproval } from "./nationalApproval";
 import { getDb } from "@/lib/mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import type { State, MetricCategoryId, GameState } from "@/lib/db/types";
-import type { StateDemographics } from "@/lib/db/types/demographics";
 import {
   calculateStateApproval,
   computeStateApprovalBase,
   buildFlatMetrics,
   BASE_APPROVAL,
+  loadElectorateGroups,
+  weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
@@ -126,19 +127,15 @@ export async function loadNationalMetrics(
   const stateMap = new Map(allStates.map((s) => [s._id, s]));
   const totalPopulation = allStates.reduce((sum, s) => sum + s.population, 0);
 
-  // P6d: per-state demographic groups so displayed approval matches the
+  // P6d: per-state census electorate so displayed approval matches the
   // electorate-weighted value the snapshot stores.
-  const [demographics, gameStateDoc] = await Promise.all([
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({ _id: { $in: stateIds }, countryId }, { projection: { _id: 1, groups: 1 } })
-      .toArray(),
+  const [groupsByState, gameStateDoc] = await Promise.all([
+    loadElectorateGroups(db, { _id: { $in: stateIds }, countryId }),
     db.collection<GameState>("gameState").findOne({ _id: "current" }),
   ]);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
   // Live year for era-aware scoring; null while the flag is off (legacy path).
   const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
-  const groupsByState = new Map(demographics.map((d) => [d._id, Object.values(d.groups ?? {})]));
 
   const categories = categoryFilter
     ? [categoryFilter]
@@ -279,8 +276,7 @@ export async function loadNationalMetrics(
     const state = stateMap.get(metrics._id);
     if (!state) continue;
     const flat = buildFlatMetrics(metrics);
-    const groups = groupsByState.get(metrics._id);
-    const weighting = groups && groups.length > 0 ? { groups } : undefined;
+    const weighting = weightingFor(groupsByState, countryId, String(metrics._id));
     const baseOverride = isPoliticalApprovalCountry(countryId, true)
       ? (politicalBases?.byRegion.get(metrics._id) ?? BASE_APPROVAL)
       : undefined;
