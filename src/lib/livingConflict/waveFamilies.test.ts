@@ -13,7 +13,11 @@ import {
   yearFractionOfTurn,
 } from "./rules/waveFamilies";
 import {
+  ANTIMICROBIAL_RESISTANCE_KEY,
+  ARCTIC_OPENING_KEY,
+  CLIMATE_MIGRATION_KEY,
   CRITICAL_MINERALS_KEY,
+  ORBITAL_DEBRIS_KEY,
   GRID_CASCADE_KEY,
   SECOND_PANDEMIC_KEY,
   SOVEREIGN_DEBT_WAVE_KEY,
@@ -181,6 +185,49 @@ describe("wave family opening rules", () => {
     expect(waveGatesHold(rule, "US", signals({ tension: 20, rdIntensity: 3 }))).toBe(false);
     expect(waveGatesHold(rule, "US", signals({ tension: 60, rdIntensity: 0.5 }))).toBe(false);
     expect(waveGatesHold(rule, "US", signals({ tension: 60, rdIntensity: 3 }))).toBe(true);
+  });
+});
+
+describe("climate, Arctic, resistance and orbit opening rules", () => {
+  it("opens climate migration only under climate pressure with real inflows", () => {
+    const rule = waveFamilyTable(CLIMATE_MIGRATION_KEY).opening;
+    expect(waveGatesHold(rule, "DE", signals({ migrationRate: 0.6, stewardship: 30 }))).toBe(true);
+    expect(waveGatesHold(rule, "DE", signals({ migrationRate: 0.6, stewardship: 80 }))).toBe(false);
+    expect(waveGatesHold(rule, "DE", signals({ migrationRate: 0.05, stewardship: 30 }))).toBe(
+      false
+    );
+    const open = waveAnnualChance(
+      rule,
+      signals({ migrationRate: 0.9, stewardship: 25, integration: 30 })
+    );
+    const calm = waveAnnualChance(
+      rule,
+      signals({ migrationRate: 0.3, stewardship: 50, integration: 55 })
+    );
+    expect(open).toBeGreaterThan(calm);
+  });
+
+  it("limits the Arctic scramble to countries with northern coasts", () => {
+    const rule = waveFamilyTable(ARCTIC_OPENING_KEY).opening;
+    const warm = signals({ stewardship: 30, tension: 60 });
+    expect(waveGatesHold(rule, "RU", warm)).toBe(true);
+    expect(waveGatesHold(rule, "US", warm)).toBe(true);
+    expect(waveGatesHold(rule, "BR", warm)).toBe(false);
+    expect(waveGatesHold(rule, "RU", signals({ stewardship: 90, tension: 60 }))).toBe(false);
+  });
+
+  it("grows antimicrobial resistance risk as prevention weakens", () => {
+    const rule = waveFamilyTable(ANTIMICROBIAL_RESISTANCE_KEY).opening;
+    expect(waveGatesHold(rule, "UK", signals({ healthPrevention: 80 }))).toBe(false);
+    const weak = waveAnnualChance(rule, signals({ healthPrevention: 25, healthEfficiency: 30 }));
+    const fair = waveAnnualChance(rule, signals({ healthPrevention: 50, healthEfficiency: 55 }));
+    expect(weak).toBeGreaterThan(fair);
+  });
+
+  it("only exposes research-heavy space economies to orbital debris", () => {
+    const rule = waveFamilyTable(ORBITAL_DEBRIS_KEY).opening;
+    expect(waveGatesHold(rule, "US", signals({ rdIntensity: 1 }))).toBe(false);
+    expect(waveGatesHold(rule, "US", signals({ rdIntensity: 3.5, tension: 50 }))).toBe(true);
   });
 });
 

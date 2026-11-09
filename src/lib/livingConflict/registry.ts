@@ -21,6 +21,10 @@ import { SECOND_PANDEMIC_DEF } from "./defs/waveFamilies/secondPandemic";
 import { SOVEREIGN_DEBT_WAVE_DEF } from "./defs/waveFamilies/sovereignDebtWave";
 import { GRID_CASCADE_DEF } from "./defs/waveFamilies/gridCascade";
 import { CRITICAL_MINERALS_DEF } from "./defs/waveFamilies/criticalMinerals";
+import { CLIMATE_MIGRATION_DEF } from "./defs/waveFamilies/climateMigration";
+import { ARCTIC_OPENING_DEF } from "./defs/waveFamilies/arcticOpening";
+import { ANTIMICROBIAL_RESISTANCE_DEF } from "./defs/waveFamilies/antimicrobialResistance";
+import { ORBITAL_DEBRIS_DEF } from "./defs/waveFamilies/orbitalDebris";
 
 /** Every living-conflict definition, keyed by its stable def key. */
 export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
@@ -46,6 +50,10 @@ export const LIVING_CONFLICT_DEFS: Record<string, LivingConflictDef> = {
   [SOVEREIGN_DEBT_WAVE_DEF.key]: SOVEREIGN_DEBT_WAVE_DEF,
   [GRID_CASCADE_DEF.key]: GRID_CASCADE_DEF,
   [CRITICAL_MINERALS_DEF.key]: CRITICAL_MINERALS_DEF,
+  [CLIMATE_MIGRATION_DEF.key]: CLIMATE_MIGRATION_DEF,
+  [ARCTIC_OPENING_DEF.key]: ARCTIC_OPENING_DEF,
+  [ANTIMICROBIAL_RESISTANCE_DEF.key]: ANTIMICROBIAL_RESISTANCE_DEF,
+  [ORBITAL_DEBRIS_DEF.key]: ORBITAL_DEBRIS_DEF,
 };
 
 export function livingConflictDef(key: string): LivingConflictDef | null {

@@ -135,6 +135,10 @@ export const SECOND_PANDEMIC_KEY = "second_pandemic";
 export const SOVEREIGN_DEBT_WAVE_KEY = "sovereign_debt_wave";
 export const GRID_CASCADE_KEY = "grid_cascade";
 export const CRITICAL_MINERALS_KEY = "critical_minerals_squeeze";
+export const CLIMATE_MIGRATION_KEY = "climate_migration_surge";
+export const ARCTIC_OPENING_KEY = "arctic_opening";
+export const ANTIMICROBIAL_RESISTANCE_KEY = "antimicrobial_resistance";
+export const ORBITAL_DEBRIS_KEY = "orbital_debris";
 
 export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
   [SECOND_PANDEMIC_KEY]: {
@@ -208,6 +212,67 @@ export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
       ],
     },
     dynamics: { ...SLOW, startPressure: 30, peakAt: 60, windowTurns: 24, onsetEveryTurns: 4 },
+    scale: HARM_SCALE,
+  },
+  [CLIMATE_MIGRATION_KEY]: {
+    fromYear: 2035,
+    opening: {
+      baseAnnual: 0.02,
+      capAnnual: 0.25,
+      gates: [
+        { signal: "migrationRate", min: 0.2 },
+        { signal: "stewardship", max: 55 },
+      ],
+      stressors: [
+        { signal: "stewardship", from: 55, to: 20, weight: 0.1 },
+        { signal: "migrationRate", from: 0.2, to: 1, weight: 0.08 },
+        { signal: "integration", from: 60, to: 25, weight: 0.05 },
+      ],
+    },
+    dynamics: { ...SLOW, startPressure: 30, peakAt: 60, windowTurns: 24, onsetEveryTurns: 4 },
+    scale: HARM_SCALE,
+  },
+  [ARCTIC_OPENING_KEY]: {
+    fromYear: 2033,
+    opening: {
+      baseAnnual: 0.03,
+      capAnnual: 0.3,
+      onlyCountries: ["US", "RU", "SE", "FI"],
+      gates: [{ signal: "stewardship", max: 60 }],
+      stressors: [
+        { signal: "stewardship", from: 60, to: 20, weight: 0.1 },
+        { signal: "tension", from: 20, to: 70, weight: 0.1 },
+      ],
+    },
+    dynamics: { ...SLOW, startPressure: 25, peakAt: 60, windowTurns: 24, onsetEveryTurns: 4 },
+    scale: HARM_SCALE,
+  },
+  [ANTIMICROBIAL_RESISTANCE_KEY]: {
+    fromYear: 2036,
+    opening: {
+      baseAnnual: 0.01,
+      capAnnual: 0.2,
+      gates: [{ signal: "healthPrevention", max: 55 }],
+      stressors: [
+        { signal: "healthPrevention", from: 55, to: 20, weight: 0.1 },
+        { signal: "healthEfficiency", from: 60, to: 25, weight: 0.05 },
+      ],
+    },
+    dynamics: { ...SLOW, startPressure: 25, peakAt: 60, windowTurns: 24, onsetEveryTurns: 4 },
+    scale: HARM_SCALE,
+  },
+  [ORBITAL_DEBRIS_KEY]: {
+    fromYear: 2040,
+    opening: {
+      baseAnnual: 0.01,
+      capAnnual: 0.15,
+      gates: [{ signal: "rdIntensity", min: 2.5 }],
+      stressors: [
+        { signal: "rdIntensity", from: 2.5, to: 4.5, weight: 0.08 },
+        { signal: "tension", from: 30, to: 80, weight: 0.06 },
+      ],
+    },
+    dynamics: { ...SLOW, startPressure: 30, peakAt: 55, windowTurns: 24, onsetEveryTurns: 3 },
     scale: HARM_SCALE,
   },
 };
