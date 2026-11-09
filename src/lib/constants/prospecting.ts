@@ -16,10 +16,11 @@ import { RD_INNOVATION_SCORE_THRESHOLD } from "@/lib/constants/corporations";
 // ── Prospecting ──────────────────────────────────────────────────────────────
 
 /**
- * Whether a company may launch a corporate survey. The company's own type or
- * secondary type must be extraction; merely operating an extraction sector
- * (for example after buying one) does not qualify. Shared by the launch command
- * and the sector page so the button and the refusal cannot drift apart.
+ * Whether a company's own type or secondary type is extraction, which on its
+ * own is enough to launch a corporate survey in any state it operates in. Any
+ * other company may still survey a state where it operates an extraction
+ * sector; the launch command and the sector page add that check, so the button
+ * and the refusal cannot drift apart.
  */
 export function corpCanProspect(corp: {
   type?: string | null;
@@ -28,9 +29,9 @@ export function corpCanProspect(corp: {
   return corp.type === "extraction" || corp.secondaryType === "extraction";
 }
 
-/** Refusal shown when a company that is not extraction-typed tries to prospect. */
+/** Refusal shown when a company with no extraction link to the state tries to prospect. */
 export const PROSPECT_NOT_EXTRACTION_MESSAGE =
-  "Only extraction companies can prospect. Your company's main or secondary business must be extraction, and owning an extraction sector is not enough.";
+  "Your company needs an extraction sector in this state, or an extraction main or secondary business, to prospect here.";
 
 /**
  * Turns from launch to resolution (6 turns = half a game quarter at 48/yr).

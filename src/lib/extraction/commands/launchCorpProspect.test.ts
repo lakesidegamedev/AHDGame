@@ -79,7 +79,7 @@ async function run(db: MockDb, corp: Corporation) {
 }
 
 describe("corpCanProspect", () => {
-  it("allows extraction as the primary or secondary type only", () => {
+  it("is true for extraction as the primary or secondary type only", () => {
     expect(corpCanProspect({ type: "extraction" })).toBe(true);
     expect(corpCanProspect({ type: "retail", secondaryType: "extraction" })).toBe(true);
     expect(corpCanProspect({ type: "retail", secondaryType: null })).toBe(false);
@@ -95,15 +95,44 @@ describe("launchCorpProspect", () => {
     register(db);
   });
 
-  it("rejects a non-extraction corporation", async () => {
+  it("rejects a non-extraction corporation with only a non-extraction sector in the state", async () => {
     primeEligible(db);
+    db.collectionMocks.corporateSectors.findOne.mockImplementation(
+      (filter: { sectorType?: string }) =>
+        Promise.resolve(filter.sectorType === "extraction" ? null : { countryId: "US" })
+    );
     const res = await run(db, makeCorp({ type: "technology" } as Partial<Corporation>));
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.status).toBe(400);
       expect(res.error).toBe(PROSPECT_NOT_EXTRACTION_MESSAGE);
-      expect(res.error).not.toMatch(/with an extraction sector/);
     }
+    expect(db.collectionMocks.prospectingSurveys.insertOne).not.toHaveBeenCalled();
+  });
+
+  it("allows a non-extraction corporation that operates an extraction sector in the state", async () => {
+    primeEligible(db);
+    db.collectionMocks.corporateSectors.findOne.mockImplementation(
+      (filter: { sectorType?: string }) =>
+        Promise.resolve(filter.sectorType === "extraction" ? { countryId: "US" } : null)
+    );
+    const res = await run(
+      db,
+      makeCorp({
+        type: "healthcare",
+        secondaryType: "chemical_industries",
+      } as unknown as Partial<Corporation>)
+    );
+    expect(res.ok).toBe(true);
+    expect(db.collectionMocks.prospectingSurveys.insertOne).toHaveBeenCalledOnce();
+  });
+
+  it("tells a non-extraction corporation with no sector in the state it has no operations there", async () => {
+    primeEligible(db);
+    db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null);
+    const res = await run(db, makeCorp({ type: "technology" } as Partial<Corporation>));
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("Your company has no operations in that state.");
   });
 
   it("allows a corporation with extraction as its secondary sector", async () => {
