@@ -1,7 +1,7 @@
 "use client";
 
 import { describeApprovalEffects } from "@/lib/demographics/effectAudience";
-import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
+import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { isMetricActive } from "@/lib/era/metricCatalog";
 import { useWorldFlags } from "@/hooks/useWorldFlags";

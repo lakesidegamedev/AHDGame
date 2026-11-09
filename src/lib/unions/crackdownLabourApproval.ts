@@ -28,13 +28,13 @@ export async function processCrackdownLabourApprovalTurn(
     if (!executiveId) continue;
     const marker = `lastUnionCrackdownApprovalTurn.${countryId}`;
     const set: Record<string, unknown> = { [marker]: currentTurn };
-    for (const archetypeId of segmentsFor(countryId).labour) {
-      set[`bucketApprovals.${archetypeId}`] = {
+    for (const bucketId of segmentsFor(countryId).labour) {
+      set[`bucketApprovals.${bucketId}`] = {
         $max: [
           -100,
           {
             $subtract: [
-              { $ifNull: [`$bucketApprovals.${archetypeId}`, 0] },
+              { $ifNull: [`$bucketApprovals.${bucketId}`, 0] },
               CRACKDOWN_LABOUR_APPROVAL_COST_PER_TURN,
             ],
           },

@@ -10,7 +10,7 @@ import {
   calculateShiftImpacts,
   getDomainForPolicyDomain,
   SHIFT_IMPACT_SCALE,
-} from "./archetypeAffinities";
+} from "./policyShiftImpacts";
 import { DOMAIN_BUCKET_AFFINITIES } from "./bucketAffinities";
 import { turnoutTargetIdsForCountry } from "./demographics/turnoutTargets";
 

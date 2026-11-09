@@ -37,7 +37,7 @@ import { withLawAdministration } from "@/lib/governmentFinance/lawAdministration
 // ============================================================================
 // Archetype approval impacts are calculated at bill ENACTMENT time (not stored
 // in seed data). Impacts are based on the SHIFT from old policy position to new,
-// using domain-specific affinities defined in src/lib/archetypeAffinities.ts.
+// using domain-specific affinities defined in src/lib/policyShiftImpacts.ts.
 //
 // The UI shows shift-based previews by fetching current policies and calculating
 // potential impacts using calculateShiftImpacts().

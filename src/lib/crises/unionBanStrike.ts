@@ -35,11 +35,11 @@ import { announceUnionBanStrikeEnd, announceUnionBanStrikeStart } from "./unionB
  */
 
 /**
- * Which archetypes read as labour/liberal and which as business/conservative in
- * each country, so the same crisis can charge the right constituencies without
- * branching on the country id at every call site. Countries with no row use
- * `default`, which carries only archetypes shared across the tables in
- * `archetypeAffinities.ts`.
+ * Which census buckets ("dimension:bucket") read as labour/liberal and which as
+ * business/conservative in each country, so the same crisis can charge the
+ * right constituencies without branching on the country id at every call site.
+ * Countries with no row use `default`, which carries only the income buckets
+ * shared by every non-US census.
  */
 export interface StrikeSegments {
   labour: string[];
@@ -48,20 +48,20 @@ export interface StrikeSegments {
 
 export const UNION_BAN_SEGMENTS: Record<string, StrikeSegments> = {
   default: {
-    labour: ["public_sector"],
-    business: ["small_business", "rural_traditionalists"],
+    labour: ["income:low"],
+    business: ["income:high"],
   },
   US: {
-    labour: ["union_trades", "college_liberals", "public_sector"],
-    business: ["small_business", "libertarians", "rural_traditionalists"],
+    labour: ["wealth:low", "education:no_college", "age:young"],
+    business: ["wealth:high", "age:mature"],
   },
   UK: {
-    labour: ["post_industrial_workers", "urban_progressives", "public_sector"],
-    business: ["small_business", "populist_right", "rural_traditionalists"],
+    labour: ["income:low", "education:no_qualifications", "urbanization:urban"],
+    business: ["income:high", "age:mature", "urbanization:rural"],
   },
   IE: {
-    labour: ["working_class", "young_urban"],
-    business: ["small_business", "rural_traditional"],
+    labour: ["income:low", "education:primary_or_less", "age:young"],
+    business: ["income:high", "urbanization:rural"],
   },
 };
 
@@ -74,9 +74,9 @@ export function segmentsFor(countryId: string): StrikeSegments {
 export interface ExecutiveCost {
   /** Points off `Character.favorability` (0-100). */
   favorability: number;
-  /** Points off each labour/liberal archetype's approval of them. */
+  /** Points off each labour/liberal bucket's approval of them. */
   labourSegment: number;
-  /** Points off each business/conservative archetype's approval of them. */
+  /** Points off each business/conservative bucket's approval of them. */
   businessSegment: number;
 }
 
@@ -288,7 +288,7 @@ async function endUnionBanStrike(
 /**
  * Charge a resolution to the executive who chose it.
  *
- * Personal favorability and per-archetype approval are the two channels the
+ * Personal favorability and per-bucket approval are the two channels the
  * game already models for "this decision cost you standing with these people"
  * (`Character.favorability` and `Character.bucketApprovals`, both read by
  * `effectiveFavorability`). Deltas land on the deciding character only: the
@@ -315,8 +315,8 @@ async function chargeExecutive(
 
   await db.collection<Character>("characters").updateOne({ _id: characterId }, { $inc: inc });
 
-  // Clamp after the fact, exactly as `applyArchetypeImpactsToVoters` does:
-  // favorability is a 0-100 scale and archetype approvals are -100..100, and a
+  // Clamp after the fact, exactly as `applyBucketImpactsToVoters` does:
+  // favorability is a 0-100 scale and bucket approvals are -100..100, and a
   // bare `$inc` respects neither.
   const character = await db
     .collection<Character>("characters")

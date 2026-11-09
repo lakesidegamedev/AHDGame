@@ -3741,11 +3741,11 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/archetypeAffinities.shiftDirection.test.ts": {
+    "src/lib/policyShiftImpacts.shiftDirection.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/archetypeAffinities.test.ts": {
+    "src/lib/policyShiftImpacts.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
