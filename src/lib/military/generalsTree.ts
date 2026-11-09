@@ -429,14 +429,12 @@ export const FULLTREE: Record<string, TraitTreeCategory> = {
 
 export interface SpecProfile {
   reputation: string;
-  branch: "Army" | "Navy" | "Air";
   stats: Record<string, number>;
   personality: string[];
 }
 export const SPEC_PROFILE: Record<string, SpecProfile> = {
   armor: {
     reputation: "The Iron Planner",
-    branch: "Army",
     stats: {
       leadership: 74,
       planning: 81,
@@ -459,7 +457,6 @@ export const SPEC_PROFILE: Record<string, SpecProfile> = {
   },
   offense: {
     reputation: "The Hammer",
-    branch: "Army",
     stats: {
       leadership: 82,
       planning: 62,
@@ -482,7 +479,6 @@ export const SPEC_PROFILE: Record<string, SpecProfile> = {
   },
   defense: {
     reputation: "The Anvil",
-    branch: "Army",
     stats: {
       leadership: 71,
       planning: 84,
@@ -505,7 +501,6 @@ export const SPEC_PROFILE: Record<string, SpecProfile> = {
   },
   logi: {
     reputation: "The Quartermaster",
-    branch: "Army",
     stats: {
       leadership: 64,
       planning: 79,
@@ -528,7 +523,6 @@ export const SPEC_PROFILE: Record<string, SpecProfile> = {
   },
   naval: {
     reputation: "The Tide",
-    branch: "Navy",
     stats: {
       leadership: 76,
       planning: 78,

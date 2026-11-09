@@ -1318,6 +1318,10 @@ export interface GameConfig {
    * delivery, expiry and cancellation continue. Preserved with gameConfig. */
   governmentContractsEnabled?: boolean;
 
+  /** Temporary confidence-gauge freeze. Missing means frozen. Explicitly enable
+   * to resume drift, events and formation changes. Preserved across resets. */
+  governmentConfidenceEnabled?: boolean;
+
   /**
    * Unified action audit spine master flag (forensics/alt-detection rework
    * plan §3.1). When on, `recordAudit`/`recordAuditBulk` writes normalized

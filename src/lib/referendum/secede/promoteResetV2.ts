@@ -23,6 +23,13 @@ import type { ResetCabinetActionState } from "@/lib/resetCabinet/rules/actionSta
 import { resetLawFamilies } from "@/lib/resetLegislation/catalog";
 import { fundingNameForLaw1991, fundingSeatForLaw } from "@/lib/resetLegislation/fundingOwner";
 import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
+import { openingLawReferences } from "@/lib/resetLegislation/openingLaw";
+import { withPostLaunchReferences } from "@/lib/resetLegislation/rules/postLaunchReferences";
+import {
+  completeSuccessorLawReferences,
+  splitInheritedLawAuthority,
+  splitNationalLawReferences,
+} from "./rules/lawSuccession";
 import {
   buildResetLawOpeningBoard,
   type ResetLawOpeningBoard,
@@ -141,6 +148,13 @@ export async function promoteResetV2ForIndependence(
         )
       : null;
   if (versions.metrics === "v2") {
+    const fiscalBudget = await db
+      .collection<FederalBudget>("federalBudget")
+      .findOne(
+        { _id: countryId },
+        { projection: { gdp: 1, revenue: 1, spending: 1, debt: 1, economicFactors: 1 } }
+      );
+    if (!fiscalBudget) throw new Error(`${countryId} metric promotion has no successor budget`);
     const metricRows: ResetMetricSnapshot[] = buildSuccessorMetricRows({
       countryId,
       aggregate: aggregateMetric!,
@@ -150,6 +164,14 @@ export async function promoteResetV2ForIndependence(
           throw new Error("Missing UK national metric source");
         })(),
       regions: regionSeeds,
+      turn: conversionTurn ?? gameState.currentTurn ?? aggregateMetric!.asOfTurn,
+      fiscal: {
+        gdp: fiscalBudget.gdp,
+        revenue: fiscalBudget.revenue?.total,
+        spending: fiscalBudget.spending?.total,
+        debtPrincipal: fiscalBudget.debt?.principal,
+        inflationRate: fiscalBudget.economicFactors?.inflationRate,
+      },
     });
     await metricCollection.bulkWrite(
       metricRows.map((row) => ({
@@ -159,6 +181,13 @@ export async function promoteResetV2ForIndependence(
     );
   }
   const sourcesToDelete: Array<Promise<unknown>> = [];
+  const sourceAccounts =
+    versions.legislation === "v2" || versions.cabinet === "v2"
+      ? await db
+          .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+          .find({ countryId: "UK", worldId })
+          .toArray()
+      : [];
 
   let nationalReferences: OpeningLawReference[] = [];
   if (versions.legislation === "v2") {
@@ -172,21 +201,43 @@ export async function promoteResetV2ForIndependence(
     }
     const nationalLaw = await lawCollection.findOne({ _id: "UK:national", worldId });
     if (!nationalLaw) throw new Error("Missing UK national law source");
-    nationalReferences = Object.values(nationalLaw.references).map((reference) => ({
-      ...rekeyReference(reference, countryId, "national"),
-      sourceComponents: reference.sourceComponents.map((component) => ({
-        ...component,
-        annualBooked: component.annualBooked * nationalWeight,
-      })),
-    }));
+    nationalReferences = splitNationalLawReferences(
+      Object.values(nationalLaw.references),
+      nationalWeight,
+      true
+    ).map((reference) => rekeyReference(reference, countryId, "national"));
+    nationalReferences = completeSuccessorLawReferences({
+      current: nationalReferences,
+      fallback: openingLawReferences.filter(
+        (reference) => reference.country === "UK" && reference.scope === "national"
+      ),
+      countryId,
+      scope: "national",
+      inheritedAuthority: splitInheritedLawAuthority(sourceAccounts, nationalWeight, true),
+    });
+    nationalReferences = Object.values(
+      withPostLaunchReferences({
+        countryId,
+        scope: "national",
+        references: Object.fromEntries(
+          nationalReferences.map((reference) => [reference.familyId, reference])
+        ),
+      })
+    );
     if (nationalLaw) {
-      const keptReferences = Object.values(nationalLaw.references).map((reference) => ({
-        ...reference,
-        sourceComponents: reference.sourceComponents.map((component) => ({
-          ...component,
-          annualBooked: component.annualBooked * (1 - nationalWeight),
-        })),
-      }));
+      const keptReferences = completeSuccessorLawReferences({
+        current: splitNationalLawReferences(
+          Object.values(nationalLaw.references),
+          nationalWeight,
+          false
+        ),
+        fallback: openingLawReferences.filter(
+          (reference) => reference.country === "UK" && reference.scope === "national"
+        ),
+        countryId: "UK",
+        scope: "national",
+        inheritedAuthority: splitInheritedLawAuthority(sourceAccounts, nationalWeight, false),
+      });
       await lawCollection.replaceOne(
         { _id: nationalLaw._id, worldId },
         buildResetLawOpeningBoard({
@@ -197,9 +248,16 @@ export async function promoteResetV2ForIndependence(
         })
       );
     }
-    const regionalReferences = Object.values(aggregateLaw.references).map((reference) =>
-      rekeyReference(reference, countryId, "regional")
-    );
+    const regionalReferences = completeSuccessorLawReferences({
+      current: Object.values(aggregateLaw.references).map((reference) =>
+        rekeyReference(reference, countryId, "regional")
+      ),
+      fallback: openingLawReferences.filter(
+        (reference) => reference.country === "UK" && reference.scope === "regional"
+      ),
+      countryId,
+      scope: "regional",
+    });
     const regionalRows = buildSuccessorRegionalRows({
       countryId,
       aggregate: aggregateFiscal,
@@ -301,10 +359,6 @@ export async function promoteResetV2ForIndependence(
     const sourceTreasury = await db
       .collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries")
       .findOne({ _id: "UK", worldId });
-    const sourceAccounts = await db
-      .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
-      .find({ countryId: "UK", worldId })
-      .toArray();
     if (!sourceTreasury || !sourceAccounts.length)
       throw new Error("Independence requires the live UK finance books");
     const rump = await db

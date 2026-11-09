@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
+import { completeRefusedDebitBatch } from "./constructionBatchCompletion";
 import { resumeSettlement } from "./settlementJournal";
 
 export async function acquireConstructionServiceLease(
@@ -168,7 +169,11 @@ export async function recoverConstructionServiceLeases(
       .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
       .findOne({ _id: key }, { projection: { _id: 1 } });
     if (record) {
-      const result = await resumeSettlement(db, key);
+      let result = await resumeSettlement(db, key);
+      // A refused borrower debit is final. Each pass drops one refusal and
+      // resumes the rest, so a batch that is only short that payment completes.
+      while (result.status === "partial" && (await completeRefusedDebitBatch(db, key)))
+        result = await resumeSettlement(db, key);
       const complete = !result.error && ["applied", "replayed"].includes(result.status);
       const unfunded =
         result.status === "rejected" &&

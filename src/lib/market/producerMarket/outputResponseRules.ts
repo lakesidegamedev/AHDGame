@@ -136,12 +136,19 @@ export interface RunSignals {
   losing: boolean;
   /** Revenue per unit sold. Null when nothing sold. */
   unitPrice: number | null;
-  /** Inputs consumed per unit made. Null when nothing was made. */
+  /**
+   * Inputs consumed per unit sold. The whole bill for what was made is
+   * spread over what sold, so units made but left unsold are paid for by the
+   * ones that sold and the figure reconciles with the sector's profit and loss.
+   * Null when nothing sold.
+   */
   unitMaterials: number | null;
-  /** Wages per unit made. Null when nothing was made. */
+  /** Wages per unit sold. Null when nothing sold. */
   unitWages: number | null;
-  /** Running site bill per unit made. Null when nothing was made. */
+  /** Running site bill per unit sold. Null when nothing sold. */
   unitSite: number | null;
+  /** Share of what was made that did not sell, 0-1. */
+  unsoldShare: number;
 }
 
 export function runSignals(
@@ -176,9 +183,10 @@ export function runSignals(
       contributionPerUnit,
     }),
     unitPrice: sold > 0 ? finite(prior.revenue) / sold : null,
-    unitMaterials: made > 0 ? finite(prior.inputsConsumed) / made : null,
-    unitWages: made > 0 ? labour / made : null,
-    unitSite: made > 0 ? site / made : null,
+    unitMaterials: sold > 0 ? finite(prior.inputsConsumed) / sold : null,
+    unitWages: sold > 0 ? labour / sold : null,
+    unitSite: sold > 0 ? site / sold : null,
+    unsoldShare: made > 0 ? Math.max(0, made - sold) / made : 0,
   };
 }
 

@@ -25,6 +25,9 @@ vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
 vi.mock("@/lib/congress/governmentVoteBreakdown", () => ({
   computeCabinetNominationTally: vi.fn(),
 }));
+vi.mock("@/lib/achievements/triggers", () => ({
+  checkOfficeHeldAchievements: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/analytics/officeTransitionAnalytics", () => ({
   captureOfficeTransition: vi.fn().mockResolvedValue(undefined),
 }));
@@ -712,5 +715,72 @@ describe("processCabinetNominationLifecycle — rejection notices", () => {
     }>;
     const toNominee = sent.find((n) => String(n.userId) === nomineeUser.toString());
     expect(toNominee?.message).toBe("You were not confirmed for Secretary of State.");
+  });
+});
+
+describe("processCabinetNominationLifecycle — vice president seating", () => {
+  it("awards the Vice President achievement to a confirmed nominee", async () => {
+    vi.clearAllMocks();
+    const db = createMockDb();
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    const { getGameState } = await import("@/lib/gameState");
+    vi.mocked(getGameState).mockResolvedValue({ currentTurn: 100 } as never);
+    for (const name of [
+      "cabinetNominations",
+      "cabinetMembers",
+      "characters",
+      "centralBanks",
+      "electedOfficials",
+    ]) {
+      db.collection(name);
+    }
+    const nomineeId = new ObjectId();
+    const presidentId = new ObjectId();
+    const nomineeUser = new ObjectId();
+    const nom = {
+      _id: new ObjectId(),
+      status: "active",
+      countryId: "US",
+      positionId: "vicePresident",
+      nomineeCharacterId: nomineeId,
+      nomineeCharacterName: "Vee Pea",
+      nomineeParty: "democrat",
+      proposedByPresidentId: presidentId,
+      votingEndsOnTurn: 101,
+      votes: {},
+    };
+    db.collectionMocks.cabinetNominations.find.mockImplementation(
+      (query: Record<string, unknown>) =>
+        ({ toArray: async () => (query.$or ? [nom] : []) }) as never
+    );
+    db.collectionMocks.centralBanks.find.mockReturnValue({ toArray: async () => [] } as never);
+    db.collectionMocks.characters.findOne.mockImplementation(
+      (query: { _id?: unknown }) =>
+        Promise.resolve(
+          String(query?._id) === nomineeId.toString()
+            ? { _id: nomineeId, userId: nomineeUser }
+            : null
+        ) as never
+    );
+    const { computeCabinetNominationTally } =
+      await import("@/lib/congress/governmentVoteBreakdown");
+    vi.mocked(computeCabinetNominationTally).mockResolvedValue({
+      votesFor: 60,
+      votesAgainst: 40,
+      votesAbstain: 0,
+      houseVotesFor: 250,
+      houseVotesAgainst: 150,
+    } as never);
+
+    const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
+    await processCabinetNominationLifecycle(new Date(0));
+
+    const { checkOfficeHeldAchievements } = await import("@/lib/achievements/triggers");
+    expect(checkOfficeHeldAchievements).toHaveBeenCalledWith(
+      nomineeUser,
+      nomineeId,
+      "vicePresident"
+    );
   });
 });

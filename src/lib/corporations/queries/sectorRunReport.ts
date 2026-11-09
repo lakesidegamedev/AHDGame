@@ -49,11 +49,13 @@ export interface RunReport {
   turnsToFull: number | null;
   /** What last turn's run was cut by, if anything. */
   cutBy: string[];
-  /** ₳ per unit, from last turn's receipt. Own-site deliveries are valued at the asking price. */
+  /** ₳ per unit sold, from last turn's receipt. Own-site deliveries are valued at the asking price. */
   unitPrice: number | null;
   unitMaterials: number | null;
   unitWages: number | null;
   unitSite: number | null;
+  /** Share of what was made that did not sell, 0-1. The unit costs above already carry its bill. */
+  unsoldShare?: number;
   /** True when some output went to the company's own sites and is valued at the ask. */
   ownSiteValued: boolean;
 }
@@ -141,6 +143,7 @@ export function buildRunReport(
     unitMaterials: signals.unitMaterials,
     unitWages: signals.unitWages,
     unitSite: signals.unitSite,
+    unsoldShare: signals.unsoldShare,
     ownSiteValued,
   };
 }
