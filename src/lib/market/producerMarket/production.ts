@@ -1,3 +1,4 @@
+import { productionOrderOutcomes } from "./productionOrderOutcomes";
 /**
  * Plants turn purchased inputs and paid work into deliverable output.
  * Input shortages constrain the whole recipe; purchases and consumed stock
@@ -1965,35 +1966,11 @@ export function advanceProducerEconomy(
     prices: market.prices,
     ...(spillover ? { spillover } : {}),
     ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),
-    orderOutcomes: (() => {
-      const meta = new Map(
-        [...consumerOrders, ...inputOrders()].map((o) => [
-          o.id,
-          {
-            commodity: o.commodity,
-            book: o.book,
-            accountId: o.accountId,
-            lowerStep: !!(o.demandStep && o.demandStep > 0),
-          },
-        ])
-      );
-      return market.orders.flatMap((o) => {
-        const m = meta.get(o.id);
-        if (!m) return [];
-        const { lowerStep, ...where } = m;
-        // A lower demand-curve step asked only at its own lower price, so it
-        // is demand for what it bought, not a shortage at the market price.
-        const requestedUnits = lowerStep ? o.deliveredUnits : o.requestedUnits;
-        const spilled = lowerStep ? 0 : Math.min(requestedUnits, spilloverUnits.get(o.id) ?? 0);
-        return [
-          {
-            ...where,
-            requestedUnits,
-            deliveredUnits: o.deliveredUnits,
-            ...(spilled > 0 ? { spilloverRequestedUnits: spilled } : {}),
-          },
-        ];
-      });
-    })(),
+    ...(market.regionalBooks ? { regionalBooks: market.regionalBooks } : {}),
+    orderOutcomes: productionOrderOutcomes(
+      [...consumerOrders, ...inputOrders()],
+      market.orders,
+      spilloverUnits
+    ),
   };
 }

@@ -1381,10 +1381,11 @@ export function buildSectorPlantsSection(args: {
   corpCapitalAnchor: number;
   /** Untapped units in this market — see `unownedHeadroomUnitsOf`. */
   headroomUnits: number;
-  /** True buyers' room (see SectorPlantsSection.demandGapUnits). Optional so
-   *  test fixtures predating the field keep compiling; defaults to 0. */
+  /** Expansion appetite; automatic sizing uses measuredDemandGapUnits. */
   demandGapUnits?: number;
   measuredDemandGapUnits?: number | null;
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
   /** Owned capacity in this (state, sectorType) cell, every producer, units/day. */
   ownedCellCapacityUnits?: number;
   /** Strategy suggestion when the plant's valuable output is oversupplied (computeRetoolHint). */
@@ -1904,6 +1905,8 @@ export function buildSectorPlantsSection(args: {
     headroomUnits: nonNeg(headroomUnits),
     demandGapUnits: roomHeldByOwnIdle ? 0 : nonNeg(demandGapUnits),
     measuredDemandGapUnits: roomHeldByOwnIdle ? 0 : (args.measuredDemandGapUnits ?? null),
+    buildDemand: args.buildDemand,
+    buildDemandTurn: args.buildDemandTurn,
     roomHeldByOwnIdle,
     ...(!mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
       ? {
