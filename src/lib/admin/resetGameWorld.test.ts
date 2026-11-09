@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { MongoServerError, ObjectId } from "mongodb";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -137,6 +137,15 @@ function getResetSealGameStateFields(): string[] {
 }
 
 describe("resetGameWorld", () => {
+  // Every test builds a mock Db with thousands of vi.fn mocks, and vitest holds
+  // each one through a WeakRef. A WeakRef target stays alive until the current
+  // macrotask ends, and these tests are all microtasks, so the whole file would
+  // pin every Db it ever made and run out of the default heap. Yielding to the
+  // event loop lets the previous test's Db be collected.
+  afterEach(async () => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  });
+
   it.each([true, false])(
     "preserves wiki articles and office archives when deleteProfiles=%s",
     async (deleteProfiles) => {

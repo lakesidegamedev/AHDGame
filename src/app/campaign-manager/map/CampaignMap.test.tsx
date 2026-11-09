@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithElectionsMessages } from "@/lib/test-utils/renderWithElectionsMessages";
 import { buildRaceIndex, type RaceFilter } from "@/lib/campaignManager/rules";
 import { election } from "@/lib/campaignManager/rules/__fixtures__/election";
@@ -285,6 +285,9 @@ describe("CampaignMap pan and zoom", () => {
   it("zooms on the wheel instead of scrolling the page", async () => {
     renderMap();
     await screen.findByRole("button", { name: /London/ });
+    // The wheel listener attaches in a passive effect that can still be queued
+    // when the map first appears; flush it before dispatching.
+    await act(async () => {});
     const svg = screen.getByRole("group", { name: /map/ });
     const wheel = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
     fireEvent(svg, wheel);
