@@ -4,6 +4,8 @@
  * families share them.
  */
 import type { Db } from "mongodb";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { EMPTY_WAVE_SIGNALS } from "./rules/waveFamilies";
 import type { WaveSignals } from "./rules/waveFamilyTables";
@@ -80,31 +82,33 @@ async function readSignals(db: Db, countryIds: string[]): Promise<Map<string, Wa
       })
       .toArray(),
     // Active sectors running each method, per country.
-    db
-      .collection("corporateSectors")
-      .aggregate<{ _id: { countryId: string; strategyId: string }; count: number }>([
-        {
-          $match: {
-            countryId: { $in: countryIds },
-            strategyId: { $in: [ORBITAL_STRATEGY_ID, PERSONALISED_MEDIA_STRATEGY_ID] },
-            mothballed: { $ne: true },
+    getCorporateSectorsCollection(db).then((sectors) =>
+      sectors
+        .aggregate<{ _id: { countryId: string; strategyId: string }; count: number }>([
+          {
+            $match: {
+              countryId: { $in: countryIds },
+              strategyId: { $in: [ORBITAL_STRATEGY_ID, PERSONALISED_MEDIA_STRATEGY_ID] },
+              mothballed: { $ne: true },
+            },
           },
-        },
-        {
-          $group: {
-            _id: { countryId: "$countryId", strategyId: "$strategyId" },
-            count: { $sum: 1 },
+          {
+            $group: {
+              _id: { countryId: "$countryId", strategyId: "$strategyId" },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ])
-      .toArray(),
-    db
-      .collection<{ countryId?: string; sovereignCrisisState?: string }>("federalBudget")
-      .find(
-        { countryId: { $in: countryIds } },
-        { projection: { _id: 0, countryId: 1, sovereignCrisisState: 1 } }
-      )
-      .toArray(),
+        ])
+        .toArray()
+    ),
+    getFederalBudgetCollection(db).then((budgets) =>
+      budgets
+        .find(
+          { countryId: { $in: countryIds } },
+          { projection: { _id: 0, countryId: 1, sovereignCrisisState: 1 } }
+        )
+        .toArray()
+    ),
   ]);
   const operatorCount = (countryId: string, strategyId: string): number =>
     operators.find((row) => row._id.countryId === countryId && row._id.strategyId === strategyId)
