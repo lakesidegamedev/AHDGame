@@ -118,3 +118,15 @@ describe("producer stage env labour-linked wages", () => {
     });
   });
 });
+
+describe("producer stage env own-site valuation credit", () => {
+  it("is off unless its stage is on", () => {
+    expect(producerStageEnv(null).ownSiteValuationCredit).toBe(false);
+    expect(producerStageEnv({ fundedValuationOwnSiteCreditStage: 0 }).ownSiteValuationCredit).toBe(
+      false
+    );
+    expect(producerStageEnv({ fundedValuationOwnSiteCreditStage: 1 }).ownSiteValuationCredit).toBe(
+      true
+    );
+  });
+});

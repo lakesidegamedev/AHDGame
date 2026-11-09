@@ -228,7 +228,7 @@ export const GET = withNoStore(async (request: Request) => {
   }
 });
 
-// PATCH /api/notifications — Mark read (one or all); supports bundled accounts via forUserId
+// PATCH /api/notifications — Mark read (one, a list via `ids`, or all); supports bundled accounts via forUserId
 // Auth: requireBasicAuth
 // Errors: 400, 401, 429
 export async function PATCH(request: Request) {
@@ -243,7 +243,10 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { id, forUserId, forCharacterId } = parsed.data;
+    const { id, ids, forUserId, forCharacterId } = parsed.data;
+    if (ids && (id || (parsed.data.action && parsed.data.action !== "read"))) {
+      return errorResponse(400, "Bulk update supports only the read action");
+    }
     const db = await getDb();
     const userId = new ObjectId(auth.user.userId);
 
@@ -259,7 +262,17 @@ export async function PATCH(request: Request) {
     const bundleUserIds = getNotificationBundleUserIds(user);
     const bundleSet = new Set(bundleUserIds.map((x) => x.toString()));
 
-    if (id) {
+    if (ids) {
+      const objectIds = ids
+        .map((i) => parseObjectId(i))
+        .filter((oid): oid is ObjectId => oid !== null);
+      await db
+        .collection<Notification>("notifications")
+        .updateMany(
+          { _id: { $in: objectIds }, userId: { $in: bundleUserIds } },
+          { $set: { read: true } }
+        );
+    } else if (id) {
       const notificationOid = parseObjectId(id);
       if (!notificationOid) {
         return errorResponse(400, "Invalid notification ID");

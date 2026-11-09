@@ -35,6 +35,17 @@ export function bankingSeparationDefault(input: {
   return input.eraUnitScale > 1 ? "separated" : "universal";
 }
 
+/** Enacted separation and command-economy eligibility, shared by scalar and cohort reads. */
+export function legalCharterTypesForPolicy(
+  blocked: boolean,
+  separation: "separated" | "universal"
+): Array<"retail" | "investment" | "universal"> {
+  if (blocked) return [];
+  return separation === "separated"
+    ? ["retail", "investment"]
+    : ["retail", "investment", "universal"];
+}
+
 export function playerInvestmentBankingSeedFlags(seedYear: number) {
   return seedYear === 1991
     ? {

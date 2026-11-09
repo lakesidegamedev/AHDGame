@@ -103,6 +103,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   fundedHeadcountStage: "",
   equityCashoutLimitsStage: "",
   fundedValuationStage: "",
+  fundedValuationOwnSiteCreditStage: "",
   marketAdjustmentStage: "",
 });
 

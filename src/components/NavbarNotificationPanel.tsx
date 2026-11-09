@@ -71,7 +71,11 @@ export function NavbarNotificationPanel({
                 {!n.read && (
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                 )}
-                <Link href="/notifications" onClick={onClose} className="flex-1 min-w-0">
+                <Link
+                  href={`/notifications?id=${encodeURIComponent(n._id)}`}
+                  onClick={onClose}
+                  className="flex-1 min-w-0"
+                >
                   {!n.read && isActionRequiredType(n.type as NotificationType) && (
                     <span className="mb-0.5 inline-block rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary bg-primary/10">
                       {t("notifications.needsYou")}
@@ -84,7 +88,7 @@ export function NavbarNotificationPanel({
                   </p>
                   <p className="text-xs text-muted line-clamp-1 mt-0.5">{n.message}</p>
                 </Link>
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 shrink-0 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
                   {!n.read && (
                     <button
                       onClick={(e) => onMarkRead(n._id, e)}

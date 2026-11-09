@@ -4557,10 +4557,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/congress/applyPlayerWhip.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/congress/applyWhipVotes.ts": {
       "longBlocks": 1,
       "narrativeLines": 1

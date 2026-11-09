@@ -85,6 +85,12 @@ export type ProducerEconomyInput = {
    */
   captiveMarketValue?: boolean;
   /**
+   * Credit each seller's own-site deliveries at the same prices to the sector
+   * valuation only (valuationCredit / valuationCharge on the result); no site
+   * account or cash changes (gameConfig.fundedValuationOwnSiteCreditStage).
+   */
+  ownSiteValuationCredit?: boolean;
+  /**
    * Shortage ask step (shortageAskRules, gameConfig.producerShortageAskStage):
    * an automatic seller that sold out into a lane where buyers went short asks
    * a step above last turn's clearing instead of at it. Absent = off.
@@ -108,6 +114,8 @@ export type ProducerEconomyInput = {
 };
 
 export type ProducerPlanningExecution = {
+  /** Independent whole-operation deadline supplied by the host. */
+  checkBudget?: () => void;
   /** The host owns the clock. Checked between whole clearing passes only. */
   elapsedMs: () => number;
   maximumElapsedMs: number;

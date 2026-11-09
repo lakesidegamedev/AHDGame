@@ -6,7 +6,8 @@
  * segment chips, and grouping into "This turn / Earlier".
  */
 
-import { useReducer, useMemo, useEffect, useState, useCallback } from "react";
+import { useReducer, useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useInboxData } from "./useInboxData";
 import { inboxReducer, initialInboxState } from "./inboxReducer";
 import { RailItem } from "./RailItem";
@@ -16,7 +17,7 @@ import { InboxEmpty } from "./InboxEmpty";
 import { PriorityLane } from "./PriorityLane";
 import type { InboxItem } from "@/lib/inbox";
 import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
-import { fetchJson } from "@/lib/observability/fetchJson";
+import { bulkMarkRead } from "./bulkMarkRead";
 import { Skeleton, ListRowSkeleton } from "@/components/ui";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,8 @@ function segmentLabel(seg: "all" | "action" | "notifs" | "mail"): string {
 }
 
 const FOCUS_LIMIT = 24;
+
+const asRead = (item: InboxItem): InboxItem => ({ ...item, unread: false, action: false });
 
 /**
  * Keep the broad inbox views useful on busy accounts. Actionable unread items
@@ -142,11 +145,12 @@ export function InboxClient() {
     if (state.seg === "action") {
       return base.filter((i) => {
         const effectivelyUnread = i.unread && !state.readIds.has(i.id);
-        return i.action && effectivelyUnread;
+        // The open item stays put after opening it marks it read.
+        return (i.action && effectivelyUnread) || i.id === state.selId;
       });
     }
     return base;
-  }, [items, state.seg, state.archivedIds, state.snoozedIds, state.readIds]);
+  }, [items, state.seg, state.archivedIds, state.snoozedIds, state.readIds, state.selId]);
 
   const counts = useMemo(() => {
     const activeItems = items.filter(
@@ -161,18 +165,15 @@ export function InboxClient() {
     };
   }, [items, state.archivedIds, state.snoozedIds, state.readIds]);
 
-  const itemsWithReadState = useMemo(
-    () =>
-      visibleItems.map((item) =>
-        state.readIds.has(item.id) ? { ...item, unread: false, action: false } : item
-      ),
-    [visibleItems, state.readIds]
-  );
-
-  const railItems = useMemo(
-    () => (showHistory ? itemsWithReadState : focusItems(itemsWithReadState)),
-    [itemsWithReadState, showHistory]
-  );
+  // The open item keeps its original rank in the focused list (it is ranked
+  // before it turns read), then is shown as read.
+  const railItems = useMemo(() => {
+    const ranked = visibleItems.map((item) =>
+      state.readIds.has(item.id) && item.id !== state.selId ? asRead(item) : item
+    );
+    const shown = showHistory ? ranked : focusItems(ranked);
+    return shown.map((item) => (state.readIds.has(item.id) ? asRead(item) : item));
+  }, [visibleItems, state.readIds, state.selId, showHistory]);
 
   // Derive effective selected item (default to first if none selected)
   const selId =
@@ -211,6 +212,21 @@ export function InboxClient() {
     [state.readIds]
   );
 
+  // Deep link from the navbar bell: /notifications?id=<notification id> opens
+  // that item. Widen the segment and history so the item is on the rail even
+  // when it is read or older than the focused list, then select it once.
+  const deepLinkId = useSearchParams()?.get("id") ?? null;
+  const handledDeepLinkId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!deepLinkId || loading || handledDeepLinkId.current === deepLinkId) return;
+    const target = items.find((item) => item.id === deepLinkId);
+    handledDeepLinkId.current = deepLinkId;
+    if (!target) return;
+    dispatch({ type: "SET_SEG", seg: "all" });
+    setShowHistory(true);
+    void handleSelect(target);
+  }, [deepLinkId, loading, items, handleSelect]);
+
   // Archive
   const handleArchive = useCallback(async (item: InboxItem) => {
     dispatch({ type: "ARCHIVE", id: item.id });
@@ -245,8 +261,8 @@ export function InboxClient() {
     }
   }, []);
 
-  // Mark all read — optimistic update, then await the batch. Any item the
-  // server rejects is rolled back so the client never silently diverges,
+  // Mark all read — optimistic update, then one bulk request per kind (notifications,
+  // mail). Any item the server rejects is rolled back so the client never silently diverges,
   // the player sees an error, and refetch() reconciles with server state.
   const handleMarkAllRead = useCallback(async () => {
     const unreadItems = visibleItems.filter((item) => item.unread && !state.readIds.has(item.id));
@@ -257,35 +273,28 @@ export function InboxClient() {
       type: "MARK_ALL_READ",
       ids: unreadItems.map((item) => item.id),
     });
-    const outcomes = await Promise.allSettled(
-      unreadItems.map(async (item) => {
-        if (item.kind === "mail") {
-          const responses = await Promise.all(
-            receivedMailIds(item).map((id) => fetch(`/api/mail/${id}`, { method: "PATCH" }))
-          );
-          if (responses.some((res) => !res.ok)) {
-            throw new Error(`mark read failed for mail thread ${item.id}`);
-          }
-        } else {
-          await fetchJson("/api/notifications", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: item.id, action: "read" }),
-            feature: "inbox-mark-all-read",
-          });
-        }
-      })
-    );
+    const notifIds = unreadItems.filter((item) => item.kind !== "mail").map((item) => item.id);
+    const mailIds = unreadItems.filter((item) => item.kind === "mail").flatMap(receivedMailIds);
+    const [notifResult, mailResult] = await Promise.all([
+      bulkMarkRead("/api/notifications", notifIds),
+      bulkMarkRead("/api/mail", mailIds),
+    ]);
     const failedIds = unreadItems
-      .filter((_, index) => outcomes[index].status === "rejected")
+      .filter((item) =>
+        item.kind === "mail"
+          ? receivedMailIds(item).some((id) => mailResult.failedIds.has(id))
+          : notifResult.failedIds.has(item.id)
+      )
       .map((item) => item.id);
     if (failedIds.length > 0) {
       dispatch({ type: "UNMARK_READ", ids: failedIds });
       console.error("[inbox] Failed to mark all read", { failed: failedIds.length });
       setMarkAllError(
-        failedIds.length === unreadItems.length
-          ? "Couldn't mark everything as read. Please try again."
-          : "Some items couldn't be marked as read. Please try again."
+        notifResult.rateLimited || mailResult.rateLimited
+          ? "Too many requests right now. Wait a few seconds and try again."
+          : failedIds.length === unreadItems.length
+            ? "Couldn't mark everything as read. Please try again."
+            : "Some items couldn't be marked as read. Please try again."
       );
       refetch();
     }

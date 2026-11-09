@@ -73,3 +73,43 @@ export function captiveMarketValue(input: {
   }
   return { incomeByOffer, chargeByOrder };
 }
+
+/**
+ * Accounts whose own-site deliveries are credited for valuation only
+ * (gameConfig.fundedValuationOwnSiteCreditStage). Every account qualifies except
+ * those that already book their own entries: a priced internal transfer, or an
+ * opt-in to market-value entries while that booking is on. The credit moves no
+ * cash and touches no site account; it only reaches the sector valuation.
+ */
+export function valuationCreditAccounts(input: {
+  plans: readonly { accountId: string; ownSiteMarketValue?: boolean }[];
+  /** Accounts with an explicit (non-free) internal transfer price. */
+  pricedAccounts: ReadonlySet<string>;
+  /** True while captiveMarketValue books entries for opted-in accounts. */
+  marketValueBooked: boolean;
+}): Set<string> {
+  const out = new Set<string>();
+  for (const p of input.plans) {
+    if (input.pricedAccounts.has(p.accountId)) continue;
+    if (input.marketValueBooked && p.ownSiteMarketValue) continue;
+    out.add(p.accountId);
+  }
+  return out;
+}
+
+/** captiveMarketValue for the accounts that qualify for the valuation-only credit. */
+export function ownSiteCredit(input: {
+  deliveries: readonly InternalDeliveryRow[];
+  offers: ReadonlyMap<string, CaptiveMarketOffer>;
+  prices: Parameters<typeof laneClearingPrices>[0];
+  plans: Parameters<typeof valuationCreditAccounts>[0]["plans"];
+  pricedAccounts: ReadonlySet<string>;
+  marketValueBooked: boolean;
+}): CaptiveMarketValue {
+  return captiveMarketValue({
+    deliveries: input.deliveries,
+    offers: input.offers,
+    clearingByLane: laneClearingPrices(input.prices),
+    valuedAccounts: valuationCreditAccounts(input),
+  });
+}

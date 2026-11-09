@@ -14,7 +14,10 @@ import { getCharterCapitalRequirement, issueCharter } from "@/lib/banking/charte
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
 import { getRateCorridors } from "@/lib/banking/regulationQ";
 import { setBankRates } from "@/lib/banking/rates";
-import { getLegalCharterTypes } from "@/lib/banking/separationLaw";
+import {
+  getLegalCharterTypes,
+  loadLegalCharterTypesForCountries,
+} from "@/lib/banking/separationLaw";
 import { loadWorldEraUnitScale, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
 import { JP_IDENTITY } from "@/lib/countries/jp/identity";
@@ -186,7 +189,8 @@ function offsetsMatch(a: number, b: number): boolean {
  */
 export async function seedNpcBanks(
   db: Db,
-  log: (msg: string) => void = () => {}
+  log: (msg: string) => void = () => {},
+  options: { batchReads?: boolean } = {}
 ): Promise<SeedNpcBanksResult> {
   const result: SeedNpcBanksResult = {
     created: 0,
@@ -210,6 +214,28 @@ export async function seedNpcBanks(
   // the whole sweep against the same marketization-dial gate the spawn path
   // enforces.
   const blocked = await loadPrivateEnterpriseBlockedCountries(db);
+  const capitals = Object.values(NPP_CAPITAL_STATES).filter((id): id is string => !!id);
+  const batch = options.batchReads
+    ? await Promise.all([
+        db
+          .collection<State>("states")
+          .find({ _id: { $in: capitals } }, { projection: { countryId: 1 } })
+          .toArray(),
+        db
+          .collection<NpcBankCorporation>("corporations")
+          .find(
+            { npcBankSeedKey: { $exists: true } },
+            {
+              projection: { npcBankSeedKey: 1 },
+            }
+          )
+          .toArray(),
+        loadLegalCharterTypesForCountries(db, ALL_COUNTRY_IDS),
+      ])
+    : undefined;
+  const states = new Map(batch?.[0].map((state) => [state._id, state]));
+  const existingKeys = new Set(batch?.[1].map((corp) => corp.npcBankSeedKey));
+  const requirements = new Map<CurrencyCode, number>();
 
   for (const countryId of ALL_COUNTRY_IDS) {
     // Background countries (#5702) run no corporations, banks included.
@@ -236,9 +262,11 @@ export async function seedNpcBanks(
     // in this preset's seeded states and belong to this country. A missing HQ
     // is a deliberate exclusion (recorded with reason), never an attempted
     // spawn that fails with `State "…" not found`.
-    const hqDoc = await db
-      .collection<State>("states")
-      .findOne({ _id: hqState }, { projection: { countryId: 1 } });
+    const hqDoc = batch
+      ? states.get(hqState)
+      : await db
+          .collection<State>("states")
+          .findOne({ _id: hqState }, { projection: { countryId: 1 } });
     if (!hqDoc || hqDoc.countryId !== countryId) {
       const reason: NpcBankHqExclusionReason = !hqDoc
         ? "no-state-in-preset"
@@ -260,24 +288,32 @@ export async function seedNpcBanks(
       continue;
     }
 
-    const legalTypes = await getLegalCharterTypes(db, countryId);
+    const legalTypes = batch
+      ? (batch[2].get(countryId) ?? [])
+      : await getLegalCharterTypes(db, countryId);
     if (legalTypes.length === 0 || !legalTypes.includes("retail")) {
       result.skippedIneligible += NPC_BANKS_PER_COUNTRY;
       continue;
     }
 
-    const requirement = await getCharterCapitalRequirement(db, currency);
-    const startingCapital = requirement * NPC_BANK_CAPITAL_BUFFER_MULTIPLIER;
-
     for (let index = 0; index < NPC_BANKS_PER_COUNTRY; index++) {
       const key = npcBankSeedKey(countryId, index);
-      const existing = await db
-        .collection<NpcBankCorporation>("corporations")
-        .findOne({ npcBankSeedKey: key }, { projection: { _id: 1 } });
+      const existing = batch
+        ? existingKeys.has(key)
+        : await db
+            .collection<NpcBankCorporation>("corporations")
+            .findOne({ npcBankSeedKey: key }, { projection: { _id: 1 } });
       if (existing) {
         result.skippedExisting += 1;
         continue;
       }
+
+      let requirement = requirements.get(currency);
+      if (requirement == null) {
+        requirement = await getCharterCapitalRequirement(db, currency);
+        requirements.set(currency, requirement);
+      }
+      const startingCapital = requirement * NPC_BANK_CAPITAL_BUFFER_MULTIPLIER;
 
       const name = generateNpcBankName(countryId, index, historicalEra);
 
@@ -371,21 +407,29 @@ async function issueCharterWithFlag(
 export async function runNpcBankPolicy(db: Db, _turn: number): Promise<NpcBankPolicySummary> {
   const corps = await db
     .collection<Corporation>("corporations")
-    .find({
-      ceoType: "npp",
-      "bankCharter.status": "active",
-      "bankCharter.type": { $in: ["retail", "universal"] },
-    })
+    .find(
+      {
+        ceoType: "npp",
+        "bankCharter.status": "active",
+        "bankCharter.type": { $in: ["retail", "universal"] },
+      },
+      { projection: { bankCharter: 1 } }
+    )
     .toArray();
 
   let banksUpdated = 0;
+  const corridorsByCountry = new Map<CountryId, Awaited<ReturnType<typeof getRateCorridors>>>();
   for (const corp of corps) {
     const charter = corp.bankCharter;
     if (!charter || charter.status !== "active") continue;
     if (charter.type !== "retail" && charter.type !== "universal") continue;
 
     const countryId = getCountryIdForCurrency(charter.currency);
-    const corridors = await getRateCorridors(db, countryId);
+    let corridors = corridorsByCountry.get(countryId);
+    if (!corridors) {
+      corridors = await getRateCorridors(db, countryId);
+      corridorsByCountry.set(countryId, corridors);
+    }
     const targetDeposit = corridorDepositTarget(
       corridors.deposit.minOffset,
       corridors.deposit.maxOffset
@@ -426,7 +470,7 @@ export async function processNpcBankPolicyTurn(
   }
   let banksSeeded = 0;
   try {
-    banksSeeded = (await seedNpcBanks(db)).created;
+    banksSeeded = (await seedNpcBanks(db, undefined, { batchReads: true })).created;
   } catch (err) {
     console.error("[npcBanks] seeding market-economy banks failed", err);
   }

@@ -4,7 +4,11 @@ import type { GameConfig, GameState } from "@/lib/db/types";
 import type { BankCharterType } from "@/lib/db/types/bank";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { bankingSeparationDefault, bankingWorldYear } from "./rules/charterAccess";
+import {
+  bankingSeparationDefault,
+  bankingWorldYear,
+  legalCharterTypesForPolicy,
+} from "./rules/charterAccess";
 
 /**
  * Banking charter separation is a per-country law, not a world switch. Any
@@ -91,5 +95,53 @@ export async function getLegalCharterTypes(
   }
   // Gates both new charters and type switches, which both consult this function.
   const policy = await getBankingSeparationPolicy(db, countryId);
-  return policy === "separated" ? ["retail", "investment"] : ["retail", "investment", "universal"];
+  return legalCharterTypesForPolicy(false, policy);
+}
+
+/** Same charter eligibility, with the immutable turn-wide inputs loaded once. */
+export async function loadLegalCharterTypesForCountries(
+  db: Db,
+  countries: readonly CountryId[]
+): Promise<Map<CountryId, BankCharterType[]>> {
+  const [state, config, laws] = await Promise.all([
+    db.collection<GameState>("gameState").findOne(
+      { _id: "current" },
+      {
+        projection: { currentYear: 1, currentTurn: 1, startingYear: 1, preset: 1 },
+      }
+    ),
+    db.collection<GameConfig>("gameConfig").findOne(
+      { _id: "default" },
+      {
+        projection: { commandEconomyEnabled: 1 },
+      }
+    ),
+    db
+      .collection<BankingLawDoc>("bankingLaws")
+      .find(
+        { _id: { $in: [...countries] } },
+        {
+          projection: { separation: 1 },
+        }
+      )
+      .toArray(),
+  ]);
+  const policies = new Map(laws.map((law) => [law._id, law.separation]));
+  return new Map(
+    countries.map((countryId): [CountryId, BankCharterType[]] => {
+      const blocked = isCommandEconomy(
+        countryId,
+        state?.currentYear ?? null,
+        config?.commandEconomyEnabled ?? false
+      );
+      const policy =
+        policies.get(countryId) ??
+        bankingSeparationDefault({
+          countryId,
+          year: bankingWorldYear(state),
+          eraUnitScale: getEraUnitScale(state?.preset),
+        });
+      return [countryId, legalCharterTypesForPolicy(blocked, policy)];
+    })
+  );
 }

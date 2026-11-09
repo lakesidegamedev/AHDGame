@@ -957,6 +957,7 @@ export default function SectorDetailPage() {
                 liquidCurrencyCode={corporation?.liquidCurrencyCode}
                 currentTurn={gameTurn?.currentTurn ?? 0}
                 prospectingEnabled={prospectingEnabled}
+                corpCanProspect={corporation?.canProspect === true}
               />
             )}
 

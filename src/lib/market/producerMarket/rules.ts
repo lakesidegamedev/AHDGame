@@ -353,6 +353,8 @@ const bookKey = (commodity: string, book: string) => JSON.stringify([commodity, 
 
 /** One pure clearing pass. Seller receipts, buyer charges and observed prices share the same trades. */
 export function settleProducerMarket(input: {
+  /** Host-owned deadline, checked within a clearing before any persistent writes. */
+  checkBudget?: () => void;
   turn: number;
   accounts: readonly MarketAccount[];
   offers: readonly ProducerOffer[];
@@ -388,10 +390,22 @@ export function settleProducerMarket(input: {
   /** Report units moved between a company's own sites, per offer and order. */
   trackInternalDeliveries?: boolean;
 }): ProducerMarketResult {
+  input.checkBudget?.();
   if (!Number.isSafeInteger(input.turn) || input.turn < 0) throw new Error("Invalid market turn");
   unique(input.accounts, "account");
   unique(input.offers, "offer");
   unique(input.orders, "order");
+  // Route lists are shared by commodity/country. Do not rebuild the same large
+  // set for each plant and each own-stock/ordinary/fair allocation pass.
+  const supplierIds = new WeakMap<readonly ProducerOffer[], string[]>();
+  const idsForSuppliers = (suppliers: readonly ProducerOffer[]) => {
+    let ids = supplierIds.get(suppliers);
+    if (!ids) {
+      ids = suppliers.map((offer) => offer.id);
+      supplierIds.set(suppliers, ids);
+    }
+    return ids;
+  };
   const cash = new Map(input.accounts.map((a) => [a.id, nonNegative(a.cash, "operating cash")]));
   // Opening budgets prevent a circular chain of unfunded sales from financing itself.
   const budgets = new Map(cash);
@@ -451,7 +465,7 @@ export function settleProducerMarket(input: {
   // moves the goods, so the book reports executed cross-border units rather
   // than inferring them from a national balance.
   const deliveredAcross = new Map<string, number>();
-  const recordDelivery = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
+  const recordInternalValue = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
     if (
       order.internalAccountingSiteId &&
       offer.accountId === order.accountId &&
@@ -465,20 +479,34 @@ export function settleProducerMarket(input: {
       seller.internalValue = (seller.internalValue ?? 0) + amount;
       buyer.internalCost = (buyer.internalCost ?? 0) + amount;
     }
+  };
+  const recordCrossCountry = (
+    seller: string | undefined,
+    order: PurchaseOrder,
+    units: number
+  ): void => {
     if (!tracked || !(units > 0)) return;
-    const seller = offer.countryId;
     const buyer = order.countryId;
     if (!seller || !buyer || seller === buyer) return;
     const key = JSON.stringify([seller, buyer, order.commodity]);
     deliveredAcross.set(key, (deliveredAcross.get(key) ?? 0) + units);
   };
+  const recordDelivery = (offer: ProducerOffer, order: PurchaseOrder, units: number): void => {
+    recordInternalValue(offer, order, units);
+    recordCrossCountry(offer.countryId, order, units);
+  };
+  const sellerCountries = new WeakMap<readonly ProducerOffer[], string | null>();
   const sellerCountryOf = (rows: readonly ProducerOffer[]): string | undefined => {
+    if (sellerCountries.has(rows)) return sellerCountries.get(rows) ?? undefined;
     let country: string | undefined;
     for (const offer of rows) {
-      if (!offer.countryId) return undefined;
+      if (!offer.countryId || (country !== undefined && country !== offer.countryId)) {
+        sellerCountries.set(rows, null);
+        return undefined;
+      }
       if (country === undefined) country = offer.countryId;
-      else if (country !== offer.countryId) return undefined;
     }
+    sellerCountries.set(rows, country ?? null);
     return country;
   };
   const fillsWithCountries = (
@@ -781,7 +809,7 @@ export function settleProducerMarket(input: {
     for (const order of orders) {
       if (order.supplierOfferId || order.contractUnitPrice != null || order.quantityGroup) continue;
       if (marketFirst.has(order.accountId)) continue;
-      const eligible = eligibleSetOf(order);
+      const eligible = eligibleSetOf(order) ?? null;
       const ownAll = (
         ownByBook.get(bookKey(order.commodity, order.book))?.get(order.accountId) ?? []
       ).filter((offer) => !eligible || eligible.has(offer.id));
@@ -864,7 +892,7 @@ export function settleProducerMarket(input: {
           prior?.orderBudget ?? order.maximumSpend ?? Number.MAX_VALUE,
           byPrice,
           { homeCountry: true },
-          eligibleSetOf(order)
+          eligibleSetOf(order) ?? null
         )
       );
     }
@@ -907,24 +935,40 @@ export function settleProducerMarket(input: {
    * returns the amount; the caller tracks its own target and order budget.
    * Routed allocations name an exact supplier subset instead of the whole pool.
    */
+  type RoutedPool = {
+    stock: ProducerSupplyPool;
+    total: number;
+    countries: { offer: ProducerOffer; units: number }[];
+    internal: Map<string, { offer: ProducerOffer; units: number }[]>;
+  };
   const buyFromPool = (
     order: PurchaseOrder,
     price: number,
     pool: ProducerSupplyPool,
     take: number,
-    suppliers?: readonly ProducerOffer[]
+    suppliers?: readonly ProducerOffer[],
+    supplierTotal?: number,
+    routedPool?: RoutedPool
   ): number => {
+    input.checkBudget?.();
     const key = bookKey(order.commodity, order.book);
     const amount = take * price;
     if (!Number.isFinite(amount)) throw new Error("Non-finite trade value");
     const poolOffers = suppliers ?? offersByPool.get(pool) ?? [];
     const poolTotal = suppliers
-      ? suppliers.reduce((n, offer) => n + remaining.get(offer.id), 0)
+      ? (supplierTotal ?? suppliers.reduce((n, offer) => n + remaining.get(offer.id), 0))
       : pool.total;
-    tradeCount += suppliers
-      ? suppliers.filter((offer) => remaining.get(offer.id) > 0).length
-      : pool.activeCount;
-    if (tracked) {
+    if (routedPool) {
+      tradeCount += routedPool.stock.activeCount;
+      if (tracked) {
+        for (const row of routedPool.countries)
+          recordCrossCountry(row.offer.countryId, order, take * (row.units / routedPool.total));
+        for (const row of routedPool.internal.get(order.accountId) ?? [])
+          recordInternalValue(row.offer, order, take * (row.units / routedPool.total));
+      }
+      routedPool.stock.take(take);
+    } else if (!suppliers) tradeCount += pool.activeCount;
+    if (tracked && !suppliers && !routedPool) {
       // `take` draws pro rata on remaining units, so each offer's share of
       // this order is its remaining units over the pool total.
       for (const offer of poolOffers) {
@@ -932,9 +976,12 @@ export function settleProducerMarket(input: {
         if (available > 0) recordDelivery(offer, order, take * (available / poolTotal));
       }
     }
-    if (suppliers) {
+    if (suppliers && !routedPool) {
       for (const supplier of suppliers) {
         const available = remaining.get(supplier.id);
+        if (available > 0) tradeCount++;
+        if (tracked && available > 0)
+          recordDelivery(supplier, order, take * (available / poolTotal));
         const units = Math.min(available, take * (available / poolTotal));
         if (!(units > 0)) continue;
         remaining.set(supplier.id, Math.max(0, available - units));
@@ -944,7 +991,7 @@ export function settleProducerMarket(input: {
         seller.revenue += units * price;
         cash.set(supplier.accountId, credited(supplier.accountId, units * price));
       }
-    } else pool.take(take);
+    } else if (!routedPool) pool.take(take);
     fills.push(
       fillsWithCountries(
         order,
@@ -953,7 +1000,7 @@ export function settleProducerMarket(input: {
           kind: "sale",
           unitPrice: price,
           units: take,
-          ...(suppliers ? { supplierOfferIds: suppliers.map((offer) => offer.id) } : {}),
+          ...(suppliers ? { supplierOfferIds: idsForSuppliers(suppliers) } : {}),
         },
         poolOffers
       )
@@ -1028,40 +1075,32 @@ export function settleProducerMarket(input: {
       };
     });
     type Member = (typeof members)[number];
-    // Which members can buy from each supplier does not depend on the price
-    // level, so work it out once per group: invert the route lists instead of
-    // testing every supplier against every member at every level.
-    const routed = members.some((m) => m.eligible);
-    const unrestricted: number[] = [];
-    const restricted = new Map<string, number[]>();
-    if (routed) {
-      members.forEach((m, i) => {
-        if (!m.eligible) unrestricted.push(i);
-        else
-          for (const id of m.eligible) {
-            const list = restricted.get(id);
-            if (list) list.push(i);
-            else restricted.set(id, [i]);
-          }
-      });
-    }
-    const indicesCache = new Map<string, number[]>();
-    const indicesOf = (supplierId: string): number[] => {
-      let indices = indicesCache.get(supplierId);
-      if (!indices) {
-        const own = restricted.get(supplierId) ?? [];
-        indices =
-          unrestricted.length === 0
-            ? own
-            : own.length === 0
-              ? unrestricted
-              : [...unrestricted, ...own].sort((x, y) => x - y);
-        indicesCache.set(supplierId, indices);
-      }
-      return indices;
-    };
     const key = bookKey(group[0].commodity, group[0].book);
+    const routed = members.some((m) => m.eligible);
+    // Reachability depends on route classes, not the number of plants sharing
+    // each class. Reuse member cohorts across every supplier and price level.
+    const classes = [...new Set(members.map((m) => m.eligible))];
+    const classOf = new Map(classes.map((set, i) => [set, i]));
+    const cohortMembers = new Map<string, Member[]>();
+    const reachability = new Map<string, { key: string; live: Member[] }>();
+    const reachable = (supplier: ProducerOffer) => {
+      let result = reachability.get(supplier.id);
+      if (!result) {
+        const indices = classes.flatMap((set, i) => (!set || set.has(supplier.id) ? [i] : []));
+        const key = JSON.stringify(indices);
+        let live = cohortMembers.get(key);
+        if (!live) {
+          const allowed = new Set(indices);
+          live = members.filter((m) => allowed.has(classOf.get(m.eligible)!));
+          cohortMembers.set(key, live);
+        }
+        result = { key, live };
+        reachability.set(supplier.id, result);
+      }
+      return result;
+    };
     for (const [price, pool] of sortedPoolsByBook.get(key) ?? []) {
+      input.checkBudget?.();
       // What a member could still buy at this level: target, reservation group,
       // limit price, and the order, account and spend-group budgets.
       const capOf = (m: Member): number => {
@@ -1082,20 +1121,52 @@ export function settleProducerMarket(input: {
       const cohorts = new Map<string, { suppliers: ProducerOffer[]; live: Member[] }>();
       if (routed) {
         for (const supplier of offersByPool.get(pool) ?? []) {
-          const indices = indicesOf(supplier.id);
-          if (indices.length === 0) continue;
-          const cohortKey = indices.join(",");
-          const cohort = cohorts.get(cohortKey) ?? {
+          const { key, live } = reachable(supplier);
+          if (live.length === 0) continue;
+          const cohort = cohorts.get(key) ?? {
             suppliers: [],
-            live: indices.map((i) => members[i]),
+            live,
           };
           cohort.suppliers.push(supplier);
-          cohorts.set(cohortKey, cohort);
+          cohorts.set(key, cohort);
         }
       }
       const levels = routed ? [...cohorts.values()] : [{ suppliers: undefined, live: members }];
+      // Within one price/reachability cohort every purchase draws the same
+      // pro-rata seller mix. Use the existing lazy stock primitive instead of
+      // walking every seller for every buyer. Flush once before another price
+      // or group can observe this stock. Country totals share the same mix;
+      // same-owner management values retain their individual site legs.
+      const routedPools = new Map<readonly ProducerOffer[] | undefined, RoutedPool>();
+      for (const { suppliers } of levels) {
+        if (!suppliers && !tracked) continue;
+        const sellers = suppliers ?? offersByPool.get(pool) ?? [];
+        const stock = suppliers ? new ProducerSupplyPool() : pool;
+        const countries = new Map<string | undefined, { offer: ProducerOffer; units: number }>();
+        const internal = new Map<string, { offer: ProducerOffer; units: number }[]>();
+        for (const offer of sellers) {
+          const units = remaining.get(offer.id);
+          if (suppliers) stock.add(offer.id, units);
+          if (tracked) {
+            const row = countries.get(offer.countryId) ?? { offer, units: 0 };
+            row.units += units;
+            countries.set(offer.countryId, row);
+          }
+          if (tracked && units > 0 && (offer.internalUnitPrice ?? 0) > 0) {
+            const owned = internal.get(offer.accountId) ?? [];
+            owned.push({ offer, units });
+            internal.set(offer.accountId, owned);
+          }
+        }
+        routedPools.set(suppliers, {
+          stock,
+          total: stock.total,
+          countries: [...countries.values()],
+          internal,
+        });
+      }
       const supplyOf = (suppliers: readonly ProducerOffer[] | undefined) =>
-        suppliers ? suppliers.reduce((n, o) => n + remaining.get(o.id), 0) : pool.total;
+        suppliers ? routedPools.get(suppliers)!.stock.total : pool.total;
       for (let round = 0; round <= members.length + cohorts.size; round++) {
         const proposals = levels.flatMap(({ suppliers, live: candidates }) => {
           const supply = supplyOf(suppliers);
@@ -1136,7 +1207,15 @@ export function settleProducerMarket(input: {
           const take = Math.min(shares[i], capOf(m), supply);
           if (take < units - 1e-9 * Math.max(1, units)) short = true;
           if (!(take > 0)) return;
-          const amount = buyFromPool(m.order, price, pool, take, suppliers);
+          const amount = buyFromPool(
+            m.order,
+            price,
+            pool,
+            take,
+            suppliers,
+            supply,
+            routedPools.get(suppliers)
+          );
           moved += take;
           m.wanted = Math.max(0, m.wanted - take);
           if (m.quantityGroup)
@@ -1145,10 +1224,28 @@ export function settleProducerMarket(input: {
         });
         if (!short || !(moved > 0)) break;
       }
+      for (const [suppliers, lazy] of routedPools) {
+        if (!suppliers) continue; // The ordinary pool is flushed once at market close.
+        for (const offer of suppliers) {
+          const units = lazy.stock.pooledSold(offer.id);
+          if (!(units > 0)) continue;
+          remaining.set(
+            offer.id,
+            Math.min(remaining.get(offer.id), lazy.stock.remaining(offer.id))
+          );
+          const seller = offerResults.get(offer.id)!;
+          const amount = units * price;
+          seller.soldUnits += units;
+          seller.deliveredUnits += units;
+          seller.revenue += amount;
+          cash.set(offer.accountId, credited(offer.accountId, amount));
+        }
+      }
     }
   };
   // Phase 2: the ordinary book pass over every order at its residual target.
   const clearOrder = (order: PurchaseOrder): void => {
+    input.checkBudget?.();
     const fairGroup = fairGroupOf.get(order.id);
     if (fairGroup) {
       // The whole group clears at its first member's place in the queue.
@@ -1163,7 +1260,7 @@ export function settleProducerMarket(input: {
     let orderBudget = carriedOrder
       ? carriedOrder.orderBudget
       : (order.maximumSpend ?? Number.MAX_VALUE);
-    const eligible = eligibleSetOf(order);
+    const eligible = eligibleSetOf(order) ?? null;
     const key = bookKey(order.commodity, order.book);
     if (!eligible && !order.supplierOfferId && order.contractUnitPrice == null) {
       const ownTake = fillOwnStock(order, wanted);

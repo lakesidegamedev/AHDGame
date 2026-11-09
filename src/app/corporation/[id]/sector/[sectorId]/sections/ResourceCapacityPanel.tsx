@@ -30,6 +30,8 @@ interface ResourceCapacityPanelProps {
   liquidCurrencyCode?: string | null;
   currentTurn?: number;
   prospectingEnabled?: boolean;
+  /** Company type allows surveys (extraction main or secondary type). */
+  corpCanProspect?: boolean;
 }
 
 export default function ResourceCapacityPanel({
@@ -44,12 +46,13 @@ export default function ResourceCapacityPanel({
   liquidCurrencyCode,
   currentTurn = 0,
   prospectingEnabled = false,
+  corpCanProspect = false,
 }: ResourceCapacityPanelProps) {
   const rowByResource = new Map((capacityRows ?? []).map((r) => [r.resource, r]));
   const signpost = (opportunities ?? []).filter((o) => o.states.length > 0);
   const showHeadroom = (capacityRows?.length ?? 0) > 0;
   const resourcesTabHref = `${regionUrl(countryId as CountryId, stateId)}?tab=resources`;
-  const canProspect = isCeo && prospectingEnabled && !!corpId;
+  const canProspect = isCeo && prospectingEnabled && corpCanProspect && !!corpId;
 
   const [prospectResource, setProspectResource] = useState<ExtractableResource | null>(null);
   const {

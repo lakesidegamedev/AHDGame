@@ -10,6 +10,7 @@ import {
   settleProducerTurn,
 } from "@/lib/market/producerMarket/settlement";
 import type { prepareProducerSector } from "./producerSectorPlan";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
 import {
   roundStageTimings,
@@ -19,8 +20,23 @@ import {
 
 /** Stop on convergence, with a bounded fallback for difficult live markets. */
 export const LIVE_PLANNING_PASSES = 64;
-/** Cooperative budget includes market preparation; final clearing still completes. */
-export const LIVE_PLANNING_BUDGET_MS = 30_000;
+/**
+ * Cooperative budget includes market preparation (~20 s live); final clearing
+ * still completes. 30 s allowed one ~15 s planning pass, leaving 6,500+ plans
+ * still moving 40-65% (turn 746); 90 s allows about four within the 450 s
+ * execution budget of the ten-minute corporation window. Owner 2026-11-08.
+ */
+export const LIVE_PLANNING_BUDGET_MS = 90_000;
+/**
+ * Size the pre-settlement deadline from the corporation-specific timeout,
+ * leaving a quarter of the phase for durable settlement and other work.
+ */
+export function liveMarketExecutionBudgetMs(timeoutMs: number): number {
+  return Math.floor(timeoutMs * 0.75);
+}
+export const LIVE_MARKET_EXECUTION_BUDGET_MS = liveMarketExecutionBudgetMs(
+  phaseTimeoutMs("corporationTurn")
+);
 
 export { producerWalletId, type ProducerWalletScope };
 
@@ -179,6 +195,7 @@ export async function runCorporationProducerMarket(
     stageTimingsMs: timings,
     worldEpoch: input.worldEpoch,
     planningBudgetMs: LIVE_PLANNING_BUDGET_MS,
+    executionBudgetMs: LIVE_MARKET_EXECUTION_BUDGET_MS,
     production: {
       ...input.demand,
       // Small aggregate differences can conceal large site-level errors.

@@ -4208,10 +4208,6 @@
       "gameState": 1,
       "states": 1
     },
-    "src/lib/congress/applyPlayerWhip.ts": {
-      "electedOfficials": 4,
-      "untyped": 1
-    },
     "src/lib/congress/billProposal.ts": {
       "gameState": 2
     },

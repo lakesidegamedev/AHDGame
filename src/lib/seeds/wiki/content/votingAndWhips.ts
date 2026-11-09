@@ -62,7 +62,7 @@ whip-success-by-loyalty
 
 For hard whip rolls: an NPP with loyalty 80 and stubbornness 40 scores 55 + round(80 x 0.35) - round(40 x 0.18) + 15 = 55 + 28 - 7 + 15 = 91%. Under a soft whip the roll does not decide the vote, so the same NPP just feels a 30-point pull scaled by compliance 0.8 x 0.7 plus 0.6 x 0.3 = 0.74.
 
-**Whips and players.** A whip never takes away a player's choice. A hard whip can write a vote for you, but you can change it. There is no automatic penalty for defying your party's whip: no infamy, no stat loss. The cost is political, through the trust of your leadership and your standing in your party.
+**Whips and players.** A whip never takes away a player's choice. Player whips are advisory only on every vote type and cannot cast or overwrite your vote. Hard NPP whips remain available. There is no automatic penalty for defying your party's whip: no infamy, no stat loss. The cost is political, through the trust of your leadership and your standing in your party.
 
 ## Votes beyond bills
 

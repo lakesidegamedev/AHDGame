@@ -28,7 +28,12 @@ export function fundedSectorValuation(args: {
   const { sector, receipt, result } = args;
   return {
     valueAnchor: fundedSectorValueAnchor({
-      profitPerTurn: result.hourlyRevenue - result.costs,
+      // Own-site credit and charge are valuation only, set on the receipt when their stage is on.
+      profitPerTurn:
+        result.hourlyRevenue -
+        result.costs +
+        (receipt.valuationCredit ?? 0) -
+        (receipt.valuationCharge ?? 0),
       bookFloorAnchor:
         sectorCapacityBookAnchor(sector, args.currentYear, args.eraUnitScale) *
         BOOK_DEPRECIATION_FACTOR,

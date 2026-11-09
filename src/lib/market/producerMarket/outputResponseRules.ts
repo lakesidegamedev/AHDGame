@@ -417,6 +417,17 @@ function planRecoveryRunShareCore(
     soldOutGrowth?: number;
     /** Partial sell-through plans from expected sales (producerDemandPlanStage >= 1). */
     demandPlan?: boolean;
+    /**
+     * producerRunPlanStage >= 2: turns of sales a plant may hold in stock before
+     * the never-below-sales floor counts the excess (see planRecoveryRunShare).
+     */
+    stockCoverTurns?: number;
+    /**
+     * producerRunPlanStage >= 3: a line whose sold units lost money after inputs,
+     * wages and site costs steps down instead of holding or growing, and may plan
+     * below last turn's sales (see planRecoveryRunShare).
+     */
+    lossCutBelowSales?: boolean;
   } = {}
 ): number {
   const floor = options.floor ?? OUTPUT_RUN_FLOOR;
@@ -488,6 +499,24 @@ export function planRecoveryRunShare(
   prior: PriorReceipt | null | undefined,
   options: Parameters<typeof planRecoveryRunShareCore>[1] = {}
 ): number {
+  // Stage 3 (owner 2026-11-08): a line selling every unit below its running cost
+  // was held at its sales by the floor and grew on the sell-out, so it ran until
+  // its company's cash hit zero and every plant stopped at once (49 car plants
+  // on turn 761). It now steps down a cut a turn and may plan below its sales.
+  if (options.lossCutBelowSales && prior) {
+    const signals = runSignals(prior, options.floor ?? OUTPUT_RUN_FLOOR);
+    const base = planBaseRunShare(prior, options.floor ?? OUTPUT_RUN_FLOOR);
+    const unitCost =
+      (signals?.unitMaterials ?? 0) + (signals?.unitWages ?? 0) + (signals?.unitSite ?? 0);
+    if (
+      signals &&
+      base != null &&
+      finiteSold(prior) > 0 &&
+      signals.unitPrice != null &&
+      signals.unitPrice < unitCost
+    )
+      return Math.max(options.floor ?? OUTPUT_RUN_FLOOR, base * (1 - OUTPUT_CUT_STEP));
+  }
   const next = planRecoveryRunShareCore(prior, options);
   if (!prior) return next;
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
@@ -500,6 +529,19 @@ export function planRecoveryRunShare(
     glutTurnsThrough(prior) >= GLUT_TURNS_TO_FLOOR
   )
     return next;
-  const soldShare = Math.min(1, finite(prior.soldUnits) / active);
+  const sold = finite(prior.soldUnits);
+  // Stage 2 (owner 2026-11-08): stock held beyond the cover is sold from the pile,
+  // not made again. Gas plants sold what they made each turn and kept an equal
+  // pile, so the floor held the run at full and world stock grew ~28k units a turn.
+  const cover = options.stockCoverTurns;
+  const excessStock =
+    typeof cover === "number" && Number.isFinite(cover) && cover >= 0
+      ? Math.max(0, Math.max(0, offered - sold) - cover * sold)
+      : 0;
+  const soldShare = Math.min(1, Math.max(0, sold - excessStock) / active);
   return Math.max(next, soldShare);
+}
+
+function finiteSold(prior: PriorReceipt): number {
+  return Number.isFinite(prior.soldUnits) ? prior.soldUnits : 0;
 }

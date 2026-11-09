@@ -96,8 +96,8 @@ const nothing = () =>
     corporationHistory: rows(TURN - 1, 100),
     corporateSectors: [{ producerSettlement: { turn: TURN - 1 } }],
   });
-const full = () =>
-  world({
+const full = () => {
+  const w = world({
     producerEconomyTurns: [{ _id: JSON.stringify(["epoch-a", TURN]), status: "settled" }],
     corporationHistory: [...rows(TURN - 1, 100), ...rows(TURN, 100)],
     corporateSectors: [
@@ -106,6 +106,20 @@ const full = () =>
     ],
     bankMoneyMoves: [{ _id: `corp-operating-cash:${TURN}:abc` }],
   });
+
+  w.data.gameState![0]!.processingPhaseResults = {
+    corporationTurn: {
+      corporationsProcessed: 100,
+      sectorsProcessed: 2,
+      totalRevenueGenerated: 1000,
+      totalIncomeGenerated: 20,
+      turnWarnings: [],
+      currencyIncomeInternalByCharacterId: [["player", 20]],
+      currencyIncomeFaceByCharacterId: [["player", [["USD", 20]]]],
+    },
+  };
+  return w;
+};
 const partial = () =>
   world({
     producerEconomyTurns: [{ _id: JSON.stringify(["epoch-a", TURN]), status: "settled" }],
@@ -118,6 +132,15 @@ const partial = () =>
   });
 
 describe("repair-interrupted-turn", () => {
+  it("refuses to mark committed corporate writes completed without verified income", async () => {
+    const w = full();
+    delete w.data.gameState![0]!.processingPhaseResults;
+    const plan = await inspectInterruptedTurn(w.db);
+    await expect(applyRepair(w.db, plan, { turn: TURN, now: NOW })).rejects.toThrow(
+      /income result is missing/
+    );
+    expect(w.writes).toHaveLength(0);
+  });
   it("NOTHING_COMMITTED: marks corporationTurn failed/mustStop so the engine reruns it", async () => {
     const w = nothing();
     const plan = await inspectInterruptedTurn(w.db);

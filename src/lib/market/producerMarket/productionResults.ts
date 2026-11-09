@@ -2,7 +2,7 @@
 import type { ProducerEconomyInput } from "./productionTypes";
 import type { ProducerOffer, PurchaseOrder } from "./rules";
 import { type ProducerPayable, accrueProducerPayable } from "./payablesRules";
-import { captiveMarketValue, laneClearingPrices } from "./captiveMarketValueRules";
+import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
 import { minorInputs, minorInputShortfallCost } from "./makeDoRules";
 import { deferredBillFraction } from "./salesAdvanceRules";
 import { cappedStockUnitCost, writeDownUnits, stockCover } from "./stockCoverRules";
@@ -89,6 +89,17 @@ export function buildProducerOperatingResults({
             .filter((p) => p.ownSiteMarketValue && !internalAccountingAccounts.has(p.accountId))
             .map((p) => p.accountId)
         ),
+      })
+    : null;
+  // Same prices, valuation only, for accounts that book no entries of their own.
+  const valuationValue = input.ownSiteValuationCredit
+    ? ownSiteCredit({
+        deliveries: market.internalDeliveries ?? [],
+        offers: postedOffers,
+        prices: market.prices,
+        plans,
+        pricedAccounts: internalAccountingAccounts,
+        marketValueBooked: input.captiveMarketValue === true,
       })
     : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
@@ -192,6 +203,7 @@ export function buildProducerOperatingResults({
     }
     let purchases = 0;
     let internalSupplyCharge = 0;
+    let valuationCharge = 0;
     for (const recipe of p.inputs) {
       const bought = orderIdsForInput(p.id, recipe.commodity).reduce(
         (total, id) => {
@@ -216,6 +228,8 @@ export function buildProducerOperatingResults({
       stock.value += bought.cost;
       purchases += bought.cost;
       internalSupplyCharge += bought.internalCost;
+      for (const id of orderIdsForInput(p.id, recipe.commodity))
+        valuationCharge += valuationValue?.chargeByOrder.get(id) ?? 0;
       stocks.set(recipe.commodity, stock);
     }
     // Make do: the plant produces its settled plan and uses up to what it has
@@ -269,6 +283,7 @@ export function buildProducerOperatingResults({
       stock.value *= 1 - loss;
     }
     let internalSupplyIncome = 0;
+    let valuationCredit = 0;
     let revenue = 0,
       offeredUnits = 0,
       soldUnits = 0,
@@ -281,6 +296,7 @@ export function buildProducerOperatingResults({
       const marketValue = captiveValue?.incomeByOffer.get(sold.id) ?? 0;
       revenue += sold.revenue;
       internalSupplyIncome += (sold.internalValue ?? 0) + marketValue;
+      valuationCredit += valuationValue?.incomeByOffer.get(sold.id) ?? 0;
       offeredUnits += sold.offeredUnits;
       soldUnits += sold.soldUnits;
       deliveredUnits += sold.deliveredUnits;
@@ -429,6 +445,8 @@ export function buildProducerOperatingResults({
       id: p.id,
       ...(internalSupplyIncome > 0 ? { internalSupplyIncome } : {}),
       ...(internalSupplyCharge > 0 ? { internalSupplyCharge } : {}),
+      ...(valuationCredit > 0 ? { valuationCredit } : {}),
+      ...(valuationCharge > 0 ? { valuationCharge } : {}),
       capacityUnits: p.capacityUnits,
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,

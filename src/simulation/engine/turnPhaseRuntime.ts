@@ -25,7 +25,7 @@ import {
 } from "@/lib/observability/phaseSubsteps";
 import { withSpan } from "@/lib/observability/spans";
 import type { CompletedTurnPhaseObservation, TurnPhaseRuntime } from "@/simulation/engine/types";
-import { TURN_LOCK_HEARTBEAT_MS, PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
+import { TURN_LOCK_HEARTBEAT_MS, phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { runInAuditContext, turnPhaseTraceId } from "@/lib/observability/context";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
@@ -33,6 +33,8 @@ import {
   encodeResumeResult,
   INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
   phaseRequiresResumeResult,
+  phaseBlocksResumeWhenInterrupted,
+  TurnResumeRefusedError,
   TurnPhaseCompletionPersistError,
   TurnResumeResultUnavailableError,
   type CrashedTurnPhaseState,
@@ -131,6 +133,8 @@ export function createTurnPhaseRuntime(input: {
    * eligibility condition rejected the phase.
    */
   shouldRunPhase?: (phaseName: string) => boolean;
+  /** Recovery-only boundary: defer work whose prerequisites have not settled. */
+  blockedByFailure?: (phaseName: string) => boolean;
   /**
    * Turn number for the `"turn:<n>:<phase>"` audit traceId. Optional so tests
    * that don't exercise the audit spine can omit it; defaults to 0.
@@ -162,6 +166,7 @@ export function createTurnPhaseRuntime(input: {
   const turn = input.turn ?? 0;
   let lastFlushAtMs = 0;
   let nextInvocationId = 0;
+  let stopError: Error | null = null;
   // Nested work may bypass its own ancestors, but never a different runtime's
   // drain. Keep this context beside the invocation ids it identifies.
   const phaseInvocationChain = new AsyncLocalStorage<readonly number[]>();
@@ -290,6 +295,8 @@ export function createTurnPhaseRuntime(input: {
   }
 
   async function runPhase<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
+    const timeoutMs = phaseTimeoutMs(name);
+    if (stopError) throw stopError;
     // A combined predicate can reject an ordinary cadence or singleplayer
     // phase as well as a simulation profile. Record the known conditional
     // skip without claiming a profile that the predicate does not expose.
@@ -322,6 +329,14 @@ export function createTurnPhaseRuntime(input: {
           restored !== null ? "restored" : resumeCarried === "completed" ? "missing" : "interrupted"
         );
       }
+      if (phaseBlocksResumeWhenInterrupted(name) && restored === null) {
+        stopError = new TurnResumeResultUnavailableError(
+          name,
+          resumeCarried === "completed" ? "missing" : "interrupted",
+          "turn processing"
+        );
+        throw stopError;
+      }
       // Carry the restored copy forward, so a second crash can restore it again.
       const result = restored !== null ? encodeResumeResult(name, restored) : null;
       if (resumeCarried === "interrupted") {
@@ -345,20 +360,29 @@ export function createTurnPhaseRuntime(input: {
       });
       return restored;
     }
+    if (input.blockedByFailure?.(name)) {
+      await setPhaseStatus(name, "notReached", {
+        reason: "upstreamAbort",
+        message: "Deferred until the failed market and its prerequisites complete.",
+      });
+      return null;
+    }
     await waitForDrainingPhases();
+    if (stopError) throw stopError;
     const invocationId = ++nextInvocationId;
     const invocationChain = [...(phaseInvocationChain.getStore() ?? []), invocationId];
     // Set by the timeout once it fires; settles when the timed-out function does.
     let drained: Promise<void> | null = null;
     const lateCompletion: { value?: { result: T } } = {};
+    const lateFailure: { value?: unknown } = {};
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         // Registered synchronously, before the rejection reaches any awaiting
         // caller, so no other lane can start a phase in between.
         drained = beginDrain();
-        reject(new Error(`Phase "${name}" timed out after ${PHASE_TIMEOUT_MS / 1000}s`));
-      }, PHASE_TIMEOUT_MS);
+        reject(new Error(`Phase "${name}" timed out after ${timeoutMs / 1000}s`));
+      }, timeoutMs);
     });
     let heartbeatTimer = setInterval(() => {
       // Heartbeats renew the lock only. An in-flight heartbeat may finish after
@@ -423,6 +447,15 @@ export function createTurnPhaseRuntime(input: {
             console.warn(`[Turn] Timed-out phase "${name}" finished after its timeout`);
           },
           (lateErr) => {
+            lateFailure.value = lateErr;
+            if (phaseBlocksResumeWhenInterrupted(name)) {
+              stopError =
+                lateErr instanceof TurnMustStopError
+                  ? lateErr
+                  : new TurnResumeRefusedError(
+                      `${name} failed after timeout; the turn stops for repair.`
+                    );
+            }
             console.error(`[Turn] Timed-out phase "${name}" failed after its timeout`, lateErr);
             Sentry.captureException(lateErr, {
               extra: { phase: name, settledAfterTimeout: true },
@@ -570,9 +603,16 @@ export function createTurnPhaseRuntime(input: {
         // treats the phase as interrupted.
         discardPhaseSubsteps(name);
         warnings.push(`${name}: ${err.message}`);
+        stopError = err;
         throw err;
       }
       const message = err instanceof Error ? err.message : String(err);
+      if (!drained && phaseBlocksResumeWhenInterrupted(name)) {
+        stopError =
+          err instanceof TurnMustStopError
+            ? err
+            : new TurnResumeRefusedError(`${name} failed; the turn stops for repair.`);
+      }
       console.error(`[Turn] Phase "${name}" failed: ${message}`, err);
       Sentry.captureException(err, { extra: { phase: name } });
       if (isMutatingPhase) {
@@ -605,6 +645,14 @@ export function createTurnPhaseRuntime(input: {
         // the phase status. Serialize them so a slow first write cannot land
         // last and overwrite substeps recorded while the callback drained.
         await initialFailureWrite;
+        if (lateFailure.value instanceof TurnMustStopError) {
+          await setPhaseStatus(name, "failed", {
+            reason: "mustStop",
+            message: lateFailure.value.message,
+            substeps: takePhaseSubsteps(name),
+          });
+          throw lateFailure.value;
+        }
         if (lateCompletion.value && phaseRequiresResumeResult(name)) {
           // A timeout cannot cancel writes. Once this exact invocation returns
           // successfully, retain its real flows rather than stranding treasury
@@ -617,6 +665,7 @@ export function createTurnPhaseRuntime(input: {
           } catch (completionErr) {
             if (completionErr instanceof TurnPhaseCompletionPersistError) {
               warnings.push(`${name}: ${completionErr.message}`);
+              stopError = completionErr;
             }
             throw completionErr;
           }
@@ -629,6 +678,13 @@ export function createTurnPhaseRuntime(input: {
       if (err instanceof TurnMustStopError) {
         await initialFailureWrite;
         throw err;
+      }
+      if (phaseBlocksResumeWhenInterrupted(name)) {
+        await initialFailureWrite;
+        stopError ??= new TurnResumeRefusedError(
+          `${name} did not complete successfully; the turn stops with its evidence preserved for repair.`
+        );
+        throw stopError;
       }
       return null;
     } finally {
