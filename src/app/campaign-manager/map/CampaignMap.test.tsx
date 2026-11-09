@@ -289,6 +289,9 @@ describe("CampaignMap pan and zoom", () => {
       renderMap();
     });
     await screen.findByRole("button", { name: /London/ });
+    // The wheel listener attaches in a passive effect that can still be queued
+    // when the map first appears; flush it before dispatching.
+    await act(async () => {});
     const svg = screen.getByRole("group", { name: /map/ });
     const wheel = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
     fireEvent(svg, wheel);
