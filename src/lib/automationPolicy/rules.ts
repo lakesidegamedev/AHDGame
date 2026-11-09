@@ -1,22 +1,9 @@
 /**
  * Automation policy rules for the 2027 world: what the automation law track
- * (automation tax, wage insurance, retraining guarantee, hiring subsidy,
- * automation pension levy, transition compacts) does outside the metric board.
- * Game design, not calibration to real labour markets, and deliberately small:
- * the strongest rung of any one law moves a cost by a few percent, and the
- * combined effect of every law is capped.
- *
- * - Crew retention: levies, subsidies and compacts keep part of the crew an
- *   automated plant would have shed, so fewer workers are displaced and the
- *   plant pays more wages.
- * - Automation cost: the tax and the pension levy raise the input bill of
- *   automation methods, the margin the firms give up for the revenue.
- * - Wage cost: a hiring subsidy cuts the wage bill every firm carries.
- * - Re-employment: retraining and the subsidy speed up how fast displaced
- *   workers find new work.
- * - Unions: transition compacts strengthen union organising.
- * - Voters: each law moves the buckets it helps or taxes when it is enacted.
- *
+ * does outside the metric board. Game design, deliberately small: the top rung
+ * of any one law moves a cost by a few percent and the combined effect is capped.
+ * Crew retention, automation input cost, wage cost, re-employment speed, union
+ * bias and voter bucket impacts each have one pure function below.
  * Plain data in, plain data out: law levels arrive already read.
  */
 

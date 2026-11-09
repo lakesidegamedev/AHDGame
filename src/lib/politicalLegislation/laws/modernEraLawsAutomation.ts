@@ -1,16 +1,10 @@
 /**
- * The automation policy track of the later-era law book: the laws that decide
- * who carries the cost when machines take over work. Beside the automation tax
- * and wage insurance (2030) and the basic income pilot (2035), this adds a
- * retraining guarantee and a hiring subsidy (2030), and an automation pension
- * levy and transition compacts (2035). Split from modernEraLaws.ts to keep that
- * file under its size pin; the specs share its shape and are built there.
- *
- * Beyond the metric board and the budget, these laws reach the economy through
- * the rules in `@/lib/automationPolicy`: how many crew automated plants keep,
- * what automation and labour cost firms, how fast displaced workers find new
- * work, how strong unions are, and which voters approve. The numbers there are
- * deliberately small.
+ * The automation policy track of the later-era law book: who carries the cost
+ * when machines take over work. Adds a retraining guarantee and a hiring
+ * subsidy (2030), and an automation pension levy and transition compacts (2035).
+ * Split from modernEraLaws.ts to keep that file under its size pin; the specs
+ * share its shape and are built there. Effects beyond the metric board live in
+ * `@/lib/automationPolicy` and are deliberately small.
  */
 
 import type { ModernLawSpec } from "./modernEraLaws";
