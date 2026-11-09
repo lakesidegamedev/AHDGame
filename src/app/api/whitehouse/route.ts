@@ -12,6 +12,8 @@ import { getExecutiveTermsServed } from "@/lib/elections/executiveTermLimits";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { resolveExecutiveHolder } from "@/lib/elections/resolveExecutiveHolder";
 import { getGameTime } from "@/lib/time/gameTime";
+import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { pastRealTimestampToLarpDate } from "@/lib/utils/formatters";
 
 // GET /api/whitehouse — Returns the current President and Vice President details along with caller admin and president flags.
@@ -40,17 +42,22 @@ export async function GET(request: Request) {
           ) || null
         : null;
 
-    const [presidentOfficial, vicePresidentOfficial, activeVpNomination] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "president" }),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "vicePresident" }),
-      db
-        .collection<CabinetNomination>("cabinetNominations")
-        .findOne({ countryId, positionId: "vicePresident", status: "active" }),
-    ]);
+    const [presidentOfficial, vicePresidentOfficial, activeVpNomination, govFormation] =
+      await Promise.all([
+        db
+          .collection<ElectedOfficial>("electedOfficials")
+          .findOne({ countryId, officeType: "president" }),
+        db
+          .collection<ElectedOfficial>("electedOfficials")
+          .findOne({ countryId, officeType: "vicePresident" }),
+        db
+          .collection<CabinetNomination>("cabinetNominations")
+          .findOne({ countryId, positionId: "vicePresident", status: "active" }),
+        getGovernmentFormationsCollection(db).findOne(
+          { _id: countryId },
+          { projection: { status: 1, caretaker: 1, succession: 1 } }
+        ),
+      ]);
 
     // Character-backed holders resolve below; NPP-backed holders (characterId
     // null, nppId set) fall through to the resolveExecutiveHolder branches.
@@ -228,6 +235,7 @@ export async function GET(request: Request) {
       isVicePresident,
       isSenator,
       vpNomination,
+      executiveStatus: executiveStatusPayload(govFormation, gameTime.currentTurn),
     });
   } catch (error) {
     return handleRouteError(error);

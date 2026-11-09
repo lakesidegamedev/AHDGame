@@ -78,6 +78,7 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   chancellor: "headOfGovernment", // DE Bundeskanzler — selected via parliamentary formation
   president: "headOfState",
   uachtaran: "headOfState",
+  special_president: "headOfState", // presidential vacancy fill, same seat as `president`
 };
 
 export function positionForElectionType(electionType: string): ElectionPosition | undefined {

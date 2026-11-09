@@ -8,6 +8,7 @@ import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import ImpeachmentPanel from "./ImpeachmentPanel";
+import { ExecutiveStatusBanner } from "./ExecutiveStatusBanner";
 import { useToast } from "@/contexts/ToastContext";
 import { Skeleton, CardSkeleton, TabRowSkeleton, ListRowSkeleton } from "@/components/ui";
 import {
@@ -536,6 +537,8 @@ export default function WhiteHouseClient({
             />
           }
         />
+
+        <ExecutiveStatusBanner status={data.executiveStatus} />
 
         {data.president && (
           <ImpeachmentPanel

@@ -120,6 +120,7 @@ export function electionToLarpYear(
       return firstYear + (cycle - 1) * 6;
     }
     case "president":
+    case "special_president":
       // 4-year cycles
       return years.president + (cycle - 1) * 4;
     case "governor":

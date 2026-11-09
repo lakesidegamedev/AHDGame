@@ -15,7 +15,13 @@ const NPP_ENDORSEMENT_REEVALUATION_TURNS = 4;
 export const NPP_ENDORSEMENT_DIRECT_FAVORABILITY_PER_ENDORSEMENT = 1.5;
 export const NPP_ENDORSEMENT_DIRECT_FAVORABILITY_CAP = 6;
 
-const NATIONAL_RACE_TYPES = new Set(["president", "primeMinister", "chancellor", "uachtaran"]);
+const NATIONAL_RACE_TYPES = new Set([
+  "president",
+  "special_president",
+  "primeMinister",
+  "chancellor",
+  "uachtaran",
+]);
 
 export type RequestedEndorsementLikelihood = "likely_accept" | "likely_decline";
 

@@ -325,7 +325,7 @@ describe("standing targeted ad actions", () => {
     });
     expect(db.collection("elections").findOne.mock.calls[0][0]).toMatchObject({
       _id: { $in: [candidate.electionId] },
-      electionType: { $in: ["president", "uachtaran"] },
+      electionType: { $in: ["president", "uachtaran", "special_president"] },
       status: "active",
       countryId: character.countryId,
     });

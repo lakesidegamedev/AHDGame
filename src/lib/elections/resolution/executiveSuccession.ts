@@ -4,8 +4,8 @@
  * Opens a succession record on the government document when the head of
  * government or state falls vacant, marks it overdue past its fill deadline,
  * clears it once someone holds the office, and promotes a deputy in countries
- * whose rule is a permanent deputy. Election and party-vote fills stay with the
- * existing formation and election engines; this records the timetable they owe.
+ * whose rule is a permanent deputy. Special elections and legislature or party
+ * votes are spawned by executiveSuccessionFill.
  */
 
 import type { AnyBulkWriteOperation, Db } from "mongodb";

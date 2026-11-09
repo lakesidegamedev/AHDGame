@@ -43,6 +43,8 @@ import { computeParliamentaryGovernmentTally } from "@/lib/congress/governmentVo
 import { resolveCountryOfficeLayout } from "@/lib/countries/rules/officeLayout";
 import { SNAP_ELECTION_LIMIT, SNAP_ELECTION_COOLDOWN_TURNS } from "@/lib/turn/snapElection";
 import { getConfidenceConsequenceLevel } from "@/lib/turn/rulingPartyPriorities";
+import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
+import { loadExecutiveStatus } from "@/lib/elections/executiveStatus";
 
 /**
  * Coerce a character id that is typed `ObjectId` but may have been persisted as
@@ -93,9 +95,10 @@ async function handlePresidential(countryId: CountryId) {
       .collection<ElectedOfficial>("electedOfficials")
       .findOne({ countryId, officeType: "vicePresident" }),
   ]);
-  const [president, vicePresident] = await Promise.all([
+  const [president, vicePresident, executiveStatus] = await Promise.all([
     resolveExecutiveHolder(db, presidentOfficial),
     resolveExecutiveHolder(db, vicePresidentOfficial),
+    loadExecutiveStatus(db, countryId),
   ]);
 
   const myCharacter = authUser
@@ -121,6 +124,7 @@ async function handlePresidential(countryId: CountryId) {
     isAdmin: authUser?.isAdmin ?? false,
     isPresident,
     isVicePresident,
+    executiveStatus,
   });
 }
 
@@ -622,5 +626,6 @@ async function handleParliamentary(countryId: CountryId) {
     snapElectionsRemaining,
     snapCooldownTurnsRemaining,
     rulingPartyConfidence,
+    executiveStatus: executiveStatusPayload(govFormation, executiveGameTime.currentTurn),
   });
 }
