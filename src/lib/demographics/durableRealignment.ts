@@ -36,9 +36,7 @@
  *     `applyBaselineDecay`) has nothing to pull back toward — this is what
  *     makes the shift durable rather than a capped, decaying overlay.
  *  2. `demographicDefaults.layer1PositionOverrides[dim][bucket].<axis>` — a
- *     durable per-census-bucket delta, projected via the shared
- *     `archetypeValuesToBuckets` map (the SAME map that diffuses
- *     archetype-keyed turnout/approval effects onto cells elsewhere), applied
+ *     durable per-census-bucket delta, applied
  *     by `granularElectorate.ts`'s `applyPositionOverlay` directly to the
  *     Layer-1 position table BEFORE cell derivation — the ONLY channel the
  *     the granular vote path reads a durable shift through
@@ -67,7 +65,6 @@
  * pure and does no I/O, so it is trivially shared across three different
  * turn-processing entry points without any of them depending on the others.
  */
-import { archetypeValuesToBuckets } from "./archetypeBucketMap";
 import type { StateDemographics } from "@/lib/db/types/demographics";
 
 /** Absolute bounds of the shared lean axis. */
@@ -168,12 +165,8 @@ export function applyDurableGroupShift(
     live: number;
     /** Current `demographicDefaults.groups[groupId][axis]`, when present. */
     default: number | undefined;
-    /** Current cumulative overlay value reader for this axis. */
-    readOverlay: (dim: string, bucket: string) => number;
   },
-  acc: DurableShiftAccumulators,
-  /** Selects the bucket vocabulary — see `archetypeValuesToBuckets`. */
-  countryId?: string
+  acc: DurableShiftAccumulators
 ): void {
   if (netDelta === 0) return;
 
@@ -184,20 +177,6 @@ export function applyDurableGroupShift(
   if (typeof current.default === "number") {
     const defaultBase = acc.defaultUpdates[liveKey] ?? current.default;
     acc.defaultUpdates[liveKey] = applyDurableStep(defaultBase, netDelta);
-  }
-
-  // Durable Layer-1 bucket-position overlay — the ONLY channel that reaches
-  // the granular vote path (see module doc above). `countryId` selects the
-  // bucket vocabulary, so a non-US group projects onto its own country's
-  // buckets rather than onto nothing.
-  const bucketDeltas = archetypeValuesToBuckets({ [groupId]: netDelta }, countryId);
-  for (const [bucketKey, bucketDelta] of Object.entries(bucketDeltas)) {
-    if (bucketDelta === 0) continue;
-    const sep = bucketKey.indexOf(":");
-    if (sep <= 0) continue;
-    const dim = bucketKey.slice(0, sep);
-    const bucket = bucketKey.slice(sep + 1);
-    applyDurableBucketShift(dim, bucket, axis, bucketDelta, current.readOverlay, acc);
   }
 }
 
@@ -253,8 +232,7 @@ export function readLayer1TurnoutOverlay(
  * points — the turnout counterpart of `applyDurableGroupShift`. Same
  * layering/stacking contract (multiple targets landing on the same group or
  * bucket within one turn sum rather than clobber), same no-op-on-zero
- * short-circuit, same archetype→bucket projection for the granular path via
- * `archetypeValuesToBuckets` — the ONLY difference is which clamp each
+ * short-circuit — the ONLY difference is which clamp each
  * substrate uses (see the module-level bounds above).
  */
 export function applyDurableGroupTurnoutShift(
@@ -264,12 +242,8 @@ export function applyDurableGroupTurnoutShift(
     live: number;
     /** Current `demographicDefaults.groups[groupId].turnout`, when present. */
     default: number | undefined;
-    /** Current cumulative turnout-overlay value reader. */
-    readOverlay: (dim: string, bucket: string) => number;
   },
-  acc: DurableShiftAccumulators,
-  /** Selects the bucket vocabulary — see `archetypeValuesToBuckets`. */
-  countryId?: string
+  acc: DurableShiftAccumulators
 ): void {
   if (netDelta === 0) return;
 
@@ -280,20 +254,6 @@ export function applyDurableGroupTurnoutShift(
   if (typeof current.default === "number") {
     const defaultBase = acc.defaultUpdates[liveKey] ?? current.default;
     acc.defaultUpdates[liveKey] = applyDurableTurnoutStep(defaultBase, netDelta);
-  }
-
-  // Durable Layer-1 bucket-turnout overlay — the ONLY channel that reaches
-  // the granular vote path for turnout (see `Layer1TurnoutOverlay`'s doc
-  // comment). `countryId` selects the bucket vocabulary, so a non-US group
-  // projects onto its own country's buckets rather than onto nothing.
-  const bucketDeltas = archetypeValuesToBuckets({ [groupId]: netDelta }, countryId);
-  for (const [bucketKey, bucketDelta] of Object.entries(bucketDeltas)) {
-    if (bucketDelta === 0) continue;
-    const sep = bucketKey.indexOf(":");
-    if (sep <= 0) continue;
-    const dim = bucketKey.slice(0, sep);
-    const bucket = bucketKey.slice(sep + 1);
-    applyDurableBucketTurnoutShift(dim, bucket, bucketDelta, current.readOverlay, acc);
   }
 }
 

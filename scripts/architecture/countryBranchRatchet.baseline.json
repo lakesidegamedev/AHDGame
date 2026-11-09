@@ -170,7 +170,6 @@
     "src/lib/currency/rules/euroAdoption.ts": 4,
     "src/lib/currency/rules/rubleTransition.ts": 1,
     "src/lib/db/types/governorOfficeState.ts": 1,
-    "src/lib/demographics/archetypeBucketMap.ts": 1,
     "src/lib/demographics/cachedStateLean.ts": 1,
     "src/lib/demographics/granularElectorate.ts": 2,
     "src/lib/demographics/legislativePriorities/rules.ts": 1,

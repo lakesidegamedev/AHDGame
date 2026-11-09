@@ -10,6 +10,8 @@ import {
   computeWhipForce,
   verdictFromForces,
 } from "./crossPressure";
+import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
+import type { Layer1Config } from "@/lib/seeds/stateDemographicsPure";
 
 function makeNPP(overrides: Partial<NPP> = {}): NPP {
   return {
@@ -234,15 +236,12 @@ describe("computeWhipForce", () => {
 });
 
 describe("computeDistrictForce", () => {
-  function makeStateDemographics(rural: number, urban: number): StateDemographics {
+  function makeStateDemographics(stateId = "OH", countryId: "US" | "UK" = "US"): StateDemographics {
     return {
-      _id: "OH",
-      countryId: "US",
-      categoryWeights: { voterGroups: 100 },
-      groups: {
-        young_renters: { population: rural, economicLean: 0, socialLean: 0 },
-        union_trades: { population: urban, economicLean: 0, socialLean: 0 },
-      },
+      _id: stateId,
+      countryId,
+      categoryWeights: {},
+      groups: {},
       lastUpdated: new Date(),
     };
   }
@@ -251,10 +250,10 @@ describe("computeDistrictForce", () => {
     const bill = makeBill({
       provisions: [{ type: "policy", legislationTypeId: "tax-policy", effectDirection: 1 }],
     });
-    expect(computeDistrictForce(bill, makeTaxType(), makeStateDemographics(50, 50))).toBe(0);
+    expect(computeDistrictForce(bill, makeTaxType(), makeStateDemographics())).toBe(0);
   });
 
-  it("weights bucket approvals by the state's bucket mass", () => {
+  it("weights bucket approvals by the state's census share", () => {
     const bill = makeBill({
       provisions: [
         {
@@ -265,8 +264,28 @@ describe("computeDistrictForce", () => {
         },
       ],
     });
-    const result = computeDistrictForce(bill, makeTaxType(), makeStateDemographics(70, 30));
-    expect(result).toBeCloseTo(-4.55, 5);
+    const census = getRegionCensusData("US", "OH", undefined) as Layer1Config;
+    const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
+    const young = census.age.young / sum(census.age);
+    const low = census.wealth.low / sum(census.wealth);
+    const expected = ((-40 * young + 30 * low) / 4) * 1;
+    const result = computeDistrictForce(bill, makeTaxType(), makeStateDemographics());
+    expect(result).toBeCloseTo(expected, 5);
+    expect(result).not.toBe(0);
+  });
+
+  it("returns 0 when the state has no census", () => {
+    const bill = makeBill({
+      provisions: [
+        {
+          type: "policy",
+          legislationTypeId: "tax-policy",
+          policyOptionId: "raise-taxes",
+          effectDirection: 1,
+        },
+      ],
+    });
+    expect(computeDistrictForce(bill, makeTaxType(), makeStateDemographics("ZZ"))).toBe(0);
   });
 
   it("returns 0 when state has no demographic data", () => {
@@ -294,7 +313,7 @@ describe("computeDistrictForce", () => {
         },
       ],
     });
-    expect(computeDistrictForce(bill, null, makeStateDemographics(50, 50))).toBe(0);
+    expect(computeDistrictForce(bill, null, makeStateDemographics())).toBe(0);
   });
 });
 
@@ -430,12 +449,13 @@ describe("computeCrossPressureForces (integration)", () => {
     const demographics: StateDemographics = {
       _id: "OH",
       countryId: "US",
-      categoryWeights: { voterGroups: 100 },
-      groups: {
-        young_renters: { population: 100, economicLean: 0, socialLean: 0 },
-      },
+      categoryWeights: {},
+      groups: {},
       lastUpdated: new Date(),
     };
+    const census = getRegionCensusData("US", "OH", undefined) as Layer1Config;
+    const ageTotal = Object.values(census.age).reduce((a, b) => a + b, 0);
+    const expectedDistrict = (100 * (census.age.young / ageTotal)) / 4;
 
     const { forces, donorsLabel } = computeCrossPressureForces(npp, bill, {
       legislationType: legType,
@@ -445,7 +465,7 @@ describe("computeCrossPressureForces (integration)", () => {
 
     expect(forces.ideology).toBeCloseTo(40, 5);
     expect(forces.whip).toBe(60);
-    expect(forces.district).toBeCloseTo(50, 5);
+    expect(forces.district).toBeCloseTo(expectedDistrict, 5);
     expect(forces.donors).toBeCloseTo(24, 5);
     expect(donorsLabel).toMatch(/aligns/i);
     expect(verdictFromForces(forces)).toBe("for");

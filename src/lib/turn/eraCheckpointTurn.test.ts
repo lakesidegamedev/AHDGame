@@ -275,8 +275,22 @@ describe("processEraCheckpointsTurn", () => {
       demographicEffects: [
         // Strong, sustained leftward pull on the same group+axis the
         // checkpoint targets — a player campaigning hard against the tide.
-        { groupId: "rural_traditionalists", target: "economicLean", direction: -1, magnitude: 3 },
-        { groupId: "rural_traditionalists", target: "socialLean", direction: -1, magnitude: 3 },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "economicLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "socialLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        { dim: "age", bucket: "mature", target: "economicLean", direction: -1, magnitude: 3 },
+        { dim: "age", bucket: "mature", target: "socialLean", direction: -1, magnitude: 3 },
       ],
     } as unknown as LegislationType;
 
@@ -312,10 +326,8 @@ describe("processEraCheckpointsTurn", () => {
     // per-turn shift several times the checkpoint's own rate, it held the
     // targeted buckets at (or past) their starting position (0, no
     // pre-existing overlay) instead of the full authored shift they would
-    // otherwise have reached. The law is authored against the
-    // `rural_traditionalists` archetype and still nets against bucket targets,
-    // because the turn processor projects every active legislative archetype
-    // shift through `archetypeValuesToBuckets` before netting.
+    // otherwise have reached. The law targets the same buckets, so it nets
+    // against the checkpoint.
     expect(overlay(al, "education", "no_college", "economicLean")).toBeLessThanOrEqual(0);
     expect(overlay(al, "age", "mature", "economicLean")).toBeLessThanOrEqual(0);
   });
@@ -520,10 +532,24 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       policyDomain: "governance",
       subCategory: "test",
       demographicEffects: [
-        { groupId: "rural_traditionalists", target: "economicLean", direction: -1, magnitude: 3 },
-        { groupId: "rural_traditionalists", target: "socialLean", direction: -1, magnitude: 3 },
-        { groupId: "evangelicals", target: "economicLean", direction: -1, magnitude: 3 },
-        { groupId: "evangelicals", target: "socialLean", direction: -1, magnitude: 3 },
+        { dim: "race", bucket: "white", target: "economicLean", direction: -1, magnitude: 3 },
+        { dim: "race", bucket: "white", target: "socialLean", direction: -1, magnitude: 3 },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "economicLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "socialLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        { dim: "age", bucket: "mature", target: "economicLean", direction: -1, magnitude: 3 },
+        { dim: "age", bucket: "mature", target: "socialLean", direction: -1, magnitude: 3 },
       ],
     } as unknown as LegislationType;
     const opposingPolicy: StatePolicy = {
@@ -736,27 +762,22 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
     }
   });
 
-  it("is beatable: sustained opposing legislation on a mapped archetype nets against a bucket target's pull", async () => {
-    // union_trades maps onto race:black at weight 0.25 in ARCHETYPE_BUCKET_MAP
-    // — an ordinary archetype-authored law can contest a bucket checkpoint
-    // with no new authoring convention needed, because eraCheckpointTurn.ts
-    // projects every active legislative archetype shift through the SAME
-    // archetypeValuesToBuckets map before netting.
+  it("is beatable: sustained opposing legislation on the same bucket nets against a bucket target's pull", async () => {
     const opposingLegType: LegislationType = {
-      _id: "test-opposing-union-law",
-      name: "Test Opposing Union Law",
+      _id: "test-opposing-bucket-law",
+      name: "Test Opposing Bucket Law",
       description: "test fixture",
       policyDomain: "governance",
       subCategory: "test",
       demographicEffects: [
         // Positive (rightward) direction opposes the checkpoint's negative
         // (leftward) race:black pull.
-        { groupId: "union_trades", target: "economicLean", direction: 1, magnitude: 3 },
+        { dim: "race", bucket: "black", target: "economicLean", direction: 1, magnitude: 3 },
       ],
     } as unknown as LegislationType;
     const opposingPolicy: StatePolicy = {
       stateId: "OH",
-      legislationTypeId: "test-opposing-union-law",
+      legislationTypeId: "test-opposing-bucket-law",
       policyOptionId: "opt-max",
       policyOptionIndex: 6,
       enactedAt: new Date("2026-01-01"),

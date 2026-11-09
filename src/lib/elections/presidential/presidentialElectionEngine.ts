@@ -894,7 +894,7 @@ export async function accumulatePresidentVoteTurn(
                     ? 1 - Math.max(0, Math.min(100, unregistered)) / 100
                     : 1;
                 })(),
-                contactByBucket: campaignContactByBucket(rawTurnoutDoc, electionCountryId),
+                contactByBucket: campaignContactByBucket(rawTurnoutDoc),
               },
             }
           : {}),

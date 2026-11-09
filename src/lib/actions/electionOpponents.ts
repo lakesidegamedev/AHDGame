@@ -3,10 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import type { Character, State, Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { buildGranularElectorateForState } from "@/lib/actions/granularPollPayload";
-import {
-  computePollHeadline,
-  projectCandidateApprovalBuckets,
-} from "@/lib/actions/granularPollPayload/rules";
+import { computePollHeadline } from "@/lib/actions/granularPollPayload/rules";
 import { getGameState } from "@/lib/gameState";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
@@ -244,10 +241,7 @@ export async function getElectionOpponents(
             socialPosition: social,
             favorability: fav,
             politicalInfluence: clampPercentStat(polInf),
-            approvalBuckets: projectCandidateApprovalBuckets(
-              bucketApprovals,
-              state.countryId ?? "US"
-            ),
+            approvalBuckets: bucketApprovals ?? {},
           }),
         };
       });

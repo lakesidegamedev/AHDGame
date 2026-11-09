@@ -256,9 +256,7 @@ export const SOUTHERN_REALIGNMENT_CHECKPOINT: EraCheckpoint = {
   // term — the sharpest, best-documented span of the defection.
   durationTurns: 15 * 48,
   historicalWindow: { startYear: 1954, endYear: 1969 },
-  // BUCKET targets only. The archetype targets (`rural_traditionalists`,
-  // `evangelicals`, `union_trades`) were folded into the buckets they already
-  // projected onto via ARCHETYPE_BUCKET_MAP, and per-axis contributions summed:
+  // Bucket targets only, with per-axis contributions summed:
   //   economicLean: race:white 6.8, education:no_college 2.8, age:mature 0.8,
   //     wealth:low -0.525, race:black -0.375
   //   socialLean:   race:white 5.85, education:no_college 2.55, age:mature 0.7,
@@ -571,9 +569,8 @@ const ENGEL_SCHOOL_PRAYER_CHECKPOINT: EraCheckpoint = {
   fallbackStartTurn: yearToTurn(1963, STARTING_YEAR_1953),
   durationTurns: 8 * 48,
   historicalWindow: { startYear: 1963, endYear: 1971 },
-  // Converted from two `evangelicals` archetype targets (national +1.0, South
-  // and Midwest top-up +1.0) to the buckets they already projected onto:
-  // ARCHETYPE_BUCKET_MAP.evangelicals = race:white .6, education:no_college .4.
+  // National baseline plus a South and Midwest top-up, split across
+  // race:white (0.6) and education:no_college (0.4).
   targets: [
     // National baseline (all US states).
     { dim: "race", bucket: "white", stateIds: ALL_US_STATES, axis: "socialLean", totalShift: 0.6 },

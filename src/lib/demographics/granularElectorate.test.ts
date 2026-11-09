@@ -13,8 +13,6 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { getCountryLayer1Model } from "@/lib/seeds/international";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
 // Side-effect import — populates stateCensusData with all US states so the
 // Layer-1 derivation can find census configs.
 import "@/lib/seeds/stateDemographics";
@@ -29,13 +27,9 @@ import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import { GRANULAR_DIMENSIONS } from "@/lib/demographics/granularCells";
 import {
-  ARCHETYPE_BUCKET_MAP,
-  archetypeValuesToBuckets,
-} from "@/lib/demographics/archetypeBucketMap";
-import {
   buildGranularElectorateSubstrate,
   deriveGranularElectorateUnits,
-  remapArchetypeValuesToUnits,
+  bucketValuesToUnits,
   clearGranularElectorateCache,
   campaignContactByBucket,
   ELECTORATE_PRUNE_FLOOR,
@@ -151,55 +145,6 @@ beforeEach(() => {
   clearGranularElectorateCache();
 });
 
-describe("ARCHETYPE_BUCKET_MAP", () => {
-  it("covers all 12 archetypes with 1-3 buckets whose weights sum to 1", () => {
-    const validDims = new Set<string>(GRANULAR_DIMENSIONS);
-    for (const archetypeId of ARCHETYPE_IDS) {
-      const weights = ARCHETYPE_BUCKET_MAP[archetypeId];
-      expect(weights, archetypeId).toBeDefined();
-      expect(weights.length).toBeGreaterThanOrEqual(1);
-      expect(weights.length).toBeLessThanOrEqual(3);
-      const sum = weights.reduce((s, w) => s + w.w, 0);
-      expect(sum, `${archetypeId} weights must sum to 1`).toBeCloseTo(1, 10);
-      for (const { dim, w } of weights) {
-        expect(validDims.has(dim), `${archetypeId} dim ${dim}`).toBe(true);
-        expect(w).toBeGreaterThan(0);
-      }
-    }
-  });
-
-  it("distributes archetype values onto buckets by weight", () => {
-    const buckets = archetypeValuesToBuckets({ retirees: 40 });
-    expect(buckets["age:senior"]).toBeCloseTo(28, 8);
-    expect(buckets["age:mature"]).toBeCloseTo(12, 8);
-    expect(Object.keys(buckets)).toHaveLength(2);
-  });
-
-  it("maps UK voter groups onto UK buckets when the country is given", () => {
-    // Twice-corrected contract. It first asserted {} (the bug as the contract),
-    // then asserted "projects somewhere" — which passed while projecting onto US
-    // buckets the UK electorate does not have. The country is what makes it land.
-    const buckets = archetypeValuesToBuckets({ urban_progressives: 25 }, "UK");
-    expect(Object.keys(buckets).length).toBeGreaterThan(0);
-    // Weights sum to 1, so the full magnitude survives the projection.
-    expect(Object.values(buckets).reduce((s, v) => s + v, 0)).toBeCloseTo(25, 8);
-    const model = getCountryLayer1Model("UK", eraForPreset("1953-default"))!;
-    const real = new Set(
-      model.dims.flatMap((d) => Object.keys(model.turnoutRates[d] ?? {}).map((k) => `${d}:${k}`))
-    );
-    for (const bucket of Object.keys(buckets)) expect(real.has(bucket), bucket).toBe(true);
-  });
-
-  it("drops a UK group asked for in the US vocabulary", () => {
-    // The US table has no UK-only ids, and must not acquire any.
-    expect(archetypeValuesToBuckets({ urban_progressives: 25 }, "US")).toEqual({});
-  });
-
-  it("still ignores a genuinely unknown id", () => {
-    expect(archetypeValuesToBuckets({ not_a_real_group: 25 })).toEqual({});
-  });
-});
-
 describe("deriveGranularElectorateUnits", () => {
   it("produces a pruned, renormalized distribution of units", () => {
     const derived = deriveGranularElectorateUnits("US", "CT", "2019-default", null);
@@ -282,24 +227,6 @@ describe("deriveGranularElectorateUnits", () => {
     const baseSenior = weightedTurnout(base.units, (w) => w > 0.9);
     const boostedSenior = weightedTurnout(boosted.units, (w) => w > 0.9);
     expect(boostedSenior).toBeGreaterThan(baseSenior);
-  });
-
-  it("folds archetype-keyed GOTV modifiers via the bucket map", () => {
-    const doc: StateDemographicTurnout = {
-      _id: "CT",
-      countryId: "US",
-      modifiers: { voterGroups: { retirees: 15 } },
-      lastDecayApplied: new Date(),
-      lastUpdated: new Date(),
-    };
-    const base = deriveGranularElectorateUnits("US", "CT", "2019-default", null)!;
-    const boosted = deriveGranularElectorateUnits("US", "CT", "2019-default", doc)!;
-    const seniorTurnout = (units: typeof base.units) => {
-      const subset = units.filter((u) => (u.bucketWeights["age:senior"] ?? 0) > 0.9);
-      const share = subset.reduce((s, u) => s + u.share, 0);
-      return subset.reduce((s, u) => s + u.share * u.turnout, 0) / share;
-    };
-    expect(seniorTurnout(boosted.units)).toBeGreaterThan(seniorTurnout(base.units));
   });
 });
 
@@ -705,9 +632,9 @@ describe("buildGranularElectorateSubstrate", () => {
       lastDecayApplied: new Date("2024-01-01"),
       lastUpdated: new Date("2024-01-01"),
     };
-    const contactByBucket = campaignContactByBucket(turnoutDoc, "US");
+    const contactByBucket = campaignContactByBucket(turnoutDoc);
     expect(contactByBucket["age:young"]).toBe(4);
-    expect(contactByBucket["age:senior"]).toBeCloseTo(2.8);
+    expect(contactByBucket["age:senior"]).toBeUndefined();
 
     const male = Array<number>(101).fill(1);
     const female = Array<number>(101).fill(1);
@@ -729,7 +656,9 @@ describe("buildGranularElectorateSubstrate", () => {
 
   it("remaps candidate bucketApprovals onto units", () => {
     const substrate = buildSubstrate({
-      enriched: [makeCandidate("cand", "democrat", 0, 0, { bucketApprovals: { retirees: 40 } })],
+      enriched: [
+        makeCandidate("cand", "democrat", 0, 0, { bucketApprovals: { "age:senior": 28 } }),
+      ],
     })!;
     const approvals = substrate.enriched[0].bucketApprovals!;
     const values = Object.values(approvals);
@@ -738,7 +667,7 @@ describe("buildGranularElectorateSubstrate", () => {
       expect(Number.isFinite(v)).toBe(true);
       expect(Math.abs(v)).toBeLessThanOrEqual(100);
     }
-    // A pure-senior unit picks up the full senior bucket value (0.7 x 40 = 28).
+    // A pure-senior unit picks up the full senior bucket value.
     const pureSenior = substrate.units.find((u) => (u.bucketWeights["age:senior"] ?? 0) > 0.99);
     if (pureSenior) {
       expect(approvals[pureSenior.id]).toBeCloseTo(28, 1);
@@ -755,7 +684,7 @@ describe("buildGranularElectorateSubstrate", () => {
 
   it("remaps partyGroupFavorability keys onto units", () => {
     const substrate = buildSubstrate({
-      partyGroupFavorabilityByKey: new Map([["democrat:retirees", 10]]),
+      partyGroupFavorabilityByKey: new Map([["democrat:age:senior", 10]]),
     })!;
     const remapped = substrate.partyGroupFavorabilityByKey!;
     expect(remapped.size).toBeGreaterThan(0);
@@ -765,77 +694,34 @@ describe("buildGranularElectorateSubstrate", () => {
     }
   });
 
-  it("folds legislation-driven lean drift (live vs seeded defaults) onto unit leans", () => {
-    // Seeded snapshot: retirees at economicLean 1. Live doc: drifted to 3
-    // (+2 economic drift from legislation). Senior-heavy units must shift
-    // right relative to a substrate built without the defaults doc.
-    const defaults: StateDemographics = {
-      ...LEGACY_DEMOGRAPHICS,
-      groups: {
-        ...LEGACY_DEMOGRAPHICS.groups,
-        retirees: { ...LEGACY_DEMOGRAPHICS.groups.retirees, economicLean: 1 },
-      },
-    };
+  it("folds live-doc bucket overlay drift onto unit leans", () => {
     const live: StateDemographics = {
       ...LEGACY_DEMOGRAPHICS,
-      groups: {
-        ...LEGACY_DEMOGRAPHICS.groups,
-        retirees: { ...LEGACY_DEMOGRAPHICS.groups.retirees, economicLean: 3 },
-      },
+      layer1PositionOverrides: { age: { senior: { economicLean: 2, socialLean: 0 } } },
+    };
+    const input = {
+      countryId: "US",
+      stateId: "CT",
+      preset: "2019-default",
+      turnoutDoc: null,
+      statePopulation: 1_000_000,
+      categories: LEGACY_CATEGORIES,
+      enriched: [],
     };
     const base = buildGranularElectorateSubstrate({
-      countryId: "US",
-      stateId: "CT",
-      preset: "2019-default",
-      turnoutDoc: null,
-      statePopulation: 1_000_000,
-      demographics: live,
-      categories: LEGACY_CATEGORIES,
-      enriched: [],
+      ...input,
+      demographics: LEGACY_DEMOGRAPHICS,
     })!;
-    const folded = buildGranularElectorateSubstrate({
-      countryId: "US",
-      stateId: "CT",
-      preset: "2019-default",
-      turnoutDoc: null,
-      statePopulation: 1_000_000,
-      demographics: live,
-      categories: LEGACY_CATEGORIES,
-      enriched: [],
-      demographicDefaults: defaults,
-    })!;
-    // Pure-senior unit: full drift (+2 x 0.7 senior weight = +1.4).
+    const folded = buildGranularElectorateSubstrate({ ...input, demographics: live })!;
     const seniorUnit = folded.units.find((u) => (u.bucketWeights["age:senior"] ?? 0) > 0.99);
     expect(seniorUnit).toBeDefined();
     const baseLean = base.demographics.groups[seniorUnit!.id].economicLean;
     const foldedLean = folded.demographics.groups[seniorUnit!.id].economicLean;
-    expect(foldedLean - baseLean).toBeCloseTo(1.4, 6);
-    // Units with no senior/mature membership are untouched.
-    const unrelated = folded.units.find(
-      (u) =>
-        (u.bucketWeights["age:senior"] ?? 0) === 0 && (u.bucketWeights["age:mature"] ?? 0) === 0
-    );
+    expect(foldedLean - baseLean).toBeCloseTo(2, 6);
+    const unrelated = folded.units.find((u) => (u.bucketWeights["age:senior"] ?? 0) === 0);
     if (unrelated) {
       expect(folded.demographics.groups[unrelated.id].economicLean).toBeCloseTo(
         base.demographics.groups[unrelated.id].economicLean,
-        8
-      );
-    }
-    // No drift when live matches the seeded snapshot.
-    const identical = buildGranularElectorateSubstrate({
-      countryId: "US",
-      stateId: "CT",
-      preset: "2019-default",
-      turnoutDoc: null,
-      statePopulation: 1_000_000,
-      demographics: live,
-      categories: LEGACY_CATEGORIES,
-      enriched: [],
-      demographicDefaults: live,
-    })!;
-    for (const u of identical.units) {
-      expect(identical.demographics.groups[u.id].economicLean).toBeCloseTo(
-        base.demographics.groups[u.id].economicLean,
         8
       );
     }
@@ -843,8 +729,8 @@ describe("buildGranularElectorateSubstrate", () => {
 
   it("remap is linear and exact for coalesced units", () => {
     const { units } = deriveGranularElectorateUnits("US", "CT", "2019-default", null)!;
-    const a = remapArchetypeValuesToUnits({ retirees: 20 }, units);
-    const b = remapArchetypeValuesToUnits({ retirees: 40 }, units);
+    const a = bucketValuesToUnits({ "age:senior": 20 }, units);
+    const b = bucketValuesToUnits({ "age:senior": 40 }, units);
     for (const [unitId, v] of Object.entries(a)) {
       expect(b[unitId]).toBeCloseTo(v * 2, 8);
     }
@@ -918,13 +804,13 @@ describe("granular substrate through the vote engine", () => {
     expect(towardShares["mover"]).toBeGreaterThan(awayShares["mover"]);
   });
 
-  it("archetype-keyed approvals shift cell-engine results in the right direction", () => {
+  it("bucket approvals shift cell-engine results in the right direction", () => {
     const neutral = buildSubstrate({
       enriched: [makeCandidate("a", "democrat", 0, 0), makeCandidate("b", "republican", 0, 0)],
     })!;
     const boosted = buildSubstrate({
       enriched: [
-        makeCandidate("a", "democrat", 0, 0, { bucketApprovals: { retirees: 60 } }),
+        makeCandidate("a", "democrat", 0, 0, { bucketApprovals: { "age:senior": 60 } }),
         makeCandidate("b", "republican", 0, 0),
       ],
     })!;

@@ -940,10 +940,8 @@ export async function processAllStateDemographics(
           {
             live: currentLive,
             default: stateDefaults?.groups[groupId]?.[axis],
-            readOverlay: (dim, bucket) => readLayer1Overlay(stateDefaults, dim, bucket, axis),
           },
-          durableAcc,
-          state.countryId
+          durableAcc
         );
       }
     }
@@ -973,10 +971,8 @@ export async function processAllStateDemographics(
         {
           live: currentLive,
           default: stateDefaults?.groups[groupId]?.turnout,
-          readOverlay: (dim, bucket) => readLayer1TurnoutOverlay(stateDefaults, dim, bucket),
         },
-        durableAcc,
-        state.countryId
+        durableAcc
       );
     }
     const updates = durableAcc.liveUpdates;

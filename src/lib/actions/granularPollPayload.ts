@@ -18,10 +18,7 @@ import {
   personalStatTenureRetentionForCandidate,
   type PersonalStatTenureContext,
 } from "@/lib/electionEngine/rules/tenureRetention";
-import {
-  applyCandidatePersonalVoteWeight,
-  projectCandidateApprovalBuckets,
-} from "./granularPollPayload/rules";
+import { applyCandidatePersonalVoteWeight } from "./granularPollPayload/rules";
 import {
   deriveGranularCells,
   deriveGranularCellsGeneric,
@@ -308,20 +305,13 @@ function computeCandidateShares(
   character: GranularPollBuilderInput["character"],
   opponents: GranularPollCandidate[],
   campaign?: CampaignPollProjection,
-  countryId = "US",
   incumbency?: PersonalStatTenureContext,
   useNationalInfluenceForReach = false
 ): Record<string, GranularCandidateShare> {
   const candidateShares: Record<string, GranularCandidateShare> = {};
-  const characterApprovalBuckets = projectCandidateApprovalBuckets(
-    character.bucketApprovals,
-    countryId
-  );
+  const characterApprovalBuckets = character.bucketApprovals ?? {};
   const opponentApprovalBuckets = new Map(
-    opponents.map((opponent) => [
-      opponent.candidateId,
-      projectCandidateApprovalBuckets(opponent.bucketApprovals, countryId),
-    ])
+    opponents.map((opponent) => [opponent.candidateId, opponent.bucketApprovals ?? {}])
   );
 
   for (const cell of cells) {
@@ -432,7 +422,6 @@ export function buildGranularPollPayload({
     character,
     opponents,
     undefined,
-    "US",
     incumbency,
     useNationalInfluenceForReach
   );
@@ -471,7 +460,6 @@ export function buildGranularPollPayloadForState({
         character,
         opponents,
         campaign,
-        countryId,
         incumbency,
         useNationalInfluenceForReach
       ),
@@ -490,7 +478,6 @@ export function buildGranularPollPayloadForState({
     character,
     opponents,
     undefined,
-    countryId,
     incumbency,
     useNationalInfluenceForReach
   );

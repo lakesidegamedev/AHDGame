@@ -358,8 +358,7 @@ export interface Character {
   groupFavorability?: Record<string, number>;
   /**
    * Per-group approval modifiers (-100 to +100), keyed on Layer-1 census
-   * buckets (`"education:no_college"`). Legacy voter-archetype keys still
-   * resolve via `archetypeValuesToBuckets` until the migration runs.
+   * buckets (`"education:no_college"`).
    *
    * Applied as: effectiveFavorability = favorability + approval * 0.5
    * Decays 0.5% per turn toward 0.

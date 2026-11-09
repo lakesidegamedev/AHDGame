@@ -77,59 +77,32 @@ describe("readLayer1Overlay / readLayer1TurnoutOverlay", () => {
   });
 });
 
-describe("applyDurableGroupShift (lean, archetype-keyed)", () => {
+describe("applyDurableGroupShift (lean, group-keyed)", () => {
   it("writes both live and default group keys and stacks within one turn's acc", () => {
     const acc = makeAcc();
-    applyDurableGroupShift(
-      "retirees",
-      "economicLean",
-      1,
-      { live: 2, default: 2, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupShift("retirees", "economicLean", 1, { live: 2, default: 2 }, acc);
     expect(acc.liveUpdates["groups.retirees.economicLean"]).toBe(3);
     expect(acc.defaultUpdates["groups.retirees.economicLean"]).toBe(3);
 
     // A second target landing on the SAME group+axis within the same turn
     // sums rather than clobbers.
-    applyDurableGroupShift(
-      "retirees",
-      "economicLean",
-      0.5,
-      { live: 2, default: 2, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupShift("retirees", "economicLean", 0.5, { live: 2, default: 2 }, acc);
     expect(acc.liveUpdates["groups.retirees.economicLean"]).toBe(3.5);
   });
 
   it("is a no-op when netDelta is 0", () => {
     const acc = makeAcc();
-    applyDurableGroupShift(
-      "retirees",
-      "economicLean",
-      0,
-      { live: 2, default: 2, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupShift("retirees", "economicLean", 0, { live: 2, default: 2 }, acc);
     expect(acc.liveUpdates).toEqual({});
     expect(acc.defaultUpdates).toEqual({});
   });
 
-  it("skips the default write when no default value is present, but still writes live + overlay", () => {
+  it("skips the default write when no default value is present, but only the live key is written", () => {
     const acc = makeAcc();
-    applyDurableGroupShift(
-      "retirees",
-      "economicLean",
-      1,
-      { live: 2, default: undefined, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupShift("retirees", "economicLean", 1, { live: 2, default: undefined }, acc);
     expect(acc.liveUpdates["groups.retirees.economicLean"]).toBe(3);
     expect(acc.defaultUpdates["groups.retirees.economicLean"]).toBeUndefined();
-    // retirees maps onto age:senior/age:mature — the overlay projection still fires.
-    expect(
-      Object.keys(acc.defaultUpdates).some((k) => k.startsWith("layer1PositionOverrides.age."))
-    ).toBe(true);
+    expect(acc.defaultUpdates).toEqual({});
   });
 });
 
@@ -150,15 +123,10 @@ describe("applyDurableBucketShift (lean, exact dim/bucket)", () => {
 
 // ─── Turnout channel — the Voting Rights Act's mechanism ───────────────────
 
-describe("applyDurableGroupTurnoutShift (turnout, archetype-keyed)", () => {
+describe("applyDurableGroupTurnoutShift (turnout, group-keyed)", () => {
   it("writes groups.<id>.turnout on both live and default, clamped to 0-100 (not the lean ±5 axis)", () => {
     const acc = makeAcc();
-    applyDurableGroupTurnoutShift(
-      "union_trades",
-      50,
-      { live: 60, default: 60, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupTurnoutShift("union_trades", 50, { live: 60, default: 60 }, acc);
     // 60 + 50 = 110, clamped to 100 — proves this uses the turnout clamp, not
     // the lean clamp (which would have clamped to 5).
     expect(acc.liveUpdates["groups.union_trades.turnout"]).toBe(100);
@@ -167,48 +135,23 @@ describe("applyDurableGroupTurnoutShift (turnout, archetype-keyed)", () => {
 
   it("is a no-op when netDelta is 0", () => {
     const acc = makeAcc();
-    applyDurableGroupTurnoutShift(
-      "union_trades",
-      0,
-      { live: 60, default: 60, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupTurnoutShift("union_trades", 0, { live: 60, default: 60 }, acc);
     expect(acc.liveUpdates).toEqual({});
     expect(acc.defaultUpdates).toEqual({});
   });
 
-  it("skips the default write when no default value is present, but still writes live + bucket overlay", () => {
+  it("skips the default write when no default value is present, but only the live key is written", () => {
     const acc = makeAcc();
-    applyDurableGroupTurnoutShift(
-      "union_trades",
-      10,
-      { live: 40, default: undefined, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupTurnoutShift("union_trades", 10, { live: 40, default: undefined }, acc);
     expect(acc.liveUpdates["groups.union_trades.turnout"]).toBe(50);
     expect(acc.defaultUpdates["groups.union_trades.turnout"]).toBeUndefined();
-    // union_trades maps onto race:black/education:no_college/wealth:low —
-    // the turnout-overlay projection still fires for those buckets.
-    expect(
-      Object.keys(acc.defaultUpdates).some((k) => k.startsWith("layer1TurnoutOverrides."))
-    ).toBe(true);
-    expect(acc.defaultUpdates["layer1TurnoutOverrides.race.black"]).toBeCloseTo(10 * 0.25, 8);
+    expect(acc.defaultUpdates).toEqual({});
   });
 
   it("stacks multiple targets landing on the same group+turnout within one turn", () => {
     const acc = makeAcc();
-    applyDurableGroupTurnoutShift(
-      "union_trades",
-      5,
-      { live: 40, default: 40, readOverlay: () => 0 },
-      acc
-    );
-    applyDurableGroupTurnoutShift(
-      "union_trades",
-      3,
-      { live: 40, default: 40, readOverlay: () => 0 },
-      acc
-    );
+    applyDurableGroupTurnoutShift("union_trades", 5, { live: 40, default: 40 }, acc);
+    applyDurableGroupTurnoutShift("union_trades", 3, { live: 40, default: 40 }, acc);
     expect(acc.liveUpdates["groups.union_trades.turnout"]).toBe(48);
   });
 });

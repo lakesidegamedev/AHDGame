@@ -21,11 +21,7 @@ import {
   buildGranularPollPayloadForState,
   type GranularPollPayload,
 } from "@/lib/actions/granularPollPayload";
-import {
-  computeInRaceVotes,
-  computePollHeadline,
-  projectCandidateApprovalBuckets,
-} from "@/lib/actions/granularPollPayload/rules";
+import { computeInRaceVotes, computePollHeadline } from "@/lib/actions/granularPollPayload/rules";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { clampPercentStat } from "@/lib/numeric/rules";
 import { eraYearContextFromGameState } from "@/lib/era/context";
@@ -384,10 +380,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     socialPosition: character.policies.social,
     favorability: character.favorability,
     politicalInfluence: clampPercentStat(character.politicalInfluence ?? 0),
-    approvalBuckets: projectCandidateApprovalBuckets(
-      character.bucketApprovals,
-      state.countryId ?? "US"
-    ),
+    approvalBuckets: character.bucketApprovals ?? {},
   });
   const inRaceVoteShare = campaignProjection
     ? {
