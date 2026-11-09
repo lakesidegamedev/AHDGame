@@ -155,6 +155,43 @@ describe("continuing federation service transaction", () => {
       successorContributionsMinor: { BY: 38, UA: 74 },
     });
   });
+  it("adds only newly accrued arrears to the cumulative total, not the carried stock", async () => {
+    const { db, oldId } = scenario();
+    const arrears = async () =>
+      (
+        await db
+          .collection("federationFiscalAccounts")
+          .findOne({ _id: `${applicationId}:UA` as never })
+      )?.cumulativeArrearsMinor;
+    await db
+      .collection("macroCountries")
+      .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    await run(db);
+    expect(await arrears()).toBe(37);
+    // With nothing new falling due, the unpaid 37 is carried but must not be added again.
+    await db.collection("bonds").updateOne({ _id: oldId }, { $set: { matured: true } });
+    expect(await run(db, 92)).toMatchObject({
+      creditorDueMinor: 0,
+      successorArrearsMinor: { UA: 37 },
+    });
+    await run(db, 93);
+    expect(await arrears()).toBe(37);
+  });
+  it("does not overflow when a large unchanged arrears stock is carried forward", async () => {
+    const { db, oldId } = scenario();
+    await db
+      .collection("macroCountries")
+      .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    await run(db);
+    await db.collection("bonds").updateOne({ _id: oldId }, { $set: { matured: true } });
+    await db
+      .collection("federationFiscalAccounts")
+      .updateOne(
+        { _id: `${applicationId}:UA` as never },
+        { $set: { cumulativeArrearsMinor: Number.MAX_SAFE_INTEGER - 10 } }
+      );
+    await expect(run(db, 92)).resolves.toBeTruthy();
+  });
   it("recovers arrears after maturity without calling successors for new Russian bonds", async () => {
     const { db, oldId } = scenario();
     await db

@@ -267,9 +267,16 @@ export async function materializeContinuingFederationServiceTurn(input: {
             (account.cumulativeContributionMinor ?? 0) +
               (plan.successorContributionsMinor[account.entityId] ?? 0)
           ),
+          // The planned arrears are the whole unpaid stock, already carried from the
+          // prior turn. Only the net increase is new, so an unchanged stock is not
+          // re-added every turn (that grew without bound and overflowed safe integers).
           cumulativeArrearsMinor: safeMinor(
             (account.cumulativeArrearsMinor ?? 0) +
-              (plan.successorArrearsMinor[account.entityId] ?? 0)
+              Math.max(
+                0,
+                (plan.successorArrearsMinor[account.entityId] ?? 0) -
+                  (previous?.successorArrearsMinor?.[account.entityId] ?? 0)
+              )
           ),
         },
       },
