@@ -159,7 +159,7 @@
     "src/lib/congress/billProposal.ts": 1,
     "src/lib/constants/countryClientConfig.ts": 1,
     "src/lib/constants/countryOfficesClient.ts": 1,
-    "src/lib/constants/historicalSeats.ts": 5,
+    "src/lib/seats/rules/historicalSeats.ts": 5,
     "src/lib/constants/readinessExpectations.ts": 1,
     "src/lib/constants/regionBanner.ts": 29,
     "src/lib/counties/seed.ts": 1,

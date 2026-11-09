@@ -269,7 +269,7 @@ const SIZE_CAP_EXEMPT = [
   "src/lib/countries/bal/data/",
   "src/lib/countries/bal/cabinet/",
   "src/lib/constants/cnCabinetMechanics.ts",
-  "src/lib/constants/historicalSeats.ts",
+  "src/lib/constants/historicalSeatsTables.ts",
   "src/lib/constants/metricDefinitionsTables.ts",
   // The world alignment roster: one declarative row per entity (key, name, tier,
   // 1953 status, map feature ids, metropole) and no runtime logic. It grows by a
