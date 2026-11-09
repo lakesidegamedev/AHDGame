@@ -10,6 +10,7 @@
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { EffectIntent, EffectModule } from "@/lib/crises/v2/effectModule";
+import { stanceLeversFor } from "@/lib/crises/v2/stanceLevers";
 import type {
   CrisisDefinition,
   EffectModuleRef,
@@ -317,7 +318,7 @@ export function convertLivingConflictDef(def: LivingConflictDef): CrisisDefiniti
       actingThreshold: 1,
       inaction: { graceTurns: 100_000, perTurn: 0, growthPerTurn: 0, maxPerTurn: 0 },
     },
-    levers: [],
+    levers: stanceLeversFor(def.key),
     // Outcome rules fire for the outcome a response selected, which only the
     // response resolver knows. Listing them here would apply every outcome's
     // rules when the mirror reaches its peak.

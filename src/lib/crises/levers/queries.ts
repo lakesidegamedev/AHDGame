@@ -9,6 +9,7 @@ import type { Crisis, CrisisInteraction, CrisisLeverUse } from "@/lib/db/types/c
 import { getGameState } from "@/lib/gameState";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { leverActionCost } from "@/lib/crises/v2/leverActions";
+import { stanceTradeoff } from "@/lib/crises/v2/stanceLevers";
 import { leverBlock } from "./availability";
 import { governsAffectedState, leverInActorJurisdiction } from "./jurisdiction";
 import { resolveLeverRoles } from "./roles";
@@ -33,6 +34,8 @@ export interface AvailableLever {
   actionCost: number;
   /** True when pulling it raises an emergency bill rather than acting directly. */
   viaBill: boolean;
+  /** Plain-language tradeoff of a stance choice (lockdown vs open, bailout vs reform). */
+  tradeoff?: string;
   /** Present on an aid pledge, which the holder sizes before pulling. */
   aid?: AidPledgeRange;
 }
@@ -227,6 +230,7 @@ export async function getAvailableLevers(
         cooldownTurns: lever.cooldownTurns ?? 0,
         actionCost: leverActionCost(lever.cost.politicalCapital),
         viaBill: lever.role === "legislature",
+        ...(stanceTradeoff(lever.id) ? { tradeoff: stanceTradeoff(lever.id) } : {}),
         ...(lever.legacy?.kind === "aid" && aidRanges.has(crisis._id.toString())
           ? { aid: aidRanges.get(crisis._id.toString()) }
           : {}),
