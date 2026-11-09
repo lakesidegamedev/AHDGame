@@ -51,7 +51,7 @@ export function CrisesManager() {
           preIterationTurns: data.preIterationTurns,
           preIterationActive: data.preIterationActive,
         });
-        setAutoDisastersEnabled(data.autoDisastersEnabled === true);
+        setAutoDisastersEnabled(data.autoDisastersEnabled !== false);
         setAutoCrisisPaused(data.autoCrisisPaused === true);
         setAutoTemplates(data.autoTemplates ?? []);
         setAutoCooldowns(data.autoCooldowns ?? []);

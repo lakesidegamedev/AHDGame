@@ -47,10 +47,12 @@ export async function runEraCrossing(
   ).findOne(
     { _id: "current" },
     {
-      projection: { currentYear: 1, lastEraCrossedYear: 1, currentEraId: 1 },
+      projection: { currentYear: 1, lastEraCrossedYear: 1, currentEraId: 1, eraSystemEnabled: 1 },
     }
   );
   if (!gameState) return { ran: false };
+  // Emergency kill switch. The system ships on, so only an explicit false stops it.
+  if (gameState.eraSystemEnabled === false) return { ran: false };
 
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).

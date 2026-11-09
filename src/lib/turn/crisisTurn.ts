@@ -74,7 +74,10 @@ export async function processCrisisTurn(
   // only stamped at turn end, so on the first turn of a new year it still holds
   // the prior year. Non-turn callers omit it and use the persisted value.
   const effectiveYear = currentYear ?? gameState?.currentYear;
-  await processLivingConflictsTurn(db, turn, effectiveYear);
+  // Emergency kill switch. The system ships on, so only an explicit false stops it.
+  if (gameState?.livingConflictsEnabled !== false) {
+    await processLivingConflictsTurn(db, turn, effectiveYear);
+  }
   await retireLegacyVietnamCrises(db);
   // Fetch after living-conflict materialization so new response events receive
   // their start-turn effects, interaction, wire item, and notifications now.
