@@ -532,9 +532,7 @@ export async function creditTreasuryProceedsFromAnchor(
 
 /** Flows whose payer's own rows evidence the cash, so the Treasury leg adds no witness of its own. */
 export type PayerEvidencedProceedsFlow =
-  | "incorporation_fee"
-  | "founding_confidence_premium"
-  | "index_fund_charter_fee";
+  "incorporation_fee" | "founding_confidence_premium" | "index_fund_charter_fee";
 
 type PairedProceedsFlow =
   | "privatization_ipo"
