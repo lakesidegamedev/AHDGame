@@ -10,7 +10,7 @@ import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { processStatePolicyEffects } from "@/lib/policyEffects";
 import { processAllStateDemographics } from "@/lib/demographicEffects";
 import { processEraCheckpointsTurn } from "@/lib/turn/eraCheckpointTurn";
-import { processArchetypeApprovalDecay } from "@/lib/turn/archetypeApprovalDecay";
+import { processBucketApprovalDecay } from "@/lib/turn/bucketApprovalDecay";
 import { processUnownedSectorGrowth } from "@/lib/turn/unownedSectorGrowth";
 import { processMetricDecay } from "@/lib/turn/metricDecay";
 import { processSubsidyBudget } from "@/lib/turn/subsidyBudgetTurn";
@@ -219,7 +219,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     const [
       { crisisResult, crisisV2Result, navairResult, ministerialOrdersResult, policyResult },
       demoEffectResult,
-      archetypeDecayResult,
+      bucketDecayResult,
       unownedResult,
       ,
       ,
@@ -253,7 +253,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         }
         return result;
       }),
-      runtime.runPhase("archetypeApprovalDecay", () => processArchetypeApprovalDecay()),
+      runtime.runPhase("bucketApprovalDecay", () => processBucketApprovalDecay()),
       runtime.runPhase("unownedSectorGrowth", () => processUnownedSectorGrowth(db)),
       runtime.runPhase("metricDecay", () => processMetricDecay()),
       runtime.runPhase("subsidyBudget", () => processSubsidyBudget(db)),
@@ -364,13 +364,13 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     (phaseResults as Record<string, unknown>).navairOperations = navairResult ?? null;
     phaseResults.topSectorsRecompute = topSectorsResult ?? null;
 
-    if (archetypeDecayResult) {
-      phaseResults.archetypeApprovalDecay = {
-        charactersProcessed: archetypeDecayResult.charactersProcessed,
-        nppsProcessed: archetypeDecayResult.nppsProcessed,
+    if (bucketDecayResult) {
+      phaseResults.bucketApprovalDecay = {
+        charactersProcessed: bucketDecayResult.charactersProcessed,
+        nppsProcessed: bucketDecayResult.nppsProcessed,
       };
       console.log(
-        `[Turn] Archetype approval decay: ${archetypeDecayResult.charactersProcessed} characters, ${archetypeDecayResult.nppsProcessed} NPPs`
+        `[Turn] Bucket approval decay: ${bucketDecayResult.charactersProcessed} characters, ${bucketDecayResult.nppsProcessed} NPPs`
       );
     }
 

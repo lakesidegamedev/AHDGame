@@ -166,7 +166,7 @@ export const ELECTIONS_SKIP_PHASES: ReadonlySet<string> = new Set<string>([
   "financialSuspectScan",
   // stateEffectsAndNationalAggregation — the economy legs only. The approval /
   // demographic / snapshot legs of this mega-adapter (nationalMetrics, census,
-  // demographicFlows, archetypeApprovalDecay, approvalSnapshot, metricHistory,
+  // demographicFlows, bucketApprovalDecay, approvalSnapshot, metricHistory,
   // partyHistorySnapshot, socialAxisDrift, policyEffects, demographicEffects) are
   // NOT listed here, so they keep running and feed vote share.
   "unownedSectorGrowth",

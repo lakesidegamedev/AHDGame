@@ -301,7 +301,7 @@ export interface TurnLog {
       statesProcessed: number;
     } | null;
 
-    archetypeApprovalDecay: {
+    bucketApprovalDecay: {
       charactersProcessed: number;
       nppsProcessed: number;
     } | null;
