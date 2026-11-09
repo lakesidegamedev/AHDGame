@@ -246,8 +246,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     ] = await Promise.all([
       policyEffectsPromise,
       // Era checkpoints (src/lib/demographics/eraCheckpoints.ts) write the SAME
-      // stateDemographics.groups.<id>.<axis> fields processAllStateDemographics
-      // does, so it runs strictly AFTER that call completes (never concurrently
+      // demographicDefaults layer-1 overlays processAllStateDemographics
+      // reads, so it runs strictly AFTER that call completes (never concurrently
       // in this Promise.all) to avoid the same lost-update race the S4 comment
       // above documents for the state-metrics writers. Its own result isn't
       // destructured (mirrors the append-only results below); only

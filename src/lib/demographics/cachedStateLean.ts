@@ -17,38 +17,18 @@ export interface CachedStateLeanContext {
 }
 
 /**
- * Derive the lean persisted on state cache documents.
- *
- * The calibrated US electorate lives in the era-aware granular substrate:
- * `DEMOGRAPHIC_POSITIONS` authors a position table per era and
- * `STATE_POSITION_OVERRIDES` layers a regional map on the anchor eras, with
- * `getEraPositionsForYear` blending forward between anchors.
- *
- * Non-substrate worlds fall back to `calculateStateLean`, which reads the
- * era-invariant `defaultEconomicLean`/`defaultSocialLean` constants on the 12
- * demographic groups. Those are modern-calibrated and their two axes are
- * ~0.88 collinear, so any weighted mix is collinear too: the social axis
- * carries no independent information. The engine (`presidentialElectionEngine`,
- * `electionEngine/tallyManagement`) already builds the substrate for every
- * preset, so the cache would disagree with how votes are actually decided.
- *
- * The collinearity is fixed in the authored position tables (see
- * `leanAxisIndependence.test.ts`). Unifying the cache and engine paths needs
- * its own calibration audit, not a ride-along with a data fix.
+ * The lean persisted on state cache documents, read from the region's census
+ * electorate with the live drift and durable overlays folded in. Null when the
+ * region has no census (background and economy-only countries).
  */
-export function calculateStateLeanForCache(
+export function censusCachedStateLean(
   demographics: StateDemographics,
-  categories: DemographicCategory[],
   context: CachedStateLeanContext
-): CalculatedLean {
-  if (context.countryId !== "US" || context.preset !== "1953-default") {
-    return calculateStateLean(demographics, categories);
-  }
-
+): CalculatedLean | null {
   const substrate = buildGranularElectorateSubstrate({
     countryId: context.countryId,
     stateId: context.stateId,
-    preset: context.preset,
+    preset: context.preset ?? undefined,
     turnoutDoc: context.turnoutDoc,
     statePopulation: 1,
     demographics,
@@ -57,7 +37,19 @@ export function calculateStateLeanForCache(
     startingYear: context.startingYear,
     enriched: [],
   });
-
-  if (!substrate) return calculateStateLean(demographics, categories);
+  if (!substrate) return null;
   return calculateStateLean(substrate.demographics, substrate.categories);
+}
+
+/** Same lean, but a region without a census is an error rather than a null. */
+export function calculateStateLeanForCache(
+  demographics: StateDemographics,
+  _categories: DemographicCategory[],
+  context: CachedStateLeanContext
+): CalculatedLean {
+  const lean = censusCachedStateLean(demographics, context);
+  if (!lean) {
+    throw new Error(`No census electorate for ${context.countryId} region ${context.stateId}`);
+  }
+  return lean;
 }

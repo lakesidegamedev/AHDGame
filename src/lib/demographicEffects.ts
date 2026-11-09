@@ -1,51 +1,40 @@
 /**
  * Demographic Effects Processing Module
  *
- * Processes how policies shift demographics over time. Two generations of
- * effect channels exist on `LegislationType.demographicEffects[]`:
- *
- *  - population (legacy, always active): policies shift a voter group's
- *    population share. E.g. education funding gradually grows the
- *    college-educated share of a state.
- *  - economicLean / socialLean / turnout (v2): policies shift a voter
- *    group's political lean and turnout — the "legislation →
- *    demographics → elections" link. E.g. pro-labour laws pull union workers'
- *    economic lean toward the law's direction and nudge their turnout up.
+ * Processes how policies shift the electorate over time. Effects are authored
+ * on `LegislationType.demographicEffects[]` as `{ dim, bucket }` census
+ * targets and drive the "legislation → demographics → elections" link: a
+ * pro-labour law pulls the low-wealth bucket's economic lean toward the law's
+ * direction and nudges its turnout up.
  *
  * KEY DESIGN DECISIONS:
  *
- * 1. Cumulative shifts: Each policy contributes additive shifts to specific
- *    demographic groups. Multiple policies affecting the same group stack.
+ * 1. Drift lives on the Layer-1 overlays of the live demographics document
+ *    (`layer1PositionOverrides`, `layer1TurnoutOverrides`), a signed deviation
+ *    per `dim:bucket`. The granular substrate folds it onto unit leans and
+ *    turnouts, so the vote path, polls and the cached lean all read one
+ *    electorate.
  *
- * 2. Federal effect division: Federal policies apply at 1/50 strength per US state
+ * 2. Cumulative shifts: Each policy contributes additive shifts to specific
+ *    buckets. Multiple policies affecting the same bucket stack.
+ *
+ * 3. Federal effect division: Federal policies apply at 1/50 strength per US state
  *    and 1/12 strength per UK region. This prevents a single national bill from
  *    dominating region-level demographics and ensures the sum of per-region
- *    effects roughly equals the intended national total. Lean/turnout targets
- *    reuse the exact same scope multiplier as the population channel.
+ *    effects roughly equals the intended national total.
  *
- * 3. Policy strength normalization: Policy economic/social scores (-3 to +3)
+ * 4. Policy strength normalization: Policy economic/social scores (-3 to +3)
  *    are normalized to -1 to +1 range before applying shifts. This creates
  *    a consistent scale across all legislation types. (Some seed options score
- *    up to ±5, i.e. strength up to ±1.67 — pre-existing behavior, shared by
- *    all channels.)
+ *    up to ±5, i.e. strength up to ±1.67, shared by all channels.)
  *
- * 4. Shift rate: SHIFT_RATE_PER_TURN = 0.1% maximum population shift per turn
- *    when policy is at full strength (+3 or -3). Lean/turnout rates are
- *    documented on their constants below.
- *
- * 5. Natural decay: population-analog metrics decay naturally toward baseline
- *    at 0.25%/turn when no active policy is pushing them (see
- *    src/lib/turn/metricDecay.ts DECAY_RATE). Lean/turnout use the same
- *    proportional 0.25%/turn decay toward the state's SEEDED per-group
- *    baseline (`demographicDefaults` collection, falling back to the
- *    DemographicCategory template defaults) whenever no active law targets
- *    that group+axis, so lean drift reverts after legislation is repealed
- *    without eroding intentional per-state seed variation.
+ * 5. Natural decay: a deviation decays proportionally toward zero at
+ *    0.25%/turn whenever no active law targets that bucket and axis, so drift
+ *    reverts after legislation is repealed.
  */
 
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import type { Db } from "mongodb";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types/demographics";
+import type { StateDemographics } from "@/lib/db/types/demographics";
 import type {
   DemographicEffect,
   DemographicEffectTarget,
@@ -54,8 +43,11 @@ import type {
 import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import { getFederalMultiplier } from "@shared/constants/formulas";
-import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
-import { calculateStateLean } from "@/lib/utils/demographics";
+import {
+  censusCachedStateLean,
+  type CachedStateLeanContext,
+} from "@/lib/demographics/cachedStateLean";
+import { censusBucketKeys } from "@/lib/demographics/censusBucketKeys";
 import {
   loadAllStateSlants,
   mediaPullForState,
@@ -67,8 +59,6 @@ import { isBucketTarget } from "@/lib/demographics/turnoutTarget";
 import {
   applyDurableBucketShift,
   applyDurableBucketTurnoutShift,
-  applyDurableGroupShift,
-  applyDurableGroupTurnoutShift,
   readLayer1Overlay,
   readLayer1TurnoutOverlay,
   type DurableShiftAccumulators,
@@ -76,52 +66,43 @@ import {
 import type { ActivePolicy, LegislationTypeMap } from "./policyEffects";
 
 /**
- * Population shift rate per turn at maximum policy strength.
- * 0.1 = 0.1% population shift per turn when policy is at full strength (+3 or -3)
- */
-export const SHIFT_RATE_PER_TURN = 0.1;
-
-/**
  * Lean shift per turn at maximum policy strength (magnitude 1, state scope).
- * Group leans live on the shared −5..+5 axis (see DemographicCategory group
- * defaults and calculateStateLean's ±5 clamp), so the axis range is 10 units
- * and 10% of the range is 1.0 lean. At 0.035/turn a max-strength (±3 ⇒
- * strength 1.0) state law moves a group's lean by 1.0 in ~29 turns (~0.6 game
- * years) — inside the intended 20-40 turn window; the strongest ±5 seed
- * options (strength 1.67) reach it in ~17 turns.
+ * Leans live on the shared −5..+5 axis, so the axis range is 10 units and 10%
+ * of the range is 1.0 lean. At 0.035/turn a max-strength (±3 ⇒ strength 1.0)
+ * state law moves a bucket's lean by 1.0 in ~29 turns (~0.6 game years),
+ * inside the intended 20-40 turn window; the strongest ±5 seed options
+ * (strength 1.67) reach it in ~17 turns.
  */
 export const LEAN_SHIFT_RATE_PER_TURN = 0.035;
 
 /**
- * Maximum cumulative lean deviation legislation may build up from a group's
- * seeded baseline: 1.5 lean = 15% of the 10-unit axis. Values already outside
- * the band (seed variation, admin edits) are never snapped inward — the band
- * only stops legislation from pushing further out.
+ * Maximum cumulative lean deviation legislation may build up on a bucket:
+ * 1.5 lean = 15% of the 10-unit axis. A value already outside the band is
+ * never snapped inward; the band only stops legislation pushing further out.
  */
 export const LEAN_MAX_DEVIATION_FROM_BASELINE = 1.5;
 
 /**
  * Turnout shift per turn at maximum policy strength (magnitude 1, state
- * scope), in percentage points on the 0-100 turnout scale
- * (StateDemographicGroup.turnout). 0.25/turn ⇒ a max-strength law needs 40
- * turns to move a group's turnout by 10 points. Deliberately reaches its own
- * (tighter) deviation cap at the slow end of the 20-40-turn lean window:
- * real-world mobilization laws move turnout by a few points, not tens.
+ * scope), in percentage points on the 0-100 turnout scale. 0.25/turn ⇒ a
+ * max-strength law needs 40 turns to move a bucket's turnout by 10 points.
+ * Deliberately reaches its own (tighter) deviation cap at the slow end of the
+ * 20-40-turn lean window: real-world mobilization laws move turnout by a few
+ * points, not tens.
  */
 export const TURNOUT_SHIFT_RATE_PER_TURN = 0.25;
 
 /**
- * Maximum cumulative turnout deviation legislation may build up from a
- * group's seeded baseline: 10 percentage points (10% of the 0-100 range —
- * tighter than the lean band; see TURNOUT_SHIFT_RATE_PER_TURN rationale).
+ * Maximum cumulative turnout deviation legislation may build up on a bucket:
+ * 10 percentage points (10% of the 0-100 range, tighter than the lean band).
  */
 export const TURNOUT_MAX_DEVIATION_FROM_BASELINE = 10;
 
 /**
- * Proportional decay per turn of a group's lean/turnout back toward its seeded
- * baseline when NO active law targets that group+axis. Matches the 0.25%/turn
+ * Proportional decay per turn of a bucket's lean/turnout deviation back toward
+ * zero when NO active law targets that bucket and axis. Matches the 0.25%/turn
  * natural metric decay (src/lib/turn/metricDecay.ts DECAY_RATE) so legislative
- * lean drift reverts on the same timescale metrics do (~19 game years for 90%
+ * drift reverts on the same timescale metrics do (~19 game years for 90%
  * reversion).
  */
 export const LEAN_TURNOUT_DECAY_RATE_PER_TURN = 0.0025;
@@ -133,9 +114,6 @@ export const DEMOGRAPHIC_EFFECT_MAGNITUDE_MAX = 3;
 /** Absolute bounds of the lean axis (shared −5..+5 ruler). */
 const LEAN_ABS_MIN = -5;
 const LEAN_ABS_MAX = 5;
-/** Absolute bounds of the turnout scale (percentage). */
-const TURNOUT_ABS_MIN = 0;
-const TURNOUT_ABS_MAX = 100;
 
 /** Skip very small changes (floating point churn guard, shared by all channels). */
 const MIN_CHANGE_THRESHOLD = 0.0001;
@@ -153,25 +131,20 @@ export function clampDemographicEffectMagnitude(magnitude: number | undefined): 
  * The key a demographic effect accumulates under, or null when it names
  * nothing this engine can move.
  *
- * A `{ dim, bucket }` effect keys as `"dim:bucket"` — the same `"dim:key"`
+ * A `{ dim, bucket }` effect keys as `"dim:bucket"`, the same `"dim:key"`
  * form the cell `bucketWeights`, the GOTV modifiers and the Layer-1 overlays
- * all use, so `isBucketTarget` tells the two vocabularies apart downstream
- * without a second flag to keep in sync. A legacy archetype effect keys as its
- * `groupId`.
- *
- * Returns null for a bucket target on the population channel: a bucket's
- * population is the region's raked census marginal, not a legislative lever
- * (see `DemographicEffect`'s doc comment).
+ * all use. Returns null for a population effect (a bucket's population is the
+ * region's raked census marginal, not a legislative lever, see
+ * `DemographicEffect`'s doc comment) and for a stored effect that still names
+ * only a voter group, which has no census bucket to move.
  */
 export function demographicEffectTargetKey(effect: DemographicEffect): string | null {
-  if (effect.dim && effect.bucket) {
-    if ((effect.target ?? "population") === "population") return null;
-    return `${effect.dim}:${effect.bucket}`;
-  }
-  return effect.groupId || null;
+  if (!effect.dim || !effect.bucket) return null;
+  if ((effect.target ?? "population") === "population") return null;
+  return `${effect.dim}:${effect.bucket}`;
 }
 
-/** Split a `"dim:bucket"` key. Null for an archetype key. */
+/** Split a `"dim:bucket"` key. Null when the key has no bucket form. */
 function splitBucketKey(key: string): { dim: string; bucket: string } | null {
   if (!isBucketTarget(key)) return null;
   const sep = key.indexOf(":");
@@ -180,15 +153,13 @@ function splitBucketKey(key: string): { dim: string; bucket: string } | null {
 
 /** Per-target accumulated shifts: target key → per-turn delta. */
 export interface DemographicShiftSet {
-  population: Record<string, number>;
-  /** Note: `calculateDemographicShiftsByTarget` includes EVERY effect (permanent or not) — see that function's doc comment for why. `subtractDurableShifts` is what narrows this down to the temporary-only rate `buildDemographicUpdates` consumes. */
+  /** `calculateDemographicShiftsByTarget` includes EVERY effect (permanent or not); `subtractDurableShifts` narrows it to the temporary-only rate `buildDemographicUpdates` consumes. */
   economicLean: Record<string, number>;
   socialLean: Record<string, number>;
   turnout: Record<string, number>;
 }
 
-const SHIFT_RATE_BY_TARGET: Record<DemographicEffectTarget, number> = {
-  population: SHIFT_RATE_PER_TURN,
+const SHIFT_RATE_BY_TARGET: Record<Exclude<DemographicEffectTarget, "population">, number> = {
   economicLean: LEAN_SHIFT_RATE_PER_TURN,
   socialLean: LEAN_SHIFT_RATE_PER_TURN,
   turnout: TURNOUT_SHIFT_RATE_PER_TURN,
@@ -206,7 +177,6 @@ function computeShiftsByTarget(
   include: (effect: DemographicEffect) => boolean
 ): DemographicShiftSet {
   const shifts: DemographicShiftSet = {
-    population: {},
     economicLean: {},
     socialLean: {},
     turnout: {},
@@ -225,18 +195,16 @@ function computeShiftsByTarget(
 
     for (const effect of legType.demographicEffects) {
       if (!include(effect)) continue;
-      const target: DemographicEffectTarget = effect.target ?? "population";
+      const key = demographicEffectTargetKey(effect);
+      if (!key) continue;
+      const target = effect.target as Exclude<DemographicEffectTarget, "population">;
       // Calculate shift amount:
       // - effect.direction: base rate of change (-1 to +1)
       // - strength: normalized policy strength (same scaling for every target)
       // - scopeMultiplier: 1.0 for state, 1/N for federal/national
       // - rate: per-target maximum shift per turn
       // - magnitude: optional per-effect multiplier, clamped to [0.25, 3].
-      //   Population ignores it: that channel is the ungated legacy path, and
-      //   a magnitude there would change flag-off behavior the moment a seed
-      //   entry set one.
-      const magnitude =
-        target === "population" ? 1 : clampDemographicEffectMagnitude(effect.magnitude);
+      const magnitude = clampDemographicEffectMagnitude(effect.magnitude);
       const shiftAmount =
         effect.direction *
         strength *
@@ -244,8 +212,6 @@ function computeShiftsByTarget(
         SHIFT_RATE_BY_TARGET[target] *
         magnitude;
 
-      const key = demographicEffectTargetKey(effect);
-      if (!key) continue;
       const channel = shifts[target];
       channel[key] = (channel[key] ?? 0) + shiftAmount;
     }
@@ -256,8 +222,7 @@ function computeShiftsByTarget(
 
 /**
  * Calculate cumulative demographic shifts from all active policies, routed by
- * effect target. Effects without a `target` are population effects (legacy).
- * Includes EVERY effect regardless of `permanent` — this is also what
+ * effect target. Includes EVERY effect regardless of `permanent` — this is also what
  * `eraCheckpointTurn.ts`'s counter-pressure netting reads, and a durable
  * ("permanent") law's ongoing per-turn pull should count as counter-pressure
  * against an era checkpoint (or vice versa) exactly like an ordinary one
@@ -275,17 +240,14 @@ export function calculateDemographicShiftsByTarget(
 
 /**
  * Same computation, restricted to `permanent: true` lean/turnout effects —
- * the per-turn rate that durably relocates a group's base value (see
+ * the per-turn rate that durably relocates a bucket's base value (see
  * `DemographicEffect.permanent`'s doc comment and
  * `src/lib/demographics/durableRealignment.ts`) rather than applying a
- * capped, decaying overlay. `population` is excluded: it is the always-on
- * legacy channel and has no durable/temporary distinction to make (there is
- * no "seeded baseline" it decays toward in the first place). `turnout` IS
- * included — the Voting Rights Act's enfranchisement effect (see
- * `DemographicEffect.permanent`'s doc comment) is a durable TURNOUT shift,
- * not a lean one, and routes through `applyDurableGroupTurnoutShift`'s
- * dedicated turnout-rate overlay (`layer1TurnoutOverrides`), not the lean
- * channel's `layer1PositionOverrides`.
+ * capped, decaying overlay. `turnout` is included: the Voting Rights Act's
+ * enfranchisement effect is a durable TURNOUT shift, not a lean one, and
+ * routes through `applyDurableBucketTurnoutShift`'s dedicated turnout-rate
+ * overlay (`layer1TurnoutOverrides`), not the lean channel's
+ * `layer1PositionOverrides`.
  */
 export function calculateDurableDemographicShiftsByTarget(
   policies: ActivePolicy[],
@@ -304,11 +266,8 @@ export function calculateDurableDemographicShiftsByTarget(
 
 /**
  * Subtract a durable shift set (already counted once in `total`) out of the
- * total, per group+axis, leaving the TEMPORARY-only rate that should still
+ * total, per bucket+axis, leaving the TEMPORARY-only rate that should still
  * go through the capped/decaying channel (`buildDemographicUpdates`).
- * `population` is never non-empty in `durable` (see
- * `calculateDurableDemographicShiftsByTarget`'s doc comment) and passes
- * through untouched.
  */
 export function subtractDurableShifts(
   total: DemographicShiftSet,
@@ -320,13 +279,12 @@ export function subtractDurableShifts(
   ): Record<string, number> => {
     if (Object.keys(d).length === 0) return t;
     const out: Record<string, number> = { ...t };
-    for (const [groupId, value] of Object.entries(d)) {
-      out[groupId] = (out[groupId] ?? 0) - value;
+    for (const [key, value] of Object.entries(d)) {
+      out[key] = (out[key] ?? 0) - value;
     }
     return out;
   };
   return {
-    population: total.population,
     economicLean: subtractChannel(total.economicLean, durable.economicLean),
     socialLean: subtractChannel(total.socialLean, durable.socialLean),
     turnout: subtractChannel(total.turnout, durable.turnout),
@@ -334,74 +292,12 @@ export function subtractDurableShifts(
 }
 
 /**
- * Legacy population-only view of calculateDemographicShiftsByTarget.
- * Kept for backward compatibility: for seed data without `target` fields the
- * result is identical to the pre-v2 implementation.
- * @returns Record of groupId to population shift amount
- */
-export function calculateDemographicShifts(
-  policies: ActivePolicy[],
-  legTypeMap: LegislationTypeMap
-): Record<string, number> {
-  return calculateDemographicShiftsByTarget(policies, legTypeMap).population;
-}
-
-/** Per-group baseline values that lean/turnout clamp to and decay toward. */
-export interface DemographicGroupBaselines {
-  economicLean?: number;
-  socialLean?: number;
-  turnout?: number;
-}
-
-/**
- * Build the per-group baseline map for one state.
- *
- * Preference order per group+field:
- *  1. The state's seeded defaults doc (`demographicDefaults` collection — the
- *     exact values the state was seeded with, preserving intentional per-state
- *     variation),
- *  2. the DemographicCategory template defaults.
- * Groups with neither source get no baseline and are left untouched by the v2
- * channels.
- */
-export function buildGroupBaselineMap(
-  categories: DemographicCategory[],
-  stateDefaults: StateDemographics | null | undefined
-): Map<string, DemographicGroupBaselines> {
-  const map = new Map<string, DemographicGroupBaselines>();
-
-  for (const category of categories) {
-    for (const group of category.groups) {
-      map.set(group.id, {
-        economicLean: group.defaultEconomicLean,
-        socialLean: group.defaultSocialLean,
-        turnout: group.defaultTurnout,
-      });
-    }
-  }
-
-  if (stateDefaults?.groups) {
-    for (const [groupId, group] of Object.entries(stateDefaults.groups)) {
-      const existing = map.get(groupId) ?? {};
-      map.set(groupId, {
-        economicLean:
-          typeof group.economicLean === "number" ? group.economicLean : existing.economicLean,
-        socialLean: typeof group.socialLean === "number" ? group.socialLean : existing.socialLean,
-        turnout: typeof group.turnout === "number" ? group.turnout : existing.turnout,
-      });
-    }
-  }
-
-  return map;
-}
-
-/**
  * Apply one turn of legislative shift to a lean/turnout value.
  *
  * The deviation band is one-directional: legislation can never push the value
  * further than ±maxDeviation from baseline, but a value already outside the
- * band (seed variation, admin edit) is not snapped inward — it simply cannot
- * move further out, and shifts back toward the band always apply.
+ * band (admin edit) is not snapped inward — it simply cannot move further
+ * out, and shifts back toward the band always apply.
  */
 export function applyBandedShift(
   current: number,
@@ -432,133 +328,51 @@ export function applyBaselineDecay(current: number, baseline: number): number {
 }
 
 /**
- * Build the `$set` field updates for one state's demographics doc from a
- * shift set.
- *
- * - The population channel is always processed (legacy, ungated behavior).
- * - Lean/turnout channels run when baselines are available; each group+axis either
- *   receives its active legislative shift (band-clamped around its baseline)
- *   or decays toward its baseline.
+ * Build the `$set` field updates for one state's live demographics doc from a
+ * shift set: the Layer-1 overlay drift for bucket-targeted laws, plus the
+ * newsroom pull spread over `pullBuckets` when one applies.
  */
 export function buildDemographicUpdates(
   demographics: StateDemographics,
   shifts: DemographicShiftSet,
-  baselines: Map<string, DemographicGroupBaselines> | null,
-  mediaPull: MediaPull | null = null
+  mediaPull: MediaPull | null = null,
+  pullBuckets: readonly string[] = []
 ): Record<string, number> {
   const updates: Record<string, number> = {};
-
-  // ── Population channel (always on; byte-identical to legacy behavior) ──
-  for (const [groupId, shift] of Object.entries(shifts.population)) {
-    const currentPop = demographics.groups[groupId]?.population;
-    if (currentPop === undefined) continue;
-    const newPop = Math.max(0, currentPop + shift);
-    if (Math.abs(newPop - currentPop) > MIN_CHANGE_THRESHOLD) {
-      updates[`groups.${groupId}.population`] = newPop;
-    }
-  }
-
-  if (!baselines) return updates;
-
-  // ── Lean/turnout channels (v2) ──
-  for (const [groupId, group] of Object.entries(demographics.groups)) {
-    const baseline = baselines.get(groupId);
-    if (!baseline) continue;
-
-    const channels: Array<{
-      field: "economicLean" | "socialLean" | "turnout";
-      base: number | undefined;
-      stored: number | undefined;
-      shift: number | undefined;
-      maxDeviation: number;
-      absMin: number;
-      absMax: number;
-    }> = [
-      {
-        field: "economicLean",
-        base: baseline.economicLean,
-        stored: group.economicLean,
-        shift: shifts.economicLean[groupId],
-        maxDeviation: LEAN_MAX_DEVIATION_FROM_BASELINE,
-        absMin: LEAN_ABS_MIN,
-        absMax: LEAN_ABS_MAX,
-      },
-      {
-        field: "socialLean",
-        base: baseline.socialLean,
-        stored: group.socialLean,
-        shift: shifts.socialLean[groupId],
-        maxDeviation: LEAN_MAX_DEVIATION_FROM_BASELINE,
-        absMin: LEAN_ABS_MIN,
-        absMax: LEAN_ABS_MAX,
-      },
-      {
-        field: "turnout",
-        base: baseline.turnout,
-        stored: group.turnout,
-        shift: shifts.turnout[groupId],
-        maxDeviation: TURNOUT_MAX_DEVIATION_FROM_BASELINE,
-        absMin: TURNOUT_ABS_MIN,
-        absMax: TURNOUT_ABS_MAX,
-      },
-    ];
-
-    for (const ch of channels) {
-      if (typeof ch.base !== "number") continue;
-      const hasActiveShift = typeof ch.shift === "number" && ch.shift !== 0;
-      // With an active shift, an unset stored value starts from baseline; with
-      // no shift there is nothing stored to decay.
-      const current = typeof ch.stored === "number" ? ch.stored : hasActiveShift ? ch.base : null;
-      if (current === null) continue;
-
-      const next = hasActiveShift
-        ? applyBandedShift(
-            current,
-            ch.base,
-            ch.shift as number,
-            ch.maxDeviation,
-            ch.absMin,
-            ch.absMax
-          )
-        : applyBaselineDecay(current, ch.base);
-
-      // Only update if change is significant (same threshold as population)
-      if (Math.abs(next - current) > MIN_CHANGE_THRESHOLD) {
-        updates[`groups.${groupId}.${ch.field}`] = next;
-      }
-    }
-  }
-
   addBucketDriftUpdates(demographics, shifts, updates);
-  if (mediaPull) addMediaPullUpdates(demographics, baselines, mediaPull, updates);
-
+  if (mediaPull) addMediaPullUpdates(demographics, mediaPull, pullBuckets, updates);
   return updates;
 }
 
 /**
- * Newsroom slant channel. The same step is added to every group's lean on an
- * axis, which moves the population-weighted state lean by that step. It rides
- * on top of whatever the legislation channel or baseline decay already wrote
- * this turn, so those forces are untouched. See `mediaEditorial/opinionPull.ts`
- * for the size and bounds of the step.
+ * Newsroom slant channel. The same step is added to every bucket of one census
+ * dimension on an axis. Each unit's weights over a dimension sum to one, so
+ * that moves the electorate-weighted state lean by exactly the step. It rides
+ * on top of whatever the legislation channel or decay already wrote this turn,
+ * so those forces are untouched. See `mediaEditorial/opinionPull.ts` for the
+ * size and bounds of the step.
  */
 function addMediaPullUpdates(
   demographics: StateDemographics,
-  baselines: Map<string, DemographicGroupBaselines> | null,
   pull: MediaPull,
+  buckets: readonly string[],
   updates: Record<string, number>
 ): void {
   const axes = [
-    { field: "economicLean" as const, step: pull.economic },
-    { field: "socialLean" as const, step: pull.social },
+    { axis: "economicLean" as const, step: pull.economic },
+    { axis: "socialLean" as const, step: pull.social },
   ];
-  for (const [groupId, group] of Object.entries(demographics.groups)) {
-    for (const { field, step } of axes) {
+  for (const key of buckets) {
+    const parts = splitBucketKey(key);
+    if (!parts) continue;
+    for (const { axis, step } of axes) {
       if (step === 0) continue;
-      const key = `groups.${groupId}.${field}`;
-      const current = updates[key] ?? group[field] ?? baselines?.get(groupId)?.[field];
-      if (typeof current !== "number") continue;
-      updates[key] = Math.max(LEAN_ABS_MIN, Math.min(LEAN_ABS_MAX, current + step));
+      const path = `layer1PositionOverrides.${parts.dim}.${parts.bucket}.${axis}`;
+      const current =
+        updates[path] ??
+        demographics.layer1PositionOverrides?.[parts.dim]?.[parts.bucket]?.[axis] ??
+        0;
+      updates[path] = Math.max(LEAN_ABS_MIN, Math.min(LEAN_ABS_MAX, current + step));
     }
   }
 }
@@ -566,19 +380,14 @@ function addMediaPullUpdates(
 /**
  * Temporary lean/turnout drift for `{ dim, bucket }` effects.
  *
- * An archetype effect drifts `groups.<id>.<axis>` on the LIVE demographics doc
- * and the substrate reads it back as `live − default` (see
- * `computeArchetypeLeanDeltas`). A bucket target has no group to carry that
- * drift on, so it stores the drift directly, in the same overlay shape the
- * DURABLE channel writes to `demographicDefaults` — the same parallel the two
- * docs already have for groups: the defaults doc holds the base, the live doc
- * holds what legislation has moved it to. `buildGranularElectorateSubstrate`
- * folds the live doc's overlay onto unit leans and turnouts exactly where it
- * folds the archetype deltas.
+ * The drift is stored directly on the live doc, in the same overlay shape the
+ * DURABLE channel writes to `demographicDefaults`: the defaults doc holds the
+ * base, the live doc holds what legislation has moved it to.
+ * `buildGranularElectorateSubstrate` folds the live doc's overlay onto unit
+ * leans and turnouts.
  *
- * Baseline is 0 rather than a seeded value: this overlay IS the deviation, so
- * the deviation band and the decay-back-to-baseline both measure from zero and
- * a fully decayed law leaves no residue.
+ * Baseline is 0: this overlay IS the deviation, so the deviation band and the
+ * decay both measure from zero and a fully decayed law leaves no residue.
  */
 function addBucketDriftUpdates(
   demographics: StateDemographics,
@@ -648,9 +457,8 @@ function addBucketDriftUpdates(
 }
 
 /**
- * Clone a demographics doc and apply this turn's dot-path updates in memory —
- * `groups.<id>.<field>` for archetype drift, and the two Layer-1 overlay paths
- * for bucket drift, so the cached-lean recompute below sees a bucket-targeted
+ * Clone a demographics doc and apply this turn's dot-path updates in memory
+ * (the two Layer-1 overlay paths), so the cached-lean recompute below sees a
  * law's effect in the same turn it is written rather than one turn late.
  */
 function cloneWithUpdates(
@@ -659,21 +467,12 @@ function cloneWithUpdates(
 ): StateDemographics {
   const clone: StateDemographics = {
     ...demographics,
-    groups: Object.fromEntries(
-      Object.entries(demographics.groups).map(([id, g]) => [id, { ...g }])
-    ),
     layer1PositionOverrides: structuredClone(demographics.layer1PositionOverrides ?? {}),
     layer1TurnoutOverrides: structuredClone(demographics.layer1TurnoutOverrides ?? {}),
   };
   for (const [path, value] of Object.entries(updates)) {
     const parts = path.split(".");
-    if (parts.length === 3 && parts[0] === "groups") {
-      const [, groupId, field] = parts;
-      const group = clone.groups[groupId];
-      if (group) {
-        (group as unknown as Record<string, number>)[field] = value;
-      }
-    } else if (parts.length === 4 && parts[0] === "layer1PositionOverrides") {
+    if (parts.length === 4 && parts[0] === "layer1PositionOverrides") {
       const [, dim, bucket, axis] = parts;
       const overlay = (clone.layer1PositionOverrides ??= {});
       const byBucket = (overlay[dim] ??= {});
@@ -689,28 +488,19 @@ function cloneWithUpdates(
 }
 
 /**
- * Recompute the cached derived leans after v2 updates. Mirrors the admin
- * demographics route writer: `calculateStateLean` over the updated doc, cached
- * onto both `stateDemographics` and `states`.
- * Returns null when the cache is already consistent.
+ * Recompute the cached derived leans after this turn's updates: the census
+ * electorate lean over the updated doc, cached onto both `stateDemographics`
+ * and `states`. Returns null when the cache is already consistent or the
+ * region has no census to read a lean from.
  */
 function computeCacheUpdate(
   demographics: StateDemographics,
   updates: Record<string, number>,
-  categories: DemographicCategory[],
-  context: {
-    preset?: string | null;
-    demographicDefaults?: StateDemographics | null;
-    year?: number | null;
-    startingYear?: number | null;
-  }
+  context: CachedStateLeanContext
 ): { economicLean: number; socialLean: number } | null {
   const updated = cloneWithUpdates(demographics, updates);
-  const lean = calculateStateLeanForCache(updated, categories, {
-    countryId: demographics.countryId,
-    stateId: demographics._id,
-    ...context,
-  });
+  const lean = censusCachedStateLean(updated, context);
+  if (!lean) return null;
   if (
     demographics.cachedEconomicLean === lean.economicLean &&
     demographics.cachedSocialLean === lean.socialLean
@@ -757,12 +547,11 @@ export async function processAllStateDemographics(
     ),
   ]);
 
-  // v2 needs the category templates (cache recompute + baseline fallback) and
-  // the per-state seeded defaults (baseline source).
-  const [categories, allDefaults] = await Promise.all([
-    loadDemographicCategories(db),
-    db.collection<StateDemographics>("demographicDefaults").find({}).toArray(),
-  ]);
+  // The per-state seeded defaults carry the durable overlays the census reads.
+  const allDefaults = await db
+    .collection<StateDemographics>("demographicDefaults")
+    .find({})
+    .toArray();
   const defaultsByState = new Map(allDefaults.map((d) => [String(d._id), d]));
   // Newsroom slant: two batched reads for every state, only with the media
   // editorial flag on. Flag-off turns issue nothing extra.
@@ -858,31 +647,46 @@ export async function processAllStateDemographics(
     const temporaryShifts = subtractDurableShifts(shifts, durableShifts);
 
     const stateDefaults = defaultsByState.get(state._id);
-    const baselines = buildGroupBaselineMap(categories, stateDefaults);
+    const leanContext = {
+      countryId: demographics.countryId,
+      stateId: demographics._id,
+      preset: gameState?.preset,
+      demographicDefaults: stateDefaults,
+      year: gameState ? gameState.currentYear : null,
+      startingYear: gameState?.startingYear,
+    };
 
     // Newsroom slant pull: once per state per turn (watermarked), measured
-    // from the state's current cached lean.
+    // from the state's current cached lean. A region without a census has no
+    // electorate to pull.
     const slant = slantByState.get(state._id) ?? null;
     const alreadyPulled =
       typeof turn === "number" && (demographics.mediaOpinionPull?.turn ?? -1) >= turn;
     let mediaPull: MediaPull | null = null;
+    let pullBuckets: string[] = [];
     if (slant && !alreadyPulled) {
-      const lean =
+      const calc =
         typeof demographics.cachedEconomicLean === "number" &&
         typeof demographics.cachedSocialLean === "number"
-          ? { economic: demographics.cachedEconomicLean, social: demographics.cachedSocialLean }
-          : (() => {
-              const calc = calculateStateLean(demographics, categories);
-              return { economic: calc.economicLean, social: calc.socialLean };
-            })();
-      mediaPull = mediaPullForState(lean, slant);
+          ? {
+              economicLean: demographics.cachedEconomicLean,
+              socialLean: demographics.cachedSocialLean,
+            }
+          : censusCachedStateLean(demographics, leanContext);
+      pullBuckets = censusBucketKeys(leanContext);
+      if (calc && pullBuckets.length > 0) {
+        mediaPull = mediaPullForState(
+          { economic: calc.economicLean, social: calc.socialLean },
+          slant
+        );
+      }
     }
 
     const temporaryUpdates = buildDemographicUpdates(
       demographics,
       temporaryShifts,
-      baselines,
-      mediaPull
+      mediaPull,
+      pullBuckets
     );
     // Record what the newsrooms are doing so the state page can say so. Only
     // written when it changes or a pull is applied, and only for slanted states
@@ -907,71 +711,37 @@ export async function processAllStateDemographics(
     // Durable channel: seed its live-update accumulator with whatever the
     // temporary channel already computed this turn (banded shift OR decay)
     // so a durable delta STACKS on top of it rather than clobbering it when
-    // a group has both a durable and an ordinary effect active on the same
+    // a bucket has both a durable and an ordinary effect active on the same
     // axis in the same turn.
     const durableAcc: DurableShiftAccumulators = {
       liveUpdates: { ...temporaryUpdates },
       defaultUpdates: {},
     };
     for (const axis of ["economicLean", "socialLean"] as const) {
-      for (const [groupId, netDelta] of Object.entries(durableShifts[axis])) {
-        if (!netDelta) continue;
-        // A `{ dim, bucket }` target relocates the census bucket directly —
-        // exact, and with no archetype to carry it on the live doc (see
-        // `applyDurableBucketShift`).
-        const bucket = splitBucketKey(groupId);
-        if (bucket) {
-          applyDurableBucketShift(
-            bucket.dim,
-            bucket.bucket,
-            axis,
-            netDelta,
-            (dim, key) => readLayer1Overlay(stateDefaults, dim, key, axis),
-            durableAcc
-          );
-          continue;
-        }
-        const currentLive = demographics.groups[groupId]?.[axis];
-        if (typeof currentLive !== "number") continue;
-        applyDurableGroupShift(
-          groupId,
+      for (const [key, netDelta] of Object.entries(durableShifts[axis])) {
+        const bucket = splitBucketKey(key);
+        if (!netDelta || !bucket) continue;
+        applyDurableBucketShift(
+          bucket.dim,
+          bucket.bucket,
           axis,
           netDelta,
-          {
-            live: currentLive,
-            default: stateDefaults?.groups[groupId]?.[axis],
-          },
+          (dim, name) => readLayer1Overlay(stateDefaults, dim, name, axis),
           durableAcc
         );
       }
     }
-    // Durable TURNOUT — the Voting Rights Act's enfranchisement channel.
-    // Separate loop (not folded into the lean loop above) because it routes
-    // through `applyDurableGroupTurnoutShift`'s own clamp/overlay
-    // (`layer1TurnoutOverrides`), not the lean channel's — see
-    // `DemographicEffect.permanent`'s doc comment.
-    for (const [groupId, netDelta] of Object.entries(durableShifts.turnout)) {
-      if (!netDelta) continue;
-      const bucket = splitBucketKey(groupId);
-      if (bucket) {
-        applyDurableBucketTurnoutShift(
-          bucket.dim,
-          bucket.bucket,
-          netDelta,
-          (dim, key) => readLayer1TurnoutOverlay(stateDefaults, dim, key),
-          durableAcc
-        );
-        continue;
-      }
-      const currentLive = demographics.groups[groupId]?.turnout;
-      if (typeof currentLive !== "number") continue;
-      applyDurableGroupTurnoutShift(
-        groupId,
+    // Durable TURNOUT, the Voting Rights Act's enfranchisement channel. A
+    // separate loop because it routes through its own clamp and overlay
+    // (`layer1TurnoutOverrides`), not the lean channel's.
+    for (const [key, netDelta] of Object.entries(durableShifts.turnout)) {
+      const bucket = splitBucketKey(key);
+      if (!netDelta || !bucket) continue;
+      applyDurableBucketTurnoutShift(
+        bucket.dim,
+        bucket.bucket,
         netDelta,
-        {
-          live: currentLive,
-          default: stateDefaults?.groups[groupId]?.turnout,
-        },
+        (dim, name) => readLayer1TurnoutOverlay(stateDefaults, dim, name),
         durableAcc
       );
     }
@@ -979,12 +749,7 @@ export async function processAllStateDemographics(
     const durableDefaultUpdates = durableAcc.defaultUpdates;
 
     if (Object.keys(updates).length > 0) {
-      const cacheLean = computeCacheUpdate(demographics, updates, categories, {
-        preset: gameState?.preset,
-        demographicDefaults: stateDefaults,
-        year: gameState ? gameState.currentYear : null,
-        startingYear: gameState?.startingYear,
-      });
+      const cacheLean = computeCacheUpdate(demographics, updates, leanContext);
       bulkOps.push({
         updateOne: {
           filter: { _id: state._id },

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types/demographics";
+import type { StateDemographics } from "@/lib/db/types/demographics";
 import { buildDemographicUpdates, processAllStateDemographics } from "@/lib/demographicEffects";
 import {
   MEDIA_PULL_AXIS_SPAN,
@@ -18,31 +18,17 @@ function demographics(overrides?: Partial<StateDemographics>): StateDemographics
   return {
     _id: "PA",
     countryId: "US",
-    categoryWeights: { voterGroups: 100 },
-    groups: {
-      a: { population: 20, economicLean: -3, socialLean: -1, turnout: 60 },
-      b: { population: 20, economicLean: 3, socialLean: 1, turnout: 60 },
-    },
+    categoryWeights: {},
+    groups: {},
     lastUpdated: FIXED_DATE,
     ...overrides,
   };
 }
 
-const CATEGORY: DemographicCategory = {
-  _id: "voterGroups",
-  name: "Voter Groups",
-  defaultWeight: 100,
-  groups: [
-    { id: "a", name: "A", defaultEconomicLean: -3, defaultSocialLean: -1, defaultTurnout: 60 },
-    { id: "b", name: "B", defaultEconomicLean: 3, defaultSocialLean: 1, defaultTurnout: 60 },
-  ],
-};
-
-const EMPTY_SHIFTS = { population: {}, economicLean: {}, socialLean: {}, turnout: {} };
-const BASELINES = new Map([
-  ["a", { economicLean: -3, socialLean: -1, turnout: 60 }],
-  ["b", { economicLean: 3, socialLean: 1, turnout: 60 }],
-]);
+const EMPTY_SHIFTS = { economicLean: {}, socialLean: {}, turnout: {} };
+const BUCKETS = ["race:black", "race:white"];
+const PATH = (bucket: string, axis = "economicLean") =>
+  `layer1PositionOverrides.race.${bucket}.${axis}`;
 
 describe("mediaPullStep", () => {
   it("max per-turn step times the window equals half an axis point", () => {
@@ -102,35 +88,32 @@ describe("mediaPullForState", () => {
 });
 
 describe("buildDemographicUpdates with a media pull", () => {
-  it("adds the step to every group on that axis and leaves other axes alone", () => {
-    const updates = buildDemographicUpdates(demographics(), EMPTY_SHIFTS, BASELINES, {
-      economic: 0.005,
-      social: 0,
-    });
-    expect(updates["groups.a.economicLean"]).toBeCloseTo(-2.995, 9);
-    expect(updates["groups.b.economicLean"]).toBeCloseTo(3.005, 9);
-    expect(updates["groups.a.socialLean"]).toBeUndefined();
+  it("adds the step to every bucket of the dimension on that axis and leaves other axes alone", () => {
+    const updates = buildDemographicUpdates(
+      demographics(),
+      EMPTY_SHIFTS,
+      { economic: 0.005, social: 0 },
+      BUCKETS
+    );
+    expect(updates[PATH("black")]).toBeCloseTo(0.005, 9);
+    expect(updates[PATH("white")]).toBeCloseTo(0.005, 9);
+    expect(updates[PATH("black", "socialLean")]).toBeUndefined();
   });
 
-  it("is a no-op without a pull, and keeps baseline mean reversion running", () => {
-    const off = buildDemographicUpdates(demographics(), EMPTY_SHIFTS, BASELINES, null);
-    expect(off).toEqual({});
+  it("is a no-op without a pull, and keeps decay running", () => {
     const drifted = demographics({
-      groups: {
-        a: { population: 20, economicLean: -2, socialLean: -1, turnout: 60 },
-        b: { population: 20, economicLean: 3, socialLean: 1, turnout: 60 },
-      },
+      layer1PositionOverrides: { race: { black: { economicLean: 2, socialLean: 0 } } },
     });
-    const reverting = buildDemographicUpdates(drifted, EMPTY_SHIFTS, BASELINES, null);
-    const withPull = buildDemographicUpdates(drifted, EMPTY_SHIFTS, BASELINES, {
-      economic: 0.005,
-      social: 0,
-    });
-    // Same mean reversion, plus the pull on top.
-    expect(withPull["groups.a.economicLean"]).toBeCloseTo(
-      (reverting["groups.a.economicLean"] ?? -2) + 0.005,
-      9
+    expect(buildDemographicUpdates(demographics(), EMPTY_SHIFTS, null, BUCKETS)).toEqual({});
+    const reverting = buildDemographicUpdates(drifted, EMPTY_SHIFTS, null, BUCKETS);
+    const withPull = buildDemographicUpdates(
+      drifted,
+      EMPTY_SHIFTS,
+      { economic: 0.005, social: 0 },
+      BUCKETS
     );
+    // Same decay, plus the pull on top.
+    expect(withPull[PATH("black")]).toBeCloseTo((reverting[PATH("black")] ?? 2) + 0.005, 9);
   });
 });
 
@@ -183,7 +166,6 @@ describe("processAllStateDemographics media pull", () => {
       "stateDemographics",
       "gameState",
       "gameConfig",
-      "demographicCategories",
       "demographicDefaults",
       "corporateSectors",
       "corporations",
@@ -198,9 +180,11 @@ describe("processAllStateDemographics media pull", () => {
         demographics({ cachedEconomicLean: 0, cachedSocialLean: 0, mediaOpinionPull: opts.stored }),
       ])
     );
-    db.collectionMocks.gameState!.findOne.mockResolvedValue({ _id: "current" });
+    db.collectionMocks.gameState!.findOne.mockResolvedValue({
+      _id: "current",
+      preset: "2019-default",
+    });
     db.collectionMocks.gameConfig!.findOne.mockResolvedValue({ mediaEditorialEnabled: opts.flag });
-    db.collectionMocks.demographicCategories!.find.mockReturnValue(cursorOf([CATEGORY]));
     db.collectionMocks.demographicDefaults!.find.mockReturnValue(cursorOf([demographics()]));
     db.collectionMocks.corporateSectors!.find.mockReturnValue(
       cursorOf([{ corporationId: "c1", stateId: "PA", realizedRevenue: 100 }])
@@ -224,7 +208,14 @@ describe("processAllStateDemographics media pull", () => {
     seed({ flag: true });
     await processAllStateDemographics(db as unknown as Db, [], 100);
     const set = written()!;
-    expect(set["groups.a.economicLean"]).toBeCloseTo(-3 + mediaPullStep(0, 5, 1), 9);
+    // The pull lands on the buckets of one census dimension, one step each.
+    const pulled = Object.entries(set).filter(
+      ([key]) => key.startsWith("layer1PositionOverrides.") && key.endsWith(".economicLean")
+    );
+    expect(pulled.length).toBeGreaterThan(1);
+    const dims = new Set(pulled.map(([key]) => key.split(".")[1]));
+    expect(dims.size).toBe(1);
+    for (const [, value] of pulled) expect(value).toBeCloseTo(mediaPullStep(0, 5, 1), 9);
     expect(set["mediaOpinionPull.turn"]).toBe(100);
     expect(set["mediaOpinionPull.strength"]).toBe(1);
     expect(db.collectionMocks.corporateSectors!.find).toHaveBeenCalledTimes(1);
