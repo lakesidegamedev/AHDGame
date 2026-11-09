@@ -12,7 +12,7 @@ export const REFERENCE_REBUILD_KEPT_COLLECTIONS: Readonly<Record<string, string>
   politicalParties:
     "Default parties keep their identity and sequential ids, which archived careers and party " +
     "counters reference. Country seeders replace their own rows and finalize removes the rest.",
-  achievements: "seedAchievements drops and reinserts the whole catalog on every reset seed.",
+  achievements: "Seeded only into an empty collection; character achievements reference its ids.",
 });
 
 /**

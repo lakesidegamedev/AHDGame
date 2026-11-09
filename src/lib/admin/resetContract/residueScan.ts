@@ -37,7 +37,17 @@ export const RESIDUE_SCAN_REFERENCE_EXEMPT: Readonly<Record<string, string>> = O
   politicalParties:
     "Default parties keep their identity; finalize removes player-created and absent-country parties.",
   statePartyOrg: "Follows politicalParties; finalize removes rows of removed parties.",
+  achievements: "Seeded only into an empty collection; character achievements reference its ids.",
 });
+
+/**
+ * Collections whose seeders mint fixed ObjectIds, so the id's embedded time says
+ * nothing about when the row was written. Only `createdAt` ages them.
+ */
+export const RESIDUE_SCAN_FIXED_ID_COLLECTIONS: ReadonlySet<string> = new Set([
+  "enactedLaws",
+  "corporations",
+]);
 
 /** In-flight records that must not carry a turn stamp from the outgoing world. */
 const TURN_STAMPS: ReadonlyArray<{
@@ -92,9 +102,12 @@ export function residueScanAgeCollections(referenceReplaced: boolean): string[] 
   return [...runtime, ...reference, ...emptied];
 }
 
-function documentAge(doc: { _id?: unknown; createdAt?: unknown }): DocumentAge {
+function documentAge(
+  doc: { _id?: unknown; createdAt?: unknown },
+  idCarriesTime: boolean
+): DocumentAge {
   const age: DocumentAge = { id: String(doc._id) };
-  if (doc._id instanceof ObjectId)
+  if (idCarriesTime && doc._id instanceof ObjectId)
     age.idSeconds = Math.floor(doc._id.getTimestamp().getTime() / 1000);
   if (doc.createdAt instanceof Date) age.createdAtMs = doc.createdAt.getTime();
   return age;
@@ -114,7 +127,12 @@ export async function runResidueScan(
       .find(filter, { projection: { _id: 1, createdAt: 1 } })
       .toArray();
     if (documents.length > 0)
-      collectionAges.push({ collection, documents: documents.map(documentAge) });
+      collectionAges.push({
+        collection,
+        documents: documents.map((doc) =>
+          documentAge(doc, !RESIDUE_SCAN_FIXED_ID_COLLECTIONS.has(collection))
+        ),
+      });
   }
 
   const state = await db.collection<GameState>("gameState").findOne(
