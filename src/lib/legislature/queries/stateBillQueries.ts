@@ -297,7 +297,7 @@ export async function listStateLegislatureBills(
           effectDirection: provision.effectDirection,
           directionLabel: directionText,
           effectTargetsWeighted: legislationType?.effectTargetsWeighted ?? [],
-          ...(option?.groupApprovals ? { groupApprovals: option.groupApprovals } : {}),
+          ...(option?.bucketApprovals ? { bucketApprovals: option.bucketApprovals } : {}),
           annualCostPerCapita: option?.annualCostPerCapita ?? null,
           gdpPerCapitaMultiplier: option?.gdpPerCapitaMultiplier ?? null,
         };

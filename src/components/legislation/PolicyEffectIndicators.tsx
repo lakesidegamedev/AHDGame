@@ -286,11 +286,9 @@ export function computeMetricEffects({
 interface PolicyEffectIndicatorsProps {
   effectTargetsWeighted?: EffectTargetWeighted[];
   effectDirection: number; // -1, 0, or 1
-  /** @deprecated Use archetypeApprovals or shift-based props instead */
-  groupApprovals?: Record<string, number>;
-  /** Per-archetype approval impacts (-100 to +100) - static values */
-  archetypeApprovals?: Record<string, number>;
-  /** Policy domain for shift-based archetype calculation (e.g., "education") */
+  /** Per-bucket approval impacts (-100 to +100), keyed "dim:bucket" - static values */
+  bucketApprovals?: Record<string, number>;
+  /** Policy domain for shift-based bucket calculation (e.g., "education") */
   policyDomain?: string;
   /** Current policy index (0-6) for shift-based calculation */
   currentPolicyIndex?: number;
@@ -303,7 +301,7 @@ interface PolicyEffectIndicatorsProps {
    * some CN/DE/JP types). When omitted, derived from `policyOptions` if those carry scores.
    */
   policyOptionScores?: number[];
-  /** Country whose archetype affinity table to use (UK, JP). Omit for US (default). */
+  /** Country whose bucket affinity table to use (UK, JP). Omit for US (default). */
   billCountry?: string;
   /**
    * Full ordered list of the legislation type's options. When provided alongside
@@ -319,8 +317,7 @@ interface PolicyEffectIndicatorsProps {
 export function PolicyEffectIndicators({
   effectTargetsWeighted,
   effectDirection,
-  groupApprovals,
-  archetypeApprovals,
+  bucketApprovals,
   policyDomain,
   currentPolicyIndex,
   proposedPolicyIndex,
@@ -331,7 +328,7 @@ export function PolicyEffectIndicators({
   // Era flags — read before any early return (rules of hooks).
   const { currentYear } = useWorldFlags();
   // Calculate shift-based approvals if we have the necessary data
-  // This takes priority over static archetypeApprovals
+  // This takes priority over static bucketApprovals
   let approvals: Record<string, number> | undefined;
 
   if (policyDomain && currentPolicyIndex !== undefined && proposedPolicyIndex !== undefined) {
@@ -350,8 +347,8 @@ export function PolicyEffectIndicators({
       optionScores
     );
   } else {
-    // Fall back to static approvals (or deprecated groupApprovals)
-    approvals = archetypeApprovals ?? groupApprovals;
+    // Fall back to the authored static approvals
+    approvals = bucketApprovals;
   }
 
   const hasApprovals = approvals && Object.keys(approvals).length > 0;

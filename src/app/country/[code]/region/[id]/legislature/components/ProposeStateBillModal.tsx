@@ -651,11 +651,8 @@ function LegacyProposeStateBillModal({
                         <PolicyEffectIndicators
                           effectTargetsWeighted={type?.effectTargetsWeighted}
                           effectDirection={p.effectDirection}
-                          archetypeApprovals={
-                            options.find((o) => o.id === p.policyOptionId)?.archetypeApprovals
-                          }
-                          groupApprovals={
-                            options.find((o) => o.id === p.policyOptionId)?.groupApprovals
+                          bucketApprovals={
+                            options.find((o) => o.id === p.policyOptionId)?.bucketApprovals
                           }
                           policyDomain={type?.policyDomain}
                           currentPolicyIndex={

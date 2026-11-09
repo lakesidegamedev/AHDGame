@@ -511,10 +511,9 @@ function LegacyQueueBillModal({
               <PolicyEffectIndicators
                 effectTargetsWeighted={selectedType?.effectTargetsWeighted}
                 effectDirection={effectDirection}
-                archetypeApprovals={
-                  policyOptions.find((o) => o.id === policyOptionId)?.archetypeApprovals
+                bucketApprovals={
+                  policyOptions.find((o) => o.id === policyOptionId)?.bucketApprovals
                 }
-                groupApprovals={policyOptions.find((o) => o.id === policyOptionId)?.groupApprovals}
                 policyDomain={selectedType?.policyDomain}
                 currentPolicyIndex={
                   currentPolicies[legId] ?? ladderBounds(policyOptions.length).centerIndex

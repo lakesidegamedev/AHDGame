@@ -9,7 +9,7 @@ export interface BillProvisionView {
   economic?: number;
   social?: number;
   effects?: { metric: string; direction: "up" | "down"; isGood: boolean }[];
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   policyDomain?: string;
   currentPolicyIndex?: number;
   proposedPolicyIndex?: number;
@@ -53,7 +53,7 @@ export function provisionToView(p: ProvisionDisplay): BillProvisionView {
     economic: p.economic,
     social: p.social,
     effects: p.effects,
-    archetypeApprovals: p.archetypeApprovals,
+    bucketApprovals: p.bucketApprovals,
     policyDomain: p.policyDomain,
     currentPolicyIndex: p.currentPolicyIndex,
     proposedPolicyIndex: p.proposedPolicyIndex,

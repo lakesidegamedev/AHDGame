@@ -86,9 +86,9 @@ function makeTaxType(): LegislationType {
         effectDirection: 1,
         economic: -3,
         social: 0,
-        archetypeApprovals: {
-          rural_workers: -40,
-          urban_professionals: 30,
+        bucketApprovals: {
+          "age:young": -40,
+          "wealth:low": 30,
         },
       },
     ],
@@ -240,8 +240,8 @@ describe("computeDistrictForce", () => {
       countryId: "US",
       categoryWeights: { voterGroups: 100 },
       groups: {
-        rural_workers: { population: rural, economicLean: 0, socialLean: 0 },
-        urban_professionals: { population: urban, economicLean: 0, socialLean: 0 },
+        young_renters: { population: rural, economicLean: 0, socialLean: 0 },
+        union_trades: { population: urban, economicLean: 0, socialLean: 0 },
       },
       lastUpdated: new Date(),
     };
@@ -254,7 +254,7 @@ describe("computeDistrictForce", () => {
     expect(computeDistrictForce(bill, makeTaxType(), makeStateDemographics(50, 50))).toBe(0);
   });
 
-  it("computes population-weighted approval", () => {
+  it("weights bucket approvals by the state's bucket mass", () => {
     const bill = makeBill({
       provisions: [
         {
@@ -266,7 +266,7 @@ describe("computeDistrictForce", () => {
       ],
     });
     const result = computeDistrictForce(bill, makeTaxType(), makeStateDemographics(70, 30));
-    expect(result).toBeCloseTo(-19, 5);
+    expect(result).toBeCloseTo(-4.55, 5);
   });
 
   it("returns 0 when state has no demographic data", () => {
@@ -426,13 +426,13 @@ describe("computeCrossPressureForces (integration)", () => {
       ],
     });
     const legType = makeTaxType();
-    legType.policyOptions![0].archetypeApprovals = { urban_professionals: 50 };
+    legType.policyOptions![0].bucketApprovals = { "age:young": 100 };
     const demographics: StateDemographics = {
       _id: "OH",
       countryId: "US",
       categoryWeights: { voterGroups: 100 },
       groups: {
-        urban_professionals: { population: 100, economicLean: 0, socialLean: 0 },
+        young_renters: { population: 100, economicLean: 0, socialLean: 0 },
       },
       lastUpdated: new Date(),
     };
