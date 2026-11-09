@@ -534,7 +534,9 @@ type PairedProceedsFlow =
   | "nationalization_compensation"
   | PayerEvidencedProceedsFlow;
 
-function isWitnessedProceedsFlow(flow: PairedProceedsFlow): flow is TreasuryCashFlow {
+function isWitnessedProceedsFlow(
+  flow: PairedProceedsFlow
+): flow is Extract<PairedProceedsFlow, TreasuryCashFlow> {
   return (
     flow !== "incorporation_fee" &&
     flow !== "founding_confidence_premium" &&
