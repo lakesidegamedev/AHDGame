@@ -1,0 +1,1191 @@
+import type { CorporationType } from "./corporations";
+import type { CurrencyCode } from "./currencies";
+import type { EraSeedModels } from "./economicModels";
+import {
+  type CountryId,
+  type CountryStatus,
+  type ElectionMethod,
+  type ElectionPosition,
+  type GovernmentType,
+  type OpsVoteMultipliers,
+} from "./countriesCore";
+import { JP_IDENTITY } from "@/lib/countries/jp/identity";
+import { JP_ERAS } from "@/lib/countries/jp/eras";
+import { AT_ERAS } from "@/lib/countries/at/eras";
+import { BAL_ERAS } from "@/lib/countries/bal/eras";
+import { BG_ERAS } from "@/lib/countries/bg/eras";
+import { BLR_ERAS } from "@/lib/countries/blr/eras";
+import { BR_ERAS } from "@/lib/countries/br/eras";
+import { CN_ERAS } from "@/lib/countries/cn/eras";
+import { CS_ERAS } from "@/lib/countries/cs/eras";
+import { DD_ERAS } from "@/lib/countries/dd/eras";
+import { DE_ERAS } from "@/lib/countries/de/eras";
+import { ES_ERAS } from "@/lib/countries/es/eras";
+import { FI_ERAS } from "@/lib/countries/fi/eras";
+import { FR_ERAS } from "@/lib/countries/fr/eras";
+import { GR_ERAS } from "@/lib/countries/gr/eras";
+import { HU_ERAS } from "@/lib/countries/hu/eras";
+import { IE_ERAS } from "@/lib/countries/ie/eras";
+import { IT_ERAS } from "@/lib/countries/it/eras";
+import { NG_ERAS } from "@/lib/countries/ng/eras";
+import { PL_ERAS } from "@/lib/countries/pl/eras";
+import { RO_ERAS } from "@/lib/countries/ro/eras";
+import { RU_ERAS } from "@/lib/countries/ru/eras";
+import { SE_ERAS } from "@/lib/countries/se/eras";
+import { TR_ERAS } from "@/lib/countries/tr/eras";
+import { UKR_ERAS } from "@/lib/countries/ukr/eras";
+import { UK_ERAS } from "@/lib/countries/uk/eras";
+import { US_ERAS } from "@/lib/countries/us/eras";
+import { YU_ERAS } from "@/lib/countries/yu/eras";
+import {
+  JP_CONFIG,
+  JP_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/jp/institutionsFacts";
+import {
+  US_CONFIG,
+  US_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/us/institutionsFacts";
+import {
+  UK_CONFIG,
+  UK_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/uk/institutionsFacts";
+import { US_IDENTITY } from "@/lib/countries/us/identity";
+import { UK_IDENTITY } from "@/lib/countries/uk/identity";
+import {
+  DE_CONFIG,
+  DE_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/de/institutionsFacts";
+import { DE_IDENTITY } from "@/lib/countries/de/identity";
+import { CN_CONFIG } from "@/lib/countries/cn/institutionsFacts";
+import {
+  IE_CONFIG,
+  IE_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/ie/institutionsFacts";
+import { IE_IDENTITY } from "@/lib/countries/ie/identity";
+import {
+  RU_CONFIG,
+  RU_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/ru/institutionsFacts";
+import {
+  DD_CONFIG,
+  DD_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/dd/institutionsFacts";
+import { NG_CONFIG } from "@/lib/countries/ng/institutionsFacts";
+import { BR_CONFIG } from "@/lib/countries/br/institutionsFacts";
+import { FR_CONFIG } from "@/lib/countries/fr/institutionsFacts";
+import { IT_CONFIG } from "@/lib/countries/it/institutionsFacts";
+import { ES_CONFIG } from "@/lib/countries/es/institutionsFacts";
+import { SE_CONFIG } from "@/lib/countries/se/institutionsFacts";
+import { TR_CONFIG } from "@/lib/countries/tr/institutionsFacts";
+import { GR_CONFIG } from "@/lib/countries/gr/institutionsFacts";
+import { AT_CONFIG } from "@/lib/countries/at/institutionsFacts";
+import { FI_CONFIG } from "@/lib/countries/fi/institutionsFacts";
+import { PL_CONFIG } from "@/lib/countries/pl/institutionsFacts";
+import { HU_CONFIG } from "@/lib/countries/hu/institutionsFacts";
+import { RO_CONFIG } from "@/lib/countries/ro/institutionsFacts";
+import { YU_CONFIG } from "@/lib/countries/yu/institutionsFacts";
+import { BG_CONFIG } from "@/lib/countries/bg/institutionsFacts";
+import { CS_CONFIG } from "@/lib/countries/cs/institutionsFacts";
+import { SCO_CONFIG } from "@/lib/countries/sco/institutionsFacts";
+import { WAL_CONFIG } from "@/lib/countries/wal/institutionsFacts";
+import { BLR_CONFIG } from "@/lib/countries/blr/institutionsFacts";
+import { UKR_CONFIG } from "@/lib/countries/ukr/institutionsFacts";
+import { BAL_CONFIG } from "@/lib/countries/bal/institutionsFacts";
+
+// Re-export the client-safe core so every existing import from this module works.
+export * from "./countriesCore";
+
+export interface ChamberConfig {
+  /** Internal key used in APIs, URLs, and BillChamber values */
+  key: string;
+  /** Display name shown in UI */
+  name: string;
+  /** Short label for tabs/chips */
+  shortName: string;
+  /** Total number of seats */
+  seats: number;
+  /** Description shown to players */
+  description: string;
+  /** True for elected chambers (US Senate, JP Sangiin); false/omitted for appointed (CA Senate, DE Bundesrat, UK Lords) */
+  elected?: boolean;
+  /** An appointed upper chamber can still approve ordinary bills. */
+  participatesInOrdinaryBills?: boolean;
+  /**
+   * True only for an upper chamber elected per-region in rotating classes
+   * (US Senate: 2 per state across 3 classes, keyed by `SENATE_CLASSES`). Drives
+   * the region seat appointer's "classed upper" group. JP Sangiin / BR Senate set
+   * `staggeredClasses` on their election system but are NOT region-appointable here
+   * and have no per-region class data, so they intentionally omit this flag.
+   */
+  regionElectedClasses?: boolean;
+  /**
+   * True when this sub-national tier uses the "regional" governance model:
+   * player-facing copy says "Regional" (not "State") and the tier has a regional
+   * budget / fiscal layer (regionalBudgets). UK/DE/JP/IE/CN set this; the US omits
+   * it (US uses the "State" model with no regional budget). Only meaningful on
+   * `subNationalChamber`.
+   */
+  regionalModel?: boolean;
+}
+
+export interface LegislatureConfig {
+  /** Display name for the legislature as a whole (e.g. "Congress", "Parliament") */
+  name: string;
+  /** Upper chamber config — omitted for genuinely unicameral legislatures
+   *  (Scotland's Holyrood, the Senedd). Consumers must tolerate `undefined`. */
+  upperChamber?: ChamberConfig;
+  /** Lower chamber config */
+  lowerChamber: ChamberConfig;
+  /** Nav link path (e.g. "/congress") */
+  path: string;
+  /**
+   * True when both chambers participate in the player legislative loop
+   * (bills require passage in both). False for systems where the upper
+   * chamber is appointed / observer-only and doesn't vote on bills as
+   * part of normal gameplay — UK Lords (appointed), DE Bundesrat
+   * (delegated by Land governments). Used by bill UI to hide bicameral
+   * tally tabs and second-chamber/executive-override sections.
+   */
+  bicameral: boolean;
+}
+
+/**
+ * Configuration for one type of office within a country.
+ * Drives action bonuses, party-strength weights, and achievement triggers.
+ */
+export interface OfficeTypeConfig {
+  /** Matches Character.currentOffice.type and ElectedOfficial.officeType */
+  key: string;
+  /** Human-readable label (e.g. "Member of Parliament", "Senator") */
+  label: string;
+  /** Plural label for listings */
+  labelPlural: string;
+  /** Which chamber key this office maps to, if any */
+  chamberKey?: string;
+  /** True for President, Prime Minister, etc. */
+  isExecutive: boolean;
+  /**
+   * True for the ceremonial head of state in non-monarchy systems
+   * (e.g. CN President of the PRC = CCP chair, IE Uachtarán). Monarchies
+   * (parliamentaryMonarchy) render their head of state via the imperial-character
+   * system instead, so they do not set this.
+   */
+  isHeadOfState?: boolean;
+  /** True for Governor, State Senator, devolved assembly members, etc. */
+  isSubNational: boolean;
+  /** Term length in years (undefined = no fixed term, e.g. PM in parliamentary system) */
+  termYears?: number;
+  /**
+   * Extra actions granted per turn while holding this office.
+   * Supplements GameConfig.officeActionBonus; the config value is the authoritative source
+   * but this is used for display and validation.
+   */
+  actionBonus: number;
+  /**
+   * Multiplier applied to the turn vote pool to reflect incumbency / executive power.
+   * Replaces the hardcoded PARTY_STRENGTH_BY_OFFICE map in electionEngine.ts.
+   */
+  partyStrengthWeight: number;
+}
+
+/**
+ * Electoral system definition for one chamber.
+ */
+export interface ElectionSystemConfig {
+  /** How many years between elections (undefined = variable, e.g. parliamentary dissolution) */
+  termYears?: number;
+  /** Whether all seats are up in each cycle or only a fraction */
+  seatsContested: "all" | "partial";
+  /** For staggered systems (US Senate): number of classes */
+  staggeredClasses?: number;
+  /** Whether each constituency elects exactly one winner */
+  singleMemberConstituencies: boolean;
+  /** UK: can elections be called early by the government */
+  snapElectionsAllowed: boolean;
+}
+
+export interface CentralBankConfig {
+  /** Full name (e.g. "Federal Reserve") */
+  name: string;
+  /** Short abbreviation (e.g. "Fed") */
+  abbreviation: string;
+  /** Title of the bank's leader (e.g. "Federal Reserve Chair") */
+  chairTitle: string;
+  /** Default prime rate when the bank document is first created */
+  defaultPrimeRate: number;
+  /** Hero image path for the central bank page */
+  heroImage?: string;
+  /** Alt text for the hero image */
+  heroAlt?: string;
+  /**
+   * When set, multiple countries share one central bank document keyed by this
+   * ID instead of countryId. Used for supranational institutions like the ECB,
+   * where all Eurozone members share a single bank, prime rate, and chair.
+   *
+   * Example: all EU countries set `sharedBankId: "ECB"`. Queries resolve the
+   * bank document as `{ _id: sharedBankId }` rather than `{ _id: countryId }`.
+   */
+  sharedBankId?: string;
+  /**
+   * When set, chair selection and nominations are governed by this international
+   * organization rather than a single country executive.
+   */
+  centralBankIntorgId?: string;
+}
+
+export interface CountryConfig {
+  id: CountryId;
+  name: string;
+  flagEmoji: string;
+  /** ISO 3166-1 alpha-2 code */
+  code: string;
+
+  /** Economic-model identity a fresh game starts with (P7), per start-date era,
+   *  before enough play has accrued to move the classification. */
+  seedEconomicModel?: EraSeedModels;
+
+  // ── Region terminology ─────────────────────────────────────────────────────
+  /** What sub-national divisions are called (e.g. "State", "Nation", "Constituency") */
+  regionLabel: string;
+  /** Plural form of regionLabel */
+  regionLabelPlural: string;
+
+  // ── Executive ──────────────────────────────────────────────────────────────
+  /** Title of head of government (e.g. "President", "Prime Minister") */
+  executiveTitle: string;
+  /**
+   * Title of head of state (may differ from executive, e.g. "Monarch").
+   * Optional — when unset, {@link getHeadOfStateTitle} returns a
+   * governmentType-derived default ("President" for presidential /
+   * parliamentaryRepublic / onePartyState, "Monarch" for
+   * parliamentaryMonarchy). Set explicitly only when a country uses a
+   * culturally-specific term (e.g. JP "Emperor").
+   */
+  headOfStateTitle?: string;
+  /**
+   * Optional phrase for titles like "President of …" / "Prime Minister of …".
+   * When set (e.g. "the United States"), overrides {@link name} for that wording.
+   */
+  executiveRealmPhrase?: string;
+  /**
+   * "presidential": executive directly elected; term is fixed.
+   * "parliamentaryMonarchy": parliamentary system under a constitutional
+   *   monarch (UK, JP). Executive emerges from legislative majority; head of
+   *   state is a ceremonial monarch.
+   * "parliamentaryRepublic": parliamentary system with a ceremonial president
+   *   (DE, IE). Executive emerges from legislative majority; head of state is
+   *   a non-executive president.
+   * "onePartyState": single dominant party; executive emerges from internal
+   *   party confidence. Mechanically follows the parliamentary code paths for
+   *   now via {@link isParliamentarySystem}; will diverge as the one-party
+   *   subsystem is fleshed out.
+   */
+  governmentType: GovernmentType;
+  /**
+   * Display label for the regime classification shown on the country overview
+   * page (e.g. "Presidential Republic", "Constitutional Monarchy", "Parliamentary
+   * Republic", "One Party State"). Distinct from {@link governmentType}, which
+   * is a low-level gameplay enum driving executive/election mechanics.
+   */
+  governmentTypeLabel: string;
+  /**
+   * Optional country-specific tail appended to this country's Discord webhook
+   * description in Admin Panel > System > Integrations. Carries only what
+   * cannot be derived (shared central banks, unusual institutions). Omit when
+   * the generated sentence is sufficient.
+   */
+  discordWebhookNote?: string;
+  /**
+   * Geographic granularity of campaign field offices. `"county"` pins each
+   * office to a subdivision with its own committed geometry and lean (US
+   * counties). Unset disables field offices. Field offices belong to Campaign
+   * Manager, so only countries with a directly elected executive use it.
+   * Rules per scope live in `src/lib/campaigns/fieldOffices/rules.ts`.
+   */
+  fieldOfficeScope?: "county";
+  /**
+   * Minimum seats for an outright majority in the lower chamber.
+   * US House: 218. UK Commons: 326.
+   * Used by the government formation resolver.
+   */
+  coalitionThreshold: number;
+  /**
+   * Whether the governing party can trigger a snap election mid-term.
+   * Optional — when unset, falls back to the governmentType-derived default
+   * returned by {@link supportsSnapElections} (parliamentary systems → `true`,
+   * presidential / one-party → `false`). Set explicitly only when a country
+   * needs to diverge from its regime-type default. Distinct from the
+   * per-chamber {@link ElectionSystemConfig.snapElectionsAllowed} field, which
+   * controls whether an individual chamber can be dissolved.
+   */
+  snapElectionsAllowed?: boolean;
+  /**
+   * Whether a vote of no confidence can collapse the government. Optional —
+   * when unset, falls back to the governmentType-derived default returned by
+   * {@link hasConfidenceVoteMechanism} (parliamentary systems → `true`,
+   * presidential / one-party → `false`). Set explicitly only when a country
+   * needs to diverge from its regime-type default.
+   */
+  confidenceVoteMechanism?: boolean;
+  /**
+   * Chamber keys whose seated members are eligible for direct cabinet
+   * appointment in parliamentary-style systems. Optional — when unset,
+   * {@link getCabinetEligibleChamberKeys} returns `[]` for presidential
+   * countries (no parliamentary cabinet concept) and
+   * `[legislature.lowerChamber.key]` for parliamentary-style countries.
+   * Set explicitly only when a country diverges from the lower-chamber
+   * default (e.g. JP includes both chambers).
+   */
+  cabinetEligibleChamberKeys?: string[];
+
+  // ── Legislature ────────────────────────────────────────────────────────────
+  legislature: LegislatureConfig;
+
+  // ── Electoral systems ──────────────────────────────────────────────────────
+  /** Electoral rules for the lower (elected) chamber */
+  lowerElectionSystem: ElectionSystemConfig;
+  /** Electoral rules for the upper chamber (may be "appointed" etc.) */
+  upperElectionSystem?: ElectionSystemConfig;
+  /**
+   * Allocation/selection method per political position. Config holds the
+   * DEFAULT; a future in-game layer may override per game. Positions a country
+   * lacks are omitted. Single source of truth for "method" — read via
+   * {@link ../elections/electionMethod getElectionMethod}.
+   */
+  electionSystems: Partial<Record<ElectionPosition, ElectionMethod>>;
+
+  // ── Offices ────────────────────────────────────────────────────────────────
+  /**
+   * All office types that exist in this country.
+   * Drives action bonuses, party-strength weights, and achievement triggers.
+   * US: president, vicePresident, senate, house, governor, stateSenate.
+   * UK: primeMinister, commons, regionalCouncil.
+   */
+  officeTypes: OfficeTypeConfig[];
+
+  /**
+   * Optional sub-national chamber for countries with elected regional bodies.
+   * UK: Regional Councils elected within each nation/region.
+   */
+  subNationalChamber?: ChamberConfig;
+
+  /**
+   * Short UI title for the regional chief executive who assents to sub-national legislation.
+   * When omitted, {@link getRegionalBillAssentTitle} uses the country's sub-national executive
+   * office type (Governor, Premier, Minister-President, etc.).
+   */
+  regionalBillAssentTitle?: string;
+
+  // ── Parties ────────────────────────────────────────────────────────────────
+  /**
+   * Party IDs considered "major" for FPTP spoiler modelling at the national level.
+   * UK: overridden per-region (see getMajorPartiesForRegion).
+   * US: ["democrat", "republican"]
+   */
+  majorPartyIds: string[];
+
+  /**
+   * Configuration for third party creation NPP spawning.
+   * - statesRequired: number of regions the creator must select
+   * - lockHomeState: whether the creator's home state is auto-included and locked
+   * - nppsPerState: number of NPPs spawned per selected region
+   *
+   * US: 4 states + locked home = 5 states × 2 NPPs = 10 NPPs
+   * UK: 2 regions (no locked home) × 1 NPP = 2 NPPs
+   */
+  partyCreationNPPs: {
+    statesRequired: number;
+    lockHomeState: boolean;
+    nppsPerState: number;
+  };
+
+  /**
+   * Optional per-country overrides for party leadership / committee labels.
+   * Keys map to the generic NationalPosition labels plus the party committee
+   * concept. Any key left undefined falls back to the default English label
+   * (see getPartyRoleLabel). Used to localize e.g. the CCP's "Chair" →
+   * "General Secretary" and "Committee" → "Secretariat" for CN only.
+   */
+  partyRoleLabels?: {
+    chair?: string;
+    viceChair?: string;
+    treasurer?: string;
+    committee?: string;
+  };
+
+  // ── Demographics ───────────────────────────────────────────────────────────
+  /**
+   * ID of the demographic profile used for voter archetypes in this country.
+   * Corresponds to a set of DemographicCategory documents in the DB.
+   * US: "us_archetypes" (12 voterGroups)
+   * UK: "uk_archetypes" (12 UK-specific voterGroups)
+   */
+  demographicProfileId: string;
+
+  /**
+   * Optional executive term-limit rule for this country.
+   * Applies to the configured executive office holder, not to the player account.
+   */
+  executiveTermLimit?: {
+    officeKey: string;
+    maxTermsPerCharacter: number;
+    blocksRunningMateSelection: boolean;
+  };
+
+  /**
+   * Country has an internal-party leader confidence model (e.g. CN's CPC
+   * confidence). When true, leader transitions write to countryLeaderStates
+   * and the turn pipeline drives drift via processRulingPartyConfidenceTurn().
+   */
+  hasLeaderConfidenceModel?: boolean;
+
+  /**
+   * Seed baseline for the country's social-axis position (−5 libertarian …
+   * +5 authoritarian; matches demographic socialLean and legislation-option
+   * `social` scales). Copied onto CountryState at seed time; the runtime
+   * value then drifts toward the social stance of enacted national laws
+   * (socialAxisDrift turn phase). Omitted ⇒ 0 (mid). First-pass values from
+   * the P6 design.
+   */
+  socialAxisBaseline?: number;
+
+  /**
+   * Seed-time pointer to the party that should be marked
+   * `regimeStatus: "ruling"` when this country is first seeded. Only
+   * meaningful when `governmentType === "onePartyState"`. Authoritative at
+   * runtime is the `PoliticalParty.regimeStatus` field, not this pointer.
+   *
+   * Type matches `PoliticalParty.sequentialId` (number).
+   */
+  rulingPartyId?: number;
+
+  /**
+   * Public-mood axis weights driving the per-turn `popularLegitimacy`
+   * drift. Only meaningful when `hasLeaderConfidenceModel === true` —
+   * the per-turn driver short-circuits with `null` when this field is
+   * absent. See `src/lib/constants/popularMoodProfiles.ts` for the
+   * shape and CN seed value.
+   */
+  popularMoodProfile?: import("./popularMoodProfiles").PopularMoodAxisProfile;
+
+  /**
+   * Player-facing name for the spinoff party created when Stage 3
+   * (internal challenge) fires the auto-faction-split. Only meaningful
+   * for one-party-state countries; missing field → no faction split
+   * fires (the regime still transitions to Stage 3, but only the
+   * decision-event side runs without spawning a new party).
+   *
+   * Phase 4 only — the richer faction subsystem on
+   * `feature/legislation-update-cn` will supersede this with per-axis
+   * caucus structure later.
+   */
+  factionDefectionName?: string;
+
+  /**
+   * Ruling-party priority profile (9-axis ideology weights). Only meaningful
+   * when `governmentType === "onePartyState"`. Drives per-turn confidence
+   * drift in `processRulingPartyConfidenceTurn`. Use the shape from
+   * `RulingPartyPriorityProfile` in `@/lib/turn/rulingPartyPriorities`.
+   */
+  priorityProfile?: import("@/lib/turn/rulingPartyPriorities").RulingPartyPriorityProfile;
+
+  /**
+   * Per-country policy-category → axis-effect map. Each enacted bill's
+   * `category` is looked up here to derive axis deltas that fold into
+   * ruling-party confidence drift. Only meaningful when
+   * `governmentType === "onePartyState"`.
+   */
+  policyAxisEffects?: Record<
+    string,
+    Array<import("@/lib/turn/rulingPartyPriorities").PolicyAxisEffect>
+  >;
+
+  /**
+   * Two-source regional-budget knobs for one-party states with a
+   * CN-style "local tax retention + central transfer grant" model.
+   * Read by `processCNRegionalBudgets` so a future second one-party
+   * country with the same shape can populate this and pick up the
+   * processor without code changes.
+   */
+  onePartyRegionalBudget?: {
+    /** Share of the per-region tax that stays local (CN: 0.40 for EIT). */
+    localTaxRetentionShare: number;
+    /** Corporate profits as a fraction of regional GDP (CN: 0.06). */
+    corporateProfitRatio: number;
+    /** Default central transfer pool per capita (local currency / year). */
+    centralTransferPerCapita: number;
+    /** Fallback tax rate (%) when the primary tax has not been enacted. */
+    defaultTaxRate: number;
+    /** legislationTypeId of the primary regional tax (CN: cn_enterprise_income_tax). */
+    primaryTaxLegislationKey: string;
+    /**
+     * legislationTypeId of an optional per-region resource tax. When set, the
+     * processor reads each region's enacted policy rate and feeds it into the
+     * resource-tax revenue stream (analogous to DE's Hebesatz/tradeTaxRevenue).
+     * CN: cn_provincial_resource_tax. Omit on countries with no resource tax.
+     */
+    resourceTaxLegislationKey?: string;
+    /**
+     * Resource-extraction (mining, oil/gas, water, salt) as a fraction of
+     * regional GDP. Used as the base for resource-tax revenue. Omit (or set
+     * 0) when the country has no resource tax. CN: 0.03 nation-wide proxy.
+     */
+    resourceExtractionRatio?: number;
+    /**
+     * Consumption base as a fraction of regional GDP for the standing Business
+     * Tax (营业税) — the dominant 1991 Chinese local tax. CN: 0.50 (derived from
+     * the national sales-tax implied base). Omit when the country has no
+     * standing regional consumption tax.
+     */
+    businessTaxConsumptionRatio?: number;
+    /** Standing Business Tax rate (percent). CN: 24. Omit (or 0) for none. */
+    businessTaxRate?: number;
+  };
+
+  /**
+   * DE's federal fiscal-equalization pool (Länderfinanzausgleich /
+   * Bundesergänzungszuweisungen) — the per-capita currency figure
+   * `processDERegionalBudgets` (src/lib/turn/deRegionalBudget.ts) uses as the
+   * default even split of the national grant pool when a Land has no explicit
+   * Finance Minister allocation. Kept as its own top-level field (rather than
+   * folded into `onePartyRegionalBudget`) because DE is not a one-party state
+   * and that shape doesn't fit. Era-scaled via `ERA_COUNTRY_CONFIG_OVERRIDES`
+   * the same way CN's `centralTransferPerCapita` is — see the 1953 entry.
+   */
+  federalEqualizationGrantPerCapita?: number;
+
+  /**
+   * Per-regime vote-weight multipliers for legislative general elections.
+   * Only consulted when `governmentType === "onePartyState"`. Defaults to
+   * `DEFAULT_OPS_VOTE_MULTIPLIERS` when absent.
+   */
+  opsVoteMultipliers?: OpsVoteMultipliers;
+
+  /**
+   * How a one-party state's ceremonial head of state is seated.
+   * - "partyChairSync": auto-reconciled every turn to the ruling party's
+   *   chairId (CN President — partyChairHeadOfState.ts).
+   * - "legislatureAppointment": elected by the seated legislature through
+   *   an appointment vote mirroring the PM flow (RU Chairman of the
+   *   Presidium).
+   * Only meaningful when `governmentType === "onePartyState"`. Omitted →
+   * the country has no synced/appointed ceremonial head of state.
+   */
+  headOfStateSelection?: "partyChairSync" | "legislatureAppointment";
+
+  // ── Phase-6 collapse / convention ────────────────────────────────────────
+  /**
+   * Default `governmentType` the country falls into when a Stage-4 forced
+   * conversion fires without a convention's negotiated target. Only
+   * meaningful on one-party-state countries.
+   */
+  collapseTargetSystem?: GovernmentType;
+
+  /**
+   * Government types the player is allowed to pick when drafting a
+   * constitutional convention. Defaults to `[collapseTargetSystem]` when
+   * omitted. Excludes `onePartyState` — conversion is one-way.
+   */
+  collapseTargetAllowlist?: GovernmentType[];
+
+  /**
+   * Legacy seat reservation (% of post-conversion legislature) granted to
+   * the former ruling party on a voluntary convention path. Range 0..35.
+   * The Stage-4 forced path always uses 5% regardless of this default
+   * (and halves it to 3% when `stage4Delay.halveLegacyBonusIfStillBelow15`
+   * was set by a "resist" decision).
+   */
+  legacyReservationDefault?: number;
+
+  /**
+   * Default delay (turns) between the convention's ratification phase
+   * and the snap election. Convention draft can override per submission;
+   * the runtime constraint is `{ 12, 24, 48 }`.
+   */
+  electionDelayDefault?: number;
+
+  /**
+   * Optional map-mode overlay this country exposes beyond the default
+   * lean/approval layers. Currently "partyOrg" is the only value (CN's
+   * per-region party organization heatmap).
+   */
+  mapOverlay?: "partyOrg";
+
+  // ── Central Bank ──────────────────────────────────────────────────────────
+  centralBank: CentralBankConfig;
+
+  // ── Stock Exchange ─────────────────────────────────────────────────────────
+  /** Display name of the country's stock exchange (e.g. "NYSE", "FTSE", "Nikkei") */
+  exchangeName?: string;
+  /**
+   * What kind of listing venue `exchangeName` names. "market" (the default) is a
+   * tradable stock exchange. "stateRegister" is a command economy's enterprise
+   * register: state-owned enterprises are recorded there, but no shares change
+   * hands. The distinction exists so planned economies get a listing venue of
+   * their own instead of falling through to whichever exchange was the fallback.
+   */
+  exchangeKind?: "market" | "stateRegister";
+
+  // ── Currency ───────────────────────────────────────────────────────────────
+  /** Multiplier to convert GDP millions stored in local currency to USD millions.
+   *  US/UK/CA/DE seed GDP in USD-equivalent so this is 1.0.
+   *  JP seeds GDP in JPY millions — 2020 avg rate: 1 JPY = $0.00943 USD.
+   */
+  usdExchangeRate: number;
+  /** ISO 4217 currency code for this country's home currency */
+  currencyCode: CurrencyCode;
+
+  /**
+   * Turn in the 48-turn year when the next fiscal year begins.
+   * This keeps fiscal-calendar rules config-driven instead of burying them in
+   * budget or turn modules as more countries grow bespoke finance behavior.
+   */
+  fiscalYearStartTurnInYear: number;
+
+  // ── Cabinet Bills ──────────────────────────────────────────────────────────
+  /** Whether this country supports cabinet-origin bills (JP feature). Default false. */
+  cabinetBillsEnabled?: boolean;
+
+  // ── FX Intervention ────────────────────────────────────────────────────────
+  /** Cabinet seat ID authorized to transfer funds from the federal budget to the
+   *  central bank's FX reserve. Resolved against the country's cabinet registry.
+   *  Leave unset to disable the FX Reserve Transfer action for that country. */
+  financeMinisterCabinetId?: string;
+
+  // ── UI / Navigation ────────────────────────────────────────────────────────
+  status: CountryStatus;
+  /** Short description shown on the world map */
+  tagline: string;
+  /**
+   * One-sentence blurb displayed on the country overview page.
+   * Should describe the political system concisely for new players.
+   */
+  descriptor: string;
+  /** Path to a hero/banner image for the country card */
+  heroImage?: string;
+  /**
+   * Optional wider hero for the country overview page only.
+   * When set, `heroImage` is still used for world cards and the overview header flag thumbnail.
+   */
+  overviewHeroImage?: string;
+  /** Route players navigate to when selecting this country (entry/play page) */
+  entryPath: string;
+  /** Route for the country overview page — defaults to entryPath if not set */
+  overviewPath: string;
+  /**
+   * Path to the country's interactive map subpage.
+   * US: "/country/us/map" (state-level approval heatmap)
+   * UK: "/country/uk/map" (region clickthrough map)
+   */
+  mapPath: string;
+  /**
+   * Path to the country's executive/government page.
+   * US: "/country/us/executive" (White House)
+   * UK: "/country/uk/executive" (PM + Cabinet)
+   */
+  executivePath: string;
+  /** Display name for the executive residence / seat of government (e.g. "White House", "10 Downing Street") */
+  executiveLabel: string;
+  /** Label for central government funding to regions (e.g. "Federal Grants", "Westminster Funding") */
+  centralGovernmentLabel: string;
+
+  // ── Imperial ──────────────────────────────────────────────────────────────
+  /**
+   * Whether this country has a ceremonial imperial head of state. Optional —
+   * when unset, {@link isImperialCountry} returns the governmentType-derived
+   * default: `true` for `parliamentaryMonarchy` (UK monarch, JP emperor),
+   * `false` otherwise. Set explicitly to override (e.g. DE's
+   * parliamentaryRepublic configures `true` for the ceremonial
+   * Bundespräsident; IE leaves it unset so it inherits `false`).
+   */
+  hasImperialRole?: boolean;
+  /** Gender-aware titles for the imperial head of state */
+  imperialTitles?: {
+    male: string;
+    female: string;
+    nonbinary: string;
+  };
+  /**
+   * Gender-aware possessive prefix for government/cabinet labels.
+   * UK: "His Majesty's" / "Her Majesty's" / "The Monarch's"
+   * Only relevant for countries whose government labels include the head of state's style.
+   */
+  imperialPossessives?: {
+    male: string;
+    female: string;
+    nonbinary: string;
+  };
+  /** Starter corporation config for imperial character creation */
+  imperialCorporation?: {
+    name: string;
+    sector: CorporationType;
+  };
+  /**
+   * If set, this country shares another country's imperial character
+   * (e.g., CA shares UK's monarch). The value is the source CountryId.
+   */
+  imperialSharedWith?: CountryId;
+
+  /**
+   * When true, players in this country cannot found private corporations.
+   * Used for command-economy states (USSR, East Germany) where private
+   * enterprise is constitutionally prohibited. The server-side POST
+   * /api/corporations guard rejects the request; the UI hides the
+   * "Found Corp" button.
+   */
+}
+
+export const COUNTRY_CONFIGS: Record<CountryId, CountryConfig> = {
+  US: US_CONFIG,
+
+  UK: UK_CONFIG,
+  DE: DE_CONFIG,
+  JP: JP_CONFIG,
+
+  IE: IE_CONFIG,
+
+  // Latent secession country (Sub-project 1). Authored fully but `coming-soon`
+  // and absent from COUNTRY_ORDER, so invisible until the secession actuation
+  // (SP2) writes its countryGameStates row. Sterlingized (shares UK's GBP rate).
+  SCO: SCO_CONFIG,
+
+  // Latent secession country (Sub-project 1). See SCO above; sterlingized,
+  // unicameral Senedd, coming-soon and absent from COUNTRY_ORDER until SP2.
+  WAL: WAL_CONFIG,
+
+  BR: BR_CONFIG,
+
+  CN: CN_CONFIG,
+
+  NG: NG_CONFIG,
+
+  // ── Eastern Bloc (1979 iteration) — NPP-run one-party states ────────────────
+  // Template for the Warsaw-Pact / socialist roster. `status: "coming-soon"`
+  // until its seed stack lands; enablement (NPP-only, econ-locked) is set per
+  // preset via countryGameStates. governmentType "onePartyState" drives the
+  // parliamentary-style code paths + one-party constraints.
+  HU: HU_CONFIG,
+
+  // ── Poland (PZPR) ───────────────────────────────────────────────────────────
+  PL: PL_CONFIG,
+
+  // ── Romania (PCR) ───────────────────────────────────────────────────────────
+  RO: RO_CONFIG,
+
+  // ── Yugoslavia (SKJ) — non-aligned, battleground ────────────────────────────
+  YU: YU_CONFIG,
+
+  // ── Bulgaria (BKP) ──────────────────────────────────────────────────────────
+  BG: BG_CONFIG,
+
+  // ── Belarus (BSSR / CPSU) — Soviet ruble ────────────────────────────────────
+  BLR: BLR_CONFIG,
+
+  // ── Czechoslovakia (KSČ) ────────────────────────────────────────────────────
+  CS: CS_CONFIG,
+
+  // ── Ukraine (Ukrainian SSR, KPU) — Soviet ruble ─────────────────────────────
+  UKR: UKR_CONFIG,
+
+  // ── Baltics (combined EE+LV+LT, CPSU) — Soviet ruble ────────────────────────
+  BAL: BAL_CONFIG,
+
+  // ── Russia / USSR (RU) — ONE entity; displayed "Soviet Union" in 1979 and
+  // "Russia" elsewhere (era name via ERA_COUNTRY_NAMES). Carries the USSR config
+  // (one-party / Supreme Soviet / Gosbank / SUR / 17 macro-regions); modern
+  // Russia's distinct politics (presidential / Federal Assembly / RUB) and an
+  // era-aware flag are a deferred future build. Status stays coming-soon until the
+  // seed stack lands; per-game countryGameStates enables it (the 1979 sandbox).
+  // RU is already in FOREX_ACTIVE_COUNTRIES (currencies.ts) with SUR as its
+  // forex-active currency; the remaining modern-Russia work is the RUB anchor.
+  RU: RU_CONFIG,
+
+  // ── France (Tier-2 Econ-enabled, NPP-run) — Fifth Republic default ─────────
+  // Semi-presidential (1958–): a directly-elected President (the dominant
+  // executive) plus a Prime Minister and a bicameral Parliament. This is the
+  // era-neutral / 1979+ default. The 1953-default Fourth Republic overlay
+  // (parliamentary republic, ceremonial President, Conseil de la République)
+  // lives in {@link ERA_COUNTRY_CONFIG_OVERRIDES} and is applied via
+  // {@link getCountryConfig}(id, preset). Status coming-soon until its seed
+  // stack lands; economyPreview enablement set per preset via countryGameStates.
+  FR: FR_CONFIG,
+
+  // ── Italy (Tier-2 Econ-enabled, NPP-run) — First Republic, 1979 ─────────────
+  // Parliamentary republic: a ceremonial President + a Prime Minister governing
+  // through a powerful bicameral Parliament (the unstable DC-led coalition era,
+  // PCI at its "historic compromise" peak). Status coming-soon until seeded.
+  IT: IT_CONFIG,
+
+  // ── Spain (Tier-2 Econ-enabled, NPP-run) — the young democracy, 1979 ────────
+  // Parliamentary monarchy under the 1978 Constitution: King Juan Carlos as head
+  // of state, a Prime Minister governing through the Cortes Generales, and the
+  // autonomous communities just forming. Status coming-soon until seeded.
+  ES: ES_CONFIG,
+
+  // ── Sweden (Tier-2 Econ-enabled, NPP-run) — the Swedish model, 1979 ─────────
+  // Constitutional monarchy with a unicameral Riksdag (349 seats since the 1970
+  // reform). In 1979 a non-socialist coalition governs with the Social Democrats
+  // the largest party in opposition. Status coming-soon until seeded.
+  SE: SE_CONFIG,
+
+  // ── Turkey (Tier-2 Econ-enabled, NPP-run) — fragile pre-coup republic, 1979 ─
+  // Parliamentary republic: a ceremonial President + a Prime Minister governing
+  // through a bicameral parliament, amid the unstable AP/CHP coalitions and street
+  // violence of the late 1970s (a year before the September 1980 coup). Status
+  // coming-soon until seeded.
+  //
+  // Era note: the 1961-constitution Senato below is correct for 1979-default.
+  // 1953-default overrides to a unicameral TBMM via {@link ERA_COUNTRY_CONFIG_OVERRIDES}
+  // (no Senate existed until after the 1960 coup).
+  TR: TR_CONFIG,
+
+  // ── Greece (econ-tier democracy; Third Hellenic Republic) — 1979 base ──────
+  GR: GR_CONFIG,
+
+  // ── Austria (econ-tier democracy; Second Republic) — 1979 base ─────────────
+  AT: AT_CONFIG,
+
+  FI: FI_CONFIG,
+
+  // ── East Germany / GDR (NPP-run one-party state; two-state Germany) — 1979 ──
+  // SED-led socialist republic with the National Front bloc parties and a planned
+  // economy. Player-enabled only via the economy if it decommunises;
+  // collapseTargetSystem routes a collapse toward reunification/democracy. Status
+  // coming-soon until seeded.
+  DD: DD_CONFIG,
+};
+
+/**
+ * Every configured CountryId, including latent secession countries (SCO/WAL).
+ * This is the VALIDATION universe — request schemas accept any structurally-valid
+ * country id; whether a country is registered/playable is decided at runtime by the
+ * access layer (`getEnabledCountryIds`) + `getRegisteredCountryIds`, NOT by the Zod
+ * enum (which is built once at module load and cannot be runtime-aware).
+ */
+export const ALL_COUNTRY_IDS: readonly CountryId[] = Object.keys(COUNTRY_CONFIGS) as CountryId[];
+
+/**
+ * Tuple for Zod `z.enum()` validation — the full id universe (see ALL_COUNTRY_IDS).
+ * Iteration / display / gating use `getRegisteredCountryIds` + the access layer, not this.
+ */
+export const ZOD_COUNTRY_ENUM = ALL_COUNTRY_IDS as unknown as [
+  CountryId,
+  CountryId,
+  ...CountryId[],
+];
+
+/** Default `countryId` when legacy documents omit it (historically US-only Congress). */
+export const DEFAULT_LEGACY_COUNTRY_ID = COUNTRY_CONFIGS.US.id;
+
+/**
+ * Institutional fields that may diverge by historical era for the same
+ * CountryId (e.g. France's Fourth → Fifth Republic, Turkey's unicameral
+ * 1953 TBMM). Applied as a shallow merge over {@link COUNTRY_CONFIGS} by
+ * {@link getCountryConfig} when a preset is supplied. Nested objects
+ * (`legislature`, `officeTypes`, …) are replaced wholesale when present —
+ * do not partial-patch nested trees here. Same shape as seedDE/seedIE
+ * `eraOverride` objects.
+ */
+export type EraCountryConfigOverride = Partial<
+  Pick<
+    CountryConfig,
+    | "name"
+    | "flagEmoji"
+    | "executiveTitle"
+    | "headOfStateTitle"
+    | "executiveRealmPhrase"
+    | "governmentType"
+    | "governmentTypeLabel"
+    | "coalitionThreshold"
+    | "legislature"
+    | "subNationalChamber"
+    | "lowerElectionSystem"
+    | "upperElectionSystem"
+    | "electionSystems"
+    | "officeTypes"
+    | "tagline"
+    | "descriptor"
+    | "executiveLabel"
+    | "regionLabel"
+    | "regionLabelPlural"
+    | "rulingPartyId"
+    | "headOfStateSelection"
+    | "majorPartyIds"
+    | "currencyCode"
+    | "usdExchangeRate"
+    | "centralGovernmentLabel"
+    | "exchangeName"
+    | "exchangeKind"
+    | "onePartyRegionalBudget"
+    | "federalEqualizationGrantPerCapita"
+    | "priorityProfile"
+  >
+>;
+
+/**
+ * Per-era institutional overlays. Mirrors {@link ERA_COUNTRY_NAMES}: the base
+ * entry in {@link COUNTRY_CONFIGS} stays the era-neutral / later-era default;
+ * presets that need a different government model merge an override at read time.
+ *
+ * TR 1953: 1950s Turkey had a unicameral Grand National Assembly (TBMM). The
+ * Cumhuriyet Senatosu was created by the 1961 constitution (post-1960 coup) and
+ * belongs only to 1979-default. Seat count 487 = 1950 general election TBMM size
+ * (YSK / Nohlen, Grotz & Hartmann, Elections in Asia Vol. I); matches
+ * `trRegions1953` houseDistricts sum. (1954 election expanded to 541.)
+ *
+ * FR 1953: Fourth Republic (1946–1958). Ceremonial President elected by
+ * Parliament; real executive is the Président du Conseil (President of the
+ * Council) answerable to the Assemblée Nationale. Closest in-tree pattern is
+ * Italy's parliamentaryRepublic (ceremonial president + PM first in officeTypes).
+ * Chamber keys stay `assembleeNationale` / `senat` so election types and office
+ * mappings remain stable; only display names and seat counts change.
+ *
+ * ES 1953: Franco's one-party dictatorship. Closest in-tree pattern is DD —
+ * a single executive who is also head of state (no separate ceremonial HoS
+ * office / partyChairSync; Franco personally held both Jefe del Estado and
+ * head of government until 1973). Legislature is the unicameral Cortes
+ * Españolas (1942 Ley de Cortes) — corporatist / appointed "organic democracy"
+ * (syndicates, municipalities, families, direct appointment), modelled with
+ * `elected: false` like HU/PL appointed upper councils. Chamber key stays
+ * `congresoDiputados` so the null-gated `esCongreso` cycle mapping remains
+ * stable. Seat count 350 matches `esRegions1953` houseDistricts sum.
+ * `rulingPartyId: 1` = FET (sole 1953 party, seeded first → seq 1).
+ *
+ * SE 1953: Bicameral Riksdag (Första + Andra kammaren) until the 1970 reform.
+ * Modelled on the IE Seanad / UK Lords pattern: upper chamber is real for seat
+ * counts and revise/delay flavour, but `bicameral: false` so it is NOT part of
+ * the player bill loop (no perpetual First Chamber elections). Seat counts
+ * match `seRegions1953` (Andra 230 via houseDistricts; Första 150 via
+ * stateSenateSeats — not the base config's 151, which is abolished-era metadata).
+ * Chamber key `riksdag` stays stable for the election engine.
+ *
+ * 1953 `usdExchangeRate` (refs the 1953 economy calibration): this field is the
+ * ₳ value of ONE unit of the country's stored seed currency — it is what
+ * normalizes `state.gdp` and the national budget seed into the shared ₳ anchor,
+ * and the ₳ anchor tracks the US dollar of the era. The base entries in
+ * {@link COUNTRY_CONFIGS} are modern (US/UK/DE/IE pinned at 1.0, JP 0.00943, …)
+ * or, for the Cold-War-only roster, 1979 rates — both wrong for a 1953 world,
+ * where every rate must be the reciprocal of `INITIAL_RATES_1953`
+ * (constants/currencies.ts), the same table `seedExchangeRates` writes into the
+ * `exchangeRates` collection. Left unfixed, the seeder and the forex collection
+ * disagreed by up to 83x (FR) and the 1953 world's ₳ GDP ranking was fiction:
+ * France read as a $3.9T economy and the USSR $1.9T against a $387B United
+ * States, while Turkey read $0.7B and the UK $14.4B.
+ *
+ * IT/JP/CN/NG deliberately stay at 1.0: their 1953 regional GDP is authored in
+ * **USD millions**, so
+ * they are already ₳-denominated and a rate of 1.0 IS their era-correct
+ * normalization. Do not "fix" them to 1/INITIAL_RATES_1953 — that would read
+ * Italy as a $27M economy.
+ *
+ * HU/PL/RO/YU/BG/CS now have authored 1953 rates too. They stay
+ * OUT of `FOREX_ACTIVE_COUNTRIES` — `seedExchangeRates` still writes no
+ * `exchangeRates` row for them and they remain budget-only, non-convertible
+ * economies. Only the config-side GDP→₳ normalization is authored, sourced from
+ * `INITIAL_RATES_1953` like every entry above; the per-country reasoning (which
+ * official parity each rate departs from, and why) lives on those constants.
+ * Before this, the base config's 1979 rates read Bulgaria as a $40B economy —
+ * larger than West Germany.
+ *
+ * Seat-count-only overlays (UK/IT/DE/JP/IE/BR/CN/NG/RU): modern base
+ * `lowerChamber.seats` disagreed with historically authored `*Regions1953`
+ * houseDistricts sums — the 1953 sim audit reported party seats vs totalSeats
+ * mismatches (UK 806≠650, IT 945≠630). Align config to the era seed totals
+ * (same pattern as TR/ES/SE above). FR already had a 627-seat era overlay;
+ * its region HD were scaled to match.
+ */
+export const ERA_COUNTRY_CONFIG_OVERRIDES: Record<
+  string,
+  Partial<Record<CountryId, EraCountryConfigOverride>>
+> = {
+  "1979-default": {
+    BR: BR_ERAS["1979-default"]?.config,
+  },
+  // First non-1953 era to use this table. The lookup was always generic; nothing
+  // had exercised it.
+  //
+  // ⚠️ THIS TABLE IS THE WIRING, NOT THE DATA. A country's era file can define
+  // `config` and have it silently ignored, because only the entries listed here
+  // are ever consulted. DE/IE/CN each carried a `1991-default` config that
+  // reached nothing until they were added below — the folder looked right and
+  // the value never applied. Adding an era override means editing BOTH places.
+  // 2027 eurozone: FR/IT/ES/GR/AT/FI seed budgets in EUR (see
+  // convertEuroMemberBudgetsFor2027), so their GDP→₳ normalization must be the
+  // euro-anchored value, not the base legacy-currency rate. Each era file shows
+  // the derivation (base × R_legacy/R_EUR from the seeder's rate table). DE is
+  // already EUR and IE converts at 1.0, so neither needs an entry.
+  "2027-default": {
+    FR: FR_ERAS["2027-default"]?.config,
+    IT: IT_ERAS["2027-default"]?.config,
+    ES: ES_ERAS["2027-default"]?.config,
+    GR: GR_ERAS["2027-default"]?.config,
+    AT: AT_ERAS["2027-default"]?.config,
+    FI: FI_ERAS["2027-default"]?.config,
+    HU: HU_ERAS["2027-default"]?.config,
+    RO: RO_ERAS["2027-default"]?.config,
+    BG: BG_ERAS["2027-default"]?.config,
+    PL: PL_ERAS["2027-default"]?.config,
+    RU: RU_ERAS["2027-default"]?.config,
+    // Modern lira: the 2027 budget and bonds seed in TRY.
+    TR: TR_ERAS["2027-default"]?.config,
+  },
+  "1991-default": {
+    UK: UK_ERAS["1991-default"]?.config,
+    JP: JP_ERAS["1991-default"]?.config,
+    // GDP→anchor normalization (see each era file's header): their regional GDP
+    // is authored in local currency, so the anchor is the reciprocal of
+    // `INITIAL_RATES_1991`. The Soviet slot's output uses original rubles;
+    // Nigeria's local GDP now agrees with its national nominal seed anchor.
+    DE: DE_ERAS["1991-default"]?.config,
+    IE: IE_ERAS["1991-default"]?.config,
+    CN: CN_ERAS["1991-default"]?.config,
+    PL: PL_ERAS["1991-default"]?.config,
+    HU: HU_ERAS["1991-default"]?.config,
+    CS: CS_ERAS["1991-default"]?.config,
+    BG: BG_ERAS["1991-default"]?.config,
+    YU: YU_ERAS["1991-default"]?.config,
+    RO: RO_ERAS["1991-default"]?.config,
+    RU: RU_ERAS["1991-default"]?.config,
+    NG: NG_ERAS["1991-default"]?.config,
+    // FR/IT/ES/SE/TR/GR/AT/FI: legacy-currency 1991 GDP at the WDI 1991 average rate.
+    FR: FR_ERAS["1991-default"]?.config,
+    IT: IT_ERAS["1991-default"]?.config,
+    ES: ES_ERAS["1991-default"]?.config,
+    SE: SE_ERAS["1991-default"]?.config,
+    TR: TR_ERAS["1991-default"]?.config,
+    GR: GR_ERAS["1991-default"]?.config,
+    AT: AT_ERAS["1991-default"]?.config,
+    FI: FI_ERAS["1991-default"]?.config,
+  },
+  "1953-default": {
+    US: US_ERAS["1953-default"]?.config,
+    TR: TR_ERAS["1953-default"]?.config,
+    GR: GR_ERAS["1953-default"]?.config,
+    AT: AT_ERAS["1953-default"]?.config,
+    FI: FI_ERAS["1953-default"]?.config,
+    FR: FR_ERAS["1953-default"]?.config,
+    ES: ES_ERAS["1953-default"]?.config,
+    SE: SE_ERAS["1953-default"]?.config,
+    // Rákosi's MDP (1948–1956); MSZMP only founded after the 1956 revolution.
+    HU: HU_ERAS["1953-default"]?.config,
+    // Gheorghiu-Dej's PMR (1948–1965); "PCR" name restored only in 1965.
+    RO: RO_ERAS["1953-default"]?.config,
+    PL: PL_ERAS["1953-default"]?.config,
+    CS: CS_ERAS["1953-default"]?.config,
+    BG: BG_ERAS["1953-default"]?.config,
+    YU: YU_ERAS["1953-default"]?.config,
+    DD: DD_ERAS["1953-default"]?.config,
+    BLR: BLR_ERAS["1953-default"]?.config,
+    BAL: BAL_ERAS["1953-default"]?.config,
+    UKR: UKR_ERAS["1953-default"]?.config,
+    // ── Seat-count alignments to *Regions1953 houseDistricts ───────────────
+    UK: UK_ERAS["1953-default"]?.config,
+    IT: IT_ERAS["1953-default"]?.config,
+    DE: DE_ERAS["1953-default"]?.config,
+    JP: JP_ERAS["1953-default"]?.config,
+    IE: IE_ERAS["1953-default"]?.config,
+    BR: BR_ERAS["1953-default"]?.config,
+    CN: CN_ERAS["1953-default"]?.config,
+    NG: NG_ERAS["1953-default"]?.config,
+    RU: RU_ERAS["1953-default"]?.config,
+  },
+};
+
+/**
+ * Per-era country display-name overrides. A country's `name` in COUNTRY_CONFIGS is
+ * the era-neutral default; some countries are known by a different name in a given
+ * preset's year (e.g. the FRG is "West Germany" while the GDR exists in 1979).
+ * Use {@link getCountryDisplayName} at display sites that know the active preset.
+ */
+export const ERA_COUNTRY_NAMES: Record<string, Partial<Record<CountryId, string>>> = {
+  "1953-default": {
+    DE: "West Germany",
+    RU: "Soviet Union",
+  },
+  "1979-default": {
+    DE: "West Germany",
+    RU: "Soviet Union",
+  },
+  "1991-default": {
+    RU: "Soviet Union",
+  },
+};
+
+/** Maps country to the office key used for regional executive assent on state bills. */
+export const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>> = {
+  US: US_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  UK: UK_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  JP: JP_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  IE: IE_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  DE: DE_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  // One-party regional executives — Republic / Land First Secretaries. Without
+  // these entries the region pages fell back to the generic "Governor" label.
+  RU: RU_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  DD: DD_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+};
+
+/** Behavioral shape of a region-appointable seat in the admin seat appointer. */
+export type RegionSeatKind =
+  | "executive" // single-seat regional chief executive (governor / minister-president)
+  | "classedUpper" // US-style per-region senate elected in rotating classes
+  | "upperChamber" // multi-seat contested upper chamber (RU Soviet of Nationalities)
+  | "lowerChamber" // region-elected federal lower house (House / NPC Delegate / Shūgiin / …)
+  | "subNationalChamber"; // sub-national legislature (State Senate / People's Congress / Landtag / …)
+
+/**
+ * One region-appointable seat group for a country, derived entirely from config.
+ * The admin seat appointer (panel + vacant-seats GET + assign-seat POST) renders
+ * and validates against this — there are no hardcoded US offices.
+ */
+export interface RegionAppointableSeatSpec {
+  /** `electedOfficials.officeType` + `Character/NPP.currentOffice.type`. */
+  officeType: string;
+  /** Singular display label, e.g. "Governor", "NPC Delegate", "Senator". */
+  label: string;
+  /** Panel heading, e.g. "Governor", "Senate", "House", "People's Congress". */
+  groupLabel: string;
+  kind: RegionSeatKind;
+  /** lower/sub-national chambers hold many seats (seatsToAssign); executive/senate are single. */
+  multiSeat: boolean;
+  /** Which `State` field holds the seat total for a multi-seat group (null otherwise). */
+  totalField: "houseDistricts" | "stateSenateSeats" | null;
+  /**
+   * Per-region seat totals for groups whose apportionment lives in a config
+   * map rather than a `State` field (RU Soviet of Nationalities — the D11
+   * republic-weighted map). Checked before `totalField` by the admin
+   * vacant-seats / assign-seat routes.
+   */
+  totalsByRegion?: Record<string, number>;
+}
+
+/**
+ * ⚠️ `?.` IS LOAD-BEARING, NOT DEFENSIVE NOISE. The registry is `Partial`, and
+ * `addressNames` is optional in the country contract because China has no row
+ * here at all -- `getNationalAddressName` falls back to "Address to the
+ * Nation". A country that omits the field therefore stays omitted rather than
+ * acquiring someone else's phrase.
+ */
+export const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
+  US: US_IDENTITY.addressNames?.national,
+  UK: UK_IDENTITY.addressNames?.national,
+  DE: DE_IDENTITY.addressNames?.national,
+  JP: JP_IDENTITY.addressNames?.national,
+  IE: IE_IDENTITY.addressNames?.national,
+};
+
+/**
+ * Display and label helpers now live in `countryClientConfig.ts` (generated,
+ * client-safe). They are re-exported here so every existing server import keeps
+ * working, and the two this module still uses are imported above.
+ */
+export {
+  getCountryDisplayName,
+  getCountryIdByName,
+  getExecutiveOrderName,
+  getExecutiveOrderNamePlural,
+  getNationalAddressName,
+  getRegionalBillAssentTitle,
+  getRegionalBillAssentTitleForState,
+  getRegionalExecutiveOfficeKey,
+  getSubNationalLegislatureKey,
+} from "./countryClientConfig";
