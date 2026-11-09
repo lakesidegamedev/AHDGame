@@ -9,7 +9,8 @@ export interface ForceReadinessInput {
 
 export function nationalForceReadiness(
   units: readonly ForceReadinessInput[],
-  turn: number
+  turn: number,
+  emptyRosterIsZero = false
 ): number | null {
   if (!Number.isSafeInteger(turn) || turn < 0) throw new Error("invalid turn");
   let weightedReadiness = 0;
@@ -47,5 +48,5 @@ export function nationalForceReadiness(
     weightedReadiness += unit.basePower * effective;
     totalPower += unit.basePower;
   }
-  return totalPower > 0 ? weightedReadiness / totalPower : null;
+  return totalPower > 0 ? weightedReadiness / totalPower : emptyRosterIsZero ? 0 : null;
 }
