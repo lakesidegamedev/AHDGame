@@ -1,4 +1,5 @@
 import { ProducerSupplyPool } from "./supplyPoolRules";
+import { bookKey } from "./bookKey";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
 import { nextAutoAsk } from "./autoAskRules";
@@ -349,21 +350,6 @@ function unique<T extends { id: string }>(rows: readonly T[], label: string): vo
 }
 
 const compareId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-const bookKeys = new Map<string, Map<string, string>>();
-const bookKey = (commodity: string, book: string) => {
-  let byBook = bookKeys.get(commodity);
-  if (!byBook) {
-    byBook = new Map();
-    bookKeys.set(commodity, byBook);
-  }
-  let key = byBook.get(book);
-  if (key === undefined) {
-    key = JSON.stringify([commodity, book]);
-    byBook.set(book, key);
-  }
-  return key;
-};
-
 /** One pure clearing pass. Seller receipts, buyer charges and observed prices share the same trades. */
 export function settleProducerMarket(input: {
   /** Host-owned deadline, checked within a clearing before any persistent writes. */
