@@ -6,7 +6,7 @@ summary: >-
   tools now work from the same census electorate that decides votes.
 tags: [demographics, elections, admin]
 badges: [patch]
-areas: [backend, admin]
+areas: [fullstack]
 ---
 
 ## What changed

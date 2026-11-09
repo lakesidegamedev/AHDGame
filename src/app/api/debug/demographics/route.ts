@@ -11,11 +11,11 @@ import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
-import type { GameState, State, StateDemographics } from "@/lib/db/types";
+import type { State, StateDemographics } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getStateLean } from "@/lib/utils/demographics";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
-import { eraYearContextFromGameState } from "@/lib/era/context";
+import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 
 // GET /api/debug/demographics — Debug demographic lean calculation for a given state; admin-only in production.
 // Auth: requireAdmin
@@ -37,16 +37,10 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
 
-    const [demographics, defaults, state, gameState] = await Promise.all([
+    const [demographics, state, context] = await Promise.all([
       db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
-      db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
       db.collection<State>("states").findOne({ _id: stateId, countryId }),
-      db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
-        ),
+      loadCampaignProjectionContext(db, [stateId]),
     ]);
 
     const debug: Record<string, unknown> = {
@@ -74,9 +68,10 @@ export async function GET(request: Request) {
     const censusLean = censusCachedStateLean(demographics, {
       countryId,
       stateId,
-      preset: gameState?.preset,
-      demographicDefaults: defaults,
-      ...eraYearContextFromGameState(gameState),
+      preset: context.preset,
+      demographicDefaults: context.defaultsByState.get(stateId),
+      year: context.year,
+      startingYear: context.startingYear,
     });
 
     return NextResponse.json({
