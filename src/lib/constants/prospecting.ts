@@ -16,6 +16,23 @@ import { RD_INNOVATION_SCORE_THRESHOLD } from "@/lib/constants/corporations";
 // ── Prospecting ──────────────────────────────────────────────────────────────
 
 /**
+ * Whether a company may launch a corporate survey. The company's own type or
+ * secondary type must be extraction; merely operating an extraction sector
+ * (for example after buying one) does not qualify. Shared by the launch command
+ * and the sector page so the button and the refusal cannot drift apart.
+ */
+export function corpCanProspect(corp: {
+  type?: string | null;
+  secondaryType?: string | null;
+}): boolean {
+  return corp.type === "extraction" || corp.secondaryType === "extraction";
+}
+
+/** Refusal shown when a company that is not extraction-typed tries to prospect. */
+export const PROSPECT_NOT_EXTRACTION_MESSAGE =
+  "Only extraction companies can prospect. Your company's main or secondary business must be extraction, and owning an extraction sector is not enough.";
+
+/**
  * Turns from launch to resolution (6 turns = half a game quarter at 48/yr).
  * BALANCE: was 12. Seeded deposits were binding in the busiest oil states while
  * surveys took 13+ turns at 1991 era scaling, too slow to keep up with demand.
