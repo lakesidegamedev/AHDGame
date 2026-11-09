@@ -1,4 +1,9 @@
-import type { Db } from "mongodb";
+import type { Db, Document } from "mongodb";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import { getCollectionsByCategory } from "@/lib/admin/seed/seedManifest";
 import {
   RESIDUE_SCAN_REFERENCE_EXEMPT,
@@ -93,7 +98,7 @@ export function residueScanContractProblems(): string[] {
   if (evaluateResidueScan(clean).length > 0) problems.push("the evaluator flags a clean world");
   const dirty = {
     ...clean,
-    collectionAges: [{ collection: "x", documents: [{ id: "a", createdAtMs: 1 }] }],
+    collectionAges: [{ collection: "elections", documents: [{ id: "a", createdAtMs: 1 }] }],
   };
   if (evaluateResidueScan(dirty).length === 0)
     problems.push("the evaluator misses an old document");
@@ -130,10 +135,16 @@ export async function runPreflight2027(
     findings.push({ severity: "fail", check: "residue-scan-contract", detail: problem });
   }
 
-  const gameState = await db.collection("gameState").findOne({ _id: "current" } as never);
+  const [gameStates, characterCol, nppCol, stateCol, budgetCol] = await Promise.all([
+    getGameStateCollection(db),
+    getCharactersCollection(db),
+    getNppsCollection(db),
+    getStatesCollection(db),
+    getFederalBudgetCollection(db),
+  ]);
+  const gameState = await gameStates.findOne({ _id: "current" });
   const states = (
-    await db
-      .collection("states")
+    await stateCol
       .find(
         { countryId: { $in: countries } },
         {
@@ -156,26 +167,24 @@ export async function runPreflight2027(
     stateSenateSeats: row.stateSenateSeats,
   }));
   const exists = { $exists: true };
+  const legacyApprovals = { archetypeApprovals: exists } as never;
   const [characters, npps, legislationTypes, priceIndexRows] = await Promise.all([
-    db.collection("characters").countDocuments({ archetypeApprovals: exists }),
-    db.collection("npps").countDocuments({ archetypeApprovals: exists }),
-    db.collection("legislationTypes").countDocuments({
+    characterCol.countDocuments(legacyApprovals),
+    nppCol.countDocuments(legacyApprovals),
+    db.collection<Document>("legislationTypes").countDocuments({
       $or: [
         { "policyOptions.archetypeApprovals": exists },
         { "policyOptions.groupApprovals": exists },
       ],
     }),
-    db
-      .collection("federalBudget")
-      .find({ priceIndex: exists }, { projection: { countryId: 1 } })
-      .toArray(),
+    budgetCol.find({ priceIndex: exists } as never, { projection: { countryId: 1 } }).toArray(),
   ]);
 
   findings.push(
     ...evaluatePreflight({
       mode: options.mode,
       countries,
-      gameState: gameState as Record<string, unknown> | null,
+      gameState: gameState as unknown as Record<string, unknown> | null,
       states,
       seatRequirements: SEAT_FIELD_REQUIREMENTS,
       legacy: {

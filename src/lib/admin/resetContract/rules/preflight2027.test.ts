@@ -16,7 +16,7 @@ const goodState = (id: string, countryId: string, extra: Partial<StateEvidence> 
   ...extra,
 });
 
-const allTrue = {
+const allTrue: Record<string, unknown> = {
   ...Object.fromEntries(REMOVED_ALWAYS_ON_FLAGS.map((flag) => [flag, true])),
   nppAutonomyLevel: "v6",
 };
