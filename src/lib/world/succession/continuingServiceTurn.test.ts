@@ -172,6 +172,56 @@ describe("continuing federation service transaction", () => {
       successorArrearsMinor: { BY: 0, UA: 0 },
     });
   });
+  describe("cumulative arrears", () => {
+    const cumulative = async (db: Db, id: string) =>
+      (
+        (await db
+          .collection("federationFiscalAccounts")
+          .findOne({ _id: `${applicationId}:${id}` as never })) as {
+          cumulativeArrearsMinor?: number;
+        }
+      ).cumulativeArrearsMinor;
+    const owe = (db: Db) =>
+      db
+        .collection("macroCountries")
+        .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    it("adds the full new arrears on the first turn", async () => {
+      const { db } = scenario();
+      await owe(db);
+      await run(db);
+      expect(await cumulative(db, "UA")).toBe(37);
+    });
+    it("adds only the growth when standing arrears grow", async () => {
+      const { db } = scenario();
+      await owe(db);
+      await run(db);
+      await run(db, 92);
+      // standing 37 -> 74: cumulative 37 + 37, not 37 + 74
+      expect(await cumulative(db, "UA")).toBe(74);
+    });
+    it("adds nothing when standing arrears are unchanged", async () => {
+      const { db, oldId } = scenario();
+      await owe(db);
+      await run(db);
+      await db.collection("bonds").updateOne({ _id: oldId }, { $set: { matured: true } });
+      await run(db, 92);
+      expect(await cumulative(db, "UA")).toBe(37);
+    });
+    it("does not overflow shared precision on unchanged standing arrears", async () => {
+      const { db, oldId } = scenario();
+      await owe(db);
+      await run(db);
+      await db.collection("bonds").updateOne({ _id: oldId }, { $set: { matured: true } });
+      await db
+        .collection("federationFiscalAccounts")
+        .updateOne(
+          { _id: `${applicationId}:UA` as never },
+          { $set: { cumulativeArrearsMinor: Number.MAX_SAFE_INTEGER } }
+        );
+      await run(db, 92);
+      expect(await cumulative(db, "UA")).toBe(Number.MAX_SAFE_INTEGER);
+    });
+  });
   it("requires an active transaction and an unchanged approved contract inventory", async () => {
     const { db } = scenario();
     await expect(
