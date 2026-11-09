@@ -137,3 +137,32 @@ describe("detector sources", () => {
     for (const { spec } of DETECTOR_SOURCES) expect(spec.sustainedTurns).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("detector round trips", () => {
+  it("reads the streak collection once per turn for all detectors", async () => {
+    const streakFinds = vi.fn();
+    const stateFinds = vi.fn();
+    const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
+    const db = {
+      collection(name: string) {
+        return {
+          find() {
+            if (name === DETECTOR_STREAK_COLLECTION) streakFinds();
+            if (name === "states") stateFinds();
+            return cursor([]);
+          },
+          bulkWrite: vi.fn(),
+          aggregate: () => cursor([]),
+          findOne: async () => null,
+        };
+      },
+    } as never;
+    for (const source of DETECTOR_SOURCES) {
+      await createDetectorProvider(source).load({ db, turn: 30 });
+    }
+    expect(streakFinds).toHaveBeenCalledTimes(1);
+    expect(stateFinds).toHaveBeenCalledTimes(1);
+    await createDetectorProvider(DETECTOR_SOURCES[0]).load({ db, turn: 31 });
+    expect(streakFinds).toHaveBeenCalledTimes(2);
+  });
+});
