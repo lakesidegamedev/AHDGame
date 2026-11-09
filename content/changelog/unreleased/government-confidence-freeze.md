@@ -5,7 +5,7 @@ summary: >-
   An Admin switch freezes Government Confidence at its current value across countries.
 tags: [government, admin]
 badges: [patch]
-areas: [engine, ui]
+areas: [engine, frontend]
 ---
 
 - Government Confidence defaults to Frozen. The Admin kill-switch board can resume it without a deployment.
