@@ -4,14 +4,10 @@
  *   npx tsx scripts/countries/gen-country-client-config.ts
  *
  * The client-safe slice of the country registry: display names, chamber keys
- * and labels, currency codes, routes, government type and office labels. It
- * imports nothing but `countriesCore` and types, so a client component that
- * needs a country's name no longer pulls the full registry (and its 29
- * institution and era modules) into the browser bundle.
- *
- * The field list is the contract: `scripts/countries/gen-country-client-config.ts`
- * projects `COUNTRY_CONFIGS` down to it, and
- * `countryClientConfig.test.ts` fails when a seed edit is not regenerated.
+ * and labels, currency codes, routes, government type and office labels.
+ * Keeps the full registry out of the browser bundle. The field list is the
+ * contract; the generator projects COUNTRY_CONFIGS down to it and the test
+ * fails when a seed edit is not regenerated.
  */
 import {
   COUNTRY_ORDER,
