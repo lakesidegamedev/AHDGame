@@ -2,6 +2,11 @@
  * Map overview API tests for DE.
  */
 import { describe, it, expect, vi } from "vitest";
+
+// Fixture dbs carry no census rows; strict tiers are covered in governmentApproval.censusTier.test.ts.
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: async () => ({ fullSimulationIds: [] }),
+}));
 import { GET } from "@/app/api/country/[code]/map/overview/route";
 
 vi.mock("@/lib/mongodb", () => ({

@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Fixture dbs carry no census rows; strict tiers are covered in governmentApproval.censusTier.test.ts.
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: async () => ({ fullSimulationIds: [] }),
+}));
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));

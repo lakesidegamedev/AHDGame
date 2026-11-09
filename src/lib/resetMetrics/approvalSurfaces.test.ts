@@ -52,6 +52,9 @@ beforeEach(() => {
   db.collection("states").find().toArray.mockResolvedValue(states);
   db.collection("states").distinct.mockResolvedValue(states.map((state) => state._id));
   db.collection("states").findOne.mockResolvedValue(states.find((state) => state._id === "SCO"));
+  db.collection("stateDemographics")
+    .find()
+    .toArray.mockResolvedValue(states.map((state) => ({ _id: state._id, countryId: "UK" })));
   const macro = states.map((state) => ({ _id: state._id, countryId: "UK", economic: {} }));
   db.collection("macroMetrics").find().toArray.mockResolvedValue(macro);
   db.collection("macroMetrics").findOne.mockImplementation(
