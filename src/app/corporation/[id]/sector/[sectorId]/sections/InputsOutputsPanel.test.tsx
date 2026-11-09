@@ -282,6 +282,61 @@ describe("InputsOutputsPanel layout", () => {
     expect(screen.queryByText(/waiting on inputs/i)).toBeNull();
   });
 
+  it("flags the short input on its row and names it when only the run receipt records it", () => {
+    const { container } = render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          throughput: { bindingInput: null, applied: null, projected: 1 },
+        }}
+        plants={
+          {
+            fillRate: 0.5,
+            capacityUnits: 100,
+            idleCauses: [{ cause: "inputs", units: 40, bindingInput: "electronics" }],
+          } as PlantsData
+        }
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    const flagged = container.querySelectorAll("[data-short-input]");
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]!.closest("li")?.textContent).toContain("Electronics & Semiconductors");
+    expect(
+      screen.getByText("Electronics & Semiconductors", { selector: "span.font-semibold" })
+    ).toBeTruthy();
+    expect(container.querySelector("[data-short-input-unknown]")).toBeNull();
+  });
+
+  it("says no input was recorded when inputs idled capacity and nothing names one", () => {
+    const { container } = render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          throughput: { bindingInput: null, applied: null, projected: 1 },
+        }}
+        plants={
+          {
+            fillRate: 0.5,
+            capacityUnits: 100,
+            idleCauses: [{ cause: "inputs", units: 40 }],
+          } as PlantsData
+        }
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    expect(container.querySelector("[data-short-input]")).toBeNull();
+    expect(container.querySelector("[data-short-input-unknown]")?.textContent).toBe(
+      "An input ran short but the game did not record which one this turn."
+    );
+  });
+
   it("keeps buy and make columns from sharing a grid track", () => {
     const { container } = render(
       <InputsOutputsPanel

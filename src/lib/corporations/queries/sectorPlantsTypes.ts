@@ -34,6 +34,8 @@ export interface PlantIdleCause {
   capacityShare?: number;
   /** The input that cut the run, as a label. Only for held; absent means cash held it. */
   heldInput?: string;
+  /** The commodity the run receipt named as short. Only for inputs, and only when recorded. */
+  bindingInput?: string;
 }
 
 /** One outstanding capacity build order, already turned into countdown form. */

@@ -1278,7 +1278,12 @@ export function computeSectorMarginSection(args: {
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
 
-type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?: string };
+type IdleWeight = {
+  cause: PlantIdleCause["cause"];
+  w: number;
+  heldInput?: string;
+  bindingInput?: string;
+};
 
 /**
  * Idle weights from a funded settlement receipt, or null when the sector has
@@ -1322,18 +1327,21 @@ function fundedIdleWeights(
     else weights.push({ cause: "ramping", w: 1 - runShare });
   }
   const shortfall = Math.max(0, runShare - made);
-  if (shortfall > 0)
+  if (shortfall > 0) {
+    const cause: PlantIdleCause["cause"] =
+      cutBy.length > 0
+        ? cutBy.includes("inputs")
+          ? "inputs"
+          : "cash"
+        : (receipt.operatingArrears ?? 0) > 0
+          ? "cash"
+          : "inputs";
     weights.push({
-      cause:
-        cutBy.length > 0
-          ? cutBy.includes("inputs")
-            ? "inputs"
-            : "cash"
-          : (receipt.operatingArrears ?? 0) > 0
-            ? "cash"
-            : "inputs",
+      cause,
       w: shortfall,
+      ...(cause === "inputs" && receipt.bindingInput ? { bindingInput: receipt.bindingInput } : {}),
     });
+  }
   return weights;
 }
 
@@ -1549,11 +1557,16 @@ export function buildSectorPlantsSection(args: {
     const sumW = weights.reduce((s, x) => s + x.w, 0);
     const scale = sumW > 0 ? Math.min(1, idleShare / sumW) : 0;
     let attributed = coldUnits + bankUnits;
-    for (const { cause, w, heldInput } of weights) {
+    for (const { cause, w, heldInput, bindingInput } of weights) {
       const units = w * scale * capacityUnits;
       if (units <= 0) continue;
       attributed += units;
-      idleCauses.push({ cause, units, ...(heldInput ? { heldInput } : {}) });
+      idleCauses.push({
+        cause,
+        units,
+        ...(heldInput ? { heldInput } : {}),
+        ...(bindingInput ? { bindingInput } : {}),
+      });
     }
     const leftover = nonNeg(idleUnits - attributed);
     if (leftover > 0.0001) idleCauses.push({ cause: "other", units: leftover });

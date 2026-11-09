@@ -14,6 +14,7 @@ import {
 import ShortageBadge from "../components/ShortageBadge";
 import InputOffersHint from "../components/InputOffersHint";
 import { costliestInput } from "../lib/costliestInput";
+import { isShortInputRow, shortInputState } from "../lib/shortInput";
 import { perProductSalePrices } from "../lib/perProductSalePrice";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import UnsoldNote from "../components/UnsoldNote";
@@ -85,20 +86,14 @@ export default function InputsOutputsPanel({
   // a turn where availability was barely trimmed can still have lost most of its
   // run because the plant could not buy enough of the input. Read the slice off
   // the same idle causes the meter draws.
-  const inputIdleShare =
-    plants.capacityUnits != null && plants.capacityUnits > 0
-      ? Math.min(
-          1,
-          Math.max(
-            0,
-            (plants.idleCauses?.find((c) => c.cause === "inputs")?.units ?? 0) /
-              plants.capacityUnits
-          )
-        )
-      : null;
-  const showsInputShortfall =
-    commodities.throughput?.bindingInput != null &&
-    ((inputIdleShare ?? 0) > 0.005 || (throttleApplied != null && throttleApplied < 0.999));
+  const inputIdleUnits = plants.idleCauses?.find((c) => c.cause === "inputs")?.units ?? 0;
+  const shortInput = shortInputState({
+    throughputBinding: commodities.throughput?.bindingInput,
+    throttleApplied,
+    capacityUnits: plants.capacityUnits,
+    idleCauses: plants.idleCauses,
+  });
+  const inputIdleShare = shortInput.idleShare;
   const inputBillSharePct =
     plants.pnl && plants.pnl.revenueAnchor > 0
       ? (plants.pnl.inputsAnchor / plants.pnl.revenueAnchor) * 100
@@ -210,8 +205,22 @@ export default function InputsOutputsPanel({
                     ) : null
                   }
                   badge={
-                    f.shortageRatio != null && f.shortageRatio > 1.2 ? (
-                      <ShortageBadge ratio={f.shortageRatio} />
+                    isShortInputRow(shortInput, f.commodity, inputIdleUnits) ||
+                    (f.shortageRatio != null && f.shortageRatio > 1.2) ? (
+                      <>
+                        {isShortInputRow(shortInput, f.commodity, inputIdleUnits) && (
+                          <span
+                            data-short-input
+                            className="inline-flex items-center rounded-full border border-warning/40 bg-warning/10 px-1.5 text-[9px] font-semibold uppercase tracking-wide text-warning"
+                            title="This is the input that ran short last turn and held back your run."
+                          >
+                            Short input
+                          </span>
+                        )}
+                        {f.shortageRatio != null && f.shortageRatio > 1.2 && (
+                          <ShortageBadge ratio={f.shortageRatio} />
+                        )}
+                      </>
                     ) : null
                   }
                 />
@@ -219,12 +228,11 @@ export default function InputsOutputsPanel({
             </ul>
           )}
           {costliest && <InputOffersHint flow={costliest} />}
-          {showsInputShortfall && commodities.throughput?.bindingInput && (
+          {shortInput.showsCallout && shortInput.commodity && (
             <p className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
               Last turn, short supply of{" "}
               <span className="font-semibold">
-                {COMMODITY_LABELS[commodities.throughput.bindingInput as CommodityType] ??
-                  commodities.throughput.bindingInput}
+                {COMMODITY_LABELS[shortInput.commodity as CommodityType] ?? shortInput.commodity}
               </span>{" "}
               was the binding input.{" "}
               {inputIdleShare != null && inputIdleShare > 0.005 ? (
@@ -248,6 +256,14 @@ export default function InputsOutputsPanel({
               )}
               . That floor sits under the limit, not under the run: when the input you can actually
               buy falls short, the run can still be cut below it.
+            </p>
+          )}
+          {shortInput.unknownWhich && (
+            <p
+              data-short-input-unknown
+              className="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground"
+            >
+              An input ran short but the game did not record which one this turn.
             </p>
           )}
           <OwnSupplyNotes demands={commodities.demands} />

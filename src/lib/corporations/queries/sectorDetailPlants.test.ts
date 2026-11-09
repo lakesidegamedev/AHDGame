@@ -247,6 +247,9 @@ describe("buildSectorPlantsSection", () => {
     const byInput = settled({ runCutBy: ["inputs"], bindingInput: "iron" });
     expect(byInput.map((c) => c.cause)).toEqual(["held", "inputs"]);
     expect(byInput[0]?.heldInput).toBe("Iron Ore");
+    // The inputs slice carries the commodity key so the page can flag its row.
+    expect(byInput[1]?.bindingInput).toBe("iron");
+    expect(settled({})[1]?.bindingInput).toBeUndefined();
     const byCash = settled({ runCutBy: ["cash"] });
     expect(byCash.map((c) => c.cause)).toEqual(["held", "cash"]);
     expect(byCash[0]?.heldInput).toBeUndefined();
