@@ -7,7 +7,7 @@ import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
 import { servicesConfig } from "@/lib/config/services";
 
 // POST /api/seed — Seeds the database from static seed data; protected by SEED_SECRET bearer token and idempotent unless ?reset=true.
-// Auth: requireAdminOrApiKey
+// Auth: SEED_SECRET bearer token
 // Errors: 401
 export async function POST(request: Request) {
   const secret = servicesConfig.seedSecret();

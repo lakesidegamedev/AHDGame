@@ -50,7 +50,8 @@ describe("2027 to 2059 content calendar", () => {
     expect(families(2033)).toContain("arctic_opening");
     expect(families(2035)).toContain("climate_migration_surge");
     expect(families(2036)).toContain("antimicrobial_resistance");
-    expect(families(2040)).toContain("orbital_debris");
+    expect(families(2041)).not.toContain("orbital_debris");
+    expect(families(2042)).toContain("orbital_debris");
     expect(families(2041)).not.toContain("fusion_breakthrough");
     expect(families(2042)).toContain("fusion_breakthrough");
     expect(families(2059)).toEqual(

@@ -1,7 +1,7 @@
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
+import type { CountryId } from "@/lib/constants/countries";
 import type { Db } from "mongodb";
 import type { PartyHistorySnapshot, StatePartyOrg } from "@/lib/db/types";
-import { COUNTRY_ORDER, COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
@@ -18,9 +18,7 @@ type OrgRow = { _id: { countryId: string; partyId: string }; organization: numbe
 export async function snapshotPartyHistory(db: Db, turn: number): Promise<number> {
   // Full-simulation countries only: a background country (#5702) has no
   // politicians, government or legislature for this phase to run.
-  const activeCountries = (await getFullSimulationCountryIds(db)).filter(
-    (id) => COUNTRY_CONFIGS[id].status === "active" || !COUNTRY_ORDER.includes(id)
-  );
+  const activeCountries = await getFullSimulationCountryIds(db);
   if (activeCountries.length === 0) return 0;
 
   const countryFilter = { countryId: { $in: activeCountries } };

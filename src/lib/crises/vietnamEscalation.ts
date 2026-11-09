@@ -336,7 +336,7 @@ function clamp01to100(n: number): number {
  * deliberately reads nothing and writes nothing. It is a pure multiplier on
  * whatever baseline procurement demand the contracting system computes, so that
  * system can adopt it with one call and no coupling in the other direction.
- * Surfaced to players on the conflicts hub via `getVietnamEscalationSummary`.
+ * Surfaced to players on the conflicts hub.
  */
 export function vietnamProcurementMultiplier(level: number): number {
   return rungForLevel(clampVietnamLevel(level))?.procurementMultiplier ?? 1;
@@ -459,15 +459,6 @@ export async function recordVietnamMove(
   return { before, after };
 }
 
-/** Advance the war clock by one turn and persist. Called from the crisis turn. */
-export async function tickVietnamEscalation(db: Db): Promise<VietnamEscalationState> {
-  const before = await getVietnamEscalation(db);
-  if (before.level < VIETNAM_WAR_LEVEL) return before;
-  const after = tickVietnamWarClock(before);
-  await putVietnamEscalation(db, after);
-  return after;
-}
-
 /**
  * The small query helper other systems read the war off.
  *
@@ -488,22 +479,4 @@ export interface VietnamEscalationSummary {
   eastSupport: number;
   warTurns: number;
   dials: VietnamDials;
-}
-
-/** Everything the conflicts hub needs to render the ladder, in one read. */
-export async function getVietnamEscalationSummary(db: Db): Promise<VietnamEscalationSummary> {
-  const state = await (
-    await import("@/lib/livingConflict/vietnamCompat")
-  ).livingVietnamAsLegacyState(db);
-  const rung = rungForLevel(state.level);
-  return {
-    level: state.level,
-    rungKey: rung?.key ?? null,
-    rungLabel: rung?.label ?? null,
-    rungSummary: rung?.summary ?? null,
-    westSupport: state.westSupport,
-    eastSupport: state.eastSupport,
-    warTurns: state.warTurns,
-    dials: deriveVietnamDials(state),
-  };
 }
