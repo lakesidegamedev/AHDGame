@@ -4,12 +4,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const routeEffectIntents = vi.hoisted(() => vi.fn(async () => ({ applied: 1, unsupported: {} })));
 const logWireEvent = vi.hoisted(() => vi.fn(async () => undefined));
 const spendFromTreasury = vi.hoisted(() => vi.fn(async () => undefined));
-const creditTreasury = vi.hoisted(() => vi.fn(async () => undefined));
+const rates = vi.hoisted(() => ({ JPY: 150 as number | undefined }));
+const budgetDoc = vi.hoisted(() => ({ balance: 1e15 }));
 const era = vi.hoisted(() => ({ year: 2045 }));
 
 vi.mock("@/lib/turn/crisisV2/intents", () => ({ routeEffectIntents }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent }));
-vi.mock("@/lib/budget/treasurySpend", () => ({ spendFromTreasury, creditTreasury }));
+vi.mock("@/lib/budget/treasurySpend", () => ({ spendFromTreasury }));
+vi.mock("@/lib/campaigns/campaignCurrency", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/campaigns/rules/currency")>(
+    "@/lib/campaigns/rules/currency"
+  );
+  return {
+    campaignAnchorToLocal: actual.campaignAnchorToLocal,
+    getCampaignCurrency: actual.getCampaignCurrency,
+    loadCampaignCurrencyRates: async () => (rates.JPY ? { JPY: rates.JPY } : {}),
+  };
+});
 vi.mock("@/lib/era/context", () => ({ getEraContext: async () => ({ year: era.year }) }));
 vi.mock("@/lib/observability/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -107,7 +118,15 @@ function makeDb(initial: Doc[] = [], corp?: { _id: ObjectId; rdScore: number; na
   const statesCol = { find: () => ({ toArray: async () => [{ _id: "s1" }, { _id: "s2" }] }) };
   const db = {
     collection: (name: string) =>
-      name === "frontierRaces" ? racesCol : name === "corporations" ? corpsCol : statesCol,
+      name === "frontierRaces"
+        ? racesCol
+        : name === "corporations"
+          ? corpsCol
+          : name === "federalBudget"
+            ? { findOne: async () => ({ treasuryBalance: budgetDoc.balance }) }
+            : name === "gameState"
+              ? { findOne: async () => ({ preset: undefined }) }
+              : statesCol,
   };
   return { db: db as never, races, corpUpdates };
 }
@@ -115,6 +134,8 @@ function makeDb(initial: Doc[] = [], corp?: { _id: ObjectId; rdScore: number; na
 beforeEach(() => {
   vi.clearAllMocks();
   era.year = 2045;
+  rates.JPY = 150;
+  budgetDoc.balance = 1e15;
 });
 
 describe("fundFrontierRace", () => {
@@ -149,6 +170,73 @@ describe("fundFrontierRace", () => {
       expect.anything()
     );
     expect((races.get("fusion")?.contributions as Record<string, number>)["country:US"]).toBe(10);
+  });
+
+  it("charges a yen treasury in yen, not anchor units", async () => {
+    const { db } = makeDb();
+    await fundFrontierRace(db, {
+      raceId: "fusion",
+      kind: "country",
+      entityId: "JP",
+      points: 10,
+      turn: 5,
+    });
+    expect(spendFromTreasury).toHaveBeenCalledWith(
+      expect.anything(),
+      "JP",
+      250_000_000 * 150,
+      expect.anything()
+    );
+  });
+
+  it("refuses a nation whose balance cannot cover the order", async () => {
+    budgetDoc.balance = 1;
+    const { db, races } = makeDb();
+    const result = await fundFrontierRace(db, {
+      raceId: "fusion",
+      kind: "country",
+      entityId: "US",
+      points: 10,
+      turn: 5,
+    });
+    expect(result).toMatchObject({ ok: false, code: "cannot_pay" });
+    expect(spendFromTreasury).not.toHaveBeenCalled();
+    expect(races.get("fusion")?.contributions).toEqual({});
+  });
+
+  it("never charges when the race has a winner, so there is nothing to refund", async () => {
+    const { db } = makeDb([
+      {
+        _id: "fusion",
+        contributions: {},
+        names: {},
+        winner: { key: "country:CN", points: 1, turn: 1 },
+      },
+    ]);
+    // The pre-check is bypassed by a winner landing after it: simulate via guard.
+    const result = await fundFrontierRace(db, {
+      raceId: "fusion",
+      kind: "country",
+      entityId: "US",
+      points: 10,
+      turn: 5,
+    });
+    expect(result).toMatchObject({ ok: false, code: "closed" });
+    expect(spendFromTreasury).not.toHaveBeenCalled();
+  });
+
+  it("rolls the points back when the charge fails", async () => {
+    spendFromTreasury.mockRejectedValueOnce(new Error("insufficient"));
+    const { db, races } = makeDb();
+    const result = await fundFrontierRace(db, {
+      raceId: "fusion",
+      kind: "country",
+      entityId: "US",
+      points: 10,
+      turn: 5,
+    });
+    expect(result).toMatchObject({ ok: false, code: "cannot_pay" });
+    expect((races.get("fusion")?.contributions as Record<string, number>)["country:US"]).toBe(0);
   });
 
   it("refuses a race that already has a winner", async () => {

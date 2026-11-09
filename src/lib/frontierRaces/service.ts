@@ -4,7 +4,13 @@
  */
 import { randomUUID } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
-import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
+import { spendFromTreasury } from "@/lib/budget/treasurySpend";
+import {
+  campaignAnchorToLocal,
+  getCampaignCurrency,
+  loadCampaignCurrencyRates,
+} from "@/lib/campaigns/campaignCurrency";
+import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
@@ -65,10 +71,41 @@ export interface FundArgs {
   turn: number;
 }
 
+export interface CountryCostQuote {
+  /** Cost in anchor currency, the unit the rules price in. */
+  anchor: number;
+  /** What the treasury is actually charged, in its own currency. */
+  local: number;
+  currency: CurrencyCode;
+}
+
+/** Converts a nation's order cost from anchor to its treasury currency at the frozen base rate. */
+export async function quoteCountryCost(
+  db: Db,
+  countryId: string,
+  points: number
+): Promise<CountryCostQuote> {
+  const [rates, state] = await Promise.all([
+    loadCampaignCurrencyRates(db),
+    db
+      .collection<{ _id: string; preset?: string }>("gameState")
+      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+  ]);
+  const preset = state?.preset;
+  const anchor = countryOrderCost(points);
+  return {
+    anchor,
+    local: campaignAnchorToLocal(anchor, countryId, rates, preset),
+    currency: getCampaignCurrency(countryId, preset),
+  };
+}
+
 /**
  * Funds a race for a nation (treasury cash) or a corporation (research points).
- * The payer is charged first; if the race closed in between, the charge is
- * returned. Authorisation (who may act for the entrant) belongs to the caller.
+ * The contribution is reserved first behind a no-winner guard, then the payer is
+ * charged; if the charge fails the reserved points are taken back. Nothing is
+ * ever charged and then refunded, so no money is created or destroyed.
+ * Authorisation (who may act for the entrant) belongs to the caller.
  */
 export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResult> {
   const def = frontierRaceDef(args.raceId);
@@ -90,41 +127,47 @@ export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResu
 
   const key = entrantKey(args.kind, args.entityId);
   let name: string;
-  let refund: () => Promise<void>;
+  let charge: () => Promise<boolean>;
   if (args.kind === "country") {
     const config = COUNTRY_CONFIGS[args.entityId as CountryId];
     if (!config) return fail("bad_order", "Unknown country");
     name = config.name;
-    const cost = countryOrderCost(points);
-    try {
-      await spendFromTreasury(db, args.entityId as CountryId, cost, {
-        resyncDerived: true,
-        witness: {
-          flow: "frontier_programme",
-          key: `frontier:${def.id}:${args.entityId}:${args.turn}:${randomUUID()}`,
-          site: "frontierRaces/service",
-        },
-      });
-    } catch {
+    const { local: cost } = await quoteCountryCost(db, args.entityId, points);
+    // Legacy treasuries may go negative, so refuse to fund on debt in either mode.
+    const budget = await db
+      .collection<{ treasuryBalance?: number }>("federalBudget")
+      .findOne({ countryId: args.entityId } as never, { projection: { treasuryBalance: 1 } });
+    if ((budget?.treasuryBalance ?? 0) < cost) {
       return fail("cannot_pay", "The treasury cannot cover this order");
     }
-    refund = async () => {
-      await creditTreasury(db, args.entityId as CountryId, cost, { resyncDerived: true });
+    charge = async () => {
+      try {
+        await spendFromTreasury(db, args.entityId as CountryId, cost, {
+          resyncDerived: true,
+          witness: {
+            flow: "frontier_programme",
+            key: `frontier:${def.id}:${args.entityId}:${args.turn}:${randomUUID()}`,
+            site: "frontierRaces/service",
+          },
+        });
+        return true;
+      } catch {
+        return false;
+      }
     };
   } else {
     const corps = await getCorporationsCollection(db);
     if (!ObjectId.isValid(args.entityId)) return fail("bad_order", "Unknown corporation");
     const _id = new ObjectId(args.entityId);
     const cost = corporationOrderCost(points);
-    const spent = await corps.updateOne(
-      { _id, rdScore: { $gte: cost } },
-      { $inc: { rdScore: -cost, frontierResearchSpent: cost } }
-    );
-    if (spent.modifiedCount === 0) return fail("cannot_pay", "Not enough R&D points");
     const corp = await corps.findOne({ _id }, { projection: { name: 1 } });
     name = corp?.name ?? "Corporation";
-    refund = async () => {
-      await corps.updateOne({ _id }, { $inc: { rdScore: cost, frontierResearchSpent: -cost } });
+    charge = async () => {
+      const spent = await corps.updateOne(
+        { _id, rdScore: { $gte: cost } },
+        { $inc: { rdScore: -cost } }
+      );
+      return spent.modifiedCount > 0;
     };
   }
 
@@ -136,9 +179,15 @@ export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResu
     },
     { returnDocument: "after" }
   );
-  if (!updated) {
-    await refund();
-    return fail("closed", "This programme already has a winner");
+  if (!updated) return fail("closed", "This programme already has a winner");
+
+  if (!(await charge())) {
+    // Points are bookkeeping, not money: taking them back creates nothing.
+    await races.updateOne({ _id: def.id }, { $inc: { [`contributions.${key}`]: -points } });
+    return fail(
+      "cannot_pay",
+      args.kind === "country" ? "The treasury cannot cover this order" : "Not enough R&D points"
+    );
   }
   const total = updated.contributions[key] ?? points;
   return { ok: true, points, total, progress: Math.min(1, total / def.threshold) };

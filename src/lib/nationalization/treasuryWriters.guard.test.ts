@@ -121,7 +121,7 @@ const SPEND_REGISTRY: Record<string, Registered> = {
     witness: [{ kind: "flow", flows: ["crisis_response"] }],
   },
   "src/lib/frontierRaces/service.ts": {
-    writers: ["creditTreasury", "spendFromTreasury"],
+    writers: ["spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["frontier_programme"] }],
   },
   "src/lib/crises/levers/leverCommand.ts": {

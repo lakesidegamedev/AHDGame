@@ -56,14 +56,18 @@ export const MEANINGFUL_STAKE_SHARE = 0.25;
 export const SUNSET_TURNS = 48;
 /** Strength of the licence relative to the winning method. */
 export const LICENCE_STRENGTH = 0.5;
-/** Plant output a corporation gets from holding a method, at full strength. */
-export const METHOD_PLANT_OUTPUT_PCT = 0.012;
+/**
+ * Plant output a corporation gets from holding a method, at full strength.
+ * Sized so one method (6000+ research points) beats what the same points buy
+ * from ordinary frontier programmes (about +5.6%), because a race can be lost.
+ */
+export const METHOD_PLANT_OUTPUT_PCT = 0.1;
 /** National approval points for the winning nation. */
 export const WINNER_APPROVAL = 1.5;
 /** National approval points lost by a nation that funded a meaningful stake and lost. */
 export const LOSER_APPROVAL = -0.4;
-/** National approval points a licensed nation regains when the licence arrives. */
-export const LICENCE_APPROVAL = 0.6;
+/** National approval points a licensed nation regains when the licence arrives. Smaller than the loss. */
+export const LICENCE_APPROVAL = 0.2;
 /** Share of a losing corporation's spent research points returned when its licence arrives. */
 export const CONVERSION_RETURN_SHARE = 0.4;
 

@@ -6,6 +6,7 @@ import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { resolveCharacterRoles } from "@/lib/crises/interactionEngine";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { quoteCountryCost } from "./service";
 
 export interface FundingActor {
   userId: string;
@@ -17,7 +18,13 @@ export interface FundingActor {
 }
 
 export interface FundingOptions {
-  country: { id: string; name: string } | null;
+  country: {
+    id: string;
+    name: string;
+    /** Treasury cost of one point in the nation's own currency. */
+    costPerPointLocal: number;
+    currency: string;
+  } | null;
   corporations: { id: string; name: string; rdScore: number }[];
 }
 
@@ -30,10 +37,16 @@ export async function canFundForCountry(db: Db, actor: FundingActor): Promise<bo
 
 export async function loadFundingOptions(db: Db, actor: FundingActor): Promise<FundingOptions> {
   const countryId = actor.character.countryId;
-  const country =
-    countryId && (await canFundForCountry(db, actor))
-      ? { id: countryId, name: COUNTRY_CONFIGS[countryId as CountryId].name }
-      : null;
+  let country: FundingOptions["country"] = null;
+  if (countryId && (await canFundForCountry(db, actor))) {
+    const quote = await quoteCountryCost(db, countryId, 1);
+    country = {
+      id: countryId,
+      name: COUNTRY_CONFIGS[countryId as CountryId].name,
+      costPerPointLocal: quote.local,
+      currency: quote.currency,
+    };
+  }
   const corps = await getCorporationsCollection(db);
   const owned = ObjectId.isValid(actor.userId)
     ? await corps

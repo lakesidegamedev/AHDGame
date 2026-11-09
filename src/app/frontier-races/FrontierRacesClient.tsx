@@ -6,7 +6,6 @@ import type { FrontierRaceView } from "@/lib/frontierRaces/service";
 import type { FundingOptions } from "@/lib/frontierRaces/access";
 import {
   CORPORATION_RD_PER_POINT,
-  COUNTRY_CASH_PER_POINT,
   LICENCE_STRENGTH,
   SUNSET_TURNS,
 } from "@/lib/frontierRaces/rules";
@@ -136,7 +135,8 @@ function RaceCard({
                 className="rounded bg-primary px-3 py-1.5 text-primary-foreground disabled:opacity-50"
               >
                 Fund for {options.country.name} (treasury cost{" "}
-                {(points * COUNTRY_CASH_PER_POINT).toLocaleString()})
+                {(points * options.country.costPerPointLocal).toLocaleString()}{" "}
+                {options.country.currency})
               </button>
             )}
             {options.corporations.length > 0 && (
