@@ -247,6 +247,35 @@ export const CAMPAIGN_SPILLOVER: Readonly<Record<string, readonly SpilloverLink[
   congo: [link("refugees", "refugee_crisis", "migration", 50, 0.3)],
   suez_aftermath: [link("energy", "energy_crisis", "trade", 45, 0.4)],
   northern_ireland: [],
+  second_pandemic: [
+    link("freight", "autonomous_logistics_stall", "trade", 45, 0.4),
+    link("pensions", "longevity_pension_strain", "finance", 55, 0.3),
+  ],
+  sovereign_debt_wave: [
+    link("lenders", "tech_lender_run", "finance", 45, 0.4),
+    link("housing", "housing_rate_reset_crash", "finance", 50, 0.4),
+    link("pensions", "pension_funding_cliff", "finance", 55, 0.3),
+  ],
+  grid_cascade: [link("grid", "grid_emergency", "trade", 40, 0.6)],
+  critical_minerals_squeeze: [
+    link("chips", "chip_fab_fire", "trade", 45, 0.4),
+    link("freight", "autonomous_logistics_stall", "trade", 55, 0.3),
+  ],
+  climate_migration_surge: [
+    link("insurance", "climate_insurance_retreat", "climate", 50, 0.3),
+    link("water", "municipal_water_rationing", "migration", 55, 0.3),
+  ],
+  arctic_opening: [link("shipping", "autonomous_logistics_stall", "trade", 55, 0.3)],
+  antimicrobial_resistance: [
+    link("food", "engineered_crop_blight", "trade", 55, 0.3),
+    link("pensions", "longevity_pension_strain", "finance", 60, 0.3),
+  ],
+  orbital_debris: [link("satellites", "orbital_debris_outage", "trade", 40, 0.7)],
+  fusion_breakthrough: [link("displacement", "automation_layoff_wave", "finance", 60, 0.15)],
+  election_integrity_crisis: [
+    link("media", "synthetic_media_market_panic", "alliance", 50, 0.4),
+    link("models", "ai_model_failure_scandal", "alliance", 60, 0.2),
+  ],
 };
 
 function link(

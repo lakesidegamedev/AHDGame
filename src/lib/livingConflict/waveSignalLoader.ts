@@ -23,6 +23,10 @@ interface MacroRow {
   governance?: { debtToGdp?: { value?: number } };
 }
 
+const ORBITAL_STRATEGY_ID = "orbital_logistics";
+const PERSONALISED_MEDIA_STRATEGY_ID = "personalised_media";
+const SOVEREIGN_CRISIS_STATES = ["crisisPending", "crisisResolving", "recovering"];
+
 const BOARD_KEYS: Array<[keyof WaveSignals, string]> = [
   ["healthPrevention", "health.prevention"],
   ["healthEfficiency", "health.systemEfficiency"],
@@ -42,8 +46,14 @@ const mean = (values: Array<number | undefined>): number | null => {
   return kept.length === 0 ? null : kept.reduce((sum, value) => sum + value, 0) / kept.length;
 };
 
+/** 1 when the country is in a sovereign default crisis, 0 when not, null with no budget record. */
+function sovereignCrisisReading(states: Array<string | undefined>): number | null {
+  if (states.length === 0) return null;
+  return states.some((state) => state && SOVEREIGN_CRISIS_STATES.includes(state)) ? 1 : 0;
+}
+
 async function readSignals(db: Db, countryIds: string[]): Promise<Map<string, WaveSignals>> {
-  const [macro, boards] = await Promise.all([
+  const [macro, boards, operators, budgets] = await Promise.all([
     db
       .collection<MacroRow>("macroMetrics")
       .find(
@@ -69,7 +79,36 @@ async function readSignals(db: Db, countryIds: string[]): Promise<Map<string, Wa
         projection: { _id: 0, countryId: 1, values: 1 },
       })
       .toArray(),
+    // Active sectors running each method, per country.
+    db
+      .collection("corporateSectors")
+      .aggregate<{ _id: { countryId: string; strategyId: string }; count: number }>([
+        {
+          $match: {
+            countryId: { $in: countryIds },
+            strategyId: { $in: [ORBITAL_STRATEGY_ID, PERSONALISED_MEDIA_STRATEGY_ID] },
+            mothballed: { $ne: true },
+          },
+        },
+        {
+          $group: {
+            _id: { countryId: "$countryId", strategyId: "$strategyId" },
+            count: { $sum: 1 },
+          },
+        },
+      ])
+      .toArray(),
+    db
+      .collection<{ countryId?: string; sovereignCrisisState?: string }>("federalBudget")
+      .find(
+        { countryId: { $in: countryIds } },
+        { projection: { _id: 0, countryId: 1, sovereignCrisisState: 1 } }
+      )
+      .toArray(),
   ]);
+  const operatorCount = (countryId: string, strategyId: string): number =>
+    operators.find((row) => row._id.countryId === countryId && row._id.strategyId === strategyId)
+      ?.count ?? 0;
   const result = new Map<string, WaveSignals>();
   for (const countryId of countryIds) {
     const rows = macro.filter((row) => row.countryId === countryId);
@@ -82,6 +121,11 @@ async function readSignals(db: Db, countryIds: string[]): Promise<Map<string, Wa
       urbanization: mean(rows.map((row) => row.population?.urbanizationRate?.value)),
       migrationRate: mean(rows.map((row) => row.population?.migrationRate?.value)),
       debtToGdp: mean(rows.map((row) => row.governance?.debtToGdp?.value)),
+      orbitalOperators: operatorCount(countryId, ORBITAL_STRATEGY_ID),
+      personalisedMediaOperators: operatorCount(countryId, PERSONALISED_MEDIA_STRATEGY_ID),
+      sovereignCrisis: sovereignCrisisReading(
+        budgets.filter((row) => row.countryId === countryId).map((row) => row.sovereignCrisisState)
+      ),
     };
     for (const [name, boardKey] of BOARD_KEYS) {
       signals[name] = mean(

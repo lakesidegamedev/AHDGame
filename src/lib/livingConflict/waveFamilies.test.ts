@@ -158,7 +158,7 @@ describe("wave family opening rules", () => {
   });
 
   it("keeps the debt wave shut until three countries qualify together", () => {
-    const stressed = signals({ debtToGdp: 140, gdpGrowth: 0 });
+    const stressed = signals({ debtToGdp: 140, gdpGrowth: 0, sovereignCrisis: 0 });
     const calm = signals({ debtToGdp: 60, gdpGrowth: 2 });
     const two = new Map([
       ["US", stressed],
@@ -172,6 +172,12 @@ describe("wave family opening rules", () => {
     const chances = waveAnnualChances(SOVEREIGN_DEBT_WAVE_KEY, three);
     expect([...chances.keys()].sort()).toEqual(["IT", "JP", "US"]);
     expect(chances.get("US")!).toBeGreaterThan(0);
+    // a country already in its own default crisis neither counts nor is hit twice
+    const defaulting = signals({ debtToGdp: 140, gdpGrowth: 0, sovereignCrisis: 1 });
+    const withDefault = new Map([...two, ["JP", defaulting]]);
+    expect(
+      [...waveAnnualChances(SOVEREIGN_DEBT_WAVE_KEY, withDefault).values()].every((v) => v === 0)
+    ).toBe(true);
   });
 
   it("opens the grid cascade only in the summer window", () => {
@@ -226,10 +232,21 @@ describe("climate, Arctic, resistance and orbit opening rules", () => {
     expect(weak).toBeGreaterThan(fair);
   });
 
-  it("only exposes research-heavy space economies to orbital debris", () => {
+  it("only exposes countries that run orbital constellations to orbital debris", () => {
     const rule = waveFamilyTable(ORBITAL_DEBRIS_KEY).opening;
-    expect(waveGatesHold(rule, "US", signals({ rdIntensity: 1 }))).toBe(false);
-    expect(waveGatesHold(rule, "US", signals({ rdIntensity: 3.5, tension: 50 }))).toBe(true);
+    expect(waveGatesHold(rule, "US", signals({ orbitalOperators: 0, rdIntensity: 4 }))).toBe(false);
+    expect(waveGatesHold(rule, "US", signals({ orbitalOperators: 1, tension: 50 }))).toBe(true);
+    const few = waveAnnualChance(rule, signals({ orbitalOperators: 1, tension: 50 }));
+    const many = waveAnnualChance(rule, signals({ orbitalOperators: 6, tension: 50 }));
+    expect(many).toBeGreaterThan(few);
+  });
+
+  it("keeps a country already in a sovereign default crisis out of the debt wave", () => {
+    const rule = waveFamilyTable(SOVEREIGN_DEBT_WAVE_KEY).opening;
+    const stressed = { debtToGdp: 140, gdpGrowth: 0 };
+    expect(waveGatesHold(rule, "IT", signals({ ...stressed, sovereignCrisis: 0 }))).toBe(true);
+    expect(waveGatesHold(rule, "IT", signals({ ...stressed, sovereignCrisis: 1 }))).toBe(false);
+    expect(waveGatesHold(rule, "IT", signals(stressed))).toBe(false);
   });
 });
 
@@ -261,6 +278,14 @@ describe("fusion and election integrity", () => {
     const weak = waveAnnualChance(rule, signals({ integrity: 25, openness: 30 }));
     const fair = waveAnnualChance(rule, signals({ integrity: 50, openness: 55 }));
     expect(weak).toBeGreaterThan(fair);
+  });
+
+  it("raises the election integrity chance with personalised media adoption", () => {
+    const rule = waveFamilyTable(ELECTION_INTEGRITY_KEY).opening;
+    const base = { integrity: 40, openness: 40 };
+    const none = waveAnnualChance(rule, signals({ ...base, personalisedMediaOperators: 0 }));
+    const some = waveAnnualChance(rule, signals({ ...base, personalisedMediaOperators: 4 }));
+    expect(some).toBeGreaterThan(none);
   });
 });
 

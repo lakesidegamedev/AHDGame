@@ -7,7 +7,7 @@
  * Opening probabilities are annual, per country, before the seeded roll.
  */
 
-/** Readings a family may gate or stress on. All are per country except the last two. */
+/** Readings a family may gate or stress on. All are per country except tension and yearFraction. */
 export type WaveSignalName =
   | "healthPrevention"
   | "healthEfficiency"
@@ -24,7 +24,10 @@ export type WaveSignalName =
   | "migrationRate"
   | "debtToGdp"
   | "tension"
-  | "yearFraction";
+  | "yearFraction"
+  | "orbitalOperators"
+  | "personalisedMediaOperators"
+  | "sovereignCrisis";
 
 /** Every named signal holds a reading, or null when the country has none. */
 export type WaveSignals = Record<WaveSignalName, number | null>;
@@ -165,6 +168,8 @@ export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
       gates: [
         { signal: "debtToGdp", min: 100 },
         { signal: "gdpGrowth", max: 1.5 },
+        // 1 while the country is already in its own sovereign default crisis
+        { signal: "sovereignCrisis", max: 0 },
       ],
       stressors: [
         { signal: "debtToGdp", from: 100, to: 200, weight: 0.1 },
@@ -268,9 +273,9 @@ export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
     opening: {
       baseAnnual: 0.01,
       capAnnual: 0.15,
-      gates: [{ signal: "rdIntensity", min: 2.5 }],
+      gates: [{ signal: "orbitalOperators", min: 1 }],
       stressors: [
-        { signal: "rdIntensity", from: 2.5, to: 4.5, weight: 0.08 },
+        { signal: "orbitalOperators", from: 1, to: 8, weight: 0.08 },
         { signal: "tension", from: 30, to: 80, weight: 0.06 },
       ],
     },
@@ -303,6 +308,7 @@ export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
       stressors: [
         { signal: "integrity", from: 55, to: 20, weight: 0.12 },
         { signal: "openness", from: 60, to: 25, weight: 0.08 },
+        { signal: "personalisedMediaOperators", from: 0, to: 6, weight: 0.06 },
       ],
     },
     dynamics: { ...SLOW, startPressure: 30, peakAt: 60, windowTurns: 24, onsetEveryTurns: 3 },
