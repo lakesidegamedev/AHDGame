@@ -26,7 +26,3 @@ areas: [frontend, backend]
 - The background country page gains a Public finances panel: the interest spiral
   count against the two years that trigger a restructuring, how much programme
   spending is left after cuts, tax rises so far and the latest austerity package.
-- Fix: the interest spiral restructuring never fired for background countries
-  because it read a counter that nothing wrote for them. It now restructures
-  through the same default path as other countries after two spiral years, so
-  their bondholders take the haircut the page warns about.

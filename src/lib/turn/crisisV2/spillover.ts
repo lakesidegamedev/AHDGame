@@ -8,12 +8,15 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CountryId } from "@/lib/constants/countries";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
-import type { Crisis } from "@/lib/db/types/crisis";
+import type { Crisis, CrisisTemplate } from "@/lib/db/types/crisis";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { MACRO_COUNTRIES_COLLECTION } from "@/lib/db/collections/macroCountries";
 import { decideOpenings, type DirectorActiveCrisis } from "@/lib/crises/v2/director";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
+import { templateKeyFromDefinitionId } from "@/lib/crises/v2/legacyConvert";
+import { spilloverShell } from "@/lib/crises/v2/spilloverShell";
+import { ALL_CRISIS_TEMPLATES } from "@/lib/crises/templates";
 import {
   allianceWeights,
   evaluateSpillover,
@@ -366,6 +369,11 @@ async function openSpilled(
     const id = new ObjectId();
     const instance = createCrisisInstance(def as CrisisDefinition, turn);
     instance.parents = [ref(source._id, source.v2.definitionId, open.linkId)];
+    const templateKey = templateKeyFromDefinitionId(def.id);
+    const template = templateKey
+      ? (ALL_CRISIS_TEMPLATES as Record<string, CrisisTemplate | undefined>)[templateKey]
+      : undefined;
+    const shell = spilloverShell(def, template?.effects);
     inserted.push({
       _id: id,
       name: def.label,
@@ -376,8 +384,9 @@ async function openSpilled(
       status: "active",
       startTurn: turn,
       endTurn: null,
-      durationTurns: null,
-      effects: [],
+      durationTurns: shell.durationTurns,
+      effects: shell.effects,
+      ...(templateKey ? { templateKey } : {}),
       wireMessageOnStart: `${def.label} is spreading.`,
       wireMessageOnEnd: `${def.label} has eased.`,
       createdBy: null,

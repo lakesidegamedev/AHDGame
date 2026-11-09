@@ -54,10 +54,7 @@ import {
   emitFiscalConsolidationNews,
   loadRulingEconomicPositions,
 } from "./fiscalStabilizer";
-import {
-  INTEREST_SPIRAL_YEARS_FOR_RESTRUCTURE,
-  shouldRestructureForInterest,
-} from "./rules/fiscalStabilizer";
+import { shouldRestructureForInterest } from "./rules/fiscalStabilizer";
 import { backgroundBudgetDocuments, loadBackgroundBudgetSources } from "./backgroundBudget";
 import {
   backgroundAnnualGdp,
@@ -205,9 +202,9 @@ export async function processFiscalYear(
   );
   const processedBudgetIds = new Set<string>();
   const interestSpiralCountries = new Set<string>();
-  // Background countries count their spiral on the macro document, which the
-  // closing step has already reset, so the restructuring carries the count.
-  const backgroundSpiralCountries = new Set<string>();
+  // Background countries keep their spiral count in macro state, so the years
+  // that tripped the restructuring travel with the country to the restructure call.
+  const backgroundSpiralYears = new Map<string, number>();
   // Stabilizer state is written in one batch after the loop, never per country.
   const stabilizerWrites: AnyBulkWriteOperation<FederalBudget>[] = [];
   const consolidationNews: Array<{
@@ -506,7 +503,7 @@ export async function processFiscalYear(
       });
       if (fiscalStabilizerEnabled && closed.restructure) {
         interestSpiralCountries.add(countryId);
-        backgroundSpiralCountries.add(countryId);
+        backgroundSpiralYears.set(countryId, closed.interestSpiralYears);
       }
       if (closed.package) {
         backgroundPackage = {
@@ -750,15 +747,9 @@ export async function processFiscalYear(
     // resolution; this only fires one for a country still outside a crisis.
     if (interestSpiralCountries.has(countryId)) {
       try {
-        await restructureForInterestSpiral(
-          db,
-          countryId,
-          currentTurn,
-          realtimeMs,
-          backgroundSpiralCountries.has(countryId)
-            ? { countedYears: INTEREST_SPIRAL_YEARS_FOR_RESTRUCTURE }
-            : undefined
-        );
+        await restructureForInterestSpiral(db, countryId, currentTurn, realtimeMs, {
+          spiralYears: backgroundSpiralYears.get(countryId),
+        });
       } catch (err) {
         console.error(`[FiscalYear] Interest-spiral restructuring failed for ${countryId}:`, err);
       }

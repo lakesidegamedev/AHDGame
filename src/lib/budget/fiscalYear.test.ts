@@ -556,13 +556,9 @@ describe("processFiscalYear", () => {
         "sovereign",
         expect.anything()
       );
-      expect(restructureForInterestSpiral).toHaveBeenCalledWith(
-        db,
-        "IT",
-        760,
-        expect.any(Number),
-        undefined
-      );
+      expect(restructureForInterestSpiral).toHaveBeenCalledWith(db, "IT", 760, expect.any(Number), {
+        spiralYears: undefined,
+      });
     });
 
     it.each([

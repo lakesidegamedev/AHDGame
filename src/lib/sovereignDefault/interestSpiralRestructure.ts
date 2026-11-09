@@ -29,11 +29,11 @@ const FIREABLE_STATES: readonly SovereignCrisisState[] = ["normal", "warning"];
 
 export interface InterestSpiralRestructureOptions {
   /**
-   * Spiral years the caller already counted and reset elsewhere. A background
-   * country keeps its counter on its macro document, not on the budget this
-   * function reads, so it passes the count that made the restructuring due.
+   * Spiral years counted by the caller. Background countries track the count in
+   * their macro fiscal state and never write it onto the budget, so they pass it
+   * here; full countries leave it unset and the budget's own counter is read.
    */
-  countedYears?: number;
+  spiralYears?: number;
 }
 
 export async function restructureForInterestSpiral(
@@ -50,7 +50,7 @@ export async function restructureForInterestSpiral(
     { projection: { sovereignCrisisState: 1, "fiscalConsolidation.interestSpiralYears": 1 } }
   );
   if (!budget) return { ok: false, reason: "no-budget" };
-  const spiralYears = options.countedYears ?? budget.fiscalConsolidation?.interestSpiralYears ?? 0;
+  const spiralYears = options.spiralYears ?? budget.fiscalConsolidation?.interestSpiralYears ?? 0;
   if (!shouldRestructureForInterest(spiralYears)) return { ok: false, reason: "not-due" };
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
   if (!FIREABLE_STATES.includes(state)) return { ok: false, reason: "crisis-in-progress" };
@@ -83,12 +83,9 @@ export async function restructureForInterestSpiral(
   if (!result.ok) return { ok: false, reason: "restructure-failed" };
 
   // The haircut resets the clock: a further restructuring needs two more years.
-  // A caller-counted clock is reset by the caller, and the budget is left alone.
-  if (options.countedYears === undefined) {
-    await budgets.updateOne(
-      { _id: budgetId },
-      { $set: { "fiscalConsolidation.interestSpiralYears": 0 } }
-    );
-  }
+  await budgets.updateOne(
+    { _id: budgetId },
+    { $set: { "fiscalConsolidation.interestSpiralYears": 0 } }
+  );
   return { ok: true, bondsAffected: result.bondsAffected };
 }
