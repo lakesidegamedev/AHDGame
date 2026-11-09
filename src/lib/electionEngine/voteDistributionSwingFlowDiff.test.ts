@@ -17,6 +17,7 @@
  * Support are seeded to reflect the actual 1992 partisan landscape.
  */
 
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { describe, expect, it } from "vitest";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
@@ -176,8 +177,7 @@ describe("§7.3.2 swing-flow — diff against legacy engine (#4F)", () => {
         POOL,
         POOL,
         POOL,
-        fixture.demographics,
-        categories,
+        electorateFromStoredGroups(fixture.demographics, categories),
         fixture.orgs,
         baseOptions
       );
@@ -186,8 +186,7 @@ describe("§7.3.2 swing-flow — diff against legacy engine (#4F)", () => {
         POOL,
         POOL,
         POOL,
-        fixture.demographics,
-        categories,
+        electorateFromStoredGroups(fixture.demographics, categories),
         fixture.orgs,
         baseOptions
       );

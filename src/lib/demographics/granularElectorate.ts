@@ -106,6 +106,7 @@
  * the type doc on `Layer1TurnoutOverlay` (`src/lib/db/types/demographics.ts`).
  */
 
+import type { ElectorateUnit } from "./electorateUnit";
 import { isBucketTarget } from "./turnoutTarget";
 import { clamp } from "@/lib/numeric/rules";
 import {
@@ -265,6 +266,12 @@ export interface GranularSubstrateInput {
 /** Drop-in replacements for the legacy engine inputs. */
 export interface GranularSubstrate {
   campaignCells?: CampaignCell[];
+  /** Live units the vote engines iterate. */
+  electorate: ElectorateUnit[];
+  /**
+   * Group-shaped view of the same units, kept only for the lean and weighting
+   * helpers that still read stored-group rows.
+   */
   demographics: StateDemographics;
   categories: DemographicCategory[];
   liveTurnouts: Record<string, number>;
@@ -889,6 +896,7 @@ export function buildGranularElectorateSubstrate(
 
   const liveTurnouts: Record<string, number> = {};
   const participationLedgers: Record<string, ParticipationLedger> = {};
+  const electorate: ElectorateUnit[] = [];
   const groups: StateDemographics["groups"] = {};
   const categoryGroups: DemographicCategory["groups"] = [];
   let pool = 0;
@@ -936,6 +944,7 @@ export function buildGranularElectorateSubstrate(
     );
     const populationPct = unit.share * 100;
     liveTurnouts[unit.id] = turnout;
+    electorate.push({ id: unit.id, populationPct, economicLean, socialLean, turnout });
     groups[unit.id] = {
       population: populationPct,
       economicLean,
@@ -1088,6 +1097,7 @@ export function buildGranularElectorateSubstrate(
       : null;
 
   return {
+    electorate,
     demographics,
     categories,
     liveTurnouts,

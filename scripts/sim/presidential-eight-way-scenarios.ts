@@ -13,8 +13,9 @@
  * so it can be iterated on without touching the production suite.
  */
 
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { shiftDemographicsForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
+import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/electionEngine/constants";
 import { INDEPENDENT_VOTE_PENALTY } from "@/lib/presidentialElectionEngine";
 import {
@@ -261,8 +262,7 @@ function runGeneralScenario(sc: GeneralScenario): GeneralResult {
       totalPool,
       totalPool,
       state.pop * 1_000_000,
-      demos,
-      CATEGORIES,
+      electorateFromStoredGroups(demos, CATEGORIES),
       partyOrgByParty,
       options
     );
@@ -408,8 +408,7 @@ function runPaGeneralMatchup(args: { demOrgLevel?: number; demHomeState?: string
     totalPool,
     totalPool,
     pa.pop * 1_000_000,
-    demos,
-    CATEGORIES,
+    electorateFromStoredGroups(demos, CATEGORIES),
     partyOrgByParty,
     options
   );
@@ -466,7 +465,10 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
   for (const stateId of sc.states) {
     const state = STATES.find((s) => s.id === stateId);
     if (!state) continue;
-    const primaryDemos = shiftDemographicsForPrimary(demographicsForState(state), sc.partyPosition);
+    const primaryElectorate = shiftElectorateForPrimary(
+      electorateFromStoredGroups(demographicsForState(state), CATEGORIES),
+      sc.partyPosition
+    );
 
     const partyOrgByParty = new Map<string, number>();
     partyOrgByParty.set(sc.party, partyOrgForState(state, sc.party).org);
@@ -509,8 +511,7 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
       totalPool,
       totalPool,
       state.pop * 1_000_000,
-      primaryDemos,
-      CATEGORIES,
+      primaryElectorate,
       partyOrgByParty,
       options
     );

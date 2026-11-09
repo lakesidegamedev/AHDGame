@@ -444,8 +444,7 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       substrate.totalPool,
       substrate.totalPool,
       1_000_000,
-      substrate.demographics,
-      substrate.categories,
+      substrate.electorate,
       new Map(),
       {
         isGeneralElection: true,

@@ -1,4 +1,5 @@
 /** Deterministic paired mechanisms, using the production vote allocator. No database. */
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
@@ -94,8 +95,7 @@ function share(
     60000,
     60000,
     100000,
-    demo,
-    categories,
+    electorateFromStoredGroups(demo, categories),
     new Map([
       [partyIds[0], 50],
       [partyIds[1], 50],

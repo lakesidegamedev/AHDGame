@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import { ORG_WEIGHT_EXPONENT } from "./electionFormulaFactors";
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
@@ -81,8 +82,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -101,8 +101,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -121,8 +120,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -141,8 +139,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         isGeneralElection: true,
@@ -163,8 +160,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         isGeneralElection: true,
@@ -189,8 +185,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       0,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -234,8 +229,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       baseOptions
     );
@@ -244,8 +238,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { ...baseOptions, applyPartyFit: true }
     );
@@ -291,8 +284,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       baseOptions
     );
@@ -301,8 +293,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { ...baseOptions, stateOrgByCandidate: new Map([["funded", 10]]) }
     );
@@ -345,8 +336,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       baseOptions
     );
@@ -406,8 +396,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
         turnPool,
         totalPool,
         population,
-        demographics,
-        categories,
+        electorateFromStoredGroups(demographics, categories),
         emptyOrgMap,
         { ...base, currentStateId }
       );
@@ -447,8 +436,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         useAveragedPositions: false,
@@ -498,8 +486,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { ...baseOptions, currentStateId: "PA" }
     );
@@ -508,8 +495,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { ...baseOptions, currentStateId: "CA" }
     );
@@ -566,8 +552,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       primaryOptions
     );
@@ -576,8 +561,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOptions
     );
@@ -629,8 +613,7 @@ describe("distributeVotesByGroupLevelAllocation", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { ...baseOptions, currentStateId: "PA" }
     );
@@ -664,8 +647,7 @@ describe("balance: candidate positioning determines vote share", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -686,8 +668,7 @@ describe("balance: candidate positioning determines vote share", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -712,8 +693,7 @@ describe("balance: candidate positioning determines vote share", () => {
       turnPool,
       totalPool,
       population,
-      leftLeaningState,
-      categories,
+      electorateFromStoredGroups(leftLeaningState, categories),
       emptyOrgMap
     );
 
@@ -740,8 +720,7 @@ describe("balance: candidate positioning determines vote share", () => {
       turnPool,
       totalPool,
       population,
-      highConservativeTurnout,
-      categories,
+      electorateFromStoredGroups(highConservativeTurnout, categories),
       emptyOrgMap
     );
 
@@ -775,8 +754,7 @@ describe("regByParty entrenchment multiplier", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap,
       { isGeneralElection: true } as DistributeVotesOptions
     );
@@ -786,8 +764,7 @@ describe("regByParty entrenchment multiplier", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap,
       {
         isGeneralElection: true,
@@ -815,8 +792,7 @@ describe("regByParty entrenchment multiplier", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap,
       {
         isGeneralElection: false,
@@ -828,8 +804,7 @@ describe("regByParty entrenchment multiplier", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap,
       { isGeneralElection: false } as DistributeVotesOptions
     );
@@ -852,8 +827,7 @@ describe("regByParty entrenchment multiplier", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap,
       { isGeneralElection: true } as DistributeVotesOptions
     );
@@ -881,8 +855,7 @@ describe("balance: favorability impacts vote share", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -902,8 +875,7 @@ describe("balance: favorability impacts vote share", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -929,8 +901,7 @@ describe("balance: favorability impacts vote share", () => {
       turnPool,
       totalPool,
       population,
-      balancedState,
-      categories,
+      electorateFromStoredGroups(balancedState, categories),
       emptyOrgMap
     );
 
@@ -957,8 +928,7 @@ describe("balance: favorability impacts vote share", () => {
       turnPool,
       totalPool,
       population,
-      rightLeaningState,
-      categories,
+      electorateFromStoredGroups(rightLeaningState, categories),
       emptyOrgMap
     );
 
@@ -987,8 +957,7 @@ describe("balance: political influence provides meaningful but bounded advantage
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -1006,8 +975,7 @@ describe("balance: political influence provides meaningful but bounded advantage
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -1043,8 +1011,7 @@ describe("balance: political influence provides meaningful but bounded advantage
       turnPool,
       totalPool,
       population,
-      leftLeaningState,
-      categories,
+      electorateFromStoredGroups(leftLeaningState, categories),
       emptyOrgMap
     );
 
@@ -1080,8 +1047,7 @@ describe("balance: party organization scales vote share", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap,
       { isGeneralElection: true }
     );
@@ -1105,8 +1071,7 @@ describe("balance: party organization scales vote share", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgMap
       // no isGeneralElection → primary path
     );
@@ -1141,8 +1106,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -1152,8 +1116,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -1177,8 +1140,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { isGeneralElection: false, votingSystem: "fptp", countryId: "US" }
     );
@@ -1188,8 +1150,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -1209,8 +1170,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { isGeneralElection: true, votingSystem: "rcv", countryId: "US" }
     );
@@ -1220,8 +1180,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { isGeneralElection: true, votingSystem: "fptp", countryId: "US" }
     );
@@ -1242,8 +1201,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -1253,8 +1211,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -1274,8 +1231,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       new Map([
         ["1", 90],
         ["2", 50],
@@ -1289,8 +1245,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       new Map([
         ["1", 0],
         ["2", 50],
@@ -1339,8 +1294,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -1350,8 +1304,7 @@ describe("FPTP spoiler effect", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -1382,8 +1335,7 @@ describe("balance: multi-candidate races", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -1406,8 +1358,7 @@ describe("balance: multi-candidate races", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
     const fourResult = distributeVotesByGroupLevelAllocation(
@@ -1415,8 +1366,7 @@ describe("balance: multi-candidate races", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -1436,8 +1386,7 @@ describe("balance: multi-candidate races", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -1477,8 +1426,7 @@ describe("NPP_GENERAL_WEIGHT_MULTIPLIER: NPP handicap when player is in race", (
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { hasPlayerInRace: true }
     );
@@ -1488,8 +1436,7 @@ describe("NPP_GENERAL_WEIGHT_MULTIPLIER: NPP handicap when player is in race", (
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { hasPlayerInRace: false }
     );
@@ -1514,8 +1461,7 @@ describe("NPP_GENERAL_WEIGHT_MULTIPLIER: NPP handicap when player is in race", (
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { hasPlayerInRace: true }
     );
@@ -1534,8 +1480,7 @@ describe("NPP_GENERAL_WEIGHT_MULTIPLIER: NPP handicap when player is in race", (
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { hasPlayerInRace: false }
     );
@@ -1555,8 +1500,7 @@ describe("NPP_GENERAL_WEIGHT_MULTIPLIER: NPP handicap when player is in race", (
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { hasPlayerInRace: true }
     );
@@ -1597,8 +1541,7 @@ describe("liveTurnouts: dynamic turnout overrides stored demographic values", ()
       turnPool,
       totalPool,
       population,
-      balancedDemographics,
-      categories,
+      electorateFromStoredGroups(balancedDemographics, categories),
       emptyOrgMap
     );
 
@@ -1608,8 +1551,7 @@ describe("liveTurnouts: dynamic turnout overrides stored demographic values", ()
       turnPool,
       totalPool,
       population,
-      balancedDemographics,
-      categories,
+      electorateFromStoredGroups(balancedDemographics, categories),
       emptyOrgMap,
       { liveTurnouts: { liberal: 90, conservative: 30 } }
     );
@@ -1635,8 +1577,7 @@ describe("liveTurnouts: dynamic turnout overrides stored demographic values", ()
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { liveTurnouts: { liberal: 60, conservative: 0 } }
     );
@@ -1663,8 +1604,7 @@ describe("liveTurnouts: dynamic turnout overrides stored demographic values", ()
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { liveTurnouts: { liberal: 90 } } // conservatives fall through to stored 60%
     );
@@ -1709,8 +1649,7 @@ describe("useAveragedPositions: party-candidate position blending", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useAveragedPositions: false }
     );
@@ -1720,8 +1659,7 @@ describe("useAveragedPositions: party-candidate position blending", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useAveragedPositions: true, partyPositionWeight: 1 }
     );
@@ -1765,8 +1703,7 @@ describe("useAveragedPositions: party-candidate position blending", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useAveragedPositions: true, partyPositionWeight: 1 }
     );
@@ -1776,8 +1713,7 @@ describe("useAveragedPositions: party-candidate position blending", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useAveragedPositions: true, partyPositionWeight: 4 }
     );
@@ -1803,8 +1739,7 @@ describe("useAveragedPositions: party-candidate position blending", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useAveragedPositions: true }
     );
@@ -1814,8 +1749,7 @@ describe("useAveragedPositions: party-candidate position blending", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useAveragedPositions: false }
     );
@@ -1860,8 +1794,7 @@ describe("useNationalInfluenceForReach: national vs state-level reach", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useNationalInfluenceForReach: false }
     );
@@ -1871,8 +1804,7 @@ describe("useNationalInfluenceForReach: national vs state-level reach", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { useNationalInfluenceForReach: true }
     );
@@ -1909,8 +1841,7 @@ describe("FPTP spoiler: UK region-specific major party sets", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         isGeneralElection: true,
@@ -1925,8 +1856,7 @@ describe("FPTP spoiler: UK region-specific major party sets", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         isGeneralElection: true,
@@ -1960,8 +1890,7 @@ describe("FPTP spoiler: UK region-specific major party sets", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         isGeneralElection: true,
@@ -1976,8 +1905,7 @@ describe("FPTP spoiler: UK region-specific major party sets", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       {
         isGeneralElection: true,
@@ -2027,8 +1955,7 @@ describe("FPTP spoiler: multiple simultaneous third parties", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -2038,8 +1965,7 @@ describe("FPTP spoiler: multiple simultaneous third parties", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -2068,8 +1994,7 @@ describe("FPTP spoiler: multiple simultaneous third parties", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -2079,8 +2004,7 @@ describe("FPTP spoiler: multiple simultaneous third parties", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -2125,8 +2049,7 @@ describe("FPTP spoiler: multiple simultaneous third parties", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -2138,16 +2061,16 @@ describe("FPTP spoiler: multiple simultaneous third parties", () => {
   });
 });
 
-// ─── Balance: archetype approvals ───────────────────────────────────────────
+// ─── Balance: bucket approvals ───────────────────────────────────────────
 
-describe("balance: archetype approvals modify effective favorability", () => {
+describe("balance: bucket approvals modify effective favorability", () => {
   const categories = [makeCategory()];
   const demographics = makeDemographics();
   const population = 1_000_000;
   const totalPool = 600_000;
   const turnPool = 10_000;
 
-  it("positive archetype approval boosts votes from that group", () => {
+  it("positive bucket approval boosts votes from that group", () => {
     const withBoost = [
       makeCandidate({
         candidateId: "boosted",
@@ -2164,15 +2087,14 @@ describe("balance: archetype approvals modify effective favorability", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
     expect(sharesPct.boosted).toBeGreaterThan(sharesPct.normal);
   });
 
-  it("negative archetype approval reduces votes from that group", () => {
+  it("negative bucket approval reduces votes from that group", () => {
     const candidates = [
       makeCandidate({
         candidateId: "disliked",
@@ -2189,8 +2111,7 @@ describe("balance: archetype approvals modify effective favorability", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap
     );
 
@@ -2211,8 +2132,7 @@ describe("balance: archetype approvals modify effective favorability", () => {
         1_000_000,
         1_000_000,
         1_000_000,
-        makeDemographics(),
-        [makeCategory()],
+        electorateFromStoredGroups(makeDemographics(), [makeCategory()]),
         partyOrgs,
         {}
       );
@@ -2237,8 +2157,7 @@ describe("balance: archetype approvals modify effective favorability", () => {
         1_000_000,
         1_000_000,
         1_000_000,
-        makeDemographics(),
-        [makeCategory()],
+        electorateFromStoredGroups(makeDemographics(), [makeCategory()]),
         partyOrgs,
         {}
       );
@@ -2280,8 +2199,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2309,8 +2227,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2347,8 +2264,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       baseOpts
     );
@@ -2357,8 +2273,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       regOpts
     );
@@ -2400,8 +2315,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2410,8 +2324,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2452,8 +2365,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2462,8 +2374,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2484,8 +2395,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       generalOpts
     );
@@ -2512,8 +2422,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       generalOpts
     );
@@ -2552,8 +2461,7 @@ describe("Phase 5a general-election formula", () => {
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgs,
       primaryOpts
     );
@@ -2599,8 +2507,7 @@ describe("distributeVotesByGroupLevelAllocation — OPS regime weighting", () =>
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { countryId: "CN", isGeneralElection: true }
     );
@@ -2621,8 +2528,7 @@ describe("distributeVotesByGroupLevelAllocation — OPS regime weighting", () =>
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { countryId: "CN", isGeneralElection: true }
     );
@@ -2639,8 +2545,7 @@ describe("distributeVotesByGroupLevelAllocation — OPS regime weighting", () =>
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { countryId: "CN", isGeneralElection: true }
     );
@@ -2657,8 +2562,7 @@ describe("distributeVotesByGroupLevelAllocation — OPS regime weighting", () =>
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { countryId: "US", isGeneralElection: true }
     );
@@ -2691,8 +2595,7 @@ describe("distributeVotesByGroupLevelAllocation — OPS regime weighting", () =>
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { countryId: "CN", isGeneralElection: true }
     );
@@ -2736,8 +2639,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP spoiler skip for OPS", 
       turnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       emptyOrgMap,
       { countryId: "CN", isGeneralElection: true, votingSystem: "fptp" }
     );

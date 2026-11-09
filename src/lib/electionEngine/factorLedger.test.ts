@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import {
   createLedgerSink,
   assembleNationalLedger,
@@ -369,8 +370,7 @@ function runWithLedger(enriched: EnrichedCandidate[], demo: StateDemographics = 
     100_000,
     100_000,
     1_000_000,
-    demo,
-    cats,
+    electorateFromStoredGroups(demo, cats),
     new Map(),
     {
       useAveragedPositions: true,
@@ -418,8 +418,7 @@ describe("factorLedger swing-flow integration", () => {
       100_000,
       100_000,
       1_000_000,
-      demographics(),
-      categories(),
+      electorateFromStoredGroups(demographics(), categories()),
       new Map(),
       opts
     );
@@ -429,8 +428,7 @@ describe("factorLedger swing-flow integration", () => {
       100_000,
       100_000,
       1_000_000,
-      demographics(),
-      categories(),
+      electorateFromStoredGroups(demographics(), categories()),
       new Map(),
       { ...opts, ledgerSink: sink, ledgerUnitId: "TS" }
     );

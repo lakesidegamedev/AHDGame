@@ -13,6 +13,7 @@
  *   handing the seat to the other major party.  In RCV states no adjustment
  *   is made — ranked choice eliminates the spoiler dynamic entirely.
  */
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine";
 import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine";
@@ -95,8 +96,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       opts
     );
@@ -128,8 +128,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       optsFPTP
     );
@@ -138,8 +137,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       optsRCV
     );
@@ -182,8 +180,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgWithLib,
       opts
     );
@@ -192,8 +189,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       orgWithLib,
       { votingSystem: "rcv", isGeneralElection: true }
     );
@@ -229,8 +225,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       opts
     );
@@ -239,8 +234,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       { votingSystem: "rcv", isGeneralElection: true }
     );
@@ -262,8 +256,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       optsGeneral
     );
@@ -272,8 +265,7 @@ describe("distributeVotesByGroupLevelAllocation — FPTP vote-splitting (spoiler
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      categories,
+      electorateFromStoredGroups(demographics, categories),
       partyOrgByParty,
       optsPrimary
     );

@@ -8,6 +8,7 @@ import {
   type GroupLeanWithId,
 } from "@/lib/countries/uk/manifesto/manifestoPopularity";
 import { runtimeConfig } from "@/lib/config/runtime";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 
 /**
  * Election-time bridge from locked manifestos to the vote engine's
@@ -22,14 +23,10 @@ export function isManifestoVoteEffectEnabled(): boolean {
   return runtimeConfig.ukManifestoVoteEffect();
 }
 
-/** Minimal shape so this stays decoupled from the engine's concrete types. */
-interface ElectorateUnitsLike {
-  groups: Record<string, { economicLean: number; socialLean: number }>;
-}
-
 /** The per-unit lean list the multiplier builder needs, from the census electorate units. */
-export function deriveGroupLeans(electorate: ElectorateUnitsLike): GroupLeanWithId[] {
-  return Object.entries(electorate.groups).map(([id, unit]) => {
+export function deriveGroupLeans(electorate: readonly ElectorateUnit[]): GroupLeanWithId[] {
+  return electorate.map((unit) => {
+    const id = unit.id;
     if (!Number.isFinite(unit.economicLean) || !Number.isFinite(unit.socialLean)) {
       throw new Error(`Electorate unit ${id} has no lean`);
     }

@@ -61,8 +61,7 @@ function project(
     substrate.totalPool,
     substrate.totalPool,
     1_000_000,
-    substrate.demographics,
-    substrate.categories,
+    substrate.electorate,
     new Map(),
     { isGeneralElection: general, liveTurnouts: substrate.liveTurnouts, votingSystem: "rcv" }
   );

@@ -9,6 +9,7 @@
  * Blocks 1–3: direct calls to distributeVotesByGroupLevelAllocation with real seed data.
  * Block 4: full accumulatePresidentVoteTurn integration with mock DB + EV counting.
  */
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { calcStateTurnout, turnVoteWeight, type EnrichedCandidate } from "@/lib/electionEngine";
@@ -86,7 +87,10 @@ function getEffectiveTurnPool(
   population: number
 ): { effectiveTurnPool: number; totalPool: number } {
   const demographics = getDemographics(stateId);
-  const totalPool = calcStateTurnout(population, demographics, demographicCategories);
+  const totalPool = calcStateTurnout(
+    population,
+    electorateFromStoredGroups(demographics, demographicCategories)
+  );
   const turnPool = turnVoteWeight(12, 6, totalPool);
   return { effectiveTurnPool: turnPool * 1.0, totalPool };
 }
@@ -116,8 +120,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -147,8 +150,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -176,8 +178,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -205,8 +206,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -234,8 +234,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -300,8 +299,7 @@ describe("Vote share margins — parametrized state matrix", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -338,8 +336,7 @@ describe("Position sensitivity — 1-step move should shift outcome by ≤10pp",
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -838,8 +835,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -875,8 +871,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -888,8 +883,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -925,8 +919,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -962,8 +955,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -1010,8 +1002,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -1022,8 +1013,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromStoredGroups(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );

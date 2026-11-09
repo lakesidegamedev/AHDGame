@@ -47,6 +47,13 @@ function substrate(
   favorability?: Map<string, number>
 ): GranularSubstrate {
   return {
+    electorate: units.map((u) => ({
+      id: u.id,
+      populationPct: u.share * 100,
+      economicLean: u.economicLean,
+      socialLean: u.socialLean,
+      turnout: u.turnout,
+    })),
     demographics: {
       ...national,
       groups: Object.fromEntries(

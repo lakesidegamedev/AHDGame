@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import {
@@ -368,8 +369,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -418,8 +418,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map([
         ["1", 70],
         ["2", 60],
@@ -463,8 +462,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map([
         ["1", 50],
         ["3", 40],
@@ -486,8 +484,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -508,8 +505,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -530,8 +526,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -549,8 +544,7 @@ describe("distributeVotesBySwingFlow — Step 1 reproduces the appeal kernel", (
       0,
       0,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -577,8 +571,7 @@ describe("distributeVotesBySwingFlow — produces a plausible final distribution
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -602,8 +595,7 @@ describe("distributeVotesBySwingFlow — produces a plausible final distribution
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       orgs,
       {
         isGeneralElection: true,
@@ -616,8 +608,7 @@ describe("distributeVotesBySwingFlow — produces a plausible final distribution
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       orgs,
       {
         isGeneralElection: true,
@@ -676,8 +667,7 @@ describe("distributeVotesBySwingFlow — OPS regime weighting", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -715,8 +705,7 @@ describe("distributeVotesBySwingFlow — OPS regime weighting", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -735,8 +724,7 @@ describe("distributeVotesBySwingFlow — OPS regime weighting", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -760,8 +748,7 @@ describe("distributeVotesBySwingFlow — governor coattail (govModifier)", () =>
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -770,8 +757,7 @@ describe("distributeVotesBySwingFlow — governor coattail (govModifier)", () =>
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -789,8 +775,7 @@ describe("distributeVotesBySwingFlow — governor coattail (govModifier)", () =>
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -799,8 +784,7 @@ describe("distributeVotesBySwingFlow — governor coattail (govModifier)", () =>
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -820,8 +804,7 @@ describe("distributeVotesBySwingFlow — presidential coattail (presidentialModi
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -830,8 +813,7 @@ describe("distributeVotesBySwingFlow — presidential coattail (presidentialModi
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -849,8 +831,7 @@ describe("distributeVotesBySwingFlow — presidential coattail (presidentialModi
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -859,8 +840,7 @@ describe("distributeVotesBySwingFlow — presidential coattail (presidentialModi
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -880,8 +860,7 @@ describe("distributeVotesBySwingFlow: democratic health pressure", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -890,8 +869,7 @@ describe("distributeVotesBySwingFlow: democratic health pressure", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -917,8 +895,7 @@ describe("distributeVotesBySwingFlow — midterm opposition modifier", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "UK", votingSystem: "fptp" }
     );
@@ -927,8 +904,7 @@ describe("distributeVotesBySwingFlow — midterm opposition modifier", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -951,8 +927,7 @@ describe("personal-reach org floor (#0671)", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       orgs,
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -970,8 +945,7 @@ describe("personal-reach org floor (#0671)", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       orgs,
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -1016,8 +990,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -1063,8 +1036,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -1108,8 +1080,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp" }
     );
@@ -1146,8 +1117,7 @@ function runCrowded(enriched: EnrichedCandidate[], extra: Record<string, unknown
     1_000_000,
     1_000_000,
     1_000_000,
-    fixtureDemographics(),
-    fixtureCategories(),
+    electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
     new Map(),
     { isGeneralElection: true, countryId: "US", votingSystem: "fptp", ...extra }
   );
@@ -1231,8 +1201,7 @@ describe("distributeVotesBySwingFlow — regional bases (state org / home state)
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", votingSystem: "fptp", ...extra }
     );
@@ -1300,8 +1269,7 @@ describe("distributeVotesBySwingFlow — L2 party-sign gate in appeal", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       opts
     );
@@ -1310,8 +1278,7 @@ describe("distributeVotesBySwingFlow — L2 party-sign gate in appeal", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       opts
     );
@@ -1449,8 +1416,7 @@ describe("appealWeight — personal-stat tenure fatigue (executive own-race)", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       opts
     );
@@ -1499,8 +1465,7 @@ describe("appealWeight — personal-stat tenure fatigue (executive own-race)", (
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       {
         isGeneralElection: true,
@@ -1594,8 +1559,7 @@ describe("multi-cycle simulation — entrenched incumbency vs. a genuinely bette
         1_000_000,
         1_000_000,
         1_000_000,
-        fixtureDemographics(),
-        fixtureCategories(),
+        electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
         new Map(),
         opts
       );
@@ -1757,8 +1721,7 @@ describe("appealWeight — House per-candidate tenure fatigue", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       opts
     );
@@ -1802,8 +1765,7 @@ describe("appealWeight — House per-candidate tenure fatigue", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       opts
     );
@@ -1898,8 +1860,7 @@ describe("appealWeight — tenure erosion never deletes a long-serving candidate
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       opts
     );
@@ -2005,8 +1966,7 @@ describe("multi-cycle simulation — US House control can change hands", () => {
         1_000_000,
         1_000_000,
         1_000_000,
-        fixtureDemographics(),
-        fixtureCategories(),
+        electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
         new Map(),
         opts2
       );
@@ -2097,8 +2057,7 @@ describe("distributeVotesBySwingFlow — FPTP spoiler gate", () => {
       1_000_000,
       1_000_000,
       1_000_000,
-      fixtureDemographics(),
-      fixtureCategories(),
+      electorateFromStoredGroups(fixtureDemographics(), fixtureCategories()),
       new Map(),
       { isGeneralElection: true, countryId: "US", ...options }
     ).votesPerCandidate;

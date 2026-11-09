@@ -48,7 +48,7 @@ import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
   applyPrimaryTurnoutRetention,
   computeTurnoutPoolFromRates,
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
 } from "@/lib/campaigns/shiftPrimaryElectorate";
 import {
   PRIMARY_CAMPAIGN_STAGGER_TICK_RATE,
@@ -630,26 +630,23 @@ export async function runPrimaryStaggerWaveIfDue(
       if (!substrate) {
         throw new Error(`No census electorate for ${election.countryId ?? "US"} region ${stateId}`);
       }
-      const effBaseDemographics = substrate.demographics;
-      const effCategories = substrate.categories;
+      const effBaseElectorate = substrate.electorate;
       const effGeneralTurnouts = substrate.liveTurnouts;
       const effPartyCandidates = substrate.enriched;
 
       const liveTurnouts = applyPrimaryTurnoutRetention(
         effGeneralTurnouts,
-        effBaseDemographics,
+        effBaseElectorate,
         partyPosition
       );
       const resolvedTotalPool = computeTurnoutPoolFromRates(
         state.population,
-        effBaseDemographics,
-        effCategories,
+        effBaseElectorate,
         liveTurnouts
       );
       // Ideology leans are unchanged by the primary shift — only turnout is.
-      // Keep a shifted demographics doc for any path that reads group.turnout
-      // directly (and for symmetry with projection / polls).
-      const demographicsDoc = shiftDemographicsForPrimary(effBaseDemographics, partyPosition);
+      // Shifted units keep the unit turnout consistent with projection / polls.
+      const primaryElectorate = shiftElectorateForPrimary(effBaseElectorate, partyPosition);
       // Each state votes once in its wave using a party-primary share of the
       // general-turnout pool. No time-based weighting — earlier waves and
       // later waves are equally weighted within their own state's population.
@@ -671,8 +668,7 @@ export async function runPrimaryStaggerWaveIfDue(
         turnPool,
         resolvedTotalPool,
         state.population,
-        demographicsDoc,
-        effCategories,
+        primaryElectorate,
         partyOrgForState,
         {
           // Intra-party primary: averaging the (shared) party position into

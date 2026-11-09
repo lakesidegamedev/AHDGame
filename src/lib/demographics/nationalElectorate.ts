@@ -6,6 +6,7 @@
  * Plain data in, plain data out: callers build one regional substrate per
  * region and this folds them together.
  */
+import type { ElectorateUnit } from "./electorateUnit";
 import type { StateDemographics } from "@/lib/db/types";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import {
@@ -107,6 +108,7 @@ export function mergeRegionalSubstrates(
   if (merged.length === 0) return null;
 
   const units: GranularElectorateUnit[] = [];
+  const electorate: ElectorateUnit[] = [];
   const groups: StateDemographics["groups"] = {};
   const liveTurnouts: Record<string, number> = {};
   const categoryGroups: GranularSubstrate["categories"][number]["groups"] = [];
@@ -120,6 +122,7 @@ export function mergeRegionalSubstrates(
     );
     units.push({ id, share: acc.share, economicLean, socialLean, turnout, bucketWeights });
     groups[id] = { population: acc.share * 100, economicLean, socialLean, turnout };
+    electorate.push({ id, populationPct: acc.share * 100, economicLean, socialLean, turnout });
     liveTurnouts[id] = turnout;
     categoryGroups.push({
       id,
@@ -180,6 +183,7 @@ export function mergeRegionalSubstrates(
   }
 
   return {
+    electorate,
     demographics: {
       ...nationalDemographics,
       categoryWeights: { [GRANULAR_CATEGORY_ID]: 100 },

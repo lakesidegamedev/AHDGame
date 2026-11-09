@@ -35,9 +35,7 @@ export function censusMedianVoter(input: CensusMedianInput): MedianVoter | undef
       demographicDefaults: defaultsByState.get(stateId) ?? null,
       enriched: [],
     });
-    return substrate
-      ? computeMedianVoter(substrate.demographics, substrate.categories, substrate.liveTurnouts)
-      : null;
+    return substrate ? computeMedianVoter(substrate.electorate, substrate.liveTurnouts) : null;
   };
   if (input.evByState) {
     const evByState = input.evByState;

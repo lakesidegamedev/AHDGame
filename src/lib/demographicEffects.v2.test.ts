@@ -1188,8 +1188,7 @@ describe("processAllStateDemographics — durable ('permanent') legislation", ()
         s.totalPool,
         s.totalPool,
         1_000_000,
-        s.demographics,
-        s.categories,
+        s.electorate,
         new Map(),
         { isGeneralElection: true, countryId: "US", liveTurnouts: s.liveTurnouts }
       ).sharesPct;
@@ -1496,8 +1495,7 @@ describe("processAllStateDemographics — durable ('permanent') TURNOUT (Voting 
         s.totalPool,
         s.totalPool,
         1_000_000,
-        s.demographics,
-        s.categories,
+        s.electorate,
         new Map(),
         { isGeneralElection: true, countryId: "US", liveTurnouts: s.liveTurnouts }
       ).sharesPct;

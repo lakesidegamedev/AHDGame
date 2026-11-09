@@ -48,8 +48,7 @@ function run(data: GranularSubstrateInput, general: boolean) {
     substrate.totalPool,
     substrate.totalPool,
     input.statePopulation,
-    substrate.demographics,
-    substrate.categories,
+    substrate.electorate,
     new Map(),
     { isGeneralElection: general, liveTurnouts: substrate.liveTurnouts, votingSystem: "rcv" }
   );

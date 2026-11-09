@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import {
   calcEffectiveFavorability,
   calcCandidateVotePotential,
@@ -87,12 +88,24 @@ describe("calcCandidateVotePotential", () => {
   const population = 1_000_000;
 
   it("returns a positive number for a viable candidate", () => {
-    const result = calcCandidateVotePotential(0, 0, 100, population, demographics, categories);
+    const result = calcCandidateVotePotential(
+      0,
+      0,
+      100,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
     expect(result).toBeGreaterThan(0);
   });
 
   it("returns 0 when political influence is 0 (no reach)", () => {
-    const result = calcCandidateVotePotential(0, 0, 0, population, demographics, categories);
+    const result = calcCandidateVotePotential(
+      0,
+      0,
+      0,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
     expect(result).toBe(0);
   });
 
@@ -102,16 +115,14 @@ describe("calcCandidateVotePotential", () => {
       -3,
       100,
       population,
-      demographics,
-      categories
+      electorateFromStoredGroups(demographics, categories)
     );
     const rightCandidate = calcCandidateVotePotential(
       3,
       3,
       100,
       population,
-      demographics,
-      categories
+      electorateFromStoredGroups(demographics, categories)
     );
     // Right candidate should get slightly more total due to 52% conservative vs 48% liberal + higher turnout
     // But each candidate should dominate their aligned group. We test that both produce significant votes.
@@ -120,8 +131,20 @@ describe("calcCandidateVotePotential", () => {
   });
 
   it("centrist candidate has broader appeal but extreme can win in polarized electorate", () => {
-    const centrist = calcCandidateVotePotential(0, 0, 100, population, demographics, categories);
-    const extreme = calcCandidateVotePotential(5, 5, 100, population, demographics, categories);
+    const centrist = calcCandidateVotePotential(
+      0,
+      0,
+      100,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
+    const extreme = calcCandidateVotePotential(
+      5,
+      5,
+      100,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
     // In a polarized electorate (groups at -3,-3 and 3,3), a candidate at 5,5 has strong appeal
     // to conservatives (quadratic scoring means 3→5 gap is small penalty) while centrist 0,0
     // has moderate appeal to both but dominates neither. Extreme can win here — this is by design.
@@ -132,17 +155,47 @@ describe("calcCandidateVotePotential", () => {
   });
 
   it("higher political influence increases vote potential (sqrt curve, capped at PI=100)", () => {
-    const low = calcCandidateVotePotential(0, 0, 50, population, demographics, categories);
-    const mid = calcCandidateVotePotential(0, 0, 100, population, demographics, categories);
-    const high = calcCandidateVotePotential(0, 0, 500, population, demographics, categories);
+    const low = calcCandidateVotePotential(
+      0,
+      0,
+      50,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
+    const mid = calcCandidateVotePotential(
+      0,
+      0,
+      100,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
+    const high = calcCandidateVotePotential(
+      0,
+      0,
+      500,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
 
     expect(mid).toBeGreaterThan(low);
     expect(high).toBe(mid);
   });
 
   it("larger population produces more total votes", () => {
-    const small = calcCandidateVotePotential(0, 0, 100, 100_000, demographics, categories);
-    const large = calcCandidateVotePotential(0, 0, 100, 10_000_000, demographics, categories);
+    const small = calcCandidateVotePotential(
+      0,
+      0,
+      100,
+      100_000,
+      electorateFromStoredGroups(demographics, categories)
+    );
+    const large = calcCandidateVotePotential(
+      0,
+      0,
+      100,
+      10_000_000,
+      electorateFromStoredGroups(demographics, categories)
+    );
     expect(large).toBeGreaterThan(small);
     // Should scale roughly linearly with population
     expect(large / small).toBeCloseTo(100, -1);
@@ -164,8 +217,20 @@ describe("vote potential balance scenarios", () => {
       },
     });
 
-    const left = calcCandidateVotePotential(-3, -3, 100, population, evenDemographics, categories);
-    const right = calcCandidateVotePotential(3, 3, 100, population, evenDemographics, categories);
+    const left = calcCandidateVotePotential(
+      -3,
+      -3,
+      100,
+      population,
+      electorateFromStoredGroups(evenDemographics, categories)
+    );
+    const right = calcCandidateVotePotential(
+      3,
+      3,
+      100,
+      population,
+      electorateFromStoredGroups(evenDemographics, categories)
+    );
 
     // With identical population and turnout, mirror candidates should get identical votes
     expect(left).toBeCloseTo(right, 0);
@@ -180,8 +245,20 @@ describe("vote potential balance scenarios", () => {
       },
     });
 
-    const alignedLeft = calcCandidateVotePotential(-3, -2, 100, population, leftState, categories);
-    const farRight = calcCandidateVotePotential(5, 5, 100, population, leftState, categories);
+    const alignedLeft = calcCandidateVotePotential(
+      -3,
+      -2,
+      100,
+      population,
+      electorateFromStoredGroups(leftState, categories)
+    );
+    const farRight = calcCandidateVotePotential(
+      5,
+      5,
+      100,
+      population,
+      electorateFromStoredGroups(leftState, categories)
+    );
 
     expect(alignedLeft).toBeGreaterThan(farRight * 2);
   });
@@ -225,16 +302,14 @@ describe("vote potential balance scenarios", () => {
       0,
       100,
       population,
-      moderateDomDemo,
-      twoCategories
+      electorateFromStoredGroups(moderateDomDemo, twoCategories)
     );
     const extreme = calcCandidateVotePotential(
       5,
       5,
       100,
       population,
-      moderateDomDemo,
-      twoCategories
+      electorateFromStoredGroups(moderateDomDemo, twoCategories)
     );
 
     expect(moderate).toBeGreaterThan(extreme);
@@ -243,8 +318,20 @@ describe("vote potential balance scenarios", () => {
   it("NPI advantage provides meaningful but not overwhelming edge", () => {
     const demographics = makeDemographics();
     // Same positions, different influence
-    const low = calcCandidateVotePotential(0, 0, 30, population, demographics, categories);
-    const high = calcCandidateVotePotential(0, 0, 200, population, demographics, categories);
+    const low = calcCandidateVotePotential(
+      0,
+      0,
+      30,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
+    const high = calcCandidateVotePotential(
+      0,
+      0,
+      200,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
 
     // High NPI should be an advantage
     expect(high).toBeGreaterThan(low);
@@ -253,8 +340,20 @@ describe("vote potential balance scenarios", () => {
   });
 
   it("caps state-race influence at 100", () => {
-    const atCap = calcCandidateVotePotential(0, 0, 100, population, demographics, categories);
-    const aboveCap = calcCandidateVotePotential(0, 0, 250, population, demographics, categories);
+    const atCap = calcCandidateVotePotential(
+      0,
+      0,
+      100,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
+    const aboveCap = calcCandidateVotePotential(
+      0,
+      0,
+      250,
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
     expect(aboveCap).toBe(atCap);
   });
 });
@@ -268,20 +367,23 @@ describe("calcStateTurnout", () => {
     const demographics = makeDemographics();
     const population = 1_000_000;
 
-    const result = calcStateTurnout(population, demographics, categories);
+    const result = calcStateTurnout(
+      population,
+      electorateFromStoredGroups(demographics, categories)
+    );
 
     // Manual: (480000 * 0.60 + 520000 * 0.65) * 100/100 = 288000 + 338000 = 626000
     expect(result).toBe(626000);
   });
 
   it("returns 0 for zero population", () => {
-    expect(calcStateTurnout(0, makeDemographics(), categories)).toBe(0);
+    expect(calcStateTurnout(0, electorateFromStoredGroups(makeDemographics(), categories))).toBe(0);
   });
 
   it("scales linearly with population", () => {
     const demo = makeDemographics();
-    const small = calcStateTurnout(100_000, demo, categories);
-    const big = calcStateTurnout(1_000_000, demo, categories);
+    const small = calcStateTurnout(100_000, electorateFromStoredGroups(demo, categories));
+    const big = calcStateTurnout(1_000_000, electorateFromStoredGroups(demo, categories));
     expect(big / small).toBeCloseTo(10, 1);
   });
 
@@ -299,8 +401,8 @@ describe("calcStateTurnout", () => {
       },
     });
 
-    const low = calcStateTurnout(1_000_000, lowTurnout, categories);
-    const high = calcStateTurnout(1_000_000, highTurnout, categories);
+    const low = calcStateTurnout(1_000_000, electorateFromStoredGroups(lowTurnout, categories));
+    const high = calcStateTurnout(1_000_000, electorateFromStoredGroups(highTurnout, categories));
     expect(high).toBeGreaterThan(low * 2);
   });
 });

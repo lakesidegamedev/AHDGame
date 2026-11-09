@@ -865,8 +865,7 @@ export async function accumulatePresidentVoteTurn(
     if (!substrate) {
       throw new Error(`No census electorate for ${electionCountryId} region ${stateId}`);
     }
-    const effDemographics = substrate.demographics;
-    const effCategories = substrate.categories;
+    const effElectorate = substrate.electorate;
     const effLiveTurnouts = substrate.liveTurnouts;
     const effTotalPool = substrate.totalPool;
     const effEnriched = substrate.enriched;
@@ -922,8 +921,7 @@ export async function accumulatePresidentVoteTurn(
       effectiveTurnPool,
       effTotalPool,
       electorate,
-      effDemographics,
-      effCategories,
+      effElectorate,
       partyOrgByParty,
       {
         useAveragedPositions: true,

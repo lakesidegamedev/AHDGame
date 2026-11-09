@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import type { EnrichedCandidate } from "./types";
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
@@ -81,8 +82,7 @@ function sharesAt(basisPopulation: number): Record<string, number> {
     turnPool,
     totalPool,
     basisPopulation,
-    demographics,
-    categories,
+    electorateFromStoredGroups(demographics, categories),
     emptyOrgMap
   ).sharesPct;
 }

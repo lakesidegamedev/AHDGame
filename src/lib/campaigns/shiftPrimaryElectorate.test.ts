@@ -1,7 +1,7 @@
 /**
  * Primary electorate retention must survive the US Layer-1 liveTurnout path.
  *
- * Regression: stagger called shiftDemographicsForPrimary, then resolveTurnout
+ * Regression: stagger called shiftElectorateForPrimary, then resolveTurnout
  * (which rebuilds US turnouts from census baselines), then passed those
  * liveTurnouts into distributeVotes — wiping the primary shift. Projection
  * (no liveTurnouts) kept the shifted electorate, so a party-base favorite
@@ -13,48 +13,20 @@ import {
   applyPrimaryTurnoutRetention,
   computeTurnoutPoolFromRates,
   primaryTurnoutRetention,
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
 } from "./shiftPrimaryElectorate";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 
 const GOP = { economicPosition: 3, socialPosition: 3 };
 
-const categories: DemographicCategory[] = [
-  {
-    _id: "ideology",
-    name: "Ideology",
-    defaultWeight: 100,
-    groups: [
-      {
-        id: "liberal",
-        name: "Liberals",
-        defaultEconomicLean: -3,
-        defaultSocialLean: -3,
-        defaultTurnout: 70,
-      },
-      {
-        id: "conservative",
-        name: "Conservatives",
-        defaultEconomicLean: 3,
-        defaultSocialLean: 3,
-        defaultTurnout: 70,
-      },
-    ],
-  } as unknown as DemographicCategory,
+const electorate: ElectorateUnit[] = [
+  { id: "liberal", populationPct: 45, economicLean: -3, socialLean: -3, turnout: 70 },
+  { id: "conservative", populationPct: 55, economicLean: 3, socialLean: 3, turnout: 70 },
 ];
 
-const demographics: StateDemographics = {
-  _id: "SC",
-  categoryWeights: { ideology: 100 },
-  groups: {
-    liberal: { population: 45, turnout: 70, economicLean: -3, socialLean: -3 },
-    conservative: { population: 55, turnout: 70, economicLean: 3, socialLean: 3 },
-  },
-} as unknown as StateDemographics;
-
-/** Layer-1-style general turnouts that ignore any demographics.groups.turnout shift. */
+/** Layer-1-style general turnouts that ignore any unit turnout shift. */
 const generalLiveTurnouts = { liberal: 70, conservative: 70 };
 
 function makeCandidate(
@@ -89,13 +61,14 @@ describe("primaryTurnoutRetention", () => {
   });
 });
 
-describe("applyPrimaryTurnoutRetention vs demographics-only shift", () => {
-  it("scales a liveTurnout map the same way shiftDemographicsForPrimary scales stored turnout", () => {
-    const shifted = shiftDemographicsForPrimary(demographics, GOP);
-    const retained = applyPrimaryTurnoutRetention(generalLiveTurnouts, demographics, GOP);
+describe("applyPrimaryTurnoutRetention vs electorate-only shift", () => {
+  it("scales a liveTurnout map the same way shiftElectorateForPrimary scales unit turnout", () => {
+    const shifted = shiftElectorateForPrimary(electorate, GOP);
+    const retained = applyPrimaryTurnoutRetention(generalLiveTurnouts, electorate, GOP);
 
-    expect(retained.conservative).toBeCloseTo(shifted.groups.conservative.turnout ?? 0, 5);
-    expect(retained.liberal).toBeCloseTo(shifted.groups.liberal.turnout ?? 0, 5);
+    const turnoutOf = (id: string) => shifted.find((unit) => unit.id === id)?.turnout ?? 0;
+    expect(retained.conservative).toBeCloseTo(turnoutOf("conservative"), 5);
+    expect(retained.liberal).toBeCloseTo(turnoutOf("liberal"), 5);
   });
 });
 
@@ -112,18 +85,17 @@ describe("primary electorate vs wiped liveTurnouts — winner parity", () => {
       favorability: 95,
     });
 
-    const shifted = shiftDemographicsForPrimary(demographics, GOP);
+    const shifted = shiftElectorateForPrimary(electorate, GOP);
     const population = 1_000_000;
     const primaryPool = Math.round(population * 0.13);
 
-    // Projection path: shifted demographics, no liveTurnouts.
+    // Projection path: shifted electorate, no liveTurnouts.
     const projection = distributeVotesByGroupLevelAllocation(
       [baseFavorite, generalFavorite],
       primaryPool,
       primaryPool,
       population,
       shifted,
-      categories,
       new Map(),
       {
         useAveragedPositions: false,
@@ -144,7 +116,6 @@ describe("primary electorate vs wiped liveTurnouts — winner parity", () => {
       primaryPool,
       population,
       shifted,
-      categories,
       new Map(),
       {
         useAveragedPositions: false,
@@ -182,15 +153,10 @@ describe("primary electorate vs wiped liveTurnouts — winner parity", () => {
       favorability: 95,
     });
 
-    const shifted = shiftDemographicsForPrimary(demographics, GOP);
-    const retainedTurnouts = applyPrimaryTurnoutRetention(generalLiveTurnouts, demographics, GOP);
+    const shifted = shiftElectorateForPrimary(electorate, GOP);
+    const retainedTurnouts = applyPrimaryTurnoutRetention(generalLiveTurnouts, electorate, GOP);
     const population = 1_000_000;
-    const retainedPool = computeTurnoutPoolFromRates(
-      population,
-      demographics,
-      categories,
-      retainedTurnouts
-    );
+    const retainedPool = computeTurnoutPoolFromRates(population, electorate, retainedTurnouts);
     const turnPool = Math.round(retainedPool * 0.13);
     // Projection uses population×0.13 as both pools; relative shares matter.
     const projectionPool = Math.round(population * 0.13);
@@ -201,7 +167,6 @@ describe("primary electorate vs wiped liveTurnouts — winner parity", () => {
       projectionPool,
       population,
       shifted,
-      categories,
       new Map(),
       {
         useAveragedPositions: false,
@@ -220,8 +185,7 @@ describe("primary electorate vs wiped liveTurnouts — winner parity", () => {
       turnPool,
       retainedPool,
       population,
-      demographics,
-      categories,
+      electorate,
       new Map(),
       {
         useAveragedPositions: false,

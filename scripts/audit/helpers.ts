@@ -7,6 +7,7 @@
  *   NPI = nationalInfluence  — national stat, uncapped. Used in presidential elections only.
  */
 
+import { electorateFromStoredGroups } from "../../src/lib/demographics/electorateUnit";
 import { demographicCategories } from "../../src/lib/seeds/demographicCategories";
 import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
 import {
@@ -129,15 +130,15 @@ export function runRace(
   if (!demographics) throw new Error(`No demographics for state: ${stateId}`);
 
   const population = 1_000_000;
-  const totalPool = calcStateTurnout(population, demographics, categories);
+  const electorate = electorateFromStoredGroups(demographics, categories);
+  const totalPool = calcStateTurnout(population, electorate);
 
   const { votesPerCandidate } = distributeVotesByGroupLevelAllocation(
     candidates,
     totalPool,
     totalPool,
     population,
-    demographics,
-    categories,
+    electorate,
     partyOrgMap,
     { includeInfluenceInAppeal: false, useNationalInfluenceForReach: false }
   );
@@ -163,15 +164,15 @@ export function runPresidentialRace(
   if (!demographics) throw new Error(`No demographics for state: ${stateId}`);
 
   const population = 1_000_000;
-  const totalPool = calcStateTurnout(population, demographics, categories);
+  const electorate = electorateFromStoredGroups(demographics, categories);
+  const totalPool = calcStateTurnout(population, electorate);
 
   const { votesPerCandidate } = distributeVotesByGroupLevelAllocation(
     candidates,
     totalPool,
     totalPool,
     population,
-    demographics,
-    categories,
+    electorate,
     partyOrgMap,
     {
       includeInfluenceInAppeal: true,

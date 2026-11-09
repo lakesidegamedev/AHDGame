@@ -23,6 +23,7 @@
  * detail page for candidates who haven't voted yet.
  */
 
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 import type { CampaignProjectionContext } from "@/lib/campaignTargeting/audience";
@@ -46,7 +47,7 @@ import {
 } from "@/lib/electionEngine/constants";
 import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
 import {
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
   applyPrimaryTurnoutRetention,
 } from "@/lib/campaigns/shiftPrimaryElectorate";
 
@@ -216,8 +217,7 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
 
     // Shift the electorate toward the party's ideological position — primary
     // voters are more ideologically extreme than the general electorate.
-    let baseDemographics = rawDemographics;
-    let effectiveCategories = categories;
+    let baseElectorate = electorateFromStoredGroups(rawDemographics, categories);
     let effectiveCandidates = candidates;
     let liveTurnouts = input.liveTurnouts?.[stateId];
     if (input.campaignContext) {
@@ -234,17 +234,16 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
         demographicDefaults: context.defaultsByState.get(stateId),
       });
       if (substrate) {
-        baseDemographics = substrate.demographics;
-        effectiveCategories = substrate.categories;
+        baseElectorate = substrate.electorate;
         effectiveCandidates = substrate.enriched;
         liveTurnouts = applyPrimaryTurnoutRetention(
           substrate.liveTurnouts,
-          substrate.demographics,
+          substrate.electorate,
           partyPosition
         );
       }
     }
-    const demographics = shiftDemographicsForPrimary(baseDemographics, partyPosition);
+    const electorate = shiftElectorateForPrimary(baseElectorate, partyPosition);
 
     // Party-org map for this state — all intra-party candidates see the same
     // value for their party (mobilization scalar, not a differentiator).
@@ -265,8 +264,7 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
       effectivePool,
       totalPool,
       state.population,
-      demographics,
-      effectiveCategories,
+      electorate,
       partyOrgForState,
       {
         // Intra-party primary: every candidate is in the same party so the
