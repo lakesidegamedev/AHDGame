@@ -1523,7 +1523,7 @@ describe("accumulateGeneralElectionVotes", () => {
       votingEligiblePopulation: 320,
       votingSystem: "fptp",
     });
-    expect(options?.preload?.demographicsMap.get("IE")?.groups.urban.population).toBeCloseTo(40);
+    expect(options?.preload?.demographicsMap.get("IE")?.groups).toEqual({});
     expect(options?.preload?.statePartyOrgsByState.get("IE")?.[0]?.organization).toBeCloseTo(65);
     expect(options?.preload?.turnoutByState.get("IE")?.modifiers.ie_voterGroups.urban).toBeCloseTo(
       1
@@ -1659,7 +1659,7 @@ describe("accumulateGeneralElectionVotes", () => {
       votingEligiblePopulation: 250,
       votingSystem: "fptp",
     });
-    expect(options?.preload?.demographicsMap.get("RU")?.groups.urban.population).toBeCloseTo(40);
+    expect(options?.preload?.demographicsMap.get("RU")?.groups).toEqual({});
     expect(options?.preload?.statePartyOrgsByState.get("RU")?.[0]?.organization).toBeCloseTo(65);
     expect(options?.preload?.turnoutByState.get("RU")?.modifiers.ie_voterGroups.urban).toBeCloseTo(
       1

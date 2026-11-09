@@ -4,7 +4,16 @@ import type {
   StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
+import type { Db } from "mongodb";
+import { getStatesCollection } from "@/lib/db/collections/states";
 import type { CountryId } from "@/lib/constants/countries";
+import { turnoutForElection } from "@/lib/campaignTargeting/rules";
+import {
+  buildGranularElectorateSubstrate,
+  type GranularSubstrate,
+} from "@/lib/demographics/granularElectorate";
+import { mergeRegionalSubstrates } from "@/lib/demographics/nationalElectorate";
+import type { EnrichedCandidate } from "./types";
 
 export interface NationwideElectoratePreload {
   state: State;
@@ -68,62 +77,6 @@ export function buildNationwideElectoratePreload(
     (row) => row.countryId === countryId && stateById.has(row._id)
   );
   if (countryDemographics.length === 0) return null;
-
-  const categoryIds = new Set(
-    countryDemographics.flatMap((row) => Object.keys(row.categoryWeights))
-  );
-  const categoryWeights: StateDemographics["categoryWeights"] = {};
-  for (const categoryId of categoryIds) {
-    categoryWeights[categoryId] =
-      weightedAverage(
-        countryDemographics.map((row) => ({
-          value: row.categoryWeights[categoryId],
-          weight: stateById.get(row._id)?.population ?? 0,
-        }))
-      ) ?? 0;
-  }
-
-  const groupIds = new Set(countryDemographics.flatMap((row) => Object.keys(row.groups)));
-  const groups: StateDemographics["groups"] = {};
-  for (const groupId of groupIds) {
-    const rows = countryDemographics.flatMap((row) => {
-      const group = row.groups[groupId];
-      const statePopulation = stateById.get(row._id)?.population ?? 0;
-      if (!group || statePopulation <= 0) return [];
-      return [{ group, statePopulation, groupWeight: statePopulation * (group.population / 100) }];
-    });
-    const groupPopulation = rows.reduce((total, row) => total + row.groupWeight, 0);
-    if (groupPopulation <= 0) continue;
-    groups[groupId] = {
-      population: (groupPopulation / totalPopulation) * 100,
-      economicLean:
-        weightedAverage(
-          rows.map((row) => ({ value: row.group.economicLean, weight: row.groupWeight }))
-        ) ?? 0,
-      socialLean:
-        weightedAverage(
-          rows.map((row) => ({ value: row.group.socialLean, weight: row.groupWeight }))
-        ) ?? 0,
-      ...(weightedAverage(
-        rows.map((row) => ({ value: row.group.turnout, weight: row.groupWeight }))
-      ) != null
-        ? {
-            turnout: weightedAverage(
-              rows.map((row) => ({ value: row.group.turnout, weight: row.groupWeight }))
-            ),
-          }
-        : {}),
-      ...(weightedAverage(
-        rows.map((row) => ({ value: row.group.nameRecognition, weight: row.groupWeight }))
-      ) != null
-        ? {
-            nameRecognition: weightedAverage(
-              rows.map((row) => ({ value: row.group.nameRecognition, weight: row.groupWeight }))
-            ),
-          }
-        : {}),
-    };
-  }
 
   const countryTurnout = turnoutDocs.filter(
     (row) => row.countryId === countryId && stateById.has(row._id)
@@ -222,8 +175,8 @@ export function buildNationwideElectoratePreload(
     demographics: {
       _id: countryId,
       countryId,
-      categoryWeights,
-      groups,
+      categoryWeights: {},
+      groups: {},
       cachedEconomicLean: weightedAverage(
         countryDemographics.map((row) => ({
           value: row.cachedEconomicLean,
@@ -248,5 +201,95 @@ export function buildNationwideElectoratePreload(
       lastUpdated: turnoutUpdatedAt,
     },
     partyOrgs: nationalPartyOrgs,
+  };
+}
+
+export interface NationalSubstrateInput {
+  countryId: CountryId;
+  nationalDemographics: StateDemographics;
+  stateMap: Map<string, State>;
+  demographicsMap: Map<string, StateDemographics>;
+  turnoutByState: Map<string, StateDemographicTurnout>;
+  demographicDefaultsByState?: Map<string, StateDemographics>;
+  election: { campaignRulesVersion?: number };
+  currentTurn: number;
+  preset?: string;
+  year?: number | null;
+  startingYear?: number | null;
+  enriched: EnrichedCandidate[];
+  partyGroupFavorabilityByKey?: Map<string, number>;
+}
+
+/**
+ * The electorate of a nationwide contest: every region's census cells, weighted
+ * by eligible population. A region without a census row is an error, never a
+ * silent gap in the national vote.
+ */
+export function buildNationalSubstrate(input: NationalSubstrateInput): GranularSubstrate {
+  const regions = [...input.stateMap.values()].filter(
+    (state) => state.countryId === input.countryId && state._id !== input.countryId
+  );
+  if (regions.length === 0) {
+    throw new Error(`No regions for ${input.countryId} national electorate`);
+  }
+  const parts = regions.map((region) => {
+    const demographics = input.demographicsMap.get(region._id);
+    if (!demographics) {
+      throw new Error(`No census electorate for ${input.countryId} region ${region._id}`);
+    }
+    const electorate = region.votingEligiblePopulation ?? region.population;
+    const substrate = buildGranularElectorateSubstrate({
+      campaignRulesVersion: input.election.campaignRulesVersion,
+      currentTurn: input.currentTurn,
+      countryId: input.countryId,
+      stateId: region._id,
+      preset: input.preset,
+      turnoutDoc: turnoutForElection(input.turnoutByState.get(region._id), input.election) ?? null,
+      statePopulation: electorate,
+      demographics,
+      enriched: input.enriched,
+      partyGroupFavorabilityByKey: input.partyGroupFavorabilityByKey,
+      demographicDefaults: input.demographicDefaultsByState?.get(region._id) ?? null,
+      year: input.year,
+      startingYear: input.startingYear,
+    });
+    if (!substrate) {
+      throw new Error(`No census electorate for ${input.countryId} region ${region._id}`);
+    }
+    return { regionId: region._id, electorate, substrate };
+  });
+  const merged = mergeRegionalSubstrates(parts, input.nationalDemographics);
+  if (!merged) throw new Error(`No census electorate for ${input.countryId}`);
+  return merged;
+}
+
+export interface NationalRegionDocs {
+  stateMap: Map<string, State>;
+  demographicsMap: Map<string, StateDemographics>;
+  turnoutByState: Map<string, StateDemographicTurnout>;
+  demographicDefaultsByState: Map<string, StateDemographics>;
+}
+
+/** Regional docs for a nationwide contest run outside the batched turn preload. */
+export async function loadNationalRegionDocs(
+  db: Db,
+  countryId: CountryId
+): Promise<NationalRegionDocs> {
+  const states = await (
+    await getStatesCollection(db)
+  )
+    .find({ countryId, _id: { $ne: countryId } })
+    .toArray();
+  const filter = { countryId, _id: { $in: states.map((state) => state._id) } };
+  const [demographics, turnout, defaults] = await Promise.all([
+    db.collection<StateDemographics>("stateDemographics").find(filter).toArray(),
+    db.collection<StateDemographicTurnout>("stateDemographicTurnout").find(filter).toArray(),
+    db.collection<StateDemographics>("demographicDefaults").find(filter).toArray(),
+  ]);
+  return {
+    stateMap: new Map(states.map((row) => [row._id as string, row])),
+    demographicsMap: new Map(demographics.map((row) => [row._id as string, row])),
+    turnoutByState: new Map(turnout.map((row) => [row._id as string, row])),
+    demographicDefaultsByState: new Map(defaults.map((row) => [row._id as string, row])),
   };
 }

@@ -115,7 +115,7 @@ describe("buildNationwideElectoratePreload", () => {
     expect(preload!.state.houseDistricts).toBe(6);
   });
 
-  it("population-weights group leans by each group's absolute headcount", () => {
+  it("carries no stored group aggregate", () => {
     const preload = buildNationwideElectoratePreload(
       "IE",
       [bigState, smallState],
@@ -123,18 +123,8 @@ describe("buildNationwideElectoratePreload", () => {
       [],
       []
     );
-    const workers = preload!.demographics.groups.workers;
-    // workers headcount: 2M*60% = 1.2M and 1M*30% = 0.3M => weights 0.8 / 0.2
-    expect(workers.population).toBeCloseTo(50, 10); // 1.5M of 3M
-    expect(workers.economicLean).toBeCloseTo(-30 * 0.8 + -60 * 0.2, 10);
-    expect(workers.socialLean).toBeCloseTo(10 * 0.8 + 20 * 0.2, 10);
-    expect(workers.turnout).toBeCloseTo(60 * 0.8 + 90 * 0.2, 10);
-    // Group present in only one region keeps its own lean but a nationwide share.
-    const clergy = preload!.demographics.groups.clergy;
-    expect(clergy.population).toBeCloseTo((700_000 / 3_000_000) * 100, 10);
-    expect(clergy.economicLean).toBe(10);
-    // turnout was authored in neither clergy row, so it must stay absent.
-    expect(clergy.turnout).toBeUndefined();
+    expect(preload!.demographics.groups).toEqual({});
+    expect(preload!.demographics.categoryWeights).toEqual({});
   });
 
   it("population-weights turnout modifiers across regions", () => {
@@ -198,17 +188,10 @@ describe("buildNationwideElectoratePreload", () => {
     const preload = buildNationwideElectoratePreload(
       "IE",
       [bigState, ghost],
-      [
-        bigDemo,
-        makeDemographics("IE-G", {
-          workers: { population: 100, economicLean: 99, socialLean: 99 },
-        }),
-      ],
+      [bigDemo, makeDemographics("IE-G", {})],
       [],
       []
     );
-    // Zero-population region contributes no group weight, so leans are the
-    // big state's alone.
-    expect(preload!.demographics.groups.workers.economicLean).toBe(-30);
+    expect(preload!.state.population).toBe(2_000_000);
   });
 });

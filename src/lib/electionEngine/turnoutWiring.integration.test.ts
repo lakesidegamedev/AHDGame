@@ -8,17 +8,9 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  distributeVotesByGroupLevelAllocation,
-  calcStateTurnout,
-  resolveTurnout,
-} from "@/lib/electionEngine";
+import { distributeVotesByGroupLevelAllocation, calcStateTurnout } from "@/lib/electionEngine";
 import type { EnrichedCandidate } from "@/lib/electionEngine";
-import type {
-  StateDemographics,
-  DemographicCategory,
-  StateDemographicTurnout,
-} from "@/lib/db/types";
+import type { StateDemographics, DemographicCategory } from "@/lib/db/types";
 
 // Test data: Simplified demographics
 const TEST_CATEGORIES: DemographicCategory[] = [
@@ -99,120 +91,6 @@ function makeTestCandidates(): EnrichedCandidate[] {
 
 describe("Turnout-to-election wiring integration", () => {
   const statePopulation = 1_000_000;
-
-  describe("resolveTurnout", () => {
-    it("applies positive modifiers to increase turnout", () => {
-      const turnoutDoc: StateDemographicTurnout = {
-        _id: "TEST_STATE",
-        countryId: "US",
-        modifiers: {
-          voterGroups: {
-            college_liberals: 10, // +10 percentage points
-          },
-        },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      };
-
-      const { byGroup } = resolveTurnout(
-        statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
-        turnoutDoc
-      );
-
-      // Baseline was 60, +10 modifier = 70
-      expect(byGroup["college_liberals"]).toBe(70);
-      // Other groups unchanged
-      expect(byGroup["rural_conservatives"]).toBe(70);
-      expect(byGroup["suburban_moderates"]).toBe(65);
-    });
-
-    it("applies negative modifiers (suppression) to decrease turnout", () => {
-      const turnoutDoc: StateDemographicTurnout = {
-        _id: "TEST_STATE",
-        countryId: "US",
-        modifiers: {
-          voterGroups: {
-            rural_conservatives: -15, // -15 percentage points
-          },
-        },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      };
-
-      const { byGroup } = resolveTurnout(
-        statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
-        turnoutDoc
-      );
-
-      // Baseline was 70, -15 modifier = 55
-      expect(byGroup["rural_conservatives"]).toBe(55);
-      // Other groups unchanged
-      expect(byGroup["college_liberals"]).toBe(60);
-    });
-
-    it("clamps turnout to valid range (0-100)", () => {
-      const turnoutDoc: StateDemographicTurnout = {
-        _id: "TEST_STATE",
-        countryId: "US",
-        modifiers: {
-          voterGroups: {
-            college_liberals: 50, // Would push to 110, should clamp to 100
-            rural_conservatives: -100, // Would push to -30, should clamp to 0
-          },
-        },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      };
-
-      const { byGroup } = resolveTurnout(
-        statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
-        turnoutDoc
-      );
-
-      expect(byGroup["college_liberals"]).toBe(100);
-      expect(byGroup["rural_conservatives"]).toBe(0);
-    });
-
-    it("calculates total pool correctly with modified turnouts", () => {
-      const turnoutDoc: StateDemographicTurnout = {
-        _id: "TEST_STATE",
-        countryId: "US",
-        modifiers: {
-          voterGroups: {
-            college_liberals: 10, // 60 -> 70
-          },
-        },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      };
-
-      const { totalPool, byGroup } = resolveTurnout(
-        statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
-        turnoutDoc
-      );
-
-      // Without modifier:
-      // college_liberals: 1M * 0.30 * 0.60 = 180k
-      // rural_conservatives: 1M * 0.40 * 0.70 = 280k
-      // suburban_moderates: 1M * 0.30 * 0.65 = 195k
-      // Total: 655k
-
-      // With +10 modifier on college_liberals:
-      // college_liberals: 1M * 0.30 * 0.70 = 210k
-      // Total: 685k
-
-      expect(byGroup["college_liberals"]).toBe(70);
-      expect(totalPool).toBe(685000);
-    });
-  });
 
   describe("vote distribution with live turnouts", () => {
     it("changes Dem vote share when liberal group turnout increases", () => {
