@@ -4,7 +4,7 @@
  *
  * Implements M1 from `2026-05-22-per-state-median-voter.md`. Replaces
  * the policy-distance driver's hard-coded `(0, 0)` reference with a
- * turnout-weighted average of the state's demographic group leans so a
+ * turnout-weighted average of the state's census unit leans so a
  * centrist candidate is judged relative to the state's actual median
  * voter, not abstract national neutrality.
  *
@@ -16,7 +16,7 @@
  * See `policyDistanceDriver` in `persuasionDrivers.ts` for the consumer.
  */
 
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 import type { CountryId } from "@/lib/constants/countries";
 
 export interface MedianVoter {
@@ -27,61 +27,35 @@ export interface MedianVoter {
 }
 
 /**
- * Turnout-weighted average of group leans across all demographic categories.
+ * Turnout-weighted average of the electorate units' leans.
  * Returns `{ ep: 0, sp: 0 }` for mirror-symmetric demographics, positive for
  * right-leaning electorates, negative for left-leaning.
  *
- * Per-group leans come from the group, falling back to the category defaults.
- * `liveTurnouts` overrides per-group turnout (GOTV / suppression shift the
- * median toward boosted or suppressed groups); when omitted, each group's own
- * `turnout` is used, falling back to the category default.
+ * `liveTurnouts` overrides per-unit turnout (GOTV / suppression shift the
+ * median toward boosted or suppressed units); when omitted, each unit's own
+ * `turnout` is used.
  *
  * Zero total weight yields `{ ep: 0, sp: 0 }`; negative or non-finite values
  * are clamped.
  */
 export function computeMedianVoter(
-  demographics: StateDemographics,
-  categories: DemographicCategory[],
+  electorate: readonly ElectorateUnit[],
   liveTurnouts?: Record<string, number>
 ): MedianVoter {
   let weightSum = 0;
   let epWeighted = 0;
   let spWeighted = 0;
 
-  for (const category of categories) {
-    const catWeight = demographics.categoryWeights[category._id] ?? 0;
-    if (!Number.isFinite(catWeight) || catWeight <= 0) continue;
+  for (const unit of electorate) {
+    if (!Number.isFinite(unit.populationPct) || unit.populationPct <= 0) continue;
 
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const populationPct = stateGroup?.population;
-      if (
-        typeof populationPct !== "number" ||
-        !Number.isFinite(populationPct) ||
-        populationPct <= 0
-      )
-        continue;
+    const turnoutPct = liveTurnouts?.[unit.id] ?? unit.turnout;
+    if (!Number.isFinite(turnoutPct) || turnoutPct <= 0) continue;
 
-      const turnoutPct =
-        liveTurnouts?.[group.id] ??
-        (typeof stateGroup?.turnout === "number" ? stateGroup.turnout : group.defaultTurnout) ??
-        55;
-      if (!Number.isFinite(turnoutPct) || turnoutPct <= 0) continue;
-
-      const groupEP =
-        typeof stateGroup?.economicLean === "number"
-          ? stateGroup.economicLean
-          : group.defaultEconomicLean;
-      const groupSP =
-        typeof stateGroup?.socialLean === "number"
-          ? stateGroup.socialLean
-          : group.defaultSocialLean;
-
-      const w = catWeight * populationPct * turnoutPct;
-      weightSum += w;
-      epWeighted += w * groupEP;
-      spWeighted += w * groupSP;
-    }
+    const w = unit.populationPct * turnoutPct;
+    weightSum += w;
+    epWeighted += w * unit.economicLean;
+    spWeighted += w * unit.socialLean;
   }
 
   if (weightSum <= 0) return { ep: 0, sp: 0 };

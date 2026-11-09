@@ -30,7 +30,7 @@
  * absent). See `govCoattail.ts` for how it is built and gated.
  */
 
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 import { calcAppeal, approvalScalar } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI, normalizeNationalReachPresidentialPrimary } from "@/lib/utils/normalizeNPI";
 import { infamyPenaltyMultiplier } from "@/lib/utils/infamy";
@@ -296,8 +296,7 @@ export function distributeVotesBySwingFlow(
   effectiveTurnPool: number,
   totalPool: number,
   statePopulation: number,
-  demographics: StateDemographics,
-  categories: DemographicCategory[],
+  electorate: readonly ElectorateUnit[],
   partyOrgByParty: Map<string, number>,
   options?: DistributeVotesOptions
 ): { votesPerCandidate: Record<string, number>; sharesPct: Record<string, number> } {
@@ -329,88 +328,70 @@ export function distributeVotesBySwingFlow(
   // Per-party total appeal-weighted votes summed across all groups.
   const partyAppealVotes = new Map<string, number>();
 
-  for (const category of categories) {
-    const categoryWeight = demographics.categoryWeights[category._id] ?? 0;
-    if (categoryWeight <= 0) continue;
+  for (const unit of electorate) {
+    const populationPct = unit.populationPct;
+    const demoEP = unit.economicLean;
+    const demoSP = unit.socialLean;
+    const turnoutPct = options?.liveTurnouts?.[unit.id] ?? unit.turnout;
 
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const populationPct = stateGroup?.population ?? 0;
-      const demoEP = stateGroup?.economicLean ?? group.defaultEconomicLean;
-      const demoSP = stateGroup?.socialLean ?? group.defaultSocialLean;
-      const turnoutPct =
-        options?.liveTurnouts?.[group.id] ??
-        (typeof stateGroup?.turnout === "number" ? stateGroup.turnout : group.defaultTurnout) ??
-        55;
+    const groupContribution = statePopulation * (populationPct / 100) * (turnoutPct / 100);
+    const groupShare = groupContribution / totalPool;
+    const groupPool = effectiveTurnPool * groupShare;
 
-      const groupContribution =
-        statePopulation * (populationPct / 100) * (turnoutPct / 100) * (categoryWeight / 100);
-      const groupShare = groupContribution / totalPool;
-      const groupPool = effectiveTurnPool * groupShare;
+    // Slate-nested split: the group pool is divided between PARTIES (slate
+    // weight = mean of its candidates' appeal weights), then within a party
+    // between its own candidates. Byte-identical for one-candidate-per-party
+    // FPTP; stops a multi-seat party from buying nominal share with extra
+    // ballot slots. See slateAllocation.ts.
+    //
+    // The ledger sink captures the trace multiplicands to decompose each
+    // cell's nominal votes. `appealWeight`'s return is unaffected by tracing.
+    const traces = sink ? new Map<string, AppealWeightTrace>() : undefined;
+    const groupSplit = splitGroupPoolBySlate(
+      groupPool,
+      enriched.map((ec) => {
+        const trace: AppealWeightTrace | undefined = traces
+          ? { reachMult: 1, fitMult: 1, restMult: 1 }
+          : undefined;
+        const weight = appealWeight(ec, demoEP, demoSP, partyOrgByParty, unit.id, options, trace);
+        if (traces && trace) traces.set(ec.candidateId, trace);
+        return { candidateId: ec.candidateId, party: ec.party, weight };
+      })
+    );
+    for (const ec of enriched) {
+      candidateGroupVotes[ec.candidateId] += groupSplit[ec.candidateId] ?? 0;
+    }
 
-      // Slate-nested split: the group pool is divided between PARTIES (slate
-      // weight = mean of its candidates' appeal weights), then within a party
-      // between its own candidates. Byte-identical for one-candidate-per-party
-      // FPTP; stops a multi-seat party from buying nominal share with extra
-      // ballot slots. See slateAllocation.ts.
-      //
-      // The ledger sink captures the trace multiplicands to decompose each
-      // cell's nominal votes. `appealWeight`'s return is unaffected by tracing.
-      const traces = sink ? new Map<string, AppealWeightTrace>() : undefined;
-      const groupSplit = splitGroupPoolBySlate(
-        groupPool,
-        enriched.map((ec) => {
-          const trace: AppealWeightTrace | undefined = traces
-            ? { reachMult: 1, fitMult: 1, restMult: 1 }
-            : undefined;
-          const weight = appealWeight(
-            ec,
-            demoEP,
-            demoSP,
-            partyOrgByParty,
-            group.id,
-            options,
-            trace
-          );
-          if (traces && trace) traces.set(ec.candidateId, trace);
-          return { candidateId: ec.candidateId, party: ec.party, weight };
-        })
-      );
+    if (sink && sinkUnitId) {
+      const bucketWeights = options?.ledgerBucketWeightsByGroup?.get(unit.id);
       for (const ec of enriched) {
-        candidateGroupVotes[ec.candidateId] += groupSplit[ec.candidateId] ?? 0;
-      }
-
-      if (sink && sinkUnitId) {
-        const bucketWeights = options?.ledgerBucketWeightsByGroup?.get(group.id);
-        for (const ec of enriched) {
-          const v = groupSplit[ec.candidateId] ?? 0;
-          const t = traces?.get(ec.candidateId);
-          const product = t ? t.reachMult * t.fitMult * t.restMult : 0;
-          let base = v;
-          let reachDelta = 0;
-          let fitDelta = 0;
-          let restDelta = 0;
-          if (t && v > 0 && product > 0) {
-            // Decompose fit BEFORE reach so candidate-fit's effective multiplier
-            // is the pure appeal term (influence-free), and reach carries the
-            // name-recognition term. Keeps the reach-not-fit attribution honest.
-            base = v / product;
-            const afterFit = base * t.fitMult;
-            const afterReach = afterFit * t.reachMult;
-            fitDelta = afterFit - base;
-            reachDelta = afterReach - afterFit;
-            restDelta = v - afterReach;
-          }
-          sink.recordCellAppeal(
-            sinkUnitId,
-            ec.candidateId,
-            v,
-            demoEP,
-            demoSP,
-            { base, reachDelta, fitDelta, restDelta },
-            bucketWeights
-          );
+        const v = groupSplit[ec.candidateId] ?? 0;
+        const t = traces?.get(ec.candidateId);
+        const product = t ? t.reachMult * t.fitMult * t.restMult : 0;
+        let base = v;
+        let reachDelta = 0;
+        let fitDelta = 0;
+        let restDelta = 0;
+        if (t && v > 0 && product > 0) {
+          // Decompose fit BEFORE reach so candidate-fit's effective multiplier
+          // is the pure appeal term (influence-free), and reach carries the
+          // name-recognition term. Keeps the reach-not-fit attribution honest.
+          base = v / product;
+          const afterFit = base * t.fitMult;
+          const afterReach = afterFit * t.reachMult;
+          fitDelta = afterFit - base;
+          reachDelta = afterReach - afterFit;
+          restDelta = v - afterReach;
         }
+        sink.recordCellAppeal(
+          sinkUnitId,
+          ec.candidateId,
+          v,
+          demoEP,
+          demoSP,
+          { base, reachDelta, fitDelta, restDelta },
+          bucketWeights
+        );
       }
     }
   }

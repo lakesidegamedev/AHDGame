@@ -73,6 +73,7 @@ import {
   buildPresidentialModifierByParty,
 } from "./presidentialCoattail";
 import { computeMedianVoter } from "./medianVoter";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 import {
   fetchEnrichedCandidates,
   type CandidateEnrichmentPreload,
@@ -230,7 +231,6 @@ export async function accumulateVoteTurn(
   const stateId = election.state as string;
   let state: State | null;
   let demographics: StateDemographics | null;
-  let categories: import("@/lib/db/types").DemographicCategory[];
   let statePartyOrgs: StatePartyOrg[];
   let turnoutDoc: StateDemographicTurnout | null;
   let registrationPool: StateRegistrationPool | null = null;
@@ -244,7 +244,6 @@ export async function accumulateVoteTurn(
   if (options?.preload) {
     state = options.preload.stateMap.get(stateId) ?? null;
     demographics = options.preload.demographicsMap.get(stateId) ?? null;
-    categories = options.preload.categories;
     statePartyOrgs = options.preload.statePartyOrgsByState.get(stateId) ?? [];
     turnoutDoc = options.preload.turnoutByState.get(stateId) ?? null;
     registrationPool = options.preload.registrationPoolByState?.get(stateId) ?? null;
@@ -259,15 +258,11 @@ export async function accumulateVoteTurn(
     votingAge = options.preload.votingAgeByCountry?.get(election.countryId ?? "US") ?? 18;
     partyRenewalEnabled = options.preload.partyRenewalEnabled === true;
   } else {
-    const [s, d, c, spo, t, rp, gs] = await Promise.all([
+    const [s, d, spo, t, rp, gs] = await Promise.all([
       db.collection<State>("states").findOne({ _id: stateId, countryId: election.countryId }),
       db
         .collection<StateDemographics>("stateDemographics")
         .findOne({ _id: stateId, countryId: election.countryId }),
-      db
-        .collection<import("@/lib/db/types").DemographicCategory>("demographicCategories")
-        .find({})
-        .toArray(),
       db
         .collection<StatePartyOrg>("statePartyOrg")
         .find({ stateId, countryId: election.countryId })
@@ -298,7 +293,6 @@ export async function accumulateVoteTurn(
     ]);
     state = s;
     demographics = d;
-    categories = c;
     statePartyOrgs = spo;
     turnoutDoc = t;
     registrationPool = rp;
@@ -410,8 +404,7 @@ export async function accumulateVoteTurn(
   // The electorate is Layer-1 cells. Same engines, same appeal formula.
   // Regional contests need a census row. A nationwide contest (the region id
   // is the country id) folds every region's census cells together.
-  let effDemographics = demographics;
-  let effCategories = categories;
+  let effElectorate: ElectorateUnit[] = [];
   let effLiveTurnouts: Record<string, number> = {};
   let effTotalPool = 0;
   let effEffectiveTurnPool = 0;
@@ -459,8 +452,7 @@ export async function accumulateVoteTurn(
         : {}),
     });
     if (substrate) {
-      effDemographics = substrate.demographics;
-      effCategories = substrate.categories;
+      effElectorate = substrate.electorate;
       effLiveTurnouts = substrate.liveTurnouts;
       effTotalPool = substrate.totalPool;
       effEffectiveTurnPool =
@@ -486,8 +478,7 @@ export async function accumulateVoteTurn(
         enriched,
         partyGroupFavorabilityByKey,
       });
-      effDemographics = national.demographics;
-      effCategories = national.categories;
+      effElectorate = national.electorate;
       effLiveTurnouts = national.liveTurnouts;
       effTotalPool = national.totalPool;
       effEffectiveTurnPool =
@@ -772,10 +763,10 @@ export async function accumulateVoteTurn(
   const legislativeIncumbentTenureTerms = legInc ? legInc.tenureTerms : undefined;
 
   // M3 — per-state median voter for the policy-distance driver.
-  // Computed from already-loaded demographics + categories so no extra
+  // Computed from the already-built electorate units so no extra
   // DB hit. GOTV / suppression effects shift the median via liveTurnouts.
   const medianVoter = isGeneralElection
-    ? computeMedianVoter(effDemographics, effCategories, effLiveTurnouts)
+    ? computeMedianVoter(effElectorate, effLiveTurnouts)
     : undefined;
 
   // Multi-seat legislative own-race (US House): per-candidate consecutive-term
@@ -811,7 +802,7 @@ export async function accumulateVoteTurn(
     countryId: electionCountryId,
     electionId,
     isGeneralElection,
-    groups: deriveGroupLeans(effDemographics),
+    groups: deriveGroupLeans(effElectorate),
   });
 
   // Runtime one-party flag for the FPTP spoiler gate, so a mid-game conversion
@@ -829,8 +820,7 @@ export async function accumulateVoteTurn(
     effEffectiveTurnPool,
     effTotalPool,
     electorate,
-    effDemographics,
-    effCategories,
+    effElectorate,
     partyOrgByParty,
     {
       includeInfluenceInAppeal: false,

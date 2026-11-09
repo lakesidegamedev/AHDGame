@@ -25,12 +25,10 @@ describe("isManifestoVoteEffectEnabled", () => {
 
 describe("deriveGroupLeans", () => {
   it("lists every census electorate unit with its lean", () => {
-    const leans = deriveGroupLeans({
-      groups: {
-        nat_0: { economicLean: -4, socialLean: -2 },
-        nat_1: { economicLean: 3, socialLean: 1 },
-      },
-    });
+    const leans = deriveGroupLeans([
+      { id: "nat_0", populationPct: 50, economicLean: -4, socialLean: -2, turnout: 60 },
+      { id: "nat_1", populationPct: 50, economicLean: 3, socialLean: 1, turnout: 60 },
+    ]);
     expect(leans).toEqual([
       { id: "nat_0", economicLean: -4, socialLean: -2 },
       { id: "nat_1", economicLean: 3, socialLean: 1 },
@@ -39,7 +37,9 @@ describe("deriveGroupLeans", () => {
 
   it("errors on a unit with no lean", () => {
     expect(() =>
-      deriveGroupLeans({ groups: { nat_0: { economicLean: Number.NaN, socialLean: 0 } } })
+      deriveGroupLeans([
+        { id: "nat_0", populationPct: 100, economicLean: Number.NaN, socialLean: 0, turnout: 60 },
+      ])
     ).toThrow("Electorate unit nat_0 has no lean");
   });
 });

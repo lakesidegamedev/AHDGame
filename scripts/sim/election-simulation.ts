@@ -8,7 +8,7 @@
  *
  * What this exercises:
  *   - distributeVotesBySwingFlow per state (the pure §7.3.2 engine)
- *   - shiftDemographicsForPrimary for primary electorate scaling
+ *   - shiftElectorateForPrimary for primary electorate scaling
  *   - turnVoteWeight to confirm per-turn pool distribution
  *   - persuasionDrivers indirectly via fundsByParty +
  *     incumbentSeatShareByParty + support deltas
@@ -27,8 +27,9 @@
  * No DB, no network. All inputs are local fixtures.
  */
 
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import { shiftDemographicsForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
+import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
 import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
 import {
@@ -306,8 +307,7 @@ function runGeneralScenario(sc: GeneralScenario): GeneralResult {
       totalPool, // effectiveTurnPool — single-shot, all in this call
       totalPool, // totalPool
       state.pop * 1_000_000, // statePopulation
-      demos,
-      CATEGORIES,
+      electorateFromStoredGroups(demos, CATEGORIES),
       partyOrgByParty,
       options
     );
@@ -400,11 +400,11 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
     const state = STATES.find((s) => s.id === stateId);
     if (!state) continue;
 
-    const baseDemos = demographicsForState(state);
-    const primaryDemos =
+    const baseElectorate = electorateFromStoredGroups(demographicsForState(state), CATEGORIES);
+    const primaryElectorate =
       sc.applyPrimaryShift === false
-        ? baseDemos
-        : shiftDemographicsForPrimary(baseDemos, sc.partyPosition);
+        ? baseElectorate
+        : shiftElectorateForPrimary(baseElectorate, sc.partyPosition);
 
     const partyOrgByParty = new Map<string, number>();
     // Within a primary every candidate is same party — use party's state org.
@@ -437,8 +437,7 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
       totalPool,
       totalPool,
       state.pop * 1_000_000,
-      primaryDemos,
-      CATEGORIES,
+      primaryElectorate,
       partyOrgByParty,
       options
     );
@@ -938,7 +937,7 @@ const DEM_PRIMARY_CROWDED: PrimaryScenario = {
 };
 
 // ─── P5: Primary shift impact (shifted vs unshifted) ────────────────────
-// Runs identical Dem field twice: once with shiftDemographicsForPrimary
+// Runs identical Dem field twice: once with shiftElectorateForPrimary
 // applied (real behavior), once without (general electorate as control).
 // Delta exposes how much the primary-voter scaling moves outcomes.
 

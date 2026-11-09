@@ -7,6 +7,7 @@
  * - State-level turnout changes affect vote distribution
  */
 
+import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation, calcStateTurnout } from "@/lib/electionEngine";
 import type { EnrichedCandidate } from "@/lib/electionEngine";
@@ -95,7 +96,10 @@ describe("Turnout-to-election wiring integration", () => {
   describe("vote distribution with live turnouts", () => {
     it("changes Dem vote share when liberal group turnout increases", () => {
       const candidates = makeTestCandidates();
-      const totalPool = calcStateTurnout(statePopulation, TEST_DEMOGRAPHICS, TEST_CATEGORIES);
+      const totalPool = calcStateTurnout(
+        statePopulation,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
+      );
 
       // Baseline: no turnout modifiers
       const baselineResult = distributeVotesByGroupLevelAllocation(
@@ -103,8 +107,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         {}
       );
@@ -121,8 +124,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         { liveTurnouts: gotvTurnouts }
       );
@@ -136,7 +138,10 @@ describe("Turnout-to-election wiring integration", () => {
 
     it("changes Rep vote share when conservative group turnout increases", () => {
       const candidates = makeTestCandidates();
-      const totalPool = calcStateTurnout(statePopulation, TEST_DEMOGRAPHICS, TEST_CATEGORIES);
+      const totalPool = calcStateTurnout(
+        statePopulation,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
+      );
 
       // Baseline: no turnout modifiers
       const baselineResult = distributeVotesByGroupLevelAllocation(
@@ -144,8 +149,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         {}
       );
@@ -162,8 +166,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         { liveTurnouts: gotvTurnouts }
       );
@@ -177,7 +180,10 @@ describe("Turnout-to-election wiring integration", () => {
 
     it("produces different vote totals with suppression vs no suppression", () => {
       const candidates = makeTestCandidates();
-      const totalPool = calcStateTurnout(statePopulation, TEST_DEMOGRAPHICS, TEST_CATEGORIES);
+      const totalPool = calcStateTurnout(
+        statePopulation,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
+      );
 
       // No suppression
       const normalResult = distributeVotesByGroupLevelAllocation(
@@ -185,8 +191,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         {}
       );
@@ -203,8 +208,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool * 0.9, // Adjusted effective pool
         totalPool,
         statePopulation,
-        TEST_DEMOGRAPHICS,
-        TEST_CATEGORIES,
+        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         { liveTurnouts: suppressedTurnouts }
       );

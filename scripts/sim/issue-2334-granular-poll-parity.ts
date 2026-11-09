@@ -283,8 +283,7 @@ for (const office of offices) {
           tallySubstrate.totalPool,
           tallySubstrate.totalPool,
           population,
-          tallySubstrate.demographics,
-          tallySubstrate.categories,
+          tallySubstrate.electorate,
           new Map(),
           voteOptions
         );

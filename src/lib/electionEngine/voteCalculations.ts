@@ -3,7 +3,7 @@
  */
 
 import { clampPercentStat } from "@/lib/numeric/rules";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 import { calcAppeal, MAX_APPEAL } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI } from "@/lib/utils/normalizeNPI";
 
@@ -24,7 +24,7 @@ export function calcEffectiveFavorability(
 //
 // Simplified estimator (not the live vote engine):
 //   potential = reached voters × (appeal / MAX_APPEAL)
-//   appeal = position score vs the group (state-level: NPI is reach, not appeal)
+//   appeal = position score vs the electorate unit (state-level: NPI is reach, not appeal)
 //   reach  = normalizeNPI(politicalInfluence), name recognition in state
 //
 
@@ -33,37 +33,30 @@ export function calcCandidateVotePotential(
   charSP: number,
   politicalInfluence: number,
   statePopulation: number,
-  demographics: StateDemographics,
-  categories: DemographicCategory[]
+  electorate: readonly ElectorateUnit[]
 ): number {
   // This helper is state-race specific, so PI should never outrun the 0-100 cap.
   const clampedPoliticalInfluence = clampPercentStat(politicalInfluence);
   let totalWeightedVoters = 0;
 
-  for (const category of categories) {
-    const categoryWeight = demographics.categoryWeights[category._id] ?? 0;
+  for (const unit of electorate) {
+    const populationPct = unit.populationPct;
+    const demoEP = unit.economicLean;
+    const demoSP = unit.socialLean;
+    const turnoutPct = unit.turnout;
 
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const populationPct = stateGroup?.population ?? 0;
-      const demoEP = stateGroup?.economicLean ?? group.defaultEconomicLean;
-      const demoSP = stateGroup?.socialLean ?? group.defaultSocialLean;
-      const turnoutPct =
-        (typeof stateGroup?.turnout === "number" ? stateGroup.turnout : group.defaultTurnout) ?? 55;
+    // Reach: political influence (name recognition) determines what fraction of turned-out voters the candidate reaches
+    const reachFraction = normalizeNPI(clampedPoliticalInfluence);
 
-      // Reach: political influence (name recognition) determines what fraction of turned-out voters the candidate reaches
-      const reachFraction = normalizeNPI(clampedPoliticalInfluence);
+    const unitPop = statePopulation * (populationPct / 100);
+    const turnoutPop = unitPop * (turnoutPct / 100);
+    const reachedPop = turnoutPop * reachFraction;
 
-      const groupPop = statePopulation * (populationPct / 100);
-      const turnoutPop = groupPop * (turnoutPct / 100);
-      const reachedPop = turnoutPop * reachFraction;
+    // Appeal (0-25): quadratic position only (state-level: NPI is reach, not appeal)
+    const appeal = calcAppeal(demoEP, demoSP, charEP, charSP, clampedPoliticalInfluence, false);
+    const rawPotential = reachedPop * (appeal / MAX_APPEAL);
 
-      // Appeal (0-25): quadratic position only (state-level: NPI is reach, not appeal)
-      const appeal = calcAppeal(demoEP, demoSP, charEP, charSP, clampedPoliticalInfluence, false);
-      const rawPotential = reachedPop * (appeal / MAX_APPEAL);
-
-      totalWeightedVoters += rawPotential * (categoryWeight / 100);
-    }
+    totalWeightedVoters += rawPotential;
   }
 
   return Math.max(0, totalWeightedVoters);
@@ -73,21 +66,11 @@ export function calcCandidateVotePotential(
 
 export function calcStateTurnout(
   statePopulation: number,
-  demographics: StateDemographics,
-  categories: DemographicCategory[]
+  electorate: readonly ElectorateUnit[]
 ): number {
   let total = 0;
-  for (const category of categories) {
-    const categoryWeight = demographics.categoryWeights[category._id] ?? 0;
-    let categoryTurnout = 0;
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const populationPct = stateGroup?.population ?? 0;
-      const turnoutPct =
-        (typeof stateGroup?.turnout === "number" ? stateGroup.turnout : group.defaultTurnout) ?? 55;
-      categoryTurnout += statePopulation * (populationPct / 100) * (turnoutPct / 100);
-    }
-    total += categoryTurnout * (categoryWeight / 100);
+  for (const unit of electorate) {
+    total += statePopulation * (unit.populationPct / 100) * (unit.turnout / 100);
   }
   return Math.round(total);
 }

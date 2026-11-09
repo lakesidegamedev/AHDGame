@@ -12,7 +12,7 @@ import {
 } from "@/lib/primaryScore";
 import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/electionEngine/constants";
 import {
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
   applyPrimaryTurnoutRetention,
 } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { ObjectId, type Db } from "mongodb";
@@ -156,17 +156,17 @@ export async function projectCampaignPoll(
       ),
     };
   }
-  let demographics = substrate.demographics;
+  let electorate = substrate.electorate;
   let liveTurnouts = substrate.liveTurnouts;
   if (inPrimary) {
     const position = {
       economicPosition: enriched[0]?.partyEcon ?? 0,
       socialPosition: enriched[0]?.partySocial ?? 0,
     };
-    demographics = shiftDemographicsForPrimary(substrate.demographics, position);
+    electorate = shiftElectorateForPrimary(substrate.electorate, position);
     liveTurnouts = applyPrimaryTurnoutRetention(
       substrate.liveTurnouts,
-      substrate.demographics,
+      substrate.electorate,
       position
     );
   }
@@ -177,8 +177,7 @@ export async function projectCampaignPoll(
     substrate.totalPool,
     substrate.totalPool,
     audience.context.statePopulation,
-    demographics,
-    substrate.categories,
+    electorate,
     new Map(partyOrgs.map((org) => [org.partyId, org.organization])),
     {
       isGeneralElection: !inPrimary,

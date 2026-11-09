@@ -1275,7 +1275,7 @@ describe("accumulateVoteTurn — vote accumulation", () => {
     await accumulateVoteTurn(electionId, 1, new Date());
 
     const lastCall = vi.mocked(distributeVotesBySwingFlow).mock.calls.at(-1)!;
-    const options = lastCall[7] as { presidentialModifierByParty?: Map<string, number> };
+    const options = lastCall[6] as { presidentialModifierByParty?: Map<string, number> };
     expect(options.presidentialModifierByParty).toBeDefined();
     expect(options.presidentialModifierByParty!.has("democrat")).toBe(true);
     // 70% approval → boosting multiplier (> 1).
@@ -1967,15 +1967,9 @@ describe("accumulateVoteTurn — granular electorate substrate", () => {
       vi.mocked(distributeVotesBySwingFlow).mock.calls[0] ??
       vi.mocked(distributeVotesByGroupLevelAllocation).mock.calls[0];
     expect(call).toBeDefined();
-    const [, , , , demographics, categories] = call;
-    expect(categories).toHaveLength(1);
-    expect(categories[0]._id).toBe("granularCells");
-    expect(categories[0].groups.length).toBeGreaterThan(5);
-    expect(demographics.categoryWeights.granularCells).toBe(100);
-    const popSum = Object.values(demographics.groups).reduce(
-      (s: number, g) => s + (g as { population: number }).population,
-      0
-    );
+    const [, , , , electorate] = call;
+    expect(electorate.length).toBeGreaterThan(5);
+    const popSum = electorate.reduce((sum: number, unit) => sum + unit.populationPct, 0);
     expect(popSum).toBeCloseTo(100, 3);
   });
 
