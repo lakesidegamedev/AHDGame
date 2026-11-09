@@ -88,6 +88,44 @@ describe(defect.id, () => {
     expect(plan.touched[0]!.ids).toHaveLength(5);
   });
 
+  it("does not flag a shared rollover bond beside one scheduled issuance of the same coupon and term", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("gameState", [{ _id: "current", currentTurn: 740 }]);
+    memory.seed("bonds", [
+      // AT: one shared rollover bond plus one scheduled issuance is the intended shape.
+      bond(11, { sovereignRolloverConsolidated: true }),
+      bond(12),
+      // DE: two shared rollover bonds for one series is a split.
+      bond(13, {
+        countryId: "DE",
+        issuerName: "Germany",
+        currencyCode: "DEM",
+        sovereignRolloverConsolidated: true,
+      }),
+      bond(14, {
+        countryId: "DE",
+        issuerName: "Germany",
+        currencyCode: "DEM",
+        sovereignRolloverConsolidated: true,
+      }),
+      // FR: a shared bond plus two unconsolidated bonds is a split.
+      bond(15, {
+        countryId: "FR",
+        issuerName: "France",
+        currencyCode: "FRF",
+        sovereignRolloverConsolidated: true,
+      }),
+      bond(16, { countryId: "FR", issuerName: "France", currencyCode: "FRF" }),
+      bond(17, { countryId: "FR", issuerName: "France", currencyCode: "FRF" }),
+    ] as unknown as Record<string, unknown>[]);
+    const db = memory as unknown as Db;
+    const detected = await defect.detect(db, { ...ctx, dryRun: true });
+    expect(detected.affected).toBe(3);
+    expect(
+      (detected.sample as Array<{ countryId: string }>).map((row) => row.countryId).sort()
+    ).toEqual(["DE", "FR"]);
+  });
+
   it("folds each series into its oldest bond with face, float and positions conserved", async () => {
     const memory = world();
     const db = memory as unknown as Db;

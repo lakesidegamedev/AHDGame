@@ -82,7 +82,7 @@ type SeriesBond = Pick<
   | "requestedUnits"
   | "holders"
   | "updatedAt"
-> & { reconcile?: boolean };
+> & { reconcile?: boolean; sovereignRolloverConsolidated?: boolean };
 
 export interface SeriesPlan {
   key: string;
@@ -189,7 +189,20 @@ export function mergeHolders(bonds: readonly Pick<Bond, "holders">[]): BondHolde
   );
 }
 
-/** Read-only: every series with more than one plain bond, and what it folds into. */
+/**
+ * With the consolidation switch on, one shared rollover bond per issuer, coupon,
+ * term and turn is the intended shape, and a scheduled issuance that lands on
+ * the same coupon and term may sit beside it. That pair is not the wall. A
+ * series is split only when two or more members of the same kind exist: two
+ * shared rollover bonds, or two bonds that never took part in consolidation.
+ */
+export function isSplitSeries(group: readonly SeriesBond[]): boolean {
+  if (group.length < 2) return false;
+  const shared = group.filter((bond) => bond.sovereignRolloverConsolidated === true).length;
+  return shared >= 2 || group.length - shared >= 2;
+}
+
+/** Read-only: every series split into more than one plain bond, and what it folds into. */
 export async function surveySovereignSeries(db: Db): Promise<Payload> {
   const turn = await currentTurn(db);
   const bonds = await db
@@ -209,6 +222,7 @@ export async function surveySovereignSeries(db: Db): Promise<Payload> {
         requestedUnits: 1,
         holders: 1,
         reconcile: 1,
+        sovereignRolloverConsolidated: 1,
       },
     })
     .sort({ _id: 1 })
@@ -226,7 +240,7 @@ export async function surveySovereignSeries(db: Db): Promise<Payload> {
   }
   const series: SeriesPlan[] = [];
   for (const [key, group] of groups) {
-    if (group.length < 2) continue;
+    if (!isSplitSeries(group)) continue;
     const survivor = group[0]!;
     series.push({
       key,
