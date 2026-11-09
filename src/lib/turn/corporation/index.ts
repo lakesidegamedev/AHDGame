@@ -44,6 +44,7 @@ import {
   buildUnionsBannedByCountry,
   type LabourContext,
 } from "@/lib/labour/laborCost";
+import { withAutomationUnionBias } from "@/lib/automationPolicy/policies";
 import { buildUnionEffectsById } from "@/lib/unions/unionLookups";
 import { loadUndergroundStrengthByCountrySector } from "@/lib/unions/undergroundEffects";
 import { loadCollectiveAgreementEffects } from "@/lib/unions/collectiveAgreementEffects";
@@ -294,7 +295,10 @@ export async function processCorporationTurn(
     unionsEnabled: labourAtLeast(labourMode, "unions"),
     // v3 Phase 7b: gates union-law bias + union-busting.
     fullEnabled,
-    unionLawBiasByCountry: buildUnionLawBiasByCountry(lookups.federalBudgets),
+    unionLawBiasByCountry: withAutomationUnionBias(
+      buildUnionLawBiasByCountry(lookups.federalBudgets),
+      lookups.automationPolicyByCountry
+    ),
     // Union ban (player suggestion #93): read at the "unions" tier (the same
     // tier the unionization/strike machinery runs at), unlike the bias map
     // above whose reads are gated at "full".

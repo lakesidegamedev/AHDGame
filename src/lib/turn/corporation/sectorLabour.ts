@@ -221,6 +221,8 @@ export interface SectorLabourEconomicsInput {
   marketRecoveryStage?: number;
   computedWorkers: number;
   techLaborCostMultiplier: number;
+  /** 2027 world: wage bill multiplier from the hiring subsidy; absent is 1. */
+  employerWageCostMultiplier?: number;
   costOfLivingIndex?: number;
   unemploymentRate?: number;
   wageIndexByState: SectorTurnEnv["wageIndexByState"];
@@ -266,6 +268,7 @@ export function resolveSectorLabourEconomics({
   explicitPlantCostsEnabled,
   computedWorkers,
   techLaborCostMultiplier,
+  employerWageCostMultiplier = 1,
   costOfLivingIndex,
   unemploymentRate,
   wageIndexByState,
@@ -299,7 +302,11 @@ export function resolveSectorLabourEconomics({
   const unionPremiumPercent =
     labour.unionsEnabled && !unionsBanned ? unionPremium(sector.unionization ?? 0) : 0;
   const wageMultiplier =
-    wageLevel * floorMultiplier * techLaborCostMultiplier * (1 + unionPremiumPercent / 100);
+    wageLevel *
+    floorMultiplier *
+    techLaborCostMultiplier *
+    employerWageCostMultiplier *
+    (1 + unionPremiumPercent / 100);
 
   let wageAccumulator = wageIndexByState.get(sector.stateId);
   if (!wageAccumulator) {

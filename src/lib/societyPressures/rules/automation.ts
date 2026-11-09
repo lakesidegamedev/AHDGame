@@ -49,12 +49,16 @@ const finiteOr = (v: number | undefined, fallback: number): number =>
 export function absorptionHalfLifeYears(input: {
   /** 0..1 from the wage insurance law. */
   wageInsuranceSupport: number;
+  /** 0..1 from the retraining guarantee and hiring subsidy; adds to the speed. */
+  policySupport?: number;
   /** Output gap, percent. Above trend creates new jobs faster. */
   outputGap?: number;
   /** Regional education index, percent of adults with tertiary education. */
   educationIndex?: number;
 }): number {
-  const support = clamp(finiteOr(input.wageInsuranceSupport, 0), 0, 1);
+  const support =
+    clamp(finiteOr(input.wageInsuranceSupport, 0), 0, 1) +
+    clamp(finiteOr(input.policySupport, 0), 0, 1);
   const demand = clamp(finiteOr(input.outputGap, 0), -10, 10) * 0.04;
   const schooling =
     (clamp(finiteOr(input.educationIndex, NEUTRAL_EDUCATION_INDEX), 0, 100) -

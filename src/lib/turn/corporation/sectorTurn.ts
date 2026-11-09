@@ -40,6 +40,11 @@ import {
   NEUTRAL_TECH_EFFECTS,
 } from "@/lib/constants/techTree";
 import { sectorVintageYear, withEnergyTransition } from "@/lib/energyTransition/policies";
+import {
+  lawAdjustedLabourFactor,
+  lawWageCostMultiplier,
+  withAutomationLevy,
+} from "@/lib/automationPolicy/policies";
 import { blendVintageYear } from "@/lib/energyTransition/rules";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
@@ -145,7 +150,7 @@ export function processSector(
   // folds into the same aggregate (techTree/sunset).
   // Energy transition worlds also fold plant age, climate laws and mineral
   // recycling into the input rates (energyTransition/policies).
-  const techEffects = withEnergyTransition(
+  const transitionTechEffects = withEnergyTransition(
     techTreesEnabled
       ? withSunsetPenalty(
           currentYear != null
@@ -172,6 +177,11 @@ export function processSector(
     operatingSectorType,
     currentYear
   );
+  // 2027 world: automation levies make automation methods' inputs dearer.
+  const techEffects = withAutomationLevy(transitionTechEffects, lookups.automationPolicyByCountry, {
+    countryId: sector.countryId ?? corp.countryId,
+    strategyId: sector.strategyId,
+  });
   // Normalize host-currency revenue to anchor currency. Recover corrupt values
   // here so NaN cannot spread through corporate totals and tax accruals.
   const rawSectorRevenue = Number.isFinite(sector.revenue) ? sector.revenue : 0;
@@ -840,9 +850,10 @@ export function processSector(
     labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
-    labourPerUnitFactor: automationLabourFactor(
-      sector.strategyId,
-      env.automationDisplacedByState !== undefined
+    labourPerUnitFactor: lawAdjustedLabourFactor(
+      automationLabourFactor(sector.strategyId, env.automationDisplacedByState !== undefined),
+      lookups.automationPolicyByCountry,
+      sector.countryId ?? corp.countryId
     ),
     automationDisplacedByState: env.automationDisplacedByState,
     fundedHeadcount: env.fundedHeadcountBySectorId
@@ -903,6 +914,10 @@ export function processSector(
     grossMaintenance: explicitPlantCostsEnabled ? explicitPayrollBasis : payrollBasis,
     computedWorkers,
     techLaborCostMultiplier: techEffects.laborCostMultiplier,
+    employerWageCostMultiplier: lawWageCostMultiplier(
+      lookups.automationPolicyByCountry,
+      sector.countryId ?? corp.countryId
+    ),
     costOfLivingIndex: sectorMetrics?.economic?.costOfLiving?.value,
     unemploymentRate: sectorMetrics?.economic?.unemploymentRate?.value,
     wageIndexByState,

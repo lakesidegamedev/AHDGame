@@ -171,6 +171,23 @@ describe("resolveSectorLabourEconomics", () => {
     }
   });
 
+  it("cheapens payroll under the hiring subsidy and leaves the automation index alone", () => {
+    const plain = economicsInput();
+    const subsidised = economicsInput();
+    const base = resolveSectorLabourEconomics(plain);
+    const cheaper = resolveSectorLabourEconomics({
+      ...subsidised,
+      employerWageCostMultiplier: 0.95,
+    });
+    expect(cheaper.wagePerWorker).toBeCloseTo(base.wagePerWorker! * 0.95, 10);
+    expect(cheaper.sectorLaborCost).toBeLessThan(base.sectorLaborCost);
+    expect(subsidised.automationIndexByState).toEqual(plain.automationIndexByState);
+    expect(
+      resolveSectorLabourEconomics({ ...economicsInput(), employerWageCostMultiplier: 1 })
+        .sectorLaborCost
+    ).toBe(base.sectorLaborCost);
+  });
+
   it("prices an agreement wage floor above the employer's own wage level", () => {
     const unfloored = resolveSectorLabourEconomics(economicsInput());
     const floored = resolveSectorLabourEconomics(economicsInput(1.3));

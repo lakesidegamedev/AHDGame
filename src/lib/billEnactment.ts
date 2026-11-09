@@ -78,6 +78,7 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { generateDiscordEventCard } from "@/lib/discord/eventCard";
 import { billChamberVoteSplits } from "@/lib/charts/voteSplitChart";
 import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
+import { automationBucketImpacts, mergeBucketImpacts } from "@/lib/automationPolicy/rules";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
 import { taxSliderRateLabel } from "@/lib/politicalLegislation/taxSlider";
 import {
@@ -1093,15 +1094,19 @@ async function processProvisionEnactment(
 
   // Calculate and apply bucket approval impacts based on policy shift
   if (!corporateRateHandled && lt?.policyDomain && forVoters.length > 0) {
-    const impacts = calculateShiftImpacts(
-      lt.policyDomain,
-      oldPolicyIndex,
-      newPolicyIndex,
-      countryId,
-      // Curated position scores → correct shift direction even for right→left-ordered
-      // option sets (all tax brackets, some CN/DE/JP types). Without these the bare
-      // index flips every approval sign (e.g. libertarians "approve" a 50% income tax).
-      lt.policyOptions?.map((o) => (o.economic ?? 0) + (o.social ?? 0))
+    const impacts = mergeBucketImpacts(
+      calculateShiftImpacts(
+        lt.policyDomain,
+        oldPolicyIndex,
+        newPolicyIndex,
+        countryId,
+        // Curated position scores → correct shift direction even for right→left-ordered
+        // option sets (all tax brackets, some CN/DE/JP types). Without these the bare
+        // index flips every approval sign (e.g. libertarians "approve" a 50% income tax).
+        lt.policyOptions?.map((o) => (o.economic ?? 0) + (o.social ?? 0))
+      ),
+      // The automation laws also move the buckets they help or tax.
+      automationBucketImpacts(lt._id, oldPolicyIndex, newPolicyIndex)
     );
 
     if (Object.keys(impacts).length > 0) {

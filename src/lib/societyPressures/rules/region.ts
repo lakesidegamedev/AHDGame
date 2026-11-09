@@ -3,6 +3,12 @@
  * re-employment), then automation absorption, then housing. Levels persist on
  * the region's macro document; a replayed turn returns the stored state.
  */
+import {
+  NO_AUTOMATION_POLICY,
+  reemploymentSupport,
+  wageInsuranceLevelSupport,
+  type AutomationPolicy,
+} from "@/lib/automationPolicy/rules";
 import { absorptionHalfLifeYears, advanceAutomationAbsorption } from "./automation";
 import { advanceEducationIndex, educationIndexTarget } from "./education";
 import {
@@ -42,6 +48,8 @@ export interface RegionSocietyInput {
   educationSpendingResponse: number;
   outputGap?: number;
   laws: SocietyLawPositions;
+  /** Enacted US and UK automation laws; absent is no statute. */
+  automation?: AutomationPolicy;
 }
 
 export interface RegionSocietyResult {
@@ -93,7 +101,11 @@ export function advanceRegionSocietyPressures(input: RegionSocietyInput): Region
     previousAbsorbed: prev?.automationAbsorbed ?? 0,
     turnsPerYear: input.turnsPerYear,
     halfLifeYears: absorptionHalfLifeYears({
-      wageInsuranceSupport: wageInsuranceSupport(input.laws.wageInsurance),
+      wageInsuranceSupport: Math.max(
+        wageInsuranceSupport(input.laws.wageInsurance),
+        wageInsuranceLevelSupport((input.automation ?? NO_AUTOMATION_POLICY).wageInsurance)
+      ),
+      policySupport: reemploymentSupport(input.automation ?? NO_AUTOMATION_POLICY),
       outputGap: input.outputGap,
       educationIndex,
     }),

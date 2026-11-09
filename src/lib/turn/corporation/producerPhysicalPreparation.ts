@@ -33,6 +33,11 @@ import {
 } from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { withEnergyTransition } from "@/lib/energyTransition/policies";
+import {
+  lawAdjustedLabourFactor,
+  lawWageCostMultiplier,
+  withAutomationLevy,
+} from "@/lib/automationPolicy/policies";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import {
   LOW_USE_COLD_UPKEEP_FRACTION,
@@ -233,6 +238,7 @@ export type ProducerPhysicalEnv = Pick<
     | "regionalConditionMarginByState"
     | "stateOwnershipConcentrationByCountry"
     | "energyTransition"
+    | "automationPolicyByCountry"
   >;
 };
 
@@ -316,7 +322,7 @@ export function prepareProducerPhysicalSector(input: {
     sector.industryModel,
     sector.mediaDiscriminator
   );
-  const tech = withEnergyTransition(
+  const transitionTech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
           getSectorTechEffectsForYear(
@@ -336,6 +342,11 @@ export function prepareProducerPhysicalSector(input: {
     operatingType,
     currentYear
   );
+  // 2027 world: automation levies make automation methods' inputs dearer.
+  const tech = withAutomationLevy(transitionTech, lookups.automationPolicyByCountry, {
+    countryId,
+    strategyId: sector.strategyId,
+  });
   const recipe = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
     sector.strategyId ?? "standard",
@@ -607,9 +618,10 @@ export function prepareProducerPhysicalSector(input: {
     labourDemandByState: env.labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: sector.wageLevel,
-    labourPerUnitFactor: automationLabourFactor(
-      sector.strategyId,
-      presetUsesSocietyPressures(lookups.preset)
+    labourPerUnitFactor: lawAdjustedLabourFactor(
+      automationLabourFactor(sector.strategyId, presetUsesSocietyPressures(lookups.preset)),
+      lookups.automationPolicyByCountry,
+      countryId
     ),
   });
   const metrics = lookups.stateMetricsByState?.get(sector.stateId);
@@ -626,6 +638,7 @@ export function prepareProducerPhysicalSector(input: {
     grossMaintenance: (nominalDaily * runningFraction * staffedShare) / TURNS_PER_DAY,
     computedWorkers: headcount.workers,
     techLaborCostMultiplier: tech.laborCostMultiplier,
+    employerWageCostMultiplier: lawWageCostMultiplier(lookups.automationPolicyByCountry, countryId),
     costOfLivingIndex: metrics?.economic?.costOfLiving?.value,
     unemploymentRate: metrics?.economic?.unemploymentRate?.value,
     wageIndexByState: env.wageIndexByState,

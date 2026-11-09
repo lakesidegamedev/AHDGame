@@ -36,6 +36,8 @@ const SLUGS_2030 = [
   "heatLabourStandards",
   "pensionAgeIndexation",
   "nuclearLicensingReform",
+  "retrainingGuarantee",
+  "hiringSubsidy",
 ];
 const SLUGS_2035 = [
   "climateAdaptationFund",
@@ -43,6 +45,8 @@ const SLUGS_2035 = [
   "basicIncomePilot",
   "geneEditingRegulation",
   "spaceTrafficAct",
+  "automationPensionLevy",
+  "transitionCompacts",
 ];
 const SLUGS_2040 = [
   "automationDividend",
@@ -152,7 +156,7 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       const [repealed, ...rungs] = law.levels!;
       expect(repealed.gdpCostFraction).toBeUndefined();
       expect(repealed.gdpRevenueFraction).toBeUndefined();
-      if (slugOf(law) === "pensionAgeIndexation") continue;
+      if (["pensionAgeIndexation", "automationPensionLevy"].includes(slugOf(law))) continue;
       const costs = rungs.map((level) => level.gdpCostFraction ?? 0);
       expect(
         costs.every((cost) => cost > 0 && cost <= 0.12),
@@ -224,6 +228,28 @@ describe.each(["US", "UK"] as const)("%s later-era laws", (countryId) => {
       modernIds.some((id) => error.startsWith(`${id}: level`))
     );
     expect(errors).toEqual([]);
+  });
+
+  it("books the automation pension levy as a growing saving on the pension line", () => {
+    const law = laws.find((entry) => entry.id === `${cc}.sec.automationPensionLevy`)!;
+    expect(budgetKeyForLaw(law)).toBe(countryId === "US" ? "socialSecurity" : "statePensions");
+    const savings = law.levels!.slice(1).map((level) => level.gdpCostFraction ?? 0);
+    expect(savings.every((cost, i) => cost < 0 && (i === 0 || cost < savings[i - 1]))).toBe(true);
+    // Conservative: even the top rung saves well under half a percent of output.
+    expect(savings[3]).toBeGreaterThan(-0.005);
+    const modernIds = laws.map((entry) => entry.id);
+    const errors = validateCatalog(getCatalog(countryId), countryId).filter((error) =>
+      modernIds.some((id) => error.startsWith(`${id}: level`))
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("opens the automation track in two steps: retraining and subsidy first, levy and compacts later", () => {
+    const from = (slug: string) => laws.find((entry) => entry.id === `${cc}.sec.${slug}`)!.window;
+    expect(from("retrainingGuarantee")).toEqual({ from: 2030 });
+    expect(from("hiringSubsidy")).toEqual({ from: 2030 });
+    expect(from("automationPensionLevy")).toEqual({ from: 2035 });
+    expect(from("transitionCompacts")).toEqual({ from: 2035 });
   });
 
   it("books costs on lines the country already budgets", () => {
@@ -341,7 +367,7 @@ describe("seed projection", () => {
   });
 
   it("authors each spec once for both countries", () => {
-    expect(MODERN_ERA_LAW_SPECS).toHaveLength(32);
-    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(32);
+    expect(MODERN_ERA_LAW_SPECS).toHaveLength(36);
+    expect(new Set(MODERN_ERA_LAW_SPECS.map((spec) => spec.slug)).size).toBe(36);
   });
 });

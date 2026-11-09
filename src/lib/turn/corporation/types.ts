@@ -437,6 +437,11 @@ export interface CorporationLookups {
     policyByCountry: Map<string, import("@/lib/energyTransition/rules").TransitionPolicy>;
     cleanShareByCountry: Map<string, number>;
   };
+  /**
+   * 2027 world: each country's enacted automation laws (levies, subsidies,
+   * compacts) that price automation and labour. Absent elsewhere.
+   */
+  automationPolicyByCountry?: Map<string, import("@/lib/automationPolicy/rules").AutomationPolicy>;
   /** Named regional conditions (approval modifiers) stacked into sector margins. */
   regionalConditionMarginByState?: Map<string, number>;
   /** Live era year — gates inactive metric margin signals. */
