@@ -49,7 +49,6 @@ function project(
     demographics: {
       _id: region,
       countryId: "US",
-      groups: {},
       categoryWeights: {},
       lastUpdated: new Date(0),
     },
