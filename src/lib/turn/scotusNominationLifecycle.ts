@@ -162,7 +162,7 @@ export async function processScotusNominationLifecycle(
       .toArray(),
     database
       .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } }),
+      .findOne({ countryId: "US", officeType: "president" }),
   ]);
   const nppIds = nppOfficials
     .map((o) => o.nppId)

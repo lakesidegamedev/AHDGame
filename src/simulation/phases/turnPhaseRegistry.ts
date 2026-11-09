@@ -1010,9 +1010,12 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             processScotusTurn(gameState.currentTurn, realNow, db)
           ),
           // UK JR surprise flavor, same parallel group as SCOTUS; UK-only
-          // mild uk_* enactments tagged uk_judicial_review_surprise.
+          // mild uk_* enactments tagged uk_judicial_review_surprise. Skipped in
+          // worlds where the UK is not a full simulation country.
           runtime.runPhase("ukJrSurpriseTurn", () =>
-            processUkJrSurpriseTurn(gameState.currentTurn, db)
+            registeredForBills.has("UK")
+              ? processUkJrSurpriseTurn(gameState.currentTurn, db)
+              : Promise.resolve({ spawned: false })
           ),
           // FOMC seat confirmations, a like-shaped Senate-confirmation lifecycle,
           // appended last so the index math above is unchanged.

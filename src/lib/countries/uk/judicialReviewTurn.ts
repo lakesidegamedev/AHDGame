@@ -10,6 +10,7 @@ import { enactRulingBill } from "@/lib/scotus/enactRulingBill";
 import { createSystemNewsPost } from "@/lib/news";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
 import type { PoliticalParty } from "@/lib/db/types";
+import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { rollUkJrSurpriseSpawn } from "@/lib/countries/uk/judicialReview/surpriseSpawn";
 import {
   UK_JR_SURPRISE_TEMPLATES,
@@ -40,14 +41,9 @@ export interface UkJrSurpriseTurnResult {
  */
 async function resolveUkProxyCourtLean(db: Db, axis: JrCaseAxis): Promise<-1 | 0 | 1> {
   const formation = await db
-    .collection("governmentFormations")
-    .findOne(
-      { countryId: "UK", status: "formed" },
-      { projection: { rulingPartyId: 1, partyId: 1 } }
-    );
-  const partyId =
-    (formation as { rulingPartyId?: string; partyId?: string } | null)?.rulingPartyId ??
-    (formation as { rulingPartyId?: string; partyId?: string } | null)?.partyId;
+    .collection<GovernmentFormation>("governmentFormations")
+    .findOne({ _id: "UK", status: "formed" }, { projection: { governingPartyId: 1 } });
+  const partyId = formation?.governingPartyId ?? null;
 
   let economic = 0;
   let social = 0;

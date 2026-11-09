@@ -47,7 +47,7 @@ describe("processUkJrSurpriseTurn", () => {
     db.collectionMocks["ukJudicialReviewCases"]!.find.mockReturnValue(cursor([]));
     db.collectionMocks["governmentFormations"]!.findOne.mockResolvedValue({
       status: "formed",
-      rulingPartyId: "1",
+      governingPartyId: "1",
     });
     db.collectionMocks["politicalParties"]!.findOne.mockResolvedValue({
       sequentialId: 1,
