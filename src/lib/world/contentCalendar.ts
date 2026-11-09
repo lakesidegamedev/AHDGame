@@ -36,7 +36,7 @@ import { countriesByTier, type ShippingPreset } from "@/lib/world/eraRoster";
 
 export const CALENDAR_PRESET: ShippingPreset = "2027-default";
 export const CALENDAR_FIRST_YEAR = 2027;
-export const CALENDAR_LAST_YEAR = 2055;
+export const CALENDAR_LAST_YEAR = 2059;
 
 export const CALENDAR_CATEGORIES = [
   "livingConflicts",

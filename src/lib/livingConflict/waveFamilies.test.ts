@@ -13,6 +13,8 @@ import {
   yearFractionOfTurn,
 } from "./rules/waveFamilies";
 import {
+  ELECTION_INTEGRITY_KEY,
+  FUSION_BREAKTHROUGH_KEY,
   ANTIMICROBIAL_RESISTANCE_KEY,
   ARCTIC_OPENING_KEY,
   CLIMATE_MIGRATION_KEY,
@@ -228,6 +230,37 @@ describe("climate, Arctic, resistance and orbit opening rules", () => {
     const rule = waveFamilyTable(ORBITAL_DEBRIS_KEY).opening;
     expect(waveGatesHold(rule, "US", signals({ rdIntensity: 1 }))).toBe(false);
     expect(waveGatesHold(rule, "US", signals({ rdIntensity: 3.5, tension: 50 }))).toBe(true);
+  });
+});
+
+describe("fusion and election integrity", () => {
+  it("needs a research base and an energy framework for fusion, and rewards policy", () => {
+    const rule = waveFamilyTable(FUSION_BREAKTHROUGH_KEY).opening;
+    expect(waveGatesHold(rule, "JP", signals({ rdIntensity: 1, energySecurity: 60 }))).toBe(false);
+    expect(waveGatesHold(rule, "JP", signals({ rdIntensity: 4, energySecurity: 10 }))).toBe(false);
+    expect(waveGatesHold(rule, "JP", signals({ rdIntensity: 4, energySecurity: 60 }))).toBe(true);
+    const def = livingConflictDef(FUSION_BREAKTHROUGH_KEY)!;
+    const swing = (outcomeId: string) =>
+      outcomeOf(def, "peak", outcomeId).effectsByRole!.belligerent!.find(
+        (effect) => effect.metricField === "gdpGrowth"
+      )!.value;
+    expect(swing("contained")).toBeGreaterThan(swing("softened"));
+    expect(swing("softened")).toBeGreaterThan(swing("adapted"));
+    expect(swing("adapted")).toBeGreaterThan(swing("unchecked"));
+    expect(swing("unchecked")).toBeGreaterThan(0);
+  });
+
+  it("does not count good news against the severe-crisis limit", () => {
+    expect(livingConflictDef(FUSION_BREAKTHROUGH_KEY)!.severeRoles).toEqual([]);
+    expect(livingConflictDef(ELECTION_INTEGRITY_KEY)!.severeRoles).toBeUndefined();
+  });
+
+  it("opens election integrity only where integrity is weak", () => {
+    const rule = waveFamilyTable(ELECTION_INTEGRITY_KEY).opening;
+    expect(waveGatesHold(rule, "US", signals({ integrity: 80 }))).toBe(false);
+    const weak = waveAnnualChance(rule, signals({ integrity: 25, openness: 30 }));
+    const fair = waveAnnualChance(rule, signals({ integrity: 50, openness: 55 }));
+    expect(weak).toBeGreaterThan(fair);
   });
 });
 

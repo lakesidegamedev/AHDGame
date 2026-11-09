@@ -10,7 +10,13 @@ import { choiceNode, responseOpt } from "../authoring";
 import { cfx } from "../effects";
 import { defaultRoleResolver } from "../roles";
 import { waveFamilyTable, type WaveDynamics } from "../rules/waveFamilyTables";
-import type { ConflictEvent, ConflictPhase, LivingConflictDef, RoleDecisionTrees } from "../types";
+import type {
+  ConflictEvent,
+  ConflictPhase,
+  ConflictRole,
+  LivingConflictDef,
+  RoleDecisionTrees,
+} from "../types";
 
 /** The only metrics a wave may move, so a typo cannot silently do nothing. */
 const ALLOWED_METRICS = new Set([
@@ -72,6 +78,10 @@ export interface WaveFamilyContent {
   effects: WaveEffectSpec[];
   /** Approval swing at scale 1 while the wave bites. */
   approvalSwing: number;
+  /** Apply outcome effects already in the onset phase, for families whose gains start early. */
+  effectsFromOnset?: boolean;
+  /** Roles that count against the severe-conflict limit; empty for a family that is good news. */
+  severeRoles?: ConflictRole[];
 }
 
 const ACTIVE = ["onset", "peak"];
@@ -136,7 +146,8 @@ function trees(content: WaveFamilyContent, nodeKey: string): RoleDecisionTrees {
 function outcomes(content: WaveFamilyContent, phase: "onset" | "peak"): GlobalResponseOutcome[] {
   const { dynamics, scale } = waveFamilyTable(content.key);
   const peak = phase === "peak";
-  const damage = (factor: number) => (peak ? effectsAt(content, factor) : []);
+  const damage = (factor: number) =>
+    peak || content.effectsFromOnset ? effectsAt(content, factor) : [];
   const worse = peak ? "escalation" : "pressure";
   const text = content.outcomes;
   return [
@@ -182,18 +193,19 @@ function outcomes(content: WaveFamilyContent, phase: "onset" | "peak"): GlobalRe
       conditions: [],
       trackDeltas: { [worse]: dynamics.uncheckedStep },
       effectsByRole: {
-        belligerent: peak
-          ? damage(scale.unchecked)
-          : [
-              cfx(
-                "flat",
-                "approval",
-                "government",
-                "overall",
-                content.approvalSwing * 0.3,
-                content.name
-              ),
-            ],
+        belligerent:
+          peak || content.effectsFromOnset
+            ? damage(scale.unchecked)
+            : [
+                cfx(
+                  "flat",
+                  "approval",
+                  "government",
+                  "overall",
+                  content.approvalSwing * 0.3,
+                  content.name
+                ),
+              ],
       },
       wireMessage: peak ? text.unchecked.peakWire : text.unchecked.onsetWire,
     },
@@ -305,6 +317,7 @@ export function buildWaveFamilyDef(content: WaveFamilyContent): LivingConflictDe
     minimumOpeningPressure: 1,
     participants: { belligerents: [], neighbors: [], blocMembers: [], bystanders: [] },
     roleResolver: defaultRoleResolver,
+    ...(content.severeRoles ? { severeRoles: content.severeRoles } : {}),
     tracks: {
       pressure: { initial: d.startPressure },
       escalation: { initial: 0 },
