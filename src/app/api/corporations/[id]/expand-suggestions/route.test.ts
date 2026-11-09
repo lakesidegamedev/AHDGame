@@ -780,6 +780,28 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     expect(row.roomScope).toBe(data.countrySharedDemand ? "country" : "state");
   });
 
+  it("publishes funded national construction demand and its measured regional subset", async () => {
+    seedPlantsMarket({ worldEpochId: "funded" });
+    await corpOverride({ type: "construction" });
+    db.collection("producerMarketOutcomes").findOne.mockResolvedValue({
+      turn: 10,
+      books: [{ countryId: "US", commodity: "construction_services", funded: 100, filled: 10 }],
+      regionalBuildBooks: [],
+    });
+    const response = await GET(makeRequest("sectorType=construction&mode=unowned"), ctx());
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.countrySharedDemand).toBe(true);
+    expect(data.suggestions[0]).toMatchObject({
+      roomScope: "country",
+      buildDemandTurn: 10,
+      buildDemand: [
+        { commodity: "construction_services", scope: "regional", unmet: 0 },
+        { commodity: "construction_services", scope: "national", unmet: 90 },
+      ],
+    });
+  });
+
   it("refuses with insufficient_capital when cash is short of the founding charge", async () => {
     seedPlantsMarket();
     await corpOverride({ liquidCapital: 0 });
