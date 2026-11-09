@@ -27,6 +27,7 @@ import { actingAppointmentsEnabled } from "@/lib/cabinet/actingEligibility";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { resolveGameYear } from "@/lib/era/era";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getHeadOfGovernmentReference } from "@/lib/api/headOfGovernmentReference";
 import {
@@ -305,9 +306,12 @@ export async function loadElectorateGroups(
   const [docs, defaultDocs, gameState] = await Promise.all([
     db.collection<StateDemographics>("stateDemographics").find(filter, { projection }).toArray(),
     db.collection<StateDemographics>("demographicDefaults").find(filter, { projection }).toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, startingYear: 1 } }),
+    getGameStateCollection(db).then((col) =>
+      col.findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+      )
+    ),
   ]);
   return electorateUnitsByRegion(
     docs,
