@@ -450,3 +450,92 @@ describe("sold share beside own-site use", () => {
     expect(screen.getByText(/70% sold · .*worth about .*1,?234.* to your sites/)).toBeTruthy();
   });
 });
+
+describe("short input rows", () => {
+  const healthcare: CommoditiesData = {
+    supplies: [],
+    demands: [
+      flow({
+        commodity: "pharmaceuticals",
+        label: "Pharmaceuticals",
+        icon: "Rx",
+        inputAvailability: 1,
+      }),
+      flow({
+        commodity: "real_estate_services",
+        label: "Real Estate Services",
+        icon: "RE",
+        inputAvailability: 0.286,
+      }),
+    ],
+    commodityMarginModifier: 0,
+    throughput: { bindingInput: "real_estate_services", applied: 0.286, projected: 0.286 },
+  };
+  const idlePlants = {
+    fillRate: 0.39,
+    capacityUnits: 2470,
+    producedUnits: 967.56,
+    idleCauses: [{ cause: "inputs", units: 1502 }],
+  } as PlantsData;
+  const renderPanel = (c: CommoditiesData, p: PlantsData) =>
+    render(
+      <InputsOutputsPanel
+        commodities={c}
+        plants={p}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+
+  it("marks only the input that ran short and links its sellers", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ enabled: true, offers: [{ side: "sell", own: false }] }),
+      })
+    );
+    const { container } = renderPanel(healthcare, idlePlants);
+    const marked = container.querySelectorAll("[data-short-input]");
+    expect(Array.from(marked).map((n) => n.getAttribute("data-short-input"))).toEqual([
+      "real_estate_services",
+    ]);
+    expect(within(marked[0] as HTMLElement).getByText("Ran short")).toBeTruthy();
+    const link = await within(marked[0] as HTMLElement).findByText("1 seller offering");
+    expect(link.getAttribute("href")).toBe("/commodity/real_estate_services/offers");
+  });
+
+  it("marks the engine's binding input when the world market shows full cover", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) => ({ ...d, inputAvailability: 1 })),
+    };
+    const { container } = renderPanel(c, idlePlants);
+    expect(container.querySelector("[data-short-input='real_estate_services']")).not.toBeNull();
+    expect(container.querySelector("[data-short-input='pharmaceuticals']")).toBeNull();
+  });
+
+  it("says so when inputs stopped the run but no input row is short", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) => ({ ...d, inputAvailability: 1 })),
+      throughput: { bindingInput: null, applied: null, projected: 1 },
+    };
+    const { container } = renderPanel(c, idlePlants);
+    expect(container.querySelector("[data-short-input]")).toBeNull();
+    expect(container.querySelector("[data-unmarked-input-stop]")).not.toBeNull();
+  });
+
+  it("marks nothing and stays quiet when no input ran short", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) => ({ ...d, inputAvailability: 1 })),
+      throughput: { bindingInput: null, applied: 1, projected: 1 },
+    };
+    const { container } = renderPanel(c, { fillRate: 1 } as PlantsData);
+    expect(container.querySelector("[data-short-input]")).toBeNull();
+    expect(container.querySelector("[data-unmarked-input-stop]")).toBeNull();
+  });
+});

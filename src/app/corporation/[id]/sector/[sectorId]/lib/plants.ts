@@ -69,7 +69,7 @@ export function idleCauseMeta(
     inputs: {
       label: "Stopped: short of inputs",
       tone: "warning",
-      help: `Your ${sites} could not buy enough of what they consume, so part of ${run} stopped. Check the Inputs list below for the item in short supply.`,
+      help: `Your ${sites} could not buy enough of what they consume, so part of ${run} stopped. Check the Inputs list below for the items marked as ran short.`,
     },
     demand: {
       label: "Cut back: buyers took less",
