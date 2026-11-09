@@ -80,6 +80,7 @@ import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOffic
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { openCaretaker } from "@/lib/elections/rules/caretaker";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -1786,7 +1787,11 @@ export async function unformGovernmentAndVacatePM(
         // the auto-snap loop (expired clock never re-armed → watcher fires
         // every turn). Matches existing NC-pass and reset-else-branch behavior.
         pmVacancyDeadlineTurn: currentTurn + PM_VACANCY_DEADLINE_TURNS,
+        ...(reason === "snap"
+          ? { caretaker: openCaretaker(currentTurn, existing.pmName ?? null) }
+          : {}),
       },
+      ...(reason === "snap" ? {} : { $unset: { caretaker: "" } }),
     }
   );
 
