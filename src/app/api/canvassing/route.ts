@@ -1,4 +1,8 @@
-import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
+import {
+  loadCampaignCurrencyRates,
+  loadCampaignPriceLevel,
+} from "@/lib/campaigns/campaignCurrency";
+import { canvassUnitFundsCost } from "@/lib/canvassing/cost";
 import { z } from "zod";
 import { canUseNativeCanvassTargets } from "@/lib/canvassing/campaignContext";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -35,7 +39,6 @@ import {
 } from "@/lib/canvassing/eligibility";
 import { getGameTime } from "@/lib/time/gameTime";
 
-const COST_FUNDS = 100;
 const COST_ACTIONS = 1;
 
 const MAX_CANVASS_BATCH = 50;
@@ -143,9 +146,13 @@ export async function GET(req: NextRequest) {
       };
     }
     const forex = await isForexEnabled();
-    const campaignRates = await loadCampaignCurrencyRates(db);
+    const [campaignRates, priceLevel] = await Promise.all([
+      loadCampaignCurrencyRates(db),
+      loadCampaignPriceLevel(db),
+    ]);
     const fundsCost =
-      COST_FUNDS * (forex ? campaignLocalRate(auth.user.character.countryId, campaignRates) : 1);
+      canvassUnitFundsCost(priceLevel) *
+      (forex ? campaignLocalRate(auth.user.character.countryId, campaignRates) : 1);
     return NextResponse.json(
       { stateId, targets: [...targets.values()], preview, fundsCost },
       { headers: { "Cache-Control": "private, no-store" } }
@@ -220,14 +227,18 @@ export async function POST(req: NextRequest) {
       electionId ??
         (usingSurrogate && mateEligibility.ok ? mateEligibility.electionId.toString() : undefined)
     );
-    const totalFundsCost = COST_FUNDS * count;
     const totalActionsCost = COST_ACTIONS * count;
 
     const forexEnabled = await isForexEnabled();
-    // COST_FUNDS is an ANCHOR-denominated constant. Campaign funds are decoupled
-    // from live forex: convert to LOCAL at the frozen world-seeded currency basis so
-    // the gate and the $inc both operate on local-unit balances.
-    const campaignRates = await loadCampaignCurrencyRates(db);
+    // The canvass cost is an ANCHOR-denominated constant scaled by the era's
+    // campaign price level, like every other campaign cost. Campaign funds are
+    // decoupled from live forex: convert to LOCAL at the frozen world-seeded
+    // currency basis so the gate and the $inc both operate on local-unit balances.
+    const [campaignRates, priceLevel] = await Promise.all([
+      loadCampaignCurrencyRates(db),
+      loadCampaignPriceLevel(db),
+    ]);
+    const totalFundsCost = canvassUnitFundsCost(priceLevel) * count;
     const campaignRate = forexEnabled
       ? campaignLocalRate(user.character.countryId ?? "US", campaignRates)
       : 1;

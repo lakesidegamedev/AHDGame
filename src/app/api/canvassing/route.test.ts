@@ -376,6 +376,39 @@ describe("POST /api/canvassing — country-aware groups", () => {
     expect(input.fingerprint).toBe(`${character._id.toHexString()}:JP-13:education:tertiary:1`);
   });
 
+  it("scales the funds cost by the era campaign price level", async () => {
+    db.collection("gameConfig").findOne.mockResolvedValue({ campaignEraPriceLevelEnabled: true });
+    db.collection("gameState").findOne.mockResolvedValue({ preset: "1979-default" });
+    const character = authedCharacter({ homeState: "JP-13", countryId: "JP" } as never);
+    const turnoutCollection = {
+      findOne: vi.fn().mockResolvedValue({
+        _id: "JP-13",
+        modifiers: { education: {} },
+        lastUpdated: new Date(),
+      }),
+      updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    };
+    const { getStateDemographicTurnoutCollection } = await import("@/lib/db/collections");
+    vi.mocked(getStateDemographicTurnoutCollection).mockResolvedValue(turnoutCollection as never);
+    const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: { userId: "u1", character },
+    } as never);
+
+    const { POST } = await import("./route");
+    const res = await POST(
+      makeRequest({ stateId: "JP-13", category: "education", group: "tertiary", count: 2 }) as never
+    );
+
+    expect(res.status).toBe(200);
+    const { eraPriceLevelFor } = await import("@/lib/campaigns/rules/priceLevel");
+    const { canvassUnitFundsCost } = await import("@/lib/canvassing/cost");
+    const unit = canvassUnitFundsCost(eraPriceLevelFor("1979-default"));
+    expect(unit).toBeLessThan(100);
+    expect((await spendCall()).totalFundsCostLocal).toBe(unit * 2);
+  });
+
   it("rejects a UK group id submitted by a JP character", async () => {
     const character = authedCharacter({ homeState: "JP-13", countryId: "JP" } as never);
     const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
