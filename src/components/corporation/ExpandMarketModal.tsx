@@ -16,6 +16,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
+import FundedBuildDemand from "./FundedBuildDemand";
 import {
   CAPACITY_UNIT_LABEL,
   formatUnits,
@@ -72,6 +73,8 @@ interface Suggestion {
   roomToBuildUnits?: number | null;
   /** Plants tier: "country" when that room is one figure shared by the country. */
   roomScope?: "state" | "country" | null;
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
 }
 
 type EntryBlockReason =
@@ -919,6 +922,10 @@ export default function ExpandMarketModal({
                         )}
                       </div>
 
+                      <FundedBuildDemand
+                        rows={activeSuggestion.buildDemand}
+                        turn={activeSuggestion.buildDemandTurn}
+                      />
                       {/* Stats row — plants */}
                       {plantsMode && foundingQuote && (
                         <div className="grid grid-cols-3 gap-2">
@@ -1113,8 +1120,7 @@ export default function ExpandMarketModal({
 
                       {activeSuggestion.competitors.length === 0 && (
                         <p className="text-[11px] text-success">
-                          No competitors in this state market. Full in-state untapped demand
-                          available.
+                          {t("fundedAdvice.noLocalCompetitors")}
                         </p>
                       )}
 

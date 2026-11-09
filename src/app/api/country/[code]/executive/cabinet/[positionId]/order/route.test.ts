@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -167,5 +168,64 @@ describe("POST /api/country/[code]/executive/cabinet/[positionId]/order", () => 
         ],
       })
     );
+  });
+  describe("Cabinet v2 country", () => {
+    const receipt = (system: "metrics" | "cabinet") => ({
+      worldId: "w1",
+      revision: RESET_V2_SEED_REVISION[system],
+      sourceTurn: 10,
+      completedAt: "2026-11-09T00:00:00Z",
+      verificationHash: "h",
+      countries: ["JP"],
+    });
+    const post = async () => {
+      const { POST } =
+        await import("@/app/api/country/[code]/executive/cabinet/[positionId]/order/route");
+      return POST(
+        new Request(
+          "http://localhost/api/country/jp/executive/cabinet/environment_minister/order",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: "clean_energy_push", targetRegionId: null }),
+          }
+        ),
+        { params: Promise.resolve({ code: "jp", positionId: "environment_minister" }) }
+      );
+    };
+    beforeEach(() => {
+      vi.mocked(getGameState).mockResolvedValue({
+        currentTurn: 42,
+        resetWorldId: "w1",
+        metricsSystemVersion: "v2",
+        cabinetSystemVersion: "v2",
+        resetVersionSeeds: { metrics: receipt("metrics"), cabinet: receipt("cabinet") },
+      } as never);
+      db.collection("resetCabinetActionStates");
+    });
+
+    it("spends a v2 charge, not the legacy row", async () => {
+      db.collectionMocks.resetCabinetActionStates.findOne.mockResolvedValue({
+        sourceTurn: 10,
+        actorStates: { char_1: { charges: 3, lastRechargeTurn: 42 } },
+      });
+      expect((await post()).status).toBe(200);
+      expect(db.collectionMocks.resetCabinetActionStates.updateOne).toHaveBeenCalledWith(
+        expect.objectContaining({ "actorStates.char_1.charges": 3 }),
+        { $set: { "actorStates.char_1": { charges: 2, lastRechargeTurn: 42 } } }
+      );
+      expect(db.collectionMocks.cabinetMembers.updateOne).not.toHaveBeenCalled();
+    });
+
+    it("refuses with 400 when the v2 pool is empty even if the legacy row has actions", async () => {
+      db.collectionMocks.resetCabinetActionStates.findOne.mockResolvedValue({
+        sourceTurn: 10,
+        actorStates: { char_1: { charges: 0, lastRechargeTurn: 42 } },
+      });
+      const res = await post();
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: "No ministerial actions remaining" });
+      expect(db.collectionMocks.ministerialOrders.insertOne).not.toHaveBeenCalled();
+    });
   });
 });
