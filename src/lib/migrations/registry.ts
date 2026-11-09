@@ -1,3 +1,4 @@
+import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
 import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
@@ -441,6 +442,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   // County stock initialization requires paused population writers and an explicit --only.
   countyPopulations,
   ukJpSubdivisionPopulations,
+  jpLawLeanEffects,
 ];
 
 // Deferred to follow-up (need bootstrap-marker pass on production first):
