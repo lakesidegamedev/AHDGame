@@ -211,7 +211,10 @@ export default function HeroPanel({
           <span className="text-base font-bold tabular-nums text-success">
             {formatUnits(marketScope.supply, data.unit)}
           </span>
-          <span className="text-xs text-muted">per day</span>
+          <span className="text-xs text-muted">{t("supplyOfferedPerDay")}</span>
+          <span className="text-[10px] text-muted" title={t("supplyOfferedExplanation")}>
+            {t("supplyIncludesStock")}
+          </span>
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">
