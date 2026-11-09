@@ -9,7 +9,6 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { deliverAddress } from "@/lib/governorOffice/address/deliverAddress";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
-import { getDemographicCategoriesForCountry } from "@/lib/demographics/countryDemographics";
 import {
   ADDRESS_COOLDOWN_TURNS,
   ADDRESS_EMPHASIS_MIN,
@@ -95,7 +94,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
 // GET /api/country/[code]/executive/address — page-load payload for the
 // Address tab. Returns most-recent address, cooldown, AP / NPI balances,
-// and the country's demographic groups for the modal dropdown.
+// balances. Targets come from the turnout-targets endpoint.
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
@@ -157,9 +156,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       viewerIsAdmin: isAdmin,
       mostRecentAddress,
       addressAvailableAtTurn,
-      demographicGroups: getDemographicCategoriesForCountry(countryId).flatMap((c) =>
-        c.groups.map((g) => ({ id: g.id, name: g.name }))
-      ),
     });
   } catch (error) {
     return handleRouteError(error);

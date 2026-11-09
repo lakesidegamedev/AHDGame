@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { getDemographicCategoriesForCountry } from "@/lib/demographics/countryDemographics";
-import { DE_GROUP_EN_LABELS } from "@/lib/seeds/de/deDemographicCategories";
+import { bucketLabel, dimensionLabelFor } from "@/lib/demographics/bucketLabels";
 import { BLEND, FONT, BLEND_LABEL } from "@/components/blend/tokens";
 import { blendButtonStyle, BlendLabel, BlendSelect } from "@/components/blend/BlendControls";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -78,35 +77,30 @@ export function CanvassingPanel({
   } | null>(null);
   const blend = variant === "blend";
 
-  // Country-aware demographic categories (SSOT). US returns multiple categories
-  // (race/age/…); voter-group countries (UK/JP/DE/IE/CN/BR) return a single category.
-  const originalCategories = getDemographicCategoriesForCountry(countryId);
+  // Targets are the census buckets of the player's active campaign state.
   const categories: Array<{
     key: string;
     label: string;
     groups: Array<{ id: string; name: string }>;
-  }> = originalCategories.map((category) => ({
-    ...category,
-    groups: [...category.groups],
-  }));
+  }> = [];
   for (const target of nativeTargets) {
     let category = categories.find((item) => item.key === target.dimension);
     if (!category) {
       category = {
         key: target.dimension,
-        label: target.dimension.replaceAll("_", " "),
+        label: dimensionLabelFor(target.dimension, countryId),
         groups: [],
       };
       categories.push(category);
     }
     if (!category.groups.some((group) => group.id === target.bucket))
-      category.groups.push({ id: target.bucket, name: target.bucket.replaceAll("_", " ") });
+      category.groups.push({
+        id: target.bucket,
+        name: bucketLabel(`${target.dimension}:${target.bucket}`, countryId),
+      });
   }
-  const isSingleCategory = categories.length === 1;
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    isSingleCategory ? categories[0].key : ""
-  );
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [count, setCount] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -234,7 +228,7 @@ export function CanvassingPanel({
           );
         }
         setSelectedGroup("");
-        if (!isSingleCategory) setSelectedCategory("");
+        setSelectedCategory("");
         setCount(1);
         onResourcesSpent?.();
       } else {
@@ -319,7 +313,9 @@ export function CanvassingPanel({
   }
 
   const activeStateId = eligibility.stateId;
-  const description = SOURCE_DESCRIPTION[eligibility.source](isSingleCategory);
+  const description = SOURCE_DESCRIPTION[eligibility.source](
+    (countryId ?? "US").toUpperCase() !== "US"
+  );
   const costSuffix = `${totalActionsCost} action${totalActionsCost !== 1 ? "s" : ""}, ${formatFull(totalFundsCost)}`;
 
   function quantityStyle(active: boolean, enabled: boolean): React.CSSProperties {
@@ -355,31 +351,29 @@ export function CanvassingPanel({
 
         {previewCopy}
         <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 460 }}>
-          {!isSingleCategory && (
-            <div>
-              <BlendLabel>Demographic category</BlendLabel>
-              <div style={{ marginTop: 6 }}>
-                <BlendSelect
-                  value={selectedCategory}
-                  onChange={(e) => {
-                    setSelectedCategory(e.target.value);
-                    setSelectedGroup("");
-                  }}
-                >
-                  <option value="">Select category…</option>
-                  {categories.map((cat) => (
-                    <option key={cat.key} value={cat.key}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </BlendSelect>
-              </div>
+          <div>
+            <BlendLabel>Demographic category</BlendLabel>
+            <div style={{ marginTop: 6 }}>
+              <BlendSelect
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setSelectedGroup("");
+                }}
+              >
+                <option value="">Select category…</option>
+                {categories.map((cat) => (
+                  <option key={cat.key} value={cat.key}>
+                    {cat.label}
+                  </option>
+                ))}
+              </BlendSelect>
             </div>
-          )}
+          </div>
 
           {activeCategory && (
             <div>
-              <BlendLabel>{isSingleCategory ? "Voter group" : "Specific group"}</BlendLabel>
+              <BlendLabel>Specific group</BlendLabel>
               <div style={{ marginTop: 6 }}>
                 <BlendSelect
                   value={selectedGroup}
@@ -389,7 +383,6 @@ export function CanvassingPanel({
                   {activeCategory.groups.map((group) => (
                     <option key={group.id} value={group.id}>
                       {group.name}
-                      {DE_GROUP_EN_LABELS[group.id] ? ` (${DE_GROUP_EN_LABELS[group.id]})` : ""}
                     </option>
                   ))}
                 </BlendSelect>
@@ -507,36 +500,31 @@ export function CanvassingPanel({
 
       {previewCopy}
       <div className="space-y-4">
-        {/* Category selector — only for multi-category countries (US). */}
-        {!isSingleCategory && (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Demographic category
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setSelectedGroup("");
-              }}
-              className="w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Select category...</option>
-              {categories.map((cat) => (
-                <option key={cat.key} value={cat.key}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Demographic category
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              setSelectedGroup("");
+            }}
+            className="w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Select category...</option>
+            {categories.map((cat) => (
+              <option key={cat.key} value={cat.key}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Group selector. */}
         {activeCategory && (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {isSingleCategory ? "Voter group" : "Specific group"}
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Specific group</label>
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
@@ -546,7 +534,6 @@ export function CanvassingPanel({
               {activeCategory.groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
-                  {DE_GROUP_EN_LABELS[group.id] ? ` (${DE_GROUP_EN_LABELS[group.id]})` : ""}
                 </option>
               ))}
             </select>

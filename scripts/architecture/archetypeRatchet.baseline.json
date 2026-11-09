@@ -100,7 +100,6 @@
     "src/lib/demographics/eraCheckpoints.test.ts": 2,
     "src/lib/demographics/eraCheckpoints.ts": 9,
     "src/lib/demographics/granularElectorate.test.ts": 12,
-    "src/lib/demographics/partyTurnoutTarget.test.ts": 1,
     "src/lib/demographics/preferredParty.test.ts": 1,
     "src/lib/demographics/preferredParty.ts": 6,
     "src/lib/demographics/regionTurnout.ts": 1,
