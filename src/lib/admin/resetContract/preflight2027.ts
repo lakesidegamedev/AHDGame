@@ -18,6 +18,7 @@ import {
   type StateEvidence,
 } from "@/lib/admin/resetContract/rules/preflight2027";
 import { evaluateResidueScan } from "@/lib/admin/resetContract/rules/residueScan";
+import type { CountryId } from "@/lib/constants/countries";
 import { DE_LANDTAG_SPEC } from "@/lib/countries/de/elections/chamberSpecs";
 import { countriesByTier, type ShippingPreset } from "@/lib/world/eraRoster";
 import { checkSeedContract } from "@/lib/seeds/contract/checkSeedContract";
@@ -146,7 +147,7 @@ export async function runPreflight2027(
   const states = (
     await stateCol
       .find(
-        { countryId: { $in: countries } },
+        { countryId: { $in: countries as CountryId[] } },
         {
           projection: {
             countryId: 1,
@@ -184,7 +185,7 @@ export async function runPreflight2027(
     ...evaluatePreflight({
       mode: options.mode,
       countries,
-      gameState: gameState as unknown as Record<string, unknown> | null,
+      gameState: gameState ? { ...gameState } : null,
       states,
       seatRequirements: SEAT_FIELD_REQUIREMENTS,
       legacy: {
