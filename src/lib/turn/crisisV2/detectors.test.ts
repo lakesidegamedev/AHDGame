@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { createDetectorProvider, DETECTOR_SOURCES, DETECTOR_STREAK_COLLECTION } from "./detectors";
+import {
+  createDetectorProvider,
+  DETECTOR_SOURCES,
+  DETECTOR_STREAK_COLLECTION,
+  loadDetectorWorld,
+} from "./detectors";
 
 interface Fake {
   resolved?: { endTurn: number; countryIds: string[]; regionIds: string[] }[];
@@ -164,5 +169,24 @@ describe("detector round trips", () => {
     expect(stateFinds).toHaveBeenCalledTimes(1);
     await createDetectorProvider(DETECTOR_SOURCES[0]).load({ db, turn: 31 });
     expect(streakFinds).toHaveBeenCalledTimes(2);
+  });
+
+  it("shares one states read between the detectors and the crisis turn world", async () => {
+    const stateFinds = vi.fn();
+    const db = {
+      collection() {
+        return {
+          find() {
+            stateFinds();
+            return { toArray: async () => [{ _id: "tx", countryId: "US" }] };
+          },
+        };
+      },
+    } as never;
+    const first = await loadDetectorWorld(db, 40);
+    const second = await loadDetectorWorld(db, 40);
+    expect(second).toBe(first);
+    expect(first.allStateIds).toEqual(["tx"]);
+    expect(stateFinds).toHaveBeenCalledTimes(1);
   });
 });

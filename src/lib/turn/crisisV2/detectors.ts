@@ -37,12 +37,13 @@ interface StreakDoc extends StreakRecord {
 interface DetectorWorld {
   inputs: CrisisInputContext;
   countryByState: ReadonlyMap<string, string>;
+  allStateIds: readonly string[];
 }
 
 const worldCache = new WeakMap<Db, { turn: number; world: Promise<DetectorWorld> }>();
 
 /** Every country and region, read once per turn and shared by all detectors. */
-function loadDetectorWorld(db: Db, turn: number): Promise<DetectorWorld> {
+export function loadDetectorWorld(db: Db, turn: number): Promise<DetectorWorld> {
   const cached = worldCache.get(db);
   if (cached?.turn === turn) return cached.world;
   const world = (async (): Promise<DetectorWorld> => {
@@ -62,6 +63,7 @@ function loadDetectorWorld(db: Db, turn: number): Promise<DetectorWorld> {
     return {
       inputs: { db, turn, countryIds: new Set(stateIdsByCountry.keys()), stateIdsByCountry },
       countryByState,
+      allStateIds: states.map((state) => state._id),
     };
   })();
   worldCache.set(db, { turn, world });
