@@ -5,7 +5,7 @@ summary: >-
   Canvassing, party get-out-the-vote and voter suppression now aim at the same
   census groups the elections count, in every country.
 tags: [elections, campaigns, demographics]
-badges: [fix]
+badges: [patch]
 areas: [frontend, backend]
 ---
 
