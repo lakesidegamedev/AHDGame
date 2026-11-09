@@ -32,8 +32,8 @@ function input(overrides: Partial<PreflightInput> = {}): PreflightInput {
       { countryId: "DE", field: "stateSenateSeats", level: "positive", source: "test" },
     ],
     legacy: {
-      charactersArchetypeApprovals: 0,
-      nppsArchetypeApprovals: 0,
+      charactersLegacyApprovals: 0,
+      nppsLegacyApprovals: 0,
       legislationTypesLegacyApprovals: 0,
     },
     priceIndexCountries: [],
@@ -134,8 +134,8 @@ describe("evaluatePreflight", () => {
 
   it("treats legacy fields as moot before a reset and as failures in a fresh world", () => {
     const legacy = {
-      charactersArchetypeApprovals: 4,
-      nppsArchetypeApprovals: 2,
+      charactersLegacyApprovals: 4,
+      nppsLegacyApprovals: 2,
       legislationTypesLegacyApprovals: 1,
     };
     const before = evaluatePreflight(input({ legacy }));

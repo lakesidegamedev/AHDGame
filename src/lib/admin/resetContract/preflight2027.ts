@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin/resetContract/residueScan";
 import {
   evaluatePreflight,
+  LEGACY_APPROVAL_FIELD,
   type PreflightFinding,
   type PreflightMode,
   type SeatFieldRequirement,
@@ -168,13 +169,13 @@ export async function runPreflight2027(
     stateSenateSeats: row.stateSenateSeats,
   }));
   const exists = { $exists: true };
-  const legacyApprovals = { archetypeApprovals: exists } as never;
+  const legacyApprovals = { [LEGACY_APPROVAL_FIELD]: exists } as never;
   const [characters, npps, legislationTypes, priceIndexRows] = await Promise.all([
     characterCol.countDocuments(legacyApprovals),
     nppCol.countDocuments(legacyApprovals),
     db.collection<Document>("legislationTypes").countDocuments({
       $or: [
-        { "policyOptions.archetypeApprovals": exists },
+        { [`policyOptions.${LEGACY_APPROVAL_FIELD}`]: exists },
         { "policyOptions.groupApprovals": exists },
       ],
     }),
@@ -189,8 +190,8 @@ export async function runPreflight2027(
       states,
       seatRequirements: SEAT_FIELD_REQUIREMENTS,
       legacy: {
-        charactersArchetypeApprovals: characters,
-        nppsArchetypeApprovals: npps,
+        charactersLegacyApprovals: characters,
+        nppsLegacyApprovals: npps,
         legislationTypesLegacyApprovals: legislationTypes,
       },
       priceIndexCountries: priceIndexRows.map((row) => String(row.countryId ?? row._id)),

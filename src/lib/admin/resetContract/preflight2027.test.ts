@@ -8,7 +8,7 @@ import {
   runPreflight2027,
   SEAT_FIELD_REQUIREMENTS,
 } from "./preflight2027";
-import { REMOVED_ALWAYS_ON_FLAGS } from "./rules/preflight2027";
+import { LEGACY_APPROVAL_FIELD, REMOVED_ALWAYS_ON_FLAGS } from "./rules/preflight2027";
 
 async function seedWorld(db: Db, countries: string[]) {
   await db.collection("gameState").insertOne({
@@ -57,7 +57,9 @@ describe("2027 preflight shell", () => {
       .collection("states")
       .updateOne({ _id: "DE-1" } as never, { $set: { stateSenateSeats: 0 } });
     await db.collection("states").updateOne({ _id: "JP-1" } as never, { $set: { gdp: 0 } });
-    await db.collection("npps").insertOne({ _id: "n1", archetypeApprovals: { "a:b": 1 } } as never);
+    await db
+      .collection("npps")
+      .insertOne({ _id: "n1", [LEGACY_APPROVAL_FIELD]: { "a:b": 1 } } as never);
     await db
       .collection("federalBudget")
       .insertOne({ _id: "US", countryId: "US", priceIndex: 1.1 } as never);
