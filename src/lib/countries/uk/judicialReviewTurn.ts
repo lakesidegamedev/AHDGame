@@ -6,6 +6,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { enactRulingBill } from "@/lib/scotus/enactRulingBill";
 import { createSystemNewsPost } from "@/lib/news";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
@@ -78,6 +79,10 @@ export async function processUkJrSurpriseTurn(
   const database = db ?? (await getDb());
 
   if (!rollUkJrSurpriseSpawn(spawnRandomDraw)) {
+    return { spawned: false };
+  }
+  // Rulings enact uk_* laws and post UK news: only where the UK is simulated.
+  if (!(await getFullSimulationCountryIds(database)).includes("UK")) {
     return { spawned: false };
   }
 
