@@ -405,8 +405,8 @@ export async function accumulatePresidentVoteTurn(
   const gsDoc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
   const { electoralVoteUnits } = await loadApportionment(db, gsDoc?.preset, gsDoc?.currentYear);
   const uniqueStateIds = [...new Set(electoralVoteUnits.map((u) => u.stateId))];
-  // Granular-cell electorate engine (fail-closed): swap the archetype
-  // substrate for Layer-1 cells in the per-state distribution loop below.
+  // Granular-cell electorate engine (fail-closed): swap the stored group
+  // categories for Layer-1 cells in the per-state distribution loop below.
   // Live era clock.
   const eraYear = eraYearContextFromGameState(gsDoc);
 
@@ -850,8 +850,8 @@ export async function accumulatePresidentVoteTurn(
     );
 
     // Granular-cell electorate substrate — same
-    // swap as tallyManagement: cells replace archetypes as the iterated
-    // electorate; archetype-keyed approvals/favorability remap onto cells.
+    // swap as tallyManagement: cells replace stored groups as the iterated
+    // electorate; approvals/favorability remap onto cells.
     // Null substrate (no Layer-1 census) → legacy path. Flag OFF: eff* are
     // the legacy values, byte-identical behavior.
     let effDemographics = demographics;
@@ -862,8 +862,8 @@ export async function accumulatePresidentVoteTurn(
     let effPartyGroupFavorabilityByKey = partyGroupFavorabilityByKey;
     let participationSummary: ParticipationSummary | undefined;
     // Per-cell census bucketWeights for the ledger's bucket-appeal aggregation.
-    // Populated only on the granular substrate; the legacy archetype path leaves
-    // it undefined so the ledger emits no bucket appeal (never archetype keys).
+    // Populated only on the granular substrate; a state without a census leaves
+    // it undefined so the ledger emits no bucket appeal.
     let effLedgerBucketWeights: Map<string, Record<string, number>> | undefined;
     {
       const substrate = buildGranularElectorateSubstrate({

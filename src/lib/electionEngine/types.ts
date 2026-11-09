@@ -53,8 +53,8 @@ export interface EnrichedCandidate {
   /** When present, appeal uses average of party and candidate positions */
   partyEcon?: number;
   partySocial?: number;
-  /** Per-bucket approval modifiers (-100 to +100) for effective favorability — see `Character.archetypeApprovals`. */
-  archetypeApprovals?: Record<string, number>;
+  /** Per-bucket approval modifiers (-100 to +100) for effective favorability, keyed by electorate unit id. */
+  bucketApprovals?: Record<string, number>;
   /**
    * Per-candidate Support — short-term mood / momentum, 0..100. Phase 0.5
    * §3.1 canonical store: `electionCandidates.support`. Phase 5a consumes
@@ -383,7 +383,7 @@ export interface DistributeVotesOptions {
   /**
    * Per-group census `bucketWeights` ("dim:bucket" → 0..1) for the granular
    * substrate, so the sink can fold each cell's appeal back onto census buckets.
-   * Absent (legacy archetype path) means the ledger emits no bucket appeal.
+   * Absent (no census substrate) means the ledger emits no bucket appeal.
    */
   ledgerBucketWeightsByGroup?: Map<string, Record<string, number>>;
 }

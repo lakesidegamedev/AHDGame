@@ -3,7 +3,7 @@
  *
  * Covers:
  *  - Player character enrichment (charEP, charSP, favorability, politicalInfluence,
- *    nationalInfluence, archetypeApprovals)
+ *    nationalInfluence, bucketApprovals)
  *  - NPP enrichment (same fields, plus politicalInfluence-as-national-proxy)
  *  - Missing character/NPP fallback to safe defaults
  *  - Party position enrichment (includePartyPositions flag)
@@ -191,7 +191,7 @@ describe("fetchEnrichedCandidates — player character", () => {
     expect(enriched.favorability).toBe(100);
     expect(enriched.politicalInfluence).toBe(100);
     expect(enriched.nationalInfluence).toBe(80);
-    expect(enriched.archetypeApprovals).toEqual({ liberal: 10, conservative: -5 });
+    expect(enriched.bucketApprovals).toEqual({ liberal: 10, conservative: -5 });
   });
 
   it("defaults nationalInfluence to 0 when character lacks the field", async () => {
@@ -230,7 +230,7 @@ describe("fetchEnrichedCandidates — player character", () => {
     expect(enriched.favorability).toBe(50);
     expect(enriched.politicalInfluence).toBe(10);
     expect(enriched.nationalInfluence).toBe(0);
-    expect(enriched.archetypeApprovals).toBeUndefined();
+    expect(enriched.bucketApprovals).toBeUndefined();
   });
 
   it("adds a small direct favorability bump from active NPP endorsements", async () => {
@@ -312,7 +312,7 @@ describe("fetchEnrichedCandidates — NPP candidate", () => {
     expect(enriched.politicalInfluence).toBe(100);
     // NPPs use politicalInfluence as a proxy for nationalInfluence
     expect(enriched.nationalInfluence).toBe(100);
-    expect(enriched.archetypeApprovals).toEqual({ rural: 20 });
+    expect(enriched.bucketApprovals).toEqual({ rural: 20 });
   });
 
   it("uses safe defaults when NPP record is not found in DB", async () => {

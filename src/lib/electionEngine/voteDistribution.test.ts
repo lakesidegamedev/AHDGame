@@ -2154,7 +2154,7 @@ describe("balance: archetype approvals modify effective favorability", () => {
         charEP: 0,
         charSP: 0,
         favorability: 50,
-        archetypeApprovals: { liberal: 40, conservative: 40 },
+        bucketApprovals: { liberal: 40, conservative: 40 },
       }),
       makeCandidate({ candidateId: "normal", charEP: 0, charSP: 0, favorability: 50 }),
     ];
@@ -2179,7 +2179,7 @@ describe("balance: archetype approvals modify effective favorability", () => {
         charEP: 0,
         charSP: 0,
         favorability: 50,
-        archetypeApprovals: { liberal: -60, conservative: -60 },
+        bucketApprovals: { liberal: -60, conservative: -60 },
       }),
       makeCandidate({ candidateId: "neutral", charEP: 0, charSP: 0, favorability: 50 }),
     ];

@@ -26,18 +26,18 @@ type Layer1Dim = (typeof LAYER1_DIMS)[number];
 
 /**
  * For US-style states (those with a Layer-1 census config registered in
- * stateCensusData), recompute each archetype's effective turnout from the
+ * stateCensusData), recompute each group's effective turnout from the
  * Layer-1 baselines + per-dimension modifiers on turnoutDoc.
  *
  * US canvassing/GOTV write modifiers keyed by demographic group
- * (`modifiers.race.white = -9.6`), not archetype ID, so the archetype-keyed
+ * (`modifiers.race.white = -9.6`), not group ID, so the group-keyed
  * lookup alone would silently drop them. deriveGroupTurnout reuses the same
  * composition that built the stored turnouts.
  *
- * Returns null for non-US states so callers use the stored archetype +
- * archetype-keyed modifier path.
+ * Returns null for non-US states so callers use the stored group turnout +
+ * group-keyed modifier path.
  */
-function computeLayer1DerivedArchetypeTurnouts(
+function computeLayer1DerivedGroupTurnouts(
   stateId: string,
   categories: DemographicCategory[],
   turnoutDoc: StateDemographicTurnout | null | undefined,
@@ -49,9 +49,8 @@ function computeLayer1DerivedArchetypeTurnouts(
   // discriminator; the actual census shares come from the era bundle matching
   // the world's reset preset (falls back to 2019 for unregistered presets).
   if (!stateCensusData[stateId]) return null;
-  // Year-driven when the era clock is live, so the LEGACY archetype path sees
-  // the same electorate the granular path does. Two engines disagreeing about
-  // what year it is would be worse than either being wrong consistently.
+  // Year-driven when the era clock is live, so the stored-group baseline sees
+  // the same electorate the granular cells do.
   const yearSubstrate =
     year != null
       ? getUsSubstrateForYear(stateId, year, { startingYear: startingYear ?? null })
@@ -161,11 +160,11 @@ export function resolveTurnout(
       return w > 0 ? sum + w : sum;
     }, 0) || 100;
 
-  // For US-style states this recomputes archetype turnouts with Layer-1
+  // For US-style states this recomputes group turnouts with Layer-1
   // modifiers folded in (race/age/edu/wealth/ideology); null for UK/JP, where
-  // we keep using the stored archetype turnout and apply archetype-keyed
+  // we keep using the stored group turnout and apply group-keyed
   // modifiers below.
-  const layer1Derived = computeLayer1DerivedArchetypeTurnouts(
+  const layer1Derived = computeLayer1DerivedGroupTurnouts(
     demographics._id,
     categories,
     turnoutDoc,
@@ -182,16 +181,16 @@ export function resolveTurnout(
       const stateGroup = demographics.groups[group.id];
 
       // Baseline turnout: Layer-1-derived (US, modifiers already folded in)
-      // > stored archetype turnout > default.
+      // > stored group turnout > default.
       const baselineTurnout =
         layer1Derived?.[group.id] ??
         (typeof stateGroup?.turnout === "number"
           ? stateGroup.turnout
           : (group.defaultTurnout ?? 55));
 
-      // Apply archetype-keyed modifiers from turnoutDoc (UK/JP voterGroups,
+      // Apply group-keyed modifiers from turnoutDoc (UK/JP voterGroups,
       // or any new-format US modifier). For US Layer-1 modifiers the inner
-      // keys are demographic groups, not archetype IDs, so this loop is a
+      // keys are demographic groups, not group IDs, so this loop is a
       // no-op for them — their effect is already in baselineTurnout.
       let modifier = 0;
       if (turnoutDoc?.modifiers) {
@@ -286,7 +285,7 @@ export function buildLiveTurnouts(
 ): Record<string, number> {
   const liveTurnouts: Record<string, number> = {};
 
-  const layer1Derived = computeLayer1DerivedArchetypeTurnouts(
+  const layer1Derived = computeLayer1DerivedGroupTurnouts(
     demographics._id,
     categories,
     turnoutDoc,

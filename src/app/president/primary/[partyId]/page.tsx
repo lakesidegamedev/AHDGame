@@ -360,7 +360,6 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
       id: c._id.toString(),
       name: c.characterName ?? "Unknown",
       color: colorForCandidate(c._id.toString()),
-      archetype: undefined,
     })),
     // Counted results where a contest has run, the projection only where it
     // has not. Feeding the raw projection here kept the carve-up showing a

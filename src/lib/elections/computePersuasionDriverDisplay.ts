@@ -121,7 +121,7 @@ function toEnriched(c: PublicCandidate): EnrichedCandidate {
     infamy: 0,
     partyEcon: c.partyEcon,
     partySocial: c.partySocial,
-    archetypeApprovals: {},
+    bucketApprovals: {},
     support: typeof c.support === "number" ? c.support : 50,
   };
 }

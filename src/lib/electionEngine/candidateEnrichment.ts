@@ -339,7 +339,7 @@ export async function fetchEnrichedCandidates(
       politicalInfluence = 10,
       nationalInfluence = 0,
       partyInfluence = 0,
-      archetypeApprovals: Record<string, number> | undefined,
+      bucketApprovals: Record<string, number> | undefined,
       candidateInfamy: number | undefined;
 
     if (c.isNPP && c.nppId) {
@@ -350,7 +350,7 @@ export async function fetchEnrichedCandidates(
         favorability = npp.favorability;
         politicalInfluence = npp.politicalInfluence;
         nationalInfluence = npp.politicalInfluence; // NPPs use politicalInfluence as proxy for national
-        archetypeApprovals = npp.archetypeApprovals;
+        bucketApprovals = npp.archetypeApprovals;
         // NPPs have no partyInfluence — leave 0
       }
     } else {
@@ -362,7 +362,7 @@ export async function fetchEnrichedCandidates(
         politicalInfluence = char.politicalInfluence;
         nationalInfluence = char.nationalInfluence ?? 0;
         partyInfluence = char.partyInfluence ?? 0;
-        archetypeApprovals = char.archetypeApprovals;
+        bucketApprovals = char.archetypeApprovals;
         candidateInfamy = char.infamy;
       }
     }
@@ -417,7 +417,7 @@ export async function fetchEnrichedCandidates(
       partyChairRole,
       ...(stateChairStateIds ? { stateChairStateIds } : {}),
       infamy: candidateInfamy,
-      archetypeApprovals,
+      bucketApprovals,
       regimeMult,
       // Pass through `electionCandidates.support` so general-election
       // vote distribution can consume it via supportMoodMultiplier. Missing

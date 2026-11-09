@@ -43,7 +43,7 @@ function fixtureCandidates(): EnrichedCandidate[] {
       charSP: -1,
       partyEcon: -1,
       partySocial: -1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate,
     {
@@ -58,7 +58,7 @@ function fixtureCandidates(): EnrichedCandidate[] {
       charSP: 1,
       partyEcon: 1,
       partySocial: 1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate,
   ];
@@ -647,7 +647,7 @@ describe("distributeVotesBySwingFlow — OPS regime weighting", () => {
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
         regimeMult: 3.0,
         regimeStatus: "ruling",
@@ -662,7 +662,7 @@ describe("distributeVotesBySwingFlow — OPS regime weighting", () => {
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
         regimeMult: 0.375,
         regimeStatus: "approved",
@@ -704,7 +704,7 @@ describe("distributeVotesBySwingFlow — OPS regime weighting", () => {
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
         regimeMult: 0,
         regimeStatus: "banned",
@@ -993,7 +993,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       charSP: 0,
       partyEcon: 0,
       partySocial: 0,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate;
     const npp: EnrichedCandidate = {
@@ -1008,7 +1008,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       charSP: 1,
       partyEcon: 1,
       partySocial: 1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate;
     const out = distributeVotesBySwingFlow(
@@ -1040,7 +1040,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       charSP: 0,
       partyEcon: 0,
       partySocial: 0,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate;
     const npp: EnrichedCandidate = {
@@ -1055,7 +1055,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       charSP: 1,
       partyEcon: 1,
       partySocial: 1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate;
     const out = distributeVotesByGroupLevelAllocation(
@@ -1085,7 +1085,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       charSP: 0,
       partyEcon: 0,
       partySocial: 0,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate;
     const alive: EnrichedCandidate = {
@@ -1100,7 +1100,7 @@ describe("vote reach floor for PI=0 candidates (#1034)", () => {
       charSP: 1,
       partyEcon: 1,
       partySocial: 1,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       infamy: 0,
     } as EnrichedCandidate;
     const out = distributeVotesBySwingFlow(
@@ -1135,7 +1135,7 @@ function crowdedField(n: number): EnrichedCandidate[] {
     charSP: 0,
     partyEcon: 0,
     partySocial: 0,
-    archetypeApprovals: {},
+    bucketApprovals: {},
     infamy: 0,
   })) as EnrichedCandidate[];
 }
@@ -1414,7 +1414,7 @@ describe("appealWeight — personal-stat tenure fatigue (executive own-race)", (
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
       {
@@ -1427,7 +1427,7 @@ describe("appealWeight — personal-stat tenure fatigue (executive own-race)", (
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
     ];
@@ -1555,7 +1555,7 @@ describe("multi-cycle simulation — entrenched incumbency vs. a genuinely bette
           // Mildly off-center — a slightly worse fit for this electorate.
           charEP: 1.0,
           charSP: 1.0,
-          archetypeApprovals: {},
+          bucketApprovals: {},
           infamy: 0,
         } as EnrichedCandidate,
         {
@@ -1569,7 +1569,7 @@ describe("multi-cycle simulation — entrenched incumbency vs. a genuinely bette
           // Dead-center — genuinely better fit for this electorate.
           charEP: 0,
           charSP: 0,
-          archetypeApprovals: {},
+          bucketApprovals: {},
           infamy: 0,
         } as EnrichedCandidate,
       ];
@@ -1722,7 +1722,7 @@ describe("appealWeight — House per-candidate tenure fatigue", () => {
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
       {
@@ -1735,7 +1735,7 @@ describe("appealWeight — House per-candidate tenure fatigue", () => {
         support: 50,
         charEP: 0,
         charSP: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
     ];
@@ -1849,7 +1849,7 @@ describe("appealWeight — tenure erosion never deletes a long-serving candidate
         support: 50,
         charEP: 0.8,
         charSP: 1.6,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
       {
@@ -1862,7 +1862,7 @@ describe("appealWeight — tenure erosion never deletes a long-serving candidate
         support: 50,
         charEP: -0.5,
         charSP: 1.0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
       {
@@ -1875,7 +1875,7 @@ describe("appealWeight — tenure erosion never deletes a long-serving candidate
         support: 50,
         charEP: 0.8,
         charSP: 1.1,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         infamy: 0,
       } as EnrichedCandidate,
     ];
@@ -1968,7 +1968,7 @@ describe("multi-cycle simulation — US House control can change hands", () => {
           support: 50,
           charEP: opts.rivalIsGenuinelyBetter ? 1.0 : 0,
           charSP: opts.rivalIsGenuinelyBetter ? 1.0 : 0,
-          archetypeApprovals: {},
+          bucketApprovals: {},
           infamy: 0,
         } as EnrichedCandidate,
         {
@@ -1981,7 +1981,7 @@ describe("multi-cycle simulation — US House control can change hands", () => {
           support: 50,
           charEP: 0,
           charSP: 0,
-          archetypeApprovals: {},
+          bucketApprovals: {},
           infamy: 0,
         } as EnrichedCandidate,
       ];

@@ -727,11 +727,11 @@ describe("buildGranularElectorateSubstrate", () => {
     expect(substrate.participationSummary?.saturation).toBeLessThan(0);
   });
 
-  it("remaps candidate archetypeApprovals onto units", () => {
+  it("remaps candidate bucketApprovals onto units", () => {
     const substrate = buildSubstrate({
-      enriched: [makeCandidate("cand", "democrat", 0, 0, { archetypeApprovals: { retirees: 40 } })],
+      enriched: [makeCandidate("cand", "democrat", 0, 0, { bucketApprovals: { retirees: 40 } })],
     })!;
-    const approvals = substrate.enriched[0].archetypeApprovals!;
+    const approvals = substrate.enriched[0].bucketApprovals!;
     const values = Object.values(approvals);
     expect(values.length).toBeGreaterThan(0);
     for (const v of values) {
@@ -924,7 +924,7 @@ describe("granular substrate through the vote engine", () => {
     })!;
     const boosted = buildSubstrate({
       enriched: [
-        makeCandidate("a", "democrat", 0, 0, { archetypeApprovals: { retirees: 60 } }),
+        makeCandidate("a", "democrat", 0, 0, { bucketApprovals: { retirees: 60 } }),
         makeCandidate("b", "republican", 0, 0),
       ],
     })!;

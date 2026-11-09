@@ -2,7 +2,7 @@
  * Per-state demographic carve-up panel.
  *
  * Shows a conic-gradient pie of candidate slices in the selected state, plus a
- * breakdown row per candidate (avatar pill, name, archetype tag, percent, bar).
+ * breakdown row per candidate (avatar pill, name, percent, bar).
  * Slices come from the view-model, which runs `calcAppeal` against per-state
  * demographics.
  *
@@ -17,8 +17,6 @@ export interface CarveUpSlice {
   candidateName: string;
   /** Hex color of the candidate's party. */
   color: string;
-  /** Optional archetype tag (e.g. "Populist", "Moderate"). */
-  archetype?: string;
   /** Slice percent in 0..100. Sum across slices should equal 100. */
   pct: number;
 }
@@ -108,11 +106,6 @@ export function CarveUpPanel({
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
-                      {s.archetype ? (
-                        <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted">
-                          {s.archetype}
-                        </span>
-                      ) : null}
                       <div className="relative h-1 flex-1 rounded-full bg-background overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"

@@ -1121,16 +1121,16 @@ export function buildGranularElectorateSubstrate(
       : candidate;
   const enriched = input.enriched.map((ec) => {
     const approvals =
-      ec.archetypeApprovals && Object.keys(ec.archetypeApprovals).length > 0
-        ? remapArchetypeValuesToUnits(ec.archetypeApprovals, units, input.countryId)
-        : ec.archetypeApprovals;
+      ec.bucketApprovals && Object.keys(ec.bucketApprovals).length > 0
+        ? remapArchetypeValuesToUnits(ec.bucketApprovals, units, input.countryId)
+        : ec.bucketApprovals;
     if (
       !usesCampaignAds(input, input.enriched) ||
       input.currentTurn == null ||
       !ec.targetedAds?.length
     ) {
       return applySalience(
-        approvals === ec.archetypeApprovals ? ec : { ...ec, archetypeApprovals: approvals }
+        approvals === ec.bucketApprovals ? ec : { ...ec, bucketApprovals: approvals }
       );
     }
     const bonuses = targetedAdBonuses(
@@ -1151,7 +1151,7 @@ export function buildGranularElectorateSubstrate(
         return [unit.id, weight > 0 ? bonus / weight : 0];
       })
     );
-    return applySalience({ ...ec, archetypeApprovals: approvals, targetedAdBonuses: byUnit });
+    return applySalience({ ...ec, bucketApprovals: approvals, targetedAdBonuses: byUnit });
   });
 
   // Address-driven `${party}:${archetype}` favorability deltas → `${party}:${unit}`.
