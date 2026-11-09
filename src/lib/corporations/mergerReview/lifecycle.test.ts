@@ -5,6 +5,7 @@ import type { MergerReview } from "@/lib/db/types/mergerReview";
 vi.mock("@/lib/notifications", () => ({ createNotification: vi.fn() }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/nationalization/treasury", () => ({
+  collectFundedCorporationPayment: vi.fn(async () => null),
   creditTreasuryProceedsFromAnchor: vi.fn(),
 }));
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
