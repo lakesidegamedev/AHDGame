@@ -33,13 +33,9 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { fundedSizeCostPp } from "@/lib/corporations/rules/fundedSizeCost";
 import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
-import {
-  getSectorTechEffects,
-  getSectorTechEffectsForYear,
-  withSunsetPenalty,
-  NEUTRAL_TECH_EFFECTS,
-} from "@/lib/constants/techTree";
-import { sectorVintageYear, withEnergyTransition } from "@/lib/energyTransition/policies";
+import { sectorVintageYear } from "@/lib/energyTransition/policies";
+import { lawAdjustedLabourFactor, lawWageCostMultiplier } from "@/lib/automationPolicy/policies";
+import { resolveSectorTechEffects } from "./sectorTurn/sectorTechEffects";
 import { blendVintageYear } from "@/lib/energyTransition/rules";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
@@ -138,39 +134,14 @@ export function processSector(
     sector.mediaDiscriminator
   );
 
-  // Per-sector tech effects: Corporate-lane bonuses apply to every sector at
-  // reduced strength; Sector-lane bonuses apply only to the corp's primary
-  // sector type, full strength. Neutral when the feature gate is off.
-  // A retired (sunset) method runs on with dearer inputs, so its penalty
-  // folds into the same aggregate (techTree/sunset).
-  // Energy transition worlds also fold plant age, climate laws and mineral
-  // recycling into the input rates (energyTransition/policies).
-  const techEffects = withEnergyTransition(
-    techTreesEnabled
-      ? withSunsetPenalty(
-          currentYear != null
-            ? getSectorTechEffectsForYear(
-                corp,
-                sector.sectorType,
-                currentYear,
-                sector.industryModel,
-                sector.mediaDiscriminator
-              )
-            : getSectorTechEffects(
-                corp,
-                sector.sectorType,
-                sector.industryModel,
-                sector.mediaDiscriminator
-              ),
-          operatingSectorType,
-          sector.strategyId,
-          currentYear
-        )
-      : NEUTRAL_TECH_EFFECTS,
-    lookups.energyTransition,
+  // Per-sector tech effects (see sectorTurn/sectorTechEffects.ts).
+  const techEffects = resolveSectorTechEffects(
+    corp,
     sector,
-    operatingSectorType,
-    currentYear
+    lookups,
+    techTreesEnabled,
+    currentYear,
+    operatingSectorType
   );
   // Normalize host-currency revenue to anchor currency. Recover corrupt values
   // here so NaN cannot spread through corporate totals and tax accruals.
@@ -840,9 +811,10 @@ export function processSector(
     labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
-    labourPerUnitFactor: automationLabourFactor(
-      sector.strategyId,
-      env.automationDisplacedByState !== undefined
+    labourPerUnitFactor: lawAdjustedLabourFactor(
+      automationLabourFactor(sector.strategyId, env.automationDisplacedByState !== undefined),
+      lookups.automationPolicyByCountry,
+      sector.countryId ?? corp.countryId
     ),
     automationDisplacedByState: env.automationDisplacedByState,
     fundedHeadcount: env.fundedHeadcountBySectorId
@@ -903,6 +875,10 @@ export function processSector(
     grossMaintenance: explicitPlantCostsEnabled ? explicitPayrollBasis : payrollBasis,
     computedWorkers,
     techLaborCostMultiplier: techEffects.laborCostMultiplier,
+    employerWageCostMultiplier: lawWageCostMultiplier(
+      lookups.automationPolicyByCountry,
+      sector.countryId ?? corp.countryId
+    ),
     costOfLivingIndex: sectorMetrics?.economic?.costOfLiving?.value,
     unemploymentRate: sectorMetrics?.economic?.unemploymentRate?.value,
     wageIndexByState,

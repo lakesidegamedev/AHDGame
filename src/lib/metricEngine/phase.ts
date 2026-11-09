@@ -120,6 +120,7 @@ import {
   type CrisisEconomicExposure,
 } from "@/lib/livingConflict/rules/economicExposure";
 import { loadSocietyLawPositions, presetUsesSocietyPressures } from "@/lib/societyPressures/shell";
+import { automationPolicyFor, loadAutomationPolicies } from "@/lib/automationPolicy/policies";
 import { NO_SOCIETY_LAWS } from "@/lib/societyPressures/rules/laws";
 import {
   advanceRegionSocietyPressures,
@@ -500,6 +501,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   const societyLaws = societyOn
     ? await loadSocietyLawPositions(db, [...new Set(realStates.map((s) => s.countryId))])
     : new Map<string, typeof NO_SOCIETY_LAWS>();
+  // 2027 world: the US and UK automation laws that speed re-employment.
+  const automationPolicies = societyOn ? await loadAutomationPolicies(db) : undefined;
 
   // One in-memory pass over the political boards already loaded above. This
   // avoids a country-by-country query loop on the multiplayer turn path.
@@ -1143,6 +1146,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
           ),
           outputGap: hasTrend ? state.outputGap : 0,
           laws: societyLaws.get(countryId) ?? NO_SOCIETY_LAWS,
+          automation: automationPolicyFor(automationPolicies, countryId),
         })
       : undefined;
     if (society) {

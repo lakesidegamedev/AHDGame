@@ -72,6 +72,8 @@ import { loadBlockadeClosure } from "@/lib/turn/commodity/blockadeClosure";
 import { loadCorporationLookupInputs } from "./buildLookupsLoad";
 import { buildCommodityBalanceLookups } from "./buildLookupsCommodityBalances";
 import { buildExtractionAndPortfolioLookups } from "./buildLookupsExtraction";
+import { loadAutomationPolicies } from "@/lib/automationPolicy/policies";
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -1100,5 +1102,9 @@ export async function buildCorporationLookups(
     // domestic production (realizedRevenue -> 0) even when its export exposure
     // was 0, wrongly bankrupting purely-domestic sectors under an import embargo.
     embargoTradeExposureEnabled: true,
+    // 2027 world: enacted automation laws, one read for all countries.
+    ...(presetUsesSocietyPressures(marketSharePreset)
+      ? { automationPolicyByCountry: await loadAutomationPolicies(db) }
+      : {}),
   };
 }

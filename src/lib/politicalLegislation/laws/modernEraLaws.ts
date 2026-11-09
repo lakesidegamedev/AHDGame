@@ -13,6 +13,10 @@
  * 2050 bands also reach RU and DD. The same laws exist in the legacy catalogue
  * for DE, JP, CN and IE (seeds/shared/modernEraLegislation.ts).
  *
+ * The automation policy track (retraining guarantee, hiring subsidy,
+ * automation pension levy, transition compacts) is authored in
+ * modernEraLawsAutomation.ts and joins the 2030 and 2035 bands.
+ *
  * Every law carries an era `window`: it cannot be filed before its first year,
  * and an enacted one stays in force whatever the year. The automation tax also
  * closes to new bills in 2040, when the automation dividend replaces it; later
@@ -38,6 +42,7 @@
 
 import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../../politicalMetrics/types";
 import type { LawLevel, PoliticalLaw } from "../types";
+import { AUTOMATION_BAND_SPECS } from "./modernEraLawsAutomation";
 import { LATE_BAND_SPECS } from "./modernEraLawsLate";
 
 type ModernLawCountry = "US" | "UK" | "RU" | "DD";
@@ -1215,10 +1220,12 @@ const EARLIER_BAND_SPECS: readonly ModernLawSpec[] = [
   },
 ];
 
+/** Array.sort is stable, so each band keeps its authored order within a year. */
 export const MODERN_ERA_LAW_SPECS: readonly ModernLawSpec[] = [
   ...EARLIER_BAND_SPECS,
+  ...AUTOMATION_BAND_SPECS,
   ...LATE_BAND_SPECS,
-];
+].sort((a, b) => a.from - b.from);
 
 function buildLaw(spec: ModernLawSpec, countryId: ModernLawCountry): PoliticalLaw {
   const levels = [

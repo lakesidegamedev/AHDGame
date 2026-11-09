@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advanceRegionSocietyPressures, type RegionSocietyInput } from "./region";
 import { NO_SOCIETY_LAWS, societyLawPositionsByCountry } from "./laws";
+import { NO_AUTOMATION_POLICY } from "@/lib/automationPolicy/rules";
 
 const base: RegionSocietyInput = {
   turn: 10,
@@ -57,5 +58,40 @@ describe("advanceRegionSocietyPressures", () => {
     });
     expect(next.state.automationDisplaced).toBe(1000);
     expect(next.absorbedJobs).toBeGreaterThan(first.absorbedJobs);
+  });
+});
+
+describe("automation laws and re-employment", () => {
+  const withPrevious = (over: Partial<RegionSocietyInput>) => {
+    const first = advanceRegionSocietyPressures({ ...base, countryId: "US", ...over });
+    return advanceRegionSocietyPressures({
+      ...base,
+      countryId: "US",
+      ...over,
+      turn: 11,
+      previous: first.state,
+    });
+  };
+
+  it("absorbs displaced workers faster under the retraining guarantee and hiring subsidy", () => {
+    const none = withPrevious({});
+    const retrained = withPrevious({
+      automation: { ...NO_AUTOMATION_POLICY, retraining: 3, hiringSubsidy: 2 },
+    });
+    expect(retrained.absorbedJobs).toBeGreaterThan(none.absorbedJobs);
+  });
+
+  it("reads the US and UK wage insurance level, not only the legacy ladder", () => {
+    const none = withPrevious({});
+    const insured = withPrevious({
+      automation: { ...NO_AUTOMATION_POLICY, wageInsurance: 4 },
+    });
+    expect(insured.absorbedJobs).toBeGreaterThan(none.absorbedJobs);
+  });
+
+  it("matches the old behaviour when no automation law is passed", () => {
+    expect(withPrevious({}).absorbedJobs).toBe(
+      withPrevious({ automation: NO_AUTOMATION_POLICY }).absorbedJobs
+    );
   });
 });
