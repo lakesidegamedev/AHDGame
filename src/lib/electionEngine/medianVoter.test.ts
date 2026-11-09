@@ -148,89 +148,48 @@ describe("computeMedianVoter", () => {
 });
 
 describe("computeNationalEvWeightedMedian", () => {
-  function rightLeaning(): StateDemographics {
-    return {
-      ...makeDemographics({
-        low: { population: 20, turnout: 60, economicLean: -1, socialLean: 0 },
-        high: { population: 80, turnout: 60, economicLean: 1, socialLean: 0 },
-        prog: { population: 20, turnout: 60, economicLean: 0, socialLean: -1 },
-        trad: { population: 80, turnout: 60, economicLean: 0, socialLean: 1 },
-      }),
-      _id: "R",
-    };
-  }
-  function leftLeaning(): StateDemographics {
-    return {
-      ...makeDemographics({
-        low: { population: 80, turnout: 60, economicLean: -1, socialLean: 0 },
-        high: { population: 20, turnout: 60, economicLean: 1, socialLean: 0 },
-        prog: { population: 80, turnout: 60, economicLean: 0, socialLean: -1 },
-        trad: { population: 20, turnout: 60, economicLean: 0, socialLean: 1 },
-      }),
-      _id: "L",
-    };
-  }
+  const right = { ep: 0.5, sp: 0.5 };
+  const left = { ep: -0.5, sp: -0.5 };
 
   it("returns (0, 0) when the EV-weighted blend cancels out", () => {
-    // Equal EV on left + right leaning states → symmetric cancel.
-    const out = computeNationalEvWeightedMedian(
-      [
-        { demographics: leftLeaning(), ev: 10 },
-        { demographics: rightLeaning(), ev: 10 },
-      ],
-      makeCategories()
-    );
+    const out = computeNationalEvWeightedMedian([
+      { median: left, ev: 10 },
+      { median: right, ev: 10 },
+    ]);
     expect(out.ep).toBeCloseTo(0);
     expect(out.sp).toBeCloseTo(0);
   });
 
   it("pulls toward the high-EV state", () => {
-    // 50-EV right-leaning state vs 3-EV left-leaning state → net rightward.
-    const out = computeNationalEvWeightedMedian(
-      [
-        { demographics: leftLeaning(), ev: 3 },
-        { demographics: rightLeaning(), ev: 50 },
-      ],
-      makeCategories()
-    );
+    const out = computeNationalEvWeightedMedian([
+      { median: left, ev: 3 },
+      { median: right, ev: 50 },
+    ]);
     expect(out.ep).toBeGreaterThan(0);
     expect(out.sp).toBeGreaterThan(0);
   });
 
   it("returns (0, 0) for empty input", () => {
-    const out = computeNationalEvWeightedMedian([], makeCategories());
+    const out = computeNationalEvWeightedMedian([]);
     expect(out.ep).toBe(0);
     expect(out.sp).toBe(0);
   });
 
   it("ignores entries with non-positive EV", () => {
-    // The 0-EV entry is dropped; only the right-leaning state counts.
-    const out = computeNationalEvWeightedMedian(
-      [
-        { demographics: leftLeaning(), ev: 0 },
-        { demographics: rightLeaning(), ev: 10 },
-      ],
-      makeCategories()
-    );
-    expect(out.ep).toBeGreaterThan(0);
-    expect(out.sp).toBeGreaterThan(0);
+    const out = computeNationalEvWeightedMedian([
+      { median: left, ev: 0 },
+      { median: right, ev: 10 },
+    ]);
+    expect(out.ep).toBeCloseTo(0.5);
+    expect(out.sp).toBeCloseTo(0.5);
   });
 
-  it("forwards liveTurnouts to per-state median computation", () => {
-    // Symmetric population, but boosting one side's social-progressive
-    // turnout in one state shifts that state's median — and the national
-    // EV-weighted blend inherits that shift.
-    const demo = makeDemographics();
-    const out = computeNationalEvWeightedMedian(
-      [
-        {
-          demographics: demo,
-          liveTurnouts: { prog: 90, trad: 30, low: 60, high: 60 },
-          ev: 10,
-        },
-      ],
-      makeCategories()
-    );
-    expect(out.sp).toBeLessThan(0);
+  it("weights a state's median by its EV share", () => {
+    const out = computeNationalEvWeightedMedian([
+      { median: { ep: 1, sp: 0 }, ev: 30 },
+      { median: { ep: 0, sp: -1 }, ev: 10 },
+    ]);
+    expect(out.ep).toBeCloseTo(0.75);
+    expect(out.sp).toBeCloseTo(-0.25);
   });
 });

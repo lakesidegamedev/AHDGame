@@ -651,8 +651,6 @@ export async function runPrimaryStaggerWaveIfDue(
         turnoutDoc: turnoutForElection(turnoutMap.get(stateId), election),
         statePopulation: state.population,
         demographics: rawDemographicsDoc,
-        categories,
-        liveTurnouts: generalTurnouts,
         enriched: partyCandidates,
         demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
       });

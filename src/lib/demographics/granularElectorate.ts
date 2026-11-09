@@ -7,8 +7,7 @@
  * When the flag is ON, per-state vote-share computation runs over granular
  * demographic cells (the cross-product of Layer-1 census dimensions, IPF-raked
  * to state marginals — the same derivation the granular poll uses via
- * `deriveGranularCells[Generic]`) instead of the 12 mutually-exclusive voter
- * archetypes. This module builds a drop-in SUBSTRATE for the existing engines:
+ * `deriveGranularCells[Generic]`). This module builds the SUBSTRATE for the engines:
  * a synthetic `DemographicCategory[]` + `StateDemographics` + `liveTurnouts`
  * whose "groups" are coalesced cells, plus bucket-keyed inputs
  * (`bucketApprovals`, `partyGroupFavorability`) remapped onto those cells.
@@ -18,8 +17,7 @@
  * categories/groups they are handed, so feeding them cell-shaped inputs swaps
  * the electorate substrate while preserving the appeal formula's structure and
  * coefficients exactly (policy-distance appeal dominance, favorability
- * weighting, org/reg/support multipliers — all untouched). Flag OFF is
- * therefore byte-identical legacy behavior by construction.
+ * weighting, org/reg/support multipliers — all untouched).
  *
  * PERFORMANCE (hot loop is per-state per-turn)
  * --------------------------------------------
@@ -51,10 +49,8 @@
  * modifiers fold in as:
  *  - US dim-keyed modifiers (`modifiers.race.white = -9.6`) — added directly
  *    to the bucket rate before cell derivation (native granularity).
- *  - Non-US worlds — the state's
- *    AGGREGATE live-vs-static turnout ratio (from the legacy resolver) scales
- *    every cell uniformly: total GOTV magnitude is preserved, per-group
- *    targeting granularity is not (documented limitation).
+ *  - Non-US worlds — the same dim-keyed modifiers apply to the country's own
+ *    bucket rates, so targeting is as granular as the US path.
  *  - `ideology`-dim modifiers have no cell axis (ideology is non-exclusive and
  *    not part of the cross-product) and are dropped on the granular path
  *    (documented limitation).
@@ -229,19 +225,15 @@ export interface GranularSubstrateInput {
   /** GOTV/canvassing/suppression modifiers doc for the state (may be null). */
   turnoutDoc?: StateDemographicTurnout | null;
   statePopulation: number;
-  /** Legacy archetype demographics (for the non-US aggregate GOTV ratio). */
+  /** Live state doc: carries the Layer-1 overlays folded onto unit leans and turnout. */
   demographics: StateDemographics;
-  /** Legacy category list (for the non-US aggregate GOTV baseline). */
-  categories: DemographicCategory[];
-  /** Archetype-keyed resolved live turnouts from `resolveTurnout` (optional). */
-  liveTurnouts?: Record<string, number>;
   /** Candidates whose `bucketApprovals` should be remapped onto units. */
   enriched: EnrichedCandidate[];
-  /** Address-driven `${partyId}:${archetypeId}` favorability deltas (optional). */
+  /** Address-driven `${partyId}:${dim}:${bucket}` favorability deltas (optional). */
   partyGroupFavorabilityByKey?: Map<string, number>;
   /**
    * Seeded per-state snapshot (`demographicDefaults` collection). When
-   * provided, legislation-driven lean drift (live − seeded, per archetype) is
+   * provided, legislation-driven lean drift (live − seeded, per bucket) is
    * folded onto unit leans via the bucket map. Omitted/null = no drift folded.
    */
   demographicDefaults?: StateDemographics | null;
@@ -466,7 +458,6 @@ function deriveCellsForState(
   liveAgeMarginals?: Record<"young" | "mid" | "mature" | "senior", number> | null
 ): {
   cells: GenericGranularCell[];
-  modifiersNative: boolean;
   positions: Record<string, Record<string, Position>>;
 } | null {
   const era: EraId = eraForPreset(preset ?? DEFAULT_SEED_PRESET);
@@ -544,7 +535,7 @@ function deriveCellsForState(
     if (liveAgeMarginals) {
       cells = reweightSharesToMarginal(cells, "age", liveAgeMarginals);
     }
-    return { cells, modifiersNative: true, positions };
+    return { cells, positions };
   }
 
   // Same shape as the US branch: year-driven when the clock is live, legacy
@@ -579,10 +570,8 @@ function deriveCellsForState(
     positions: mergedPositions[name],
     // Dim-keyed turnout modifiers (`modifiers.race.black`) apply natively here,
     // exactly as they do on the US path — this is where bucket-targeted GOTV
-    // and Governor's Addresses land. Archetype-keyed modifiers cannot leak in:
-    // they live under `modifiers.voterGroups`, which is never a dimension name,
-    // and they keep going through the aggregate ratio below. Applied before the
-    // durable overlay so a permanent era shift composes on top of the temporary
+    // and Governor's Addresses land. Keys that are not dimension names never
+    // reach a rate table. Applied before the durable overlay so a permanent era shift composes on top of the temporary
     // one, matching the US ordering.
     turnoutRates: applyTurnoutRateOverlay(
       applyTurnoutRateOverlay(substrate.turnoutRates[name], turnoutDoc?.modifiers?.[name]),
@@ -606,9 +595,7 @@ function deriveCellsForState(
     cells = reweightSharesToMarginal(cells, "age", liveAgeMarginals);
   }
   if (cells.length === 0) return null;
-  // Non-US archetype-keyed GOTV modifiers have no bucket mapping — the caller-
-  // supplied aggregate ratio handles them (modifiersNative: false).
-  return { cells, modifiersNative: false, positions: mergedPositions };
+  return { cells, positions: mergedPositions };
 }
 
 /** Coalesce pruned cells into quantized-lean units (see module header). */
@@ -680,9 +667,8 @@ function coalesceCells(
 
 /**
  * Derive (memoized) the coalesced unit list for a state, or null when the
- * state has no Layer-1 census. `modifiersNative` tells the caller whether
- * GOTV modifiers are already folded into unit turnout (US) or still need the
- * aggregate ratio (non-US).
+ * state has no Layer-1 census. GOTV modifiers are already folded into unit
+ * turnout.
  */
 export function deriveGranularElectorateUnits(
   countryId: string,
@@ -717,7 +703,7 @@ export function deriveGranularElectorateUnits(
   cache: "shared" | "bypass" = "shared",
   /** Demographics v2 live electorate age shares. Omitted preserves v1. */
   liveAgeMarginals?: Record<"young" | "mid" | "mature" | "senior", number> | null
-): { units: GranularElectorateUnit[]; modifiersNative: boolean } | null {
+): { units: GranularElectorateUnit[] } | null {
   const modifiersSig = turnoutDoc?.modifiers ? JSON.stringify(turnoutDoc.modifiers) : "";
   const overlaySig = positionOverlay ? JSON.stringify(positionOverlay) : "";
   const turnoutOverlaySig = turnoutOverlay ? JSON.stringify(turnoutOverlay) : "";
@@ -729,8 +715,7 @@ export function deriveGranularElectorateUnits(
     UNIT_CACHE.delete(cacheKey);
     UNIT_CACHE.set(cacheKey, cached);
     if (cached === null) return null;
-    // eslint-disable-next-line local/no-country-literals -- cache stores the derivation output; nativeness is structural
-    return { units: cached, modifiersNative: countryId === "US" };
+    return { units: cached };
   }
 
   let derived: ReturnType<typeof deriveCellsForState> = null;
@@ -759,10 +744,10 @@ export function deriveGranularElectorateUnits(
     }
     UNIT_CACHE.set(cacheKey, units);
   }
-  return derived && units ? { units, modifiersNative: derived.modifiersNative } : null;
+  return derived && units ? { units } : null;
 }
 
-// ─── Archetype-keyed → unit-keyed remapping ─────────────────────────────────
+// ─── Bucket-keyed → unit-keyed remapping ─────────────────────────────────
 
 /**
  * Remap `dim:bucket`-keyed values (approvals, favorability deltas) onto units.
@@ -806,39 +791,12 @@ function addOverlayDeltas(
   }
 }
 
-/** Aggregate live-vs-static turnout ratio over the legacy archetype groups. */
-function aggregateTurnoutRatio(
-  demographics: StateDemographics,
-  categories: DemographicCategory[],
-  liveTurnouts: Record<string, number> | undefined
-): number {
-  if (!liveTurnouts) return 1;
-  let staticPool = 0;
-  let livePool = 0;
-  for (const category of categories) {
-    const categoryWeight = demographics.categoryWeights[category._id] ?? 0;
-    if (categoryWeight <= 0) continue;
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const populationPct = stateGroup?.population ?? 0;
-      if (populationPct <= 0) continue;
-      const staticTurnout =
-        (typeof stateGroup?.turnout === "number" ? stateGroup.turnout : group.defaultTurnout) ?? 55;
-      const liveTurnout = liveTurnouts[group.id] ?? staticTurnout;
-      staticPool += populationPct * staticTurnout * categoryWeight;
-      livePool += populationPct * liveTurnout * categoryWeight;
-    }
-  }
-  if (staticPool <= 0 || livePool <= 0) return 1;
-  return livePool / staticPool;
-}
-
 // ─── Substrate builder ──────────────────────────────────────────────────────
 
 /**
  * Build the granular-cell substrate for one state's vote distribution, or
- * null when the state has no Layer-1 census (callers fall back to the legacy
- * archetype path — the substrate never hard-fails a turn).
+ * null when the state has no Layer-1 census (callers fall back to the stored
+ * group rows — the substrate never hard-fails a turn).
  */
 export function buildGranularElectorateSubstrate(
   input: GranularSubstrateInput
@@ -867,12 +825,7 @@ export function buildGranularElectorateSubstrate(
     liveAgeMarginals
   );
   if (!derived || derived.units.length === 0) return null;
-  const { units, modifiersNative } = derived;
-
-  // Non-US: apply the state's aggregate GOTV ratio uniformly (see header).
-  const ratio = modifiersNative
-    ? 1
-    : aggregateTurnoutRatio(input.demographics, input.categories, input.liveTurnouts);
+  const { units } = derived;
 
   // Legislation-driven lean drift (see module header), folded into unit leans below.
   const econBucketDeltas: Record<string, number> = {};
@@ -940,7 +893,7 @@ export function buildGranularElectorateSubstrate(
   const categoryGroups: DemographicCategory["groups"] = [];
   let pool = 0;
   for (const unit of units) {
-    let turnout = ratio === 1 ? unit.turnout : clampTurnout(unit.turnout * ratio);
+    let turnout = unit.turnout;
     if (turnoutDriftKeys.length > 0) {
       let drift = 0;
       for (const k of turnoutDriftKeys) {
@@ -1019,8 +972,7 @@ export function buildGranularElectorateSubstrate(
     .flatMap((unit) =>
       (unit.campaignCells ?? []).map((cell) => ({
         ...cell,
-        // Match the counted unit's live turnout, including aggregate GOTV and
-        // temporary turnout drift, while preserving its internal turnout mix.
+        // Match the counted unit's live turnout, including temporary turnout drift, while preserving its internal turnout mix.
         turnout:
           unit.turnout > 0
             ? (cell.turnout * liveTurnouts[unit.id]) / unit.turnout

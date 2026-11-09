@@ -35,7 +35,6 @@ const input: GranularSubstrateInput = {
     groups: {},
     lastUpdated: new Date(0),
   },
-  categories: [],
   enriched: [candidate("A"), candidate("B")],
 };
 const ads = planAdPurchase([], { stateId: "PA", dimension: "race", bucket: "white" }, 10, 1)!;

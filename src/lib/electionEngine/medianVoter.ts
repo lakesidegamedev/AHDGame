@@ -117,7 +117,7 @@ export function usesEvWeightedNationalMedian(electionType: string, countryId: Co
 /**
  * EV-weighted national median voter for US presidential elections.
  *
- * Per-state `computeMedianVoter` results are aggregated by electoral-vote
+ * Per-state medians are aggregated by electoral-vote
  * weight, so a 55-EV state pulls the national signal 55x harder than a
  * 3-EV state. Population and turnout are already folded in per state, so
  * they are not double-counted here.
@@ -127,23 +127,17 @@ export function usesEvWeightedNationalMedian(electionType: string, countryId: Co
  * count toward the denominator.
  */
 export function computeNationalEvWeightedMedian(
-  states: Array<{
-    demographics: StateDemographics;
-    liveTurnouts?: Record<string, number>;
-    ev: number;
-  }>,
-  categories: DemographicCategory[]
+  states: Array<{ median: MedianVoter; ev: number }>
 ): MedianVoter {
   let evSum = 0;
   let epWeighted = 0;
   let spWeighted = 0;
 
-  for (const { demographics, liveTurnouts, ev } of states) {
+  for (const { median, ev } of states) {
     if (!Number.isFinite(ev) || ev <= 0) continue;
-    const stateMedian = computeMedianVoter(demographics, categories, liveTurnouts);
     evSum += ev;
-    epWeighted += ev * stateMedian.ep;
-    spWeighted += ev * stateMedian.sp;
+    epWeighted += ev * median.ep;
+    spWeighted += ev * median.sp;
   }
 
   if (evSum <= 0) return { ep: 0, sp: 0 };

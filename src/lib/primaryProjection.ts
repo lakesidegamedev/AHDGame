@@ -24,7 +24,6 @@
  */
 
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 import type { CampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 
@@ -224,13 +223,6 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
     if (input.campaignContext) {
       const context = input.campaignContext;
       const turnoutDoc = turnoutForElection(context.turnoutByState.get(stateId), context);
-      const generalTurnouts = resolveTurnout(
-        state.population,
-        rawDemographics,
-        categories,
-        turnoutDoc,
-        context
-      ).byGroup;
       const substrate = buildGranularElectorateSubstrate({
         ...context,
         countryId,
@@ -238,8 +230,6 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
         turnoutDoc,
         statePopulation: state.population,
         demographics: rawDemographics,
-        categories,
-        liveTurnouts: generalTurnouts,
         enriched: candidates,
         demographicDefaults: context.defaultsByState.get(stateId),
       });

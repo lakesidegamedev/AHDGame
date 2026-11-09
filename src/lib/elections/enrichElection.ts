@@ -38,7 +38,8 @@ import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocL
 import { getCountryState } from "@/lib/countryState";
 import { allocateBlocListSeats } from "@/lib/turn/election/blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
+import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
+import { eraYearContextFromGameState } from "@/lib/era/context";
 import { ObjectId } from "mongodb";
 import type {
   Election,
@@ -54,7 +55,6 @@ import type {
   StatePartyOrg,
   StateRegistrationPool,
   ElectionVoteTally,
-  DemographicCategory,
   State,
   StateDemographics,
 } from "@/lib/db/types";
@@ -1015,16 +1015,19 @@ export async function _enrichElection(
         ? [election.state]
         : [];
 
-    const [fundsMap, seatShareMap, categories, allDemographics] = await Promise.all([
+    const [fundsMap, seatShareMap, allDemographics, allDefaults] = await Promise.all([
       getFundsByPartyForElection(electionOid, db),
       getIncumbentSeatShareByParty(election, db),
       demographicsQueryStateIds.length > 0
-        ? loadDemographicCategories(db)
-        : Promise.resolve([] as DemographicCategory[]),
-      demographicsQueryStateIds.length > 0
         ? db
             .collection<StateDemographics>("stateDemographics")
-            .find({ _id: { $in: demographicsQueryStateIds } })
+            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
+            .toArray()
+        : Promise.resolve([] as StateDemographics[]),
+      demographicsQueryStateIds.length > 0
+        ? db
+            .collection<StateDemographics>("demographicDefaults")
+            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
             .toArray()
         : Promise.resolve([] as StateDemographics[]),
     ]);
@@ -1064,21 +1067,38 @@ export async function _enrichElection(
       }
     }
 
-    if (categories.length > 0 && allDemographics.length > 0) {
+    if (allDemographics.length > 0) {
+      const defaultsByState = new Map(allDefaults.map((d) => [d._id as string, d]));
+      const eraYear = eraYearContextFromGameState(gameState);
+      // The median is read off the same census cells the vote engine counts.
+      const medianFor = (demographics: StateDemographics) => {
+        const substrate = buildGranularElectorateSubstrate({
+          countryId,
+          stateId: demographics._id as string,
+          preset: gameState?.preset,
+          ...eraYear,
+          statePopulation: 1,
+          demographics,
+          demographicDefaults: defaultsByState.get(demographics._id as string) ?? null,
+          enriched: [],
+        });
+        return substrate
+          ? computeMedianVoter(substrate.demographics, substrate.categories, substrate.liveTurnouts)
+          : null;
+      };
       if (useEvWeightedMedian) {
-        const evEntries = allDemographics
-          .map((d) => ({
-            demographics: d,
-            ev: evByState[d._id as string] ?? 0,
-          }))
-          .filter((e) => e.ev > 0);
+        const evEntries = allDemographics.flatMap((d) => {
+          const ev = evByState[d._id as string] ?? 0;
+          const median = ev > 0 ? medianFor(d) : null;
+          return median ? [{ median, ev }] : [];
+        });
         if (evEntries.length > 0) {
-          medianVoter = computeNationalEvWeightedMedian(evEntries, categories);
+          medianVoter = computeNationalEvWeightedMedian(evEntries);
         }
       } else if (election.state) {
         const stateDemographics = allDemographics.find((d) => d._id === election.state);
         if (stateDemographics) {
-          medianVoter = computeMedianVoter(stateDemographics, categories);
+          medianVoter = medianFor(stateDemographics) ?? undefined;
         }
       }
     }
