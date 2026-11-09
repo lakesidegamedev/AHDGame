@@ -210,14 +210,15 @@ export async function materializeContinuingFederationServiceTurn(input: {
   )[0];
   if (previous && previous.turn >= turn)
     throw new Error("Continuing service cannot precede its latest committed turn");
+  const priorArrearsMinor: Record<string, number> =
+    previous?.successorArrearsMinor ?? Object.fromEntries(ids.map((id) => [id, 0]));
   const plan = planContinuingDebtService({
     finances,
     dueMinor: due.totalMinor,
     availableMinorBySuccessor: Object.fromEntries(
       ids.map((id) => [id, Math.max(0, slices[id].cashAfterProtectedSpendingMinor)])
     ),
-    priorArrearsMinor:
-      previous?.successorArrearsMinor ?? Object.fromEntries(ids.map((id) => [id, 0])),
+    priorArrearsMinor,
   });
   let principal = 0;
   for (const bond of bonds) {
@@ -269,7 +270,13 @@ export async function materializeContinuingFederationServiceTurn(input: {
           ),
           cumulativeArrearsMinor: safeMinor(
             (account.cumulativeArrearsMinor ?? 0) +
-              (plan.successorArrearsMinor[account.entityId] ?? 0)
+              // Only arrears newly accrued this turn: the balance already carries
+              // earlier arrears forward, so adding it whole re-counts them each turn.
+              Math.max(
+                0,
+                (plan.successorArrearsMinor[account.entityId] ?? 0) -
+                  (priorArrearsMinor[account.entityId] ?? 0)
+              )
           ),
         },
       },

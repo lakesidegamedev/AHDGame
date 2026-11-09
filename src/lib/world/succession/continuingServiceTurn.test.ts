@@ -172,6 +172,21 @@ describe("continuing federation service transaction", () => {
       successorArrearsMinor: { BY: 0, UA: 0 },
     });
   });
+  it("does not re-count carried-forward arrears in the cumulative total each turn", async () => {
+    const { db } = scenario();
+    await db
+      .collection("macroCountries")
+      .updateOne({ _id: "UA" as never }, { $set: { federationTreasuryMinor: -1000 } });
+    await run(db);
+    const fiscal = () =>
+      db.collection("federationFiscalAccounts").findOne({ _id: `${applicationId}:UA` as never });
+    expect(await fiscal()).toMatchObject({ cumulativeArrearsMinor: 37 });
+    // Later turns owe nothing new, so the carried balance must not be added again.
+    await db.collection("bonds").updateMany({}, { $set: { matured: true } });
+    await run(db, 92);
+    await run(db, 93);
+    expect(await fiscal()).toMatchObject({ cumulativeArrearsMinor: 37 });
+  });
   it("requires an active transaction and an unchanged approved contract inventory", async () => {
     const { db } = scenario();
     await expect(
