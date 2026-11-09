@@ -181,6 +181,8 @@ export const NON_GAMEPLAY_GAME_CONFIG_FIELDS: Readonly<Record<string, string>> =
   adminRegistrationEnabled: "security: admin registration side channel",
   registrationEnabled: "ops kill switch for new registrations",
   governmentContractsEnabled: "ops kill switch for government contracts; absent defaults open",
+  governmentConfidenceEnabled:
+    "ops confidence-gauge freeze; absent defaults frozen and the operator choice survives world resets",
   discordLinkRequiredForCharacter:
     "ops character-creation gate; absent defaults off and an operator-enabled requirement survives world resets",
   ipCollisionCheckEnabled: "security tooling",

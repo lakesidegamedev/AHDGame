@@ -51,7 +51,16 @@ function fakeDb(initial?: number) {
     }
   );
   const findOne = vi.fn(async () => doc);
-  return { db: { collection: () => ({ findOne, updateOne }) } as never, doc, updateOne };
+  return {
+    db: {
+      collection: (name: string) =>
+        name === "gameConfig"
+          ? { findOne: async () => ({ governmentConfidenceEnabled: true }) }
+          : { findOne, updateOne },
+    } as never,
+    doc,
+    updateOne,
+  };
 }
 
 describe("getConfidenceGauge", () => {
@@ -157,6 +166,8 @@ describe("tickParliamentaryGovernmentConfidence", () => {
     const approvals = [{ _id: "IE", approvalRating: 0 }];
     const db = {
       collection(name: string) {
+        if (name === "gameConfig")
+          return { findOne: async () => ({ governmentConfidenceEnabled: true }) };
         if (name === "governmentFormations") {
           return {
             find: () => ({ toArray: async () => governments }),

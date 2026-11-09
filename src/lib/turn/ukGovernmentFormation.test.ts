@@ -30,9 +30,11 @@ beforeEach(async () => {
     "governmentApprovals",
     "ukGovernment",
     "ukNhsState",
+    "gameConfig",
   ]) {
     db.collection(name);
   }
+  db.collectionMocks.gameConfig.findOne.mockResolvedValue({ governmentConfidenceEnabled: true });
 });
 
 const NOW = new Date("2025-06-15T12:00:00Z");
@@ -290,6 +292,33 @@ describe("updateGovernmentSeats per-turn gauges (ticket #858)", () => {
     expect((nhsWrite![1] as { $set: Record<string, unknown> }).$set.quality).toBeTypeOf("number");
     expect(snapSpy).not.toHaveBeenCalled();
   });
+
+  it.each([null, { governmentConfidenceEnabled: false }])(
+    "keeps NHS processing but freezes confidence and dissolution for %j",
+    async (config) => {
+      const { updateGovernmentSeats } = await import("./ukGovernmentFormation");
+      existingGovernment();
+      db.collectionMocks.gameConfig.findOne.mockResolvedValue(config);
+      db.collectionMocks.ukGovernment.findOne.mockResolvedValue({
+        _id: "current",
+        confidenceGauge: 0,
+      });
+      const previous = process.env.UK_CONFIDENCE_GAUGE_DISSOLUTION;
+      process.env.UK_CONFIDENCE_GAUGE_DISSOLUTION = "1";
+      try {
+        await updateGovernmentSeats();
+      } finally {
+        if (previous === undefined) delete process.env.UK_CONFIDENCE_GAUGE_DISSOLUTION;
+        else process.env.UK_CONFIDENCE_GAUGE_DISSOLUTION = previous;
+      }
+      expect(snapSpy).not.toHaveBeenCalled();
+      const gaugeWrites = db.collectionMocks.governmentFormations.updateOne.mock.calls.filter(
+        ([, update]) => Object.hasOwn(update.$set ?? {}, "confidenceGauge")
+      );
+      expect(gaugeWrites).toEqual([]);
+      expect(db.collectionMocks.ukNhsState.updateOne).toHaveBeenCalled();
+    }
+  );
 
   it("dissolves Parliament through the snap path when the gauge bottoms out and the flag is on", async () => {
     const { updateGovernmentSeats } = await import("./ukGovernmentFormation");

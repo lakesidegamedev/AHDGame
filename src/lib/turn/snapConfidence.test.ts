@@ -6,6 +6,7 @@ const now = new Date("2026-01-01");
 describe("completed snap confidence persistence", () => {
   it.each(["UK", "JP", "DE", "IE"])("sets %s to exactly 50 and records once", async (countryId) => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     memory.seed("governmentFormations", [
       {
         _id: countryId,
@@ -42,6 +43,7 @@ describe("completed snap confidence persistence", () => {
   });
   it("sets higher confidence to 50 too", async () => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     memory.seed("governmentFormations", [{ _id: "UK", confidenceGauge: 90 }]);
     await resetCompletedSnapConfidence(
       memory as unknown as Db,
@@ -58,6 +60,7 @@ describe("completed snap confidence persistence", () => {
   });
   it("preserves existing state and history bounds", async () => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     memory.seed("governmentFormations", [
       {
         _id: "UK",
@@ -87,6 +90,7 @@ describe("completed snap confidence persistence", () => {
   });
   it("does not create a missing government", async () => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     await resetCompletedSnapConfidence(
       memory as unknown as Db,
       [{ countryId: "UK", startTurn: 1, turn: 100 }],
@@ -100,6 +104,7 @@ describe("completed snap confidence persistence", () => {
   });
   it("batches countries and serializes concurrent resets", async () => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     memory.seed(
       "governmentFormations",
       ["UK", "JP", "DE"].map((_id) => ({ _id, confidenceGauge: 0 }))
