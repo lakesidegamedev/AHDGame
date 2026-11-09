@@ -265,6 +265,7 @@ export function UKRegionPageTabs({
             turnoutData={turnoutData ?? null}
             countryId="UK"
             bucketProfile={bucketProfile}
+            population={state?.population ?? null}
           />
         );
       }

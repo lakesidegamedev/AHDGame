@@ -24,9 +24,9 @@ import type {
   State,
   StateDemographics,
   StatePartyOrg,
-  DemographicCategory,
 } from "@/lib/db/types";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
+import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
 import { fetchEnrichedCandidates } from "@/lib/electionEngine";
 import { summarizePrimaryProjection } from "@/lib/elections/presidentialPrimaryDisplay";
@@ -143,35 +143,33 @@ export async function GET(req: Request) {
     // sees the exact same projection inputs.
     const charIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
     const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
-    const [chars, npps, partyOrgs, categoriesDocs, statesDocs, demographicsDocs, enriched] =
-      await Promise.all([
-        charIds.length
-          ? db
-              .collection<Character>("characters")
-              .find({ _id: { $in: charIds } })
-              .toArray()
-          : Promise.resolve([] as Character[]),
-        nppIds.length
-          ? db
-              .collection<NPP>("npps")
-              .find({ _id: { $in: nppIds } })
-              .toArray()
-          : Promise.resolve([] as NPP[]),
-        db
-          .collection<StatePartyOrg>("statePartyOrg")
-          .find({ countryId: "US", partyId: partyKey })
-          .toArray(),
-        db.collection<DemographicCategory>("demographicCategories").find({}).toArray(),
-        db
-          .collection<State>("states")
-          .find({ _id: { $in: ALL_STATE_IDS } })
-          .toArray(),
-        db
-          .collection<StateDemographics>("stateDemographics")
-          .find({ _id: { $in: ALL_STATE_IDS } })
-          .toArray(),
-        fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId: "US" }),
-      ]);
+    const [chars, npps, partyOrgs, statesDocs, demographicsDocs, enriched] = await Promise.all([
+      charIds.length
+        ? db
+            .collection<Character>("characters")
+            .find({ _id: { $in: charIds } })
+            .toArray()
+        : Promise.resolve([] as Character[]),
+      nppIds.length
+        ? db
+            .collection<NPP>("npps")
+            .find({ _id: { $in: nppIds } })
+            .toArray()
+        : Promise.resolve([] as NPP[]),
+      db
+        .collection<StatePartyOrg>("statePartyOrg")
+        .find({ countryId: "US", partyId: partyKey })
+        .toArray(),
+      db
+        .collection<State>("states")
+        .find({ _id: { $in: ALL_STATE_IDS } })
+        .toArray(),
+      db
+        .collection<StateDemographics>("stateDemographics")
+        .find({ _id: { $in: ALL_STATE_IDS } })
+        .toArray(),
+      fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId: "US" }),
+    ]);
 
     const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
     const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
@@ -223,7 +221,7 @@ export async function GET(req: Request) {
       stateIds: ALL_STATE_IDS,
       stateMap,
       demographicsMap,
-      categories: categoriesDocs,
+      campaignContext: await loadCampaignProjectionContext(db, ALL_STATE_IDS),
       statePartyOrgs: orgMap,
       partyPosition: {
         economicPosition: party.economicPosition,

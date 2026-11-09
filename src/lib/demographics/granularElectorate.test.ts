@@ -12,7 +12,7 @@
  *  - perf smoke: substrate loop stays within budget of the archetype loop
  */
 
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect, beforeEach } from "vitest";
 // Side-effect import — populates stateCensusData with all US states so the
 // Layer-1 derivation can find census configs.
@@ -860,7 +860,7 @@ describe("granular substrate through the vote engine", () => {
         500_000,
         500_000,
         1_000_000,
-        electorateFromStoredGroups(twelveDemographics, twelveGroups),
+        electorateFromFixture(twelveDemographics, twelveGroups),
         new Map(),
         { isGeneralElection: true, countryId: "US" }
       );
@@ -899,7 +899,7 @@ describe("flag OFF — legacy engine untouched", () => {
       500_000,
       500_000,
       1_000_000,
-      electorateFromStoredGroups(LEGACY_DEMOGRAPHICS, LEGACY_CATEGORIES),
+      electorateFromFixture(LEGACY_DEMOGRAPHICS, LEGACY_CATEGORIES),
       new Map(),
       { isGeneralElection: true, countryId: "US" }
     );

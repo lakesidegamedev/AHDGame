@@ -3,7 +3,7 @@
  * Uses real seed data: demographicCategories, stateDemographics, party positions.
  * Covers candidates at different stat levels (influence, favorability, policy alignment).
  */
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import {
@@ -72,7 +72,7 @@ describe("Presidential race — vote distribution with real data", () => {
     const statePopulation = 39_538_223; // from src/lib/seeds/reference/states.ts
     const totalPool = calcStateTurnout(
       statePopulation,
-      electorateFromStoredGroups(demographics, categories)
+      electorateFromFixture(demographics, categories)
     );
     const turnPool = turnVoteWeight(12, 6, totalPool);
     const strengthMultiplier = 1.5; // (1 + 0.5 approval)
@@ -113,7 +113,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -152,7 +152,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -190,7 +190,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -227,7 +227,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -242,7 +242,7 @@ describe("Presidential race — vote distribution with real data", () => {
     const statePopulation = 29_145_505;
     const totalPool = calcStateTurnout(
       statePopulation,
-      electorateFromStoredGroups(demographics, categories)
+      electorateFromFixture(demographics, categories)
     );
     const turnPool = turnVoteWeight(12, 6, totalPool);
     const effectiveTurnPool = turnPool * 1.5;
@@ -282,7 +282,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -321,7 +321,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -336,7 +336,7 @@ describe("Presidential race — vote distribution with real data", () => {
     const statePopulation = 13_002_700;
     const totalPool = calcStateTurnout(
       statePopulation,
-      electorateFromStoredGroups(demographics, categories)
+      electorateFromFixture(demographics, categories)
     );
     const turnPool = turnVoteWeight(12, 6, totalPool);
     const effectiveTurnPool = turnPool * 1.5;
@@ -375,7 +375,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );

@@ -21,7 +21,6 @@ import {
   loadRegionalCampaignCells,
 } from "@/lib/campaignTargeting/audience";
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type {
@@ -736,10 +735,9 @@ async function recordPresidentialStatePollingSnapshots(
   const stateIds = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
   const campaignContext = await loadCampaignProjectionContext(db, stateIds);
 
-  // One-shot fetch for demographics + state + categories used across all
+  // One-shot fetch for demographics + state used across all
   // pres elections in this turn.
-  const [categoriesDocs, statesDocs, demographicsDocs] = await Promise.all([
-    loadDemographicCategories(db),
+  const [statesDocs, demographicsDocs] = await Promise.all([
     db
       .collection<State>("states")
       .find({ _id: { $in: stateIds } })
@@ -843,7 +841,6 @@ async function recordPresidentialStatePollingSnapshots(
         stateIds,
         stateMap,
         demographicsMap,
-        categories: categoriesDocs,
         statePartyOrgs: orgMap,
         partyPosition: {
           economicPosition: partyDoc?.economicPosition ?? 0,

@@ -7,7 +7,7 @@
  * - State-level turnout changes affect vote distribution
  */
 
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation, calcStateTurnout } from "@/lib/electionEngine";
 import type { EnrichedCandidate } from "@/lib/electionEngine";
@@ -98,7 +98,7 @@ describe("Turnout-to-election wiring integration", () => {
       const candidates = makeTestCandidates();
       const totalPool = calcStateTurnout(
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
       );
 
       // Baseline: no turnout modifiers
@@ -107,7 +107,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         {}
       );
@@ -124,7 +124,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         { liveTurnouts: gotvTurnouts }
       );
@@ -140,7 +140,7 @@ describe("Turnout-to-election wiring integration", () => {
       const candidates = makeTestCandidates();
       const totalPool = calcStateTurnout(
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
       );
 
       // Baseline: no turnout modifiers
@@ -149,7 +149,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         {}
       );
@@ -166,7 +166,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         { liveTurnouts: gotvTurnouts }
       );
@@ -182,7 +182,7 @@ describe("Turnout-to-election wiring integration", () => {
       const candidates = makeTestCandidates();
       const totalPool = calcStateTurnout(
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES)
       );
 
       // No suppression
@@ -191,7 +191,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool,
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         {}
       );
@@ -208,7 +208,7 @@ describe("Turnout-to-election wiring integration", () => {
         totalPool * 0.9, // Adjusted effective pool
         totalPool,
         statePopulation,
-        electorateFromStoredGroups(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
+        electorateFromFixture(TEST_DEMOGRAPHICS, TEST_CATEGORIES),
         new Map(),
         { liveTurnouts: suppressedTurnouts }
       );

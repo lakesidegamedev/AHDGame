@@ -233,13 +233,12 @@ function KpiStrip({
 function computeKpiProps({
   demographics,
   turnoutData,
+  population,
 }: {
   demographics: SerializedStateDemographics | null;
   turnoutData: TurnoutResponse | null;
+  population: number | null;
 }) {
-  const population = demographics
-    ? Object.values(demographics.groups).reduce((s, g) => s + (g.population ?? 0), 0)
-    : null;
   const economicLean =
     demographics && typeof demographics.cachedEconomicLean === "number"
       ? demographics.cachedEconomicLean
@@ -577,6 +576,7 @@ export function DemographicsAndTurnoutTab({
   countryId,
   regionParties = [],
   bucketProfile = null,
+  population = null,
   isAdmin = false,
 }: {
   stateId: string;
@@ -590,12 +590,14 @@ export function DemographicsAndTurnoutTab({
    */
   bucketProfile?: BucketProfileSection[] | null;
   isAdmin?: boolean;
+  /** Census population of the region. */
+  population?: number | null;
   turnoutData: TurnoutResponse | null;
   countryId?: string;
   regionParties?: RegionPartyPosition[];
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("combined");
-  const kpi = computeKpiProps({ demographics, turnoutData });
+  const kpi = computeKpiProps({ demographics, turnoutData, population });
   const upperCountryId = countryId?.toUpperCase() as CountryId | undefined;
 
   if (!censusData && !demographics) {

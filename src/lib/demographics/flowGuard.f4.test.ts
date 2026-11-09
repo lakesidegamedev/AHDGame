@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
@@ -87,7 +87,7 @@ describe("F-4 raw-population-leak guard", () => {
         turnPool,
         totalPool,
         pop,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         emptyOrgMap
       ).sharesPct;
     };
@@ -107,7 +107,7 @@ describe("F-4 raw-population-leak guard", () => {
         turnPool,
         totalPool,
         pop,
-        electorateFromStoredGroups(demographics, categories),
+        electorateFromFixture(demographics, categories),
         emptyOrgMap
       ).sharesPct;
       return Object.entries(shares).sort((a, b) => b[1] - a[1])[0][0];

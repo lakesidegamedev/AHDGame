@@ -1,5 +1,5 @@
 /** Reproducible synthetic balance report. No database, player data, or random inputs. */
-import { electorateFromStoredGroups } from "../../src/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "../../src/lib/demographics/electorateFixture";
 import assert from "node:assert/strict";
 import {
   deriveGranularCellsGeneric,
@@ -142,7 +142,7 @@ function shares(
     pool,
     pool,
     1_000_000,
-    electorateFromStoredGroups(demographics, categories),
+    electorateFromFixture(demographics, categories),
     new Map(),
     { votingSystem: "rcv" }
   );

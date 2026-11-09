@@ -4,9 +4,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminDemographicsPostSchema } from "@/lib/api/schemas/admin";
-import type { DemographicCategory, StateDemographics, AdminLog } from "@/lib/db/types";
+import type { StateDemographics, AdminLog } from "@/lib/db/types";
 
-// GET /api/admin/demographics — Returns demographic categories and optionally a single state's demographics.
+// GET /api/admin/demographics — Returns one state's stored demographics (state query param).
 // Auth: requireAdmin
 // Errors: 403
 export async function GET(request: Request) {
@@ -19,12 +19,6 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    // Always fetch categories
-    const categories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-
     let stateDemographics: StateDemographics | null = null;
     if (stateId) {
       stateDemographics = await db
@@ -32,20 +26,15 @@ export async function GET(request: Request) {
         .findOne({ _id: stateId.toUpperCase() });
     }
 
-    return NextResponse.json({
-      categories,
-      stateDemographics,
-    });
+    return NextResponse.json({ stateDemographics });
   } catch (error) {
     return handleRouteError(error);
   }
 }
 
-// PATCH was removed. It was the only surface that could author an arbitrary
-// `categoryWeights` map and arbitrary archetype `groups` entries by hand. Both
-// are derived from the seeds and the Layer-1 census now, so hand-editing them
-// could only put a region out of step with the substrate the vote engine reads.
-// Use Reseed Demographics (POST /api/admin/demographics/reseed) instead.
+// There is no PATCH: `categoryWeights` is derived from the seeds and the Layer-1
+// census, so a hand edit could only put a region out of step with the substrate
+// the vote engine reads. Use Reseed Demographics (POST /api/admin/demographics/reseed).
 
 // POST /api/admin/demographics — Overwrites the demographic defaults collection with the current live state demographics.
 // Auth: requireAdmin
@@ -79,8 +68,8 @@ export async function POST(request: Request) {
     for (const demo of currentDemographics) {
       await db.collection<StateDemographics>("demographicDefaults").insertOne({
         _id: demo._id,
+        countryId: demo.countryId,
         categoryWeights: demo.categoryWeights,
-        groups: demo.groups,
         lastUpdated: new Date(),
       } as StateDemographics);
     }

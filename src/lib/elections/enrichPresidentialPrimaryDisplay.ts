@@ -7,7 +7,6 @@ import {
 } from "@/lib/elections/liveResults/primaryNight";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import type { Db } from "mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import type {
   ElectionCandidate,
   Character,
@@ -69,34 +68,32 @@ export async function applyPresidentialPrimaryDisplay(
     ...(await loadCampaignProjectionContext(db, staggerStateIds)),
     campaignRulesVersion: campaignRulesVersion ?? 0,
   };
-  const [categories, states, demographics, resolvedStatePartyOrgs, engineEnriched] =
-    await Promise.all([
-      loadDemographicCategories(db),
-      db
-        .collection<State>("states")
-        .find({ _id: { $in: staggerStateIds } })
-        .toArray(),
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .find({ _id: { $in: staggerStateIds } })
-        .toArray(),
-      preloadedStatePartyOrgs.length > 0
-        ? Promise.resolve(
-            preloadedStatePartyOrgs.filter((org) => (org.countryId ?? "US") === countryId)
-          )
-        : db
-            .collection<StatePartyOrg>("statePartyOrg")
-            .find({ countryId: countryId as CountryId })
-            .toArray(),
-      // Full engine enrichment (partyInfluence + chair roles) — must match the
-      // primary map page / stagger path. Hand-building from display candidates
-      // previously dropped partyInfluence and flipped WTA projections vs
-      // `/president/primary/[partyId]`.
-      fetchEnrichedCandidates(candidates, {
-        includePartyPositions: true,
-        countryId: countryId as CountryId,
-      }),
-    ]);
+  const [states, demographics, resolvedStatePartyOrgs, engineEnriched] = await Promise.all([
+    db
+      .collection<State>("states")
+      .find({ _id: { $in: staggerStateIds } })
+      .toArray(),
+    db
+      .collection<StateDemographics>("stateDemographics")
+      .find({ _id: { $in: staggerStateIds } })
+      .toArray(),
+    preloadedStatePartyOrgs.length > 0
+      ? Promise.resolve(
+          preloadedStatePartyOrgs.filter((org) => (org.countryId ?? "US") === countryId)
+        )
+      : db
+          .collection<StatePartyOrg>("statePartyOrg")
+          .find({ countryId: countryId as CountryId })
+          .toArray(),
+    // Full engine enrichment (partyInfluence + chair roles) — must match the
+    // primary map page / stagger path. Hand-building from display candidates
+    // previously dropped partyInfluence and flipped WTA projections vs
+    // `/president/primary/[partyId]`.
+    fetchEnrichedCandidates(candidates, {
+      includePartyPositions: true,
+      countryId: countryId as CountryId,
+    }),
+  ]);
 
   const stateMap = new Map(states.map((state) => [state._id as string, state]));
   const demographicsMap = new Map(
@@ -247,7 +244,6 @@ export async function applyPresidentialPrimaryDisplay(
       stateIds: staggerStateIds,
       stateMap,
       demographicsMap,
-      categories,
       statePartyOrgs: statePartyOrgsForParty,
       partyPosition: {
         economicPosition: party?.economicPosition ?? 0,

@@ -6,7 +6,7 @@
  * through the distributeVotesByGroupLevelAllocation path; does NOT
  * mock the math.
  */
-import { electorateFromStoredGroups } from "@/lib/demographics/electorateUnit";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
@@ -89,7 +89,7 @@ describe("primaryStaggerPhase L1 — party-fit", () => {
       10_000,
       600_000,
       1_000_000,
-      electorateFromStoredGroups(demographics, categories),
+      electorateFromFixture(demographics, categories),
       new Map<string, number>(),
       baseOptions
     );
@@ -100,7 +100,7 @@ describe("primaryStaggerPhase L1 — party-fit", () => {
       10_000,
       600_000,
       1_000_000,
-      electorateFromStoredGroups(demographics, categories),
+      electorateFromFixture(demographics, categories),
       new Map<string, number>(),
       { ...baseOptions, applyPartyFit: true }
     );

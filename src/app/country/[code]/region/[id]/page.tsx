@@ -18,7 +18,6 @@ import { getAuthUserWithCharacter } from "@/lib/auth";
 import { isOnboardingDismissed } from "@/lib/onboarding/checklist";
 import { OnboardingStepTracker } from "@/components/onboarding/OnboardingStepTracker";
 import { resolveOfficeAccess } from "@/lib/governorOffice/access";
-import { calculateStateLean } from "@/lib/utils/demographics";
 import { isRegionalConditionsOverviewEnabled } from "@/lib/states/conditions/featureFlag";
 import { formatPopulation, formatGDP } from "@/lib/utils/formatters";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
@@ -145,9 +144,7 @@ async function renderUKRegion(regionCode: string) {
           economicLean: state.cachedEconomicLean,
           socialLean: state.cachedSocialLean,
         }
-      : demographics
-        ? calculateStateLean(demographics, categories)
-        : null;
+      : null;
   const isZeroed = calculatedLeans?.economicLean === 0 && calculatedLeans?.socialLean === 0;
   if (!calculatedLeans || isZeroed) {
     calculatedLeans =
@@ -444,9 +441,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
           economicLean: state.cachedEconomicLean,
           socialLean: state.cachedSocialLean,
         }
-      : demographics
-        ? calculateStateLean(demographics, categories)
-        : null;
+      : null;
   const isZeroed = calculatedLeans?.economicLean === 0 && calculatedLeans?.socialLean === 0;
 
   if (!calculatedLeans || isZeroed) {
