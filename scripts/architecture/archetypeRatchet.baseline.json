@@ -9,7 +9,6 @@
     "src/app/api/admin/seed/route.ts": 6,
     "src/app/api/country/[code]/executive/cabinet/[positionId]/infra/infra.route.test.ts": 3,
     "src/app/api/country/[code]/executive/cabinet/[positionId]/infra/start/route.ts": 5,
-    "src/app/api/country/[code]/map/overview/route.ts": 2,
     "src/app/congress/components/ProposeBillModal.tsx": 1,
     "src/app/country/[code]/executive/cabinet/[positionId]/office/components/FlagshipRouter.test.tsx": 1,
     "src/app/country/[code]/executive/cabinet/[positionId]/office/components/infra/infraUi.tsx": 1,
