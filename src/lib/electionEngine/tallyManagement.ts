@@ -811,7 +811,7 @@ export async function accumulateVoteTurn(
     countryId: electionCountryId,
     electionId,
     isGeneralElection,
-    groups: deriveGroupLeans(effCategories, effDemographics),
+    groups: deriveGroupLeans(effDemographics),
   });
 
   // Runtime one-party flag for the FPTP spoiler gate, so a mid-game conversion

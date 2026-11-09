@@ -12,15 +12,6 @@ afterEach(() => {
   else process.env.UK_MANIFESTO_VOTE_EFFECT = OLD;
 });
 
-const categories = [
-  {
-    groups: [
-      { id: "wealth:low", defaultEconomicLean: -3, defaultSocialLean: -1 },
-      { id: "wealth:high", defaultEconomicLean: 3, defaultSocialLean: 1 },
-    ],
-  },
-];
-
 describe("isManifestoVoteEffectEnabled", () => {
   it("is off unless the flag is exactly '1'", () => {
     delete process.env.UK_MANIFESTO_VOTE_EFFECT;
@@ -33,17 +24,23 @@ describe("isManifestoVoteEffectEnabled", () => {
 });
 
 describe("deriveGroupLeans", () => {
-  it("prefers state group leans, falls back to defaults", () => {
-    const demographics = { groups: { "wealth:low": { economicLean: -4, socialLean: -2 } } };
-    const leans = deriveGroupLeans(categories, demographics);
+  it("lists every census electorate unit with its lean", () => {
+    const leans = deriveGroupLeans({
+      groups: {
+        nat_0: { economicLean: -4, socialLean: -2 },
+        nat_1: { economicLean: 3, socialLean: 1 },
+      },
+    });
     expect(leans).toEqual([
-      { id: "wealth:low", economicLean: -4, socialLean: -2 }, // from state
-      { id: "wealth:high", economicLean: 3, socialLean: 1 }, // default
+      { id: "nat_0", economicLean: -4, socialLean: -2 },
+      { id: "nat_1", economicLean: 3, socialLean: 1 },
     ]);
   });
-  it("de-duplicates group ids", () => {
-    const cats = [categories[0], categories[0]];
-    expect(deriveGroupLeans(cats, { groups: {} })).toHaveLength(2);
+
+  it("errors on a unit with no lean", () => {
+    expect(() =>
+      deriveGroupLeans({ groups: { nat_0: { economicLean: Number.NaN, socialLean: 0 } } })
+    ).toThrow("Electorate unit nat_0 has no lean");
   });
 });
 
