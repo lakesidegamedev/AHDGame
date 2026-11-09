@@ -19,7 +19,7 @@ import { connectDb, closeDb } from "../utils/db";
 import { demographicCategories } from "../../src/lib/seeds/demographicCategories";
 import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
 import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
-import type { DemographicCategory, State, StateDemographics } from "../../src/lib/db/types";
+import type { DemographicCategory, State, CensusGroupView } from "../../src/lib/db/types";
 
 async function main() {
   console.log("Seed: Demographics (categories + state demographics)\n");
@@ -46,10 +46,10 @@ async function main() {
     for (const sd of stateDemographics) {
       const { groups: _groups, ...storedDemographics } = sd;
       await db
-        .collection<StateDemographics>("stateDemographics")
+        .collection<CensusGroupView>("stateDemographics")
         .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
       await db
-        .collection<StateDemographics>("demographicDefaults")
+        .collection<CensusGroupView>("demographicDefaults")
         .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
       const calculatedLean = calculateStateLeanForCache(sd, [], {
         countryId: "US",

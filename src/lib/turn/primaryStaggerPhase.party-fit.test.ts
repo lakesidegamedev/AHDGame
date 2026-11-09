@@ -10,7 +10,7 @@ import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 describe("primaryStaggerPhase L1 — party-fit", () => {
   it("applyPartyFit shifts share toward the party-aligned candidate", () => {
@@ -37,14 +37,14 @@ describe("primaryStaggerPhase L1 — party-fit", () => {
         ],
       } as unknown as DemographicCategory,
     ];
-    const demographics: StateDemographics = {
+    const demographics: CensusGroupView = {
       _id: "PA",
       categoryWeights: { ideology: 100 },
       groups: {
         liberal: { population: 50, turnout: 60, economicLean: -3, socialLean: -3 },
         conservative: { population: 50, turnout: 60, economicLean: 3, socialLean: 3 },
       },
-    } as unknown as StateDemographics;
+    } as unknown as CensusGroupView;
 
     const aligned: EnrichedCandidate = {
       candidateId: "aligned",

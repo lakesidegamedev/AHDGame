@@ -9,7 +9,7 @@ import {
 } from "./factorLedger";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import type { EnrichedCandidate } from "./types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 // Archetype ids the ledger must NEVER read or emit (buckets only).
 const ARCHETYPE_IDS = [
@@ -317,7 +317,7 @@ function categories(): DemographicCategory[] {
   ];
 }
 
-function demographics(): StateDemographics {
+function demographics(): CensusGroupView {
   return {
     _id: "TS",
     categoryWeights: { income: 100 },
@@ -325,12 +325,12 @@ function demographics(): StateDemographics {
       low: { population: 50, turnout: 60, economicLean: -1, socialLean: 0 },
       high: { population: 50, turnout: 60, economicLean: 1, socialLean: 0 },
     },
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 }
 
 /** Neutral electorate (both groups lean 0) — so a uniform appeal makes the
  *  candidate-fit multiplier exactly influence-invariant. */
-function neutralDemographics(): StateDemographics {
+function neutralDemographics(): CensusGroupView {
   return {
     _id: "TS",
     categoryWeights: { income: 100 },
@@ -338,7 +338,7 @@ function neutralDemographics(): StateDemographics {
       low: { population: 50, turnout: 60, economicLean: 0, socialLean: 0 },
       high: { population: 50, turnout: 60, economicLean: 0, socialLean: 0 },
     },
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 }
 
 /** Two centrist candidates differing only in c1's national influence. */
@@ -355,7 +355,7 @@ function centristCandidates(nationalInfluenceC1: number): EnrichedCandidate[] {
 
 /** Run one state through swing-flow with a ledger sink and finish the minimal
  *  post-swing-flow pipeline the presidential engine records (no shifts). */
-function runWithLedger(enriched: EnrichedCandidate[], demo: StateDemographics = demographics()) {
+function runWithLedger(enriched: EnrichedCandidate[], demo: CensusGroupView = demographics()) {
   const sink = createLedgerSink();
   const cats = categories();
   // Census bucketWeights per group (cell) — the granular substrate supplies

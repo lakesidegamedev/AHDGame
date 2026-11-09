@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Brazil macro-region demographic composition using the 8 BR voter archetypes.
@@ -8,7 +8,7 @@ import type { StateDemographics } from "@/lib/db/types";
  * non-zero population in every region. categoryWeights references the profile
  * in brDemographicCategories.ts.
  */
-export const brRegionDemographics: StateDemographics[] = [
+export const brRegionDemographics: CensusGroupView[] = [
   // ── Norte ──────────────────────────────────────────────────────────────────
 
   // Norte: Amazon frontier; youngest region; high evangelical share and

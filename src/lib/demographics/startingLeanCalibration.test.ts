@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 import { stateCensusData2027 } from "@/lib/countries/us/data/usStateCensusData2027";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { buildModelRegionDemographics, getCountryLayer1Model } from "@/lib/seeds/international";
@@ -25,7 +25,7 @@ interface RegionRow {
 
 function movesFor(
   countryId: string,
-  docs: StateDemographics[],
+  docs: CensusGroupView[],
   categories: DemographicCategory[]
 ): RegionRow[] {
   return docs.map((doc) => {

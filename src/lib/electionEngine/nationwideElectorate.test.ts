@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type {
   State,
-  StateDemographics,
+  CensusGroupView,
   StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
@@ -25,9 +25,9 @@ function makeState(id: string, population: number, overrides: Partial<State> = {
 
 function makeDemographics(
   id: string,
-  groups: StateDemographics["groups"],
-  categoryWeights: StateDemographics["categoryWeights"] = { class: 100 }
-): StateDemographics {
+  groups: CensusGroupView["groups"],
+  categoryWeights: CensusGroupView["categoryWeights"] = { class: 100 }
+): CensusGroupView {
   return {
     _id: id,
     countryId: "IE",
@@ -123,7 +123,7 @@ describe("buildNationwideElectoratePreload", () => {
       [],
       []
     );
-    expect(preload!.demographics.groups).toEqual({});
+    expect(preload!.demographics).not.toHaveProperty("groups");
     expect(preload!.demographics.categoryWeights).toEqual({});
   });
 

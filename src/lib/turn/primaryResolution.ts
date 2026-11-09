@@ -23,7 +23,6 @@ import {
 } from "@/lib/campaignTargeting/rules";
 import { loadRegionalCampaignCells } from "@/lib/campaignTargeting/audience";
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { accumulateNGPresidentVoteTurn } from "@/lib/turn/election/ngPresidentAccumulation";
 import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
@@ -829,7 +828,6 @@ export async function accumulateGeneralElectionVotes(
       getAllStateApprovalsForElection({ countryIds: uniqueCountries }),
       (async () => {
         const [
-          categories,
           states,
           demographics,
           statePartyOrgs,
@@ -839,7 +837,6 @@ export async function accumulateGeneralElectionVotes(
           demoDefaults,
           governingPartyEntries,
         ] = await Promise.all([
-          loadDemographicCategories(db),
           (await getStatesCollection(db)).find(regionalScope).toArray(),
           db.collection<StateDemographics>("stateDemographics").find(regionalScope).toArray(),
           db
@@ -923,7 +920,6 @@ export async function accumulateGeneralElectionVotes(
           currentYear: gsPreset?.currentYear,
           startingYear: gsPreset?.startingYear,
           partyRenewalEnabled: gsPreset?.nppPartyRenewalEnabled === true,
-          categories,
           stateMap,
           demographicsMap,
           statePartyOrgsByState,

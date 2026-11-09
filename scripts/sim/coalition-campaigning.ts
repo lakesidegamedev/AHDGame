@@ -18,7 +18,7 @@ import {
 } from "../../src/lib/campaignTargeting/rules";
 import { distributeVotesByGroupLevelAllocation } from "../../src/lib/electionEngine/voteDistribution";
 import type { EnrichedCandidate } from "../../src/lib/electionEngine/types";
-import type { DemographicCategory, StateDemographics } from "../../src/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "../../src/lib/db/types";
 
 const right = { economicLean: 3, socialLean: 3 };
 const left = { economicLean: -3, socialLean: -3 };
@@ -105,7 +105,7 @@ function shares(
       turn
     ),
   }));
-  const demographics: StateDemographics = {
+  const demographics: CensusGroupView = {
     _id: "region",
     countryId: "US",
     categoryWeights: { cells: 100 },

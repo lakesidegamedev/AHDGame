@@ -9,7 +9,6 @@ import {
 
 function fixture(tier: "list" | "constituency" = "list") {
   const preload = {
-    categories: [],
     stateMap: new Map([
       ["RU", { _id: "RU", population: 1200, votingEligiblePopulation: 900 } as State],
       ["CEN", { _id: "CEN", population: 600, votingEligiblePopulation: 450 } as State],

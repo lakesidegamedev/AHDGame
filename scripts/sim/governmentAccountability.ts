@@ -8,7 +8,7 @@ import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEn
 import type { CountryId } from "@/lib/constants/countries";
 import type {
   DemographicCategory,
-  StateDemographics,
+  CensusGroupView,
   StatePartyOrg,
   StateRegistrationPool,
 } from "@/lib/db/types";
@@ -75,7 +75,7 @@ function share(
       left: { population: lean, turnout: 60, economicLean: -1.5, socialLean: -1 },
       right: { population: 100 - lean, turnout: 60, economicLean: 1.5, socialLean: 1 },
     },
-  } as StateDemographics;
+  } as CensusGroupView;
   const options: DistributeVotesOptions = {
     isGeneralElection: true,
     countryId: family.country,

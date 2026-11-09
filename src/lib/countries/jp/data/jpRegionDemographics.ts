@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Japan region demographics using JP voter archetypes.
@@ -14,7 +14,7 @@ import type { StateDemographics } from "@/lib/db/types";
  *
  * Group IDs match jpDemographicCategories.ts `jp_voterGroups` groups.
  */
-export const jpRegionDemographics: StateDemographics[] = [
+export const jpRegionDemographics: CensusGroupView[] = [
   // ── Hokkaido ──────────────────────────────────────────────────────────────
   // Mixed urban/rural. Sapporo is progressive; rural areas conservative.
   // Historically more competitive than mainland rural regions.

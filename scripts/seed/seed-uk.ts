@@ -22,7 +22,7 @@ import type {
   State,
   PoliticalParty,
   DemographicCategory,
-  StateDemographics,
+  CensusGroupView,
   StateDemographicTurnout,
   StatePartyOrg,
   StateMetrics,
@@ -99,10 +99,10 @@ async function main() {
   for (const sd of ukRegionDemographics) {
     const { groups: _groups, ...storedDemographics } = sd;
     await db
-      .collection<StateDemographics>("stateDemographics")
+      .collection<CensusGroupView>("stateDemographics")
       .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
     await db
-      .collection<StateDemographics>("demographicDefaults")
+      .collection<CensusGroupView>("demographicDefaults")
       .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
 
     const lean = calculateStateLeanForCache(sd, [], {

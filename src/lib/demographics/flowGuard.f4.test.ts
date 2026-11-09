@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import type { EnrichedCandidate } from "@/lib/electionEngine/types";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 /**
  * F-4 raw-population-leak guard (design §6.2). Once P1b-1 makes `state.population`
@@ -63,7 +63,7 @@ const demographics = {
     liberal: { population: 55, turnout: 62, economicLean: -3, socialLean: -3 },
     conservative: { population: 45, turnout: 58, economicLean: 3, socialLean: 3 },
   },
-} as unknown as StateDemographics;
+} as unknown as CensusGroupView;
 
 const emptyOrgMap = new Map<string, number>();
 const candidates = () => [

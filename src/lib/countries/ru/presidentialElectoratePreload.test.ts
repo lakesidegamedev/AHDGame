@@ -4,7 +4,6 @@ import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
 import { bindRussianPresidentialElectorate as bind } from "./presidentialElectoratePreload";
 function fixture() {
   const preload = {
-    categories: [],
     stateMap: new Map([
       ["RU", { _id: "RU", population: 1200, votingEligiblePopulation: 900 } as State],
     ]),

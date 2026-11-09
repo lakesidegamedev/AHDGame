@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * German Bundesländer demographics using the 12 DE voter archetypes.
@@ -6,7 +6,7 @@ import type { StateDemographics } from "@/lib/db/types";
  * Regional character comes from the population mix, not per-Land archetype lean variation.
  * categoryWeights references the profile in deDemographicCategories.ts.
  */
-export const deRegionDemographics: StateDemographics[] = [
+export const deRegionDemographics: CensusGroupView[] = [
   // ── Süden ──────────────────────────────────────────────────────────────────
 
   // Baden-Württemberg: Mittelstand heartland, strong CDU but Stuttgart liberal,

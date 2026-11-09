@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { computeMedianVoter, computeNationalEvWeightedMedian } from "./medianVoter";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 function makeCategories(): DemographicCategory[] {
   return [
@@ -50,7 +50,7 @@ function makeCategories(): DemographicCategory[] {
   ];
 }
 
-function makeDemographics(overrides: Partial<StateDemographics["groups"]> = {}): StateDemographics {
+function makeDemographics(overrides: Partial<CensusGroupView["groups"]> = {}): CensusGroupView {
   return {
     _id: "ST",
     countryId: "US",
@@ -63,7 +63,7 @@ function makeDemographics(overrides: Partial<StateDemographics["groups"]> = {}):
       ...overrides,
     },
     lastUpdated: new Date(),
-  } as StateDemographics;
+  } as CensusGroupView;
 }
 
 describe("computeMedianVoter", () => {
@@ -140,7 +140,7 @@ describe("computeMedianVoter", () => {
     const demo = makeDemographics();
     // Strip the state-level leans from one group — should still read
     // defaultEconomicLean / defaultSocialLean from the category.
-    demo.groups.high = { population: 50, turnout: 60 } as StateDemographics["groups"][string];
+    demo.groups.high = { population: 50, turnout: 60 } as CensusGroupView["groups"][string];
     const out = computeMedianVoter(electorateFromFixture(demo, makeCategories()));
     // Should still net to (0, 0) since defaults are the same as state leans.
     expect(out.ep).toBeCloseTo(0);

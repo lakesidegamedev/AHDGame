@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { buildModelRegionDemographics } from "@/lib/seeds/international/derive";
 import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
@@ -38,7 +38,7 @@ describe("UK demographic seeding respects the selected era", () => {
       expect(writes).toHaveLength(12);
       for (const doc of expected) {
         const write = writes.find(([filter]) => filter._id === doc._id);
-        const actual = write?.[1].$set as Omit<StateDemographics, "_id">;
+        const actual = write?.[1].$set as Omit<CensusGroupView, "_id">;
         expect(actual, `${collection}/${doc._id}`).not.toHaveProperty("groups");
         expect(actual.categoryWeights).toEqual(doc.categoryWeights);
       }

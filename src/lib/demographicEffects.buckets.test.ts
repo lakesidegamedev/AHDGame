@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { StateDemographics } from "@/lib/db/types/demographics";
+import type { CensusGroupView } from "@/lib/db/types/demographics";
 import type { DemographicEffect } from "@/lib/db/types/legislation";
 // Side-effect import — populates stateCensusData so real Layer-1 cells derive.
 import "@/lib/seeds/stateDemographics";
@@ -47,7 +47,7 @@ function policy(economic: number): ActivePolicy {
   } as unknown as ActivePolicy;
 }
 
-function demographics(overrides?: Partial<StateDemographics>): StateDemographics {
+function demographics(overrides?: Partial<CensusGroupView>): CensusGroupView {
   return {
     _id: "PA",
     countryId: "US",
@@ -141,7 +141,7 @@ describe("bucket drift on the live demographics doc", () => {
 });
 
 describe("bucket drift reaches the granular vote path", () => {
-  function substrateFor(overrides?: Partial<StateDemographics>) {
+  function substrateFor(overrides?: Partial<CensusGroupView>) {
     clearGranularElectorateCache();
     return buildGranularElectorateSubstrate({
       countryId: "US",

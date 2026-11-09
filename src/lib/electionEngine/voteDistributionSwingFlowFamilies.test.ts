@@ -21,7 +21,7 @@ import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
 import type { CountryId } from "@/lib/constants/countries";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 type Family = {
   /** Race family name (matches the §7.3.3 table). */
@@ -65,14 +65,14 @@ function candidate(
   } as EnrichedCandidate;
 }
 
-const symmetricDemographics: StateDemographics = {
+const symmetricDemographics: CensusGroupView = {
   _id: "TS",
   categoryWeights: { income: 100 },
   groups: {
     low: { population: 50, turnout: 60, economicLean: -1, socialLean: 0 },
     high: { population: 50, turnout: 60, economicLean: 1, socialLean: 0 },
   },
-} as unknown as StateDemographics;
+} as unknown as CensusGroupView;
 
 const symmetricCategories: DemographicCategory[] = [
   {

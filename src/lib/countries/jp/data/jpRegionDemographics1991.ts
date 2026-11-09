@@ -1,4 +1,4 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Japan region demographics , 1991 era (JP voter archetypes).
@@ -17,7 +17,7 @@ import type { StateDemographics } from "@/lib/db/types";
  * Turnout: calibrated so the weighted national figure lands near the ~73.3%
  * recorded in 1990, rural above urban, youth (~55-58%) below 1979 but above 2019.
  */
-export const jpRegionDemographics1991: StateDemographics[] = [
+export const jpRegionDemographics1991: CensusGroupView[] = [
   // ── Hokkaido ──────────────────────────────────────────────────────────────
   // Coal closures and JNR privatization shrank the union left, but Hokkaido
   // stayed Japan's most competitive region (JSP swept it in 1990).

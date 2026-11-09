@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateStateLean } from "@/lib/utils/demographics";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 /**
  * These pin the failure mode behind #3752: a region's lean is summed only over
@@ -31,7 +31,7 @@ const ruRegion = {
     workers: { population: 70, economicLean: -3, socialLean: 2, turnout: 60 },
     intelligentsia: { population: 30, economicLean: -1, socialLean: -1, turnout: 70 },
   },
-} as unknown as StateDemographics;
+} as unknown as CensusGroupView;
 
 describe("calculateStateLean category scoping", () => {
   it("derives a real lean when the region's own categories are supplied", () => {
