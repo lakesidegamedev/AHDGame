@@ -2,6 +2,7 @@
  * Funded build advice reads the latest compact settlement summary in the current
  * world. loadFundedBuildDemand exposes its source turn and scoped buyer demand.
  */
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import type {
@@ -19,9 +20,9 @@ export async function loadFundedBuildDemand(
 ) {
   const state =
     observed ??
-    (await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1, worldEpochId: 1 } }));
+    (await (
+      await getGameStateCollection(db)
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1, worldEpochId: 1 } }));
   if (!state?.worldEpochId) return null;
   const doc = await db
     .collection<{
