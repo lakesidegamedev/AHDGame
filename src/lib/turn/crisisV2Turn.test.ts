@@ -4,6 +4,7 @@ import type { CrisisInstance } from "@/lib/crises/v2/types";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
 import { makeDefinition } from "@/lib/crises/v2/testFixtures";
 import type { EffectModule } from "@/lib/crises/v2/effectModule";
+import { stanceLeversFor } from "@/lib/crises/v2/stanceLevers";
 
 const logger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), fatal: vi.fn() }));
 const applyCrisisEffects = vi.hoisted(() => vi.fn());
@@ -472,5 +473,50 @@ describe("director integration", () => {
     const result = await processCrisisV2Turn(db, 10);
     expect(result.processed).toBe(1);
     expect(calls.bulkWrite).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("stance levers", () => {
+  const pulled = (leverId: string, countryId?: string) => {
+    registerCrisisDefinition(
+      makeDefinition({ id: "stance-test", levers: stanceLeversFor("second_pandemic") })
+    );
+    const crisis = liveCrisis({
+      ...createCrisisInstance(makeDefinition({ id: "stance-test" }), 0),
+      stage: "peak",
+      stageStartTurn: 1,
+      severity: 60,
+    });
+    const data = baseData();
+    data.crises = [{ ...crisis, v2: { ...crisis.v2, definitionId: "stance-test" } }];
+    data.leverUses = [
+      {
+        _id: new ObjectId(),
+        crisisId: crisis._id,
+        leverId,
+        holderId: "head-1",
+        appliedTurn: null,
+        ...(countryId ? { countryId } : {}),
+      },
+    ];
+    return makeDb(data);
+  };
+
+  it("sends a lockdown's consequences to the country the holder acted for", async () => {
+    const { db } = pulled("lockdown", "US");
+    await processCrisisV2Turn(db, 10);
+    const effects = applyCrisisEffects.mock.calls.flatMap(
+      ([, list]) => list as { targetType: string }[]
+    );
+    expect(effects.length).toBeGreaterThan(0);
+    const [, , stateIds, countryIds] = applyCrisisEffects.mock.calls.at(-1) as unknown[];
+    expect(stateIds).toEqual(["s1", "s2"]);
+    expect(countryIds).toEqual(["US"]);
+  });
+
+  it("sends nothing for a pull that recorded no country", async () => {
+    const { db } = pulled("lockdown");
+    await processCrisisV2Turn(db, 10);
+    expect(applyCrisisEffects).not.toHaveBeenCalled();
   });
 });

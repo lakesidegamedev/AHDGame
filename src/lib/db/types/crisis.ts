@@ -540,6 +540,8 @@ export interface CrisisLeverUse {
   chargeState?: "pending" | "charged";
   /** Cost actually debited, after scaling by intensity. */
   cost?: import("@/lib/crises/v2/types").LeverCost;
+  /** Country the holder acted for, so stance consequences land on their own nation. */
+  countryId?: string;
   /** Corporation whose cash paid, for corporate levers. */
   corporationId?: ObjectId;
   /** Emergency bill that authorised the use, for legislature levers. */

@@ -286,6 +286,7 @@ export async function commitLeverUse(
     appliedTurn: null,
     chargeState: "pending",
     cost,
+    ...(args.countryId ? { countryId: args.countryId } : {}),
     ...(args.corporationId ? { corporationId: args.corporationId } : {}),
     ...(args.billId ? { billId: args.billId } : {}),
     createdAt: new Date(),
