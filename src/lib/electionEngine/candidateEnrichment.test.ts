@@ -171,7 +171,7 @@ describe("fetchEnrichedCandidates — player character", () => {
       favorability: 165,
       politicalInfluence: 120,
       nationalInfluence: 80,
-      archetypeApprovals: { liberal: 10, conservative: -5 },
+      bucketApprovals: { liberal: 10, conservative: -5 },
     };
 
     setupCharacters(db, [character]);
@@ -295,7 +295,7 @@ describe("fetchEnrichedCandidates — NPP candidate", () => {
       policies: { economic: -4, social: 5 },
       favorability: 142,
       politicalInfluence: 190,
-      archetypeApprovals: { rural: 20 },
+      bucketApprovals: { rural: 20 },
     };
 
     setupCharacters(db, []);

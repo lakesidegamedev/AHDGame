@@ -133,7 +133,7 @@ describe("buildGranularPollPayload", () => {
         economicPosition: 0,
         socialPosition: 0,
         favorability: 50,
-        archetypeApprovals: { retirees: 40 },
+        bucketApprovals: { retirees: 40 },
         politicalInfluence: 50,
       },
       opponents: [makeOpponent({ economicPosition: 0, socialPosition: 0 })],

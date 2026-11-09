@@ -350,7 +350,7 @@ export async function fetchEnrichedCandidates(
         favorability = npp.favorability;
         politicalInfluence = npp.politicalInfluence;
         nationalInfluence = npp.politicalInfluence; // NPPs use politicalInfluence as proxy for national
-        bucketApprovals = npp.archetypeApprovals;
+        bucketApprovals = npp.bucketApprovals;
         // NPPs have no partyInfluence — leave 0
       }
     } else {
@@ -362,7 +362,7 @@ export async function fetchEnrichedCandidates(
         politicalInfluence = char.politicalInfluence;
         nationalInfluence = char.nationalInfluence ?? 0;
         partyInfluence = char.partyInfluence ?? 0;
-        bucketApprovals = char.archetypeApprovals;
+        bucketApprovals = char.bucketApprovals;
         candidateInfamy = char.infamy;
       }
     }

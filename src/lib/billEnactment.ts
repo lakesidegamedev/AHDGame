@@ -1124,7 +1124,7 @@ async function applyArchetypeImpactsToVoters(
   // Build the $inc updates
   const incUpdates: Record<string, number> = {};
   for (const [archetypeId, impact] of Object.entries(impacts)) {
-    incUpdates[`archetypeApprovals.${archetypeId}`] = impact;
+    incUpdates[`bucketApprovals.${archetypeId}`] = impact;
   }
 
   // Convert string IDs to ObjectIds, filtering invalid ones
@@ -1147,16 +1147,16 @@ async function applyArchetypeImpactsToVoters(
   // Clamp values for characters
   const characters = await db
     .collection<Character>("characters")
-    .find({ _id: { $in: validObjectIds }, archetypeApprovals: { $exists: true } })
+    .find({ _id: { $in: validObjectIds }, bucketApprovals: { $exists: true } })
     .toArray();
 
   const charBulkOps: AnyBulkWriteOperation<Character>[] = [];
   for (const char of characters) {
-    if (!char.archetypeApprovals) continue;
+    if (!char.bucketApprovals) continue;
     let needsUpdate = false;
     const clamped: Record<string, number> = {};
 
-    for (const [id, val] of Object.entries(char.archetypeApprovals)) {
+    for (const [id, val] of Object.entries(char.bucketApprovals)) {
       const clampedVal = Math.max(-100, Math.min(100, val));
       clamped[id] = clampedVal;
       if (clampedVal !== val) needsUpdate = true;
@@ -1166,7 +1166,7 @@ async function applyArchetypeImpactsToVoters(
       charBulkOps.push({
         updateOne: {
           filter: { _id: char._id },
-          update: { $set: { archetypeApprovals: clamped } },
+          update: { $set: { bucketApprovals: clamped } },
         },
       });
     }
@@ -1178,16 +1178,16 @@ async function applyArchetypeImpactsToVoters(
   // Clamp values for NPPs
   const npps = await db
     .collection<NPP>("npps")
-    .find({ _id: { $in: validObjectIds }, archetypeApprovals: { $exists: true } })
+    .find({ _id: { $in: validObjectIds }, bucketApprovals: { $exists: true } })
     .toArray();
 
   const nppBulkOps: AnyBulkWriteOperation<NPP>[] = [];
   for (const npp of npps) {
-    if (!npp.archetypeApprovals) continue;
+    if (!npp.bucketApprovals) continue;
     let needsUpdate = false;
     const clamped: Record<string, number> = {};
 
-    for (const [id, val] of Object.entries(npp.archetypeApprovals)) {
+    for (const [id, val] of Object.entries(npp.bucketApprovals)) {
       const clampedVal = Math.max(-100, Math.min(100, val));
       clamped[id] = clampedVal;
       if (clampedVal !== val) needsUpdate = true;
@@ -1197,7 +1197,7 @@ async function applyArchetypeImpactsToVoters(
       nppBulkOps.push({
         updateOne: {
           filter: { _id: npp._id },
-          update: { $set: { archetypeApprovals: clamped } },
+          update: { $set: { bucketApprovals: clamped } },
         },
       });
     }

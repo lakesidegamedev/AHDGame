@@ -1,7 +1,7 @@
 /**
  * Static archetype to Layer-1 bucket mapping for the granular vote path.
  *
- * Systems author effects against the 12 US voter ARCHETYPES (archetypeApprovals,
+ * Systems author effects against the 12 US voter ARCHETYPES (bucketApprovals,
  * legislation demographicEffects, partyGroupFavorability, GOTV modifiers). When
  * voting runs over granular demographic cells, those archetype-keyed values
  * must still land. This table projects each archetype onto 2-3 census buckets

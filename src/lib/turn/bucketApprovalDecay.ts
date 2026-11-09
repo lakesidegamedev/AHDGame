@@ -27,29 +27,26 @@ export async function processBucketApprovalDecay(): Promise<{
   const characters = await (
     await getCharactersCollection(db)
   )
-    .find(
-      { archetypeApprovals: { $exists: true, $ne: {} } },
-      { projection: { archetypeApprovals: 1 } }
-    )
+    .find({ bucketApprovals: { $exists: true, $ne: {} } }, { projection: { bucketApprovals: 1 } })
     .toArray();
 
   const charOps: {
     updateOne: {
       filter: {
         _id: (typeof characters)[number]["_id"];
-        archetypeApprovals: Record<string, number>;
+        bucketApprovals: Record<string, number>;
       };
-      update: { $set: { archetypeApprovals: Record<string, number> } };
+      update: { $set: { bucketApprovals: Record<string, number> } };
     };
   }[] = [];
   for (const character of characters) {
-    const decayed = decayApprovals(character.archetypeApprovals);
+    const decayed = decayApprovals(character.bucketApprovals);
     if (decayed) {
       charOps.push({
         updateOne: {
           // Compare the snapshot so an API credit arriving during decay is never lost.
-          filter: { _id: character._id, archetypeApprovals: character.archetypeApprovals! },
-          update: { $set: { archetypeApprovals: decayed } },
+          filter: { _id: character._id, bucketApprovals: character.bucketApprovals! },
+          update: { $set: { bucketApprovals: decayed } },
         },
       });
     }
@@ -65,24 +62,24 @@ export async function processBucketApprovalDecay(): Promise<{
   )
     // Read only the approval balances and Mongo's default _id projection.
     .find(
-      { archetypeApprovals: { $exists: true, $ne: {} }, retiredAt: null },
-      { projection: { archetypeApprovals: 1 } }
+      { bucketApprovals: { $exists: true, $ne: {} }, retiredAt: null },
+      { projection: { bucketApprovals: 1 } }
     )
     .toArray();
 
   const nppOps: {
     updateOne: {
-      filter: { _id: (typeof npps)[number]["_id"]; archetypeApprovals: Record<string, number> };
-      update: { $set: { archetypeApprovals: Record<string, number> } };
+      filter: { _id: (typeof npps)[number]["_id"]; bucketApprovals: Record<string, number> };
+      update: { $set: { bucketApprovals: Record<string, number> } };
     };
   }[] = [];
   for (const npp of npps) {
-    const decayed = decayApprovals(npp.archetypeApprovals);
+    const decayed = decayApprovals(npp.bucketApprovals);
     if (decayed) {
       nppOps.push({
         updateOne: {
-          filter: { _id: npp._id, archetypeApprovals: npp.archetypeApprovals! },
-          update: { $set: { archetypeApprovals: decayed } },
+          filter: { _id: npp._id, bucketApprovals: npp.bucketApprovals! },
+          update: { $set: { bucketApprovals: decayed } },
         },
       });
     }

@@ -836,7 +836,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         donorBaseLevel: 0,
         actionPoints: 0,
         lastActionProcessedTurn: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         electionCooldowns: {},
         createdAt: now,
         updatedAt: now,

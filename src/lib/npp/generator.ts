@@ -573,7 +573,7 @@ export async function generateNPP(
     ...NPP_ECONOMY_DEFAULTS,
     // Cross-pressure voting modifiers — initialized empty so the decay
     // pass always has a stable object to iterate.
-    archetypeApprovals: {},
+    bucketApprovals: {},
     // Election cooldown tracking — initialized empty for consistent shape.
     electionCooldowns: {},
     createdAt: now,

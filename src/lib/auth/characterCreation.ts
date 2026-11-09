@@ -373,7 +373,7 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
       nationalInfluence: 0,
       partyInfluence: 0,
       groupFavorability: {},
-      archetypeApprovals: {},
+      bucketApprovals: {},
       onboardingDismissed: false,
       // Only set when an older client still sends it. New characters answer the
       // welcome flow instead, which writes `tutorial` (see tutorialPlan.ts).

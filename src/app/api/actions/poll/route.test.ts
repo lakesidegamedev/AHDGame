@@ -111,7 +111,7 @@ describe("commissioning a campaign-aware poll", () => {
       funds: 100_000,
       actions: 10,
       stats: { intellect: 5.5 } as Character["stats"],
-      archetypeApprovals: { retirees: 24, "age:senior": -4 },
+      bucketApprovals: { retirees: 24, "age:senior": -4 },
     });
     db.collection("characters").findOne.mockResolvedValue(character);
     vi.mocked(getElectionOpponents).mockResolvedValue({
@@ -135,7 +135,7 @@ describe("commissioning a campaign-aware poll", () => {
           socialPosition: -1,
           favorability: 34,
           politicalInfluence: 47,
-          archetypeApprovals: { retirees: -16, "age:senior": 6 },
+          bucketApprovals: { retirees: -16, "age:senior": 6 },
           overallAppeal: 0,
           totalPotentialVoters: 0,
           totalEstimatedVoters: 0,
@@ -152,14 +152,14 @@ describe("commissioning a campaign-aware poll", () => {
           candidateId: "mine-candidate",
           favorability: character.favorability,
           party: character.party,
-          archetypeApprovals: character.archetypeApprovals,
+          bucketApprovals: character.bucketApprovals,
         }),
         opponents: [
           expect.objectContaining({
             candidateId: "npp-1",
             party: "9",
             favorability: 34,
-            archetypeApprovals: { retirees: -16, "age:senior": 6 },
+            bucketApprovals: { retirees: -16, "age:senior": 6 },
             isNPP: true,
           }),
         ],

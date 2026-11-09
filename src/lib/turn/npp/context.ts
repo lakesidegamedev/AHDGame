@@ -347,8 +347,8 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
   // NPP projection: enumerated from grepping `npp\.<field>` across every NPP
   // behavior phase + nppBehavior.ts. Drops avatarUrl, gender, ethnicity,
   // currentOffice, generatedAt, createdAt,
-  // updatedAt, influenceState, archetypeApprovals, sequentialId — none of
-  // which are referenced by the behavior pipeline. archetypeApprovals on
+  // updatedAt, influenceState, bucketApprovals, sequentialId — none of
+  // which are referenced by the behavior pipeline. bucketApprovals on
   // NPPs is the biggest potential drop (Record<string, number> per NPP, can
   // grow with more archetypes). Adding new field accesses requires extending
   // this projection or the next turn quietly reads undefined.

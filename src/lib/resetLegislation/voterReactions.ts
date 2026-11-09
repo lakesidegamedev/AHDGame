@@ -51,14 +51,14 @@ export async function applyVoterApprovalImpacts(
     const direction = voter.vote === "for" ? 1 : -1;
     const fields = Object.fromEntries(
       Object.entries(impacts).map(([bucket, amount]) => [
-        `archetypeApprovals.${bucket}`,
+        `bucketApprovals.${bucket}`,
         {
           $min: [
             100,
             {
               $max: [
                 -100,
-                { $add: [{ $ifNull: [`$archetypeApprovals.${bucket}`, 0] }, direction * amount] },
+                { $add: [{ $ifNull: [`$bucketApprovals.${bucket}`, 0] }, direction * amount] },
               ],
             },
           ],

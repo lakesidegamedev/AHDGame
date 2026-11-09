@@ -11,7 +11,7 @@
  * archetypes. This module builds a drop-in SUBSTRATE for the existing engines:
  * a synthetic `DemographicCategory[]` + `StateDemographics` + `liveTurnouts`
  * whose "groups" are coalesced cells, plus archetype-keyed inputs
- * (`archetypeApprovals`, `partyGroupFavorability`) remapped onto those cells
+ * (`bucketApprovals`, `partyGroupFavorability`) remapped onto those cells
  * via the static `ARCHETYPE_BUCKET_MAP`.
  *
  * The vote-distribution engines (`voteDistribution.ts`,
@@ -249,7 +249,7 @@ export interface GranularSubstrateInput {
   categories: DemographicCategory[];
   /** Archetype-keyed resolved live turnouts from `resolveTurnout` (optional). */
   liveTurnouts?: Record<string, number>;
-  /** Candidates whose `archetypeApprovals` should be remapped onto units. */
+  /** Candidates whose `bucketApprovals` should be remapped onto units. */
   enriched: EnrichedCandidate[];
   /** Address-driven `${partyId}:${archetypeId}` favorability deltas (optional). */
   partyGroupFavorabilityByKey?: Map<string, number>;

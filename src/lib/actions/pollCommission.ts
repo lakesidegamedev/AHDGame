@@ -350,7 +350,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
         economicPosition: character.policies.economic,
         socialPosition: character.policies.social,
         favorability: character.favorability,
-        archetypeApprovals: character.archetypeApprovals,
+        bucketApprovals: character.bucketApprovals,
         politicalInfluence: character.politicalInfluence ?? 0,
         nationalInfluence: character.nationalInfluence,
       },
@@ -362,7 +362,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
           economicPosition: o.economicPosition,
           socialPosition: o.socialPosition,
           favorability: o.favorability,
-          archetypeApprovals: o.archetypeApprovals,
+          bucketApprovals: o.bucketApprovals,
           isNPP: o.isNPP,
           politicalInfluence: o.politicalInfluence,
           nationalInfluence: o.nationalInfluence,
@@ -385,7 +385,7 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     favorability: character.favorability,
     politicalInfluence: clampPercentStat(character.politicalInfluence ?? 0),
     approvalBuckets: projectCandidateApprovalBuckets(
-      character.archetypeApprovals,
+      character.bucketApprovals,
       state.countryId ?? "US"
     ),
   });

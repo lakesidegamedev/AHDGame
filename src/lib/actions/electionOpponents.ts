@@ -37,7 +37,7 @@ export interface OpponentForShare {
   isNPP?: boolean;
   party: string;
   /** Per-archetype modifiers when known (same as Character/NPP). */
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   /** Character infamy (0..100); omit for NPPs (yields no penalty). */
   infamy?: number;
 }
@@ -219,8 +219,7 @@ export async function getElectionOpponents(
         const fav = opponentChar?.favorability ?? opponentNPP?.favorability ?? 50;
         const polInf = opponentChar?.politicalInfluence ?? opponentNPP?.politicalInfluence ?? 0;
 
-        const archetypeApprovals =
-          opponentChar?.archetypeApprovals ?? opponentNPP?.archetypeApprovals;
+        const bucketApprovals = opponentChar?.bucketApprovals ?? opponentNPP?.bucketApprovals;
         const nationalInfluence = opponentNPP
           ? Math.min(100, Math.max(0, Number.isFinite(polInf) ? polInf : 10))
           : Math.max(0, opponentChar?.nationalInfluence ?? 0);
@@ -238,7 +237,7 @@ export async function getElectionOpponents(
           favorability: fav,
           politicalInfluence: polInf,
           nationalInfluence,
-          ...(archetypeApprovals && { archetypeApprovals }),
+          ...(bucketApprovals && { bucketApprovals }),
           ...(opponentInfamy != null && { infamy: opponentInfamy }),
           ...computePollHeadline(electorateCells, statePopulation, {
             economicPosition: econ,
@@ -246,7 +245,7 @@ export async function getElectionOpponents(
             favorability: fav,
             politicalInfluence: clampPercentStat(polInf),
             approvalBuckets: projectCandidateApprovalBuckets(
-              archetypeApprovals,
+              bucketApprovals,
               state.countryId ?? "US"
             ),
           }),

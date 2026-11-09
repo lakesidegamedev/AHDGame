@@ -290,7 +290,7 @@ async function endUnionBanStrike(
  *
  * Personal favorability and per-archetype approval are the two channels the
  * game already models for "this decision cost you standing with these people"
- * (`Character.favorability` and `Character.archetypeApprovals`, both read by
+ * (`Character.favorability` and `Character.bucketApprovals`, both read by
  * `effectiveFavorability`). Deltas land on the deciding character only: the
  * strike's country-wide approval damage is carried by the crisis's own
  * `targetType: "approval"` effects, which is a different thing from what the
@@ -306,10 +306,10 @@ async function chargeExecutive(
   const inc: Record<string, number> = {};
   if (cost.favorability) inc.favorability = -cost.favorability;
   if (cost.labourSegment) {
-    for (const id of segments.labour) inc[`archetypeApprovals.${id}`] = -cost.labourSegment;
+    for (const id of segments.labour) inc[`bucketApprovals.${id}`] = -cost.labourSegment;
   }
   if (cost.businessSegment) {
-    for (const id of segments.business) inc[`archetypeApprovals.${id}`] = -cost.businessSegment;
+    for (const id of segments.business) inc[`bucketApprovals.${id}`] = -cost.businessSegment;
   }
   if (Object.keys(inc).length === 0) return;
 
@@ -320,21 +320,21 @@ async function chargeExecutive(
   // bare `$inc` respects neither.
   const character = await db
     .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { favorability: 1, archetypeApprovals: 1 } });
+    .findOne({ _id: characterId }, { projection: { favorability: 1, bucketApprovals: 1 } });
   if (!character) return;
 
   const set: Record<string, unknown> = {};
   const clampedFavorability = Math.max(0, Math.min(100, character.favorability ?? 0));
   if (clampedFavorability !== character.favorability) set.favorability = clampedFavorability;
-  if (character.archetypeApprovals) {
+  if (character.bucketApprovals) {
     const clamped: Record<string, number> = {};
     let drifted = false;
-    for (const [id, value] of Object.entries(character.archetypeApprovals)) {
+    for (const [id, value] of Object.entries(character.bucketApprovals)) {
       const next = Math.max(-100, Math.min(100, value));
       clamped[id] = next;
       if (next !== value) drifted = true;
     }
-    if (drifted) set.archetypeApprovals = clamped;
+    if (drifted) set.bucketApprovals = clamped;
   }
   if (Object.keys(set).length > 0) {
     await db.collection<Character>("characters").updateOne({ _id: characterId }, { $set: set });

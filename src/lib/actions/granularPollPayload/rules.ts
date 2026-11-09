@@ -11,10 +11,10 @@ import { applyVoteReachFloor } from "@/lib/electionEngine/electionFormulaFactors
 
 /** Project authoritative archetype approvals into the active country's cell vocabulary. */
 export function projectCandidateApprovalBuckets(
-  archetypeApprovals: Record<string, number> | undefined,
+  bucketApprovals: Record<string, number> | undefined,
   countryId: string
 ): Record<string, number> {
-  return projectArchetypeValuesToBuckets(archetypeApprovals ?? {}, countryId);
+  return projectArchetypeValuesToBuckets(bucketApprovals ?? {}, countryId);
 }
 
 /** Apply the vote engine's effective-favorability and approval kernels to a cell. */
