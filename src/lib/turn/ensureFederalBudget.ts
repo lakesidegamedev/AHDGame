@@ -59,6 +59,37 @@ export async function ensureFederalBudget(
 }
 
 /**
+ * Self-heal many countries at once. One projected `_id` read finds the budgets
+ * that exist; only the missing ones go through `ensureFederalBudget`, so the
+ * healing write and its warning are exactly the single-country path. On the
+ * normal turn nothing is missing and this is one round trip instead of one
+ * read per country.
+ */
+export async function ensureFederalBudgets(
+  db: Db,
+  countryIds: readonly CountryId[],
+  preset: string
+): Promise<void> {
+  const unique = [...new Set(countryIds)];
+  if (unique.length === 0) return;
+  const budgetIds = unique.map((countryId) => getNationalBudgetId(countryId));
+  const present = new Set(
+    (
+      await (
+        await getFederalBudgetCollection(db)
+      )
+        .find({ _id: { $in: budgetIds } }, { projection: { _id: 1 } })
+        .toArray()
+    ).map((budget) => String(budget._id))
+  );
+  await Promise.all(
+    unique
+      .filter((_, index) => !present.has(budgetIds[index]!))
+      .map((countryId) => ensureFederalBudget(db, countryId, preset))
+  );
+}
+
+/**
  * Read-only cross-check of every `centralBanks` doc against `federalBudget`,
  * used by the gameHealthSnapshot integrity check so a missing budget surfaces
  * as a data-integrity error instead of turns silently no-oping.

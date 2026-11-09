@@ -28,7 +28,7 @@ import {
   sovereignCouponBooksByCountry,
 } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
-import { ensureFederalBudget } from "@/lib/turn/ensureFederalBudget";
+import { ensureFederalBudgets } from "@/lib/turn/ensureFederalBudget";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
@@ -159,14 +159,13 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // Shared banks (ECB) cover multiple member countries; heal every member's
   // budget, not just the anchor recorded on the bank doc. Banks and members
   // are independent, so the whole self-heal fans out.
-  await Promise.all(
+  const memberCountryLists = await Promise.all(
     banks.map(async (bank) => {
       const { memberCountries } = await getCentralBankScope(db, bank.countryId as CountryId);
-      await Promise.all(
-        memberCountries.map((countryId) => ensureFederalBudget(db, countryId, preset))
-      );
+      return memberCountries;
     })
   );
+  await ensureFederalBudgets(db, memberCountryLists.flat(), preset);
 
   // Flag posture first: it decides which optional fields the budget read below
   // has to decode.

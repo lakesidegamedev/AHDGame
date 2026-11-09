@@ -33,6 +33,7 @@ vi.mock("@/lib/indexFunds/fundQueries", () => ({
   listActiveFunds: vi.fn(),
   listServiceableFunds: vi.fn(),
   updateFundNav: vi.fn(),
+  updateFundNavsBulk: vi.fn(),
   updateFundConstituents: vi.fn(),
   setFundStatus: vi.fn(),
   listPendingRedemptions: vi.fn().mockResolvedValue([]),

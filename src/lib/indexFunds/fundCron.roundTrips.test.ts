@@ -146,6 +146,20 @@ describe.each([false, true])(
       expect(trips.count("indexFundSnapshots")).toBeLessThanOrEqual(2);
     }, 280_000);
 
+    it("publishes every fund NAV in one bulk write instead of one update per fund", async () => {
+      const w = world(12);
+      await runIndexFundCron(w.db, { currentTurn: 48, reuseRebalanceReads });
+      const trips = countRoundTrips(w.memory);
+      const result = await runIndexFundCron(w.db, {
+        currentTurn: quietTurn(w),
+        reuseRebalanceReads,
+      });
+      expect(result.errors).toEqual([]);
+      expect(result.navUpdates).toBe(w.funds);
+      expect(trips.count("indexFunds", "bulkWrite"), trips.summary()).toBeGreaterThanOrEqual(1);
+      expect(trips.count("indexFunds", "updateOne"), trips.summary()).toBeLessThan(w.funds);
+    }, 280_000);
+
     it("reads the equity pools and open bids once for the whole rebalance pass", async () => {
       const w = world(12);
       const trips = countRoundTrips(w.memory);
