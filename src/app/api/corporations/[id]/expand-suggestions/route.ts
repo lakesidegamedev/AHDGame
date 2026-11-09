@@ -181,7 +181,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       getStrategyForOperatingModel(sectorType, "standard", industryModel, mediaDiscriminator)
         .supply ?? {};
     const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
-    const countrySharedDemand = plantsMode && supplyMixSharesCountryDemand(supplyMix);
+    const countrySharedDemand =
+      plantsMode && supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
     const demandGapUnitsByState = new Map<string, number>();
     const demandGapUnitsByCountry = new Map<string, number>();
     const demandGapUnitsFor = (stateId: string, countryId: string): number => {
@@ -608,6 +609,8 @@ export async function GET(request: Request, { params }: RouteParams) {
           entry,
           roomToBuildUnits,
           roomScope: plantsMode ? (countrySharedDemand ? "country" : "state") : null,
+          buildDemand: buildRoom?.demandRows?.(supplyMix, state._id, state.countryId),
+          buildDemandTurn: buildRoom?.demandTurn,
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null)

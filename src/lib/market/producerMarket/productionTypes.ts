@@ -141,4 +141,5 @@ export type ProducerEconomyResult = {
   spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
   /** Per-country funded book from the settled clearing, when `trackCountryBooks` is on. */
   countryBooks?: ReturnType<typeof settleProducerMarket>["countryBooks"];
+  regionalBooks?: ReturnType<typeof settleProducerMarket>["regionalBooks"];
 };
