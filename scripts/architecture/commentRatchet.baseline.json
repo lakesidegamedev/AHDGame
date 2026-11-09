@@ -681,11 +681,11 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "scripts/sim/bankingBrowserJourney.ts": {
+    "scripts/sim/bankViabilityCalibration.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "scripts/sim/bankViabilityCalibration.ts": {
+    "scripts/sim/bankingBrowserJourney.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -1033,6 +1033,10 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/app/_landing-v2/SandboxHome.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/app/_landing-v2/publicLinks.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -1040,10 +1044,6 @@
     "src/app/_landing-v2/publicLinks.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/app/_landing-v2/SandboxHome.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/app/actions/actionsConstants.test.ts": {
       "longBlocks": 0,
@@ -1313,10 +1313,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/api/client-status/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/app/api/client/statistics/route.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -1356,10 +1352,6 @@
     "src/app/api/corporation/[id]/tech/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/app/api/corporations/__tests__/found-corp.forex.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/app/api/corporations/[id]/bonds/history/route.ts": {
       "longBlocks": 1,
@@ -1422,6 +1414,10 @@
       "narrativeLines": 2
     },
     "src/app/api/corporations/[id]/shares/sell/route.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/api/corporations/__tests__/found-corp.forex.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -1765,10 +1761,6 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/app/api/discord-bot/tickets/route.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 9
-    },
     "src/app/api/elections/[id]/endorse/route.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -1969,10 +1961,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/centralbank/[currency]/components/centralBankTypes.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/app/centralbank/[currency]/components/ChairAppointmentActions.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -1988,6 +1976,10 @@
     "src/app/centralbank/[currency]/components/FomcCommitteeTab.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
+    },
+    "src/app/centralbank/[currency]/components/centralBankTypes.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
     },
     "src/app/changelog/components/ChangelogChart.tsx": {
       "longBlocks": 1,
@@ -2081,65 +2073,29 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/app/country/[code]/approval/mergeApprovalModifiers.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/app/country/[code]/BackgroundCountryOverview.tsx": {
       "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/components/countryDirectory.ts": {
-      "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/app/country/[code]/CountryOverviewClient.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/app/country/[code]/PeaceBanner.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/app/country/[code]/approval/mergeApprovalModifiers.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/app/country/[code]/components/countryDirectory.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
     "src/app/country/[code]/elections/components/ElectionRowCells.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/CabinetForceStrip.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/dossier/dossier.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/EmergencyMechanicPanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/ArsenalTab.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/commands/CommandDetailPanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/commands/CommandsBuilder.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/CommandsTab.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/DoctrineTab.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/GeneralCorps.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
     },
     "src/app/country/[code]/executive/cabinet/ParliamentaryCabinetClient.tsx": {
       "longBlocks": 0,
@@ -2156,6 +2112,46 @@
     "src/app/country/[code]/executive/cabinet/WhipPanel.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/CabinetForceStrip.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/EmergencyMechanicPanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/dossier/dossier.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/ArsenalTab.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/CommandsTab.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/DoctrineTab.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/GeneralCorps.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/commands/CommandDetailPanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/components/military/commands/CommandsBuilder.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
     },
     "src/app/country/[code]/executive/page.tsx": {
       "longBlocks": 1,
@@ -2177,13 +2173,13 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/country/[code]/map/components/countryMapConfigs.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/app/country/[code]/map/components/EconOnlyMapPlaceholder.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/app/country/[code]/map/components/countryMapConfigs.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/app/country/[code]/navair/NavairCommandClient.tsx": {
       "longBlocks": 0,
@@ -2192,6 +2188,18 @@
     "src/app/country/[code]/navair/page.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/app/country/[code]/parties/[id]/PartyHubPage.conference.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/app/country/[code]/parties/[id]/PartyHubPage.leave.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/country/[code]/parties/[id]/PartyHubPage.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 3
     },
     "src/app/country/[code]/parties/[id]/components/CreateProposalForm.tsx": {
       "longBlocks": 0,
@@ -2224,22 +2232,6 @@
     "src/app/country/[code]/parties/[id]/components/TreasurySuppressionControl.tsx": {
       "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/app/country/[code]/parties/[id]/PartyHubPage.conference.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/app/country/[code]/parties/[id]/PartyHubPage.leave.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/country/[code]/parties/[id]/PartyHubPage.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/app/country/[code]/PeaceBanner.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/app/country/[code]/political-metrics/components/ModifiersPanel.test.tsx": {
       "longBlocks": 0,
@@ -2305,6 +2297,26 @@
       "longBlocks": 0,
       "narrativeLines": 4
     },
+    "src/app/elections/[id]/blend/GeneralTicketsTable.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 5
+    },
+    "src/app/elections/[id]/blend/PrimaryBlendView.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/elections/[id]/blend/PrimaryBlendView.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/elections/[id]/blend/ResultsBlendView.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/app/elections/[id]/blend/ResultsBlendView.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
     "src/app/elections/[id]/blend/generalBlendViewModel.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -2316,10 +2328,6 @@
     "src/app/elections/[id]/blend/generalHeadline.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/app/elections/[id]/blend/GeneralTicketsTable.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 5
     },
     "src/app/elections/[id]/blend/presMap/countyModel.ts": {
       "longBlocks": 0,
@@ -2337,14 +2345,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/elections/[id]/blend/PrimaryBlendView.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/elections/[id]/blend/PrimaryBlendView.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/app/elections/[id]/blend/primaryBlendViewModel.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -2356,14 +2356,6 @@
     "src/app/elections/[id]/blend/raceMode/useRaceMapCampaign.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/app/elections/[id]/blend/ResultsBlendView.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/app/elections/[id]/blend/ResultsBlendView.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
     },
     "src/app/elections/[id]/blend/useMyCampaign.test.tsx": {
       "longBlocks": 0,
@@ -2465,10 +2457,6 @@
       "longBlocks": 0,
       "narrativeLines": 3
     },
-    "src/app/whitehouse/cabinet/components/CabinetNominateModal.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/app/whitehouse/ImpeachmentPanel.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -2477,13 +2465,13 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
+    "src/app/whitehouse/cabinet/components/CabinetNominateModal.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/app/world/components/WorldMapSVG.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/app/world/conflicts/_coldwar/GlobalResponseCrisisStrip.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/app/world/conflicts/[conflictId]/ConflictRecord.test.tsx": {
       "longBlocks": 0,
@@ -2493,14 +2481,6 @@
       "longBlocks": 0,
       "narrativeLines": 3
     },
-    "src/app/world/conflicts/[conflictId]/conflictRecordView.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/world/conflicts/[conflictId]/conflictRecordView.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/app/world/conflicts/[conflictId]/DictateTermsPanel.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -2509,27 +2489,39 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/app/world/conflicts/[conflictId]/page.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/app/world/conflicts/[conflictId]/PostedGeneralsPanel.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/app/world/conflicts/[conflictId]/recordCopy.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
     },
     "src/app/world/conflicts/[conflictId]/WarLog.tsx": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/app/world/conflicts/combat/components/__tests__/FrontLineMap.zone.test.tsx": {
+    "src/app/world/conflicts/[conflictId]/conflictRecordView.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/app/world/conflicts/[conflictId]/conflictRecordView.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/app/world/conflicts/[conflictId]/page.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/app/world/conflicts/[conflictId]/recordCopy.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/app/world/conflicts/_coldwar/GlobalResponseCrisisStrip.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/app/world/conflicts/combat/components/FrontMap.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/app/world/conflicts/combat/components/__tests__/FrontLineMap.zone.test.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -2545,31 +2537,31 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/world/international-organizations/components/influence/NationDossier.test.tsx": {
+    "src/app/world/international-organizations/VoteRoster.test.tsx": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 1
     },
     "src/app/world/international-organizations/components/InfluenceTab.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/app/world/international-organizations/components/orgMembership.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/app/world/international-organizations/components/SanctionsPanel.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
+    },
+    "src/app/world/international-organizations/components/influence/NationDossier.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 3
+    },
+    "src/app/world/international-organizations/components/orgMembership.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/app/world/international-organizations/components/useFundFormatter.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/app/world/international-organizations/orgBallotDisplay.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/app/world/international-organizations/VoteRoster.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -2580,6 +2572,42 @@
     "src/app/world/worldBlocs.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/components/ChamberChart.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/components/DeferredAnalytics.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/components/ExperimentalNavbar.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/GameResetControls.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/NationalPartyInfluencePanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/NavbarWrapper.statusRequest.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/PositionBadges.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/RelocateButton.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/components/TurnControls.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
     },
     "src/components/admin/alts/DetectionHealthPanel.tsx": {
       "longBlocks": 1,
@@ -2657,10 +2685,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/ChamberChart.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/components/charters/FounderPicker.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -2673,25 +2697,9 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/components/corporation/bonds/hooks/useBondHistory.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/components/corporation/BondsTab.tsx": {
       "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/components/corporation/ceo/CeoBudgetPanel.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/corporation/ceo/CeoBudgetPanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 5
-    },
-    "src/components/corporation/ceo/GovernanceRow.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/components/corporation/CorporationMasthead.tsx": {
       "longBlocks": 0,
@@ -2709,6 +2717,50 @@
       "longBlocks": 0,
       "narrativeLines": 3
     },
+    "src/components/corporation/OverviewTab.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/components/corporation/OverviewTab.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/corporation/SectorMarginDrilldown.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/corporation/SectorsTab.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/corporation/SectorsTab.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/corporation/SharesTab.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/corporation/SupplyAgreementsSection.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/components/corporation/bonds/hooks/useBondHistory.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/components/corporation/ceo/CeoBudgetPanel.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/corporation/ceo/CeoBudgetPanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 5
+    },
+    "src/components/corporation/ceo/GovernanceRow.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/components/corporation/financials/financialsModel.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 3
@@ -2721,14 +2773,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/corporation/OverviewTab.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/components/corporation/OverviewTab.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/components/corporation/plantsPresentation.buildQueue.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -2737,23 +2781,11 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/corporation/SectorMarginDrilldown.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/components/corporation/sectorSortUtils.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/components/corporation/sectorSortUtils.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/corporation/SectorsTab.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/corporation/SectorsTab.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -2769,14 +2801,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/corporation/SharesTab.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/corporation/SupplyAgreementsSection.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/components/country/RegimeStabilityPanel.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -2784,10 +2808,6 @@
     "src/components/country/sovereignStatusRequest.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/components/DeferredAnalytics.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/components/economy/MarketsStrip.test.tsx": {
       "longBlocks": 0,
@@ -2817,10 +2837,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/ExperimentalNavbar.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/components/forex/ExchangeRatesTable.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -2830,10 +2846,6 @@
       "narrativeLines": 1
     },
     "src/components/forex/partitionForexCurrencies.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/GameResetControls.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -2877,15 +2889,7 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/NationalPartyInfluencePanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/components/navbar/nationDetailsSections.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/NavbarWrapper.statusRequest.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -2897,7 +2901,7 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/party/hq/bulkEstimate.ts": {
+    "src/components/party/NppWhipPanel.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -2905,61 +2909,13 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/party/NppWhipPanel.tsx": {
+    "src/components/party/hq/bulkEstimate.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/components/PositionBadges.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/RelocateButton.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
     },
     "src/components/singleplayer/SingleplayerGuide.tsx": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/components/state/demographics/ElectorateDossier.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/components/state/economy/SectorBoard.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/state/overview/BuildOrgControl.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/state/overview/EconomySummary.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/components/state/overview/PoolBreakdown.ssr.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/state/overview/PoolBreakdown.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/state/politics/orgActions/BuildOrgPanel.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/components/state/politics/orgActions/BuildOrgPanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/state/politics/orgActions/EstimateLine.test.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/state/politics/QuickActionsPanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/components/state/RegionHeader.tsx": {
       "longBlocks": 0,
@@ -3001,6 +2957,46 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/components/state/demographics/ElectorateDossier.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/components/state/economy/SectorBoard.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/state/overview/BuildOrgControl.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/state/overview/EconomySummary.tsx": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/components/state/overview/PoolBreakdown.ssr.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/state/overview/PoolBreakdown.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/state/politics/QuickActionsPanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/state/politics/orgActions/BuildOrgPanel.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/components/state/politics/orgActions/BuildOrgPanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/components/state/politics/orgActions/EstimateLine.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/components/statusbar/statusBarLayoutClasses.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -3014,10 +3010,6 @@
       "narrativeLines": 1
     },
     "src/components/time/LocalTime.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/components/TurnControls.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -3041,13 +3033,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/components/uk/budget/BudgetAuthoringPanel.tsx": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/components/uk/CommonsVacancyPanel.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
+    },
+    "src/components/uk/budget/BudgetAuthoringPanel.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 2
     },
     "src/components/uk/elections/ManifestoFlavorBar.tsx": {
       "longBlocks": 0,
@@ -3121,15 +3113,15 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
+    "src/i18n/RouteIntlProvider.test.tsx": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/i18n/clientCatalog.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/i18n/request.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/i18n/RouteIntlProvider.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -3265,6 +3257,14 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/admin/seed/indexTargets.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/admin/seed/indexTargets.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
     "src/lib/admin/seed/indexes/apiAccess.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -3307,14 +3307,6 @@
     },
     "src/lib/admin/seed/indexes/writeGuardSpecs.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/admin/seed/indexTargets.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/admin/seed/indexTargets.ts": {
-      "longBlocks": 1,
       "narrativeLines": 1
     },
     "src/lib/admin/seed/partySeederPresetHygiene.test.ts": {
@@ -3441,13 +3433,13 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/admin/seed/seedNationalManpower.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/admin/seed/seedNG.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
+    },
+    "src/lib/admin/seed/seedNationalManpower.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/admin/seed/seedNppCorporations.ts": {
       "longBlocks": 0,
@@ -3736,14 +3728,6 @@
     "src/lib/api/withAdminAuth.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/policyShiftImpacts.shiftDirection.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/policyShiftImpacts.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/audit/anomalyScan.test.ts": {
       "longBlocks": 0,
@@ -4293,6 +4277,14 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
+    "src/lib/campaignTargeting/adTargets.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/campaignTargeting/audience.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/campaigns/access.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -4409,14 +4401,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/campaignTargeting/adTargets.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/campaignTargeting/audience.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/canvassing/canvassSpend.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
@@ -4494,6 +4478,10 @@
       "narrativeLines": 1
     },
     "src/lib/charts/voteSplitChart.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/client/clientStatus.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -5317,6 +5305,10 @@
       "longBlocks": 1,
       "narrativeLines": 1
     },
+    "src/lib/corporations/retoolRescale.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 0
+    },
     "src/lib/corporations/retooling/conversion.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
@@ -5327,10 +5319,6 @@
     },
     "src/lib/corporations/retooling/rules.ts": {
       "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/retoolRescale.ts": {
-      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/corporations/rules/capacityEconomy.ts": {
@@ -5753,10 +5741,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/de/data/deLandtag.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
     "src/lib/countries/de/data/deLandVoteShares1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -5767,6 +5751,10 @@
     },
     "src/lib/countries/de/data/deLandVoteShares2025.ts": {
       "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/countries/de/data/deLandtag.ts": {
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/countries/de/data/deLegislationTypes.ts": {
@@ -6001,15 +5989,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/countries/ie/data/ieRegionVoteShares.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/countries/ie/data/ieRegions1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/ie/data/ieRegions1979.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/ie/data/ieRegionVoteShares.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -6321,11 +6309,11 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/countries/ru/rules/councilVoteTotals.ts": {
+    "src/lib/countries/ru/ruPresidencyTransition.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/countries/ru/ruPresidencyTransition.ts": {
+    "src/lib/countries/ru/rules/councilVoteTotals.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -7017,10 +7005,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/currency/corporationCapital.ts": {
-      "longBlocks": 4,
-      "narrativeLines": 0
-    },
     "src/lib/currency/corpWalletSpend.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
@@ -7028,6 +7012,10 @@
     "src/lib/currency/corpWalletSpend.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
+    },
+    "src/lib/currency/corporationCapital.ts": {
+      "longBlocks": 4,
+      "narrativeLines": 0
     },
     "src/lib/currency/exchangeRateRegime.ts": {
       "longBlocks": 1,
@@ -7489,15 +7477,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/demographics/bucketLabelScaffolding.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/demographics/bucketLabelsByCountry.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/demographics/bucketLabelsByCountry.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/demographics/bucketLabelScaffolding.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -8089,14 +8077,6 @@
       "longBlocks": 1,
       "narrativeLines": 3
     },
-    "src/lib/elections/resolvedSeatsEstimate.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/resolvedSeatsEstimate.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/elections/resolveElection.projection.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -8104,6 +8084,14 @@
     "src/lib/elections/resolveElection.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
+    },
+    "src/lib/elections/resolvedSeatsEstimate.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/resolvedSeatsEstimate.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/elections/responseCredit.ts": {
       "longBlocks": 2,
@@ -8569,10 +8557,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/internationalOrganizations/organizationFund.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
     "src/lib/internationalOrganizations/orgHeadAgenda.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -8580,6 +8564,10 @@
     "src/lib/internationalOrganizations/orgMembership.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/lib/internationalOrganizations/organizationFund.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
     },
     "src/lib/internationalOrganizations/policyVotingRoll.ts": {
       "longBlocks": 1,
@@ -8653,12 +8641,12 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/labour/unionization.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
     "src/lib/labour/unionLaws.ts": {
       "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/labour/unionization.ts": {
+      "longBlocks": 2,
       "narrativeLines": 0
     },
     "src/lib/ledger/accounts.ts": {
@@ -9701,6 +9689,22 @@
       "longBlocks": 2,
       "narrativeLines": 0
     },
+    "src/lib/nationalMetrics.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/nationalPartyElectionNotifications.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/nationalPartyElections.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/nationalPartyQuorum.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/nationalization/billTargetPreview.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -9838,22 +9842,6 @@
       "narrativeLines": 0
     },
     "src/lib/nationalization/treasuryWriters.guard.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/nationalMetrics.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/nationalPartyElectionNotifications.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/nationalPartyElections.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/nationalPartyQuorum.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -10470,6 +10458,14 @@
       "narrativeLines": 1
     },
     "src/lib/policyShift.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/policyShiftImpacts.shiftDirection.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/policyShiftImpacts.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -11813,6 +11809,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/support/discordTicketCommands.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 9
+    },
     "src/lib/tariffs/reconcileTariffs.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -12477,6 +12477,14 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/turn/deRegionalBudget.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/turn/deRegionalBudget.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 3
+    },
     "src/lib/turn/defenceDeliveryTurn.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 5
@@ -12499,14 +12507,6 @@
     },
     "src/lib/turn/demographicTurnoutTurn.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
-    },
-    "src/lib/turn/deRegionalBudget.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/turn/deRegionalBudget.ts": {
-      "longBlocks": 1,
       "narrativeLines": 3
     },
     "src/lib/turn/economyPause.ts": {
@@ -13153,6 +13153,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/turn/stateOwnershipConcentration.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/turn/statehood.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -13160,10 +13164,6 @@
     "src/lib/turn/statehood.ts": {
       "longBlocks": 2,
       "narrativeLines": 2
-    },
-    "src/lib/turn/stateOwnershipConcentration.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/turn/stockExchangeSnapshot.test.ts": {
       "longBlocks": 0,
