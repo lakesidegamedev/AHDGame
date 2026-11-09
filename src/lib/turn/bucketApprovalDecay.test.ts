@@ -16,7 +16,7 @@ describe("approval decay turn persistence", () => {
     const rows = ["US", "UK", "JP", "IE", "SCO", "WAL"].map((countryId) => ({
       _id: new ObjectId(),
       countryId,
-      archetypeApprovals: { small: 0.18, negative: -0.8, threshold: 0.01 },
+      bucketApprovals: { small: 0.18, negative: -0.8, threshold: 0.01 },
     }));
     for (const name of ["characters", "npps"]) {
       db.collection(name).find.mockReturnValue({ toArray: vi.fn().mockResolvedValue(rows) });
@@ -29,13 +29,13 @@ describe("approval decay turn persistence", () => {
     for (const name of ["characters", "npps"]) {
       expect(db.collectionMocks[name]!.find).toHaveBeenCalledTimes(1);
       expect(db.collectionMocks[name]!.find.mock.calls[0]![1]).toEqual({
-        projection: { archetypeApprovals: 1 },
+        projection: { bucketApprovals: 1 },
       });
       expect(db.collectionMocks[name]!.bulkWrite).toHaveBeenCalledTimes(1);
       const writes = db.collectionMocks[name]!.bulkWrite.mock.calls[0]![0];
       expect(writes).toHaveLength(6);
       for (const write of writes) {
-        const saved = write.updateOne.update.$set.archetypeApprovals;
+        const saved = write.updateOne.update.$set.bucketApprovals;
         expect(saved.small).toBeCloseTo(0.1791, 12);
         expect(saved.small).not.toBe(0.18);
         expect(saved.negative).toBeCloseTo(-0.796, 12);
@@ -48,20 +48,20 @@ describe("approval decay turn persistence", () => {
       snapshot = { small: 0.18 };
     let live = { small: 0.28 };
     db.collection("characters").find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([{ _id: id, archetypeApprovals: snapshot }]),
+      toArray: vi.fn().mockResolvedValue([{ _id: id, bucketApprovals: snapshot }]),
     });
     db.collection("characters").bulkWrite.mockImplementation(
       async (
         operations: Array<{
           updateOne: {
-            filter: { archetypeApprovals: { small: number } };
-            update: { $set: { archetypeApprovals: { small: number } } };
+            filter: { bucketApprovals: { small: number } };
+            update: { $set: { bucketApprovals: { small: number } } };
           };
         }>
       ) => {
         const op = operations[0]!.updateOne;
-        if (op.filter.archetypeApprovals.small !== live.small) return { modifiedCount: 0 };
-        live = op.update.$set.archetypeApprovals;
+        if (op.filter.bucketApprovals.small !== live.small) return { modifiedCount: 0 };
+        live = op.update.$set.bucketApprovals;
         return { modifiedCount: 1 };
       }
     );
@@ -73,7 +73,7 @@ describe("approval decay turn persistence", () => {
   });
 
   it("does not write empty or already-zero balances", async () => {
-    const rows = [{ _id: new ObjectId(), archetypeApprovals: { zero: 0 } }];
+    const rows = [{ _id: new ObjectId(), bucketApprovals: { zero: 0 } }];
     for (const name of ["characters", "npps"])
       db.collection(name).find.mockReturnValue({ toArray: vi.fn().mockResolvedValue(rows) });
     expect(await processBucketApprovalDecay()).toEqual({

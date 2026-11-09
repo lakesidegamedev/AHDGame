@@ -967,7 +967,7 @@ describe("onBillEnacted", () => {
       expect(reactions).toHaveLength(2);
       const dimension = countryId === "US" ? "wealth" : "income";
       const delta = (operation: any) =>
-        operation.updateOne.update[0].$set[`archetypeApprovals.${dimension}:low`].$min[1].$max[1]
+        operation.updateOne.update[0].$set[`bucketApprovals.${dimension}:low`].$min[1].$max[1]
           .$add[1];
       expect(
         delta(

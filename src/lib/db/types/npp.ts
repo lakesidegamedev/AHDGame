@@ -100,7 +100,7 @@ export interface NPP {
    * Applied as: effectiveFavorability = favorability + approval * 0.5
    * Decays 0.5% per turn toward 0.
    */
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   createdAt: Date;
   updatedAt: Date;
   /** Sequential ID for stable URLs (e.g., /politicians/npp/1) */

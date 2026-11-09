@@ -364,7 +364,7 @@ export interface Character {
    * Applied as: effectiveFavorability = favorability + approval * 0.5
    * Decays 0.5% per turn toward 0.
    */
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   /** Wall-clock instant of the last relocation (game clock). Legacy fallback for the cooldown; 24-turn cooldown applies. */
   lastRelocatedAt?: Date;
   /** Turn the last relocation occurred. Turn-first source for the 24-turn relocation cooldown. */

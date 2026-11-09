@@ -155,7 +155,7 @@ export async function seedPartylessFoundingCandidates(
       retiredAt: null,
       influenceState: { totalTimesInfluenced: 0 },
       ...NPP_ECONOMY_DEFAULTS,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       electionCooldowns: {},
       createdAt: now,
       updatedAt: now,

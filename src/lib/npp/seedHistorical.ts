@@ -737,7 +737,7 @@ export async function seedFromSeats(
       // small donor income from turn one) via the shared SSOT so every creation
       // path stays consistent.
       ...NPP_ECONOMY_DEFAULTS,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       electionCooldowns: {},
       createdAt: now,
       updatedAt: now,

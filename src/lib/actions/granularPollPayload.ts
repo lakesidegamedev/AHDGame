@@ -63,7 +63,7 @@ export interface GranularPollCandidate {
   economicPosition: number;
   socialPosition: number;
   favorability?: number;
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   /** Vote-engine NPC general-election penalty; granular polls always include a player. */
   isNPP?: boolean;
   politicalInfluence: number;
@@ -86,7 +86,7 @@ export interface GranularPollBuilderInput {
     economicPosition: number;
     socialPosition: number;
     favorability?: number;
-    archetypeApprovals?: Record<string, number>;
+    bucketApprovals?: Record<string, number>;
     politicalInfluence: number;
     nationalInfluence?: number;
   };
@@ -135,7 +135,7 @@ export interface GranularPollForStateInput {
     economicPosition: number;
     socialPosition: number;
     favorability?: number;
-    archetypeApprovals?: Record<string, number>;
+    bucketApprovals?: Record<string, number>;
     politicalInfluence: number;
     nationalInfluence?: number;
   };
@@ -314,13 +314,13 @@ function computeCandidateShares(
 ): Record<string, GranularCandidateShare> {
   const candidateShares: Record<string, GranularCandidateShare> = {};
   const characterApprovalBuckets = projectCandidateApprovalBuckets(
-    character.archetypeApprovals,
+    character.bucketApprovals,
     countryId
   );
   const opponentApprovalBuckets = new Map(
     opponents.map((opponent) => [
       opponent.candidateId,
-      projectCandidateApprovalBuckets(opponent.archetypeApprovals, countryId),
+      projectCandidateApprovalBuckets(opponent.bucketApprovals, countryId),
     ])
   );
 

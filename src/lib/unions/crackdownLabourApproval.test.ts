@@ -70,20 +70,20 @@ describe("crackdown labor approval", () => {
     });
     const set = pipeline[0].$set;
     expect(set["lastUnionCrackdownApprovalTurn.US"]).toBe(42);
-    expect(set["archetypeApprovals.union_trades"]).toEqual({
+    expect(set["bucketApprovals.union_trades"]).toEqual({
       $max: [
         -100,
         {
           $subtract: [
-            { $ifNull: ["$archetypeApprovals.union_trades", 0] },
+            { $ifNull: ["$bucketApprovals.union_trades", 0] },
             CRACKDOWN_LABOUR_APPROVAL_COST_PER_TURN,
           ],
         },
       ],
     });
-    expect(set).toHaveProperty("archetypeApprovals.college_liberals");
-    expect(set).toHaveProperty("archetypeApprovals.public_sector");
-    expect(set).not.toHaveProperty("archetypeApprovals.small_business");
+    expect(set).toHaveProperty("bucketApprovals.college_liberals");
+    expect(set).toHaveProperty("bucketApprovals.public_sector");
+    expect(set).not.toHaveProperty("bucketApprovals.small_business");
   });
 
   it("waits for a sitting executive rather than consuming a turn claim", async () => {
