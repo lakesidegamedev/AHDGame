@@ -12,4 +12,4 @@ areas: [frontend, engine]
 ## What changed
 
 - Candidate approval modifiers in vote counting are now handled as bucket approvals throughout the election engine.
-- The primary carve-up panel no longer shows a candidate tag next to each name.
+- Primary carve-up rows no longer carry a demographic-style tag; the UK Commons carve-up keeps showing the party name.

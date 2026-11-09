@@ -62,7 +62,7 @@ function share(
     politicalInfluence: 60,
     nationalInfluence: 60,
     support: 50,
-    archetypeApprovals: {},
+    bucketApprovals: {},
     infamy: 0,
   })) as EnrichedCandidate[];
   const demo = {
