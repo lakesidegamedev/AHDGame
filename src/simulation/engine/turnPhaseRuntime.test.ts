@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
 import { recordRoundTrip, resetRoundTripProfiler } from "@/lib/observability/mongoRoundTrips";
-import { PHASE_TIMEOUT_MS, TURN_LOCK_HEARTBEAT_MS } from "@/lib/turn/processingLock";
+import {
+  PHASE_TIMEOUT_MS,
+  TURN_LOCK_HEARTBEAT_MS,
+  phaseTimeoutMs,
+} from "@/lib/turn/processingLock";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { getAnomalyScanCadencePredicate } from "@/simulation/phases/anomalyScanCadence";
@@ -11,6 +15,16 @@ const recordAudit = vi.fn();
 vi.mock("@/lib/audit/recordAudit", () => ({
   recordAudit: (...a: unknown[]) => recordAudit(...a),
 }));
+
+const CORP_RESULT = {
+  corporationsProcessed: 1,
+  sectorsProcessed: 2,
+  totalRevenueGenerated: 100,
+  totalIncomeGenerated: 20,
+  turnWarnings: [],
+  currencyIncomeInternalByCharacterId: new Map([["player", 20]]),
+  currencyIncomeFaceByCharacterId: new Map([["player", new Map([["USD", 20]])]]),
+};
 
 function createMockDb() {
   const updateOne = vi.fn().mockResolvedValue({ acknowledged: true });
@@ -30,6 +44,54 @@ async function flushAsyncStatusWrites() {
 }
 
 describe("createTurnPhaseRuntime", () => {
+  it("defers dependent work without marking it applied, so a retry can run it", async () => {
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const execute = vi.fn(async () => 42);
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+      blockedByFailure: (name) => name === "billLifecycle",
+    });
+    await expect(runtime.runPhase("billLifecycle", execute)).resolves.toBeNull();
+    expect(execute).not.toHaveBeenCalled();
+    expect(phaseStatuses.billLifecycle).toMatchObject({
+      status: "notReached",
+      reason: "upstreamAbort",
+    });
+    const { readCrashedTurnPhaseState } = await import("./turnPhaseResumeResults");
+    const resumed = readCrashedTurnPhaseState(phaseStatuses, {});
+    expect(resumed.completed.size).toBe(0);
+    expect(resumed.interrupted.size).toBe(0);
+    const retry = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+      resumed,
+    });
+    await expect(retry.runPhase("billLifecycle", execute)).resolves.toBe(42);
+    expect(execute).toHaveBeenCalledOnce();
+  });
+  it("retains completed independent work during another failed-market retry", async () => {
+    const execute = vi.fn();
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+      blockedByFailure: () => true,
+      resumed: { completed: new Set(["campaignTurn"]), interrupted: new Set(), results: {} },
+    });
+    await runtime.runPhase("campaignTurn", execute);
+    expect(execute).not.toHaveBeenCalled();
+    expect(phaseStatuses.campaignTurn).toMatchObject({
+      status: "skipped",
+      resumeCarried: "completed",
+    });
+  });
   it.each(["playerIncomeTax", "incomeTaxBases"])(
     "replays the idempotent %s phase on resume",
     async (name) => {
@@ -189,6 +251,7 @@ describe("createTurnPhaseRuntime", () => {
       const resultPromise = runtime.runPhase("corporationTurn", async () => {
         substepMarker().mark("load");
         await inFlight;
+        return CORP_RESULT;
       });
       await Promise.resolve();
       await Promise.resolve();
@@ -374,6 +437,7 @@ describe("phase sub-steps and top collections (#2689)", () => {
       steps.mark("write");
       recordRoundTrip("sectors");
       steps.mark("write");
+      return CORP_RESULT;
     });
     await flushAsyncStatusWrites();
     const status = phaseStatuses.corporationTurn;
@@ -412,6 +476,65 @@ describe("phase sub-steps and top collections (#2689)", () => {
 });
 
 describe("phase timeout drain (#3385)", () => {
+  it("retains a corporation result that completes after timeout", async () => {
+    const { db } = createMockDb();
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const runtime = createTurnPhaseRuntime({
+      db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    const gate = deferred<typeof CORP_RESULT>();
+    const result = runtime.runPhase("corporationTurn", () => gate.promise);
+    await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    expect(phaseStatuses.corporationTurn.status).toBe("running");
+    await vi.advanceTimersByTimeAsync(phaseTimeoutMs("corporationTurn") - PHASE_TIMEOUT_MS);
+    gate.resolve(CORP_RESULT);
+    await expect(result).resolves.toEqual(CORP_RESULT);
+    expect(phaseStatuses.corporationTurn.status).toBe("completed");
+    const income = await result;
+    await expect(
+      runtime.runPhase("lineOfCreditTurn", async () =>
+        income?.currencyIncomeFaceByCharacterId.get("player")?.get("USD")
+      )
+    ).resolves.toBe(20);
+  });
+
+  it("stops immediately on a failed corporation phase instead of advancing with missing income", async () => {
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses: {},
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    await expect(
+      runtime.runPhase("corporationTurn", async () => {
+        throw new Error("tail failure");
+      })
+    ).rejects.toThrow(/turn stops/);
+  });
+
+  it("preserves retryable market failure even when it arrives after the phase timeout", async () => {
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const runtime = createTurnPhaseRuntime({
+      db: createMockDb().db,
+      phaseStatuses,
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    const gate = deferred();
+    const result = runtime.runPhase("corporationTurn", async () => {
+      await gate.promise;
+      throw new TurnMustStopError("corporationTurn", new Error("execution deadline"));
+    });
+    const rejected = expect(result).rejects.toBeInstanceOf(TurnMustStopError);
+    await vi.advanceTimersByTimeAsync(phaseTimeoutMs("corporationTurn"));
+    gate.resolve();
+    await rejected;
+    expect(phaseStatuses.corporationTurn).toMatchObject({ status: "failed", reason: "mustStop" });
+  });
+
   function deferred<T = void>() {
     let resolve!: (value: T) => void;
     let reject!: (err: unknown) => void;
@@ -565,13 +688,14 @@ describe("phase timeout drain (#3385)", () => {
         marker.mark("beforeTimeout");
         await callbackGate.promise;
         marker.mark("whileDraining");
+        throw new Error("late failure");
       })
       .finally(() => {
         phaseSettled = true;
       });
     await settle();
 
-    await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(phaseTimeoutMs("corporationTurn"));
     await settle();
     expect(failedWrites).toBe(1);
 
@@ -581,7 +705,7 @@ describe("phase timeout drain (#3385)", () => {
     expect(failedWrites).toBe(1);
 
     firstFailureWrite.resolve();
-    await expect(slow).resolves.toBeNull();
+    await expect(slow).rejects.toThrow(/turn stops/);
     expect(failedWrites).toBe(2);
     const finalFailure = updateOne.mock.calls
       .map(

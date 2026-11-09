@@ -238,3 +238,50 @@ describe("GET notification preferences", () => {
     expect(db.collectionMocks.notifications!.countDocuments).not.toHaveBeenCalled();
   });
 });
+
+describe("PATCH /api/notifications — bulk ids", () => {
+  const patch = async (body: unknown) => {
+    const { PATCH } = await import("./route");
+    return PATCH(
+      new Request("http://localhost/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+    );
+  };
+
+  it("marks the listed notifications read in one updateMany scoped to the caller", async () => {
+    const a = new ObjectId();
+    const b = new ObjectId();
+    const res = await patch({ ids: [a.toString(), b.toString()] });
+    expect(res.status).toBe(200);
+
+    const { updateMany, updateOne } = db.collectionMocks.notifications!;
+    expect(updateOne).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledOnce();
+    const [filter, update] = updateMany.mock.calls[0] as [Record<string, unknown>, unknown];
+    expect(filter).toEqual({ _id: { $in: [a, b] }, userId: { $in: [testUserId] } });
+    expect(update).toEqual({ $set: { read: true } });
+  });
+
+  it("rejects bulk ids combined with a non-read action", async () => {
+    const res = await patch({ ids: [notificationId.toString()], action: "archive" });
+    expect(res.status).toBe(400);
+    expect(db.collectionMocks.notifications!.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty or oversized id list", async () => {
+    expect((await patch({ ids: [] })).status).toBe(400);
+    const tooMany = Array.from({ length: 101 }, () => new ObjectId().toString());
+    expect((await patch({ ids: tooMany })).status).toBe(400);
+    expect(db.collectionMocks.notifications!.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("counts a bulk request once against the rate limit", async () => {
+    const { checkRateLimit } = await import("@/lib/api/rateLimit");
+    const ids = Array.from({ length: 50 }, () => new ObjectId().toString());
+    await patch({ ids });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledTimes(1);
+  });
+});

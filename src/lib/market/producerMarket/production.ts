@@ -502,6 +502,7 @@ export function advanceProducerEconomy(
         });
       }
     return settleProducerMarket({
+      checkBudget: execution?.checkBudget,
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
@@ -515,7 +516,9 @@ export function advanceProducerEconomy(
       ...(input.marketFirstAccounts?.length
         ? { marketFirstAccounts: input.marketFirstAccounts }
         : {}),
-      ...(input.captiveMarketValue ? { trackInternalDeliveries: true } : {}),
+      ...(input.captiveMarketValue || input.ownSiteValuationCredit
+        ? { trackInternalDeliveries: true }
+        : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it

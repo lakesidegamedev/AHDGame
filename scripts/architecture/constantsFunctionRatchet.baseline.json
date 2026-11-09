@@ -63,7 +63,7 @@
     "src/lib/constants/parliamentaryExecutiveSurface.ts": 2,
     "src/lib/constants/presetSeatGroups.ts": 2,
     "src/lib/constants/primaryCalendar.ts": 9,
-    "src/lib/constants/prospecting.ts": 6,
+    "src/lib/constants/prospecting.ts": 7,
     "src/lib/constants/readinessChecks.ts": 1,
     "src/lib/constants/readinessExpectations.ts": 1,
     "src/lib/constants/referendum.ts": 4,

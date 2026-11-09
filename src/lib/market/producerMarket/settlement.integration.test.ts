@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { performance } from "node:perf_hooks";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
@@ -202,6 +203,43 @@ function corporationById(memory: ReturnType<typeof createInMemoryDb>, id: string
 }
 
 describe("frozen producer turn settlement", () => {
+  it("expires before claiming a receipt or changing money or plant state", async () => {
+    const { db, input, memory } = fixture();
+    const before = structuredClone(memory.collection("corporations").docs);
+    const sites = structuredClone(memory.collection("corporateSectors").docs);
+    let elapsed = 0;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => (elapsed += 10));
+    try {
+      await expect(settleProducerTurn(db, { ...input, executionBudgetMs: 1 })).rejects.toThrow(
+        "execution deadline"
+      );
+      expect(memory.collection("producerEconomyTurns").docs).toHaveLength(0);
+      expect(memory.collection("corporations").docs).toEqual(before);
+      expect(memory.collection("corporateSectors").docs).toEqual(sites);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it("does not discard a fully computed market when the deadline passes during receipt work", async () => {
+    const { db, input, memory } = fixture();
+    let elapsed = 0;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => (elapsed += 1));
+    try {
+      // The deadline expires after clearing finishes, while the receipt is encoded and staged.
+      const result = await settleProducerTurn(db, {
+        ...input,
+        executionBudgetMs: 100_000,
+        close: () => {
+          elapsed += 1_000_000;
+          return { transfers: [] };
+        },
+      });
+      expect(result.close).toBeDefined();
+      expect(memory.collection("producerEconomyTurns").docs).toHaveLength(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
   it("freezes a runtime cutoff's actual pass count and retains diagnostics and warnings on retry", async () => {
     const { db, input, memory } = fixture();
     input.production.maximumPlanningPasses = 64;

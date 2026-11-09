@@ -36,16 +36,8 @@ import {
 } from "@/lib/congress/applyWhipVotes";
 import { statecraftWhipBonus } from "@/lib/partyWhips/whipSuccess";
 import { USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
-import {
-  applyPlayerWhipToBill,
-  applyPlayerWhipToLeadership,
-  applyPlayerWhipToGovernmentVote,
-  applyPlayerWhipToCabinet,
-  applyPlayerWhipToVacateMotion,
-  applyPlayerWhipToImpeachment,
-} from "@/lib/congress/applyPlayerWhip";
+import { canIssueWhip } from "@/lib/partyWhips/rules/playerWhip";
 import { getEligibleCharactersForWhip } from "@/lib/partyWhips/playerWhip";
-import { sendSystemMails } from "@/lib/mail/systemMail";
 import { createNotifications } from "@/lib/notifications";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
@@ -62,28 +54,33 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { inferWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { buildPlayerWhipMessage } from "./playerWhipMessage";
 
-export const nationalPartyWhipSchema = z.object({
-  targetType: z.enum([
-    "bill",
-    "speakerElection",
-    "leadershipElection",
-    "pmAppointmentVote",
-    "noConfidenceVote",
-    "cabinetNomination",
-    "scotusNomination",
-    "speakerVacateMotion",
-    "impeachmentVote",
-  ]),
-  targetId: z.string().min(1, "Target ID required"),
-  chamber: z.string().min(1, "Chamber required"),
-  direction: z.enum(["for", "against"]),
-  mode: z.enum(["soft", "hard"]).default("hard"),
-  candidacyId: z
-    .string()
-    .regex(/^[a-f\d]{24}$/i, "Invalid candidacy ID")
-    .optional(),
-  audience: z.enum(["npp", "character"]).default("npp"),
-});
+export const nationalPartyWhipSchema = z
+  .object({
+    targetType: z.enum([
+      "bill",
+      "speakerElection",
+      "leadershipElection",
+      "pmAppointmentVote",
+      "noConfidenceVote",
+      "cabinetNomination",
+      "scotusNomination",
+      "speakerVacateMotion",
+      "impeachmentVote",
+    ]),
+    targetId: z.string().min(1, "Target ID required"),
+    chamber: z.string().min(1, "Chamber required"),
+    direction: z.enum(["for", "against"]),
+    mode: z.enum(["soft", "hard"]).default("hard"),
+    candidacyId: z
+      .string()
+      .regex(/^[a-f\d]{24}$/i, "Invalid candidacy ID")
+      .optional(),
+    audience: z.enum(["npp", "character"]).default("npp"),
+  })
+  .refine(canIssueWhip, {
+    message: "Hard whips cannot force player votes. Use a soft player whip instead.",
+    path: ["mode"],
+  });
 
 export type NationalPartyWhipRequest = z.infer<typeof nationalPartyWhipSchema>;
 
@@ -485,7 +482,7 @@ function leadershipNominationCollection(
 async function issuePlayerWhip(
   { db, countryId, party, partyIdStr, character, issuerRole }: WhipIssuer,
   { targetType, chamber, direction, mode, candidacyId }: NationalPartyWhipRequest,
-  { targetOid, storedTargetId, whipWindowStart }: ResolvedTarget
+  { storedTargetId, whipWindowStart }: ResolvedTarget
 ): Promise<IssueNationalPartyWhipResult> {
   const characterId = character._id;
   const existingCharacterWhips = await db
@@ -552,54 +549,7 @@ async function issuePlayerWhip(
     },
   });
 
-  let overridden = 0;
-  let alreadyAligned = 0;
-
-  if (mode === "hard") {
-    let r: { overridden: number; alreadyAligned: number } | null = null;
-    if (targetType === "bill") {
-      const bill = await db
-        .collection<Bill>("bills")
-        .findOne({ _id: requireObjectId(targetOid), countryId });
-      if (bill) r = await applyPlayerWhipToBill(db, bill, direction, eligible);
-    } else if (
-      (targetType === "speakerElection" || targetType === "leadershipElection") &&
-      candidacyId
-    ) {
-      r = await applyPlayerWhipToLeadership(
-        db,
-        new ObjectId(candidacyId),
-        leadershipNominationCollection(targetType, chamber),
-        eligible
-      );
-    } else if (targetType === "pmAppointmentVote" || targetType === "noConfidenceVote") {
-      r = await applyPlayerWhipToGovernmentVote(
-        db,
-        requireObjectId(targetOid),
-        targetType,
-        direction,
-        eligible
-      );
-    } else if (targetType === "cabinetNomination" || targetType === "scotusNomination") {
-      r = await applyPlayerWhipToCabinet(
-        db,
-        requireObjectId(targetOid),
-        direction,
-        eligible,
-        targetType === "scotusNomination" ? "scotusNominations" : "cabinetNominations"
-      );
-    } else if (targetType === "speakerVacateMotion") {
-      r = await applyPlayerWhipToVacateMotion(db, direction, eligible);
-    } else if (targetType === "impeachmentVote") {
-      r = await applyPlayerWhipToImpeachment(db, requireObjectId(targetOid), direction, eligible);
-    }
-    if (r) {
-      overridden = r.overridden;
-      alreadyAligned = r.alreadyAligned;
-    }
-  }
-
-  const { subject, body, notificationTitle } = await buildPlayerWhipMessage(
+  const { subject, notificationTitle } = await buildPlayerWhipMessage(
     db,
     targetType,
     storedTargetId,
@@ -623,20 +573,6 @@ async function issuePlayerWhip(
 
   let mailedCount = 0;
   try {
-    if (mode === "hard") {
-      await sendSystemMails(
-        db,
-        charDocs.map((char) => ({
-          toCharacterId: char._id,
-          toCharacterName: char.name,
-          toCharacterSequentialId: char.sequentialId ?? 0,
-          toUserId: char.userId,
-          subject,
-          body,
-          senderName: "Party Whip",
-        }))
-      );
-    }
     await createNotifications(
       charDocs.map((char) => ({
         userId: char.userId,
@@ -663,13 +599,10 @@ async function issuePlayerWhip(
       whipId: pwInsert.insertedId.toString(),
       audience: "character",
       mode,
-      affected: overridden,
-      alreadyAligned,
+      affected: 0,
+      alreadyAligned: 0,
       mailedCount,
-      message:
-        mode === "soft"
-          ? `Soft Player Whip issued. ${mailedCount} players notified.`
-          : `Hard Player Whip issued. ${overridden} players overridden, ${alreadyAligned} already aligned, ${mailedCount} notified.`,
+      message: `Soft Player Whip issued. ${mailedCount} players notified.`,
     },
   };
 }

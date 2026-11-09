@@ -161,6 +161,8 @@ export function fundedReceiptOf(
     | "unsoldProductionCost"
     | "internalSupplyIncome"
     | "internalSupplyCharge"
+    | "valuationCredit"
+    | "valuationCharge"
   > & { turn?: number },
   transitionSupport: number
 ): FundedReceipt {
@@ -175,6 +177,9 @@ export function fundedReceiptOf(
     // Priced own-site deliveries: without these the sector accounts show no charge or income.
     ...(r.internalSupplyIncome ? { internalSupplyIncome: r.internalSupplyIncome } : {}),
     ...(r.internalSupplyCharge ? { internalSupplyCharge: r.internalSupplyCharge } : {}),
+    // Valuation only (fundedValuationOwnSiteCreditStage): never shown on a site's accounts.
+    ...(r.valuationCredit ? { valuationCredit: r.valuationCredit } : {}),
+    ...(r.valuationCharge ? { valuationCharge: r.valuationCharge } : {}),
   };
 }
 
@@ -945,6 +950,7 @@ export async function runFundedProducerTurn(
         : {}),
       ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
       ...((input.env.captiveDeliveryStage ?? 0) >= 3 ? { captiveMarketValue: true } : {}),
+      ...(input.env.ownSiteValuationCredit ? { ownSiteValuationCredit: true } : {}),
       ...((input.env.askBuyerTieStage ?? 0) >= 1 ? { askBuyerTieBreak: true } : {}),
       ...((input.env.askBuyerTieStage ?? 0) >= 2 ? { askCompetitorsMatch: true } : {}),
       ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure

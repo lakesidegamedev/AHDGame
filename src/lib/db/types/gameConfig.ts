@@ -337,7 +337,12 @@ export interface GameConfig {
    * last turn, not only what it made, so a run cut by short inputs or cash does
    * not lower the next plan; a plant that sold out at a profit grows by a fixed
    * step of capacity a turn; and only a second glut turn in a row drops a plant
-   * to its floor (one glut turn steps it down). 0 or absent = off.
+   * to its floor (one glut turn steps it down). >= 2: the never-below-last-
+   * turn's-sales floor subtracts stock held beyond producerStockCover turns of
+   * sales, so a plant sitting on a pile sells from it instead of making more.
+   * >= 3: a line whose sold units lost money after inputs, wages and site costs
+   * steps down a cut a turn, below last turn's sales if need be.
+   * 0 or absent = off.
    */
   producerRunPlanStage?: number;
   /**
@@ -611,6 +616,15 @@ export interface GameConfig {
    * absent = off.
    */
   fundedValuationStage?: number;
+  /**
+   * With fundedValuationStage on: 1 values a supplier site whose output goes to
+   * its own company's other sites at this turn's lane price for those units
+   * (the receiving site carries the matching charge), so it is not valued at
+   * its book floor while its sister sites get the goods free. Valuation only:
+   * no site account, cash or profit line changes. Companies that book their own
+   * own-site entries are left as they are. 0 or absent = off.
+   */
+  fundedValuationOwnSiteCreditStage?: number;
   /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.

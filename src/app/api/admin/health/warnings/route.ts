@@ -2,7 +2,7 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { GameHealthSnapshot, GameState, TurnLog } from "@/lib/db/types";
-import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 
 // Healthy turns normally finish in well under a minute, but historical spikes
 // have exceeded 90 seconds without actually wedging. Use a wider warning window
@@ -130,6 +130,8 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
       });
     }
     for (const e of snap.turnProcessing.errors) {
+      // Older snapshots also stored every blocked phase in this array.
+      if (snap.turnProcessing.phaseStatuses?.[e.phase]?.status === "notReached") continue;
       allWarnings.push({
         turn: snap.turn,
         phase: e.phase,
@@ -167,7 +169,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
           allWarnings.push({
             turn: snap.turn,
             phase,
-            severity: "error",
+            severity: "warning",
             message: telemetry.message ?? "Phase was never reached before the turn ended.",
             source: "turnPhase",
             timestamp: telemetry.updatedAt,
@@ -232,11 +234,13 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
       for (const [phaseName, telemetry] of Object.entries(log.phaseStatuses ?? {})) {
         const ms = phaseDurationMs(telemetry);
         if (ms === null) continue;
-        if (!worst || ms > worst.ms) worst = { phase: phaseName, ms };
+        if (!worst || ms / phaseTimeoutMs(phaseName) > worst.ms / phaseTimeoutMs(worst.phase))
+          worst = { phase: phaseName, ms };
       }
       if (!worst) continue;
 
-      const fraction = worst.ms / PHASE_TIMEOUT_MS;
+      const timeoutMs = phaseTimeoutMs(worst.phase);
+      const fraction = worst.ms / timeoutMs;
       if (fraction < PHASE_BUDGET_WARN_FRACTION) continue;
 
       // Every warning's timestamp is dereferenced by the sort below
@@ -252,7 +256,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
         severity: fraction >= PHASE_BUDGET_ERROR_FRACTION ? "error" : "warning",
         message:
           `Phase "${worst.phase}" took ${Math.round(worst.ms / 1000)}s, ` +
-          `${Math.round(fraction * 100)}% of the ${PHASE_TIMEOUT_MS / 1000}s phase timeout. ` +
+          `${Math.round(fraction * 100)}% of the ${timeoutMs / 1000}s phase timeout. ` +
           `Exceeding it fails the phase, then drains its callback before the turn continues.`,
         source: "phaseBudget",
         timestamp,

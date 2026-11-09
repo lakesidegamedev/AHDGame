@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PROSPECT_DURATION_TURNS,
   PROSPECT_MAX_ACTIVE_PER_INITIATOR,
+  PROSPECT_NOT_EXTRACTION_MESSAGE,
+  corpCanProspect,
 } from "@/lib/constants/prospecting";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -76,6 +78,15 @@ async function run(db: MockDb, corp: Corporation) {
   );
 }
 
+describe("corpCanProspect", () => {
+  it("allows extraction as the primary or secondary type only", () => {
+    expect(corpCanProspect({ type: "extraction" })).toBe(true);
+    expect(corpCanProspect({ type: "retail", secondaryType: "extraction" })).toBe(true);
+    expect(corpCanProspect({ type: "retail", secondaryType: null })).toBe(false);
+    expect(corpCanProspect({ type: "technology" })).toBe(false);
+  });
+});
+
 describe("launchCorpProspect", () => {
   let db: MockDb;
   beforeEach(() => {
@@ -88,7 +99,11 @@ describe("launchCorpProspect", () => {
     primeEligible(db);
     const res = await run(db, makeCorp({ type: "technology" } as Partial<Corporation>));
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.status).toBe(400);
+    if (!res.ok) {
+      expect(res.status).toBe(400);
+      expect(res.error).toBe(PROSPECT_NOT_EXTRACTION_MESSAGE);
+      expect(res.error).not.toMatch(/with an extraction sector/);
+    }
   });
 
   it("allows a corporation with extraction as its secondary sector", async () => {

@@ -3760,8 +3760,8 @@
       "corporations": 2
     },
     "src/lib/banking/npcBanks.ts": {
-      "corporations": 5,
-      "states": 1,
+      "corporations": 6,
+      "states": 2,
       "untyped": 2
     },
     "src/lib/banking/outlook.ts": {
@@ -3788,7 +3788,7 @@
       "untyped": 1
     },
     "src/lib/banking/separationLaw.ts": {
-      "gameState": 2
+      "gameState": 3
     },
     "src/lib/banking/serviceInterbankLoan.ts": {
       "corporations": 1
@@ -4207,10 +4207,6 @@
       "federalBudget": 1,
       "gameState": 1,
       "states": 1
-    },
-    "src/lib/congress/applyPlayerWhip.ts": {
-      "electedOfficials": 4,
-      "untyped": 1
     },
     "src/lib/congress/billProposal.ts": {
       "gameState": 2

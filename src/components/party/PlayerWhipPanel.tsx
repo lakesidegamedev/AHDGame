@@ -62,9 +62,7 @@ interface PlayerWhipPanelProps {
 
 /**
  * Player Whip panel (national-party only). One-shot whip per (target, chamber)
- * that force-overwrites seated characters' votes in that chamber to the whip
- * direction, preserves the pre-whip value in whippedFromVote, and sends mail +
- * notification to each affected character.
+ * that sends advisory notifications without casting or overwriting votes.
  */
 export function PlayerWhipPanel({
   partyId,
@@ -84,7 +82,7 @@ export function PlayerWhipPanel({
   const whipUrl = endpointConfig?.whipUrl ?? `${partyApiUrl(effectiveCountryId, partyId)}/whip`;
 
   const [whippingId, setWhippingId] = useState<string | null>(null);
-  const [whipMode, setWhipMode] = useState<PlayerWhipMode>("soft");
+  const whipMode = "soft" as const;
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [billsByChamber, setBillsByChamber] = useState<Record<string, BillWhipItem[]>>({});
@@ -175,9 +173,9 @@ export function PlayerWhipPanel({
     direction: "for" | "against"
   ) => {
     postWhip(
-      { targetType: "bill", targetId: billId, chamber: chamberKey, direction, mode: whipMode },
+      { targetType: "bill", targetId: billId, chamber: chamberKey, direction, mode: "soft" },
       billId,
-      `${whipMode === "soft" ? "Soft" : "Hard"} Player Whip issued on "${billTitle}".`
+      `Soft Player Whip issued on "${billTitle}".`
     );
   };
 
@@ -293,31 +291,7 @@ export function PlayerWhipPanel({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-card-border bg-card px-4 py-3">
-        <p className="text-sm text-muted">
-          Soft Player Whips send an in-game suggestion only. Hard Player Whips immediately overwrite
-          eligible player votes until those players change their votes manually. Each bill or vote
-          target can receive one Soft Player Whip and one Hard Player Whip.
-        </p>
-      </div>
-      <div
-        role="tablist"
-        className="flex gap-1 p-1 rounded-lg bg-background border border-card-border w-fit"
-      >
-        {(["soft", "hard"] as const).map((mode) => (
-          <button
-            key={mode}
-            role="tab"
-            aria-selected={whipMode === mode}
-            onClick={() => setWhipMode(mode)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              whipMode === mode
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            {mode === "soft" ? "Soft" : "Hard"}
-          </button>
-        ))}
+        <p className="text-sm text-muted">{t("playerWhipExplanation")}</p>
       </div>
       <WhipTabsLayout
         countryId={effectiveCountryId}

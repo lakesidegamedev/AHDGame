@@ -165,6 +165,8 @@ export type ProducerPhysicalEnv = Pick<
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
   captiveDeliveryStage?: number;
+  /** gameConfig.fundedValuationOwnSiteCreditStage >= 1: own-site deliveries credited to the sector valuation only. */
+  ownSiteValuationCredit?: boolean;
   /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan; >= 2 on its marginal cost. */
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
@@ -286,6 +288,8 @@ export function prepareProducerPhysicalSector(input: {
   sector: CorporateSector;
   /** One buyer policy, shared across sectors; supplied by the world host. */
   inputPriceHeadroom: number;
+  /** Shared era prices for this preparation call; site price ratios remain local. */
+  basePrices?: Readonly<Record<CommodityType, number>>;
 }) {
   const { env, corporation: corp, sector } = input;
   const { lookups, currentTurn, currentYear } = env;
@@ -381,7 +385,7 @@ export function prepareProducerPhysicalSector(input: {
   // less output, so scaling inputs to the filtered yield would charge it the
   // full bill for the share it cannot extract.
   const inputYieldSupply = scaledCommodityRates(recipe.supply, tech.outputRateMult);
-  const prices = eraScaledBasePrices(lookups.eraUnitScale);
+  const prices = input.basePrices ?? eraScaledBasePrices(lookups.eraUnitScale);
   const commodities = producerRecipeCommodities(recipe, sector);
   const markets = new Map(
     [...commodities].map((key) => {
@@ -552,6 +556,10 @@ export function prepareProducerPhysicalSector(input: {
           floor: runFloor,
           soldOutGrowth: soldOutGrowth(receipt),
           demandPlan: (env.demandPlanStage ?? 0) >= 1,
+          ...((env.runPlanStage ?? 0) >= 2
+            ? { stockCoverTurns: Math.max(1, env.stockCoverTurns ?? 1) }
+            : {}),
+          ...((env.runPlanStage ?? 0) >= 3 ? { lossCutBelowSales: true } : {}),
         })
       : (env.demandPlanStage ?? 0) >= 1
         ? demandPlanRunShare(receipt, runFloor, soldOutGrowth(receipt))

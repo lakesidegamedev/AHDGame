@@ -172,7 +172,7 @@ export async function applyWhipVotesToBill(
   /**
    * On a CONCURRENT bill these forks are per-OFFICIAL, not per-bill.
    *
-   * The same shape as `applyPlayerWhipToBill` MINUS the snapshot — this function writes
+   * Each official is routed to their own chamber tally. This function writes
    * no `whippedFromVote`. Routing an upper-chamber official through the lower branch
    * would put their vote and weight in the lower tally, letting the bill pass on the
    * other house's votes.

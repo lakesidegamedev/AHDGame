@@ -37,6 +37,7 @@ export function RegionReferendumCampaign({
   const [data, setData] = useState<ReferendumResponse | null>(null);
 
   const load = useCallback(async () => {
+    if (countryId !== "UK") return;
     try {
       const res = await fetch(`/api/country/${countryId.toLowerCase()}/referendum`);
       if (!res.ok) return;
@@ -56,17 +57,38 @@ export function RegionReferendumCampaign({
   );
   if (!ref) return null;
 
-  const noun = ref.kind === "reunification" ? "Reunification" : "Independence";
   const yes = Math.round(ref.yesShare);
   const turnsLeft = ref.campaignCloseTurn != null ? ref.campaignCloseTurn - data.currentTurn : null;
 
   return (
-    <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/5 p-5">
-      <h2 className="text-sm font-semibold text-amber-600">{noun} referendum: public campaign</h2>
-      <div className="mt-3 space-y-2">
+    <section
+      aria-labelledby={`referendum-campaign-${regionId.toLowerCase()}`}
+      className="mb-6 overflow-hidden rounded-xl border-2 border-amber-500/50 bg-amber-500/10 p-5 sm:p-6"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <span className="inline-flex rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+            {t("activeCampaign")}
+          </span>
+          <h2
+            id={`referendum-campaign-${regionId.toLowerCase()}`}
+            className="text-lg font-semibold"
+          >
+            {t("campaignTitle", { kind: ref.kind })}
+          </h2>
+          <p className="text-sm text-muted">{t("campaignLinkHelp")}</p>
+        </div>
+        <Link
+          href={referendumDetailUrl(countryId, regionId)}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber-700 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+        >
+          {t("viewCampaign")} <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+      <div className="mt-5 space-y-2">
         <div className="flex justify-between text-xs text-muted">
-          <span>Yes {yes}%</span>
-          <span>No {100 - yes}%</span>
+          <span>{t("campaignYesSupport", { value: yes })}</span>
+          <span>{t("campaignNoSupport", { value: 100 - yes })}</span>
         </div>
         <div
           className="h-2 w-full overflow-hidden rounded-full bg-background/60"
@@ -74,29 +96,22 @@ export function RegionReferendumCampaign({
           aria-valuenow={yes}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`${noun} support`}
+          aria-label={t("campaignSupportLabel", { kind: ref.kind })}
         >
           <div className="h-full bg-primary" style={{ width: `${ref.yesShare}%` }} />
         </div>
-        <p className="text-xs text-muted">
-          Campaign under way.
-          {ref.campaignCloseTurn != null &&
-            ` The vote is held on turn ${ref.campaignCloseTurn}${
-              turnsLeft != null && turnsLeft > 0
-                ? ` (in ${turnsLeft} ${turnsLeft === 1 ? "turn" : "turns"})`
-                : ""
-            }.`}
-        </p>
+        {ref.campaignCloseTurn != null && (
+          <p className="text-xs text-muted">
+            {t("campaignVoteOnTurn", { turn: ref.campaignCloseTurn })}
+            {turnsLeft != null &&
+              turnsLeft > 0 &&
+              ` ${t("campaignTurnsLeft", { turns: turnsLeft })}`}
+          </p>
+        )}
         {ref.kind !== "peace_agreement" && (
           <p className="text-xs text-muted">{t("campaignBaselineHelp")}</p>
         )}
-        <Link
-          href={referendumDetailUrl(countryId, regionId)}
-          className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-600/90"
-        >
-          View campaign →
-        </Link>
       </div>
-    </div>
+    </section>
   );
 }

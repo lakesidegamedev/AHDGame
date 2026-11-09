@@ -100,6 +100,11 @@ export interface CorporationRef {
    * flags; absent = 0 (25% floor odds).
    */
   rdScore?: number;
+  /**
+   * True when the company's own type or secondary type is extraction, the only
+   * companies the server lets launch a survey. Absent = not offered.
+   */
+  canProspect?: boolean;
 }
 
 export interface CeoRef {

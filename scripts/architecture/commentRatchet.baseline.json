@@ -4557,10 +4557,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/congress/applyPlayerWhip.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/congress/applyWhipVotes.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
@@ -9031,7 +9027,7 @@
     },
     "src/lib/market/producerMarket/outputResponseRules.ts": {
       "longBlocks": 3,
-      "narrativeLines": 0
+      "narrativeLines": 2
     },
     "src/lib/market/producerMarket/producerCreditRules.ts": {
       "longBlocks": 1,
@@ -12327,6 +12323,10 @@
     },
     "src/lib/turn/corporation/operatingCashSettlement.ts": {
       "longBlocks": 1,
+      "narrativeLines": 1
+    },
+    "src/lib/turn/corporation/producerMarketPhase.ts": {
+      "longBlocks": 0,
       "narrativeLines": 1
     },
     "src/lib/turn/corporation/producerMarketShadowPhase.ts": {

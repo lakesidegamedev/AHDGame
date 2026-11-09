@@ -101,7 +101,7 @@ export async function processGameHealthSnapshot(
     turnWarnings.push({ phase, message, turn, timestamp: now });
   }
   const turnErrors: TurnError[] = countedPhaseEntries
-    .filter(([, telemetry]) => telemetry.status === "failed" || telemetry.status === "notReached")
+    .filter(([, telemetry]) => telemetry.status === "failed")
     .map(([phase, telemetry]) => ({
       phase,
       message: telemetry.message ?? "Phase failed before the turn completed.",

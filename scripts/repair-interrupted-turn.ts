@@ -28,7 +28,8 @@
  *   FULLY_COMMITTED    Settlement record is `settled`, history rows are
  *                      comparable to the previous turn, and no producer sector
  *                      is behind the target turn. `--apply` marks the phase
- *                      completed so the resume skips it.
+ *                      completed only with a valid stored corporate income
+ *                      result, so resume can restore the downstream flows.
  *   PARTIAL            Anything else. Refuses to apply. The output lists what is
  *                      present and missing; a manual heal is required.
  *
@@ -39,7 +40,10 @@
  * listed so you can heal them separately.
  */
 import type { Db } from "mongodb";
-import { readCrashedTurnPhaseState } from "@/simulation/engine/turnPhaseResumeResults";
+import {
+  readCrashedTurnPhaseState,
+  encodeResumeResult,
+} from "@/simulation/engine/turnPhaseResumeResults";
 import type { TurnPhaseTelemetry, TurnPhaseTelemetryMap } from "@/lib/db/types/turnPhaseTelemetry";
 
 export const REPAIR_PHASE = "corporationTurn";
@@ -254,7 +258,7 @@ function nextStepText(verdict: RepairVerdict): string {
   if (verdict === "NOTHING_COMMITTED")
     return `--apply marks ${REPAIR_PHASE} failed/mustStop. The next resume (after the lock goes stale) reruns it, then the remaining phases.`;
   if (verdict === "FULLY_COMMITTED")
-    return `--apply marks ${REPAIR_PHASE} completed. The next resume skips it and runs the remaining phases.`;
+    return `--apply requires a verified stored corporate income result before marking ${REPAIR_PHASE} completed. Resume restores that result without rerunning the phase.`;
   return "Nothing will be written.";
 }
 
@@ -307,6 +311,21 @@ export async function applyRepair(
     throw new RepairRefusedError(
       "The lock was touched in the last 2 minutes; a worker may be alive. Re-run later."
     );
+  let completionResult: Record<string, unknown> | null = null;
+  if (plan.verdict === "FULLY_COMMITTED") {
+    const state = await db
+      .collection<GameStateDoc & { _id: string }>("gameState")
+      .findOne({ _id: "current" }, { projection: { processingPhaseResults: 1 } });
+    const results = state?.processingPhaseResults;
+    completionResult = encodeResumeResult(
+      REPAIR_PHASE,
+      results && typeof results === "object" ? Reflect.get(results, REPAIR_PHASE) : undefined
+    );
+    if (!completionResult)
+      throw new RepairRefusedError(
+        "Corporate writes are committed but their income result is missing or invalid. Restore a verified completion result before marking completed; no zero income will be invented."
+      );
+  }
   const marker = repairMarker(plan.verdict, e.corporationTurnStatus, opts.now);
   const guard: Record<string, unknown> = {
     _id: "current",
@@ -315,12 +334,17 @@ export async function applyRepair(
   };
   guard[`processingPhaseStatuses.${REPAIR_PHASE}.updatedAt`] =
     e.corporationTurnStatus?.updatedAt ?? null;
-  const res = await db
-    .collection("gameState")
-    .updateOne(
-      guard as never,
-      { $set: { [`processingPhaseStatuses.${REPAIR_PHASE}`]: marker } } as never
-    );
+  const res = await db.collection("gameState").updateOne(
+    guard as never,
+    {
+      $set: {
+        [`processingPhaseStatuses.${REPAIR_PHASE}`]: marker,
+        ...(completionResult
+          ? { [`processingPhaseResults.${REPAIR_PHASE}`]: completionResult }
+          : {}),
+      },
+    } as never
+  );
   if (res.matchedCount !== 1)
     throw new RepairRefusedError(
       "Game state changed while repairing; nothing written. Re-run the dry run."

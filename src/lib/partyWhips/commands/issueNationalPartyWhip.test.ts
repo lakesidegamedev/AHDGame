@@ -12,14 +12,6 @@ import {
 vi.mock("@/lib/partyWhips/playerWhip", () => ({
   getEligibleCharactersForWhip: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("@/lib/congress/applyPlayerWhip", () => ({
-  applyPlayerWhipToBill: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToLeadership: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToGovernmentVote: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToCabinet: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToVacateMotion: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-  applyPlayerWhipToImpeachment: vi.fn().mockResolvedValue({ overridden: 0, alreadyAligned: 0 }),
-}));
 vi.mock("@/lib/congress/applyWhipVotes", () => ({
   applyWhipVotesToBill: vi.fn().mockResolvedValue({ fellInLine: 0, ignored: 0 }),
   applyWhipVotesToLeadership: vi.fn().mockResolvedValue({ fellInLine: 0, ignored: 0 }),
@@ -37,7 +29,6 @@ vi.mock("@/lib/time/gameTime", () => ({
 vi.mock("@/lib/parties/antiAbuseGuards", () => ({
   getPartyNppControlStatus: vi.fn().mockResolvedValue({ ok: true }),
 }));
-vi.mock("@/lib/mail/systemMail", () => ({ sendSystemMails: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 
@@ -204,39 +195,43 @@ describe("issueNationalPartyWhip", () => {
     ).rejects.toBeInstanceOf(ApiError);
   });
 
-  it("issues a hard player whip, overrides votes and mails the eligible players", async () => {
+  it("issues a soft player whip and notifies the eligible players", async () => {
     const eligibleId = new ObjectId();
     const userId = new ObjectId();
     const { getEligibleCharactersForWhip } = await import("@/lib/partyWhips/playerWhip");
     vi.mocked(getEligibleCharactersForWhip).mockResolvedValueOnce([eligibleId]);
-    const { applyPlayerWhipToBill } = await import("@/lib/congress/applyPlayerWhip");
-    vi.mocked(applyPlayerWhipToBill).mockResolvedValueOnce({
-      overridden: 1,
-      alreadyAligned: 0,
-    } as never);
     db.collectionMocks["characters"]!.find.mockReturnValue(
       makeCursor([{ _id: eligibleId, name: "Senator", userId, sequentialId: 7 }])
     );
-    const { sendSystemMails } = await import("@/lib/mail/systemMail");
 
-    const result = await run(request({ targetId: billId.toString(), audience: "character" }));
+    const result = await run(
+      request({ targetId: billId.toString(), audience: "character", mode: "soft" })
+    );
 
     expect(result).toEqual({
       ok: true,
       body: expect.objectContaining({
         audience: "character",
-        mode: "hard",
-        affected: 1,
+        mode: "soft",
+        affected: 0,
         alreadyAligned: 0,
         mailedCount: 1,
-        message: "Hard Player Whip issued. 1 players overridden, 0 already aligned, 1 notified.",
+        message: "Soft Player Whip issued. 1 players notified.",
       }),
     });
-    expect(vi.mocked(sendSystemMails).mock.calls[0]?.[1]?.[0]).toMatchObject({
-      toCharacterId: eligibleId,
-      subject: 'Party Whip: Vote AYE on "Test Bill"',
-      senderName: "Party Whip",
-    });
+  });
+
+  it("rejects a hard whip aimed at players", () => {
+    expect(
+      nationalPartyWhipSchema.safeParse({
+        targetType: "bill",
+        targetId: billId.toString(),
+        chamber: "senate",
+        direction: "for",
+        mode: "hard",
+        audience: "character",
+      }).success
+    ).toBe(false);
   });
 
   it("rejects a second player whip of the same mode", async () => {

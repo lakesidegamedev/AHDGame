@@ -343,7 +343,16 @@
       "confirm": "Change Westminster’s stance for {region} to {policy} for {cost} AP?",
       "saved": "Westminster’s stance has been updated.",
       "viewOffice": "View First Minister’s office",
-      "readOnly": "Only the sitting Prime Minister can change Westminster’s stance."
+      "readOnly": "Only the sitting Prime Minister can change Westminster’s stance.",
+      "activeCampaign": "Campaign active",
+      "campaignTitle": "{kind, select, independence {Independence campaign} reunification {Reunification campaign} peace_agreement {Peace agreement campaign} other {Referendum campaign}}",
+      "campaignLinkHelp": "See the latest support and campaign activity, and take part in the referendum campaign.",
+      "viewCampaign": "View campaign",
+      "campaignYesSupport": "Yes {value}%",
+      "campaignNoSupport": "No {value}%",
+      "campaignSupportLabel": "{kind, select, independence {Independence support} reunification {Reunification support} peace_agreement {Peace agreement support} other {Referendum support}}",
+      "campaignVoteOnTurn": "The vote is held on turn {turn}.",
+      "campaignTurnsLeft": "{turns, plural, one {# turn remaining.} other {# turns remaining.}}"
     },
     "settingsMenu": {
       "themes": {

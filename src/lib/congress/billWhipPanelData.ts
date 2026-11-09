@@ -180,7 +180,7 @@ export async function buildBillWhipPanelData(
         chamberKey: chamber.key,
         chamberLabel: chamber.shortName,
         playerWhip: buildSummary(
-          chamberWhips.filter((whip) => whip.audience === "character"),
+          chamberWhips.filter((whip) => whip.audience === "character" && whip.mode === "soft"),
           1,
           party
         ),

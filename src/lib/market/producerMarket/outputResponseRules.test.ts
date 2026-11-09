@@ -404,6 +404,59 @@ describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
     expect(planRecoveryRunShare(partial, { demandPlan: true })).toBeGreaterThanOrEqual(0.6);
   });
 
+  it("stage 2: stock beyond the cover lowers the never-below-sales floor", () => {
+    // A gas plant that sold what it made and carried an equal pile on top.
+    const piled = receipt({
+      plannedRunShare: 1,
+      producedUnits: 100,
+      offeredUnits: 260,
+      soldUnits: 100,
+      revenue: 1000,
+      inputsConsumed: 100,
+    });
+    const before = planRecoveryRunShare(piled, { demandPlan: true });
+    const after = planRecoveryRunShare(piled, { demandPlan: true, stockCoverTurns: 1 });
+    // Held 160 against a one-turn cover of 100: 60 excess, floor (100 - 60) / 100.
+    expect(before).toBeGreaterThanOrEqual(1);
+    expect(after).toBeLessThan(before);
+    expect(after).toBeGreaterThanOrEqual(0.4);
+    // No pile beyond the cover: the floor is unchanged.
+    const lean = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 90,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 400,
+    });
+    expect(
+      planRecoveryRunShare(lean, { demandPlan: true, stockCoverTurns: 1 })
+    ).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("stage 3: a sold-out line selling below its running cost steps down below its sales", () => {
+    // Sold all 50 it made at 2 a unit; inputs 1, wages 2 and site 1 a unit.
+    const losing = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 50,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 50,
+      labourPaid: 100,
+      otherOperatingPaid: 50,
+    });
+    const held = planRecoveryRunShare(losing, { demandPlan: true });
+    const cut = planRecoveryRunShare(losing, { demandPlan: true, lossCutBelowSales: true });
+    expect(held).toBeGreaterThanOrEqual(0.5);
+    expect(cut).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 10);
+    // A sold-out line that pays its running costs keeps growing.
+    const paying = receipt({ ...losing, revenue: 400 });
+    expect(
+      planRecoveryRunShare(paying, { demandPlan: true, lossCutBelowSales: true })
+    ).toBeGreaterThan(0.5);
+  });
+
   it("an input or cash cut does not lower the next plan", () => {
     for (const runCutBy of [["cash"], ["inputs"]]) {
       const next = planRecoveryRunShare({ ...cut, runCutBy }, { demandPlan: true });

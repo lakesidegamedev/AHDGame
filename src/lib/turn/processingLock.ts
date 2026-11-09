@@ -39,6 +39,16 @@ export function resolvePhaseTimeoutMs(
 
 export const PHASE_TIMEOUT_MS = resolvePhaseTimeoutMs();
 
+/**
+ * Corporate settlement has a fixed ten-minute window; other phases retain their configured limit.
+ * Turns 753-761 ran the phase for 287-433 s, so a six-minute window raised a timeout
+ * warning on most turns and left every late finish to the drain path. Ten minutes stays
+ * under the 20-minute stale-lock cutoff.
+ */
+export function phaseTimeoutMs(phase: string): number {
+  return phase === "corporationTurn" ? 10 * 60 * 1000 : PHASE_TIMEOUT_MS;
+}
+
 export type ProcessingLockSnapshot = Pick<
   GameState,
   | "isProcessing"

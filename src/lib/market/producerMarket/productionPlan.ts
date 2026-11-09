@@ -155,6 +155,9 @@ export interface ProducerOperatingResult {
   /** Matching management-account entries between own sites; no treasury cash moves. */
   internalSupplyIncome?: number;
   internalSupplyCharge?: number;
+  /** Own-site deliveries at the lane price, valuation only; they net to zero per company. */
+  valuationCredit?: number;
+  valuationCharge?: number;
   capacityUnits: number;
   activeUnits: number;
   /** Physical proposal before funded order matching constrains actual production. */
