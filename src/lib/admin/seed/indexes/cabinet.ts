@@ -6,6 +6,22 @@ import { ensureIndex } from "./helpers";
 export async function seedCabinetIndexes(db: Db, log: (msg: string) => void) {
   log("Cabinet indexes:");
 
+  // Departed heads of government and their legacies: read per country, newest first.
+  await ensureIndex(
+    db,
+    "leaderLegacies",
+    { countryId: 1, endTurn: -1 },
+    { name: "leaderLegacies_countryId_endTurn" },
+    log
+  );
+  await ensureIndex(
+    db,
+    "countryBriefs",
+    { countryId: 1, turn: -1 },
+    { name: "countryBriefs_countryId_turn" },
+    log
+  );
+
   // Unified cabinetMembers (the single source of truth for all countries).
   await ensureIndex(
     db,

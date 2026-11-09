@@ -13,6 +13,9 @@
  * the page renders lands on a route that exists.
  */
 
+import { INTEREST_SPIRAL_YEARS_FOR_RESTRUCTURE } from "@/lib/budget/rules/fiscalStabilizer";
+import type { BriefAction, BriefKind } from "./countryBriefs";
+
 /** Sub-pages a background country still has: currency trading works for every currency. */
 export const BACKGROUND_COUNTRY_SUBPAGES: readonly string[] = ["forex"];
 
@@ -263,6 +266,77 @@ export function buildBilateralTrade(input: {
   };
 }
 
+// ── Fiscal state ─────────────────────────────────────────────────────────────
+
+/** The slice of the national fiscal state the page reads. */
+export interface NationalFiscalInput {
+  interestSpiralYears?: number;
+  programmeScale?: number;
+  taxScale?: number;
+  lastPackage?: {
+    fiscalYear: number;
+    turn: number;
+    sizeGdpShare: number;
+    taxRise: number;
+    spendingCut: number;
+    approvalCost: number;
+  } | null;
+}
+
+export interface BackgroundFiscalView {
+  /** Years debt interest has taken over half of revenue. */
+  interestSpiralYears: number;
+  /** Years at which the country restructures. */
+  spiralLimitYears: number;
+  /** Share of programme spending left after cuts, percent (100 = none made). */
+  programmesRemainingPercent: number;
+  /** Cumulative tax rise, percent (0 = none). */
+  taxRisePercent: number;
+  lastPackage: {
+    fiscalYear: number;
+    turn: number;
+    /** Percent of GDP. */
+    size: number;
+    taxRise: number;
+    spendingCut: number;
+    approvalCost: number;
+  } | null;
+}
+
+export function buildFiscalView(
+  fiscal: NationalFiscalInput | null | undefined
+): BackgroundFiscalView | null {
+  if (!fiscal) return null;
+  const pkg = fiscal.lastPackage;
+  return {
+    interestSpiralYears: Math.max(0, Math.floor(finiteOrNull(fiscal.interestSpiralYears) ?? 0)),
+    spiralLimitYears: INTEREST_SPIRAL_YEARS_FOR_RESTRUCTURE,
+    programmesRemainingPercent: (finiteOrNull(fiscal.programmeScale) ?? 1) * 100,
+    taxRisePercent: ((finiteOrNull(fiscal.taxScale) ?? 1) - 1) * 100,
+    lastPackage: pkg
+      ? {
+          fiscalYear: pkg.fiscalYear,
+          turn: pkg.turn,
+          size: pkg.sizeGdpShare * 100,
+          taxRise: pkg.taxRise * 100,
+          spendingCut: pkg.spendingCut * 100,
+          approvalCost: pkg.approvalCost,
+        }
+      : null,
+  };
+}
+
+// ── Briefs ───────────────────────────────────────────────────────────────────
+
+export interface BackgroundBriefView {
+  id: string;
+  kind: BriefKind;
+  headline: string;
+  body: string;
+  turn: number;
+  actions: BriefAction[];
+}
+
 // ── Whole page ───────────────────────────────────────────────────────────────
 
 export interface BackgroundCurrencyView {
@@ -298,4 +372,6 @@ export interface BackgroundCountryView {
   nationalIndex: BackgroundIndexView | null;
   alliances: { id: string; name: string; shortName: string }[];
   crises: { id: string; name: string; startTurn: number }[];
+  fiscal: BackgroundFiscalView | null;
+  briefs: BackgroundBriefView[];
 }
