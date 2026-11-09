@@ -4705,14 +4705,6 @@
       "longBlocks": 1,
       "narrativeLines": 2
     },
-    "src/lib/constants/countries.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 2
-    },
-    "src/lib/constants/countriesCore.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/constants/countryClientConfig.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -4792,10 +4784,6 @@
     "src/lib/constants/marketizationSchedule.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/metricDefinitions.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/constants/monetaryEra.test.ts": {
       "longBlocks": 0,
@@ -4900,10 +4888,6 @@
     "src/lib/constants/stateAdjacency.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/constants/states.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 2
     },
     "src/lib/constants/techTree/costs.ts": {
       "longBlocks": 1,
