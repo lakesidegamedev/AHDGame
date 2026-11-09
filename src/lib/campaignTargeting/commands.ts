@@ -110,7 +110,10 @@ export async function quoteTargetedAds(
           .collection<Character>("characters")
           .findOne({ _id: candidate.characterId }, { projection: { policies: 1, homeState: 1 } });
   if (!owner) throw notFound("Candidate not found");
-  if (!["president", "uachtaran", "special_president"].includes(election.electionType) && stateId !== owner.homeState)
+  if (
+    !["president", "uachtaran", "special_president"].includes(election.electionType) &&
+    stateId !== owner.homeState
+  )
     throw forbidden("Target the candidate’s home state. Other states require a presidential race.");
   return quoteAdAudience(
     db,

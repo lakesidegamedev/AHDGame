@@ -48,9 +48,15 @@ interface DueFill {
   succession: ExecutiveSuccessionState;
 }
 
-/** Russia's 1991 presidency runs on its own constitutional ballot machinery. */
+/** Presets where a country's presidency already runs on its own constitutional ballot machinery. */
+const OWN_PRESIDENTIAL_BALLOT_PRESETS: Readonly<Partial<Record<CountryId, readonly string[]>>> = {
+  RU: ["1991-default"],
+};
+
 function ownsPresidentialBallot(countryId: CountryId, preset: string | undefined): boolean {
-  return countryId === "RU" && preset === "1991-default";
+  return (
+    preset !== undefined && OWN_PRESIDENTIAL_BALLOT_PRESETS[countryId]?.includes(preset) === true
+  );
 }
 
 function buildSpecialPresidentElection(
