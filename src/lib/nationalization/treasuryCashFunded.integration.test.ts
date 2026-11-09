@@ -5,6 +5,7 @@ import {
   remitToTreasury,
   creditTreasuryProceeds,
   collectFundedCorporationPayment,
+  creditTreasuryProceedsPaired,
   settleFundedTreasuryCompensation,
 } from "./treasury";
 import { loadTreasuryCashContext } from "./treasuryLedger";
@@ -502,5 +503,63 @@ describe("funded Treasury corporation transfers", () => {
       site: "test",
     });
     expect(paid).toBeNull();
+  });
+
+  it("credits privatization proceeds on one paired receipt that cannot pay twice", async () => {
+    const { db } = world();
+    const input = {
+      countryId: "CN" as const,
+      now: new Date(),
+      flow: "privatization_auction_proceeds" as const,
+      key: "auction-1",
+      site: "test",
+      amountLocal: 40,
+    };
+
+    expect(await creditTreasuryProceedsPaired(db as unknown as Db, input)).toBe(40);
+    expect(await creditTreasuryProceedsPaired(db as unknown as Db, input)).toBe(40);
+
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 50,
+      treasuryBalance: 50,
+    });
+    expect(db.collection("bankMoneyMoves").docs).toHaveLength(1);
+  });
+
+  it("converts an anchor amount before the paired credit", async () => {
+    const { db } = world();
+    const credited = await creditTreasuryProceedsPaired(db as unknown as Db, {
+      countryId: "CN",
+      now: new Date(),
+      flow: "nationalization_compensation",
+      key: "recovery-1",
+      site: "test",
+      amountAnchor: 25,
+    });
+
+    expect(credited).toBe(25);
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({ treasuryCashLocal: 35 });
+  });
+
+  it("falls back to the plain proceeds credit when the funded ledger is off", async () => {
+    const { db } = world();
+    await db
+      .collection("gameConfig")
+      .updateOne({ _id: "default" }, { $set: { treasuryCashLedgerEnabled: false } });
+    const credited = await creditTreasuryProceedsPaired(db as unknown as Db, {
+      countryId: "CN",
+      now: new Date(),
+      flow: "privatization_ipo",
+      key: "ipo-1",
+      site: "test",
+      amountLocal: 40,
+    });
+
+    expect(credited).toBe(40);
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 10,
+      treasuryBalance: 50,
+    });
+    expect(db.collection("bankMoneyMoves").docs).toEqual([]);
   });
 });
