@@ -12,6 +12,7 @@ interface UseStatePartyDataReturn {
   stateParty: StatePartyData | null;
   currentTurn: number;
   loading: boolean;
+  loadError: boolean;
   // Controlled treasury state (sync'd from stateParty on fetch)
   taxRate: number;
   setTaxRate: (v: number) => void;
