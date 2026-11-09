@@ -14,6 +14,8 @@ export interface TechCorpView {
   techDecadeLane?: Record<string, TechLane>;
   /** Frontier programmes bought after the last tier (see ./frontier). */
   frontierProgrammes?: FrontierProgrammeCounts;
+  /** Frontier race methods held (see lib/frontierRaces). */
+  frontierMethods?: Record<string, "winner" | "licence">;
 }
 
 export type UnlockBlockReason =

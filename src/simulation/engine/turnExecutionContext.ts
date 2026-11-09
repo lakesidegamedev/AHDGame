@@ -157,6 +157,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     npcBankPolicyTurn: null,
     bankingTurn: null,
     pensionTurn: null,
+    frontierRaces: null,
     bankSolvencyTurn: null,
     treasuryTurn: null,
     indexFunds: null,

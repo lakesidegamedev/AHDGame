@@ -422,6 +422,12 @@ export interface TurnLog {
       schemesInvesting: number;
     } | null;
 
+    /** Frontier programme races: winners named and licences issued this turn. */
+    frontierRaces?: {
+      racesWon: number;
+      licencesIssued: number;
+    } | null;
+
     bankSolvencyTurn: {
       banksEvaluated: number;
       fled: number;

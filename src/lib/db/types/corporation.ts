@@ -1012,6 +1012,12 @@ export interface Corporation {
    * sector every turn and never expire. Absent ⇒ none.
    */
   frontierProgrammes?: { output?: number; input?: number };
+  /**
+   * Frontier race methods held (lib/frontierRaces): "winner" for the first to
+   * finish a programme, "licence" for a loser once the sunset delay has run.
+   * Each adds plant output to the primary sector. Absent => none.
+   */
+  frontierMethods?: Record<string, "winner" | "licence">;
   /** Legal structure of this corporation (e.g. "us_c_corp"). Absent = country default. */
   legalStructure?: import("../../constants/legalStructures").LegalStructureId;
   /** Turn after which the legal structure may be changed again (instant-change cooldown for private corps). */

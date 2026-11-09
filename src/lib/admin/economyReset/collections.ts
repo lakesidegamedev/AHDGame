@@ -371,6 +371,7 @@ export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
   "partyStrengthPressure",
   "peaceOffers",
   "pendingTreasuryTransactions",
+  "frontierRaces",
   "pensionSchemes",
   "playerEndorsementLocks",
   "playerEndorsements",

@@ -12,6 +12,7 @@ import {
   type TechEffect,
 } from "@/lib/constants/techTree/effects";
 import { frontierProgrammeEffects } from "@/lib/constants/techTree/frontier";
+import { frontierMethodEffects } from "@/lib/frontierRaces/rules";
 import {
   TECH_DECADES,
   getDecadeById,
@@ -104,7 +105,10 @@ export function getSectorTechEffects(
       return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
     return isPrimary ? node.effects : [];
   });
-  if (isPrimary) effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
+  if (isPrimary) {
+    effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
+    effects.push(...frontierMethodEffects(corp.frontierMethods));
+  }
   return aggregateTechEffects(effects);
 }
 
@@ -329,6 +333,9 @@ export function getSectorTechEffectsForYear(
     return isPrimary ? node.effects : [];
   });
   // Frontier programmes belong to no decade, so they never expire.
-  if (isPrimary) effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
+  if (isPrimary) {
+    effects.push(...frontierProgrammeEffects(corp.frontierProgrammes));
+    effects.push(...frontierMethodEffects(corp.frontierMethods));
+  }
   return aggregateTechEffects(effects);
 }

@@ -24,6 +24,7 @@ export type WireEventType =
   | "crisis_aid_pledged"
   | "crisis_aid_passed"
   | "crisis_aid_failed"
+  | "frontier_race_won"
   // Per-race campaign wire. Unlike the economy events above, these carry an
   // `electionId` (and usually a `campaignId`) so the ticker on a race page can
   // ask for just that race's traffic. Headlines come from

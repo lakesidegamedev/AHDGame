@@ -918,6 +918,12 @@ export const RUNTIME: CollectionEntry[] = [
       "Player order receipts and audit outboxes belong to the same world as fund cash, positions and transactions. Never expire within an active world.",
   },
   {
+    name: "frontierRaces",
+    category: "runtime",
+    notes:
+      "Per-world frontier programme race funding, winners and licences. Rebuilt through gameplay and must not survive a world reset.",
+  },
+  {
     name: "pensionSchemes",
     category: "runtime",
     notes:

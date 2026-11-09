@@ -19,6 +19,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "bankingTurn",
   "savingsShadowTurn",
   "pensionTurn",
+  "frontierRaces",
   "prospectingResolution",
   "macroCountryTurn",
   "bondTurn",
