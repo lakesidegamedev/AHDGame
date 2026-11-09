@@ -1322,7 +1322,20 @@ function fundedIdleWeights(
     else weights.push({ cause: "ramping", w: 1 - runShare });
   }
   const shortfall = Math.max(0, runShare - made);
-  if (shortfall > 0)
+  // Short inputs cut the run from the plant's own target, which productivity,
+  // staffing and cash already hold below capacity at a planned share of 1. The
+  // receipt's billed share is made / target, so the input cut is the units
+  // between them; the rest of the gap to capacity belongs to the other legs.
+  const billed = receipt.billedRunShare;
+  const inputCut =
+    cutBy.includes("inputs") && typeof billed === "number" && billed > 0 && billed < 1
+      ? Math.min(shortfall, made * (1 / billed - 1))
+      : null;
+  if (inputCut != null) {
+    if (inputCut > 0) weights.push({ cause: "inputs", w: inputCut });
+    if (cutBy.includes("cash") && shortfall - inputCut > 0)
+      weights.push({ cause: "cash", w: shortfall - inputCut });
+  } else if (shortfall > 0)
     weights.push({
       cause:
         cutBy.length > 0
