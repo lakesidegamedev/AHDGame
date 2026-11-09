@@ -92,6 +92,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
 import {
   fundedLedgers,
+  withStatelessCountryDemand,
   PRODUCER_MARKET_OUTCOMES,
   type FundedLedgerRow,
 } from "@/lib/market/producerMarket/fundedLedgerRules";
@@ -154,9 +155,13 @@ import {
 } from "./commodity/pricing";
 import { buildBlocsByCountry, buildCurtainedCountries } from "./commodity/tradeContext";
 import { runFreightSettlementPhase } from "./commodity/sourcingSettlement";
-import { buildOwnRoutes } from "@/lib/logistics/ownRoutes";
+import {
+  buildOwnFreightCapacity,
+  buildOwnMarketSupply,
+  buildOwnRoutes,
+} from "@/lib/logistics/ownRoutes";
 import { stateHops } from "@/lib/logistics/stateDistance";
-import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
+import { ownRouteIdentity, resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
 import { persistTurnOutputs } from "./commodity/persistence";
 import { loadBlockadeClosure } from "./commodity/blockadeClosure";
 import { bookExtractionDepletion } from "./commodity/extractionDepletion";
@@ -955,29 +960,36 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     demandUsesByState.set(stateId, byCommodity);
   }
 
-  const ownRoutes = buildOwnRoutes({
-    sectors: sectorData
-      .filter((s) => !!s.corporationId && !!s.sectorId && !!s.stateId)
-      .map((s) => ({
-        sectorId: s.sectorId,
-        corporationId: s.corporationId!.toString(),
-        stateId: s.stateId,
+  const ownRouteSectors = sectorData
+    .filter((s) => !!s.corporationId && !!s.sectorId && !!s.stateId)
+    .map((s) => ({
+      sectorId: s.sectorId,
+      corporationId: s.corporationId!.toString(),
+      stateId: s.stateId,
+    }));
+  const ownRoutePolicies = resolveSupplyPolicies(
+    allCorporations.map((c) => ({
+      id: c._id.toString(),
+      totalShares: c.totalShares,
+      holders: (c.shareholders ?? []).map((h) => ({
+        corporationId: h.corporationId?.toString(),
+        shares: h.shares,
       })),
+      policy: c.internalSupplyPolicy,
+    }))
+  );
+  const ownRoutes = buildOwnRoutes({
+    sectors: ownRouteSectors,
     supplyBySector: sectorUnits.supplyBySector,
     inputDemandBySector: sectorUnits.inputDemandBySector,
-    policies: resolveSupplyPolicies(
-      allCorporations.map((c) => ({
-        id: c._id.toString(),
-        totalShares: c.totalShares,
-        holders: (c.shareholders ?? []).map((h) => ({
-          corporationId: h.corporationId?.toString(),
-          shares: h.shares,
-        })),
-        policy: c.internalSupplyPolicy,
-      }))
-    ),
+    policies: ownRoutePolicies,
     stateToCountry,
     hops: stateHops,
+  });
+  const ownFreightCapacityByState = buildOwnFreightCapacity({
+    sectors: ownRouteSectors,
+    supplyBySector: sectorUnits.supplyBySector,
+    policies: ownRoutePolicies,
   });
 
   // ── Landed-price freight settlement (shadow or active) ─────────────────
@@ -997,6 +1009,12 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         affinityFor,
         demandUsesByState,
         ownRoutes,
+        ownFreightCapacityByState,
+        ownFreightMarketSupply: buildOwnMarketSupply({
+          sectors: ownRouteSectors,
+          supplyBySector: sectorUnits.supplyBySector,
+          policies: ownRoutePolicies,
+        }),
       },
       turn,
       now,
@@ -1108,7 +1126,13 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     for (const [stateId, m] of funded.byState)
       byState.set(stateId, new Map([...m].map(([c, b]) => [c as CommodityType, b])));
     byCountry.clear();
-    for (const [countryId, m] of aggregateByCountry(byState, stateToCountry))
+    // Public, military and investment buyers order from national wallets with
+    // no state. Their rows name a country only when the producer turn ran with
+    // producerNationalPublicDemandStage on; otherwise this adds nothing.
+    for (const [countryId, m] of withStatelessCountryDemand(
+      aggregateByCountry(byState, stateToCountry),
+      funded.statelessByCountry
+    ))
       byCountry.set(countryId, m);
     fundedBookRows = outcomes.books;
   }
@@ -1142,6 +1166,19 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     priceCurrentYear,
     freightSettlementActive,
     freightRampFraction,
+    ownRouteCorporationIds: (() => {
+      const byRoute = new Map<string, string[]>();
+      for (const sector of ownRouteSectors) {
+        const routeId = ownRouteIdentity(
+          sector.corporationId,
+          ownRoutePolicies.get(sector.corporationId)
+        );
+        const list = byRoute.get(routeId) ?? [];
+        if (!list.includes(sector.corporationId)) list.push(sector.corporationId);
+        byRoute.set(routeId, list);
+      }
+      return byRoute;
+    })(),
     freightSettlement,
     existingPriceMap,
     nudgeMap,

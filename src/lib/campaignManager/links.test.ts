@@ -4,6 +4,9 @@ import { election } from "./rules/__fixtures__/election";
 import {
   campaignManagerCountry,
   campaignManagerHref,
+  campaignPageHref,
+  raceCampaignHref,
+  standaloneCampaignHref,
   primaryTierHref,
   raceHref,
   presidentialRedirect,
@@ -192,6 +195,49 @@ describe("campaignManagerHref country", () => {
     expect(campaignManagerHref({ country: "UK" })).toBe("/campaign-manager?country=UK");
     expect(campaignManagerHref({ country: "JP", type: "governor" })).toBe(
       "/campaign-manager?country=JP&type=governor"
+    );
+  });
+});
+
+describe("campaign page links", () => {
+  const ids = { campaignId: "c1", electionId: "e1" };
+
+  it("opens a campaign on its race page in Campaign mode", () => {
+    expect(campaignPageHref({ ...ids, countryId: "US" })).toBe(
+      "/elections/e1?view=campaign&campaign=c1"
+    );
+  });
+
+  it("carries the rail tab and region", () => {
+    expect(campaignPageHref({ ...ids, countryId: "US", tab: "field", region: "OH" })).toBe(
+      "/elections/e1?view=campaign&campaign=c1&tab=field&region=OH"
+    );
+    expect(raceCampaignHref("e1", "c1", { tab: "field" })).toBe(
+      "/elections/e1?view=campaign&campaign=c1&tab=field"
+    );
+  });
+
+  it("keeps Russia on the standalone campaign page", () => {
+    expect(campaignPageHref({ ...ids, countryId: "RU" })).toBe("/campaign/c1");
+  });
+
+  it("keeps the Political Operations frame on the standalone page", () => {
+    expect(campaignPageHref({ ...ids, countryId: "US", embedded: true })).toBe(
+      "/campaign/c1?embedded=political-operations"
+    );
+  });
+
+  it("falls back to the standalone page when the race is unknown", () => {
+    expect(campaignPageHref({ campaignId: "c1" })).toBe("/campaign/c1");
+    expect(campaignPageHref({ campaignId: "c1", electionId: null, tab: "field" })).toBe(
+      "/campaign/c1?tab=field"
+    );
+  });
+
+  it("builds the standalone page with its params", () => {
+    expect(standaloneCampaignHref("c1")).toBe("/campaign/c1");
+    expect(standaloneCampaignHref("c1", { tab: "field", region: "OH" })).toBe(
+      "/campaign/c1?tab=field&region=OH"
     );
   });
 });

@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash, InjectedCrash } from "@/lib/test-utils/faultyDb";
 import { buySecuredConstructionProperty, recoverConstructionSales } from "../constructionSale";
+import { foldSoldSiteIntoSurvivor } from "../constructionSaleMerge";
 import { listDefaultedConstructionCollateral } from "../constructionForeclosure";
 import { recoverConstructionServiceLeases } from "../constructionServiceLease";
 import type { CorporateSector } from "@/lib/db/types/corporation";
@@ -138,9 +139,7 @@ describe("buyer-funded secured property sale", () => {
           { _id: w.sectorId },
           { $set: { sectorType: "media", mediaDiscriminator: "entertainment" } }
         );
-      const original = w.memory.collection("corporateSectors").docs[0];
       w.memory.seed("corporateSectors", [
-        original,
         {
           _id: new ObjectId(),
           corporationId: w.buyerId,
@@ -150,14 +149,170 @@ describe("buyer-funded secured property sale", () => {
         },
       ]);
       const result = await buySecuredConstructionProperty(w.input);
-      // A buyer already running this exact lane in the state cannot take a second one.
+      // A buyer already running this exact lane in the state folds the site in
+      // rather than holding a second row; either way the sale settles.
       const sameLane = buyerDiscriminator === "entertainment";
-      expect(result.ok).toBe(!sameLane);
-      expect(w.memory.collection("corporations").docs[1].liquidCapital).toBe(
-        sameLane ? 1_000_000 : 850_000
-      );
+      expect(result).toMatchObject({ ok: true });
+      expect(
+        (result as { quote: { mergeIntoSectorId?: string } }).quote.mergeIntoSectorId !== undefined
+      ).toBe(sameLane);
+      expect(w.memory.collection("corporations").docs[1].liquidCapital).toBe(850_000);
     }
   );
+  describe("when the buyer already runs that market", () => {
+    async function withSurvivor(extra: Record<string, unknown> = {}) {
+      const w = world();
+      const survivorId = new ObjectId();
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { revenue: 300, workers: 30, profitMargin: 10 } });
+      w.memory.seed("corporateSectors", [
+        {
+          _id: survivorId,
+          corporationId: w.buyerId,
+          stateId: "US-CA",
+          sectorType: "manufacturing",
+          capitalStock: 100,
+          plantCount: 1,
+          revenue: 100,
+          workers: 10,
+          profitMargin: 20,
+          buildQueue: [],
+          ...extra,
+        },
+      ]);
+      return { ...w, survivorId };
+    }
+    const survivorOf = (w: Awaited<ReturnType<typeof withSurvivor>>) =>
+      w.db.collection("corporateSectors").findOne({ _id: w.survivorId });
+
+    it("pays the lender from the price, folds the site in and leaves the buyer no debt", async () => {
+      const w = await withSurvivor();
+      const result = await buySecuredConstructionProperty(w.input);
+      expect(result).toMatchObject({
+        ok: true,
+        quote: { principalRepaid: 75_000, mergeIntoSectorId: String(w.survivorId) },
+      });
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).toBeNull();
+      expect(await survivorOf(w)).toMatchObject({
+        corporationId: w.buyerId,
+        revenue: 400,
+        workers: 40,
+        profitMargin: 12.5,
+      });
+      expect((await survivorOf(w))?.securedSaleFold).toBeUndefined();
+      expect(await w.db.collection("bankLoans").findOne({ _id: w.loanId })).toMatchObject({
+        outstanding: 0,
+        status: "repaid",
+        borrowerId: w.borrowerId,
+      });
+      expect(
+        (await w.db.collection("bankLoans").findOne({ _id: w.loanId }))?.constructionCollateral
+      ).toBeUndefined();
+      expect(
+        (await w.db.collection("corporations").findOne({ _id: w.buyerId }))?.liquidCapital
+      ).toBe(850_000);
+      expect(
+        (await w.db.collection("corporations").findOne({ _id: w.borrowerId }))?.liquidCapital
+      ).toBe(125_000);
+    });
+
+    it("folds paid construction in without the sold site's loan references", async () => {
+      const w = await withSurvivor();
+      await w.db
+        .collection("gameConfig")
+        .updateOne(
+          { _id: "default" as never },
+          { $set: { marketSystemMode: "plants" } },
+          { upsert: true }
+        );
+      await buySecuredConstructionProperty(w.input);
+      const survivor = await survivorOf(w);
+      expect(survivor?.capitalStock).toBe(350);
+      expect(survivor?.buildQueue).toHaveLength(1);
+      expect(survivor?.buildQueue[0].constructionLoanId).toBeUndefined();
+      expect(survivor?.buildQueue[0].constructionClaimId).toBeUndefined();
+      expect(survivor?.buildQueue[0]).toMatchObject({ unitsOrdered: 100, costPaidAnchor: 100_000 });
+    });
+
+    it("never folds twice when the fold lands but the run is interrupted before the delete", async () => {
+      const w = await withSurvivor();
+      const fault = withInjectedCrash(w.memory, {
+        collection: "corporateSectors",
+        op: "updateOne",
+        onCall: 1,
+        afterWrite: true,
+        matches: (args) =>
+          typeof (args[1] as { $set?: Record<string, unknown> }).$set?.securedSaleFold === "string",
+      });
+      await expect(
+        buySecuredConstructionProperty({ ...w.input, db: fault.db })
+      ).rejects.toBeInstanceOf(InjectedCrash);
+      expect(await survivorOf(w)).toMatchObject({ revenue: 400, workers: 40 });
+      expect(await recoverConstructionSales(w.db, 100)).toEqual([]);
+      expect(await survivorOf(w)).toMatchObject({ revenue: 400, workers: 40 });
+      expect((await survivorOf(w))?.securedSaleFold).toBeUndefined();
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).toBeNull();
+      expect(
+        (await w.db.collection("corporations").findOne({ _id: w.buyerId }))?.liquidCapital
+      ).toBe(850_000);
+    });
+
+    it("merges when both sites run the same strategy", async () => {
+      const w = await withSurvivor({ strategyId: "rare_earth_mining" });
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { strategyId: "rare_earth_mining" } });
+      expect(await buySecuredConstructionProperty(w.input)).toMatchObject({
+        ok: true,
+        quote: { mergeIntoSectorId: String(w.survivorId) },
+      });
+      expect(await survivorOf(w)).toMatchObject({ revenue: 400, strategyId: "rare_earth_mining" });
+    });
+
+    it("refuses before any money moves when the two sites run different strategies", async () => {
+      const w = await withSurvivor({ strategyId: "standard" });
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { strategyId: "rare_earth_mining" } });
+      const result = await buySecuredConstructionProperty(w.input);
+      expect(result).toMatchObject({ ok: false });
+      expect((result as { error: string }).error).toMatch(/Switch your existing site to/);
+      expect(
+        (await w.db.collection("corporations").findOne({ _id: w.buyerId }))?.liquidCapital
+      ).toBe(1_000_000);
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).not.toBeNull();
+      expect(await survivorOf(w)).toMatchObject({ revenue: 100, workers: 10 });
+    });
+
+    it("the fold itself refuses a strategy mismatch without touching either site", async () => {
+      const w = await withSurvivor({ strategyId: "standard" });
+      await w.db
+        .collection("corporateSectors")
+        .updateOne({ _id: w.sectorId }, { $set: { strategyId: "rare_earth_mining" } });
+      const folded = await foldSoldSiteIntoSurvivor(w.db, {
+        donorId: w.sectorId,
+        survivorId: w.survivorId,
+        buyerId: w.buyerId,
+        saleKey: "k",
+      });
+      expect(folded).toMatchObject({ ok: false });
+      expect(await survivorOf(w)).toMatchObject({ revenue: 100, workers: 10 });
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).not.toBeNull();
+    });
+
+    it("refuses before any money moves when the buyer's site is mid-change", async () => {
+      const w = await withSurvivor({
+        constructionPropertyTransition: { key: "x", kind: "abandon" },
+      });
+      expect(await buySecuredConstructionProperty(w.input)).toMatchObject({ ok: false });
+      expect(
+        (await w.db.collection("corporations").findOne({ _id: w.buyerId }))?.liquidCapital
+      ).toBe(1_000_000);
+      expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).not.toBeNull();
+    });
+  });
+
   it("retains the cash obligation if payout is rejected after buyer funding landed", async () => {
     const w = world();
     const journals = w.db.collection("bankMoneyMoves");

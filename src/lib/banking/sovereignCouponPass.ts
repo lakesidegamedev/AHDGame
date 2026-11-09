@@ -19,9 +19,11 @@ import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget, FundedSovereignCouponClaim } from "@/lib/db/types/budget";
 import type { Db } from "mongodb";
 import {
+  FROZEN_CLAIM_PROBE_PROJECTION,
   SOVEREIGN_COUPON_CLAIM_PROJECTION,
-  freezeDueSovereignCouponClaims,
+  freezeDueSovereignCouponClaimSet,
   insertClaimRecords,
+  installGroupedReplaySupplements,
   loadCappedSettleableOpenSovereignCouponClaims,
   loadCouponTargetReadiness,
   skipsSovereignCouponSettlement,
@@ -74,6 +76,8 @@ export interface SovereignCouponPassInput {
    * Omitted, every claim within the cash bound is loaded.
    */
   claimLoadLimit?: number;
+  /** `gameConfig.sovereignCouponGroupedAccrualEnabled`; see `settleFundedSovereignCoupons`. */
+  groupedAccrual?: boolean;
 }
 
 /**
@@ -128,6 +132,8 @@ export async function loadSovereignCouponPass(
       batches: CouponBatchRecord[];
       queuedClaimIds: Set<string>;
       fresh: SovereignCouponClaimRecord[];
+      marks: Record<string, number>;
+      parts: Map<string, FundedSovereignCouponClaim[]>;
       skipped: boolean;
     }
   >();
@@ -144,9 +150,14 @@ export async function loadSovereignCouponPass(
     const priorMoves = sovereignCouponBudgetPriors(input.priorPayouts ?? [], {
       bonds: entry.bonds,
       frozenThrough: entry.budget.sovereignCouponFrozenThrough,
+      budgetId,
     });
     const batches = [...(input.prefetch.batchesByBudget.get(budgetId) ?? [])];
-    const fresh = freezeDueSovereignCouponClaims({
+    const {
+      records: fresh,
+      marks,
+      parts,
+    } = freezeDueSovereignCouponClaimSet({
       budgetId,
       bonds: entry.bonds,
       turn: input.turn,
@@ -155,6 +166,7 @@ export async function loadSovereignCouponPass(
       corporateQuotes: input.corporateQuotes,
       frozenThrough: entry.budget.sovereignCouponFrozenThrough,
       knownClaims: new Map<string, FundedSovereignCouponClaim>(),
+      grouped: input.groupedAccrual === true,
     });
     const skipped = skipsSovereignCouponSettlement({
       prefetchedCashLocal: prefetchedCash,
@@ -175,6 +187,8 @@ export async function loadSovereignCouponPass(
       batches,
       queuedClaimIds: sovereignCouponQueuedClaimIds(priorMoves, batches),
       fresh,
+      marks,
+      parts,
       skipped,
     });
   }
@@ -188,7 +202,11 @@ export async function loadSovereignCouponPass(
     const existing = await claims
       .find(
         { _id: { $in: frozen.map((row) => row._id) } },
-        { projection: SOVEREIGN_COUPON_CLAIM_PROJECTION }
+        {
+          projection: input.groupedAccrual
+            ? FROZEN_CLAIM_PROBE_PROJECTION
+            : SOVEREIGN_COUPON_CLAIM_PROJECTION,
+        }
       )
       .toArray();
     for (const row of existing) savedById.set(row._id, row);
@@ -196,20 +214,20 @@ export async function loadSovereignCouponPass(
       db,
       frozen.filter((row) => !savedById.has(row._id))
     );
+    // A grouped id a replay already wrote keeps its claim; any bond it lacks
+    // gets a supplementary claim before the marks land.
+    for (const plan of prepared.values())
+      if (plan.parts.size > 0)
+        plan.fresh.push(
+          ...(await installGroupedReplaySupplements(db, plan.fresh, savedById, plan.parts))
+        );
     const marks = [...prepared.values()].flatMap((plan) =>
       plan.fresh.length
         ? [
             {
               updateOne: {
                 filter: { _id: plan.budgetId },
-                update: {
-                  $max: Object.fromEntries(
-                    plan.fresh.map((row) => [
-                      `sovereignCouponFrozenThrough.b${row.claim.bondId}`,
-                      row.claim.dueTurn,
-                    ])
-                  ),
-                },
+                update: { $max: plan.marks },
               },
             },
           ]

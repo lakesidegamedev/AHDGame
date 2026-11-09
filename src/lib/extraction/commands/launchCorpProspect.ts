@@ -18,6 +18,8 @@ import {
   PROSPECT_MAX_ACTIVE_PER_INITIATOR,
   prospectCostAnchor,
   prospectCostMultiplier,
+  corpCanProspect,
+  PROSPECT_NOT_EXTRACTION_MESSAGE,
 } from "@/lib/constants/prospecting";
 
 export interface CorpProspectCosts {
@@ -50,24 +52,31 @@ export async function launchCorpProspect(
 ): Promise<LaunchCorpProspectResult> {
   const { stateId, resource } = args;
 
-  if (corporation.type !== "extraction" && corporation.secondaryType !== "extraction") {
-    return {
-      ok: false,
-      status: 400,
-      error: "Only corporations with an extraction sector can prospect.",
-    };
-  }
-
-  // Corp must operate a sector in the target state. The sector is authoritative
-  // for the state's owning country (cross-country state-id collisions).
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ corporationId: corporation._id, stateId }, { projection: { countryId: 1 } });
+  // Extraction-typed companies may survey any state they operate in. Any other
+  // company needs an extraction sector in the target state. The sector is
+  // authoritative for the state's owning country (cross-country state-id
+  // collisions).
+  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const projection = { projection: { countryId: 1 } };
+  const extractionSector = await sectors.findOne(
+    { corporationId: corporation._id, stateId, sectorType: "extraction" },
+    projection
+  );
+  const sector =
+    extractionSector ??
+    (corpCanProspect(corporation)
+      ? await sectors.findOne({ corporationId: corporation._id, stateId }, projection)
+      : null);
   if (!sector) {
+    const anySector =
+      !corpCanProspect(corporation) &&
+      (await sectors.findOne({ corporationId: corporation._id, stateId }, projection));
     return {
       ok: false,
       status: 400,
-      error: "Your company has no operations in that state.",
+      error: anySector
+        ? PROSPECT_NOT_EXTRACTION_MESSAGE
+        : "Your company has no operations in that state.",
     };
   }
   const countryId = sector.countryId;

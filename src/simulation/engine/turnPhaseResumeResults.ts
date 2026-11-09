@@ -13,6 +13,8 @@
  */
 import type { BondTurnResult } from "@/lib/turn/bondTurn";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
+import type { CorporationTurnResult } from "@/lib/turn/corporation/corporationTurnRuntime";
+import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
 
 /** Country-keyed maps stay far below this; anything larger is not a bond flow. */
 const MAX_FLOW_KEYS = 256;
@@ -94,6 +96,91 @@ function decodeBondTurnResult(raw: unknown): BondTurnResult | null {
   return out as BondTurnResult;
 }
 
+const CORPORATION_COUNTS = [
+  "corporationsProcessed",
+  "sectorsProcessed",
+  "totalRevenueGenerated",
+  "totalIncomeGenerated",
+] as const;
+
+/** Bounded income maps, stored as entries so Mongo never receives Map instances. */
+function decodeCorporationTurnResult(raw: unknown): CorporationTurnResult | null {
+  if (!isRecord(raw)) return null;
+  if (CORPORATION_COUNTS.some((key) => typeof raw[key] !== "number" || !Number.isFinite(raw[key])))
+    return null;
+  const warnings = raw.turnWarnings;
+  if (
+    !Array.isArray(warnings) ||
+    warnings.length > 10000 ||
+    warnings.some((w) => typeof w !== "string" || w.length > 4096)
+  )
+    return null;
+  const entries = (value: unknown): unknown[] | null =>
+    value instanceof Map ? [...value] : Array.isArray(value) ? value : null;
+  const internal = entries(raw.currencyIncomeInternalByCharacterId);
+  const face = entries(raw.currencyIncomeFaceByCharacterId);
+  if (!internal || !face || internal.length > 10000 || face.length > 10000) return null;
+  const amounts = new Map<string, number>();
+  const currencies = new Map<string, Map<CurrencyCode, number>>();
+  const validKey = (key: unknown): key is string =>
+    typeof key === "string" && key.length > 0 && key.length <= MAX_KEY_LENGTH;
+  const validAmount = (n: unknown): n is number =>
+    typeof n === "number" && Number.isFinite(n) && n >= 0;
+  for (const row of internal) {
+    if (
+      !Array.isArray(row) ||
+      row.length !== 2 ||
+      !validKey(row[0]) ||
+      !validAmount(row[1]) ||
+      amounts.has(row[0])
+    )
+      return null;
+    amounts.set(row[0], row[1]);
+  }
+  for (const row of face) {
+    if (!Array.isArray(row) || row.length !== 2 || !validKey(row[0]) || currencies.has(row[0]))
+      return null;
+    const values = entries(row[1]);
+    if (!values || values.length > ZOD_CURRENCY_ENUM.length) return null;
+    const byCurrency = new Map<CurrencyCode, number>();
+    for (const value of values) {
+      if (
+        !Array.isArray(value) ||
+        value.length !== 2 ||
+        !ZOD_CURRENCY_ENUM.includes(value[0]) ||
+        !validAmount(value[1]) ||
+        byCurrency.has(value[0])
+      )
+        return null;
+      byCurrency.set(value[0], value[1]);
+    }
+    currencies.set(row[0], byCurrency);
+  }
+  return {
+    corporationsProcessed: raw.corporationsProcessed as number,
+    sectorsProcessed: raw.sectorsProcessed as number,
+    totalRevenueGenerated: raw.totalRevenueGenerated as number,
+    totalIncomeGenerated: raw.totalIncomeGenerated as number,
+    turnWarnings: [...warnings],
+    currencyIncomeInternalByCharacterId: amounts,
+    currencyIncomeFaceByCharacterId: currencies,
+  };
+}
+
+function encodeCorporationTurnResult(raw: unknown): Record<string, unknown> | null {
+  const result = decodeCorporationTurnResult(raw);
+  if (!result) return null;
+  const stored = {
+    ...result,
+    currencyIncomeInternalByCharacterId: [...result.currencyIncomeInternalByCharacterId],
+    currencyIncomeFaceByCharacterId: [...result.currencyIncomeFaceByCharacterId].map(
+      ([id, amounts]) => [id, [...amounts]]
+    ),
+  };
+  // Keep the completion snapshot well below Mongo's document limit even with long warnings.
+  return JSON.stringify(stored).length <= 2_000_000 ? stored : null;
+}
+
 interface ResumeResultCodec {
   /** Bounded persistable copy of a fresh result; null when it cannot be kept. */
   encode(result: unknown): Record<string, unknown> | null;
@@ -103,6 +190,7 @@ interface ResumeResultCodec {
 
 const CODECS: Record<string, ResumeResultCodec> = {
   bondTurn: { encode: encodeBondTurnResult, decode: decodeBondTurnResult },
+  corporationTurn: { encode: encodeCorporationTurnResult, decode: decodeCorporationTurnResult },
 };
 
 export function phaseRequiresResumeResult(name: string): boolean {
@@ -146,6 +234,28 @@ function appliedState(
       return null;
   }
 }
+
+/**
+ * Phases a crash resume must never pass over while interrupted. Their output is
+ * the economy itself: `corporationTurn` settles the funded producer market and
+ * every plant's profit, and `commodityPrices`, `lineOfCreditTurn` and the
+ * treasury read what it settled. An interrupted run may have committed any
+ * prefix of its writes (the funded settlement is journaled and replays by key,
+ * but the legacy tail still has unkeyed increments and inserts), so it cannot be
+ * proven safe to rerun, and skipping it completes the turn with the economy
+ * missing (turn 736). The resume refuses instead and holds the turn for repair.
+ * A phase that failed with TurnMustStopError is not interrupted by this
+ * definition: it stopped before the unkeyed writes and reruns by contract.
+ */
+const RESUME_BLOCKING_WHEN_INTERRUPTED: ReadonlySet<string> = new Set(["corporationTurn"]);
+
+export function phaseBlocksResumeWhenInterrupted(name: string): boolean {
+  return RESUME_BLOCKING_WHEN_INTERRUPTED.has(name);
+}
+
+/** Recorded on an interrupted phase the resume does not rerun. */
+export const INTERRUPTED_PHASE_NOT_RERUN_MESSAGE =
+  "interrupted by a crash before it finished; not rerun, so its work for this turn may be missing or partial";
 
 export interface CrashedTurnPhaseState {
   completed: Set<string>;

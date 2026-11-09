@@ -1,10 +1,13 @@
+import { createHash } from "node:crypto";
 import { producerPayableId } from "./payablesRules";
 import { producerTrades } from "./rules";
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
 import { MINOR_INPUT_SHORTFALL_PREMIUM } from "./makeDoRules";
-import { fundedInputThroughput } from "./fundedSectorRules";
+import { fundedInputThroughput, fundedSectorOpsAll, type FundedReceipt } from "./fundedSectorRules";
+import { decisionProfit } from "./internalTransferPricingRules";
+import { strugglingReason } from "./transitionRules";
 
 const plant = (changes: Partial<ProductionPlan> = {}): ProductionPlan => ({
   id: "plant",
@@ -118,6 +121,284 @@ describe("internal supply accounting", () => {
       );
     }
   );
+});
+
+describe("internal supply legs net across a multi-site company", () => {
+  const output = (commodity: string, unitPrice: number) => ({
+    commodity,
+    book: "world",
+    unitsPerOutput: 1,
+    policy: { kind: "manual" as const, unitPrice },
+    referenceUnitPrice: unitPrice,
+    storable: true,
+  });
+  const input = (commodity: string, unitsPerOutput: number) => ({
+    commodity,
+    unitsPerOutput,
+    book: "world",
+    maximumUnitPrice: 50,
+  });
+  const site = (
+    id: string,
+    inputs: ProductionPlan["inputs"],
+    outputs: ProductionPlan["outputs"]
+  ): ProductionPlan =>
+    plant({ id, inputs, outputs, internalTransferPricing: { mode: "market", discount: 0 } });
+  const request = {
+    turn: 1,
+    accounts: [
+      { id: "corp", cash: 100000 },
+      { id: "households", cash: 1000 },
+      { id: "services", cash: 0 },
+      { id: "supplier", cash: 0 },
+    ],
+    producers: [
+      site("a", [], [output("energy", 5)]),
+      site("b", [input("energy", 1)], [output("steel", 10)]),
+      site("c", [input("steel", 1), input("energy", 1)], [output("pharma", 20)]),
+      site("d", [input("pharma", 1)], [output("health", 30)]),
+    ],
+    externalOffers: [
+      {
+        id: "o",
+        accountId: "supplier",
+        commodity: "energy",
+        book: "world",
+        units: 30,
+        unitPrice: 4,
+      },
+    ],
+    externalOrders: ["pharma", "health"].map((commodity) => ({
+      id: `town-${commodity}`,
+      accountId: "households",
+      commodity,
+      book: "world",
+      units: 20,
+      maximumUnitPrice: 40,
+    })),
+  };
+
+  it.each([false, true])(
+    "books equal income and charge over a multi-hop chain (captive stage %s)",
+    (captiveMarketValue) => {
+      const result = advanceProducerEconomy({ ...request, captiveMarketValue });
+      const income = result.producers.reduce((n, p) => n + (p.internalSupplyIncome ?? 0), 0);
+      const charge = result.producers.reduce((n, p) => n + (p.internalSupplyCharge ?? 0), 0);
+      expect(income).toBeGreaterThan(0);
+      expect(income).toBeCloseTo(charge, 8);
+    }
+  );
+
+  it("still nets after each site's legs are restated in its own currency", () => {
+    const result = advanceProducerEconomy(request);
+    // Sellers at home in dollars, receivers in a currency worth 1/120 of the anchor.
+    const rate = new Map([
+      ["a", 1],
+      ["b", 1],
+      ["c", 120],
+      ["d", 120],
+    ]);
+    const ops = result.producers.map((p) => ({
+      updateOne: { filter: { _id: p.id }, update: { $set: { name: p.id } } },
+    }));
+    const funded = new Map(
+      result.producers.map((p) => [
+        p.id,
+        {
+          receipt: p as unknown as FundedReceipt,
+          result: { hourlyRevenue: 0, costs: 0, effectiveMargin: 0, hourlyGrowthCost: 0 },
+          daily: (anchor: number) => anchor * rate.get(p.id)!,
+        },
+      ])
+    );
+    const written = fundedSectorOpsAll(ops, funded, 1);
+    let income = 0;
+    let charge = 0;
+    for (const op of written) {
+      const id = String((op.updateOne.filter as { _id: string })._id);
+      const pnl = (op.updateOne.update as { $set: { plantsPnl: Record<string, number> } }).$set
+        .plantsPnl;
+      income += (pnl.internalSupplyIncome ?? 0) / rate.get(id)!;
+      charge += (pnl.internalSupplyCharge ?? 0) / rate.get(id)!;
+    }
+    expect(income).toBeGreaterThan(0);
+    expect(income).toBeCloseTo(charge, 6);
+  });
+});
+
+describe("own-site deliveries at market value (captive stage 3)", () => {
+  const mine = plant({
+    id: "mine",
+    inputs: [],
+    outputs: [
+      {
+        commodity: "energy",
+        book: "world",
+        unitsPerOutput: 2,
+        policy: { kind: "manual", unitPrice: 10 },
+        referenceUnitPrice: 10,
+        storable: true,
+      },
+    ],
+  });
+  const consumer = plant({ id: "consumer" });
+  const optedIn = (p: typeof mine) => ({ ...p, ownSiteMarketValue: true });
+  const request = {
+    turn: 1,
+    accounts,
+    producers: [optedIn(mine), optedIn(consumer)],
+    // An outside seller clears the lane at 8 while the mine asks 10.
+    externalOffers: [
+      {
+        id: "outside",
+        accountId: "supplier",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        unitPrice: 8,
+      },
+    ],
+    externalOrders: [
+      {
+        id: "town",
+        accountId: "households",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        maximumUnitPrice: 9,
+      },
+    ],
+  };
+  const byId = (r: ReturnType<typeof advanceProducerEconomy>, id: string) =>
+    r.producers.find((p) => p.id === id)!;
+
+  it("credits the producing site at the clearing price and charges the receiving site the same", () => {
+    const result = advanceProducerEconomy({
+      ...request,
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    const product = byId(result, "mine").products[0];
+    expect(product.internalDeliveredUnits).toBeGreaterThan(0);
+    expect(product.soldUnits).toBe(0);
+    expect(product.captiveUnitValue).toBeCloseTo(8);
+    expect(byId(result, "mine").internalSupplyIncome).toBeCloseTo(
+      product.internalDeliveredUnits * 8,
+      8
+    );
+    expect(byId(result, "consumer").internalSupplyCharge).toBeCloseTo(
+      product.internalDeliveredUnits * 8,
+      8
+    );
+  });
+
+  it("falls back to the site's ask when the lane did not trade", () => {
+    const result = advanceProducerEconomy({
+      ...request,
+      externalOffers: [],
+      externalOrders: [],
+      captiveMarketValue: true,
+    });
+    const product = byId(result, "mine").products[0];
+    expect(product.internalDeliveredUnits).toBeGreaterThan(0);
+    expect(product.captiveUnitValue).toBeCloseTo(10);
+    expect(byId(result, "mine").internalSupplyIncome).toBeCloseTo(
+      byId(result, "consumer").internalSupplyCharge!,
+      8
+    );
+  });
+
+  it("leaves company cash, profit and physical flows as at stage 2", () => {
+    const stage2 = advanceProducerEconomy({ ...request, captiveShortValue: true });
+    const stage3 = advanceProducerEconomy({
+      ...request,
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    expect(stage3.accounts).toEqual(stage2.accounts);
+    const flows = (r: typeof stage2) =>
+      r.producers.map((p) => [p.id, p.producedUnits, p.deliveredUnits, p.cashFlow, p.profit]);
+    expect(flows(stage3)).toEqual(flows(stage2));
+    const income = stage3.producers.reduce((n, p) => n + (p.internalSupplyIncome ?? 0), 0);
+    const charge = stage3.producers.reduce((n, p) => n + (p.internalSupplyCharge ?? 0), 0);
+    expect(income).toBeGreaterThan(0);
+    expect(income).toBeCloseTo(charge, 8);
+  });
+
+  it("books nothing at stage 2 or below", () => {
+    for (const flags of [{}, { captiveShortValue: true }]) {
+      const result = advanceProducerEconomy({ ...request, ...flags });
+      for (const p of result.producers) {
+        expect(p.internalSupplyIncome).toBeUndefined();
+        expect(p.internalSupplyCharge).toBeUndefined();
+      }
+      expect(byId(result, "mine").products[0].captiveUnitValue).toBeUndefined();
+    }
+  });
+
+  it("judges a captive-only seller on its management account at stage 3 only", () => {
+    const stage2 = advanceProducerEconomy({ ...request, captiveShortValue: true });
+    const stage3 = advanceProducerEconomy({
+      ...request,
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    const seller = byId(stage3, "mine");
+    // Everything went to its own company: no sale, an economic loss.
+    expect(seller.soldUnits).toBe(0);
+    expect(seller.profit).toBeLessThan(0);
+    expect(decisionProfit(seller, true)).toBeGreaterThan(0);
+    expect(strugglingReason(seller, true)).toBeNull();
+    // The receiving site carries the matching charge.
+    const receiver = byId(stage3, "consumer");
+    expect(decisionProfit(receiver, true)).toBeCloseTo(
+      receiver.profit - receiver.internalSupplyCharge!,
+      8
+    );
+    // Stage 2 books no entries, so decisions read the economic loss as before.
+    const before = byId(stage2, "mine");
+    expect(decisionProfit(before, false)).toBe(before.profit);
+    expect(strugglingReason(before, false)).toBe("zeroSales");
+    // Company totals: the entries net to zero, cash is untouched.
+    const sum = (r: typeof stage3, f: (p: (typeof r.producers)[number]) => number) =>
+      r.producers.reduce((n, p) => n + f(p), 0);
+    expect(sum(stage3, (p) => decisionProfit(p, true))).toBeCloseTo(
+      sum(stage3, (p) => p.profit),
+      8
+    );
+    expect(stage3.accounts).toEqual(stage2.accounts);
+  });
+
+  it("books no entries for a company on Free transfer pricing", () => {
+    const free = advanceProducerEconomy({
+      ...request,
+      producers: [mine, consumer],
+      captiveShortValue: true,
+      captiveMarketValue: true,
+    });
+    for (const p of free.producers) {
+      expect(p.internalSupplyIncome).toBeUndefined();
+      expect(p.internalSupplyCharge).toBeUndefined();
+    }
+    expect(byId(free, "mine").products[0].captiveUnitValue).toBeUndefined();
+  });
+
+  it("keeps an explicit internal transfer price instead of adding a second entry", () => {
+    const priced = optedIn({ ...mine, internalTransferPricing: { mode: "cost" as const } });
+    const base = advanceProducerEconomy({
+      ...request,
+      producers: [priced, optedIn(consumer)],
+    });
+    const stage3 = advanceProducerEconomy({
+      ...request,
+      producers: [priced, optedIn(consumer)],
+      captiveMarketValue: true,
+    });
+    expect(byId(stage3, "mine").internalSupplyIncome).toBe(byId(base, "mine").internalSupplyIncome);
+    expect(byId(stage3, "consumer").internalSupplyCharge).toBe(
+      byId(base, "consumer").internalSupplyCharge
+    );
+  });
 });
 
 describe("receipt-backed production", () => {
@@ -1286,6 +1567,124 @@ describe("same-turn spillover", () => {
   });
 });
 
+describe("spillover measurement tags", () => {
+  const output = (commodity: string, price: number) => ({
+    commodity,
+    book: "world",
+    unitsPerOutput: 0,
+    referenceUnitPrice: price,
+    retainedUnitCost: 1,
+    policy: { kind: "manual" as const, unitPrice: price },
+    storable: true,
+  });
+  const stock = (id: string, commodity: string, units: number, price: number): ProductionPlan =>
+    plant({
+      id,
+      accountId: `${id}-corp`,
+      capacityUnits: 0,
+      labourCost: 0,
+      otherOperatingCost: 0,
+      labourRecipientAccountId: "services",
+      inputs: [],
+      outputs: [output(commodity, price)],
+      outputStock: [{ commodity, book: "world", units, quoteUnitCost: 1 }],
+    });
+  const run = () =>
+    advanceProducerEconomy({
+      turn: 1,
+      accounts: [
+        { id: "scarce-corp", cash: 0 },
+        { id: "plenty-corp", cash: 0 },
+        { id: "chem-corp", cash: 0 },
+        { id: "hh-a", cash: 1000 },
+        { id: "hh-b", cash: 700 },
+        { id: "services", cash: 0 },
+      ],
+      carryLossByCommodity: { steel: 0, food: 0, chemicals: 0 },
+      producers: [
+        stock("scarce", "steel", 2, 10),
+        stock("plenty", "food", 1000, 5),
+        stock("chem", "chemicals", 500, 2),
+      ],
+      households: [
+        {
+          accountId: "hh-a",
+          countryId: "US",
+          spendFraction: 1,
+          products: [
+            { commodity: "steel", book: "world", maximumUnitPrice: 12, weight: 1 },
+            { commodity: "food", book: "world", maximumUnitPrice: 6, weight: 1 },
+            { commodity: "chemicals", book: "world", maximumUnitPrice: 3, weight: 0.2 },
+          ],
+        },
+        {
+          accountId: "hh-b",
+          countryId: "DE",
+          spendFraction: 1,
+          products: [
+            { commodity: "steel", book: "world", maximumUnitPrice: 12, weight: 2 },
+            { commodity: "chemicals", book: "world", maximumUnitPrice: 3, weight: 1 },
+          ],
+        },
+      ],
+      spilloverShare: 0.7,
+      trackCountryBooks: true,
+    });
+  const untagged = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(untagged)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value)
+              .filter(
+                ([k]) =>
+                  k !== "spilloverRequested" && k !== "spilloverRequestedUnits" && k !== "planning"
+              )
+              .map(([k, v]) => [k, untagged(v)])
+          )
+        : value;
+
+  it("leaves every settlement number byte-identical to the untagged settlement", () => {
+    // Digest of this fixture's full result (accounts, payables, producers,
+    // trade receipt, prices, order outcomes, spillover, country books) from
+    // the settlement before spillover was tagged. The tags are measurement
+    // only, so with them and planning diagnostics removed the settlement
+    // numbers must not change by a byte. Keep the original financial digest.
+    const json = JSON.stringify(untagged(run()));
+    expect(createHash("sha256").update(json).digest("hex")).toBe(
+      "8b7485b3de05658f83b615512cc96e9980d1a615ac1708b7ccd2ef65a603827d"
+    );
+  });
+
+  it("tags the spillover part of each household order and country book row", () => {
+    const result = run();
+    expect(result.spillover!.extraRequested).toBeGreaterThan(0);
+    const outcome = (accountId: string, commodity: string) =>
+      result.orderOutcomes.find((o) => o.accountId === accountId && o.commodity === commodity)!;
+    // DE wanted 700 / 3 weight split: one third of its budget on chemicals at
+    // a ceiling of 3 is 77.78 units; the rest is the 70% of stranded steel spend.
+    const chem = outcome("hh-b", "chemicals");
+    expect(chem.requestedUnits - chem.spilloverRequestedUnits!).toBeCloseTo(700 / 3 / 3, 9);
+    expect(chem.deliveredUnits).toBeCloseTo(chem.requestedUnits, 9);
+    expect(outcome("hh-a", "steel").spilloverRequestedUnits).toBeUndefined();
+    const spilledSpend = result.orderOutcomes.reduce((sum, o) => {
+      const price = o.commodity === "food" ? 6 : o.commodity === "chemicals" ? 3 : 12;
+      return sum + (o.spilloverRequestedUnits ?? 0) * price;
+    }, 0);
+    expect(spilledSpend).toBeCloseTo(result.spillover!.extraRequested, 9);
+    for (const row of result.countryBooks!) {
+      const tagged = result.orderOutcomes
+        .filter(
+          (o) =>
+            o.commodity === row.commodity &&
+            o.accountId === (row.countryId === "US" ? "hh-a" : "hh-b")
+        )
+        .reduce((sum, o) => sum + (o.spilloverRequestedUnits ?? 0), 0);
+      expect(row.spilloverRequested ?? 0).toBeCloseTo(tagged, 9);
+    }
+  });
+});
+
 describe("minor inputs in make-do", () => {
   // Energy is 2 per unit at 1; construction 0.001 per unit at 10 is 0.5% of input cost.
   const recipe = [
@@ -1404,6 +1803,53 @@ describe("own freight and the input gauge", () => {
     expect(shipped.soldUnits).toBeCloseTo(0);
   });
 
+  it("records what the company's own sites asked for, past what the supplier could make", () => {
+    const freight = plant({
+      id: "logistics",
+      stateId: "CT",
+      inputs: [],
+      outputs: [
+        {
+          commodity: "freight",
+          unitsPerOutput: 1,
+          book: "country:US",
+          policy: { kind: "manual", unitPrice: 50 },
+          referenceUnitPrice: 50,
+          storable: false,
+        },
+      ],
+      capacityUnits: 1,
+    });
+    const chemicals = plant({
+      id: "chemicals",
+      stateId: "CT",
+      inputs: [
+        { commodity: "freight", unitsPerOutput: 0.05, book: "country:US", maximumUnitPrice: 60 },
+      ],
+    });
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [freight, chemicals],
+      externalOffers: [
+        {
+          id: "freight",
+          accountId: "supplier",
+          commodity: "freight",
+          book: "country:US",
+          units: 50,
+          unitPrice: 10,
+        },
+      ],
+      ownSitesFirst: true,
+    });
+    const shipped = result.producers.find((p) => p.id === "logistics")!.products[0];
+    expect(shipped.internalDeliveredUnits).toBeCloseTo(1);
+    expect(shipped.ownSiteDemandUnits).toBeCloseTo(5);
+    const chem = result.producers.find((p) => p.id === "chemicals")!.products[0];
+    expect(chem.ownSiteDemandUnits).toBeUndefined();
+  });
+
   it("names the input that cut the run when own freight falls short", () => {
     const freight = plant({
       id: "logistics",
@@ -1440,5 +1886,222 @@ describe("own freight and the input gauge", () => {
       throughputFactor: 0.4,
       throughputBindingInput: "freight",
     });
+  });
+
+  it("values own-site deliveries at the sites' bid when they were left short (captive stage 2)", () => {
+    const freight = (capacityUnits: number) =>
+      plant({
+        id: "logistics",
+        stateId: "CT",
+        inputs: [],
+        outputs: [
+          {
+            commodity: "freight",
+            unitsPerOutput: 1,
+            book: "country:US",
+            policy: { kind: "manual", unitPrice: 30 },
+            referenceUnitPrice: 50,
+            storable: false,
+          },
+        ],
+        capacityUnits,
+      });
+    const chemicals = plant({
+      id: "chemicals",
+      stateId: "CT",
+      inputs: [
+        { commodity: "freight", unitsPerOutput: 0.05, book: "country:US", maximumUnitPrice: 60 },
+      ],
+    });
+    const run = (capacityUnits: number, captiveShortValue?: boolean) =>
+      advanceProducerEconomy({
+        turn: 1,
+        accounts,
+        producers: [freight(capacityUnits), chemicals],
+        ownSitesFirst: true,
+        ...(captiveShortValue ? { captiveShortValue } : {}),
+      }).producers.find((p) => p.id === "logistics")!.products[0];
+    // Short: 2 units of own freight against a need of 5. Bid 60, reference 50, ask 30.
+    expect(run(2, true).captiveUnitValue).toBeCloseTo(50);
+    // Not short: own freight covers the need, so the ask stands.
+    expect(run(10, true).captiveUnitValue).toBeUndefined();
+    // Stage off: nothing recorded, the receipt is unchanged.
+    expect(run(2).captiveUnitValue).toBeUndefined();
+    expect(JSON.stringify(run(2))).toBe(JSON.stringify(run(2, false)));
+  });
+});
+
+describe("own-site deliveries credited to the valuation only", () => {
+  const mine = plant({
+    id: "mine",
+    inputs: [],
+    outputs: [
+      {
+        commodity: "energy",
+        book: "world",
+        unitsPerOutput: 2,
+        policy: { kind: "manual", unitPrice: 10 },
+        referenceUnitPrice: 10,
+        storable: true,
+      },
+    ],
+  });
+  const consumer = plant({ id: "consumer" });
+  const outside = {
+    externalOffers: [
+      {
+        id: "outside",
+        accountId: "supplier",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        unitPrice: 8,
+      },
+    ],
+    externalOrders: [
+      {
+        id: "town",
+        accountId: "households",
+        commodity: "energy",
+        book: "world",
+        units: 50,
+        maximumUnitPrice: 9,
+      },
+    ],
+  };
+  const request = { turn: 1, accounts, producers: [mine, consumer], ...outside };
+  const byId = (r: ReturnType<typeof advanceProducerEconomy>, id: string) =>
+    r.producers.find((p) => p.id === id)!;
+  const physical = (r: ReturnType<typeof advanceProducerEconomy>) =>
+    r.producers.map((p) => [
+      p.id,
+      p.producedUnits,
+      p.deliveredUnits,
+      p.soldUnits,
+      p.revenue,
+      p.cashFlow,
+      p.profit,
+      p.internalSupplyIncome,
+      p.internalSupplyCharge,
+    ]);
+
+  it("credits the supplier and charges the receiver the lane price, netting to zero", () => {
+    const on = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    const units = byId(on, "mine").products[0].internalDeliveredUnits!;
+    expect(units).toBeGreaterThan(0);
+    expect(byId(on, "mine").soldUnits).toBe(0);
+    expect(byId(on, "mine").revenue).toBe(0);
+    expect(byId(on, "mine").valuationCredit).toBeCloseTo(units * 8, 8);
+    expect(byId(on, "consumer").valuationCharge).toBeCloseTo(units * 8, 8);
+    const credit = on.producers.reduce((n, p) => n + (p.valuationCredit ?? 0), 0);
+    const charge = on.producers.reduce((n, p) => n + (p.valuationCharge ?? 0), 0);
+    expect(credit).toBeCloseTo(charge, 8);
+  });
+
+  it("changes no account, cash, profit or site entry, and is absent when off", () => {
+    const off = advanceProducerEconomy(request);
+    const on = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    for (const p of off.producers) {
+      expect(p.valuationCredit).toBeUndefined();
+      expect(p.valuationCharge).toBeUndefined();
+    }
+    expect(on.accounts).toEqual(off.accounts);
+    expect(physical(on)).toEqual(physical(off));
+  });
+
+  it("treats a Free company and a company with no mode set alike", () => {
+    const free = advanceProducerEconomy({
+      ...request,
+      producers: [mine, consumer].map((p) => ({
+        ...p,
+        internalTransferPricing: { mode: "free" as const },
+      })),
+      ownSiteValuationCredit: true,
+    });
+    const unset = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    expect(byId(free, "mine").valuationCredit).toBeGreaterThan(0);
+    expect(byId(free, "mine").valuationCredit).toBe(byId(unset, "mine").valuationCredit);
+    expect(byId(free, "consumer").valuationCharge).toBe(byId(unset, "consumer").valuationCharge);
+  });
+
+  it("falls back to the site's ask when the lane did not trade", () => {
+    const on = advanceProducerEconomy({
+      ...request,
+      externalOffers: [],
+      externalOrders: [],
+      ownSiteValuationCredit: true,
+    });
+    const units = byId(on, "mine").products[0].internalDeliveredUnits!;
+    expect(units).toBeGreaterThan(0);
+    expect(byId(on, "mine").valuationCredit).toBeCloseTo(units * 10, 8);
+    expect(byId(on, "consumer").valuationCharge).toBeCloseTo(units * 10, 8);
+  });
+
+  it("leaves a company with an explicit transfer price on its own entries", () => {
+    const priced = [mine, consumer].map((p) => ({
+      ...p,
+      internalTransferPricing: { mode: "cost" as const },
+    }));
+    const base = advanceProducerEconomy({ ...request, producers: priced });
+    const on = advanceProducerEconomy({
+      ...request,
+      producers: priced,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(base, "mine").internalSupplyIncome).toBeGreaterThan(0);
+    for (const p of on.producers) {
+      expect(p.valuationCredit).toBeUndefined();
+      expect(p.valuationCharge).toBeUndefined();
+    }
+    expect(physical(on)).toEqual(physical(base));
+  });
+
+  it("does not credit twice an opted-in company whose market-value entries are booked", () => {
+    const optedIn = [mine, consumer].map((p) => ({ ...p, ownSiteMarketValue: true }));
+    const booked = advanceProducerEconomy({
+      ...request,
+      producers: optedIn,
+      captiveMarketValue: true,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(booked, "mine").internalSupplyIncome).toBeGreaterThan(0);
+    for (const p of booked.producers) {
+      expect(p.valuationCredit).toBeUndefined();
+      expect(p.valuationCharge).toBeUndefined();
+    }
+    // The same opt-in while that booking is off books nothing, so the credit applies.
+    const unbooked = advanceProducerEconomy({
+      ...request,
+      producers: optedIn,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(unbooked, "mine").valuationCredit).toBeGreaterThan(0);
+  });
+
+  it("credits an unset company under stage 3 that did not opt in", () => {
+    const on = advanceProducerEconomy({
+      ...request,
+      captiveMarketValue: true,
+      ownSiteValuationCredit: true,
+    });
+    expect(byId(on, "mine").internalSupplyIncome).toBeUndefined();
+    expect(byId(on, "mine").valuationCredit).toBeGreaterThan(0);
+  });
+
+  it("credits a newly founded company's first turn and the first turn after the switch alike", () => {
+    // Nothing is stamped on a new plan (no prior run share, glut count or stock).
+    const founded = advanceProducerEconomy({ ...request, ownSiteValuationCredit: true });
+    expect(byId(founded, "mine").plannedRunShare).toBeUndefined();
+    expect(byId(founded, "mine").valuationCredit).toBeGreaterThan(0);
+    // The turn before the switch carries no fields; the next one adds them without
+    // moving anything physical.
+    const before = advanceProducerEconomy(request);
+    const after = advanceProducerEconomy({ ...request, turn: 2, ownSiteValuationCredit: true });
+    expect(byId(before, "mine").valuationCredit).toBeUndefined();
+    expect(byId(after, "mine").valuationCredit).toBeCloseTo(
+      byId(founded, "mine").valuationCredit!,
+      8
+    );
+    expect(physical(after)).toEqual(physical(before));
   });
 });

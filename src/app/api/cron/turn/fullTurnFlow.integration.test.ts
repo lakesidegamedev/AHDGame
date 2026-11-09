@@ -193,6 +193,21 @@ describe("processTurn() — full turn flow", () => {
     db.collection("gameConfig");
     db.collectionMocks["gameConfig"].findOne.mockResolvedValue(null);
 
+    // The producer-path fence reads its claim back after inserting it. Keep
+    // claims for this test so successful inserts behave like persisted writes.
+    const producerClaims = new Map<string, { _id: string; path: string }>();
+    db.collection("producerPathClaims");
+    db.collectionMocks["producerPathClaims"].insertOne.mockImplementation(async (claim) => {
+      if (producerClaims.has(claim._id)) {
+        throw Object.assign(new Error("Duplicate producer-path claim"), { code: 11000 });
+      }
+      producerClaims.set(claim._id, { ...claim });
+      return { insertedId: claim._id };
+    });
+    db.collectionMocks["producerPathClaims"].findOne.mockImplementation(
+      async ({ _id }) => producerClaims.get(_id) ?? null
+    );
+
     // Set up sub-processor return values
     const actionRefresh = await import("@/lib/turn/actionRefresh");
     vi.mocked(actionRefresh.processActionRefresh).mockResolvedValue(undefined as never);
@@ -574,6 +589,41 @@ describe("processTurn() — full turn flow", () => {
 
     expect(processActionRefresh).toHaveBeenCalledTimes(1);
     expect(processFundGeneration).toHaveBeenCalledTimes(1);
+  });
+
+  it("finishes independent electoral work after a retryable market stop without advancing an unpaid economy", async () => {
+    const corporation = await import("@/lib/turn/corporationTurn");
+    const { TurnMustStopError } = await import("@/lib/turn/turnMustStop");
+    const spy = vi
+      .spyOn(corporation, "processCorporationTurn")
+      .mockRejectedValueOnce(
+        new TurnMustStopError("corporationTurn", new Error("market execution deadline"))
+      );
+    try {
+      const { processTurn } = await import("@/lib/turnSystem");
+      const result = await processTurn();
+      expect(result.success).toBe(false);
+      const { processCampaignTurn } = await import("@/lib/turn/campaignTurn");
+      const { advanceElectionTimers } = await import("@/lib/turn/perpetualElections");
+      const { processBillLifecycle } = await import("@/lib/billLifecycle");
+      const { processLineOfCreditTurn } = await import("@/lib/turn/lineOfCreditTurn");
+      expect(processCampaignTurn).toHaveBeenCalledOnce();
+      expect(advanceElectionTimers).toHaveBeenCalledOnce();
+      expect(processBillLifecycle).not.toHaveBeenCalled();
+      expect(processLineOfCreditTurn).not.toHaveBeenCalled();
+      const statuses = db.collectionMocks.turnLogs.insertOne.mock.calls.at(-1)?.[0].phaseStatuses;
+      expect(statuses.corporationTurn.status).toBe("failed");
+      expect(statuses.campaignTurn.status).toBe("completed");
+      expect(statuses.electionTimers.status).toBe("completed");
+      expect(statuses.billLifecycle.status).toBe("notReached");
+      expect(
+        db.collectionMocks.gameState.updateOne.mock.calls.some(
+          ([, update]) => update.$set?.currentTurn === mockGameState.currentTurn + 1
+        )
+      ).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("calls advanceElectionTimers and ensurePerpetualElections", async () => {

@@ -9,9 +9,11 @@ import {
   GLUT_MOTHBALL_PRICE_RATIO,
   GLUT_RESTART_PRICE_RATIO,
   COST_MOTHBALL_LOSS_TURNS,
+  inManualRestartGrace,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import {
+  plantShortageScore,
   sectorShortageScore,
   type CommodityPriceRatioFn,
   type PlacementSignals,
@@ -87,8 +89,10 @@ export function buildNppGlutMothballUpdates(args: {
       // precisely because such mines produce nothing, so the price signal
       // would restart it straight back onto a zero-output deposit.
       if (sp.sector.sectorType === "extraction" && sp.sector.capacityUtilization === 0) continue;
-      const ratio = sectorShortageScore(
-        sp.sector.sectorType,
+      // A mothballed mine reopens on its own recipe's prices, not on a
+      // shortage of a resource it does not extract.
+      const ratio = plantShortageScore(
+        sp.sector,
         sp.sector.countryId ?? corp.countryId,
         priceRatioOf
       );
@@ -113,6 +117,8 @@ export function buildNppGlutMothballUpdates(args: {
       for (const sp of sectorProfits) {
         if (sp.sector.mothballed === true) continue;
         if (divestedSectorIds.includes(sp.sector._id)) continue;
+        // The owner restarted this plant by hand: leave it running for the grace.
+        if (inManualRestartGrace(sp.sector, turn)) continue;
         // Extraction is excluded: every extractable is shortage-side (its
         // fill is ~1 so the gate would never fire) and its output/rationing
         // legs live outside the clearing book this signal reads.
@@ -139,6 +145,7 @@ export function buildNppGlutMothballUpdates(args: {
         for (const sp of sectorProfits) {
           if (sp.sector.mothballed === true) continue;
           if (divestedSectorIds.includes(sp.sector._id)) continue;
+          if (inManualRestartGrace(sp.sector, turn)) continue;
           if (sp.sector.sectorType === "extraction") continue;
           if (!isStuckAtThrottleFloor(sp.sector, fundedWorldEpoch)) continue;
           if (
@@ -162,7 +169,8 @@ export function buildNppGlutMothballUpdates(args: {
         const coldest = chooseCostMothballSector(
           sectorProfits,
           divestedSectorIds,
-          COST_MOTHBALL_LOSS_TURNS
+          COST_MOTHBALL_LOSS_TURNS,
+          turn
         );
         if (coldest) {
           sectorUpdates.push({

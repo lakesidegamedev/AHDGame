@@ -74,6 +74,7 @@ export function SectorMarginDrilldown({
   // outsiders (redactPrivateSectorRow); effective margin, market share, and the
   // modifier stack are not. Treat the redacted fields as optional so the
   // drill-down degrades to "—" instead of throwing.
+  const statement = sector.siteStatement;
   const base = sector.profitMargin as number | undefined;
   const effective = sector.effectiveProfitMargin;
   const workers = sector.workers as number | undefined;
@@ -155,18 +156,68 @@ export function SectorMarginDrilldown({
       {/* Effective margin build */}
       <div className="rounded-[var(--corp-rad,6px)] border border-card-border bg-card p-3.5">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-body-sm font-medium text-primary">Effective margin build</span>
+          <span className="text-body-sm font-medium text-primary">
+            {statement ? "Site net margin" : "Effective margin build"}
+          </span>
           <span className="text-[11px] text-muted">
-            {base != null ? `base ${base.toFixed(1)}% → ` : ""}
+            {!statement && base != null ? `base ${base.toFixed(1)}% → ` : ""}
             <span
-              className={`font-semibold ${net == null || net >= 0 ? "text-success" : "text-error"}`}
+              className={`font-semibold ${(statement ? statement.profit >= 0 : net == null || net >= 0) ? "text-success" : "text-error"}`}
             >
-              {effective.toFixed(1)}%
+              {statement
+                ? statement.netMarginPct == null
+                  ? "n/a"
+                  : `${statement.netMarginPct.toFixed(1)}%`
+                : `${effective.toFixed(1)}%`}
             </span>
           </span>
         </div>
 
-        {physical ? (
+        {statement ? (
+          <>
+            {statement.revenue > 0 ? (
+              <>
+                <ModifierLine
+                  label="Outside sales"
+                  value={(statement.externalRevenue / statement.revenue) * 100}
+                />
+                <ModifierLine
+                  label="Internal supply income"
+                  value={(statement.income / statement.revenue) * 100}
+                />
+                <ModifierLine
+                  label="Production and outside costs"
+                  value={(-statement.externalCost / statement.revenue) * 100}
+                />
+                <ModifierLine
+                  label="Internal supply charges"
+                  value={(-statement.charge / statement.revenue) * 100}
+                />
+                {statement.inventoryCredit > 0 && (
+                  <ModifierLine
+                    label="Stock at cost"
+                    value={(statement.inventoryCredit / statement.revenue) * 100}
+                  />
+                )}
+                {statement.supportCredit > 0 && (
+                  <ModifierLine
+                    label="Transition support"
+                    value={(statement.supportCredit / statement.revenue) * 100}
+                  />
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted">
+                No revenue this turn, so net margin has no percentage. See the profit and cost
+                amounts beside it.
+              </p>
+            )}
+            <p className="mt-2 text-xs text-muted">
+              Internal income and charges cancel in company totals. Estimated value of free
+              deliveries is separate from this result.
+            </p>
+          </>
+        ) : physical ? (
           <>
             <div className="flex items-center justify-between border-b border-card-border py-1 text-[12px]">
               <span className="text-foreground">Realized revenue</span>
@@ -236,7 +287,7 @@ export function SectorMarginDrilldown({
           )}
           <Group title="Corporate factors" rows={corporateRows} />
           <Group title="National economy" rows={nationalRows} />
-          {!physical && otherFactors != null && Math.abs(otherFactors) >= 0.05 && (
+          {!statement && !physical && otherFactors != null && Math.abs(otherFactors) >= 0.05 && (
             <div>
               <div className="mb-1 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
                 Other factors
@@ -256,7 +307,7 @@ export function SectorMarginDrilldown({
           )}
         </div>
 
-        {!physical && net != null && (
+        {!statement && !physical && net != null && (
           <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-[12px]">
             <span className="font-semibold text-foreground">Net modifiers</span>
             <span className={`font-bold tabular-nums ${net >= 0 ? "text-success" : "text-error"}`}>

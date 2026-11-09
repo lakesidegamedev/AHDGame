@@ -93,6 +93,8 @@ function seedCabinetSeat(
 }
 
 function seedUkGauge(db: MockDb) {
+  db.collection("gameConfig");
+  db.collectionMocks.gameConfig.findOne.mockResolvedValue({ governmentConfidenceEnabled: true });
   db.collection("ukGovernment");
   db.collectionMocks.ukGovernment.findOne.mockResolvedValue(null);
 }
@@ -157,6 +159,18 @@ describe("resignCabinetMemberHandler", () => {
     // Flat ministerResigned hit (12) from a full gauge of 100.
     const gaugeWrite = db.collectionMocks.governmentFormations.updateOne.mock.calls[0][1].$set;
     expect(gaugeWrite.confidenceGauge).toBe(88);
+  });
+
+  it("allows resignation while frozen without writing a confidence event", async () => {
+    seedCallerAsHolder("chief_whip");
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ governmentConfidenceEnabled: false });
+    const res = await resignCabinetMemberHandler(
+      post("/api/country/uk/executive/cabinet/resign", { positionId: "chief_whip" }),
+      "UK" as never
+    );
+    expect(res.status).toBe(200);
+    expect(db.collectionMocks.cabinetMembers.deleteOne).toHaveBeenCalled();
+    expect(db.collectionMocks.governmentFormations.updateOne).not.toHaveBeenCalled();
   });
 
   it("doubles the hit for a Great Office resignation", async () => {
@@ -566,8 +580,7 @@ describe("resignNppCaretakerMinister", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("cabinetMembers");
-    db.collection("ukGovernment");
-    db.collectionMocks.ukGovernment.findOne.mockResolvedValue(null);
+    seedUkGauge(db);
   });
 
   const memberId = new ObjectId();

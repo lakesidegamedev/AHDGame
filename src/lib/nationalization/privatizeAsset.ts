@@ -17,7 +17,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { isStateOwned, ensurePrimaryNationalCorporation } from "./nationalCorporation";
 import { assertPrivateEnterprisePermitted } from "@/lib/economy/queries/privateEnterpriseGate";
 import { computeSpunOutShareStructure } from "./privatizationShares";
-import { creditTreasuryProceeds } from "./treasury";
+import { creditTreasuryProceedsPaired } from "./treasury";
 import { loadTreasuryCashContext } from "./treasuryLedger";
 import { applyPrivatizationConsequences } from "./consequences/apply";
 import { recordNationalizationLedger } from "./ledger";
@@ -135,7 +135,9 @@ export async function privatizeAsset(
       throw new Error("Sector is not owned by the source National Corporation");
     }
     if (hasProtectedConstructionProperty(sector)) {
-      throw new Error("Resolve secured construction before privatizing this sector");
+      throw new Error(
+        "This site carries a construction loan, and privatization splits a site into a new holding. Wait until the loan is repaid."
+      );
     }
     if (
       sector.absorbedAtTurn != null &&
@@ -275,7 +277,9 @@ export async function privatizeAsset(
     `privatize:${newCorpId.toHexString()}`
   );
   if (!transitionKeys) {
-    throw new Error("Resolve secured construction before privatizing these sectors");
+    throw new Error(
+      "A selected site carries a construction loan or is in another ownership change. Wait until it settles."
+    );
   }
   const transitionKeyBySectorId = new Map(
     selected.map(({ sector }, index) => [sector._id.toHexString(), transitionKeys[index]])
@@ -452,8 +456,13 @@ export async function privatizeAsset(
     });
   } else {
     // No buyer pays for the float: the proceeds are an explicit, named mint.
-    await creditTreasuryProceeds(db, params.countryId, structure.proceedsLocal, now, {
+    await creditTreasuryProceedsPaired(db, {
+      countryId: params.countryId,
+      now,
       flow: "privatization_ipo",
+      key: `privatization-ipo:${newCorpId.toHexString()}`,
+      site: "privatizeAsset",
+      amountLocal: structure.proceedsLocal,
       // The caller's turn is the clock on the executive route; the context resolves
       // the turn whose snapshot will hold this cash on every path.
       ledger: { context: await loadTreasuryCashContext(db) },

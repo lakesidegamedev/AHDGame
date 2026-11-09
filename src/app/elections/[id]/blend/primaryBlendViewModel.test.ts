@@ -290,7 +290,7 @@ describe("campaign link", () => {
       ],
     });
     const vm = buildPrimaryBlendViewModel(input({ election: withCampaign }));
-    expect(vm.campaignHref).toBe("/campaign/camp1");
+    expect(vm.campaignHref).toBe("/elections/e1?view=campaign&campaign=camp1");
   });
 
   it("is absent when you have no campaign in this party", () => {
@@ -315,6 +315,14 @@ describe("calendar", () => {
 });
 
 describe("copy", () => {
+  it("does not double the article for a party whose name starts with The", () => {
+    const named = election({ byParty: [party({ partyName: "The Mafia" })] });
+    expect(buildPrimaryBlendViewModel(input({ election: named })).headline).toBe(
+      "The Mafia primary"
+    );
+    expect(buildPrimaryBlendViewModel(input()).headline).toBe("The Democratic primary");
+  });
+
   it("never emits an em or en dash", () => {
     const vm = buildPrimaryBlendViewModel(input());
     const strings = [

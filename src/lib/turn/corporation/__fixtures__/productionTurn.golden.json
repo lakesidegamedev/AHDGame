@@ -5,18 +5,18 @@
   "totalRevenueGenerated": 6460696.071294791,
   "totalIncomeGenerated": 874276.0799549461,
   "sectorsProcessed": 420,
-  "sha256": "4c18f295ef18d6953224fe70f5bccef6f4dfdce543f8e7df47d856517b799aa5",
+  "sha256": "d6d78bd1569cb33204cb776fd32e02fbb00373fa80c2598c90d0612a44f3f060",
   "shadow": {
     "plants": 420,
     "skipped": 0,
     "prices": 16,
     "nextPrices": 27,
-    "householdSpend": 1249055.8805675055,
+    "householdSpend": 1265017.0223127205,
     "publicSpend": 43750,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "28a2435bef8f85bfb68d40cfc3bd58fdfa551e59371e1899f4e9d5646abb74ef"
+    "sha256": "0a37c7a84a287179ad0a46044774804c32af237c4dac388474405bb63a14ff7d"
   },
   "clearing": {
     "sectorsWithClearing": 420,
@@ -36,6 +36,6 @@
     "sectorPresenceKeys": 0,
     "marketShareBySectorId": 420,
     "nationalDominanceShareBySectorId": 420,
-    "sha256": "cb7e0e5986fc30a0ff8b51c6d3105f9136c8a56c76f99e96a6f653091d169f29"
+    "sha256": "cd14af7a30f120d3b8a0c363e6478edfaac376802537b657f30d77818ec4ae3e"
   }
 }

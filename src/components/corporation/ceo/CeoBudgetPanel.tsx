@@ -28,8 +28,8 @@ import {
   SPRAWL_SECTOR_THRESHOLD,
 } from "@/lib/constants/corporations";
 import {
-  genericResearchDailyAnchor,
   marketingStrengthEquilibrium,
+  productDevelopmentDailyAnchor,
   remainingDevelopmentAnchor,
 } from "@/lib/corporations/strengthProjection";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
@@ -173,13 +173,16 @@ export default function CeoBudgetPanel({
   const lsEquilibrium =
     daily.logistics > 0 ? calcLogisticsGrowth(anchor(daily.logistics)) / LOGISTICS_DECAY_RATE : 0;
   const currentRd = corporation.rdScore ?? 0;
-  // While a product is in development the turn pays it from the R&D budget
-  // first; only the leftover earns points (#1724).
+  // While a product is in development it takes a bounded share of the R&D
+  // budget; only the rest earns points (#1724).
   const rdProjects = corporation.rdDevelopmentProjects ?? [];
   const rdFundedProject = rdProjects.find((project) => project.stage === "development");
-  const rdGenericAnchor = genericResearchDailyAnchor(anchor(daily.rd), rdProjects);
+  const rdDevelopmentAnchor = productDevelopmentDailyAnchor(anchor(daily.rd), rdProjects);
+  const rdGenericAnchor = Math.max(0, anchor(daily.rd) - rdDevelopmentAnchor);
   const rdNet = calcRdGrowth(rdGenericAnchor, currentRd) - currentRd * RD_DECAY_RATE;
-  const rdGoesToProduct = rdFundedProject != null && daily.rd > 0 && rdGenericAnchor <= 0;
+  const rdDevelopmentShare =
+    daily.rd > 0 && anchor(daily.rd) > 0 ? rdDevelopmentAnchor / anchor(daily.rd) : 0;
+  const rdFundsProduct = rdFundedProject != null && rdDevelopmentShare > 0;
   const anchorPerLocal = money.toAnchor(1);
   const rdRemainingCost =
     anchorPerLocal > 0 ? remainingDevelopmentAnchor(rdProjects) / anchorPerLocal : 0;
@@ -399,13 +402,14 @@ export default function CeoBudgetPanel({
           amount={budgetInput("rd", "R&D")}
           pct={pctOfRevenue(daily.rd)}
           note={
-            rdGoesToProduct ? (
-              <span className="text-warning">
-                +0/turn, R&amp;D budget is funding {rdFundedProject.label} development (
-                {money.fmt(rdRemainingCost)} still to pay)
-                {currentRd > 0
-                  ? `. Points decay ${(currentRd * RD_DECAY_RATE).toFixed(2)}/turn`
-                  : ""}
+            rdFundsProduct ? (
+              <span>
+                {`${rdNet >= 0 ? "+" : ""}${rdNet.toFixed(2)}/turn (now ${Math.round(currentRd)}). `}
+                <span className="text-warning">
+                  {rdFundedProject.label} development takes {Math.round(rdDevelopmentShare * 100)}%
+                  of this budget ({money.fmt(rdRemainingCost)} still to pay). The rest goes to
+                  research.
+                </span>
               </span>
             ) : daily.rd > 0 ? (
               `${rdNet >= 0 ? "+" : ""}${rdNet.toFixed(2)}/turn (now ${Math.round(currentRd)}). Innovation ${innovationPct.toFixed(0)}% every ${RD_INNOVATION_INTERVAL} turns; diminishing above ${RD_DIMINISHING_THRESHOLD}`

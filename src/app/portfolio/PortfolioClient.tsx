@@ -1,5 +1,7 @@
 "use client";
 
+import { personalPortfolioNetWorth } from "@/lib/portfolio/rules/netWorth";
+
 import { PlayerIncomeTaxStatement } from "@/components/portfolio/PlayerIncomeTaxStatement";
 import type { PlayerTaxStatement } from "@/lib/budget/playerIncomeTaxSummary";
 import { useGameEvents } from "@/hooks/useGameEvents";
@@ -181,6 +183,7 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
   const [totalBondValue, setTotalBondValue] = useState(0);
   const [totalBondIncomePerTurn, setTotalBondIncomePerTurn] = useState(0);
   const [cashOnHand, setCashOnHand] = useState(0);
+  const [portfolioLoanDebtValue, setPortfolioLoanDebtValue] = useState(0);
   const [myCharacterId, setMyCharacterId] = useState("");
   const [myCountryId, setMyCountryId] = useState("");
   // Seeded from the server → holdings render immediately; the wallet / CEO / LoC
@@ -252,8 +255,10 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
     setBondHoldings(portfolio.bondHoldings || []);
     setTotalValue(portfolio.totalValue || 0);
     setTotalBondValue(portfolio.totalBondValue || 0);
+    setFundHoldingsValue(portfolio.totalFundValue || 0);
     setTotalBondIncomePerTurn(portfolio.totalBondIncomePerTurn || 0);
     setCashOnHand(portfolio.cashOnHand || 0);
+    setPortfolioLoanDebtValue(portfolio.locDebtValue || 0);
     setHistory(portfolio.history || []);
     setSavingsApyByCurrency(portfolio.apyByCurrency ?? null);
     setSavingsAccountsOpenedState(portfolio.savingsAccountsOpened ?? null);
@@ -297,13 +302,6 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
         // null means the index-funds feature is off for this world, which hides
         // the section; an array (even empty) enables it and feeds net worth.
         setFundsFeatureEnabled(me.fundPositions !== null);
-        setFundHoldingsValue(
-          (me.fundPositions ?? []).reduce(
-            (sum: number, pos: { marketValueAnchor: number | null }) =>
-              sum + (pos.marketValueAnchor ?? 0),
-            0
-          )
-        );
       }
       if (me?.corporation && !me.corporation.isNationalCorp) {
         setCeoCorporation(me.corporation as MeCeoCorporation);
@@ -416,10 +414,17 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
   // True net worth: stock holdings + bond holdings + all cash & savings − outstanding LOC debt.
   // Previously this only summed stocks + bonds, which is why a player with £16M cash and £10M
   // loans showed a "Net Worth" identical to their stock-only total.
-  const investmentTotal = totalValue + totalBondValue + fundHoldingsValue;
-  const loanObligation = locSnapshot?.outstandingInternal ?? 0;
-  const combinedTotal =
-    investmentTotal + cashOnHand - loanObligation - (incomeTaxStatement?.unpaidTaxAnchor ?? 0);
+  // Net worth uses the same debt reading as the profile page, even if the
+  // separate loan-controls request is disabled or temporarily unavailable.
+  const loanObligation = portfolioLoanDebtValue;
+  const combinedTotal = personalPortfolioNetWorth({
+    stockValue: totalValue,
+    bondValue: totalBondValue,
+    fundValue: fundHoldingsValue,
+    cashValue: cashOnHand,
+    loanDebt: loanObligation,
+    incomeTaxDebt: incomeTaxStatement?.unpaidTaxAnchor ?? 0,
+  });
   const stockMarketFundsHref = myCountryId
     ? `/country/${myCountryId.toLowerCase()}/stockmarket?tab=funds`
     : "/country/us/stockmarket?tab=funds";

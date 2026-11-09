@@ -22,7 +22,7 @@ import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { createNotification } from "@/lib/notifications";
 import { logWireEvent, wireHeadlineCorpPrivatized } from "@/lib/wireEvent";
 import { resolveNationalCorporationForSector } from "./nationalCorporation";
-import { creditTreasuryProceeds } from "./treasury";
+import { creditTreasuryProceedsPaired } from "./treasury";
 import {
   loadTreasuryCashContext,
   witnessTreasuryCash,
@@ -34,6 +34,12 @@ import { snapshotCorporationCurrency } from "@/lib/ledger/balanceSnapshot";
 import { applyPrivatizationConsequences } from "./consequences/apply";
 import { recordNationalizationLedger } from "./ledger";
 import { notifyCountryResidents } from "./privatizationNotifications";
+import {
+  combineConstructionBorrowerTransferPlans,
+  prepareConstructionBorrowerTransfers,
+  settleConstructionBorrowerTransfers,
+  type ConstructionBorrowerTransferPlan,
+} from "@/lib/banking/constructionBorrowerTransfer";
 import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
@@ -266,20 +272,10 @@ export async function reabsorbSpunOutCorp(
   const now = new Date();
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const shellSectors = await sectors.find({ corporationId: shell._id }).toArray();
-  const transitionKeys = await reserveSectorsForTransition(
-    db,
-    shellSectors,
-    "privatization_reabsorption",
-    `reabsorb:${shell._id.toHexString()}:${turn}`
-  );
-  if (!transitionKeys)
-    throw new Error("Resolve secured construction before reabsorbing this corporation");
-  const transitionKeyBySectorId = new Map(
-    shellSectors.map((sector, index) => [sector._id.toHexString(), transitionKeys[index]])
-  );
 
   // Route each sector back to the NatCorp that owns its type.
   const destByType = new Map<string, ObjectId>();
+  const destDocs = new Map<string, Corporation>();
   for (const s of shellSectors) {
     if (!destByType.has(s.sectorType)) {
       const dest = s.industryModel
@@ -291,29 +287,75 @@ export async function reabsorbSpunOutCorp(
           )
         : await resolveNationalCorporationForSector(db, shell.countryId, s.sectorType);
       destByType.set(s.sectorType, dest._id);
+      destDocs.set(dest._id.toHexString(), dest);
     }
   }
-  const idsByDest = new Map<string, ObjectId[]>();
-  for (const s of shellSectors) {
-    const key = destByType.get(s.sectorType)!.toString();
-    idsByDest.set(key, [...(idsByDest.get(key) ?? []), s._id]);
+
+  // A financed site goes back with its construction loan; its National
+  // Corporation becomes the borrower.
+  const transferPlans: ConstructionBorrowerTransferPlan[] = [];
+  const operationKey = `reabsorb:${shell._id.toHexString()}:${turn}`;
+  for (const [destHex, dest] of destDocs) {
+    const prepared = await prepareConstructionBorrowerTransfers(db, {
+      sectors: shellSectors.filter((s) => destByType.get(s.sectorType)!.toHexString() === destHex),
+      toId: dest._id,
+      toCurrency: dest.liquidCurrencyCode,
+      operationKey,
+      turn,
+    });
+    if (!prepared.ok) {
+      await settleConstructionBorrowerTransfers(
+        db,
+        combineConstructionBorrowerTransferPlans(transferPlans)
+      );
+      throw new Error(prepared.error);
+    }
+    transferPlans.push(prepared.plan);
   }
-  for (const [destKey, ids] of idsByDest) {
-    for (const sectorId of ids) {
-      const transitionKey = transitionKeyBySectorId.get(sectorId.toHexString());
-      if (!transitionKey) throw new Error("A secured sector reservation was lost");
-      const moved = await sectors.updateOne(
-        {
-          _id: sectorId,
+  const constructionTransfers = combineConstructionBorrowerTransferPlans(transferPlans);
+  const transitionKeys = await reserveSectorsForTransition(
+    db,
+    shellSectors,
+    "privatization_reabsorption",
+    operationKey,
+    false,
+    constructionTransfers
+  );
+  if (!transitionKeys) {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+    throw new Error("A sector of this corporation is in another ownership change");
+  }
+  const transitionKeyBySectorId = new Map(
+    shellSectors.map((sector, index) => [sector._id.toHexString(), transitionKeys[index]])
+  );
+  const moves = shellSectors.map((sector) => {
+    const transitionKey = transitionKeyBySectorId.get(sector._id.toHexString());
+    if (!transitionKey) throw new Error("A secured sector reservation was lost");
+    return {
+      updateOne: {
+        filter: {
+          _id: sector._id,
           corporationId: shell._id,
           "constructionPropertyTransition.key": transitionKey,
+          ...constructionTransfers.claimFilterFor(sector),
         },
-        { $set: { corporationId: new ObjectId(destKey), absorbedAtTurn: turn, updatedAt: now } }
-      );
-      if (moved.matchedCount !== 1)
-        throw new Error("A sector changed during the National Corporation reabsorption");
-    }
+        update: {
+          $set: {
+            corporationId: destByType.get(sector.sectorType)!,
+            ...constructionTransfers.setFor(sector._id),
+            absorbedAtTurn: turn,
+            updatedAt: now,
+          },
+        },
+      },
+    };
+  });
+  const moved = moves.length > 0 ? await sectors.bulkWrite(moves) : { matchedCount: 0 };
+  if (moved.matchedCount !== moves.length) {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
+    throw new Error("A sector changed during the National Corporation reabsorption");
   }
+  await settleConstructionBorrowerTransfers(db, constructionTransfers);
 
   // Residual cash → the primary NatCorp (money conservation).
   if ((shell.liquidCapital ?? 0) > 0) {
@@ -448,8 +490,13 @@ export async function resolveNationalizationAuction(
   }
 
   // The winner's escrow already left the bidder → credit the treasury that amount.
-  await creditTreasuryProceeds(db, auction.countryId, winner.amount, now, {
+  await creditTreasuryProceedsPaired(db, {
+    countryId: auction.countryId,
+    now,
     flow: "privatization_auction_proceeds",
+    key: `privatization-auction:${auction._id.toHexString()}`,
+    site: "privatizationAuction:resolve",
+    amountLocal: winner.amount,
     ledger,
   });
 

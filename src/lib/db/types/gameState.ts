@@ -524,6 +524,14 @@ export interface GameState {
   frontierEntryExperimentEnabledAt?: string;
   /** Turn the extraction auto-strategy phase last acted. Guards its cadence. */
   lastExtractionAutoStrategyTurn?: number;
+  /**
+   * Last turn the corporation turn delivered builds in this world. A sector
+   * with no `buildDeliverySettledTurn` of its own (founded during an economy
+   * pause, or since a reset) catches up from here. A reset writes the turn
+   * before the new world's first turn, so builds placed during the opening
+   * pause land in full.
+   */
+  buildDeliverySettledTurn?: number;
   /** Master gate for the US House districted-redistricting system. Default off. */
   /**
    * NPP corporation strategy loop. DEFAULT ON: absent means enabled, so

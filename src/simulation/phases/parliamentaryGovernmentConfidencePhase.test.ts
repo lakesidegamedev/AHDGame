@@ -21,6 +21,7 @@ import { runParliamentaryGovernmentConfidencePhase } from "./parliamentaryGovern
 describe("post-election confidence ordering", () => {
   it("finishes the snap turn at exactly 50 after normal drift, then permits later drift", async () => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     memory.seed(
       "governmentFormations",
       ["UK", "JP", "DE"].map((_id) => ({ _id, confidenceGauge: 47 }))
@@ -44,6 +45,7 @@ describe("post-election confidence ordering", () => {
   });
   it("leaves ordinary confidence ticks alone without a completed snap", async () => {
     const memory = createInMemoryDb();
+    memory.seed("gameConfig", [{ _id: "default", governmentConfidenceEnabled: true }]);
     memory.seed("governmentFormations", [{ _id: "JP", confidenceGauge: 10 }]);
     await runParliamentaryGovernmentConfidencePhase(memory as unknown as Db, new Date(), 100);
     expect(

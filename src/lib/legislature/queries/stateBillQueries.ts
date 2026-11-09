@@ -1,3 +1,4 @@
+import { billVotePositions } from "@/lib/legislature/votePositions";
 import { resolveResetLawProvision } from "@/lib/legislature/provisionEnrichment/resetLaw";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUser } from "@/lib/auth";
@@ -242,12 +243,7 @@ export async function listStateLegislatureBills(
       overrideVotingEndsOnTurn: bill.overrideVotingEndsOnTurn,
       myVote: myCharacterId ? (bill.votes[myCharacterId] ?? null) : null,
       voteShiftPreview: buildVoteShiftPreview({
-        provisions: (bill.provisions ?? []).filter(
-          (provision) =>
-            provision.type !== "subsidy" &&
-            provision.type !== "end_subsidy" &&
-            provision.type !== "reset_law"
-        ),
+        provisions: billVotePositions(bill.provisions ?? []),
         ledger: bill.policyShiftLedger,
         characterId: myCharacterId,
         policies: myPolicies,
@@ -650,12 +646,7 @@ export async function getStateLegislatureBillDetail(
     overrideVotesAgainst: headlineOverrideVotesAgainst,
     canVote,
     voteShiftPreview: buildVoteShiftPreview({
-      provisions: (bill.provisions ?? []).filter(
-        (provision) =>
-          provision.type !== "subsidy" &&
-          provision.type !== "end_subsidy" &&
-          provision.type !== "reset_law"
-      ),
+      provisions: billVotePositions(bill.provisions ?? []),
       ledger: bill.policyShiftLedger,
       characterId: myCharacterId,
       policies: myPolicies,

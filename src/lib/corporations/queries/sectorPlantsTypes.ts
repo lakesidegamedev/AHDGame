@@ -1,3 +1,4 @@
+import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 /**
  * Plant capacity, freight and profit payloads for the sector detail page.
  * `SectorPlantsSection` keeps the physical cost chain and production summary together.
@@ -16,6 +17,8 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "losing"
+    | "held"
     | "cash"
     | "strike"
     | "disaster"
@@ -29,6 +32,8 @@ export interface PlantIdleCause {
   units: number;
   /** Configured branch share, before idle and mothball caps. Only for bank. */
   capacityShare?: number;
+  /** The input that cut the run, as a label. Only for held; absent means cash held it. */
+  heldInput?: string;
 }
 
 /** One outstanding capacity build order, already turned into countdown form. */
@@ -72,6 +77,8 @@ export interface PlantBuildOrderView {
  * basis as `capitalStock` / `producedUnits`.
  */
 export interface SectorPlantsSection {
+  /** Why the plan sits where it does and what next turn brings (sectorRunReport). Funded worlds only. */
+  runReport?: import("./sectorRunReport").RunReport | null;
   /** Persisted whole facilities owned by this sector. */
   plantCount: number;
   /** The strategy the sector runs; with the lane it decides plant size. */
@@ -95,6 +102,11 @@ export interface SectorPlantsSection {
   /** State-scoped output labels: these sell only in this state (ticket 1700). */
   localMarketOutputs: string[];
   mothballed: boolean;
+  /**
+   * Present while autopilot is on and the owner's manual restart holds off
+   * automatic mothballing: the first turn autopilot may mothball it again.
+   */
+  autopilotHoldUntilTurn?: number;
   /** Outstanding build orders, oldest first. */
   buildQueue: PlantBuildOrderView[];
   /** ₳ paid for capacity that is not productive yet. */
@@ -137,6 +149,9 @@ export interface SectorPlantsSection {
   demandGapUnits: number;
   /** Conservative construction-capacity room after idle capacity and queues; excludes latent demand. */
   measuredDemandGapUnits?: number | null;
+  /** Cash-backed orders in each output's actual market. National rows include the region. */
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
   /**
    * True when this sector's own demand throttle bound last turn. Its idle
    * capacity is what buyers' room fills first (output can climb by the probe
@@ -229,6 +244,9 @@ export interface SectorPlantsSection {
     perUnitChargedAnchor: number;
     /** Corp's spendable capital, normalized to ₳ so the dialog can gate on it. */
     corpCapitalAnchor: number;
+    /** Running bills and expected sales of one turn, from the last settled receipts (build warning). */
+    runningBillsAnchor?: number;
+    runRevenueAnchor?: number;
     /** Largest whole order the corp can afford, fee included. */
     maxAffordableUnits: number;
   };
@@ -248,6 +266,8 @@ export interface SectorPlantsSection {
    * same identity hold.
    */
   pnl: {
+    /** Site accounts in anchor currency per financial day. */
+    statement?: SiteStatement;
     revenueAnchor: number;
     inputsAnchor: number;
     labourAnchor: number;
@@ -271,6 +291,12 @@ export interface SectorPlantsSection {
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
     internalSupplyChargeAnchor?: number;
+    /**
+     * Free internal transfers: what this site sent to the company's own sites
+     * last turn at its own asking price, ₳ per day. A memo, not booked; only
+     * the net margin counts it. Absent when priced or none.
+     */
+    ownSiteMemoAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     growthAndBuildAnchor: number;
@@ -318,6 +344,8 @@ export interface SectorPlantsSection {
      * once it reaches STRANDED_WARN_TURNS.
      */
     lowFillTurns: number;
+    /** The CEO's opt-in to sell to outside buyers before the company's own plants. */
+    sellOutsideFirst?: boolean;
     /**
      * Inventory of unsold storable output (design-realization-legs §6): the
      * toggle state plus the pile. Null-ish zeros before the first inventory

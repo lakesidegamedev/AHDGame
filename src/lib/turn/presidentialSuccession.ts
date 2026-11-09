@@ -113,6 +113,13 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
       }
     );
 
+    try {
+      const { checkOfficeHeldAchievements } = await import("@/lib/achievements/triggers");
+      await checkOfficeHeldAchievements(vpCharacter.userId, vpRecord.characterId, "president");
+    } catch (e) {
+      console.error("President achievement check failed:", e);
+    }
+
     await createNotifications([
       {
         userId: vpCharacter.userId,

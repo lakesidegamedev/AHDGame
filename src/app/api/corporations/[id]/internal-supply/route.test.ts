@@ -276,3 +276,59 @@ it("shows an inherited group haul without exposing the parent's legacy own-only 
     },
   ]);
 });
+
+it("in a funded world reads own-site deliveries from the settled receipts", async () => {
+  db.collection("gameConfig");
+  db.collection("gameState");
+  db.collectionMocks.gameConfig.findOne.mockResolvedValue({ producerMarketLiveFromTurn: 5 });
+  db.collectionMocks.gameState.findOne.mockResolvedValue({ currentTurn: 21 });
+  db.collectionMocks.corporateSectors.find.mockReturnValue({
+    toArray: async () => [
+      {
+        internalSupplyReceipt: { turn: 20, received: {}, reserved: {}, discountCostAnchor: 0 },
+        producerSettlement: {
+          turn: 20,
+          products: [
+            {
+              commodity: "energy",
+              producedUnits: 10,
+              soldUnits: 0,
+              internalDeliveredUnits: 10,
+              askingUnitPrice: 2,
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const body = await (await GET(request("GET"), { params })).json();
+  expect(body.fundedMarket).toBe(true);
+  expect(body.lastTurn).toBe(20);
+  expect(body.ownSites.rows).toEqual([
+    {
+      commodity: "energy",
+      madeUnits: 240,
+      ownSiteUnits: 240,
+      soldUnits: 0,
+      valueAnchor: 480,
+    },
+  ]);
+  expect(body.received).toEqual({});
+  // No saved policy: own sites come first in a funded world.
+  expect(body.policy.priority).toBe("own");
+  expect(body.effectivePolicy.priority).toBe("own");
+});
+
+it("in a funded world keeps an explicit open market choice", async () => {
+  db.collection("gameConfig");
+  db.collection("gameState");
+  db.collectionMocks.gameConfig.findOne.mockResolvedValue({ producerMarketLiveFromTurn: 5 });
+  db.collectionMocks.gameState.findOne.mockResolvedValue({ currentTurn: 21 });
+  const chosen = { ...corp, internalSupplyPolicy: { priority: "market", discount: 0 } };
+  vi.mocked(resolveCorporation).mockResolvedValue({ ok: true, corporation: chosen } as never);
+  db.collectionMocks.corporations.find.mockReturnValue({ toArray: async () => [chosen] });
+  const body = await (await GET(request("GET"), { params })).json();
+  expect(body.policy.priority).toBe("market");
+  expect(body.effectivePolicy.priority).toBe("market");
+  expect(body.ownSites).toBeNull();
+});

@@ -32,6 +32,11 @@ interface PrimaryCampaignControlsProps {
    * from before the action.
    */
   onChanged?: () => void;
+  /**
+   * A state the reader is looking at (the map's state panel). Adds a one-click
+   * camp there and keeps the home-state surge to the home state's own panel.
+   */
+  focusState?: { id: string; name: string };
 }
 
 export function PrimaryCampaignControls({
@@ -48,6 +53,7 @@ export function PrimaryCampaignControls({
   surgeBoost,
   states,
   onChanged,
+  focusState,
 }: PrimaryCampaignControlsProps) {
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -108,6 +114,9 @@ export function PrimaryCampaignControls({
   };
 
   const tickBar = Array.from({ length: tickCap }, (_, i) => i < currentTicks);
+  const focusCost = focusState ? states.find((s) => s.id === focusState.id)?.actionCost : undefined;
+  const campedHere = focusState != null && focusState.id === currentCampaignState;
+  const showSurge = Boolean(homeState) && (!focusState || focusState.id === homeState);
   const canSurge = !surgeUsed && playerFunds >= surgeCostFunds && playerActions >= surgeCostActions;
 
   return (
@@ -150,17 +159,32 @@ export function PrimaryCampaignControls({
             <div className="text-sm text-muted mt-1">No state selected</div>
           )}
         </div>
+        {focusState && focusCost !== undefined && !campedHere ? (
+          <button
+            type="button"
+            disabled={busy !== null || playerActions < focusCost}
+            onClick={() => void selectState(focusState.id)}
+            title={playerActions < focusCost ? `Needs ${focusCost} actions` : undefined}
+            className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Camp in {focusState.name} ({focusCost} {focusCost === 1 ? "action" : "actions"})
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
           className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors"
         >
-          {currentCampaignState ? "Change state" : "Pick state"}
+          {focusState && !campedHere
+            ? "Another state"
+            : currentCampaignState
+              ? "Change state"
+              : "Pick state"}
         </button>
       </div>
 
       {/* Surge action */}
-      {homeState && (
+      {showSurge && (
         <div className="flex items-center flex-wrap gap-3 border-t border-card-border pt-3">
           <div className="flex-1 min-w-[200px]">
             <div className="text-body-sm font-medium text-muted">Home-state surge</div>

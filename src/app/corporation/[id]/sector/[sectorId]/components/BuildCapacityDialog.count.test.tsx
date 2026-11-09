@@ -86,6 +86,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("does not call a mixed funded shortage oversupply when conservative sizing is zero", () => {
+  renderDialog(vi.fn(), {
+    ...plants,
+    measuredDemandGapUnits: 0,
+    buildDemandTurn: 778,
+    buildDemand: [
+      { commodity: "network_services", scope: "national", funded: 100, delivered: 0, unmet: 100 },
+      { commodity: "software", scope: "national", funded: 3, delivered: 3, unmet: 0 },
+    ],
+  });
+  expect(screen.getByText(/Funded buyers remain unfilled/)).toBeTruthy();
+  expect(screen.queryByText(/buyers are already taking all they need/)).toBeNull();
+});
+
 it("shows fluctuation and idle-capacity warnings even when an order fits today's estimate", () => {
   renderDialog();
   expect(screen.getByText("Demand today is not guaranteed sales tomorrow")).toBeTruthy();

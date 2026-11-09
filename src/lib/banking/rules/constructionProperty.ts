@@ -29,21 +29,23 @@ export function hasProtectedConstructionClaim(
 /** Mongo predicate that matches only sectors with no active secured claim. */
 export function unprotectedConstructionPropertyFilter(): Record<string, unknown> {
   return {
-    $and: [
-      { constructionPropertyTransition: { $exists: false } },
+    $and: [{ constructionPropertyTransition: { $exists: false } }, unclaimedConstructionFilter()],
+  };
+}
+
+/** The claim half of the predicate above, without the ownership marker check. */
+export function unclaimedConstructionFilter(): Record<string, unknown> {
+  return {
+    $or: [
+      { constructionFinancing: { $exists: false } },
       {
-        $or: [
-          { constructionFinancing: { $exists: false } },
+        $and: [
+          { "constructionFinancing.status": { $in: ["released", "cancelled"] } },
+          { "constructionFinancing.escrowLocal": 0 },
           {
-            $and: [
-              { "constructionFinancing.status": { $in: ["released", "cancelled"] } },
-              { "constructionFinancing.escrowLocal": 0 },
-              {
-                $or: [
-                  { "constructionFinancing.cancellation": { $exists: false } },
-                  { "constructionFinancing.cancellation.cleanupCompleted": true },
-                ],
-              },
+            $or: [
+              { "constructionFinancing.cancellation": { $exists: false } },
+              { "constructionFinancing.cancellation.cleanupCompleted": true },
             ],
           },
         ],

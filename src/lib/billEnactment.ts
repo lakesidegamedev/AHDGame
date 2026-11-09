@@ -1,3 +1,5 @@
+import { applyCorporateTaxBillChange } from "@/lib/legislature/corporateTaxEnactment";
+import type { V2BillBallots } from "@/lib/resetLegislation/voterReactions";
 import { capitalGainsTierForTaxKey } from "@/lib/budget/rules/capitalGainsTax";
 import {
   INCOME_TIERS,
@@ -90,7 +92,7 @@ import { getCurrentTurn } from "@/lib/currentTurn";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getSelectedPolicyOption } from "@/lib/budget/costs";
 import type { CountryId } from "@/lib/constants/countries";
-import { getCountryConfig } from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, getCountryConfig } from "@/lib/constants/countries";
 import {
   inferCountryIdFromStateId,
   resolveBillCountryId,
@@ -126,6 +128,9 @@ type EnactableBill = Pick<
   // Votes from both chambers for federal bills
   votes?: Record<string, "for" | "against" | "abstain">;
   otherChamberVotes?: Record<string, "for" | "against" | "abstain">;
+  /** Final override ballots also determine v2 demographic reactions. */
+  vetoOverrideVotes?: Bill["vetoOverrideVotes"];
+  overrideVotes?: StateBill["overrideVotes"];
   // Chamber + tally fields read by the Discord card's vote-split chart. The
   // lifecycle engine hands us the full bill document, so these are present on
   // real enactments even though the Pick above doesn't declare them.
@@ -175,7 +180,8 @@ async function applyTaxRateChange(
   legislationType: LegislationType,
   selectedOptionRate: number | undefined,
   stateId: string,
-  retry = 0
+  retry = 0,
+  countryOverride?: CountryId
 ): Promise<void> {
   // Slider tax laws (ruling #16) carry scope+taxType on `taxSlider`, not the discrete
   // `taxRateChange` schema — the two are projected side by side, but only for freshly
@@ -192,9 +198,8 @@ async function applyTaxRateChange(
   const { scope, taxType } = change;
 
   if (scope === "federal") {
-    const countryId = (
-      legislationType.countryScope ?? "us"
-    ).toUpperCase() as import("@/lib/constants/countries").CountryId;
+    const countryId =
+      countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
     const budgetId = getNationalBudgetId(countryId);
     const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
     if (!budget) return;
@@ -290,7 +295,14 @@ async function applyTaxRateChange(
     );
     if (written.matchedCount === 0) {
       if (retry >= 3) throw new Error("Income-tax budget changed repeatedly during enactment");
-      return applyTaxRateChange(db, legislationType, selectedOptionRate, stateId, retry + 1);
+      return applyTaxRateChange(
+        db,
+        legislationType,
+        selectedOptionRate,
+        stateId,
+        retry + 1,
+        countryOverride
+      );
     }
     return;
   }
@@ -317,9 +329,8 @@ async function applyTaxRateChange(
       return;
     }
 
-    const stateBudgetCountryId = (
-      legislationType.countryScope ?? "us"
-    ).toUpperCase() as import("@/lib/constants/countries").CountryId;
+    const stateBudgetCountryId =
+      countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
     const budget = await db
       .collection<StateBudget>("stateBudgets")
       .findOne({ _id: stateId, countryId: stateBudgetCountryId });
@@ -364,7 +375,14 @@ async function applyTaxRateChange(
     if (written.matchedCount === 0) {
       if (retry >= 3)
         throw new Error("Regional income-tax budget changed repeatedly during enactment");
-      return applyTaxRateChange(db, legislationType, selectedOptionRate, stateId, retry + 1);
+      return applyTaxRateChange(
+        db,
+        legislationType,
+        selectedOptionRate,
+        stateId,
+        retry + 1,
+        countryOverride
+      );
     }
   }
 }
@@ -717,7 +735,8 @@ export async function onBillEnacted(
       legTypeMap,
       currentTurn,
       forVoters,
-      billCountryId
+      billCountryId,
+      bill
     );
 
     // Record enacted law with dynamic cost metadata from the selected policy option.
@@ -890,7 +909,8 @@ async function processProvisionEnactment(
   legTypeMap: Map<string, LegislationType>,
   currentTurn: number,
   forVoters: string[],
-  countryId?: string
+  countryId?: string,
+  ballots: V2BillBallots = {}
 ): Promise<void> {
   const lt = legTypeMap.get(provision.legislationTypeId);
 
@@ -1028,20 +1048,42 @@ async function processProvisionEnactment(
     await reconcileEnactedUKDevolution(db, new Date());
   }
 
-  // Apply tax rate changes if this is tax legislation
-  if (!exactRateValidated && lt?.taxRateChange && policyOption?.rate !== undefined) {
-    await applyTaxRateChange(db, lt, policyOption.rate, stateId);
-  }
-
-  // Exact-rate laws carry the chosen rate on the provision. New-generation
-  // types expose `taxSlider`; reviewed JP/IE v2 taxes retain their established
-  // `taxRateChange` types and use the same rate-encoded provision shape.
+  const taxChange = lt?.taxRateChange ?? lt?.taxSlider;
+  const selectedRate = exactRateValidated ? provision.proposedRate : policyOption?.rate;
+  const corporateTaxType =
+    taxChange?.taxType === "domesticCorporateTax"
+      ? "domesticCorporateTax"
+      : taxChange?.taxType === "foreignCorporateTax"
+        ? "foreignCorporateTax"
+        : null;
+  const corporateRateHandled = corporateTaxType !== null && selectedRate !== undefined;
   if (
-    exactRateValidated &&
-    (lt?.taxSlider || lt?.taxRateChange) &&
-    provision.proposedRate !== undefined
+    corporateRateHandled &&
+    taxChange &&
+    lt &&
+    !(taxChange.scope === "state" && inferCountryIdFromStateId(stateId) != null)
   ) {
-    await applyTaxRateChange(db, lt, provision.proposedRate, stateId);
+    const corporateCountry = (countryId ??
+      lt.countryScope?.toUpperCase() ??
+      COUNTRY_CONFIGS.US.id) as CountryId;
+    await applyCorporateTaxBillChange(
+      db,
+      {
+        billId: billId.toString(),
+        legislationTypeId: lt._id,
+        countryId: corporateCountry,
+        scope: taxChange.scope,
+        stateId,
+        taxType: corporateTaxType,
+        proposedRate: selectedRate,
+        turn: currentTurn,
+        ballots,
+      },
+      (transactionDb) =>
+        applyTaxRateChange(transactionDb, lt, selectedRate, stateId, 0, corporateCountry)
+    );
+  } else if (taxChange && selectedRate !== undefined && lt) {
+    await applyTaxRateChange(db, lt, selectedRate, stateId);
   }
 
   // Banking separation: write bankingLaws.<countryId>.separation (reusable law).
@@ -1059,7 +1101,7 @@ async function processProvisionEnactment(
   }
 
   // Calculate and apply archetype approval impacts based on policy shift
-  if (lt?.policyDomain && forVoters.length > 0) {
+  if (!corporateRateHandled && lt?.policyDomain && forVoters.length > 0) {
     const impacts = calculateShiftImpacts(
       lt.policyDomain,
       oldPolicyIndex,

@@ -10,10 +10,33 @@ import {
   settleProducerTurn,
 } from "@/lib/market/producerMarket/settlement";
 import type { prepareProducerSector } from "./producerSectorPlan";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
+import {
+  roundStageTimings,
+  stageClock,
+  type StageTimings,
+} from "@/lib/market/producerMarket/stageTimings";
 
-/** Planning passes for a live funded turn (the shadow uses 8). */
-export const LIVE_PLANNING_PASSES = 16;
+/** Stop on convergence, with a bounded fallback for difficult live markets. */
+export const LIVE_PLANNING_PASSES = 64;
+/**
+ * Cooperative budget includes market preparation (~20 s live); final clearing
+ * still completes. 30 s allowed one ~15 s planning pass, leaving 6,500+ plans
+ * still moving 40-65% (turn 746); 90 s allows about four within the 450 s
+ * execution budget of the ten-minute corporation window. Owner 2026-11-08.
+ */
+export const LIVE_PLANNING_BUDGET_MS = 90_000;
+/**
+ * Size the pre-settlement deadline from the corporation-specific timeout,
+ * leaving a quarter of the phase for durable settlement and other work.
+ */
+export function liveMarketExecutionBudgetMs(timeoutMs: number): number {
+  return Math.floor(timeoutMs * 0.75);
+}
+export const LIVE_MARKET_EXECUTION_BUDGET_MS = liveMarketExecutionBudgetMs(
+  phaseTimeoutMs("corporationTurn")
+);
 
 export { producerWalletId, type ProducerWalletScope };
 
@@ -81,11 +104,18 @@ export async function runCorporationProducerMarket(
       | "eligibleOffersByOrder"
       | "spilloverShare"
       | "ownSitesFirst"
+      | "marketFirstAccounts"
       | "stockCoverTurns"
       | "clearingPriceByLane"
       | "countryOfProducer"
       | "trackCountryBooks"
       | "credit"
+      | "salesAdvanceAtClearing"
+      | "salesAdvanceRevenueShare"
+      | "restartProbes"
+      | "householdIncomeSpend"
+      | "captiveShortValue"
+      | "shortageAsk"
     >;
     /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
     close?: Parameters<typeof settleProducerTurn>[1]["close"];
@@ -93,6 +123,8 @@ export async function runCorporationProducerMarket(
 ) {
   const resumed = await resumeProducerTurn(db, input);
   if (resumed) return publishHostState(db, input.corporations, resumed);
+  const timings: StageTimings = {};
+  const clock = stageClock(timings);
   await assertProducerTurnFence(db, input.worldEpoch, input.turn);
   const prepared = input.prepare();
   const corporationIds = new Set(input.corporations.map((corp) => corp._id.toHexString()));
@@ -157,13 +189,16 @@ export async function runCorporationProducerMarket(
     cash: Math.max(0, binding.openingCashLocal / binding.localPerAnchor),
   }));
   const targets = prepared.map((row) => row.target);
+  clock.lap("prepMs");
   const result = await settleProducerTurn(db, {
+    stageTimingsMs: timings,
     worldEpoch: input.worldEpoch,
+    planningBudgetMs: LIVE_PLANNING_BUDGET_MS,
+    executionBudgetMs: LIVE_MARKET_EXECUTION_BUDGET_MS,
     production: {
       ...input.demand,
-      // Settle like the shadow does, with headroom: 8 passes land within
-      // 0.02% of 32 on a t300 replay, while the default 128 let a slow turn
-      // spend well over a minute here against the phase timeout.
+      // Small aggregate differences can conceal large site-level errors.
+      // Stop when settled, or retain diagnostics when a safety limit is reached.
       maximumPlanningPasses: LIVE_PLANNING_PASSES,
       turn: input.turn,
       accounts: openingAccounts,
@@ -174,7 +209,19 @@ export async function runCorporationProducerMarket(
     targets,
     close: input.close,
   });
-  return publishHostState(db, input.corporations, { result, bindings, targets, openingAccounts });
+  const publishStarted = performance.now();
+  const published = await publishHostState(db, input.corporations, {
+    result,
+    bindings,
+    targets,
+    openingAccounts,
+  });
+  timings.publishHostStateMs = performance.now() - publishStarted;
+  // Timing only: one line per turn so the next slow turn names the stage that grew.
+  console.info(
+    `[producer-timing] turn=${input.turn} ${JSON.stringify(roundStageTimings(timings))}`
+  );
+  return published;
 }
 
 type SettledContext = NonNullable<Awaited<ReturnType<typeof resumeProducerTurn>>>;

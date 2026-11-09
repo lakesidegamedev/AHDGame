@@ -12,14 +12,14 @@ import { sectorPlantCount } from "@/lib/constants/facilityQuantum";
  * Redacted private-corp rows carry null revenue; those contribute 0.
  */
 export function sectorDisplayRevenue(
-  sector: Pick<SectorDetail, "revenue" | "financialRevenue">
+  sector: Pick<SectorDetail, "revenue" | "financialRevenue" | "siteStatement">
 ): number {
-  return sector.financialRevenue ?? sector.revenue ?? 0;
+  return sector.siteStatement?.revenue ?? sector.financialRevenue ?? sector.revenue ?? 0;
 }
 
 /** Sum of {@link sectorDisplayRevenue} across sectors, the Total row's basis. */
 export function sumSectorDisplayRevenue(
-  sectors: Pick<SectorDetail, "revenue" | "financialRevenue">[]
+  sectors: Pick<SectorDetail, "revenue" | "financialRevenue" | "siteStatement">[]
 ): number {
   return sectors.reduce((sum, s) => sum + sectorDisplayRevenue(s), 0);
 }
@@ -115,6 +115,14 @@ function compareSectors(
       // the ordering contradicts the visible numbers.
       return (sectorDisplayRevenue(a) - sectorDisplayRevenue(b)) * sign;
     case "margin":
+      if (a.siteStatement || b.siteStatement) {
+        return (
+          compareNullable(
+            a.siteStatement ? a.siteStatement.netMarginPct : a.fillAdjustedMarginPct,
+            b.siteStatement ? b.siteStatement.netMarginPct : b.fillAdjustedMarginPct
+          ) * sign
+        );
+      }
       // The margin column shows the net margin under plants and
       // the effective margin otherwise; sort on whichever the row shows.
       return (
@@ -123,7 +131,7 @@ function compareSectors(
         sign
       );
     case "profit":
-      return (a.profit - b.profit) * sign;
+      return (sectorDisplayProfit(a) - sectorDisplayProfit(b)) * sign;
     case "workers":
       return (a.workers - b.workers) * sign;
     case "capacity":
@@ -151,4 +159,20 @@ export function sortSectors(
     if (c !== 0) return c;
     return a.stateName.localeCompare(b.stateName, undefined, { sensitivity: "base" });
   });
+}
+
+/** Same profit the row and its expanded statement display. */
+export function sectorDisplayProfit(
+  sector: Pick<SectorDetail, "profit" | "managementProfit" | "siteStatement">
+): number {
+  return sector.siteStatement?.profit ?? sector.managementProfit ?? sector.profit ?? 0;
+}
+
+/** Preserve an explicitly undefined percentage when a site has no revenue. */
+export function sectorDisplayMargin(
+  sector: Pick<SectorDetail, "siteStatement" | "fillAdjustedMarginPct" | "effectiveProfitMargin">
+): number | null {
+  return sector.siteStatement
+    ? sector.siteStatement.netMarginPct
+    : (sector.fillAdjustedMarginPct ?? sector.effectiveProfitMargin ?? null);
 }

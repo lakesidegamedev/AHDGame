@@ -12,6 +12,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { planForcedPoolRollover } from "./rules/forcedSovereignRollover";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
 import { frozenClaimPoolCashPerFace } from "./sovereignMaturityPayoutTargets";
+import { sovereignRolloverBondId, sovereignRolloverBondUpsert } from "./sovereignRolloverBond";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 
@@ -32,6 +33,8 @@ export async function rollOverUnfundedSovereignPoolFloat(
     couponRate: number;
     budgetId: string;
     client?: import("mongodb").MongoClient;
+    /** Add the units to the issuer's shared rollover bond for the turn. */
+    consolidateReplacement?: boolean;
   }
 ): Promise<boolean> {
   const { bond, claim, turn, now, couponRate, budgetId, client } = input;
@@ -77,7 +80,20 @@ export async function rollOverUnfundedSovereignPoolFloat(
   const sourceCouponRate =
     disposition?.mode === "novation" ? disposition.sourceCouponRate : bond.couponRate;
   const couponDelta = ((couponRate - sourceCouponRate) / 100) * faceLocal;
-  const replacementId = primaryDocumentId(`${claim.id}:forced-rollover`);
+  const sharedIdentity = input.consolidateReplacement
+    ? {
+        countryId,
+        currencyCode: claim.currencyCode,
+        issuerName: bond.issuerName,
+        corporationId: bond.corporationId,
+        couponRate,
+        maturityTurns: FORCED_ROLLOVER_MATURITY,
+        issuedAtTurn: turn,
+      }
+    : null;
+  const replacementId = sharedIdentity
+    ? sovereignRolloverBondId(sharedIdentity)
+    : primaryDocumentId(`${claim.id}:forced-rollover`);
   const holderLegs = claim.holderLegs.map((leg, index) =>
     index === poolLegIndex ? { ...leg, amount: leg.amount - cashLocal } : leg
   );
@@ -110,9 +126,18 @@ export async function rollOverUnfundedSovereignPoolFloat(
   try {
     await runRequiredTransaction(
       async (session) => {
-        await db
-          .collection<Bond>("bonds")
-          .insertOne({ _id: replacementId, ...replacement } as Bond, { session });
+        if (sharedIdentity) {
+          // The source guard below is the one-shot receipt: a replay aborts
+          // the transaction before these units are added twice.
+          const shared = sovereignRolloverBondUpsert(sharedIdentity, units, now);
+          await db
+            .collection<Bond>("bonds")
+            .updateOne(shared.filter, shared.update, { upsert: true, session });
+        } else {
+          await db
+            .collection<Bond>("bonds")
+            .insertOne({ _id: replacementId, ...replacement } as Bond, { session });
+        }
         const source = await db.collection<Bond>("bonds").updateOne(
           {
             _id: bond._id,

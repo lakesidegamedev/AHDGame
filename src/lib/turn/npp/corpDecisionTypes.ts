@@ -100,6 +100,21 @@ export interface NppCorpDecisionContext {
     sectorType: string,
     strategyId: string | null | undefined
   ) => number | undefined;
+  /**
+   * Short-lane growth finance (gameConfig.nppShortageGrowthFinanceStage): a
+   * short, profitable sector may size one growth step on bank finance below
+   * the cash floor. Absent = off, and the decision is unchanged.
+   */
+  shortageGrowthFinance?: {
+    config: import("./rules/shortageGrowthFinance").ShortageGrowthFinanceConfig;
+    /** Last turn's book pressure on the sector's main output lane. */
+    pressureOf: (sector: CorporateSector) => number | undefined;
+  };
+  /**
+   * gameConfig.nppGrowthPerProductFillStage: >= 1 reads the reinvestment fill
+   * gate as the best per-product sell-through (rules/productFill). Absent = off.
+   */
+  productFillStage?: number;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
   /**
@@ -191,6 +206,8 @@ export interface NppCorpDecision {
     growthUnits: number;
     priority: number;
     fill: number;
+    /** Short-lane growth request (rules/shortageGrowthFinance); ranked under its own cap. */
+    shortageGrowth?: { pressure: number; paybackTurns: number };
   }>;
   shortageCreditRequest?: {
     amountLocal: number;
@@ -212,6 +229,10 @@ export interface NppPlantsContext {
   enabled: boolean;
   /** gameConfig.wholePlantsStage on: builds are sized in whole plants. */
   wholePlants?: boolean;
+  /** producerCaptiveDeliveryStage >= 3: sector profit is read on the management account. */
+  captiveMarketValue?: boolean;
+  /** nppDividendAfterTaxStage >= 2: founding and growth hold while cash is at or under the floor. */
+  holdExpansionAtCashFloor?: boolean;
   year: number;
   eraUnitScale: number;
   preset: string | undefined;
@@ -229,6 +250,8 @@ export interface NppPlantsContext {
    * services) against the building sector's own state.
    */
   commodityStateDemandOf?: (commodity: CommodityType, stateId: string) => number | null;
+  /** Country demand for freight and construction services (country books). */
+  commodityCountryDemandOf?: (commodity: CommodityType, countryId: string) => number | null;
   /**
    * Every sector of a corporation's control group as dominance sectors, set
    * once the group toll stage is on. Absent = price on the corporation alone.

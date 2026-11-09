@@ -154,13 +154,17 @@ export default function MarginsPanel({
   // me" (#gameplay-advisors, 2026-07-29). Rank by absolute impact and lead with
   // it; the full breakdown stays underneath for anyone who wants it.
   const drivers = pnl ? [] : topMarginDrivers(margins);
-  const netMargin = pnl
-    ? plantsNetMarginPct({
-        revenue: pnl.revenueAnchor,
-        profit: pnl.profitAnchor,
-        totalCost: pnl.revenueAnchor - pnl.profitAnchor,
-      })
-    : (fillAdjustedMarginPct ?? margins.effective);
+  const marginRevenue = pnl?.statement?.revenue ?? pnl?.revenueAnchor ?? 0;
+  const internalIncome = pnl?.statement?.income ?? pnl?.internalSupplyIncomeAnchor ?? 0;
+  const netMargin = pnl?.statement
+    ? pnl.statement.netMarginPct
+    : pnl
+      ? plantsNetMarginPct({
+          revenue: pnl.revenueAnchor,
+          profit: pnl.profitAnchor,
+          totalCost: pnl.revenueAnchor - pnl.profitAnchor,
+        })
+      : (fillAdjustedMarginPct ?? margins.effective);
   // Crisis and disaster losses ride inside `otherOperatingAnchor` (the
   // engine's financial legs). Split them out so the "Crisis margin shock" a
   // player sees in the condition list has a line of its own here; the two
@@ -173,6 +177,10 @@ export default function MarginsPanel({
         ["Inputs at market prices", pnl.inputsAnchor],
         ["Wages", pnl.labourAnchor],
         ["Freight charges", pnl.freightCostAnchor ?? 0],
+        ["Internal supply charges", pnl.internalSupplyChargeAnchor ?? 0],
+        ["Internal supply discount", pnl.internalSupplyDiscountAnchor ?? 0],
+        ["Output added to stock at cost", -(pnl.statement?.inventoryCredit ?? 0)],
+        ["Transition support", -(pnl.statement?.supportCredit ?? 0)],
         ["Upkeep", pnl.upkeepAnchor],
         ["Compliance", pnl.complianceAnchor],
         ["Other operating costs", pnl.otherOperatingAnchor - crisisLossAnchor],
@@ -184,8 +192,7 @@ export default function MarginsPanel({
   // lowers cost). It is a charge whenever the stack nets negative, so the label
   // names what it is rather than promising a credit (ticket 1448).
   const policyCost = pnl ? -(pnl.policyAnchor ?? 0) : 0;
-  const pctOfRevenue = (value: number) =>
-    pnl && pnl.revenueAnchor > 0 ? (value / pnl.revenueAnchor) * 100 : 0;
+  const pctOfRevenue = (value: number) => (marginRevenue > 0 ? (value / marginRevenue) * 100 : 0);
 
   return (
     <div className="rounded-xl border border-card-border bg-card">
@@ -231,16 +238,25 @@ export default function MarginsPanel({
               <h3 className="mb-2 text-sm font-semibold">Revenue less all costs</h3>
               <p className="mb-3 text-xs text-muted">
                 Net margin comes from sales revenue less the cost of everything produced, including
-                unsold output. Positive modifiers can still leave a loss when costs exceed sales.
+                unsold output. Internal transfer income allocates results between sites and is not
+                company cash revenue. Positive modifiers can still leave a loss when costs exceed
+                sales.
               </p>
-              {pnl.revenueAnchor > 0 ? (
+              {marginRevenue > 0 ? (
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between">
                     <span>
                       {pnl.freightIncomeAnchor ? "Sales and freight revenue" : "Sales revenue"}
                     </span>
-                    <span>100.0%</span>
+                    <span>{pctOfRevenue(marginRevenue - internalIncome).toFixed(1)}%</span>
                   </div>
+                  {internalIncome > 0 && (
+                    <div className="flex justify-between">
+                      <span>Own-site transfer income (management)</span>
+                      <span>{pctOfRevenue(internalIncome).toFixed(1)}%</span>
+                    </div>
+                  )}
+
                   {physicalCosts
                     .filter(([, value]) => value !== 0)
                     .map(([label, value]) => (
@@ -289,7 +305,7 @@ export default function MarginsPanel({
                   )}
                   <div className="flex justify-between border-t border-card-border pt-2 font-semibold">
                     <span>Net margin</span>
-                    <span>{netMargin?.toFixed(1) ?? "n/a"}%</span>
+                    <span>{netMargin == null ? "n/a" : `${netMargin.toFixed(1)}%`}</span>
                   </div>
                 </div>
               ) : (

@@ -21,6 +21,18 @@ describe("DeliveryLimitedPill face (ticket #1180)", () => {
     expect(text).toContain("stuck");
   });
 
+  it("names the figure as the worst good, not a share of the sector's output (ticket 1790)", () => {
+    const { container } = render(<DeliveryLimitedPill fraction={0.32} freightClass="bulk" />);
+    const text = container.textContent ?? "";
+    const tooltip = container.querySelector("[title]")?.getAttribute("title") ?? "";
+
+    expect(text).toContain("up to");
+    expect(text).toContain("32%");
+    expect(tooltip).toContain("worst-affected good");
+    expect(tooltip).toContain("not the share of the whole sector's output");
+    expect(tooltip).not.toContain("of this sector's output could not");
+  });
+
   it("stays hidden when nothing is stuck, so it cannot read as a freight-shortage light", () => {
     const { container } = render(<DeliveryLimitedPill fraction={0} freightClass="bulk" />);
 

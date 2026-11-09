@@ -29,7 +29,11 @@ import type { BankingTransition } from "@/lib/banking/rules/boundary";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { anchorToCorpLiquidCapital, getCorpFxRate } from "@/lib/currency/corporationCapital";
+import {
+  anchorToCorpLiquidCapital,
+  corpLiquidCapitalToAnchor,
+  getCorpFxRate,
+} from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { applyListingStandards, isMateriallyInsolvent } from "../listingStandards";
 import type { IndexFundCandidate } from "../constituents";
@@ -359,6 +363,15 @@ export async function fileListingPetition(opts: {
  * granted a waiver it no longer needs, and one that got worse should not be
  * judged on how it looked twelve turns ago.
  */
+/** Market cap in ₳: share price and shares are in the corp's home currency. */
+export async function marketCapInAnchor(
+  db: Db,
+  corp: Pick<Corporation, "sharePrice" | "totalShares" | "liquidCurrencyCode" | "countryId">
+): Promise<number> {
+  const local = (corp.sharePrice ?? 0) * (corp.totalShares ?? 0);
+  return corpLiquidCapitalToAnchor(local, corp, await getCorpFxRate(db, corp));
+}
+
 export async function measurePetitioner(
   db: Db,
   petition: IndexListingPetition
@@ -401,10 +414,11 @@ export async function measurePetitioner(
     })
   );
 
+  const poolCapsAnchor = await Promise.all(pool.map((c) => marketCapInAnchor(db, c)));
   const verdicts = applyListingStandards(
-    pool.map((c) => ({
+    pool.map((c, i) => ({
       corporationId: c._id.toString(),
-      marketCapAnchor: (c.sharePrice ?? 0) * (c.totalShares ?? 0),
+      marketCapAnchor: poolCapsAnchor[i],
       freeFloatRatio:
         c.publicFloat !== undefined && (c.totalShares ?? 0) > 0
           ? c.publicFloat / (c.totalShares as number)
@@ -419,7 +433,7 @@ export async function measurePetitioner(
   if (!verdict || !corp) return null;
 
   return {
-    marketCapAnchor: (corp.sharePrice ?? 0) * (corp.totalShares ?? 0),
+    marketCapAnchor: await marketCapInAnchor(db, corp),
     worstShortfallRatio: verdict.worstShortfallRatio,
     hasUnwaivableFailure: verdict.failures.includes("insolvent"),
   };

@@ -1,5 +1,7 @@
 "use client";
 
+import { sectorDisplayRevenue, sectorDisplayProfit, sectorDisplayMargin } from "../sectorSortUtils";
+
 import { Fragment, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -193,8 +195,8 @@ function OperationsRow({
   const active = sector.productionPolicyLevel ?? 0;
   const effects = getPolicyEffectInfo(active);
   const scale = (daily: number) => perTurn(daily);
-  const revenue = sector.financialRevenue ?? sector.revenue;
-  const margin = sector.fillAdjustedMarginPct ?? sector.effectiveProfitMargin;
+  const revenue = sectorDisplayRevenue(sector);
+  const margin = sectorDisplayMargin(sector) ?? NaN;
   const flag = STATE_FLAGS[sector.stateId];
 
   async function run(action: () => Promise<SectorLeverResult>, success: string) {
@@ -307,8 +309,16 @@ function OperationsRow({
         <Td align="right" className={signTone(margin)}>
           {Number.isFinite(margin) ? `${margin.toFixed(1)}%` : "n/a"}
         </Td>
-        <Td align="right" className={signTone(sector.profit)}>
-          {fmtSigned(scale(sector.profit))}
+        <Td align="right" className={signTone(sectorDisplayProfit(sector))}>
+          {fmtSigned(scale(sectorDisplayProfit(sector)))}
+          {sector.ownSiteMemoValue != null && sector.ownSiteMemoValue > 0 && (
+            <span
+              className="block text-[11px] text-muted"
+              title="Free transfers book no sale. This is what this site sent your own sites, at its own asking price. This estimate is separate from revenue, profit and net margin."
+            >
+              {fmt(scale(sector.ownSiteMemoValue))} to own sites
+            </span>
+          )}
         </Td>
         <Td align="right" className="hidden text-muted lg:table-cell">
           {sector.workers.toLocaleString("en-US")}
@@ -332,6 +342,7 @@ function OperationsRow({
                 fill={sector.fillRate}
                 band={sector.fillRateBand}
                 ownSiteShare={sector.ownSiteShare}
+                ownTruckHaulTeu={sector.ownTruckHaulTeu}
                 plantCount={sectorPlantCount(sector)}
                 className="items-end"
               />
@@ -896,9 +907,9 @@ export default function CeoOperationsTable({
 
   const sorted = useMemo(() => {
     const value: Record<SortKey, (s: SectorDetail) => number> = {
-      revenue: (s) => s.financialRevenue ?? s.revenue,
-      margin: (s) => s.fillAdjustedMarginPct ?? s.effectiveProfitMargin,
-      profit: (s) => s.profit,
+      revenue: sectorDisplayRevenue,
+      margin: (s) => sectorDisplayMargin(s) ?? -Infinity,
+      profit: sectorDisplayProfit,
       fill: (s) => s.fillRate ?? -1,
     };
     const dir = sortDir === "asc" ? 1 : -1;

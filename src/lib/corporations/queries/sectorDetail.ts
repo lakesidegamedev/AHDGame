@@ -8,7 +8,9 @@ import {
   loadCommodityDominanceContext,
 } from "@/lib/corporations/commodityDominanceContext";
 import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
+import { corpCanProspect } from "@/lib/constants/prospecting";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
+import { runningFlowsPerTurn } from "@/lib/corporations/rules/operatingReserve";
 import { loadInvestmentBondReference } from "@/lib/corporations/investment/bondReference";
 import { NextResponse } from "next/server";
 import { findMergedRegionMetrics } from "@/lib/macroMetrics/merge";
@@ -90,10 +92,13 @@ import {
 } from "@/lib/constants/commodities";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { commodityDemandGap, isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
-import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentShortageSignal";
+import { legacyBuildDemandGap } from "@/lib/corporations/rules/legacyBuildDemandGap";
 import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
+import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
+import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityPrice, GameConfig, GameState } from "@/lib/db/types";
+import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
@@ -135,7 +140,12 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import { buildSectorCommoditySections } from "@/lib/corporations/queries/sectorDetailCommodities";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import { internalTransferAccount } from "@/lib/market/producerMarket/internalTransferPricingRules";
+import {
+  sectorSiteStatement,
+  scaleSiteStatement,
+  matchingSiteReceipt,
+} from "@/lib/corporations/rules/siteStatement";
+import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import { buildPolicyStackRows } from "@/lib/corporations/plantsPnlBasis";
 import {
   buildSectorAttackInfo,
@@ -148,6 +158,10 @@ import {
   computeTechGrowthCostReductionPct,
   buildSectorPlantsSection,
 } from "@/lib/corporations/queries/sectorDetailSections";
+import {
+  RUN_REPORT_STAGE_PROJECTION,
+  withRunReport,
+} from "@/lib/corporations/queries/sectorRunReport";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -160,27 +174,11 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 
+import type { SiblingCorpProjection } from "./sectorDetailTypes";
+
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
 }
-
-/**
- * The slice of a rival corporation the market-position panel needs: enough to
- * name and colour it, plus the two fields that decide whether it is player-owned
- * or part of the NPP field.
- */
-type SiblingCorpProjection = Pick<
-  Corporation,
-  | "_id"
-  | "name"
-  | "sequentialId"
-  | "brandColor"
-  | "countryId"
-  | "liquidCurrencyCode"
-  | "ceoType"
-  | "caretakerCeo"
-  | "marketingStrength"
->;
 
 /**
  * GET /api/corporations/[id]/sectors/[sectorId]
@@ -220,6 +218,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           privateBankingEnabled: 1,
           bankConstructionFinanceEnabled: 1,
           treasuryCashLedgerEnabled: 1,
+          minimumWageLawStage: 1,
+          producerMarketLiveFromTurn: 1,
+          ...RUN_REPORT_STAGE_PROJECTION,
         },
       }
     );
@@ -439,6 +440,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 "producerSettlement.turn": 1,
                 "producerSettlement.products.commodity": 1,
                 "producerSettlement.products.producedUnits": 1,
+                "producerSettlement.products.soldUnits": 1,
+                "producerSettlement.products.internalDeliveredUnits": 1,
               },
             }
           )
@@ -490,6 +493,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               "taxRates.foreignCorporateTax": 1,
               investorConfidence: 1,
               stateOwnershipConcentration: 1,
+              minimumWageKaitzRatio: 1,
             },
           }
         ),
@@ -667,7 +671,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const blendPresenceKeys = tariffRulesNeedSectorPresenceKeys(allTariffs)
       ? buildSectorPresenceKeys(allSectorsRaw, corpByIdForLookup)
       : new Set<string>();
-
     const ftaCoverage = buildFtaCoverageLookup(allSectorsRaw, corpByIdForLookup, activeFtaPairs);
 
     // Extract raw state metric values for display context and modifier computation
@@ -990,6 +993,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           corporation,
           sector,
           siblings: allCorpSectors,
+          funded:
+            typeof governorConfig?.producerMarketLiveFromTurn === "number" &&
+            currentTurn >= governorConfig.producerMarketLiveFromTurn,
           shortInputs: demandsWithShortage
             .filter((d) => typeof d.inputAvailability === "number" && d.inputAvailability < 0.999)
             .map((d) => d.commodity),
@@ -1067,34 +1073,23 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         (sum, d) => sum + (d.units > 0 ? d.units * (d.billedUnitPrice ?? d.marketPrice) : 0),
         0
       );
-      // True buyers' room for THIS sector's outputs, in sector output units.
-      // `headroomUnits` (the unowned pool) measures claimable market SHARE,
-      // under a clearing glut it reads tens of thousands of "room" while every
-      // leg goes unsold (ticket #1027 follow-up: player read it as demand).
-      //
-      // Scoped to the sector's HOME COUNTRY reachable book, which is the book
-      // the clearing engine actually settles this sector against (see
-      // market/tradePartition). The world aggregate it used to read counted
-      // embargoed and untraded supply the sector can neither buy from nor lose
-      // a sale to, so a sector in a real shortage was told it was oversupplied
-      // (ticket #1077). Falls back to the aggregate when no book is persisted.
+      // Funded domestic buyers determine demand room, independently of unclaimed
+      // market share. Older worlds retain their reachable-book estimate.
       const reachableBooks = await loadReachableBooks(db, currentTurn);
+      const fundedBuild = await loadFundedBuildDemand(db, gameState);
+      const buildDemand = fundedBuild?.rows(effectiveSupply, sector.stateId, sectorCountryId);
+      const fundedGap = new Map(buildDemand?.map((row) => [row.commodity, row.unmet]));
       const priceDocByCommodity = new Map(commodityPrices.map((cp) => [cp.commodity, cp]));
       const demandGapUnits = sectorDemandGapUnits(effectiveSupply, (gapCommodity) => {
-        // Demand audit step 1: restore the 1.5x-cap-hidden demand to the
-        // sector gap the player reads. Zero below the cap (quote unchanged).
-        const doc = priceDocByCommodity.get(gapCommodity);
-        const latentDemandTopUp = doc
-          ? isStateScopedCommodity(gapCommodity)
-            ? latentTopUpForState(doc, sector.stateId)
-            : latentTopUpForCountry(doc, sectorCountryId)
-          : 0;
-        return commodityDemandGap({
+        if (fundedBuild) return fundedGap.get(gapCommodity) ?? 0;
+        return legacyBuildDemandGap({
+          price: priceDocByCommodity.get(gapCommodity),
+          stateId: sector.stateId,
+          countryId: sectorCountryId,
           commodity: gapCommodity,
           stateBalance: stateBalances.get(gapCommodity),
           reachableBook: bookFor(reachableBooks, sectorCountryId, gapCommodity),
           globalBalance: globalBalances.get(gapCommodity),
-          latentDemandTopUp,
         });
       });
 
@@ -1171,6 +1166,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         .filter(([, rate]) => (rate ?? 0) > 0)
         .every(([commodity]) => {
           const key = commodity as CommodityType;
+          if (fundedBuild) return fundedBuild.turn === currentTurn && fundedGap.get(key) != null;
           return isStateScopedCommodity(key)
             ? priceDocByCommodity.get(key)?.turn === currentTurn
             : !!bookFor(reachableBooks, sectorCountryId, key);
@@ -1179,13 +1175,15 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         .filter(([, rate]) => (rate ?? 0) > 0)
         .map(([commodity]) => {
           const key = commodity as CommodityType;
-          const gap = commodityDemandGap({
-            commodity: key,
-            stateBalance: stateBalances.get(key),
-            reachableBook: bookFor(reachableBooks, sectorCountryId, key),
-            globalBalance: globalBalances.get(key),
-            latentDemandTopUp: 0,
-          });
+          const gap = fundedBuild
+            ? (fundedGap.get(key) ?? 0)
+            : commodityDemandGap({
+                commodity: key,
+                stateBalance: stateBalances.get(key),
+                reachableBook: bookFor(reachableBooks, sectorCountryId, key),
+                globalBalance: globalBalances.get(key),
+                latentDemandTopUp: 0,
+              });
           return {
             weight: commodityMixWeight(effectiveSupply, COMMODITY_BASE_PRICES, key),
             gap: expansionGapAfterExistingCapacity(
@@ -1194,7 +1192,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 .filter(
                   (candidate) =>
                     (candidate.supply?.[key] ?? 0) > 0 &&
-                    (isStateScopedCommodity(key)
+                    (isStateScopedCommodity(key) && !(fundedBuild && isCountryBookCommodity(key))
                       ? candidate.stateId === sector.stateId
                       : candidate.countryId === sectorCountryId)
                 )
@@ -1245,6 +1243,11 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         Object.values(corporation.federalTaxArrearsAnchorByCountry ?? {}).some(
           (value) => value > 0
         );
+      // What next turn's run costs and earns, for the build warning.
+      const runFlows = runningFlowsPerTurn(
+        allCorpSectors.flatMap((s) => (s.producerSettlement ? [s.producerSettlement] : [])),
+        currentTurn
+      );
       const operatingReserveAnchor =
         unsettled || !enginePnl
           ? null
@@ -1346,13 +1349,22 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         currentYear: techCurrentYear,
       });
 
-      const internalAccount = internalTransferAccount({
-        revenue: sectorEconomicRevenue(sector),
-        costs: maintenanceNet,
-        profit,
-        income: sector.plantsPnl?.internalSupplyIncome,
-        charge: sector.plantsPnl?.internalSupplyCharge,
-      });
+      const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
+      const matchingReceipt = matchingSiteReceipt(sector);
+      const statement = scaleSiteStatement(
+        sectorSiteStatement(sector, {
+          revenue: sectorEconomicRevenue(sector),
+          totalCost:
+            sectorEconomicRevenue(sector) -
+            profit +
+            (sector.freightBillingCredit ?? 0) -
+            (sector.freightBillingCharge ?? 0),
+          freightIncome: sector.freightBillingCredit ?? 0,
+          freightCost: sector.freightBillingCharge ?? 0,
+          ownSiteValue: ownSite ? (ownSite.valueAnchor * TURNS_PER_DAY) / sectorAmountAnchor(1) : 0,
+        }),
+        sectorAmountAnchor(1)
+      );
       plants = buildSectorPlantsSection({
         bankingCommodityScale: commodityProductionCapacityScale(
           corporation.bankCharter,
@@ -1402,6 +1414,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         ),
         demandGapUnits,
         measuredDemandGapUnits,
+        buildDemand,
+        buildDemandTurn: fundedBuild?.turn,
         // Every producer's capacity in this cell (the focal sector included),
         // so "Unclaimed share" reads the same pool `headroomUnits` measures.
         retoolHint,
@@ -1428,13 +1442,18 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           ),
         },
         money: {
+          statement,
           nameplateRevenueAnchor: sectorAmountAnchor(sector.revenue),
-          realizedRevenueAnchor: sectorAmountAnchor(internalAccount.revenue),
-          maintenanceNetAnchor: sectorAmountAnchor(internalAccount.costs),
-          labourAnchor: sectorAmountAnchor(sectorLaborCost),
+          realizedRevenueAnchor: statement.revenue,
+          maintenanceNetAnchor: sectorAmountAnchor(maintenanceNet) + statement.charge,
+          labourAnchor: matchingReceipt
+            ? (matchingReceipt.labourPaid + (matchingReceipt.labourArrears ?? 0)) * TURNS_PER_DAY
+            : sectorAmountAnchor(sectorLaborCost),
           growthCostAnchor: sectorAmountAnchor(sector.currentGrowthCost),
-          profitAnchor: sectorAmountAnchor(internalAccount.profit),
-          inputsAnchor,
+          profitAnchor: statement.profit,
+          inputsAnchor: matchingReceipt
+            ? matchingReceipt.inputsConsumed * TURNS_PER_DAY
+            : inputsAnchor,
           internalSupplyIncomeAnchor: sectorAmountAnchor(
             sector.plantsPnl?.internalSupplyIncome ?? 0
           ),
@@ -1507,6 +1526,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           : [],
         regulatoryBurdenPp: mods.dominanceRegulatoryBurdenPp ?? 0,
         crisisMarginPenaltyPp: crisisMarginPenalty,
+        autopilotEnabled: corporation.autopilot != null,
         // C9: the same spread `buildCapacity` charges on top of the build cost.
         // Priced off 1 ₳ so the result is the RATE, which is all the quote needs
         // (the spread is strictly proportional to the construction cost).
@@ -1515,6 +1535,9 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           sectorType === "extraction" &&
           Object.values(thisSectorMultipliers).some((m) => typeof m === "number" && m < 0.999),
       });
+      plants.buildQuote.runningBillsAnchor = runFlows.bills;
+      plants.buildQuote.runRevenueAnchor = runFlows.revenue;
+      withRunReport(plants, sector.producerSettlement, currentTurn, governorConfig);
     }
 
     if (
@@ -1583,6 +1606,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       isCeo,
       viewerCorpFxRate,
       sellerCurrency: resolveCorpLiquidCurrencyCode(corporation),
+      sellerFxRate: corporationFxRate,
     });
     if (forSaleInfo) {
       const outerBlock =
@@ -1597,6 +1621,21 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       forSaleInfo.eligible = forSaleInfo.blockReason === null;
     }
 
+    // The same floor the corporation turn applies: admin ratio, else the
+    // national minimum wage law in force (minimumWageLawStage).
+    const minWageKaitz =
+      (
+        await resolveMinWageRatioByCountry(
+          db,
+          [
+            {
+              countryId: sectorCountryId,
+              minimumWageKaitzRatio: federalBudget?.minimumWageKaitzRatio,
+            },
+          ],
+          governorConfig?.minimumWageLawStage
+        )
+      ).get(sectorCountryId) ?? 0;
     const payload: Record<string, unknown> = {
       sector: {
         _id: sector._id,
@@ -1664,11 +1703,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               100
           ) / 100,
         minWageUplift:
-          Math.round(
-            (minWageFloorMultiplier(sector.sectorType, federalBudget?.minimumWageKaitzRatio ?? 0) -
-              1) *
-              1000
-          ) / 1000,
+          Math.round((minWageFloorMultiplier(sector.sectorType, minWageKaitz) - 1) * 1000) / 1000,
         // v3 Phase 5/6 (labourSystemMode ≥ "unions"): NPC unionization
         // pressure, 0-100. Feeds unionPremium (labor cost) and the strike
         // trigger threshold.
@@ -1726,6 +1761,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // Drives the Prospect modal's success-odds / yield preview (corp-side
         // prospecting math is a pure function of rdScore).
         rdScore: corporation.rdScore ?? 0,
+        // The launch command accepts extraction-typed companies and any company
+        // with an extraction sector in the state; this panel only renders on an
+        // extraction sector, so viewing one is enough to offer Prospect.
+        canProspect: corpCanProspect(corporation) || sector.sectorType === "extraction",
         ...(governorConfig?.mediaEditorialEnabled === true && sector.sectorType === "media"
           ? { mediaEditorialEnabled: true, editorialStance }
           : {}),
@@ -1779,6 +1818,12 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         ),
       },
       financials: {
+        siteStatement: plants?.pnl.statement
+          ? scaleSiteStatement(
+              plants.pnl.statement,
+              sectorAmountInCorpCurrency(1) / sectorAmountAnchor(1)
+            )
+          : null,
         revenue: Math.round(sectorAmountInCorpCurrency(sector.revenue)),
         // Realized revenue after every realization leg (capacity, clearing,
         // throughput, capital, strike, embargo). Surfaced so the detail page can

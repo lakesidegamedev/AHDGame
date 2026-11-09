@@ -3,6 +3,7 @@ import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rul
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
+import { eraScaledBasePrices, type CommodityType } from "@/lib/constants/commodities";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import {
   prepareProducerPhysicalSector,
@@ -57,6 +58,41 @@ function fixture() {
 }
 
 describe("physical producer preparation", () => {
+  it("reuses era prices without changing regional prices or country-specific plans", () => {
+    for (const countryId of ["US", "UK", "JP"] as const) {
+      const { input, env } = fixture();
+      input.corporation.countryId = countryId;
+      input.sector.countryId = countryId;
+      env.lookups.eraUnitScale = 3;
+      env.lookups.priceRatioByCommodity.set("energy", 1.8);
+      const baseline = prepareProducerPhysicalSector(input).prepared.plan;
+      const basePrices = Object.freeze(eraScaledBasePrices(env.lookups.eraUnitScale));
+      expect(prepareProducerPhysicalSector({ ...input, basePrices }).prepared.plan).toEqual(
+        baseline
+      );
+    }
+  });
+
+  it("applies clearing headroom only to buying limits, across countries", () => {
+    for (const countryId of ["US", "UK", "JP"] as const) {
+      const { input, env } = fixture();
+      input.corporation.countryId = countryId;
+      input.sector.countryId = countryId;
+      const baseline = prepareProducerPhysicalSector(input).prepared.plan;
+      const recipe = baseline.inputs.find((i) => i.book === "world")!;
+      expect(recipe).toBeDefined();
+      const clearing = recipe.maximumUnitPrice * 1.2;
+      env.clearingReferenceStage = 1;
+      env.lastClearingPriceByCommodity = new Map([[recipe.commodity as CommodityType, clearing]]);
+      const prepared = prepareProducerPhysicalSector(input).prepared.plan;
+      expect(
+        prepared.inputs.find((i) => i.commodity === recipe.commodity)!.maximumUnitPrice
+      ).toBeCloseTo(clearing * 1.25);
+      expect(prepared.outputs).toEqual(baseline.outputs);
+      env.clearingReferenceStage = 0;
+      expect(prepareProducerPhysicalSector(input).prepared.plan.inputs).toEqual(baseline.inputs);
+    }
+  });
   it("carries pricing from the company or its inherited parent policy into the funded plan", () => {
     const { input } = fixture();
     input.corporation.internalSupplyPolicy = {
@@ -87,6 +123,14 @@ describe("physical producer preparation", () => {
         },
       }).prepared.plan.internalTransferPricing
     ).toBeUndefined();
+  });
+  it("carries the sell-outside-first flag into the plan only when the sector sets it", () => {
+    const { input, sector } = fixture();
+    expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBeUndefined();
+    sector.sellOutsideFirst = false;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBeUndefined();
+    sector.sellOutsideFirst = true;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBe(true);
   });
   it("retains sale-only quotes for stored goods outside the current production recipe", () => {
     const { input, sector } = fixture();
@@ -256,6 +300,36 @@ describe("physical producer preparation", () => {
     expect(plan.expectedUnitRevenue).toBeCloseTo(made.unitsPerOutput * 40, 12);
   });
 
+  it("plans from last turn's plan under the run plan stage, and changes nothing while it is off", () => {
+    const { input, env, sector } = fixture();
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    env.runPaceDrop = 0.25;
+    // Sold out under materials cost, and cash cut the run to half of its 0.4
+    // plan: the shape of the iron mine in ticket 1765.
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: env.currentTurn - 1,
+      activeUnits: 100,
+      plannedRunShare: 0.4,
+      producedUnits: 20,
+      offeredUnits: 20,
+      soldUnits: 20,
+      revenue: 400,
+      inputsConsumed: 500,
+      runCutBy: ["cash"],
+    };
+    const off = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(off.priorGlutTurns).toBeUndefined();
+    env.runPlanStage = 0;
+    expect(prepareProducerPhysicalSector(input).prepared.plan).toEqual(off);
+    env.runPlanStage = 1;
+    const on = prepareProducerPhysicalSector(input).prepared.plan;
+    // The loss brake steps down a tenth from the plan, not from the cut output.
+    expect(on.plannedRunShare).toBeCloseTo(0.36, 12);
+    expect(on.priorGlutTurns).toBe(0);
+    expect(off.plannedRunShare).toBeCloseTo(0.18, 12);
+  });
+
   it("runs a two-product plant at its sold-out dear line, not its glutted cheap one, under the joint run stage", () => {
     const { input, env, sector } = fixture();
     Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });
@@ -345,6 +419,85 @@ describe("physical producer preparation", () => {
       0.01 * 1.15,
       12
     );
+  });
+
+  it("raises wages toward the target share of last turn's value added only under the wage share stage", () => {
+    const { input, env, sector } = fixture();
+    const base = prepareProducerPhysicalSector(input).prepared.plan;
+    const units = base.capacityUnits * base.activeFraction * base.outputMultiplier;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: units,
+      producedUnits: units,
+      offeredUnits: units,
+      soldUnits: units,
+      revenue: 20 * base.labourCost,
+      inputsConsumed: 0,
+      inventoryWriteOff: 0,
+      otherOperatingPaid: 0,
+      otherOperatingArrears: 0,
+      turn: env.currentTurn - 1,
+    };
+    const off = prepareProducerPhysicalSector(input).prepared.plan;
+    env.wageShareTarget = 0.5;
+    env.wageShareSurplusCap = 0.75;
+    const on = prepareProducerPhysicalSector(input).prepared.plan;
+    // Target 0.5 of value added binds: 10 base wages a unit on this turn's run.
+    const run = on.capacityUnits * on.activeFraction * on.outputMultiplier;
+    expect(on.labourCost).toBeCloseTo(((0.5 * 20 * base.labourCost) / units) * run, 6);
+    expect(on.labourCost).toBeGreaterThan(off.labourCost);
+    expect(on.otherOperatingCost).toBe(off.otherOperatingCost);
+  });
+
+  it("takes the wage share target from state unemployment, a step a turn, under the labour stage", () => {
+    const { input, env, sector } = fixture();
+    const base = prepareProducerPhysicalSector(input).prepared.plan;
+    const units = base.capacityUnits * base.activeFraction * base.outputMultiplier;
+    const valueAdded = 20 * base.labourCost;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: units,
+      producedUnits: units,
+      offeredUnits: units,
+      soldUnits: units,
+      revenue: valueAdded,
+      inputsConsumed: 0,
+      inventoryWriteOff: 0,
+      otherOperatingPaid: 0,
+      otherOperatingArrears: 0,
+      // Last turn paid 0.4 of value added.
+      labourPaid: 0.4 * valueAdded,
+      labourArrears: 0,
+      turn: env.currentTurn - 1,
+    };
+    env.wageShareTarget = 0.6;
+    env.wageShareSurplusCap = 0.75;
+    const constant = prepareProducerPhysicalSector(input).prepared.plan;
+    env.labourWage = {
+      naturalRate: 4.5,
+      slackRate: 12,
+      maxShare: 0.65,
+      floorShare: 0.3,
+      step: 0.03,
+    };
+    const share = (unemployment?: number) => {
+      (input.env.lookups as { stateMetricsByState?: Map<string, unknown> }).stateMetricsByState =
+        new Map(
+          unemployment == null
+            ? []
+            : [[sector.stateId, { economic: { unemploymentRate: { value: unemployment } } }]]
+        );
+      const plan = prepareProducerPhysicalSector(input).prepared.plan;
+      const run = plan.capacityUnits * plan.activeFraction * plan.outputMultiplier;
+      return plan.labourCost / ((valueAdded / units) * run);
+    };
+    // Tight market (target 0.65) and no reading (fallback 0.6) both step up to 0.43;
+    // a slack market (target 0.3) steps down to 0.37. The constant stage jumps to 0.6.
+    expect(share(3)).toBeCloseTo(0.43, 9);
+    expect(share()).toBeCloseTo(0.43, 9);
+    expect(share(20)).toBeCloseTo(0.37, 9);
+    const run = constant.capacityUnits * constant.activeFraction * constant.outputMultiplier;
+    expect(constant.labourCost / ((valueAdded / units) * run)).toBeCloseTo(0.6, 9);
+    const linked = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(linked.otherOperatingCost).toBe(constant.otherOperatingCost);
   });
 
   it("records the planned run share only under the demand plan", () => {

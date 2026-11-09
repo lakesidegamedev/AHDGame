@@ -1,3 +1,4 @@
+import { loadOwnTruckTeuByState } from "@/lib/corporations/ownTruckHaul";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import type { CountryOperatingTotals } from "./countryStatements";
 import {
@@ -67,7 +68,7 @@ import {
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
-import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import { sectorSiteStatement, scaleSiteStatement } from "@/lib/corporations/rules/siteStatement";
 import {
   fundedSectorTotalCost,
   plantlessSectorView,
@@ -123,6 +124,8 @@ export interface SectorModeFlags {
   plantsMode: boolean;
   commandEconomyEnabled: boolean;
   realizedGrowthRate: number | null;
+  /** TEU this company's own trucks hauled last turn, per origin state. Empty below plants. */
+  ownTruckTeuByState: Record<string, number>;
 }
 
 /**
@@ -180,7 +183,15 @@ export async function loadSectorModeFlags(
       )
     : null;
 
-  return { labourWagesEnabled, plantsMode, commandEconomyEnabled, realizedGrowthRate };
+  const ownTruckTeuByState = plantsMode ? await loadOwnTruckTeuByState(db, corporation) : {};
+
+  return {
+    labourWagesEnabled,
+    plantsMode,
+    commandEconomyEnabled,
+    realizedGrowthRate,
+    ownTruckTeuByState,
+  };
 }
 
 export interface SectorRowContext {
@@ -192,6 +203,8 @@ export interface SectorRowContext {
   plantsMode: boolean;
   commandEconomyEnabled?: boolean;
   labourWagesEnabled: boolean;
+  /** From loadSectorModeFlags; absent means no own-truck figure. */
+  ownTruckTeuByState?: Record<string, number>;
   revenueRealizationRatio: number;
   restatement: SectorCurrencyRestatement;
   tariffs: Pick<TurnReferenceData, "allTariffs" | "activeFtaPairs" | "activeSubsidies">;
@@ -780,20 +793,29 @@ export function buildSectorDetails(ctx: SectorRowContext) {
         ? sector.deliveryLimitedFreightClass
         : null;
     const mothballed = plantsMode ? sector.mothballed === true : false;
-    // Net margin (ticket #1027 family): realized profit over realized revenue,
-    // with the whole bill, unsold output included, already netted out of
-    // profit. `effectiveProfitMargin` divides by the revenue the SOLD units
-    // earned, so a plants sector selling 15% of its output displays a fat
-    // positive margin while it loses money. Plants only: below plants there is
-    // no produced-vs-sold split for the margin to lie about. Presentation only,
-    // never read back into the economy. Rules: `plantsNetMarginPct`.
-    const sectorNetMargin = plantsMode
-      ? plantsNetMarginPct({
-          profit,
-          revenue: financialRevenue,
-          totalCost: maintenance + sectorGrowthCostLocal + sectorRegulatoryBurden + freightCost,
-        })
+    // One receipt-backed statement for every owner-facing monetary reading.
+    // The existing economic fields below remain the company's external basis.
+    const ownSite = plantsMode ? ownSiteDeliveries(sector.producerSettlement, currentTurn) : null;
+    const supplyView = plantsMode
+      ? scaleSiteStatement(
+          sectorSiteStatement(sector, {
+            revenue:
+              revenueBasis.realizedRevenueLocal != null
+                ? revenueBasis.realizedRevenueLocal / sectorFieldToCorpCcy(1, sector)
+                : (financialRevenue - freightIncome) / sectorFieldToCorpCcy(1, sector),
+            totalCost:
+              (financialRevenue - profit + fundedResultAdjust - freightCost) /
+              sectorFieldToCorpCcy(1, sector),
+            freightIncome: sector.freightBillingCredit ?? 0,
+            freightCost: sector.freightBillingCharge ?? 0,
+            ownSiteValue: ownSite
+              ? (ownSite.valueAnchor * TURNS_PER_DAY) / sectorFieldToAnchor(1, sector)
+              : 0,
+          }),
+          sectorFieldToCorpCcy(1, sector)
+        )
       : null;
+    const sectorNetMargin = supplyView?.netMarginPct ?? null;
     const fillAdjustedMarginPct =
       sectorNetMargin == null ? null : Math.round(sectorNetMargin * 10) / 10;
 
@@ -851,6 +873,17 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ...roundOwnershipTerms(ownershipTerms),
       commoditySupplyDemandBlendPct,
       profit: Math.round(profit),
+      siteStatement: supplyView,
+      // Profit with internal supply income and charges counted, display only.
+      // Null when there are no internal lines, so the row shows `profit`.
+      managementProfit:
+        supplyView && (supplyView.income > 0 || supplyView.charge > 0)
+          ? Math.round(supplyView.profit)
+          : null,
+      // Free transfers: what this site sent to its own sites at its own asking
+      // price, per day in the corp's currency. A memo, never booked.
+      ownSiteMemoValue:
+        supplyView && supplyView.ownSiteMemo > 0 ? Math.round(supplyView.ownSiteMemo) : null,
       workers:
         sector.workers ??
         calculateWorkers(sectorFieldToAnchor(sector.revenue, sector), metrics.workforceSkill),
@@ -894,9 +927,13 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       fillRateBand: fillRateBand(sectorFillRate),
       // Share of output handed to the company's own other sites (no sale, no
       // revenue). Null when none, or not last turn's receipt.
-      ownSiteShare: plantsMode
-        ? (ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? null)
-        : null,
+      ownSiteShare: ownSite?.share ?? null,
+      // TEU the company's own trucks hauled out of this state last turn.
+      // Logistics rows only; null when none.
+      ownTruckHaulTeu:
+        plantsMode && sector.sectorType === "logistics"
+          ? (ctx.ownTruckTeuByState?.[sector.stateId] ?? null)
+          : null,
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
       mothballed,

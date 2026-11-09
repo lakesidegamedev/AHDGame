@@ -1,3 +1,5 @@
+import { RETAINED_PROFIT_SHARE } from "@/lib/market/producerMarket/profitDistributionRules";
+
 /** Reserve current taxes before old payables or spendable corporate cash. */
 export function planCorporateTaxPriority(input: {
   cash: number;
@@ -9,6 +11,13 @@ export function planCorporateTaxPriority(input: {
   priorOperating: number;
   priorOperatingByCurrency?: Readonly<Record<string, { amount: number; localPerAnchor: number }>>;
   distributionRequested?: number;
+  /**
+   * gameConfig.nppDividendAfterTaxStage >= 1. The request is sized on pre-tax
+   * profit (profitDistributionRules); take the distributed share of this turn's
+   * current tax off it, pay none while opening cash is negative, and never pay
+   * it out of opening cash.
+   */
+  distributionAfterTax?: boolean;
 }) {
   const { cash, pending, netIncome, localPerAnchor } = input;
   for (const row of Object.values(input.priorOperatingByCurrency ?? {}))
@@ -55,10 +64,21 @@ export function planCorporateTaxPriority(input: {
   const priorTaxPaid = allocate(input.priorTax);
   const priorOperatingPaid = Math.min(available, priorOperating);
   available = Math.max(0, available - priorOperatingPaid);
-  const distributionRequested = input.distributionRequested ?? 0;
-  if (!Number.isFinite(distributionRequested) || distributionRequested < 0)
+  const requested = input.distributionRequested ?? 0;
+  if (!Number.isFinite(requested) || requested < 0)
     throw new Error("Invalid corporate distribution");
-  const distributionPaid = Math.min(available, distributionRequested);
+  // A 60% payout of pre-tax profit on top of a 52-57% tax paid out more than the
+  // profit: 86 AI companies profitable at plant level went to zero cash and their
+  // plants stopped (turns 705-712). After tax the company keeps its retained share.
+  const distributionRequested = !input.distributionAfterTax
+    ? requested
+    : cash < 0
+      ? 0
+      : Math.max(0, requested - (1 - RETAINED_PROFIT_SHARE) * due * localPerAnchor);
+  const distributionCap = input.distributionAfterTax
+    ? Math.max(0, available - Math.max(0, cash))
+    : available;
+  const distributionPaid = Math.min(distributionCap, distributionRequested);
   available = Math.max(0, available - distributionPaid);
   return {
     cash: Math.min(0, opening) + available,

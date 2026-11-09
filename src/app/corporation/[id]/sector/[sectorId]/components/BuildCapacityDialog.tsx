@@ -8,8 +8,14 @@ import {
 import { useTranslations } from "next-intl";
 import InvestmentForecast from "./InvestmentForecast";
 import { investmentForecastInput } from "../lib/investment";
+import {
+  OPERATING_RESERVE_TURNS,
+  runAfterBuild,
+  runAfterBuildMessage,
+} from "@/lib/corporations/rules/operatingReserve";
 import { recommendSectorExpansion } from "@/lib/corporations/investment/expansion/rules";
 import ConstructionFinanceControls from "./ConstructionFinanceControls";
+import FundedBuildDemand from "@/components/corporation/FundedBuildDemand";
 import type {
   ConstructionFinanceChoice,
   ConstructionFinanceRequest,
@@ -49,6 +55,8 @@ interface BuildCapacityDialogProps {
   errorMessage: string;
   onWithdrawFinancing?: (claimId: string) => void;
   onSubmit: (units: number, financing?: ConstructionFinanceRequest) => void;
+  /** Set when the last build was refused for the operating reserve: confirms it past the reserve. */
+  onOverrideReserve?: () => void;
 }
 
 /** Nobody builds this many at once; the cap only stops a stray paste locking the dialog. */
@@ -97,6 +105,7 @@ export default function BuildCapacityDialog({
   submitting,
   errorMessage,
   onSubmit,
+  onOverrideReserve,
   onWithdrawFinancing,
 }: BuildCapacityDialogProps) {
   const t = useTranslations("corporations.sectorInvestment");
@@ -242,6 +251,21 @@ export default function BuildCapacityDialog({
   const noShareLeft = plants.headroomUnits < 1;
   const blockedByMothball = plants.mothballed;
   const affordable = financingChoice ? financingChoice.affordable : preview.affordable;
+  // Next turn's run once this build has taken its cash. A financed build only
+  // spends the part the lender does not fund.
+  const financedAnchor =
+    financingChoice?.request && q.financing
+      ? financingChoice.request.principal / (q.financing.localPerAnchor || 1)
+      : 0;
+  const afterBuild =
+    affordable && preview.safeCount > 0 && (q.runningBillsAnchor ?? 0) > 0
+      ? runAfterBuild({
+          cash: q.corpCapitalAnchor,
+          cost: Math.max(0, preview.total - financedAnchor),
+          billsPerTurn: q.runningBillsAnchor ?? 0,
+          revenuePerTurn: q.runRevenueAnchor ?? 0,
+        })
+      : null;
   const canSubmit =
     !q.financing?.pendingRequest &&
     !submitting &&
@@ -414,6 +438,7 @@ export default function BuildCapacityDialog({
           />
         </div>
 
+        <FundedBuildDemand rows={plants.buildDemand} turn={plants.buildDemandTurn} />
         {/* Demand warnings remain visible, including markets with no room. */}
         <div
           className={`flex gap-2 rounded-lg border p-3 ${
@@ -427,18 +452,28 @@ export default function BuildCapacityDialog({
           )}
           <div className="min-w-0">
             <h3 className="mb-1 text-body-sm font-semibold text-foreground">
-              {t(
-                sectorType === "logistics"
-                  ? "freightDemand"
-                  : plants.measuredDemandGapUnits == null
-                    ? "measuredDemandTitle"
-                    : preview.overHeadroom
-                      ? "beyondDemand"
-                      : "withinDemand"
-              )}
+              {plants.buildDemand
+                ? t("fundedAdvice.limits")
+                : t(
+                    sectorType === "logistics"
+                      ? "freightDemand"
+                      : plants.measuredDemandGapUnits == null
+                        ? "measuredDemandTitle"
+                        : preview.overHeadroom
+                          ? "beyondDemand"
+                          : "withinDemand"
+                  )}
             </h3>
             <p className="text-body-sm text-foreground">
-              {sectorType === "logistics" ? (
+              {plants.buildDemand ? (
+                <>
+                  {plants.buildDemand.some((row) => (row.unmet ?? 0) > 0)
+                    ? t("fundedAdvice.someUnfilled")
+                    : plants.buildDemand.some((row) => row.unmet == null)
+                      ? t("fundedAdvice.someUnknown")
+                      : t("fundedAdvice.noneUnfilled")}
+                </>
+              ) : sectorType === "logistics" ? (
                 <>
                   Freight demand is the state&apos;s combined bulk and special cargo load. Both draw
                   from one shared fleet, and special cargo uses three times as much TEU per unit.
@@ -609,6 +644,19 @@ export default function BuildCapacityDialog({
               {t("cashBalance", { amount: money(q.corpCapitalAnchor) })}
             </p>
           )}
+          {afterBuild && (
+            <p
+              className={`mt-2 text-body-sm ${afterBuild.cutPercent > 0 ? "text-warning" : "text-muted"}`}
+              data-testid="run-after-build"
+            >
+              {runAfterBuildMessage({
+                cashAfterText: money(afterBuild.cashAfter),
+                cutPercent: afterBuild.cutPercent,
+                belowReserve:
+                  afterBuild.cashAfter < OPERATING_RESERVE_TURNS * (q.runningBillsAnchor ?? 0),
+              })}
+            </p>
+          )}
           {!affordable && !financingChoice && (
             <p className="mt-2 flex gap-2 rounded-md border border-error/30 bg-error/10 p-2 text-body-sm text-error">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -674,6 +722,19 @@ export default function BuildCapacityDialog({
           <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
             {errorMessage}
           </p>
+        )}
+        {errorMessage && onOverrideReserve && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
+            <p className="text-body-sm text-foreground">{t("reserveOverrideHelp")}</p>
+            <Button
+              variant="secondary"
+              onClick={onOverrideReserve}
+              disabled={submitting}
+              isLoading={submitting}
+            >
+              {t("buildPastReserve")}
+            </Button>
+          </div>
         )}
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-card-border bg-card px-5 py-4">

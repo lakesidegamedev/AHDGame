@@ -167,7 +167,7 @@ export function SectorRow({
   // Prefer realized revenue (matches the corp-level total's basis, #3001/#3002)
   // over the nameplate `revenue` figure for anything shown as "how much this
   // sector makes"; falls back to nameplate pre-reprocessing.
-  const displayRevenue = sector.financialRevenue ?? sector.revenue;
+  const displayRevenue = sector.siteStatement?.revenue ?? sector.financialRevenue ?? sector.revenue;
 
   // `revenue`, `financialRevenue`, `currentGrowthCost`, and `profitMargin` are
   // stripped for private corps viewed by outsiders (redactPrivateSectorRow).
@@ -208,7 +208,25 @@ export function SectorRow({
   // `effectiveProfitMargin` divides by sold revenue only, so at a low fill it
   // reads 40%+ while the sector loses money. The raw figure stays in the
   // tooltip. Null when redacted/fogged or below plants.
-  const fillAdjusted = plantsMode ? (sector.fillAdjustedMarginPct ?? null) : null;
+  const fillAdjusted = plantsMode
+    ? sector.siteStatement
+      ? sector.siteStatement.netMarginPct
+      : (sector.fillAdjustedMarginPct ?? null)
+    : null;
+  // Profit with income and charges between the company's own sites counted
+  // (issue 5385). Null without internal lines, so the booked figure shows.
+  const shownProfit = sector.siteStatement?.profit ?? sector.managementProfit ?? sector.profit;
+  // Free transfers: what this site sent to the company's own sites, at its own
+  // asking price. Not booked and excluded from the net margin.
+  const ownSiteMemo =
+    plantsMode && sector.ownSiteMemoValue != null && sector.ownSiteMemoValue > 0 ? (
+      <span
+        className="block font-mono text-[11px] tabular-nums text-muted"
+        title="Estimated value of free deliveries to your own sites. This estimate is separate from revenue, profit and net margin."
+      >
+        {fmtMoney(sector.ownSiteMemoValue * scaleFactor)} to own sites
+      </span>
+    ) : null;
   // The part of the fill shortfall that is a DELIVERY failure. Null outside
   // plants, when redacted/fogged, and until the freight pass writes it.
   const deliveryLimited = plantsMode ? (sector.deliveryLimitedFraction ?? null) : null;
@@ -269,7 +287,7 @@ export function SectorRow({
           <span className="tabular-nums text-success">{fmtScaled(realized)}</span>
         </div>
         <div className="flex justify-between gap-3">
-          <span>× effective margin</span>
+          <span>× effective margin (outside sales only)</span>
           <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
         </div>
         <div className="flex justify-between gap-3">
@@ -284,8 +302,8 @@ export function SectorRow({
         </div>
         <div className="flex justify-between gap-3 border-t border-card-border pt-0.5 font-semibold">
           <span className="text-foreground">Net profit</span>
-          <span className={`tabular-nums ${sector.profit >= 0 ? "text-success" : "text-error"}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+          <span className={`tabular-nums ${shownProfit >= 0 ? "text-success" : "text-error"}`}>
+            {fmtMoney(shownProfit * scaleFactor)}
           </span>
         </div>
       </div>
@@ -577,7 +595,7 @@ export function SectorRow({
     </div>
   );
 
-  const profitTone = sector.profit > 0 ? "text-success" : sector.profit < 0 ? "text-error" : "";
+  const profitTone = shownProfit > 0 ? "text-success" : shownProfit < 0 ? "text-error" : "";
   // The net margin is floored at -999.9 for a sector that sold nothing; past
   // three figures the exact value is in the title, not the column.
   const netMargin =
@@ -585,7 +603,7 @@ export function SectorRow({
       ? null
       : Math.abs(fillAdjusted) > 999
         ? `${fillAdjusted > 0 ? ">" : "<-"}999%`
-        : `${fillAdjusted}%`;
+        : `${fillAdjusted.toFixed(1)}%`;
   const cellNum = "font-mono text-[13px] tabular-nums";
 
   return (
@@ -629,6 +647,7 @@ export function SectorRow({
               fill={sector.fillRate}
               band={sector.fillRateBand}
               ownSiteShare={sector.ownSiteShare}
+              ownTruckHaulTeu={sector.ownTruckHaulTeu}
               plantCount={plantCount}
               className="items-end"
             />
@@ -668,11 +687,12 @@ export function SectorRow({
                 : `Effective margin applied to this sector's revenue: ${sector.effectiveProfitMargin}%.`
             }
           >
-            {netMargin ?? `${sector.effectiveProfitMargin}%`}
+            {netMargin ?? (sector.siteStatement ? "n/a" : `${sector.effectiveProfitMargin}%`)}
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+            {fmtMoney(shownProfit * scaleFactor)}
+            {ownSiteMemo}
           </div>
 
           <div className="text-right font-mono text-xs tabular-nums text-muted">
@@ -752,7 +772,7 @@ export function SectorRow({
           </div>
 
           <div className={`${cellNum} text-right ${profitTone}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
+            {fmtMoney(shownProfit * scaleFactor)}
           </div>
 
           <div className="text-right font-mono text-xs tabular-nums text-muted">
@@ -811,6 +831,7 @@ export function SectorRow({
                     fill={sector.fillRate}
                     band={sector.fillRateBand}
                     ownSiteShare={sector.ownSiteShare}
+                    ownTruckHaulTeu={sector.ownTruckHaulTeu}
                     plantCount={plantCount}
                   />
                 </dd>
@@ -866,7 +887,8 @@ export function SectorRow({
           </div>
           <div>
             <dt className="text-[11px] text-muted">Profit{scaleLabel}</dt>
-            <dd className={`${cellNum} ${profitTone}`}>{fmtMoney(sector.profit * scaleFactor)}</dd>
+            <dd className={`${cellNum} ${profitTone}`}>{fmtMoney(shownProfit * scaleFactor)}</dd>
+            {ownSiteMemo && <dd>{ownSiteMemo}</dd>}
             <dd
               className="font-mono text-[11px] tabular-nums text-muted"
               title={
@@ -877,7 +899,9 @@ export function SectorRow({
             >
               {netMargin != null
                 ? `${netMargin} net margin`
-                : `${sector.effectiveProfitMargin}% margin`}
+                : sector.siteStatement
+                  ? "Net margin n/a: no revenue"
+                  : `${sector.effectiveProfitMargin}% margin`}
             </dd>
           </div>
         </dl>

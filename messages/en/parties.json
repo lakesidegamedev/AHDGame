@@ -15,7 +15,9 @@
     },
     "whips": {
       "nominationsTab": "Nominations",
-      "noActiveNominations": "No active nominations to whip."
+      "noActiveNominations": "No active nominations to whip.",
+      "billPlayerWhipExplanation": "Player whips send suggestions only and never cast votes. NPP whips can still be hard.",
+      "playerWhipExplanation": "Player whips send an in-game suggestion only. They never cast or overwrite a player vote. Each target can receive one advisory player whip."
     }
   }
 }

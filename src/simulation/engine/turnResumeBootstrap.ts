@@ -13,8 +13,10 @@
 import type { GameState, TurnPhaseTelemetryMap } from "@/lib/db/types";
 import { TURN_BOOTSTRAP_PHASE, turnHasCommittedWrites } from "@/lib/turn/processingLock";
 import {
+  INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
   TurnResumeRefusedError,
   encodeResumeResult,
+  phaseBlocksResumeWhenInterrupted,
   readCrashedTurnPhaseState,
   type CrashedTurnPhaseState,
 } from "./turnPhaseResumeResults";
@@ -65,6 +67,14 @@ export function validateLockedResume(
     locked.processingPhaseStatuses,
     locked.processingPhaseResults
   );
+  const blocking = [...phaseState.interrupted].filter(phaseBlocksResumeWhenInterrupted);
+  if (blocking.length > 0) {
+    throw new TurnResumeRefusedError(
+      `Turn ${target} cannot resume: ${blocking.join(", ")} was interrupted mid-phase, so what it ` +
+        `committed is unknown, and completing the turn without it would skip the economy. ` +
+        `Refusing to continue; repair required before this turn can finish.`
+    );
+  }
   return {
     targetTurn: target,
     lastPhase: locked.processingPhase!,
@@ -145,15 +155,27 @@ export function bootstrapPhaseRecord(
   const results: Record<string, Record<string, unknown>> = {};
   if (!resume) return { statuses, results };
   const carry = (phase: string, resumeCarried: "completed" | "interrupted") => {
-    statuses[phase] = {
-      status: "skipped",
-      startedAt: null,
-      completedAt: now,
-      updatedAt: now,
-      reason: "upstreamAbort",
-      message: "skipped: already applied before crash",
-      resumeCarried,
-    };
+    // An interrupted phase did not finish: record it failed, never as applied.
+    statuses[phase] =
+      resumeCarried === "interrupted"
+        ? {
+            status: "failed",
+            startedAt: null,
+            completedAt: now,
+            updatedAt: now,
+            reason: "other",
+            message: INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
+            resumeCarried,
+          }
+        : {
+            status: "skipped",
+            startedAt: null,
+            completedAt: now,
+            updatedAt: now,
+            reason: "upstreamAbort",
+            message: "skipped: already applied before crash",
+            resumeCarried,
+          };
   };
   for (const phase of resume.phaseState.completed) carry(phase, "completed");
   for (const phase of resume.phaseState.interrupted) carry(phase, "interrupted");

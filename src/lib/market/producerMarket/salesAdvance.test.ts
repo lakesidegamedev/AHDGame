@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, producerRunBudget, type ProductionPlan } from "./production";
 import {
   deferredBillFraction,
+  expectedInputUnitPrice,
   expectedUnitRevenue,
   salesAdvanceAmount,
   salesFundedRunShare,
@@ -187,6 +188,21 @@ describe("sales fund the run", () => {
     expect(owed(run.payables)).toBeGreaterThan(0);
   });
 
+  it("a thinner cushion (producerSalesAdvanceRevenueShare) runs a thin-margin plant on no cash", () => {
+    const thin = (salesAdvanceRevenueShare?: number) =>
+      advanceProducerEconomy({
+        turn: 2,
+        accounts: accounts(0),
+        producers: [mill({ expectedUnitRevenue: 3.85 })],
+        externalOffers: [ore],
+        externalOrders: [buyer()],
+        ...(salesAdvanceRevenueShare ? { salesAdvanceRevenueShare } : {}),
+      });
+    expect(thin().producers[0].producedUnits).toBe(0);
+    expect(thin(0.97).producers[0].producedUnits).toBeGreaterThan(5);
+    expect(total(thin(0.97).accounts)).toBeCloseTo(total(accounts(0)));
+  });
+
   it("does not advance a run whose sales would not pay for it", () => {
     const run = advanceProducerEconomy({
       turn: 2,
@@ -232,5 +248,148 @@ describe("bills follow a cash-cut run", () => {
     expect(plant.labourPaid + plant.labourArrears).toBeCloseTo(0);
     expect(plant.otherOperatingPaid + plant.otherOperatingArrears).toBeCloseTo(4);
     expect(plant.runCutBy).toEqual(["cash"]);
+  });
+});
+
+// gameConfig.producerSalesAdvancePriceStage: judge the run on expected input
+// prices, not the bid ceiling.
+describe("sales advance on expected input prices", () => {
+  it("prices an input at last turn's clearing price, never above the ceiling", () => {
+    expect(expectedInputUnitPrice(6, 1)).toBe(1);
+    expect(expectedInputUnitPrice(6, 9)).toBe(6);
+    expect(expectedInputUnitPrice(6, undefined)).toBe(6);
+    expect(expectedInputUnitPrice(6, 0)).toBe(6);
+    expect(expectedInputUnitPrice(6, Number.NaN)).toBe(6);
+  });
+
+  it("restores the run of a company that spent its cash on construction (turn 663 case)", () => {
+    // The company's real opening at turn 663: 2.11M free after fixed bills of
+    // 2,252; a full run needs 26.48M with inputs at the bid ceiling but 8.99M
+    // at last turn's clearing prices (wages 2.34M, site 0.41M, inputs 6.24M);
+    // a full run is expected to earn 8.96M.
+    const free = 2_113_867;
+    const need = 26_481_976;
+    const expectedNeed = 2_335_382 + 413_699 + 6_242_850;
+    const expectedRevenue = 8_959_814;
+    // At the ceiling the run reads as losing money: held to an 11% run.
+    const atCeiling = salesFundedRunShare({ free, need, expectedRevenue });
+    expect(atCeiling).toBeCloseTo(0.1148, 3);
+    expect(salesAdvanceAmount({ free, need, runShare: atCeiling })).toBeCloseTo(925_493, -1);
+    // At expected prices the sales plus its cash cover the whole run.
+    const share = salesFundedRunShare({ free, need, expectedRevenue, expectedNeed });
+    expect(share).toBe(1);
+    // The advance is capped by the run's expected revenue, not the ceiling gap.
+    const amount = salesAdvanceAmount({ free, need, runShare: share, expectedRevenue });
+    expect(amount).toBeCloseTo(expectedRevenue * 0.9, 0);
+    expect(amount).toBeLessThan(need - free);
+    // Cash and the advance together cover the run at expected prices.
+    expect(free + amount).toBeGreaterThanOrEqual(expectedNeed);
+  });
+
+  it("still holds a run that loses money at market prices to the share cash covers", () => {
+    // Expected cost 36, revenue 20 (x0.9 = 18): cash 9 covers half the gap.
+    expect(
+      salesFundedRunShare({ free: 9, need: 66, expectedNeed: 36, expectedRevenue: 20 })
+    ).toBeCloseTo(0.5);
+    // A clearing price above the ceiling never raises the judged cost.
+    expect(salesFundedRunShare({ free: 0, need: 36, expectedNeed: 90, expectedRevenue: 80 })).toBe(
+      1
+    );
+    expect(
+      salesAdvanceAmount({ free: 9, need: 66, runShare: 0.5, expectedRevenue: 20 })
+    ).toBeCloseTo(9);
+  });
+
+  // Ore's bid ceiling is 6 but it last cleared, and is offered, at 1. At the
+  // ceiling the run costs 20 + 6 + 60 = 86 against 80 x 0.9 = 72 of sales; at
+  // the market it costs 36.
+  const dearCeiling = (changes: Partial<ProductionPlan> = {}) =>
+    mill({
+      expectedUnitRevenue: 8,
+      inputs: [{ commodity: "ore", unitsPerOutput: 1, book: "world", maximumUnitPrice: 6 }],
+      ...changes,
+    });
+  const settle = (salesAdvanceAtClearing?: boolean) =>
+    advanceProducerEconomy({
+      turn: 2,
+      accounts: accounts(4),
+      producers: [dearCeiling()],
+      externalOffers: [ore],
+      externalOrders: [buyer()],
+      clearingPriceByLane: { "ore|world": 1 },
+      ...(salesAdvanceAtClearing != null ? { salesAdvanceAtClearing } : {}),
+    });
+
+  it("off: a run that pays at market prices is held to its cash by the bid ceiling", () => {
+    const run = settle();
+    expect(run.producers[0].producedUnits).toBe(0);
+    expect(run.producers[0].runCutBy).toEqual(["cash"]);
+    // Off and absent are the same settlement.
+    expect(JSON.stringify(settle(false))).toBe(JSON.stringify(run));
+  });
+
+  it("on: the same run is financed by its sales and closes owing nothing", () => {
+    const run = settle(true);
+    const plant = run.producers[0];
+    expect(plant.producedUnits).toBeCloseTo(10);
+    expect(plant.revenue).toBeCloseTo(80);
+    expect(plant.purchases).toBeCloseTo(10);
+    expect(plant.runCutBy).toBeUndefined();
+    expect(owed(run.payables)).toBe(0);
+    expect(cashOf(run.accounts, "corp")).toBeCloseTo(4 + 80 - 10 - 30);
+    for (const account of run.accounts) expect(account.cash).toBeGreaterThanOrEqual(0);
+    expect(total(run.accounts)).toBeCloseTo(total(accounts(4)));
+  });
+
+  it("on: inputs dearer than the last clearing still never close a company below zero", () => {
+    // Ore is now offered at the ceiling: the advance (capped at 72) runs out.
+    const run = advanceProducerEconomy({
+      turn: 2,
+      accounts: accounts(4),
+      producers: [dearCeiling()],
+      externalOffers: [{ ...ore, unitPrice: 6 }],
+      externalOrders: [buyer()],
+      clearingPriceByLane: { "ore|world": 1 },
+      salesAdvanceAtClearing: true,
+    });
+    for (const account of run.accounts) expect(account.cash).toBeGreaterThanOrEqual(0);
+    expect(total(run.accounts)).toBeCloseTo(total(accounts(4)));
+    const plant = run.producers[0];
+    expect(cashOf(run.accounts, "supplier")).toBeCloseTo(plant.purchases);
+  });
+});
+
+describe("expected sales count own-site deliveries (ticket 1785)", () => {
+  // Prod shape: a chemicals line offered 4633.6 units, sold 3111.7 at 829.5 and
+  // delivered 1521.9 to the company's own sites at a captive 819.9. The
+  // delivered units earn nothing in `revenue`, so reading it alone understates
+  // what the run earns by about a third and the cut turn is not rescued.
+  const line = {
+    commodity: "chemicals",
+    offeredUnits: 4633.6,
+    soldUnits: 3111.7,
+    revenue: 2_581_237.8,
+    internalDeliveredUnits: 1521.9,
+    captiveUnitValue: 819.93,
+    realizedUnitPrice: 829.52,
+  };
+  const outputs = [{ commodity: "chemicals", unitsPerOutput: 1 }];
+
+  it("pays the own-site units at their captive value", () => {
+    const withInternal = expectedUnitRevenue(outputs, [line]);
+    const marketOnly = expectedUnitRevenue(outputs, [{ ...line, internalDeliveredUnits: 0 }]);
+    expect(marketOnly).toBeCloseTo(557.0, 0);
+    expect(withInternal).toBeCloseTo(826.4, 0);
+  });
+
+  it("funds a break-even run in full once own-site sales are counted", () => {
+    const need = 700_000;
+    const revenueFor = (unit: number) => unit * 1000;
+    const marketOnly = revenueFor(
+      expectedUnitRevenue(outputs, [{ ...line, internalDeliveredUnits: 0 }])
+    );
+    const withInternal = revenueFor(expectedUnitRevenue(outputs, [line]));
+    expect(salesFundedRunShare({ free: 0, need, expectedRevenue: marketOnly })).toBeLessThan(1);
+    expect(salesFundedRunShare({ free: 0, need, expectedRevenue: withInternal })).toBe(1);
   });
 });

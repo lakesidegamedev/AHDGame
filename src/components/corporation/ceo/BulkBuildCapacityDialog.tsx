@@ -13,6 +13,7 @@ import {
   selectBulkBuildSectors,
   type BulkBuildRule,
 } from "@/lib/corporations/rules/bulkBuildCapacity";
+import { runAfterBuildMessage } from "@/lib/corporations/rules/operatingReserve";
 import { CAPACITY_UNIT_LABEL, formatUnits } from "../plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 
@@ -58,6 +59,13 @@ export interface BulkBuildResponse {
   cashAfterLocal?: number;
   builtCount?: number;
   spentLocal?: number;
+  /** Cash kept back for the plants' running costs (operating reserve), 0 when none. */
+  operatingReserveLocal?: number;
+  reserveTurns?: number;
+  /** Whole percent next turn's run would be cut after these builds; absent when unknown. */
+  runCutPercent?: number;
+  /** The reserve, not the cash, held back at least one sector. */
+  reserveHeldBack?: boolean;
   rows: BulkBuildRow[];
 }
 
@@ -67,6 +75,7 @@ export type BulkBuildRequestFn = (body: {
   rule: BulkBuildRule;
   mode: "preview" | "apply";
   maxTotalLocal?: number;
+  overrideOperatingReserve?: boolean;
 }) => Promise<{ ok: true; data: BulkBuildResponse } | { ok: false; error: string }>;
 
 interface BulkBuildCapacityDialogProps {
@@ -132,6 +141,7 @@ export default function BulkBuildCapacityDialog({
   const [preview, setPreview] = useState<BulkBuildResponse | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState<BulkBuildResponse | null>(null);
+  const [overrideReserve, setOverrideReserve] = useState(false);
 
   const stateNames = useMemo(() => new Map(sectors.map((s) => [s._id, s.stateName])), [sectors]);
   const countries = useMemo(() => {
@@ -198,6 +208,7 @@ export default function BulkBuildCapacityDialog({
       sectorType: sectorType === ALL ? null : sectorType,
       rule,
       mode: "preview",
+      ...(overrideReserve ? { overrideOperatingReserve: true } : {}),
     });
     setBusy(false);
     if (r.ok) setPreview(r.data);
@@ -217,6 +228,7 @@ export default function BulkBuildCapacityDialog({
       rule,
       mode: "apply",
       maxTotalLocal: preview.readyCostLocal,
+      ...(overrideReserve ? { overrideOperatingReserve: true } : {}),
     });
     setBusy(false);
     setConfirming(false);
@@ -452,6 +464,44 @@ export default function BulkBuildCapacityDialog({
             <p className="mt-1 text-muted">
               Cash {fmt(cash)}, leaving {fmt(preview.cashAfterLocal ?? cash - readyCost)}.
             </p>
+            {preview.runCutPercent !== undefined && readyCount > 0 && (
+              <p
+                className={`mt-2 text-body-xs ${preview.runCutPercent > 0 ? "text-warning" : "text-muted"}`}
+              >
+                {runAfterBuildMessage({
+                  cashAfterText: fmt(preview.cashAfterLocal ?? cash - readyCost),
+                  cutPercent: preview.runCutPercent,
+                  belowReserve:
+                    (preview.cashAfterLocal ?? cash - readyCost) <
+                    (preview.operatingReserveLocal ?? 0),
+                })}
+              </p>
+            )}
+            {(preview.operatingReserveLocal ?? 0) > 0 && (
+              <div className="mt-2 text-body-xs text-muted">
+                <p>
+                  Your plants need about {fmt(preview.operatingReserveLocal!)} to run for{" "}
+                  {preview.reserveTurns} turns (wages, site bills and inputs).{" "}
+                  {overrideReserve
+                    ? "You chose to build past that reserve."
+                    : "Builds stop before cash falls below it."}
+                </p>
+                {(preview.reserveHeldBack || overrideReserve) && (
+                  <label className="mt-1 flex items-center gap-2 text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={overrideReserve}
+                      onChange={(e) => {
+                        setOverrideReserve(e.target.checked);
+                        invalidate();
+                      }}
+                    />
+                    Build past the reserve. Plants short of cash run at a fraction of their output
+                    until it recovers.
+                  </label>
+                )}
+              </div>
+            )}
             <p className="mt-2 text-body-xs text-muted">
               Building several sectors of one industry can raise the price of later ones a little,
               because your share of world demand grows with each order. You are never charged more

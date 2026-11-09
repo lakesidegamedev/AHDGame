@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignPageHref } from "@/lib/campaignManager/links";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
@@ -32,17 +33,23 @@ export interface StageFieldRow {
 /** Profile, party and campaign links for a candidate, from the race payload. */
 export function candidateLinks(
   c: CandidateDetail | undefined,
-  countryId: string
+  race: { id: string; countryId: string }
 ): Pick<StageFieldRow, "href" | "avatarUrl" | "partyId" | "partyHref" | "campaignHref"> {
   if (!c)
     return { href: null, avatarUrl: null, partyId: null, partyHref: null, campaignHref: null };
-  const country = countryId.toLowerCase();
+  const country = race.countryId.toLowerCase();
   return {
     href: c.isNPP && c.nppId ? `/politicians/npp/${c.nppId}` : `/character/${c.characterId}`,
     avatarUrl: c.avatarUrl ?? null,
     partyId: c.party ?? null,
     partyHref: c.party ? `/country/${country}/parties/${c.party}` : null,
-    campaignHref: c.campaignId ? `/campaign/${c.campaignId}` : null,
+    campaignHref: c.campaignId
+      ? campaignPageHref({
+          campaignId: c.campaignId,
+          electionId: race.id,
+          countryId: race.countryId,
+        })
+      : null,
   };
 }
 

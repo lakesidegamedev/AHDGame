@@ -21,6 +21,7 @@ import type { DriverDisplayInputs } from "@/lib/elections/computePersuasionDrive
 import type { PersuasionDriverCandidate } from "@/components/elections/general/PersuasionDrivers";
 import { buildGeneralHeadline } from "./generalHeadline";
 import { STATE_NAMES } from "./presMap/usStates";
+import { campaignPageHref } from "@/lib/campaignManager/links";
 
 export type GeneralRail = "overview" | "college" | "board" | "tickets";
 
@@ -279,7 +280,13 @@ export function buildGeneralBlendViewModel(inp: GeneralBlendInput): GeneralBlend
         party: c.partyName,
         partyId: c.party,
         partyHref: `/country/${countryCode}/parties/${c.party}`,
-        campaignHref: c.campaignId ? `/campaign/${c.campaignId}` : null,
+        campaignHref: c.campaignId
+          ? campaignPageHref({
+              campaignId: c.campaignId,
+              electionId: election.id,
+              countryId: election.countryId,
+            })
+          : null,
         mate: c.runningMateName ?? null,
         candidateKey: c.isNPP && c.nppId ? c.nppId : c.characterId,
         ev: evByCandidate[c.id] ?? 0,
@@ -468,7 +475,13 @@ export function buildGeneralBlendViewModel(inp: GeneralBlendInput): GeneralBlend
     : null;
 
   const myCandidate = election.allCandidates.find((c) => c.isYou);
-  const campaignHref = myCandidate?.campaignId ? `/campaign/${myCandidate.campaignId}` : null;
+  const campaignHref = myCandidate?.campaignId
+    ? campaignPageHref({
+        campaignId: myCandidate.campaignId,
+        electionId: election.id,
+        countryId: election.countryId,
+      })
+    : null;
 
   // ── Header ────────────────────────────────────────────────────────────────
   const leader = tickets[0] ?? null;

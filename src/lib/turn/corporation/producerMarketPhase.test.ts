@@ -9,9 +9,12 @@ import { producerPayableId } from "@/lib/market/producerMarket/payablesRules";
 import { prepareProducerSector } from "./producerSectorPlan";
 import {
   producerWalletId,
+  LIVE_MARKET_EXECUTION_BUDGET_MS,
+  liveMarketExecutionBudgetMs,
   runCorporationProducerMarket,
   type ProducerWalletScope,
 } from "./producerMarketPhase";
+import { phaseTimeoutMs } from "@/lib/turn/processingLock";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -162,6 +165,11 @@ describe("corporation producer market phase", () => {
   it("funds purchases with paid wages and refreshes actual native cash without creating buyer money", async () => {
     const { memory, corp, input, db } = fixture();
     const settled = await runCorporationProducerMarket(db, input);
+    expect(settled.result.planning).toMatchObject({
+      maximumPasses: 64,
+      converged: true,
+      stopReason: "converged",
+    });
     expect(settled.operatingByCorporation.get(corp._id.toHexString())).toMatchObject({
       revenue: expect.closeTo(10, 10),
       expenses: 15,
@@ -293,4 +301,16 @@ it("holds positive operating receipts out of spendable cash and replays the froz
   const replayed = await db.collection("corporations").findOne({ _id: corp._id });
   expect(replayed?.pendingOperatingCash).toBe(stored?.pendingOperatingCash);
   expect(replayed?.liquidCapital).toBe(1000);
+});
+
+describe("live market execution deadline", () => {
+  it("scales with the phase timeout and leaves a quarter of the phase for settlement", () => {
+    expect(liveMarketExecutionBudgetMs(20 * 60 * 1000)).toBe(900_000);
+    expect(liveMarketExecutionBudgetMs(4 * 60 * 1000)).toBe(180_000);
+    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBe(450_000);
+    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBe(
+      liveMarketExecutionBudgetMs(phaseTimeoutMs("corporationTurn"))
+    );
+    expect(LIVE_MARKET_EXECUTION_BUDGET_MS).toBeLessThan(phaseTimeoutMs("corporationTurn"));
+  });
 });

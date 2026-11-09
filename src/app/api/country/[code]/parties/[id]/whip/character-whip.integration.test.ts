@@ -106,6 +106,47 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
     db.collection("npps").find.mockReturnValue({ toArray: async () => [] });
   });
 
+  it.each([
+    ["bill", "house"],
+    ["bill", "senate"],
+    ["bill", "stateSenate"],
+    ["bill", "regionalCouncil"],
+    ["speakerElection", "house"],
+    ["leadershipElection", "senate"],
+    ["pmAppointmentVote", "commons"],
+    ["noConfidenceVote", "commons"],
+    ["cabinetNomination", "senate"],
+    ["scotusNomination", "senate"],
+    ["speakerVacateMotion", "house"],
+    ["impeachmentVote", "house"],
+  ])(
+    "rejects explicit and default hard player %s whips for %s without writes",
+    async (targetType, chamber) => {
+      const { POST } = await import("./route");
+      for (const mode of ["hard", undefined]) {
+        const res = await POST(
+          new Request("http://localhost/api/country/US/parties/1/whip", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              audience: "character",
+              targetType,
+              targetId: billId.toString(),
+              chamber,
+              direction: "for",
+              mode,
+            }),
+          }),
+          { params: Promise.resolve({ code: "US", id: partyId }) }
+        );
+        expect(res.status).toBe(400);
+        expect(JSON.stringify(await res.json())).toContain("Hard whips cannot force player votes");
+      }
+      expect(db.collectionMocks.billWhips!.insertOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks.bills!.updateOne).not.toHaveBeenCalled();
+    }
+  );
+
   async function postScotus(overrides: Record<string, unknown> = {}) {
     const { POST } = await import("./route");
     return POST(
@@ -113,6 +154,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          mode: overrides.audience === "npp" ? "hard" : "soft",
           targetType: "scotusNomination",
           targetId: billId.toString(),
           chamber: "senate",
@@ -149,34 +191,13 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
   }
 
   it.each(["for", "against"])(
-    "applies a hard player Supreme Court whip %s with a revert snapshot",
+    "rejects hard player Supreme Court whips %s without writes",
     async (direction) => {
       await setupScotus();
-      const response = await postScotus({ direction });
-      expect(response.status).toBe(200);
-      expect(db.collectionMocks.scotusNominations!.updateOne).toHaveBeenCalledWith(
-        { _id: billId },
-        expect.objectContaining({
-          $set: expect.objectContaining({
-            [`votes.${c1}`]: direction,
-            [`whippedFromVote.${c1}`]: "abstain",
-          }),
-          $inc: { [direction === "for" ? "votesFor" : "votesAgainst"]: 1, votesAbstain: -1 },
-        })
-      );
-      expect(db.collectionMocks.billWhips!.insertOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          targetType: "scotusNomination",
-          targetId: billId,
-          chamber: "senate",
-          audience: "character",
-        })
-      );
-      expect(db.collection("cabinetNominations").updateOne).not.toHaveBeenCalled();
-      const { sendSystemMails } = await import("@/lib/mail/systemMail");
-      expect(vi.mocked(sendSystemMails).mock.calls[0]?.[1]?.[0]?.subject).toContain(
-        "Supreme Court"
-      );
+      const response = await postScotus({ direction, mode: "hard" });
+      expect(response.status).toBe(400);
+      expect(db.collectionMocks.scotusNominations!.updateOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks.billWhips!.insertOne).not.toHaveBeenCalled();
     }
   );
 
@@ -260,7 +281,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
     expect(db.collectionMocks.billWhips!.insertOne).not.toHaveBeenCalled();
   });
 
-  it("batches mail and notifications for eleven player recipients", async () => {
+  it("batches advisory notifications without mail or bill vote writes for eleven players", async () => {
     const recipients = Array.from({ length: 11 }, (_, index) => ({
       _id: new ObjectId(),
       userId: new ObjectId(),
@@ -280,6 +301,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
       body: JSON.stringify({
         audience: "character",
         targetType: "bill",
+        mode: "soft",
         targetId: billId.toString(),
         chamber: "house",
         direction: "for",
@@ -292,8 +314,8 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
     const { createNotification, createNotifications } = await import("@/lib/notifications");
     expect(sendSystemMail).not.toHaveBeenCalled();
     expect(createNotification).not.toHaveBeenCalled();
-    expect(sendSystemMails).toHaveBeenCalledOnce();
-    expect(vi.mocked(sendSystemMails).mock.calls[0]?.[1]).toHaveLength(11);
+    expect(sendSystemMails).not.toHaveBeenCalled();
+    expect(db.collectionMocks.bills!.updateOne).not.toHaveBeenCalled();
     expect(createNotifications).toHaveBeenCalledOnce();
     expect(vi.mocked(createNotifications).mock.calls[0]?.[0]).toHaveLength(11);
   });
@@ -306,6 +328,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
       body: JSON.stringify({
         audience: "character",
         targetType: "bill",
+        mode: "soft",
         targetId: billId.toString(),
         chamber: "house",
         direction: "for",
@@ -318,7 +341,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.audience).toBe("character");
-    expect(body.affected).toBe(1);
+    expect(body.affected).toBe(0);
     expect(body.mailedCount).toBe(1);
 
     const insertCalls = db.collectionMocks["billWhips"]!.insertOne.mock.calls;
@@ -342,7 +365,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
         return { toArray: async () => [] } as never;
       }
       // Second call is the character-scoped check
-      return { toArray: async () => [{ audience: "character" }] } as never;
+      return { toArray: async () => [{ audience: "character", mode: "soft" }] } as never;
     });
 
     const { POST } = await import("./route");
@@ -352,6 +375,7 @@ describe("POST /api/country/[code]/parties/[id]/whip — character audience", ()
       body: JSON.stringify({
         audience: "character",
         targetType: "bill",
+        mode: "soft",
         targetId: billId.toString(),
         chamber: "house",
         direction: "for",

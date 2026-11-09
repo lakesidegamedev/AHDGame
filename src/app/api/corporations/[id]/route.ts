@@ -8,6 +8,7 @@ import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
+import { viewerHoldsShares } from "@/lib/corporations/viewerShareholding";
 import { loadCorporationDetailView } from "@/lib/corporations/queries/corporationDetail";
 import { loadCorporationDefenceContracts } from "@/lib/corporations/queries/corporationDefenceContracts";
 import { resolveGameYear } from "@/lib/era/era";
@@ -238,6 +239,13 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     if (redact && viewerIsControllingParentCeo) {
       redact = false;
     }
+
+    // A direct shareholder (e.g. via a private deal) may see the company they own.
+    const viewerIsShareholder = await viewerHoldsShares(db, corporation, authUser?.userId);
+    if (redact && viewerIsShareholder) {
+      redact = false;
+    }
+    (detail.corporation as Record<string, unknown>).viewerIsShareholder = viewerIsShareholder;
     (detail.corporation as Record<string, unknown>).viewerIsControllingParentCeo =
       viewerIsControllingParentCeo;
 
@@ -253,6 +261,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
         corporation: {
           ...redactPrivateCorporation(innerCorp),
           viewerIsControllingParentCeo,
+          viewerIsShareholder,
           canManageAcquisitions: false,
           canEditEditorialStance: false,
           openPrivatizationVoteId,
@@ -397,6 +406,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
             row.deliveryLimitedFraction = null;
             // Same class of intel: who a rival's output goes to.
             row.ownSiteShare = null;
+            row.ownTruckHaulTeu = null;
+            row.managementProfit = null;
+            row.siteStatement = null;
+            row.ownSiteMemoValue = null;
           }
         }
         const corpPhysical = corpObj?.physical as Record<string, unknown> | null | undefined;

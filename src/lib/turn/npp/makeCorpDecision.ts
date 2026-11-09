@@ -5,7 +5,6 @@
  */
 import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
-import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
   toDominanceSector,
@@ -114,8 +113,8 @@ import {
   settleFrontierEntryPlacement,
 } from "@/lib/turn/npp/frontierEntryCandidate";
 import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
+import { pushFundedZeroSalesMothballs } from "@/lib/turn/npp/fundedZeroSalesMothball";
 import {
-  AI_ZERO_SALES_MOTHBALL_TURNS,
   chooseTransitionConversion,
   sectorsAfterConversion,
 } from "@/lib/turn/npp/rules/transitionConversion";
@@ -126,7 +125,8 @@ import {
   depositAwarePriceRatioOf,
   ESSENTIAL_SHORTAGE_SCORE,
   hasEnterableHeadroom,
-  sectorPeakShortageScore,
+  plantPeakShortageScore,
+  plantShortageScore,
   sectorInputPressure,
   sectorShortageScore,
   type CommodityPriceRatioFn,
@@ -162,11 +162,10 @@ import {
   reinvestPoolHeadroomUnits,
   type ReinvestCandidate,
 } from "@/lib/turn/npp/reinvestCandidatePool";
-import {
-  analyzeSectorProfitability,
-  type SectorProfitInfo,
-} from "@/lib/turn/npp/sectorProfitability";
+import { nppSectorProfitability, type SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
+import { gateFill, type ProductFillRow } from "@/lib/turn/npp/rules/productFill";
+import { sizeShortageGrowthFinance } from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import type { ObjectId } from "mongodb";
 
@@ -245,8 +244,10 @@ export function makeNppCorpDecision(
       commodities: sectorOutputCommodities(sector, ctx.turn),
       demandOf,
       stateDemandOf: plants.commodityStateDemandOf,
+      countryDemandOf: plants.commodityCountryDemandOf,
       targetSectorId: sector._id.toString(),
       targetStateId: sector.stateId,
+      targetCountryId: sector.countryId,
       extraUnits,
       isNatcorp: !!corp.countryOwnerId,
       turn: ctx.turn,
@@ -282,7 +283,7 @@ export function makeNppCorpDecision(
   );
 
   // ── Profitability analysis ─────────────────────────────────────────────────
-  const sectorProfits = analyzeSectorProfitability(sectors, plants?.enabled === true);
+  const sectorProfits = nppSectorProfitability(sectors, plants);
   const profitableSectors = sectorProfits.filter((sp) => sp.isProfitable).length;
 
   // Count consecutive loss turns for active NPP sectors. Restart resets the count.
@@ -712,40 +713,16 @@ export function makeNppCorpDecision(
     }
   }
 
-  // ── 2e. Funded market: an AI-run corporation mothballs every plant that has
-  // sold nothing for two settled turns, instead of one plant a turn. Its wages
-  // and site bills buy nothing; the glut restart above brings it back when the
-  // market's price recovers. Player autopilot and caretakers never do this.
-  if (ctx.transitionFirstFundedTurn != null && operator.role === "npp" && !corp.countryOwnerId) {
-    // Funded restart: reopen the mothballed plant whose recipe is shortest.
-    const reopen = ctx.fundedRestartPressureOf
-      ? chooseFundedRestart(
-          sectors,
-          ctx.fundedRestartPressureOf,
-          (s) =>
-            !divestedSectorIds.some((d) => d.equals(s._id)) &&
-            !(s.sectorType === "extraction" && s.capacityUtilization === 0)
-        )
-      : null;
-    if (reopen)
-      sectorUpdates.push({
-        filter: { _id: reopen._id, mothballed: true },
-        update: {
-          $set: { mothballed: false, producerZeroSalesTurns: 0, pnlLossTurns: 0, updatedAt: now },
-        },
-      });
-    for (const sector of sectors) {
-      if (reopen && sector._id.equals(reopen._id)) continue;
-      const id = sector._id.toString();
-      if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
-      if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;
-      sectorUpdates.push({
-        filter: { _id: sector._id, mothballed: { $ne: true } },
-        update: { $set: { mothballed: true, updatedAt: now } },
-      });
-      newlyMothballedIds.add(id);
-    }
-  }
+  // ── 2e. Funded market: AI-run corporations reopen and mothball by zero sales.
+  pushFundedZeroSalesMothballs({
+    ctx,
+    operator,
+    sectors,
+    divestedSectorIds,
+    newlyMothballedIds,
+    sectorUpdates,
+    now,
+  });
 
   // Input-squeeze strategy shifts use the 2c cohort independently: a mothball and a strategy
   // shift never target a sector scheduled to become cold in this decision.
@@ -911,7 +888,12 @@ export function makeNppCorpDecision(
   // whichever target survives.
   const surplusCash = liquidCapital - effectiveCashFloor;
   // Plants idle for want of cash hold founding and every reinvestment leg.
-  const cashCutHold = corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn);
+  // nppDividendAfterTaxStage >= 2: no founding or growth from cash at or under the floor.
+  // A short-lane financed build still goes through (rules/shortageGrowthFinance): the
+  // cash growth budget is zero under the floor, so only the loan can size units.
+  const cashRunCut = corpHeldByCashCut(sectors, ctx.fundedWorldEpoch, ctx.turn);
+  const floorHold = plants?.holdExpansionAtCashFloor === true && !(surplusCash > 0);
+  const cashCutHold = cashRunCut || floorHold;
   const entry = evaluateNppEntry({
     corp,
     sectors: sectorsAfterConversion(sectors, conversionApplied),
@@ -1380,7 +1362,12 @@ export function makeNppCorpDecision(
       // telemetry means no evidence, and no evidence means no build.
       const produced = sector.producedUnits ?? 0;
       const sold = sector.soldUnits ?? 0;
-      const fill = produced > 0 ? sold / produced : 0;
+      const fill = gateFill(
+        ctx.productFillStage,
+        (sector.producerSettlement as { products?: ProductFillRow[] } | null | undefined)?.products,
+        produced,
+        sold
+      );
       // (b) Is there room in the market to absorb more output? Same unowned
       // pool the founding path sizes and draws against.
       const sectorCountryId = sector.countryId ?? corp.countryId;
@@ -1402,7 +1389,7 @@ export function makeNppCorpDecision(
           )
         ),
         property_unavailable: !!sector.forSale || hasProtectedConstructionProperty(sector),
-        cash_cut_run: cashCutHold,
+        cash_cut_run: cashRunCut || (floorHold && !ctx.shortageGrowthFinance),
       });
       if (preSizingGate) {
         observeReinvestCandidate(preSizingGate, sector, capitalStock, null, 0, null);
@@ -1495,16 +1482,11 @@ export function makeNppCorpDecision(
           placementSignals?.statePriceRatioOf?.(commodity, sector.stateId) ??
           priceRatioOf(commodity, cid)
       );
-      const stateShortage = sectorShortageScore(
-        sector.sectorType,
-        sectorCountryId,
-        statePriceRatioOf
-      );
-      const peakStateShortage = sectorPeakShortageScore(
-        sector.sectorType,
-        sectorCountryId,
-        statePriceRatioOf
-      );
+      // A mine is also scored only on what its recipe sells: an oil and gas
+      // well must not grow on a coal or rare earth shortage while crude sits
+      // at the price floor (rules/plantOutputShortage).
+      const stateShortage = plantShortageScore(sector, sectorCountryId, statePriceRatioOf);
+      const peakStateShortage = plantPeakShortageScore(sector, sectorCountryId, statePriceRatioOf);
       const criticalShortage = peakStateShortage >= ESSENTIAL_SHORTAGE_SCORE;
       const interventionPriority = fragileReinvestmentPriority(
         sector,
@@ -1657,6 +1639,18 @@ export function makeNppCorpDecision(
             )
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
+      const shortageSizing =
+        ctx.shortageGrowthFinance && !autopilot && borrowAllowed && canGrow && sp.isProfitable
+          ? sizeShortageGrowthFinance(ctx.shortageGrowthFinance, sector, {
+              sectorProfitLocal: sectorEconomicToCorpLocal(sp.income, sector),
+              operatingCapacityUnits: productionCapacity,
+              perUnitBuildCostLocal: perUnitGrowthLocal,
+              stepCapUnits: Math.min(growthCapUnits, MAX_BUILD_UNITS_PER_ORDER),
+              cashLocal,
+              cashFloorLocal: effectiveCashFloor,
+            })
+          : null;
+      if (shortageSizing) growthUnits = Math.max(growthUnits, shortageSizing.growthUnits);
       // Market-throttle and input-starvation evidence (rules/growthEvidenceGate)
       // refuse the growth leg; replacement of worn capacity still goes through.
       const evidenceGate =
@@ -1732,6 +1726,7 @@ export function makeNppCorpDecision(
         fill,
         headroomUnits,
         interventionPriority,
+        shortageGrowth: growthUnits > 0 ? shortageSizing?.shortageGrowth : undefined,
       });
     }
 
@@ -1862,6 +1857,7 @@ export function makeNppCorpDecision(
             growthUnits: candidate.growthUnits,
             priority: candidate.interventionPriority,
             fill: candidate.fill,
+            shortageGrowth: candidate.growthUnits > 0 ? candidate.shortageGrowth : undefined,
           });
         }
         observePricedReinvestCandidate(

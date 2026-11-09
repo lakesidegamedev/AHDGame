@@ -4,6 +4,8 @@ import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import {
   remitToTreasury,
   creditTreasuryProceeds,
+  collectFundedCorporationPayment,
+  creditTreasuryProceedsPaired,
   settleFundedTreasuryCompensation,
 } from "./treasury";
 import { loadTreasuryCashContext } from "./treasuryLedger";
@@ -436,6 +438,127 @@ describe("funded Treasury corporation transfers", () => {
     expect(db.collection("federalBudget").docs[0]).toMatchObject({
       treasuryCashLocal: 10,
       treasuryBalance: 10,
+    });
+    expect(db.collection("bankMoneyMoves").docs).toEqual([]);
+  });
+
+  it("collects a corporation fine into Treasury cash on one paired receipt", async () => {
+    const { db, corpId } = world();
+    const input = {
+      countryId: "CN" as const,
+      corpId,
+      corpCurrency: "CNY" as const,
+      amountLocal: 40,
+      key: "fine-1",
+      now: new Date(),
+      flow: "regulatory_fine" as const,
+      site: "test",
+    };
+
+    expect(await collectFundedCorporationPayment(db as unknown as Db, input)).toBe(40);
+    expect(await collectFundedCorporationPayment(db as unknown as Db, input)).toBe(40);
+
+    expect(db.collection("corporations").docs[0]).toMatchObject({ liquidCapital: 60 });
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 50,
+      treasuryBalance: 50,
+    });
+    expect(db.collection("bankMoneyMoves").docs).toHaveLength(1);
+  });
+
+  it("moves nothing when the corporation cannot cover the fine", async () => {
+    const { db, corpId } = world();
+    const paid = await collectFundedCorporationPayment(db as unknown as Db, {
+      countryId: "CN",
+      corpId,
+      corpCurrency: "CNY",
+      amountLocal: 500,
+      key: "fine-2",
+      now: new Date(),
+      flow: "regulatory_fine",
+      site: "test",
+    });
+
+    expect(paid).toBe(0);
+    expect(db.collection("corporations").docs[0]).toMatchObject({ liquidCapital: 100 });
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 10,
+      treasuryBalance: 10,
+    });
+  });
+
+  it("defers to the legacy path when the funded ledger is off", async () => {
+    const { db, corpId } = world();
+    await db
+      .collection("gameConfig")
+      .updateOne({ _id: "default" }, { $set: { treasuryCashLedgerEnabled: false } });
+    const paid = await collectFundedCorporationPayment(db as unknown as Db, {
+      countryId: "CN",
+      corpId,
+      corpCurrency: "CNY",
+      amountLocal: 40,
+      key: "fine-3",
+      now: new Date(),
+      flow: "regulatory_fine",
+      site: "test",
+    });
+    expect(paid).toBeNull();
+  });
+
+  it("credits privatization proceeds on one paired receipt that cannot pay twice", async () => {
+    const { db } = world();
+    const input = {
+      countryId: "CN" as const,
+      now: new Date(),
+      flow: "privatization_auction_proceeds" as const,
+      key: "auction-1",
+      site: "test",
+      amountLocal: 40,
+    };
+
+    expect(await creditTreasuryProceedsPaired(db as unknown as Db, input)).toBe(40);
+    expect(await creditTreasuryProceedsPaired(db as unknown as Db, input)).toBe(40);
+
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 50,
+      treasuryBalance: 50,
+    });
+    expect(db.collection("bankMoneyMoves").docs).toHaveLength(1);
+  });
+
+  it("converts an anchor amount before the paired credit", async () => {
+    const { db } = world();
+    const credited = await creditTreasuryProceedsPaired(db as unknown as Db, {
+      countryId: "CN",
+      now: new Date(),
+      flow: "nationalization_compensation",
+      key: "recovery-1",
+      site: "test",
+      amountAnchor: 25,
+    });
+
+    expect(credited).toBe(25);
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({ treasuryCashLocal: 35 });
+  });
+
+  it("falls back to the plain proceeds credit when the funded ledger is off", async () => {
+    const { db } = world();
+    await db
+      .collection("gameConfig")
+      .updateOne({ _id: "default" }, { $set: { treasuryCashLedgerEnabled: false } });
+    const credited = await creditTreasuryProceedsPaired(db as unknown as Db, {
+      countryId: "CN",
+      now: new Date(),
+      flow: "privatization_ipo",
+      key: "ipo-1",
+      site: "test",
+      amountLocal: 40,
+    });
+
+    expect(credited).toBe(40);
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 10,
+      treasuryBalance: 50,
     });
     expect(db.collection("bankMoneyMoves").docs).toEqual([]);
   });

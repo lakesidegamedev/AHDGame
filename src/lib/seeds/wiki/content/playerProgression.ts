@@ -39,7 +39,7 @@ Open **Parties**, open a party close to your sliders, and join. [Political Parti
 1. Open **Elections** and filter to your home state or region and a low office (State Senate, House, MP, MdB). State and regional races can only be entered from your home state, which is why [relocating](/wiki/relocation) comes first if you want a different one.
 2. Open the race and confirm the primary window is open.
 3. Run a Quick Poll, then declare.
-4. Spend Campaign on **Actions** for PI, use **View Campaign** for your campaign budget, and request NPP endorsements. Do not attack rivals in your own party.
+4. Spend Campaign on **Actions** for PI, use **Campaign** mode on the race page for your campaign budget, and request NPP endorsements. Do not attack rivals in your own party.
 
 You can only hold one active candidacy at a time. Your standing sets how your party's voters split their ballots over the closing window, and the top count per party goes to the general.
 

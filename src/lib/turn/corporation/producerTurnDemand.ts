@@ -1,4 +1,12 @@
 /** Funded-market demand construction shared by the producer shadow and the live funded market. */
+import {
+  markPublicFairShare,
+  publicFairShareOn,
+} from "@/lib/market/producerMarket/publicFairShareRules";
+import {
+  markHomeCountryFirst,
+  publicHomeFirstOn,
+} from "@/lib/market/producerMarket/publicHomeFirstRules";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { CorporateSector } from "@/lib/db/types";
 import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
@@ -9,6 +17,8 @@ import { eraScaledBasePrices } from "@/lib/constants/commodities";
 import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
+import { incomeIndexByState } from "@/lib/market/rules/demandCurve";
+import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
 import { resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
@@ -22,6 +32,7 @@ import {
   withCarriedLines,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { releaseCarriedLines } from "@/lib/market/rules/publicCarryRelease";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
@@ -46,7 +57,7 @@ import {
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import type { CorporationLookups } from "./types";
 import {
-  routeEligibility,
+  createRouteEligibility,
   type RouteOffer,
   type RouteOrder,
 } from "@/lib/market/producerMarket/routeRules";
@@ -162,6 +173,7 @@ export async function buildProducerTurnDemand(
           internalSupplyPolicy: pricingPolicies?.get(corp._id.toString())?.policy,
           sector: shadowOpeningSector(sector, worldEpoch, input.turn, carry?.plants[sectorId]),
           inputPriceHeadroom: PRICE_HEADROOM,
+          basePrices: base,
         });
         const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
         const plan = shadowCountryBooks(prepared.plan, sectorCountry);
@@ -321,10 +333,20 @@ export async function buildProducerTurnDemand(
     ])
   );
   const publicCarriedIn = new Map<string, number>();
+  // Release stage (issue #5454): a line draws at most part of its carry a turn.
+  // The rest is held, and kept for later turns with what this turn leaves unspent.
+  const publicCarryHeld = new Map<string, LineCarry>();
   const carriedFunding = funding.map((f) => {
     const carryIn = input.publicCarryIn?.get(f.countryId);
     if (!carryIn) return f;
-    const lines = withCarriedLines(f.lines, carryIn);
+    let lines: typeof f.lines;
+    if (input.env.publicCarryRelease) {
+      const released = releaseCarriedLines(f.lines, carryIn);
+      lines = released.lines;
+      if (Object.keys(released.held).length > 0) publicCarryHeld.set(f.countryId, released.held);
+    } else {
+      lines = withCarriedLines(f.lines, carryIn);
+    }
     const added =
       lines.reduce((s, l) => s + l.amountLocal, 0) - f.lines.reduce((s, l) => s + l.amountLocal, 0);
     if (added > 0) publicCarriedIn.set(f.countryId, added);
@@ -459,10 +481,37 @@ export async function buildProducerTurnDemand(
   const walletCountry = new Map(
     [...householdWallets.values()].map((w) => [w.accountId, w.countryId])
   );
+  // Demand curves (#5451, #5453): each wallet state's income in anchor against
+  // the median across wallet states, and its country's prime rate. The
+  // comparison is deliberately across countries: incomes are converted to
+  // anchor first, so a richer country's households tilt toward discretionary
+  // goods and a poorer one's toward essentials, at today's exchange rates.
+  const walletStateCountry = new Map(
+    [...householdWallets.values()].map((w) => [w.stateId, w.countryId] as const)
+  );
+  const demandCurve = input.env.demandCurve
+    ? {
+        incomeIndexByState: incomeIndexByState(
+          [...walletStateCountry].map(([stateId, country]) => {
+            const local = lookups.stateMetricsByState?.get(stateId)?.economic?.medianIncome?.value;
+            const code = currencyForCountry(country);
+            const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+            return { stateId, income: typeof local === "number" ? local / rate : NaN };
+          })
+        ),
+        primeRatePctByState: new Map(
+          [...walletStateCountry].flatMap(([stateId, country]) => {
+            const rate = lookups.primeRateByCountry.get(country);
+            return typeof rate === "number" ? [[stateId, rate] as const] : [];
+          })
+        ),
+      }
+    : undefined;
   const households = householdDemandSpecs({
     wallets: [...householdWallets.values()],
     referencePrice: refPrice,
     priceHeadroom: PRICE_HEADROOM,
+    ...(demandCurve ? { demandCurve } : {}),
   }).map((h) => ({
     ...h,
     ...tagCountry(walletCountry.get(h.accountId)),
@@ -480,6 +529,10 @@ export async function buildProducerTurnDemand(
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
+  // Public buyers clear their own country's sellers first (publicHomeFirstRules).
+  if (publicHomeFirstOn(env.publicHomeFirstStage)) markHomeCountryFirst(publicBuyerOrders);
+  // What is left on the world book is shared pro rata (publicFairShareRules).
+  if (publicFairShareOn(env.publicFairShareStage)) markPublicFairShare(publicBuyerOrders);
   const investmentBuyerOrders = publicOrders(
     investmentFunding.map((f) => ({
       accountId: investmentAccountId(f.countryId),
@@ -543,39 +596,36 @@ export async function buildProducerTurnDemand(
           }))
       ),
     ];
-    eligibleOffersByOrder = routeEligibility(orders, offers, open);
-    // One list per (commodity, buyer country): households, public and
-    // marketing orders repeat the same pairs, and each call regroups every offer.
-    const listCache = new Map<string, readonly string[]>();
-    const listFor = (commodity: string, country: string) => {
-      const key = `${commodity}|${country}`;
-      let list = listCache.get(key);
-      if (!list) {
-        list =
-          routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x ?? [];
-        listCache.set(key, list);
-      }
-      return list;
+    // Producers and final buyers share the same indexed offers and cached lists.
+    // Rebuilding the offer index for every final-buyer pair repeated world-wide work.
+    const listFor = createRouteEligibility(offers, open);
+    eligibleOffersByOrder = {};
+    for (const order of orders) {
+      const list = listFor(order.commodity, order.buyerCountry);
+      if (list) eligibleOffersByOrder[order.id] = list;
+    }
+    const restrict = (row: { eligibleOfferIds?: readonly string[] }, list?: readonly string[]) => {
+      if (list) row.eligibleOfferIds = list;
     };
     for (const h of households)
       for (const product of h.products)
         if (product.book === "world")
-          (product as { eligibleOfferIds?: readonly string[] }).eligibleOfferIds = listFor(
-            product.commodity,
-            walletCountry.get(h.accountId) ?? ""
+          restrict(
+            product as { eligibleOfferIds?: readonly string[] },
+            listFor(product.commodity, walletCountry.get(h.accountId) ?? "")
           );
     const publicCountry = new Map(funding.map((f) => [publicAccountId(f.countryId), f.countryId]));
     for (const o of publicBuyerOrders)
       if (o.book === "world")
-        o.eligibleOfferIds = listFor(o.commodity, publicCountry.get(o.accountId) ?? "");
+        restrict(o, listFor(o.commodity, publicCountry.get(o.accountId) ?? ""));
     const investmentCountry = new Map(
       investmentFunding.map((f) => [investmentAccountId(f.countryId), f.countryId])
     );
     for (const o of investmentBuyerOrders)
       if (o.book === "world")
-        o.eligibleOfferIds = listFor(o.commodity, investmentCountry.get(o.accountId) ?? "");
+        restrict(o, listFor(o.commodity, investmentCountry.get(o.accountId) ?? ""));
     for (const o of marketingOrders)
-      o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
+      restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
   }
 
   const references = Object.fromEntries(
@@ -603,6 +653,8 @@ export async function buildProducerTurnDemand(
         fresh: publicFreshByCountry.get(f.countryId)?.get(carryLineKey(l.commodity, l.book)) ?? 0,
       })),
     })),
+    /** Carry each country held back this turn under the release stage. */
+    publicCarryHeld,
     headcountBySectorId,
     householdForPayee,
     householdSeed,

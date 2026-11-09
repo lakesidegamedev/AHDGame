@@ -109,7 +109,24 @@ export default function MarketMoneyPanel({
   const policyStack = plants.policyStack ?? [];
   const hasPolicy = policyAnchor !== 0;
 
+  const statement = pnl.statement;
   const costLines: { key: string; label: string; value: number; help: string }[] = [
+    ...(statement
+      ? [
+          {
+            key: "stockCredit",
+            label: "Output added to stock at cost",
+            value: -statement.inventoryCredit,
+            help: "Production cost retained as stock, separate from sales income.",
+          },
+          {
+            key: "supportCredit",
+            label: "Transition support",
+            value: -statement.supportCredit,
+            help: "Support received by this site, separate from sales income.",
+          },
+        ].filter((line) => line.value !== 0)
+      : []),
     ...(pnl.internalSupplyChargeAnchor
       ? [
           {
@@ -218,7 +235,7 @@ export default function MarketMoneyPanel({
         <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <UnitTile
             label="Selling"
-            value={truth.soldFraction != null ? `${fmtPct(truth.soldFraction)} of output` : "n/a"}
+            value={truth.soldFraction != null ? `${fmtPct(truth.soldFraction)} sold` : "n/a"}
             tone={
               truth.soldFraction == null
                 ? "muted"
@@ -228,13 +245,13 @@ export default function MarketMoneyPanel({
             }
             help={
               (truth.soldByCommodity.length > 0
-                ? `The share of what you make that buyers actually take. By product: ${truth.soldByCommodity
+                ? `Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale and is shown separately. By product: ${truth.soldByCommodity
                     .map(
                       (s) =>
                         `${COMMODITY_LABELS[s.commodity as CommodityType] ?? s.commodity} ${fmtPct(s.fraction)}`
                     )
                     .join(", ")}.`
-                : "The share of what you make that buyers actually take. Units that do not sell cost you money and earn nothing.") +
+                : "Units buyers took divided by units made, the same numbers as Sold and Offered below. Output sent to your own sites is not a sale. Units that do not sell cost you money and earn nothing.") +
               (deliveryLimitedShown
                 ? ` ${deliveryLabel} limited ${fmtPct(deliveryLimited)} of your output from reaching buyers outside this state. ${deliveryExplanation} ${deliveryAction}`
                 : "")
@@ -304,8 +321,23 @@ export default function MarketMoneyPanel({
       </div>
       {ownSite >= 0.5 && (
         <p className="mt-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-body-sm text-foreground">
-          {fmtUnits(ownSite)} units went free to your company&apos;s own sites that use them. They
-          are not sales, so they earn nothing here, but those sites did not have to buy them.
+          {pnl.internalSupplyIncomeAnchor && pnl.internalSupplyIncomeAnchor > 0 ? (
+            <>
+              {fmtUnits(ownSite)} units went to your company&apos;s own sites that use them. They
+              are not sales, but those sites were charged {money(pnl.internalSupplyIncomeAnchor)}{" "}
+              for them, booked as income here.
+            </>
+          ) : (
+            <>
+              {fmtUnits(ownSite)} units went free to your company&apos;s own sites that use them.
+              They are not sales, so they earn nothing here, but those sites did not have to buy
+              them
+              {pnl.ownSiteMemoAnchor && pnl.ownSiteMemoAnchor > 0
+                ? ` (worth about ${money(pnl.ownSiteMemoAnchor)} at your asking price)`
+                : ""}
+              .
+            </>
+          )}
         </p>
       )}
       {unsold > 0 && (
@@ -434,6 +466,21 @@ export default function MarketMoneyPanel({
             help="Revenue minus every cost line above, exactly. A line shown with a + is a credit, so it adds back instead of taking away. Corporation-level costs and tax are settled on the corporation page."
           />
         </div>
+        {!!pnl.ownSiteMemoAnchor && (
+          <div className="flex items-center justify-between text-body-sm">
+            <InfoTooltip
+              width={280}
+              trigger={
+                <span className="cursor-help border-b border-dotted border-muted/40 text-muted">
+                  {supplyText("ownSiteMemo")}
+                </span>
+              }
+            >
+              <p className="text-muted">{supplyText("ownSiteMemoNote")}</p>
+            </InfoTooltip>
+            <span className="tabular-nums text-muted">{money(pnl.ownSiteMemoAnchor)}</span>
+          </div>
+        )}
       </div>
 
       {corporation.isStateOwned && (

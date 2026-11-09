@@ -11,11 +11,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import {
-  refundMinisterialAction,
-  resolveMinisterialRemaining,
-  spendMinisterialAction,
-} from "@/lib/cabinet/ministerialActionPool";
+import { officeActionPool } from "@/lib/resetCabinet/actionPool";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import {
   DEFENSE_POSITION_BY_COUNTRY,
@@ -108,7 +104,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
+    // On Cabinet v2 countries this is the same charge pool the office header shows.
+    const pool = officeActionPool(db, gameState, countryId, member!);
+    const actions = await pool.remaining();
     if (actions < 1) {
       return errorResponse(400, "No ministerial actions remaining");
     }
@@ -118,12 +116,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "No region available to station the unit");
     }
 
-    const spend = await spendMinisterialAction(db, countryId, member!);
+    const spend = await pool.spend();
     if (!spend.ok) {
       return errorResponse(409, "No ministerial actions remaining");
     }
 
-    const refundAction = () => refundMinisterialAction(db, countryId, member!);
+    const refundAction = () => pool.refund();
 
     // Budget existence is checked FIRST, before any resource moves. It is a
     // read/heal, not a spend, so it has no ordering constraint with manpower —

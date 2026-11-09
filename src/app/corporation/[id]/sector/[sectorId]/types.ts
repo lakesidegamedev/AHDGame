@@ -1,3 +1,4 @@
+import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
@@ -99,6 +100,11 @@ export interface CorporationRef {
    * flags; absent = 0 (25% floor odds).
    */
   rdScore?: number;
+  /**
+   * True when the company's own type or secondary type is extraction, the only
+   * companies the server lets launch a survey. Absent = not offered.
+   */
+  canProspect?: boolean;
 }
 
 export interface CeoRef {
@@ -174,6 +180,8 @@ export interface CommodityFlow {
     sourceStateIds: string[];
     sourceStateNames: string[];
     reasons: import("@/lib/corporations/rules/ownSupplyReach").OwnSupplyReachReason[];
+    /** Funded only: what the company's other sites made and where it went, units a day. */
+    output?: import("@/lib/corporations/rules/ownSupplyReach").OwnSupplyOutput;
   };
   /**
    * Market clearing, supply rows only: this output's share of last turn's
@@ -411,6 +419,8 @@ export interface Margins {
 }
 
 export interface Financials {
+  /** Same statement as the plants panel, restated into corporation currency. */
+  siteStatement?: SiteStatement | null;
   revenue: number;
   /** Realized revenue after all realization legs (capacity/clearing/throughput/capital/strike/embargo). */
   realizedRevenue?: number;
@@ -596,16 +606,28 @@ export interface ForSaleInfo {
   conflict: boolean;
   /** Buyer has enough liquid capital */
   hasFunds: boolean;
+  /**
+   * Secured loan on a pledged site, in ₳. The price pays the lender first and
+   * the buyer takes on no debt; `remainingAfterSaleAnchor` stays with the seller.
+   */
+  securedLoan?: {
+    outstandingAnchor: number;
+    repaidFromPriceAnchor: number;
+    remainingAfterSaleAnchor: number;
+  } | null;
   /** First reason the purchase is unavailable; null when eligible */
   blockReason?:
     | "invalid_price"
     | "insufficient_funds"
     | "merge_blocked"
+    | "strategy_mismatch"
     | "construction"
     | "not_ceo"
     | "actions_paused"
     | "state_controlled"
     | null;
+  /** Plain-words detail for the block, when the reason carries one */
+  blockDetail?: string | null;
 }
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
@@ -617,6 +639,8 @@ export type PlantIdleCauseKey =
   | "inputs"
   | "demand"
   | "ramping"
+  | "losing"
+  | "held"
   | "cash"
   | "strike"
   | "disaster"
@@ -632,6 +656,8 @@ export interface PlantIdleCause {
   units: number;
   /** Configured branch share, before idle and mothball caps. Only for bank. */
   capacityShare?: number;
+  /** The input that cut the run, as a label. Only for held; absent means cash held it. */
+  heldInput?: string;
 }
 
 export interface PlantBuildOrderView {
@@ -658,6 +684,8 @@ export interface PlantBuildOrderView {
 }
 
 export interface PlantsData {
+  /** Why the plan sits where it does, what next turn brings, and per-unit money (funded worlds). */
+  runReport?: import("@/lib/corporations/queries/sectorRunReport").RunReport | null;
   /** Persisted whole facilities owned by this sector. */
   plantCount?: number;
   /** The strategy the sector runs; with the lane it decides plant size. */
@@ -678,6 +706,8 @@ export interface PlantsData {
    */
   localMarketOutputs?: string[];
   mothballed: boolean;
+  /** First turn autopilot may mothball this sector again after the owner restarted it. */
+  autopilotHoldUntilTurn?: number;
   buildQueue: PlantBuildOrderView[];
   constructionInProgressAnchor: number;
   depreciationPerTurn: number;
@@ -703,6 +733,8 @@ export interface PlantsData {
   demandGapUnits?: number;
   /** Measured room for every output after known queues; excludes latent demand. */
   measuredDemandGapUnits?: number | null;
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
   /** This sector's own demand throttle bound last turn, so its room to build reads 0. */
   roomHeldByOwnIdle?: boolean;
   /** Unsold-capacity retirement status. Absent when the plant is not glutted. */
@@ -751,9 +783,14 @@ export interface PlantsData {
     /** perUnitAnchor × (1 + fxSpreadRate), what a unit actually costs. */
     perUnitChargedAnchor: number;
     corpCapitalAnchor: number;
+    /** Running bills and expected sales of one turn, from the last settled receipts (build warning). */
+    runningBillsAnchor?: number;
+    runRevenueAnchor?: number;
     maxAffordableUnits: number;
   };
   pnl: {
+    /** Site accounts in anchor currency per financial day. */
+    statement?: SiteStatement;
     revenueAnchor: number;
     inputsAnchor: number;
     labourAnchor: number;
@@ -770,6 +807,8 @@ export interface PlantsData {
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
     internalSupplyChargeAnchor?: number;
+    /** Free transfers: own-site deliveries at this site's ask, ₳ per day. Not booked. */
+    ownSiteMemoAnchor?: number;
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     growthAndBuildAnchor: number;
@@ -800,6 +839,8 @@ export interface PlantsData {
     deliveryLimitedFreightClass?: "bulk" | "special" | "grid" | null;
     /** Consecutive turns under half fill; optional for payloads predating it. */
     lowFillTurns?: number;
+    /** Opt-in to sell to outside buyers before the company's own plants. */
+    sellOutsideFirst?: boolean;
     /** Unsold-output inventory (§6); optional for payloads predating it. */
     inventory?: {
       stockpileUnsold: boolean;

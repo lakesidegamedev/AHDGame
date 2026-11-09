@@ -24,6 +24,8 @@ export interface MyRaceWidgetData {
   /** Projected seats in multi-seat races. */
   mySeats: number | null;
   campaignId: string | null;
+  /** The race's country, for the link into the campaign. */
+  countryId?: string | null;
 }
 
 const NATIONAL_TYPES = new Set(["president", "primeMinister", "uachtaran"]);
@@ -129,5 +131,6 @@ export async function loadMyRace(
         ? ((tally?.seatsEstimate?.[myKey] as number | undefined) ?? null)
         : null,
     campaignId: campaign?._id.toString() ?? null,
+    countryId: election.countryId ?? null,
   };
 }

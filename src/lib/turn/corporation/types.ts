@@ -194,6 +194,12 @@ export interface CorporationLookups {
    */
   stateDeliveryLimitedRatioByState?: Map<string, Map<CommodityType, number>>;
   /**
+   * Corporation id -> state id -> commodity -> share of that corporation's own
+   * output wanted and not delivered. Drives the sector figure; the state ratio
+   * above keeps driving offers and revenue placement.
+   */
+  ownerDeliveryLimitedRatioByCorp?: Map<string, Map<string, Map<CommodityType, number>>>;
+  /**
    * Lagged global price / base price per commodity (prior turn's computed
    * price). Read by the price-realization multiplier when
    * marketSystemMode >= "realization"; always built (cheap), inert otherwise.
@@ -384,6 +390,12 @@ export interface CorporationLookups {
   /** gameConfig.wholePlantsStage on: capacity is kept to whole plants (corporations/wholePlants). */
   wholePlantsOn?: boolean;
   /**
+   * gameState.buildDeliverySettledTurn, set by the corporation turn after the
+   * lookup build: the last turn this world's builds were delivered. Absent on
+   * read-only callers of the lookups.
+   */
+  worldBuildsSettledTurn?: number;
+  /**
    * sectorId → revenue-weighted extraction capacity utilization (0..1) and the
    * most-binding resource, derived from computeExtractionCapacityMultipliers.
    * Drives the capacity revenue haircut in processSectors. Computed here (not in
@@ -468,6 +480,8 @@ export interface CorpSnapshot {
     currency: CurrencyCode;
     localPerAnchor: number;
   }[];
+  /** gameConfig.nppDividendAfterTaxStage >= 1: the deferred distribution is paid after tax. */
+  distributionAfterTax?: boolean;
   /**
    * Funded producer turn: producer profit the settlement already moved as cash
    * and witnessed in its own ledger entry (anchor). The legacy cash witness

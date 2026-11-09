@@ -68,6 +68,7 @@ describe("buildBillWhipPanelData", () => {
         partyId: "1",
         issuedByCharacterId: chairId,
         audience: "character",
+        mode: "soft",
         attemptNumber: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -83,6 +84,22 @@ describe("buildBillWhipPanelData", () => {
         partyId: "1",
         issuedByCharacterId: chairId,
         audience: "npp",
+        attemptNumber: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        _id: new ObjectId(),
+        targetType: "bill",
+        targetId: billId,
+        chamber: "house",
+        direction: "against",
+        issuedBy: "nationalParty",
+        countryId: "US",
+        partyId: "1",
+        issuedByCharacterId: chairId,
+        audience: "character",
+        mode: "hard",
         attemptNumber: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -127,6 +144,17 @@ describe("buildBillWhipPanelData", () => {
         },
       ],
     });
+
+    db.collectionMocks["billWhips"]!.find.mockReturnValue({
+      toArray: async () => whips.filter((whip) => whip.mode !== "soft"),
+    });
+    const legacyPanel = await buildBillWhipPanelData(db as never, bill, "US", {
+      characterId: chairId,
+      partyId: "1",
+      viewerCountryId: "US",
+      isAdmin: false,
+    });
+    expect(legacyPanel?.chambers[0].playerWhip).toEqual({ existingWhips: [], canWhip: true });
   });
 
   it("renders the CN whip panel for an npcDelegate (chamber key 'npc' → office 'npcDelegate')", async () => {

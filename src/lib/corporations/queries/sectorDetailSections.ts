@@ -1,9 +1,16 @@
 import { bankIdleCapacity } from "@/lib/corporations/rules/bankIdleCapacity";
 import type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
 export type { PlantIdleCause, PlantBuildOrderView, SectorPlantsSection } from "./sectorPlantsTypes";
+import {
+  inManualRestartGrace,
+  manualRestartGraceEndsTurn,
+} from "@/lib/turn/npp/nppCorporationTuning";
 import { IDLE_RETIRE_GRACE_TURNS } from "@/lib/turn/corporation/rules/idleCapacityRetirement";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
+import { buildSecuredLoanInfo } from "./securedSaleLoanInfo";
+import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
+import { securedSaleMergeRefusal } from "@/lib/banking/constructionSaleMerge";
 /**
  * Payload-section builders for the sector detail query: apportioned taxes,
  * active-crisis margin penalty, attack/split info, for-sale info, tech
@@ -136,7 +143,10 @@ import {
 } from "@/lib/market/capital";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { SOLD_OUT_FILL } from "@/lib/turn/corporation/demandThrottle";
-import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import {
+  plantAccountTotals,
+  type PlantAccountInput,
+} from "@/lib/corporations/rules/plantAccountTotals";
 import {
   fundedSectorProfit,
   sectorMaintenanceAndProfit,
@@ -464,6 +474,8 @@ export async function buildSectorForSaleInfo(
     isCeo: boolean;
     viewerCorpFxRate: number;
     sellerCurrency?: CurrencyCode | null;
+    /** Local units per ₳ for the seller, to express a secured loan in ₳. */
+    sellerFxRate?: number;
   }
 ) {
   const { sector, viewerCorporation, isCeo, viewerCorpFxRate, sellerCurrency } = args;
@@ -477,7 +489,18 @@ export async function buildSectorForSaleInfo(
       stateId: sector.stateId,
       ...getCorporateSectorLaneQuery(sector),
     },
-    { projection: { _id: 1, constructionFinancing: 1, constructionPropertyTransition: 1 } }
+    {
+      projection: {
+        _id: 1,
+        constructionFinancing: 1,
+        constructionPropertyTransition: 1,
+        corporationId: 1,
+        sectorType: 1,
+        industryModel: 1,
+        mediaDiscriminator: 1,
+        strategyId: 1,
+      },
+    }
   );
   const buyerCurrency = resolveCorpLiquidCurrencyCode(viewerCorporation);
   const feeLocal =
@@ -506,8 +529,16 @@ export async function buildSectorForSaleInfo(
   );
   const hasFunds = (viewerCorporation.liquidCapital ?? 0) >= priceInViewerCapital;
   const priceValid = Number.isFinite(listing.priceAnchor) && listing.priceAnchor > 0;
+  // A pledged site folds into the buyer's existing site once the price has paid
+  // off the lender; any other listing needs the buyer's site free of secured debt.
   const mergeBlocked =
-    !!conflict && (!!listing.pledged || hasProtectedConstructionProperty(conflict));
+    !!conflict &&
+    (listing.pledged
+      ? securedSaleMergeRefusal(conflict) !== null
+      : hasProtectedConstructionProperty(conflict));
+  const securedLoan = await buildSecuredLoanInfo(db, sector, listing, args.sellerFxRate);
+  // A merge keeps the buyer's strategy, so a different one is refused up front.
+  const strategyMismatch = conflict ? sectorMergeStrategyRefusal(sector, conflict) : null;
   const constructionBlocked =
     !!sector.constructionPropertyTransition ||
     (hasProtectedConstructionProperty(sector) &&
@@ -521,11 +552,13 @@ export async function buildSectorForSaleInfo(
     ? "invalid_price"
     : !hasFunds
       ? "insufficient_funds"
-      : mergeBlocked
-        ? "merge_blocked"
-        : constructionBlocked
-          ? "construction"
-          : null;
+      : strategyMismatch
+        ? "strategy_mismatch"
+        : mergeBlocked
+          ? "merge_blocked"
+          : constructionBlocked
+            ? "construction"
+            : null;
   return {
     viewerCorporationId: viewerCorporation._id.toString(),
     viewerLiquidCurrencyCode: resolveCorpLiquidCurrencyCode(viewerCorporation),
@@ -533,8 +566,10 @@ export async function buildSectorForSaleInfo(
     viewerCapitalAnchor,
     eligible: blockReason === null,
     blockReason: blockReason as SectorPurchaseBlockReason | null,
+    blockDetail: blockReason === "strategy_mismatch" ? strategyMismatch : null,
     conflict: !!conflict,
     hasFunds,
+    securedLoan,
   };
 }
 
@@ -542,6 +577,7 @@ export type SectorPurchaseBlockReason =
   | "invalid_price"
   | "insufficient_funds"
   | "merge_blocked"
+  | "strategy_mismatch"
   | "construction"
   | "not_ceo"
   | "actions_paused"
@@ -1242,6 +1278,8 @@ export function computeSectorMarginSection(args: {
 
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
 
+type IdleWeight = { cause: PlantIdleCause["cause"]; w: number; heldInput?: string };
+
 /**
  * Idle weights from a funded settlement receipt, or null when the sector has
  * none for the last turn (legacy worlds keep the throttle reading).
@@ -1250,11 +1288,13 @@ export function computeSectorMarginSection(args: {
  * one the player can act on (ticket 1728): the demand plan held its run below
  * capacity (demand, or ramping back up once it sells out), short inputs or
  * short cash cut what it made below that plan, and unsold output is demand.
+ * A sold-out plant whose run was cut is held by that input or by cash, not
+ * ramping up (ticket 1765): the plan is not what is keeping it down.
  */
 function fundedIdleWeights(
   receipt: CorporateSector["producerSettlement"] | null | undefined,
   currentTurn: number
-): { cause: PlantIdleCause["cause"]; w: number }[] | null {
+): IdleWeight[] | null {
   if (!receipt || !(receipt.turn >= currentTurn - 1)) return null;
   const active = receipt.activeUnits;
   if (!(Number.isFinite(active) && active > 0)) return null;
@@ -1268,12 +1308,32 @@ function fundedIdleWeights(
   const sellThrough = offered > 0 ? share((receipt.soldUnits + ownDelivered) / offered) : 1;
   const runShare = share(receipt.plannedRunShare ?? 1);
   const made = share(receipt.producedUnits / active);
-  const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
-  if (runShare < 1)
-    weights.push({ cause: sellThrough >= SOLD_OUT_FILL ? "ramping" : "demand", w: 1 - runShare });
+  const cutBy = receipt.runCutBy ?? [];
+  const heldInput =
+    cutBy.includes("inputs") && receipt.bindingInput
+      ? (COMMODITY_LABELS[receipt.bindingInput as CommodityType] ?? receipt.bindingInput)
+      : undefined;
+  const held = heldInput != null || cutBy.includes("cash");
+  const weights: IdleWeight[] = [];
+  if (runShare < 1) {
+    if (sellThrough < SOLD_OUT_FILL) weights.push({ cause: "demand", w: 1 - runShare });
+    else if (held)
+      weights.push({ cause: "held", w: 1 - runShare, ...(heldInput ? { heldInput } : {}) });
+    else weights.push({ cause: "ramping", w: 1 - runShare });
+  }
   const shortfall = Math.max(0, runShare - made);
   if (shortfall > 0)
-    weights.push({ cause: (receipt.operatingArrears ?? 0) > 0 ? "cash" : "inputs", w: shortfall });
+    weights.push({
+      cause:
+        cutBy.length > 0
+          ? cutBy.includes("inputs")
+            ? "inputs"
+            : "cash"
+          : (receipt.operatingArrears ?? 0) > 0
+            ? "cash"
+            : "inputs",
+      w: shortfall,
+    });
   return weights;
 }
 
@@ -1321,59 +1381,18 @@ export function buildSectorPlantsSection(args: {
   corpCapitalAnchor: number;
   /** Untapped units in this market — see `unownedHeadroomUnitsOf`. */
   headroomUnits: number;
-  /** True buyers' room (see SectorPlantsSection.demandGapUnits). Optional so
-   *  test fixtures predating the field keep compiling; defaults to 0. */
+  /** Expansion appetite; automatic sizing uses measuredDemandGapUnits. */
   demandGapUnits?: number;
   measuredDemandGapUnits?: number | null;
+  buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
+  buildDemandTurn?: number;
   /** Owned capacity in this (state, sectorType) cell, every producer, units/day. */
   ownedCellCapacityUnits?: number;
   /** Strategy suggestion when the plant's valuable output is oversupplied (computeRetoolHint). */
   retoolHint?: RetoolHint | null;
   workers: number;
   /** ₳/day, all on the same basis as `sector.revenue` normalized to ₳. */
-  money: {
-    realizedRevenueAnchor: number;
-    nameplateRevenueAnchor?: number;
-    /** Operating cost NET of labour, as the engine bills it. */
-    maintenanceNetAnchor: number;
-    labourAnchor: number;
-    growthCostAnchor: number;
-    profitAnchor: number;
-    /** Physical input bill computed from the demand rows at market prices. */
-    inputsAnchor: number;
-    internalSupplyIncomeAnchor?: number;
-    internalSupplyChargeAnchor?: number;
-    freightCostAnchor?: number;
-    freightIncomeAnchor?: number;
-    /**
-     * Compliance a funded producer turn booked, in ₳. Funded rows carry no
-     * full engine P&L, so without it the line is re-derived from the share.
-     */
-    fundedComplianceAnchor?: number | null;
-    /**
-     * Ticket 1122: the lines the turn ACTUALLY booked, in ₳. When present every
-     * money figure below is read straight off them and nothing is
-     * reconstructed. Absent on a sector that has not run a plants turn since
-     * the field shipped, which falls back to the margin inversion exactly as
-     * before. See `plantsPnlBasis.ts` for why the inversion is not enough.
-     */
-    enginePnl?: {
-      revenue: number;
-      inputs: number;
-      labour: number;
-      upkeep: number;
-      compliance: number;
-      otherOpex: number;
-      financialLegs: number;
-      internalSupplyDiscountAnchor?: number;
-      inventoryCarry: number;
-      policyCredit: number;
-      policyPp: number;
-      operatingCost: number;
-      totalCost: number;
-      profit: number;
-    } | null;
-  };
+  money: PlantAccountInput;
   /**
    * The modifier stack behind `pnl.policyAnchor`, already in money. Empty when
    * there is no stack to explain. Built by `buildPolicyStackRows` from the same
@@ -1384,6 +1403,8 @@ export function buildSectorPlantsSection(args: {
   regulatoryBurdenPp: number;
   /** Active-crisis margin penalty in pp (negative). */
   crisisMarginPenaltyPp: number;
+  /** The corporation runs on owner-enabled autopilot. */
+  autopilotEnabled?: boolean;
   /** True when this extraction sector is clamped by its state's deposits. */
   depositBound: boolean;
   /**
@@ -1420,6 +1441,7 @@ export function buildSectorPlantsSection(args: {
     money,
     regulatoryBurdenPp,
     crisisMarginPenaltyPp,
+    autopilotEnabled = false,
   } = args;
 
   const num = (v: unknown): number | null =>
@@ -1438,7 +1460,8 @@ export function buildSectorPlantsSection(args: {
   // Output handed free to the company's own sites is used, not unsold (ticket
   // 1757): a Kanto plant that fed its owner's US mines read "75 units went
   // unsold, the market is oversupplied" on a fully used turn.
-  const ownSiteShare = ownSiteDeliveries(sector.producerSettlement, currentTurn)?.share ?? 0;
+  const ownSite = ownSiteDeliveries(sector.producerSettlement, currentTurn);
+  const ownSiteShare = ownSite?.share ?? 0;
   const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
     producedUnits != null && soldUnits != null
@@ -1487,7 +1510,7 @@ export function buildSectorPlantsSection(args: {
       idleCauses.push({ cause: "bank", units: bankUnits, capacityShare: bankShare });
     }
     const idleShare = (idleUnits - coldUnits - bankUnits) / capacityUnits;
-    const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
+    const weights: IdleWeight[] = [];
     const funded = fundedIdleWeights(sector.producerSettlement, currentTurn);
     if (funded) {
       weights.push(...funded);
@@ -1527,11 +1550,11 @@ export function buildSectorPlantsSection(args: {
     const sumW = weights.reduce((s, x) => s + x.w, 0);
     const scale = sumW > 0 ? Math.min(1, idleShare / sumW) : 0;
     let attributed = coldUnits + bankUnits;
-    for (const { cause, w } of weights) {
+    for (const { cause, w, heldInput } of weights) {
       const units = w * scale * capacityUnits;
       if (units <= 0) continue;
       attributed += units;
-      idleCauses.push({ cause, units });
+      idleCauses.push({ cause, units, ...(heldInput ? { heldInput } : {}) });
     }
     const leftover = nonNeg(idleUnits - attributed);
     if (leftover > 0.0001) idleCauses.push({ cause: "other", units: leftover });
@@ -1705,16 +1728,37 @@ export function buildSectorPlantsSection(args: {
   const engine = money.enginePnl ?? null;
   const inputsAnchor = engine ? engine.inputs : nonNeg(money.inputsAnchor);
   const internalSupplyDiscountAnchor = engine?.internalSupplyDiscountAnchor ?? 0;
-  const otherOperatingAnchor = engine
-    ? // Financial legs (disaster losses) and inventory carry have no line of
-      // their own in the cost chain, so they sit here, exactly as the residual
-      // used to carry them.
-      engine.otherOpex + engine.financialLegs + engine.inventoryCarry - internalSupplyDiscountAnchor
-    : money.maintenanceNetAnchor -
+  const otherOperatingAnchor = money.statement
+    ? money.statement.externalCost -
+      (money.freightCostAnchor ?? 0) -
+      inputsAnchor -
+      (engine ? engine.labour : nonNeg(money.labourAnchor)) -
       upkeepAnchor -
       complianceAnchor -
-      inputsAnchor -
-      internalSupplyChargeAnchor;
+      (engine
+        ? nonNeg(
+            engine.totalCost -
+              engine.operatingCost -
+              engine.upkeep -
+              engine.compliance -
+              engine.inventoryCarry
+          )
+        : nonNeg(money.growthCostAnchor)) +
+      (engine?.policyCredit ?? 0) -
+      internalSupplyDiscountAnchor
+    : engine
+      ? // Financial legs (disaster losses) and inventory carry have no line of
+        // their own in the cost chain, so they sit here, exactly as the residual
+        // used to carry them.
+        engine.otherOpex +
+        engine.financialLegs +
+        engine.inventoryCarry -
+        internalSupplyDiscountAnchor
+      : money.maintenanceNetAnchor -
+        upkeepAnchor -
+        complianceAnchor -
+        inputsAnchor -
+        internalSupplyChargeAnchor;
   // The whole modifier stack as one signed line: positive is a credit that
   // lowers cost. Rendered as its own row with a drilldown, so a player can see
   // their subsidy or a live crisis as a number in the same units as the wage
@@ -1732,7 +1776,11 @@ export function buildSectorPlantsSection(args: {
   // sell under half their output). The headline instead spreads cost and
   // revenue over every unit made, which is the basis the player's bank balance
   // actually moves on.
-  const soldFraction = num(sector.soldFraction) ?? fillRate;
+  // One definition: market sales over units made, the same two numbers the
+  // Offered / Sold / Unsold rows print (ticket 1773: the engine's stored
+  // soldFraction read 100% beside 139 sold of 195 made). The engine value is
+  // only the fallback when the unit counts are missing.
+  const soldFraction = fillRate ?? num(sector.soldFraction);
   const soldByCommodity = Object.entries(sector.soldByCommodity ?? {})
     .filter((e): e is [string, number] => typeof e[1] === "number" && Number.isFinite(e[1]))
     .map(([commodity, fraction]) => ({
@@ -1762,38 +1810,23 @@ export function buildSectorPlantsSection(args: {
   // A negative total would be a sector paid more to run than it spends, and the
   // engine can say so; the fallback keeps the floor because an INVERTED total
   // can go negative for reasons that are artefacts of the inversion.
-  const engineGrowthAnchor = engine
-    ? engine.totalCost -
-      engine.operatingCost -
-      engine.upkeep -
-      engine.compliance -
-      engine.inventoryCarry
-    : 0;
-  const freightCostAnchor = money.freightCostAnchor ?? 0;
-  const freightIncomeAnchor = money.freightIncomeAnchor ?? 0;
-  const operatingCostAnchor =
-    (engine
-      ? engine.totalCost - engineGrowthAnchor
-      : nonNeg(money.maintenanceNetAnchor + money.labourAnchor)) + freightCostAnchor;
-  const totalCostAnchor = engine
-    ? engine.totalCost + freightCostAnchor
-    : operatingCostAnchor + nonNeg(money.growthCostAnchor);
-  const revenueAnchor =
-    (engine ? engine.revenue : money.realizedRevenueAnchor) + freightIncomeAnchor;
+  const {
+    engineGrowthAnchor,
+    operatingCostAnchor,
+    revenueAnchor,
+    ownSiteMemoAnchor,
+    statementProfit,
+    fillAdjustedMarginPct,
+  } = plantAccountTotals(money, (ownSite?.valueAnchor ?? 0) * TURNS_PER_DAY);
   const receivedPerUnitAnchor =
     producedUnits != null && producedUnits > 0 ? revenueAnchor / producedUnits : null;
   const costPerUnitAnchor =
     producedUnits != null && producedUnits > 0 ? operatingCostAnchor / producedUnits : null;
-  const fillAdjustedMarginPct = plantsNetMarginPct({
-    profit: money.profitAnchor,
-    revenue: revenueAnchor,
-    totalCost: totalCostAnchor,
-  });
   // Break-even: profit is stored per financial day (TURNS_PER_DAY turns), CIP
   // is a stock. Positive profit pays CIP down in cip / profitPerTurn turns; at
   // zero CIP the sector's own profit sign is the whole story.
   const cipAnchor = Math.max(0, queueUndeliveredCost(rawQueue, currentTurn));
-  const profitPerTurnAnchor = money.profitAnchor / TURNS_PER_DAY;
+  const profitPerTurnAnchor = statementProfit / TURNS_PER_DAY;
   const breakEven: SectorPlantsSection["truth"]["breakEven"] =
     profitPerTurnAnchor > 0
       ? cipAnchor > 0
@@ -1818,6 +1851,9 @@ export function buildSectorPlantsSection(args: {
       .filter(isStateScopedCommodity)
       .map((commodity) => COMMODITY_LABELS[commodity]),
     mothballed,
+    ...(autopilotEnabled && !mothballed && inManualRestartGrace(sector, currentTurn)
+      ? { autopilotHoldUntilTurn: manualRestartGraceEndsTurn(sector) ?? undefined }
+      : {}),
     activeCapacityPercent: activeFraction * 100,
     ...(upkeepUnitDailyAnchor != null
       ? {
@@ -1869,6 +1905,8 @@ export function buildSectorPlantsSection(args: {
     headroomUnits: nonNeg(headroomUnits),
     demandGapUnits: roomHeldByOwnIdle ? 0 : nonNeg(demandGapUnits),
     measuredDemandGapUnits: roomHeldByOwnIdle ? 0 : (args.measuredDemandGapUnits ?? null),
+    buildDemand: args.buildDemand,
+    buildDemandTurn: args.buildDemandTurn,
     roomHeldByOwnIdle,
     ...(!mothballed && (num(sector.demandIdleTurns) ?? 0) > 0
       ? {
@@ -1905,6 +1943,7 @@ export function buildSectorPlantsSection(args: {
     },
     policyStack: args.policyStack ?? [],
     pnl: {
+      ...(money.statement ? { statement: money.statement } : {}),
       revenueAnchor,
       inputsAnchor,
       labourAnchor: engine ? engine.labour : nonNeg(money.labourAnchor),
@@ -1918,17 +1957,18 @@ export function buildSectorPlantsSection(args: {
         ? { internalSupplyIncomeAnchor: money.internalSupplyIncomeAnchor }
         : {}),
       ...(internalSupplyChargeAnchor > 0 ? { internalSupplyChargeAnchor } : {}),
-      freightCostAnchor,
-      freightIncomeAnchor,
+      ...(ownSiteMemoAnchor > 0 ? { ownSiteMemoAnchor } : {}),
+      freightCostAnchor: money.freightCostAnchor ?? 0,
+      freightIncomeAnchor: money.freightIncomeAnchor ?? 0,
       growthAndBuildAnchor: engine ? nonNeg(engineGrowthAnchor) : nonNeg(money.growthCostAnchor),
-      profitAnchor: money.profitAnchor,
+      profitAnchor: statementProfit,
       financialEventsAnchor,
       avgSalePriceAnchor:
         soldUnits != null && soldUnits > 0
           ? (revenueAnchor - (money.internalSupplyIncomeAnchor ?? 0)) / soldUnits
           : null,
       profitPerUnitAnchor:
-        producedUnits != null && producedUnits > 0 ? money.profitAnchor / producedUnits : null,
+        producedUnits != null && producedUnits > 0 ? statementProfit / producedUnits : null,
     },
     truth: {
       soldFraction,
@@ -1936,6 +1976,7 @@ export function buildSectorPlantsSection(args: {
       deliveryLimitedFraction,
       deliveryLimitedFreightClass,
       lowFillTurns: num(sector.lowFillTurns) ?? 0,
+      sellOutsideFirst: sector.sellOutsideFirst === true,
       inventory: {
         stockpileUnsold: sector.stockpileUnsold === true,
         heldUnits: Object.values(sector.inventoryUnits ?? {}).reduce<number>(

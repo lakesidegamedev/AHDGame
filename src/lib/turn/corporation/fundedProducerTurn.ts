@@ -14,6 +14,7 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
+import { HOUSEHOLD_SAVINGS_DRAW_SHARE } from "@/lib/market/producerMarket/householdSpendRules";
 import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
@@ -25,7 +26,13 @@ import {
   treasuryPublicFunding,
 } from "@/lib/budget/rules/fiscalScale";
 import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
-import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
+import {
+  applyMoneyMove,
+  resumeMoneyMove,
+  MONEY_MOVE_COLLECTION,
+  type MoneyMove,
+  type MoneyMoveLeg,
+} from "@/lib/banking/moneyMove";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -49,6 +56,7 @@ import {
   type CloseParty,
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
+import type { ProducerSectorSettlement } from "@/lib/db/types/producerEconomy";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
 import {
   fundedDemandThrottle,
@@ -80,11 +88,13 @@ import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
   capCarry,
+  carryLineKey,
   carryTotal,
   nextLineCarry,
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { withHeldCarry } from "@/lib/market/rules/publicCarryRelease";
 import {
   offtakeUnits,
   type CaptiveProduct,
@@ -109,6 +119,8 @@ import {
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
 
 export interface FundedProducerTurnResult {
+  /** Frozen market-planning and ownership warnings for the turn log. */
+  turnWarnings?: string[];
   receiptsBySectorId: Map<string, FundedReceipt>;
   deferredDistributions?: Map<
     string,
@@ -123,6 +135,39 @@ export interface FundedProducerTurnResult {
 export { producerStageEnv } from "./producerStageEnv";
 
 const PUBLIC_CARRY = "producerPublicCarry";
+
+/** The funded receipt a sector's settlement publishes to its own accounts. */
+export function fundedReceiptOf(
+  r: Pick<
+    ProducerSectorSettlement,
+    | "revenue"
+    | "profit"
+    | "producedUnits"
+    | "soldUnits"
+    | "unsoldProductionCost"
+    | "internalSupplyIncome"
+    | "internalSupplyCharge"
+    | "valuationCredit"
+    | "valuationCharge"
+  > & { turn?: number },
+  transitionSupport: number
+): FundedReceipt {
+  return {
+    ...(r.turn != null ? { turn: r.turn } : {}),
+    revenue: r.revenue,
+    profit: r.profit,
+    producedUnits: r.producedUnits,
+    soldUnits: r.soldUnits,
+    unsoldProductionCost: r.unsoldProductionCost ?? 0,
+    transitionSupport,
+    // Priced own-site deliveries: without these the sector accounts show no charge or income.
+    ...(r.internalSupplyIncome ? { internalSupplyIncome: r.internalSupplyIncome } : {}),
+    ...(r.internalSupplyCharge ? { internalSupplyCharge: r.internalSupplyCharge } : {}),
+    // Valuation only (fundedValuationOwnSiteCreditStage): never shown on a site's accounts.
+    ...(r.valuationCredit ? { valuationCredit: r.valuationCredit } : {}),
+    ...(r.valuationCharge ? { valuationCharge: r.valuationCharge } : {}),
+  };
+}
 
 /**
  * The last settled funded producer turn this turn opens from. Normally the
@@ -349,6 +394,15 @@ export async function runFundedProducerTurn(
       // A Treasury-funded move whose guarded debit found less cash than read
       // moved nothing; the public buyer goes without this turn.
       if (result.status === "rejected" && options.tolerateRejected) continue;
+      // Turn 697 (2026-11-05): an attempt applied this turn's funding batch, then failed later in
+      // the turn. Each retry rebuilt the batch with slightly different amounts under the same key,
+      // which the journal rightly refused, and the turn stalled for hours. A mint-and-credit batch
+      // whose key is already applied this turn is brought to the new amounts with one keyed
+      // correction per retry instead of being re-minted.
+      if (result.status === "rejected") {
+        const corrected = await reconcileAppliedFunding(db, move);
+        if (corrected) continue;
+      }
       if (result.status !== "applied" && result.status !== "replayed")
         throw new Error(`Producer money move ${move.key} ${result.status}`);
       // Witness the move in the ledger, like the settlement witnesses its own
@@ -565,7 +619,11 @@ export async function runFundedProducerTurn(
       for (const f of demand.funding) {
         const orders =
           demand.publicCarryOrders.find((o) => o.countryId === f.countryId)?.orders ?? [];
-        const wanted = nextLineCarry(orders, outcomes, carryShare);
+        const wanted = withHeldCarry(
+          nextLineCarry(orders, outcomes, carryShare),
+          demand.publicCarryHeld.get(f.countryId),
+          new Map(orders.map((o) => [carryLineKey(o.commodity, o.book), o.fresh]))
+        );
         const target = capCarry(wanted, closingCash.get(publicWallet(f.countryId)) ?? 0);
         if (carryTotal(target) > 0) carryTargetByCountry[f.countryId] = target;
       }
@@ -763,7 +821,47 @@ export async function runFundedProducerTurn(
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
       ownSitesFirst: input.env.ownSitesFirst,
+      // An explicit "market first" supply priority is honoured (issue 5505): own
+      // sites get no head start for these companies. Unset keeps own sites first.
+      ...(input.env.ownSitesFirst
+        ? {
+            marketFirstAccounts: lookups.corporations
+              .filter((c) => c.internalSupplyPolicy?.priority === "market")
+              .map((c) => c._id.toHexString())
+              .sort(),
+          }
+        : {}),
       stockCoverTurns: input.env.stockCoverTurns,
+      ...(input.env.salesAdvanceAtClearing ? { salesAdvanceAtClearing: true } : {}),
+      ...(validRevenueShare(input.env.salesAdvanceRevenueShare)
+        ? { salesAdvanceRevenueShare: input.env.salesAdvanceRevenueShare }
+        : {}),
+      ...(input.env.restartProbes ? { restartProbes: true } : {}),
+      ...((input.env.householdIncomeSpendStage ?? 0) >= 1
+        ? {
+            householdIncomeSpend: {
+              savingsDrawShare: input.env.householdSavingsDrawShare ?? HOUSEHOLD_SAVINGS_DRAW_SHARE,
+            },
+          }
+        : {}),
+      ...((input.env.captiveDeliveryStage ?? 0) >= 2 ? { captiveShortValue: true } : {}),
+      ...((input.env.captiveDeliveryStage ?? 0) >= 3 ? { captiveMarketValue: true } : {}),
+      ...(input.env.ownSiteValuationCredit ? { ownSiteValuationCredit: true } : {}),
+      ...((input.env.askBuyerTieStage ?? 0) >= 1 ? { askBuyerTieBreak: true } : {}),
+      ...((input.env.askBuyerTieStage ?? 0) >= 2 ? { askCompetitorsMatch: true } : {}),
+      ...((input.env.shortageAskStage ?? 0) >= 1 && lastOutcome?.bookPressure
+        ? {
+            shortageAsk: {
+              pressureByLane: lastOutcome.bookPressure,
+              ...(input.env.shortageAskMaxStep != null
+                ? { maxStep: input.env.shortageAskMaxStep }
+                : {}),
+              ...(input.env.priceMaxMultiplier != null
+                ? { maxMultiplier: input.env.priceMaxMultiplier }
+                : {}),
+            },
+          }
+        : {}),
       ...(lastOutcome?.laneClearingPrices
         ? { clearingPriceByLane: lastOutcome.laneClearingPrices }
         : {}),
@@ -846,14 +944,10 @@ export async function runFundedProducerTurn(
         offtakeUnits(r as { soldUnits?: number; products?: CaptiveProduct[] })
       );
     if (r && r.worldEpoch === worldEpoch && r.turn === turn) {
-      receiptsBySectorId.set(sector._id.toHexString(), {
-        revenue: r.revenue,
-        profit: r.profit,
-        producedUnits: r.producedUnits,
-        soldUnits: r.soldUnits,
-        unsoldProductionCost: r.unsoldProductionCost ?? 0,
-        transitionSupport: supportBySector[sector._id.toHexString()] ?? 0,
-      });
+      receiptsBySectorId.set(
+        sector._id.toHexString(),
+        fundedReceiptOf(r, supportBySector[sector._id.toHexString()] ?? 0)
+      );
       throttleBySectorId.set(
         sector._id.toHexString(),
         fundedDemandThrottle(r.soldUnits, r.offeredUnits)
@@ -931,6 +1025,9 @@ export async function runFundedProducerTurn(
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
       sectorState.set(sector._id.toString(), sector.stateId);
   const stateOfWallet = (id: string) => scopeById.get(id)?.stateId ?? null;
+  // Stage on: a stateless national wallet (public, military, investment)
+  // counts in its country's national book, not the world total only.
+  const nationalPublicDemandOn = (input.env.nationalPublicDemandStage ?? 0) >= 1;
   const rows = fundedLedgerRows({
     outcomes: settled.result.orderOutcomes,
     products: settled.result.producers.flatMap((p) =>
@@ -947,6 +1044,16 @@ export async function runFundedProducerTurn(
       const first = demand.firstWalletByCorp.get(id);
       return first ? stateOfWallet(first.wallet) : null;
     },
+    ...(nationalPublicDemandOn
+      ? {
+          countryOfAccount: (id: string) => {
+            const own = scopeById.get(id)?.countryId;
+            if (own) return own;
+            const first = demand.firstWalletByCorp.get(id);
+            return first ? (scopeById.get(first.wallet)?.countryId ?? null) : null;
+          },
+        }
+      : {}),
     stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
     unitScale: TURNS_PER_DAY,
   });
@@ -982,6 +1089,9 @@ export async function runFundedProducerTurn(
           ...(row.requested != null ? { requested: row.requested * TURNS_PER_DAY } : {}),
           ...(row.funded != null ? { funded: row.funded * TURNS_PER_DAY } : {}),
           ...(row.filled != null ? { filled: row.filled * TURNS_PER_DAY } : {}),
+          ...(row.spilloverRequested != null
+            ? { spilloverRequested: row.spilloverRequested * TURNS_PER_DAY }
+            : {}),
         }))
       : undefined;
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
@@ -1007,6 +1117,7 @@ export async function runFundedProducerTurn(
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       laneClearingPrices,
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
+      ...(settled.result.regionalBooks ? { regionalBuildBooks: settled.result.regionalBooks } : {}),
       ...(pressureNow ? { bookPressure: pressureNow } : {}),
       ...(restartOn && pressureNow
         ? {
@@ -1207,7 +1318,8 @@ export async function runFundedProducerTurn(
     lookups,
     receiptsBySectorId,
     turn,
-    input.firstFundedTurn
+    input.firstFundedTurn,
+    (input.env.captiveDeliveryStage ?? 0) >= 3
   );
 
   const deferredDistributions = new Map<
@@ -1229,7 +1341,13 @@ export async function runFundedProducerTurn(
       },
     ]);
   }
-  return { receiptsBySectorId, settledProfitByCorp, headcountBySectorId, deferredDistributions };
+  return {
+    receiptsBySectorId,
+    settledProfitByCorp,
+    headcountBySectorId,
+    deferredDistributions,
+    turnWarnings: settled.result.turnWarnings ?? [],
+  };
 }
 
 /**
@@ -1408,4 +1526,124 @@ async function loadTreasuryFundingBudgets(
     });
   }
   return out;
+}
+
+type RecordedLeg = Pick<
+  MoneyMoveLeg,
+  "kind" | "amount" | "valuation" | "collection" | "filter" | "path"
+> & { applied?: boolean };
+const walletKey = (leg: { collection?: string; filter?: Record<string, unknown>; path?: string }) =>
+  `${leg.collection}|${JSON.stringify(leg.filter ?? null)}|${leg.path}`;
+
+/**
+ * Brings an already-applied mint-and-credit funding batch to the amounts this attempt computed.
+ * Only for moves made of mint and credit legs (funding), whose recorded record is applied for
+ * the same turn and kind. The difference per wallet against the original record plus every
+ * earlier correction is minted and credited, or debited and burned, under a key derived from
+ * the target amounts, so the same retry replays and a later retry corrects from the right base.
+ * Returns false when the move is not that shape, leaving the caller's rejection in place.
+ */
+export async function reconcileAppliedFunding(db: Db, move: MoneyMove): Promise<boolean> {
+  if (move.turn === undefined || !move.legs.every((l) => l.kind === "mint" || l.kind === "credit"))
+    return false;
+  const records = db.collection<{
+    _id: string;
+    kind: string;
+    turn?: number;
+    status: string;
+    legs: RecordedLeg[];
+  }>(MONEY_MOVE_COLLECTION);
+  const original = await records.findOne({ _id: move.key });
+  if (
+    !original ||
+    original.status !== "applied" ||
+    original.kind !== move.kind ||
+    original.turn !== move.turn
+  )
+    return false;
+  const prefix = `${move.key}:reconcile:`;
+  const corrections = await records
+    .find({ _id: { $gte: prefix, $lt: `${prefix}\uffff` } })
+    .toArray();
+  if (corrections.some((c) => c.status !== "applied")) return false;
+  const held = new Map<string, number>();
+  const add = (leg: RecordedLeg, sign: number) => {
+    if (leg.kind !== "credit" && leg.kind !== "debit") return;
+    const k = walletKey(leg);
+    held.set(k, (held.get(k) ?? 0) + sign * (leg.kind === "credit" ? 1 : -1) * leg.amount);
+  };
+  for (const leg of original.legs) add(leg, 1);
+  for (const c of corrections) for (const leg of c.legs) add(leg, 1);
+  const target = new Map<string, MoneyMoveLeg>();
+  const want = new Map<string, number>();
+  for (const leg of move.legs) {
+    if (leg.kind !== "credit") continue;
+    const k = walletKey(leg);
+    target.set(k, leg);
+    want.set(k, (want.get(k) ?? 0) + leg.amount);
+  }
+  const legs: MoneyMoveLeg[] = [];
+  for (const k of new Set([...held.keys(), ...want.keys()])) {
+    const delta = (want.get(k) ?? 0) - (held.get(k) ?? 0);
+    if (Math.abs(delta) < 1e-6) continue;
+    const base =
+      target.get(k) ??
+      ([...original.legs, ...corrections.flatMap((c) => c.legs)].find(
+        (l) => (l.kind === "credit" || l.kind === "debit") && walletKey(l) === k
+      ) as MoneyMoveLeg | undefined);
+    if (!base?.collection || !base.filter || !base.path) return false;
+    const where = { collection: base.collection, filter: base.filter, path: base.path };
+    if (delta > 0)
+      legs.push(
+        {
+          kind: "mint",
+          amount: delta,
+          valuation: base.valuation,
+          note: "retry correction: funding raised to this attempt's amount",
+        } as MoneyMoveLeg,
+        {
+          kind: "credit",
+          amount: delta,
+          valuation: base.valuation,
+          ...where,
+          note: "retry correction",
+        } as MoneyMoveLeg
+      );
+    else
+      legs.push(
+        {
+          kind: "debit",
+          amount: -delta,
+          valuation: base.valuation,
+          ...where,
+          note: "retry correction",
+        } as MoneyMoveLeg,
+        {
+          kind: "burn",
+          amount: -delta,
+          valuation: base.valuation,
+          note: "retry correction: funding lowered to this attempt's amount",
+        } as MoneyMoveLeg
+      );
+  }
+  if (legs.length === 0) return true;
+  const digest = createHash("sha256")
+    .update(JSON.stringify([...want.entries()].sort()))
+    .digest("hex")
+    .slice(0, 16);
+  const correction: MoneyMove = {
+    key: `${prefix}${digest}`,
+    kind: `${move.kind}_retry_correction`,
+    turn: move.turn,
+    legs,
+    record: { batchIndependentDebits: true, correctsKey: move.key },
+  };
+  let result = await applyMoneyMove(db, correction);
+  if (result.status === "replayed") result = await resumeMoneyMove(db, correction.key);
+  return result.status === "applied" || result.status === "replayed";
+}
+
+/** A configured sales-advance revenue share is used only inside (0, 1]. */
+function validRevenueShare(share: number | undefined): share is number {
+  return typeof share === "number" && Number.isFinite(share) && share > 0 && share <= 1;
 }

@@ -6,6 +6,7 @@ import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   hasCompleteSovereignFlows,
+  encodeResumeResult,
   isResumeFailClosedError,
   readCrashedTurnPhaseState,
   TurnPhaseCompletionPersistError,
@@ -19,6 +20,68 @@ import {
 } from "@/simulation/engine/turnResumeBootstrap";
 
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
+
+describe("corporate completion results", () => {
+  it("round-trips current per-currency income through JSON without losing Maps", () => {
+    const result = {
+      ...CORP_RESULT,
+      currencyIncomeFaceByCharacterId: new Map([
+        [
+          "player",
+          new Map([
+            ["USD", 20],
+            ["GBP", 15],
+            ["JPY", 2000],
+          ]),
+        ],
+      ]),
+    };
+    const stored = encodeResumeResult("corporationTurn", result);
+    const statuses = {
+      corporationTurn: { status: "completed" },
+    } as unknown as TurnPhaseTelemetryMap;
+    const restored = readCrashedTurnPhaseState(
+      statuses,
+      JSON.parse(JSON.stringify({ corporationTurn: stored }))
+    );
+    expect(restored.results.corporationTurn).toEqual(result);
+    expect(encodeResumeResult("corporationTurn", restored.results.corporationTurn)).toEqual(stored);
+  });
+
+  it("refuses malformed or incomplete income rather than assuming zero", () => {
+    expect(
+      encodeResumeResult("corporationTurn", {
+        ...CORP_RESULT,
+        currencyIncomeFaceByCharacterId: undefined,
+      })
+    ).toBeNull();
+    expect(
+      encodeResumeResult("corporationTurn", {
+        ...CORP_RESULT,
+        currencyIncomeInternalByCharacterId: [["player", NaN]],
+      })
+    ).toBeNull();
+    expect(
+      encodeResumeResult("corporationTurn", {
+        ...CORP_RESULT,
+        currencyIncomeInternalByCharacterId: [
+          ["player", 1],
+          ["player", 2],
+        ],
+      })
+    ).toBeNull();
+  });
+});
+
+const CORP_RESULT = {
+  corporationsProcessed: 1,
+  sectorsProcessed: 2,
+  totalRevenueGenerated: 100,
+  totalIncomeGenerated: 20,
+  turnWarnings: [],
+  currencyIncomeInternalByCharacterId: new Map([["player", 20]]),
+  currencyIncomeFaceByCharacterId: new Map([["player", new Map([["USD", 20]])]]),
+};
 
 /** A gameState document that applies the runtime's dotted `$set` writes. */
 function createGameStateDb(failWhen?: (set: Record<string, unknown>) => boolean) {
@@ -357,7 +420,7 @@ describe("crash resume of result-carrying phases (#3429)", () => {
       phaseStatuses: {},
       warnings: [],
       currentPhaseRef: { current: null },
-    }).runPhase("corporationTurn", async () => ({ huge: "x".repeat(10_000) }));
+    }).runPhase("indexFundTurn", async () => ({ huge: "x".repeat(10_000) }));
     expect(doc.processingPhaseResults).toEqual({});
   });
 
@@ -415,7 +478,7 @@ describe("crash resume of result-carrying phases (#3429)", () => {
     expect(statuses.corporationTurn).toMatchObject({ status: "failed", reason: "mustStop" });
 
     const bond = vi.fn(async () => BOND_RESULT);
-    const corporation = vi.fn(async () => 1);
+    const corporation = vi.fn(async () => CORP_RESULT);
     const resumed = resumedRuntime(doc, db);
     await resumed.runPhase("bondTurn", bond);
     await resumed.runPhase("corporationTurn", corporation);
@@ -589,5 +652,116 @@ describe("V2 sovereign flow completeness (#3429)", () => {
       { bondTurn: counters }
     );
     expect(state.results.bondTurn).toEqual(counters);
+  });
+});
+
+describe("interrupted phases are never silently applied (turn 736)", () => {
+  const locked = (statuses: TurnPhaseTelemetryMap) => ({
+    currentTurn: 735,
+    processingTargetTurn: 736,
+    processingPhase: "corporationTurn",
+    processingPhaseStatuses: statuses,
+    processingPhaseResults: null,
+  });
+  const at = new Date("2026-11-07T16:14:00Z");
+
+  it("refuses to resume when corporationTurn was interrupted", () => {
+    const statuses = {
+      bondTurn: { status: "completed" },
+      corporationTurn: { status: "running" },
+    } as unknown as TurnPhaseTelemetryMap;
+    expect(() => validateLockedResume(locked(statuses), 736)).toThrow(
+      /corporationTurn was interrupted mid-phase/
+    );
+    try {
+      validateLockedResume(locked(statuses), 736);
+    } catch (err) {
+      expect(isResumeFailClosedError(err)).toBe(true);
+    }
+  });
+
+  it("refuses when corporationTurn failed without TurnMustStopError, or carries a prior interruption", () => {
+    for (const marker of [
+      { status: "failed", reason: "other" },
+      { status: "skipped", reason: "upstreamAbort", resumeCarried: "interrupted" },
+      { status: "skipped", reason: "upstreamAbort" },
+    ]) {
+      const statuses = { corporationTurn: marker } as unknown as TurnPhaseTelemetryMap;
+      expect(() => validateLockedResume(locked(statuses), 736)).toThrow(/interrupted mid-phase/);
+    }
+  });
+
+  it("reruns a retryable failure, but refuses a legacy completed corporation phase without its result", async () => {
+    const mustStop = {
+      corporationTurn: { status: "failed", reason: "mustStop" },
+    } as unknown as TurnPhaseTelemetryMap;
+    const resume = validateLockedResume(locked(mustStop), 736);
+    expect(resume).not.toBeNull();
+    expect(resume!.appliedPhases.has("corporationTurn")).toBe(false);
+
+    const { doc, db } = createGameStateDb();
+    doc.processingPhaseStatuses = {
+      corporationTurn: { status: "completed" },
+      commodityPrices: { status: "failed", reason: "mustStop" },
+    };
+    const runtime = resumedRuntime(doc, db);
+    const corp = vi.fn(async () => "corp");
+    const prices = vi.fn(async () => "prices");
+    await expect(runtime.runPhase("corporationTurn", corp)).rejects.toBeInstanceOf(
+      TurnResumeResultUnavailableError
+    );
+    await expect(runtime.runPhase("commodityPrices", prices)).rejects.toBeInstanceOf(
+      TurnResumeResultUnavailableError
+    );
+    expect(corp).not.toHaveBeenCalled();
+    expect(prices).not.toHaveBeenCalled();
+  });
+
+  it("records another interrupted phase as failed, not as applied, and does not rerun it", async () => {
+    const statuses = {
+      pensionTurn: { status: "running" },
+      treasuryTurn: { status: "completed" },
+    } as unknown as TurnPhaseTelemetryMap;
+    const resume = validateLockedResume(
+      { ...locked(statuses), processingPhase: "pensionTurn" },
+      736
+    );
+    expect(resume).not.toBeNull();
+
+    const record = bootstrapPhaseRecord({}, resume, at);
+    expect(record.statuses.pensionTurn).toMatchObject({
+      status: "failed",
+      reason: "other",
+      resumeCarried: "interrupted",
+    });
+    expect(record.statuses.pensionTurn!.message).toMatch(/interrupted by a crash/);
+    expect(record.statuses.treasuryTurn).toMatchObject({
+      status: "skipped",
+      resumeCarried: "completed",
+    });
+    // A second crash still reads the carried failure as interrupted.
+    expect([...readCrashedTurnPhaseState(record.statuses, null).interrupted]).toEqual([
+      "pensionTurn",
+    ]);
+
+    const { doc, db } = createGameStateDb();
+    doc.processingPhaseStatuses = statuses;
+    const warnings: string[] = [];
+    const phaseState = readCrashedTurnPhaseState(statuses, null);
+    const runtime = createTurnPhaseRuntime({
+      db,
+      phaseStatuses: {},
+      warnings,
+      currentPhaseRef: { current: null },
+      alreadyApplied: new Set([...phaseState.completed, ...phaseState.interrupted]),
+      resumed: phaseState,
+    });
+    const pension = vi.fn(async () => 1);
+    await runtime.runPhase("pensionTurn", pension);
+    expect(pension).not.toHaveBeenCalled();
+    expect(doc.processingPhaseStatuses).toMatchObject({
+      pensionTurn: { status: "failed", resumeCarried: "interrupted" },
+    });
+    expect(warnings.join(" ")).toMatch(/pensionTurn: interrupted by a crash/);
   });
 });

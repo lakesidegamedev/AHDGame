@@ -194,6 +194,7 @@ describe("GET /api/corporations/[id]/history", () => {
           federalTaxPaid: 1,
           stateTaxPaid: 1,
           perTurnBondCouponIncome: 1,
+          perTurnBondInterestExpense: 1,
           perTurnBondDragOnNetIncome: 1,
           taxPaidByCountry: 1,
           taxPaidByState: 1,
@@ -422,5 +423,25 @@ describe("GET /api/corporations/[id]/history", () => {
       dividendRate: 5,
       currencyCode: "USD",
     });
+  });
+});
+
+it("projects gross bond interest alongside net drag for the costs chart", async () => {
+  const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+  vi.mocked(resolveCorporation).mockResolvedValue({
+    ok: true,
+    corporation: { _id: new ObjectId(), shareholders: [] },
+  } as never);
+  const { GET } = await import("./route");
+  const res = await GET(new Request("http://localhost/api/corporations/16/history"), {
+    params: Promise.resolve({ id: "16" }),
+  });
+  expect(res.status).toBe(200);
+  const pipeline = db.collectionMocks.corporationHistory.aggregate.mock.calls[0][0];
+  expect(pipeline).toContainEqual({
+    $project: expect.objectContaining({
+      perTurnBondInterestExpense: 1,
+      perTurnBondDragOnNetIncome: 1,
+    }),
   });
 });

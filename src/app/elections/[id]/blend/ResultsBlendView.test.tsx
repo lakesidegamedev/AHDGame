@@ -111,7 +111,7 @@ describe("ResultsBlendView", () => {
       "/character/ch-c1"
     );
     expect(screen.getByRole("link", { name: "Campaign" }).getAttribute("href")).toBe(
-      "/campaign/camp-c1"
+      "/elections/e1?view=campaign&campaign=camp-c1"
     );
   });
 

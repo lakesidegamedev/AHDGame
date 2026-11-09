@@ -19,7 +19,10 @@ export interface OwnSiteProduct {
   units: number;
   /** Share of this output's production (0-1). */
   share: number;
-  /** Units at the plant's asking price, ₳. */
+  /**
+   * Units at what they were worth to the company, ₳ per turn: the captive value
+   * when own sites were left short, otherwise the plant's asking price.
+   */
   valueAnchor: number;
 }
 
@@ -50,7 +53,7 @@ export function ownSiteDeliveries(
     produced += made;
     const u = positive(p.internalDeliveredUnits);
     if (u <= 0) continue;
-    const valueAnchor = u * positive(p.askingUnitPrice);
+    const valueAnchor = u * (positive(p.captiveUnitValue) || positive(p.askingUnitPrice));
     products.push({
       commodity: p.commodity,
       units: u,
@@ -69,9 +72,13 @@ export function ownSiteDeliveries(
   };
 }
 
-/** Label beside the Sold figure, e.g. "100% to your sites". Null when none. */
-export function ownSiteLabel(share: number | null | undefined): string | null {
+/**
+ * Label beside the Sold figure, e.g. "100% to your sites". Null when none.
+ * `scope` names the base the share is out of when it is not one product, e.g.
+ * "all output" gives "65% of all output to your sites".
+ */
+export function ownSiteLabel(share: number | null | undefined, scope?: string): string | null {
   if (share == null || !Number.isFinite(share) || share <= 0) return null;
   const pct = Math.round(share * 100);
-  return `${pct < 1 ? "<1" : pct}% to your sites`;
+  return `${pct < 1 ? "<1" : pct}%${scope ? ` of ${scope}` : ""} to your sites`;
 }

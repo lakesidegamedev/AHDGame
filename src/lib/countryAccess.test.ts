@@ -187,6 +187,29 @@ describe("getCountryAccess()", () => {
     expect(result.nppGoverned).toBe(true);
   });
 
+  it.each(["v1", "v2", "v3", "v4", "v5", "v6"] as const)(
+    "marks a disabled country nppGoverned at autonomy %s",
+    async (level) => {
+      // Regression: a hand-kept rank map here stopped at v4, so a world at v5
+      // or v6 read as autonomy off and no country was NPP-governed.
+      await setupDb();
+      db.collectionMocks["countryGameStates"]!.findOne.mockResolvedValue({
+        _id: "UK",
+        status: "coming-soon",
+      });
+      db.collection("gameState").findOne.mockResolvedValue({ nppAutonomyLevel: level });
+
+      const { getCountryAccess, getAllCountryAccess } = await import("./countryAccess");
+      expect((await getCountryAccess("UK")).nppGoverned).toBe(true);
+
+      db.collectionMocks["countryGameStates"]!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([{ _id: "UK", status: "coming-soon" }]),
+      } as never);
+      const all = await getAllCountryAccess(db as unknown as Db);
+      expect(all.UK.nppGoverned).toBe(true);
+    }
+  );
+
   it("does NOT mark a player-enabled country nppGoverned even at v1", async () => {
     await setupDb();
     db.collectionMocks["countryGameStates"]!.findOne.mockResolvedValue(null); // US active

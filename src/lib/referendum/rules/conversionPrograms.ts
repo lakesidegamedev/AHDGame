@@ -3,6 +3,8 @@ import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { largestRemainderAllocate } from "../secede/apportion";
+import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
+import { promotedProgramFunding } from "../secede/rules/lawSuccession";
 export function planConvertedLawPrograms(input: {
   programs: ResetLawProgramDocument[];
   accounts: ResetDepartmentAccountSnapshot[];
@@ -11,6 +13,8 @@ export function planConvertedLawPrograms(input: {
   countryId: ResetCountry;
   independent: boolean;
   scale: number;
+  nationalReferences?: Readonly<Record<string, OpeningLawReference>>;
+  nationalFamilyIds?: readonly string[];
 }) {
   const { programs, accounts, regions, rump, countryId, independent, scale } = input;
   if (!Number.isFinite(scale) || scale <= 0 || !regions.length)
@@ -27,6 +31,17 @@ export function planConvertedLawPrograms(input: {
     replaceOne: { filter: { _id: string }; replacement: ResetLawProgramDocument; upsert: true };
   }> = [];
   const removals: string[] = [];
+  const promoted = new Map(
+    programs
+      .filter(
+        (program) =>
+          independent &&
+          program.scope === "regional" &&
+          input.nationalFamilyIds?.includes(program.familyId)
+      )
+      .map((program) => [program.familyId, program])
+  );
+  const promotedRegionalIds: string[] = [];
   for (const program of programs) {
     if (program.scope === "national") {
       const moved = Math.floor(program.annualAgencyAllocation * weight);
@@ -44,6 +59,7 @@ export function planConvertedLawPrograms(input: {
           upsert: true,
         },
       });
+      if (promoted.has(program.familyId)) continue;
       const next = {
         ...program,
         _id: `${program.worldId}:${countryId}:national:${program.familyId}`,
@@ -55,6 +71,31 @@ export function planConvertedLawPrograms(input: {
       };
       updates.push({ replaceOne: { filter: { _id: next._id }, replacement: next, upsert: true } });
     } else {
+      if (promoted.has(program.familyId)) {
+        const reference = input.nationalReferences?.[program.familyId];
+        const account = accounts.find((row) =>
+          Object.hasOwn(row.familyAnnualDemand, program.familyId)
+        );
+        if (!reference || !account)
+          throw new Error(`Missing national succession owner for ${program.familyId}`);
+        const next: ResetLawProgramDocument = {
+          ...program,
+          ...promotedProgramFunding(reference, account.familyAnnualDemand[program.familyId]!),
+          _id: `${program.worldId}:${countryId}:national:${program.familyId}`,
+          country: countryId,
+          scope: "national",
+          fundingAccountId: account._id,
+          legalAuthorityId: `${countryId}:national:${program.familyId}`,
+          serviceDelivererId: account.departmentId,
+        };
+        delete next.regionId;
+        updates.push({
+          replaceOne: { filter: { _id: next._id }, replacement: next, upsert: true },
+        });
+        removals.push(program._id);
+        promotedRegionalIds.push(program.familyId);
+        continue;
+      }
       const allocated = largestRemainderAllocate(
         Math.round(program.annualAgencyAllocation * scale),
         weights
@@ -77,5 +118,5 @@ export function planConvertedLawPrograms(input: {
       removals.push(program._id);
     }
   }
-  return { updates, removals };
+  return { updates, removals, promotedRegionalIds };
 }

@@ -1,7 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { aggregateGameHealth, gameHealthRunSummary, summarizeGameHealth } from "./gameHealth";
+import {
+  aggregateGameHealth,
+  gameHealthRunSummary,
+  summarizeGameHealth,
+  gameHealthPhaseCounts,
+} from "./gameHealth";
+import { createTurnPhaseTelemetry } from "@/simulation/engine/phaseTelemetry";
 
 describe("game health summary", () => {
+  it("separates a real failure from blocked work in legacy snapshots", () => {
+    const now = new Date(0);
+    const snapshot = {
+      turnProcessing: {
+        success: false,
+        errorCount: 207,
+        warningCount: 2,
+        phaseStatuses: {
+          corporationTurn: createTurnPhaseTelemetry(now, "failed"),
+          treasuryTurn: createTurnPhaseTelemetry(now, "notReached"),
+          elections: createTurnPhaseTelemetry(now, "completed"),
+        },
+      },
+      dataIntegrity: { issues: [{ severity: "error" as const }] },
+    };
+    expect(gameHealthPhaseCounts(snapshot)).toEqual({ errors: 1, blocked: 1 });
+    expect(gameHealthRunSummary(snapshot)).toMatchObject({
+      errorCount: 2,
+      processingErrorCount: 1,
+    });
+  });
   it("keeps commit success separate from integrity severity", () => {
     expect(
       summarizeGameHealth({

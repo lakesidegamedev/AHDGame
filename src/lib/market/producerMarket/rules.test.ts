@@ -640,6 +640,107 @@ describe("one funded producer market", () => {
       ]);
     });
 
+    it("market first (issue 5505): outside buyers clear the company's output before its own sites", () => {
+      const market = (marketFirst: boolean) =>
+        settleProducerMarket({
+          turn: 1,
+          accounts: [
+            { id: "corp", cash: 100 },
+            { id: "outside", cash: 100 },
+          ],
+          offers: [
+            {
+              id: "own",
+              accountId: "corp",
+              commodity: "energy",
+              book: "world",
+              units: 5,
+              unitPrice: 1,
+            },
+          ],
+          orders: [
+            {
+              id: "a-corp",
+              accountId: "corp",
+              commodity: "energy",
+              book: "world",
+              units: 4,
+              maximumUnitPrice: 2,
+            },
+            {
+              id: "b-outside",
+              accountId: "outside",
+              commodity: "energy",
+              book: "world",
+              units: 4,
+              maximumUnitPrice: 2,
+            },
+          ],
+          ownSitesFirst: true,
+          ...(marketFirst ? { marketFirstAccounts: ["corp"] } : {}),
+        });
+      const own = market(false);
+      expect(own.offers.find((o) => o.id === "own")!.internalDeliveredUnits).toBeCloseTo(4, 9);
+      expect(own.offers.find((o) => o.id === "own")!.soldUnits).toBeCloseTo(1, 9);
+      const first = market(true);
+      // The outside buyer takes 4 at the ask; the company's own site gets the 1 left, free.
+      expect(first.offers.find((o) => o.id === "own")!.soldUnits).toBeCloseTo(4, 9);
+      expect(first.offers.find((o) => o.id === "own")!.internalDeliveredUnits).toBeCloseTo(1, 9);
+      expect(first.orders.find((o) => o.id === "a-corp")!.deliveredUnits).toBeCloseTo(1, 9);
+    });
+
+    it("market first: no own output left means the company buys from other sellers", () => {
+      const result = settleProducerMarket({
+        turn: 1,
+        accounts: [
+          { id: "corp", cash: 100 },
+          { id: "outside", cash: 100 },
+          { id: "seller", cash: 0 },
+        ],
+        offers: [
+          {
+            id: "own",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 2,
+            unitPrice: 1,
+          },
+          {
+            id: "other",
+            accountId: "seller",
+            commodity: "energy",
+            book: "world",
+            units: 5,
+            unitPrice: 1.5,
+          },
+        ],
+        orders: [
+          {
+            id: "a-corp",
+            accountId: "corp",
+            commodity: "energy",
+            book: "world",
+            units: 3,
+            maximumUnitPrice: 2,
+          },
+          {
+            id: "b-outside",
+            accountId: "outside",
+            commodity: "energy",
+            book: "world",
+            units: 2,
+            maximumUnitPrice: 2,
+          },
+        ],
+        ownSitesFirst: true,
+        marketFirstAccounts: ["corp"],
+      });
+      expect(result.offers.find((o) => o.id === "own")!.soldUnits).toBeCloseTo(2, 9);
+      expect(result.offers.find((o) => o.id === "other")!.soldUnits).toBeCloseTo(3, 9);
+      expect(result.orders.find((o) => o.id === "a-corp")!.deliveredUnits).toBeCloseTo(3, 9);
+    });
+
     it("on: a named supplier contract still reserves before own supply", () => {
       const result = settleProducerMarket({
         turn: 1,
@@ -820,6 +921,98 @@ describe("quote policies", () => {
     }
   });
 
+  describe("buyer tie-break (producerAskBuyerTieStage)", () => {
+    // Turn 700, US food: other plants' input ceilings sat 0.1 above the household
+    // ceiling, every automatic seller posted the higher one, and households bought none.
+    const food = {
+      referenceUnitPrice: 707.49,
+      clearingUnitPrice: 901.29,
+      variableUnitCost: 300,
+      fixedCost: 5000,
+      offeredUnits: 60,
+      demand: [
+        { units: 494_000, maximumUnitPrice: 884.2625 },
+        { units: 2_000, maximumUnitPrice: 884.3625 },
+        { units: 18_000, maximumUnitPrice: 2288.425 },
+      ],
+      competitors: [{ units: 38_000, unitPrice: 901.29 }],
+      policy: { kind: "automatic" as const, targetMarkup: 0 },
+    };
+
+    it("without it, posts just above the household ceiling", () => {
+      expect(quoteProducer(food).unitPrice).toBeCloseTo(884.3625, 6);
+    });
+
+    it("with it, posts where the households can buy", () => {
+      const quote = quoteProducer({ ...food, buyerTieBreak: true });
+      expect(quote.unitPrice).toBeCloseTo(884.2625, 6);
+      expect(quote.expectedSoldUnits).toBeCloseTo(60);
+    });
+
+    it("does not give up more than the profit share for reach", () => {
+      const quote = quoteProducer({
+        ...basis,
+        competitors: [],
+        demand: [
+          { units: 1000, maximumUnitPrice: 8 },
+          { units: 100, maximumUnitPrice: 10 },
+        ],
+        policy: { kind: "automatic", targetMarkup: 0 },
+        buyerTieBreak: true,
+      });
+      expect(quote.unitPrice).toBe(10);
+    });
+
+    // Turn 708, US food: opening quotes at the shortage step (925.9), household
+    // ceilings 889.94, another country's input ceilings 913.12, 2.6% apart.
+    const food708 = {
+      ...food,
+      clearingUnitPrice: 925.9,
+      offeredUnits: 50,
+      demand: [
+        { units: 444_000, maximumUnitPrice: 889.94 },
+        { units: 3_000, maximumUnitPrice: 913.12 },
+        { units: 17_000, maximumUnitPrice: 2288.425 },
+      ],
+      competitors: [{ units: 48_000, unitPrice: 925.9 }],
+      buyerTieBreak: true,
+    };
+
+    it("stage 1 alone still posts above the households when the gap is wider than the band", () => {
+      expect(quoteProducer(food708).unitPrice).toBeCloseTo(913.12, 6);
+    });
+
+    it("with competitors matching, posts where the households can buy", () => {
+      const quote = quoteProducer({ ...food708, competitorsMatch: true });
+      expect(quote.unitPrice).toBeCloseTo(889.94, 6);
+      expect(quote.expectedSoldUnits).toBeCloseTo(50);
+    });
+
+    it("with competitors matching, still takes a higher price that buyers can absorb", () => {
+      const quote = quoteProducer({
+        ...basis,
+        demand: [
+          { units: 50, maximumUnitPrice: 8 },
+          { units: 1000, maximumUnitPrice: 12 },
+        ],
+        competitors: [{ units: 300, unitPrice: 12 }],
+        policy: { kind: "automatic", targetMarkup: 0.2 },
+        competitorsMatch: true,
+      });
+      expect(quote.unitPrice).toBe(12);
+    });
+
+    it("leaves manual and cost-plus prices alone", () => {
+      expect(
+        quoteProducer({
+          ...food,
+          policy: { kind: "manual", unitPrice: 884.3625 },
+          buyerTieBreak: true,
+        }).unitPrice
+      ).toBe(884.3625);
+    });
+  });
+
   it("never asks above the market reference plus markup, however high a far bid is", () => {
     // Ticket 1728: a short world book held one buyer bidding twice the market, and
     // the automatic ask jumped to that ceiling and sold nothing.
@@ -983,6 +1176,45 @@ describe("country-tagged funded settlement", () => {
     // The book never invents a unit: every import is an export somewhere else.
     const imports = (result.countryBooks ?? []).reduce((n, r) => n + r.imports, 0);
     expect(imports).toBe(8);
+  });
+
+  it("counts a lower demand-curve step as demand only for what it bought (issue #5448)", () => {
+    const withSteps = {
+      ...base,
+      orders: [
+        ...base.orders,
+        // Below every ask: buys nothing, so it must not read as a shortage.
+        {
+          id: "order-us-step-low",
+          accountId: "buyer-us",
+          commodity: "gas",
+          book: "world",
+          units: 50,
+          maximumUnitPrice: 1,
+          countryId: "US",
+          demandStep: 2,
+        },
+        // At the low ask: buys what is left of the cheap offer.
+        {
+          id: "order-uk-step",
+          accountId: "buyer-uk",
+          commodity: "gas",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 2,
+          countryId: "UK",
+          demandStep: 1,
+        },
+      ],
+    };
+    const result = settleProducerMarket({ turn: 1, ...withSteps, trackCountryBooks: true });
+    const rows = new Map(
+      (result.countryBooks ?? []).map((r) => [`${r.countryId}:${r.commodity}`, r])
+    );
+    const ukStep = result.orders.find((o) => o.id === "order-uk-step")!;
+    expect(rows.get("US:gas")!.demand).toBe(6);
+    expect(rows.get("UK:gas")!.demand).toBeCloseTo(8 + ukStep.deliveredUnits, 9);
+    expect(result.orders.find((o) => o.id === "order-us-step-low")!.deliveredUnits).toBe(0);
   });
 
   it("tags replay legs and fills with the seller and buyer country", () => {
@@ -1221,5 +1453,254 @@ describe("automatic ask with sell-through memory", () => {
     });
     expect(noAnchor.unitPrice).toBe(0);
     expect(fullDiscount.unitPrice).toBe(0);
+  });
+});
+
+describe("spend groups share one budget (#5451)", () => {
+  it("never lets a ladder spend more than its group budget at mixed fill prices", () => {
+    const group = { id: "hh:food", maximumSpend: 100 };
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "hh", cash: 10_000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "cheap",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          unitPrice: 5,
+        },
+        {
+          id: "dear",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 50,
+          unitPrice: 10,
+        },
+      ],
+      orders: [
+        // Top step: 10 units at up to 10, its own budget 100.
+        {
+          id: "top",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 10,
+          maximumSpend: 100,
+          spendGroup: group,
+        },
+        // Lower step: 5 more units at up to 5.
+        {
+          id: "step",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 5,
+          maximumSpend: 25,
+          spendGroup: group,
+          demandStep: 1,
+        },
+      ],
+    });
+    const spent = result.orders.reduce((n, o) => n + o.cost, 0);
+    expect(spent).toBeLessThanOrEqual(100 + 1e-9);
+    // Without the shared group the two orders could spend 100 + 25.
+    const ungrouped = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "hh", cash: 10_000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "cheap",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          unitPrice: 5,
+        },
+        {
+          id: "dear",
+          accountId: "seller",
+          commodity: "food",
+          book: "world",
+          units: 50,
+          unitPrice: 10,
+        },
+      ],
+      orders: [
+        {
+          id: "top",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 10,
+          maximumSpend: 100,
+        },
+        {
+          id: "step",
+          accountId: "hh",
+          commodity: "food",
+          book: "world",
+          units: 5,
+          maximumUnitPrice: 5,
+          maximumSpend: 25,
+        },
+      ],
+    });
+    expect(ungrouped.orders.reduce((n, o) => n + o.cost, 0)).toBeGreaterThan(100);
+  });
+});
+
+describe("sell outside first (suggestion 427)", () => {
+  const market = ({
+    ownSitesFirst = true,
+    flag = true,
+    marketFirst = false,
+    twoSites = false,
+    ownWants = 6,
+    outsideWants = 8,
+  }: {
+    ownSitesFirst?: boolean;
+    flag?: boolean;
+    marketFirst?: boolean;
+    twoSites?: boolean;
+    ownWants?: number;
+    outsideWants?: number;
+  } = {}) =>
+    settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "corp", cash: 100 },
+        { id: "outside", cash: 100 },
+      ],
+      offers: [
+        {
+          id: "sup-f",
+          accountId: "corp",
+          commodity: "steel",
+          book: "world",
+          units: twoSites ? 5 : 10,
+          unitPrice: 1,
+          ...(flag ? { sellOutsideFirst: true as const } : {}),
+        },
+        ...(twoSites
+          ? [
+              {
+                id: "sup-u",
+                accountId: "corp",
+                commodity: "steel",
+                book: "world",
+                units: 5,
+                unitPrice: 1,
+              },
+            ]
+          : []),
+      ],
+      orders: [
+        {
+          id: "a-own-plant",
+          accountId: "corp",
+          commodity: "steel",
+          book: "world",
+          units: ownWants,
+          maximumUnitPrice: 2,
+        },
+        {
+          id: "b-outside",
+          accountId: "outside",
+          commodity: "steel",
+          book: "world",
+          units: outsideWants,
+          maximumUnitPrice: 2,
+        },
+      ],
+      ...(ownSitesFirst ? { ownSitesFirst: true } : {}),
+      ...(marketFirst ? { marketFirstAccounts: ["corp"] } : {}),
+    });
+  const sold = (r: ReturnType<typeof market>, id: string) =>
+    r.offers.find((o) => o.id === id)!.soldUnits;
+  const internal = (r: ReturnType<typeof market>, id: string) =>
+    r.offers.find((o) => o.id === id)!.internalDeliveredUnits;
+  const delivered = (r: ReturnType<typeof market>, id: string) =>
+    r.orders.find((o) => o.id === id)!.deliveredUnits;
+
+  const replayConserves = (r: ReturnType<typeof market>) => {
+    const byOffer = new Map<string, number>();
+    for (const trade of producerTrades(r.tradeReceipt)) {
+      // No sale is ever booked from a company to itself.
+      if (trade.kind === "sale") expect(trade.buyerAccountId).not.toBe(trade.sellerAccountId);
+      if (trade.kind === "internalTransfer") expect(trade.unitPrice).toBe(0);
+      byOffer.set(trade.offerId, (byOffer.get(trade.offerId) ?? 0) + trade.units);
+    }
+    for (const offer of r.tradeReceipt.offers) {
+      const result = r.offers.find((o) => o.id === offer.id)!;
+      expect(byOffer.get(offer.id) ?? 0).toBeCloseTo(result.deliveredUnits, 9);
+      expect(result.deliveredUnits).toBeLessThanOrEqual(offer.units + 1e-9);
+    }
+  };
+
+  it("serves the outside buyer first and leaves the own plant the remainder, free", () => {
+    const r = market();
+    expect(sold(r, "sup-f")).toBeCloseTo(8, 9);
+    expect(internal(r, "sup-f")).toBeCloseTo(2, 9);
+    expect(delivered(r, "b-outside")).toBeCloseTo(8, 9);
+    expect(delivered(r, "a-own-plant")).toBeCloseTo(2, 9);
+    const own = r.tradeReceipt.fills.filter((f) => f.orderId === "a-own-plant");
+    expect(own.every((f) => f.kind === "internalTransfer" && f.unitPrice === 0)).toBe(true);
+    expect(r.accounts.find((a) => a.id === "corp")!.cash).toBeCloseTo(108, 9);
+    replayConserves(r);
+  });
+
+  it("unset flag keeps today's result: the own plant is served first", () => {
+    const r = market({ flag: false });
+    expect(internal(r, "sup-f")).toBeCloseTo(6, 9);
+    expect(sold(r, "sup-f")).toBeCloseTo(4, 9);
+    expect(r.tradeReceipt.fills.some((f) => "skipOutsideFirst" in f)).toBe(false);
+    replayConserves(r);
+  });
+
+  it("ignores the flag when own-sites-first is off", () => {
+    const flagged = market({ ownSitesFirst: false });
+    const plain = market({ ownSitesFirst: false, flag: false });
+    expect(flagged.offers).toEqual(plain.offers);
+    expect(flagged.orders).toEqual(plain.orders);
+    expect(flagged.accounts).toEqual(plain.accounts);
+    expect(flagged.tradeReceipt.fills).toEqual(plain.tradeReceipt.fills);
+  });
+
+  it("a company already on market priority behaves as before with the flag set", () => {
+    const flagged = market({ marketFirst: true });
+    const plain = market({ marketFirst: true, flag: false });
+    expect(flagged.offers).toEqual(plain.offers);
+    expect(flagged.orders).toEqual(plain.orders);
+    expect(flagged.tradeReceipt.fills).toEqual(plain.tradeReceipt.fills);
+  });
+
+  it("a flagged and an unflagged site: the unflagged one serves the own plant, the flagged one waits", () => {
+    const r = market({ twoSites: true, ownWants: 4, outsideWants: 10 });
+    expect(internal(r, "sup-u")).toBeCloseTo(4, 9);
+    expect(internal(r, "sup-f")).toBe(0);
+    expect(sold(r, "sup-f")).toBeCloseTo(5, 9);
+    expect(sold(r, "sup-u")).toBeCloseTo(1, 9);
+    expect(delivered(r, "a-own-plant")).toBeCloseTo(4, 9);
+    replayConserves(r);
+  });
+
+  it("the own plant still gets everything when outside demand is small", () => {
+    const r = market({ outsideWants: 3 });
+    expect(sold(r, "sup-f")).toBeCloseTo(3, 9);
+    expect(internal(r, "sup-f")).toBeCloseTo(6, 9);
+    expect(delivered(r, "a-own-plant")).toBeCloseTo(6, 9);
+    replayConserves(r);
   });
 });

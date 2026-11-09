@@ -1,7 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { routeEligibility, tariffTransfers } from "./routeRules";
+import { createRouteEligibility, routeEligibility, tariffTransfers } from "./routeRules";
 
 describe("route eligibility", () => {
+  it("caches fully open routes as well as embargoed routes", () => {
+    let checks = 0;
+    const orders = Array.from({ length: 1000 }, (_, i) => ({
+      id: String(i),
+      commodity: "iron",
+      buyerCountry: i % 2 ? "JP" : "US",
+    }));
+    const result = routeEligibility(
+      orders,
+      [
+        { id: "us", commodity: "iron", sellerCountry: "US" },
+        { id: "jp", commodity: "iron", sellerCountry: "JP" },
+      ],
+      () => {
+        checks++;
+        return true;
+      }
+    );
+    expect(result).toEqual({});
+    expect(checks).toBe(2);
+  });
+  it("shares indexed lists across producer and final buyers without changing route order", () => {
+    const offers = [
+      { id: "ru1", commodity: "iron", sellerCountry: "RU" },
+      { id: "us1", commodity: "iron", sellerCountry: "US" },
+      { id: "ru2", commodity: "iron", sellerCountry: "RU" },
+      { id: "jp1", commodity: "coal", sellerCountry: "JP" },
+    ];
+    let calls = 0;
+    const listFor = createRouteEligibility(offers, (_commodity, seller, buyer) => {
+      calls++;
+      return seller === "US" && buyer === "JP";
+    });
+    expect(listFor("iron", "JP")).toEqual(["us1"]);
+    const producerList = listFor("iron", "JP");
+    const before = calls;
+    expect(listFor("iron", "JP")).toBe(producerList);
+    expect(calls).toBe(before);
+    expect(listFor("iron", "RU")).toEqual(["ru1", "ru2"]);
+    expect(listFor("iron", "GB")).toEqual([]);
+    expect(listFor("coal", "JP")).toBeUndefined();
+    expect(listFor("missing", "JP")).toBeUndefined();
+    // Caches belong to a single preparation: a later turn can close a route.
+    expect(createRouteEligibility(offers, () => false)("iron", "JP")).toEqual([]);
+  });
+
   const offers = [
     { id: "us-iron", commodity: "iron", sellerCountry: "US" },
     { id: "ru-iron", commodity: "iron", sellerCountry: "RU" },
@@ -21,13 +67,31 @@ describe("route eligibility", () => {
       offers,
       open
     );
-    expect([...e.a].sort()).toEqual(["jp-iron", "us-iron"]);
-    expect([...e.b].sort()).toEqual(["jp-iron", "ru-iron", "us-iron"]);
+    expect([...e.a!].sort()).toEqual(["jp-iron", "us-iron"]);
+    // JP reaches every seller, so its order stays unrestricted.
+    expect(e.b).toBeUndefined();
   });
 
   it("spare home output can reach a short foreign buyer", () => {
-    const e = routeEligibility([{ id: "jp", commodity: "iron", buyerCountry: "JP" }], offers, open);
-    expect(e.jp).toContain("us-iron");
+    const e = routeEligibility([{ id: "ru", commodity: "iron", buyerCountry: "RU" }], offers, open);
+    expect(e.ru).toEqual(["jp-iron", "ru-iron"]);
+  });
+
+  it("one embargo restricts only the buyers it closes a route for", () => {
+    const usJapanImportBan = (c: string, from: string, to: string) =>
+      !(from === "JP" && to === "US");
+    const e = routeEligibility(
+      [
+        { id: "us", commodity: "iron", buyerCountry: "US" },
+        { id: "ru", commodity: "iron", buyerCountry: "RU" },
+        { id: "us-coal", commodity: "coal", buyerCountry: "US" },
+      ],
+      offers,
+      usJapanImportBan
+    );
+    expect([...e.us!].sort()).toEqual(["ru-iron", "us-iron"]);
+    expect(e.ru).toBeUndefined();
+    expect(e["us-coal"]).toBeUndefined();
   });
 
   it("never mixes commodities and shares one list per commodity and country", () => {
@@ -39,8 +103,18 @@ describe("route eligibility", () => {
       offers,
       open
     );
-    expect(e.x).toEqual(["us-coal"]);
-    expect(e.x).toBe(e.y);
+    expect(e.x).toBeUndefined();
+    expect(e.y).toBeUndefined();
+    const ru = routeEligibility(
+      [
+        { id: "x", commodity: "iron", buyerCountry: "RU" },
+        { id: "y", commodity: "iron", buyerCountry: "RU" },
+      ],
+      offers,
+      open
+    );
+    expect(ru.x).toEqual(["jp-iron", "ru-iron"]);
+    expect(ru.x).toBe(ru.y);
   });
 });
 

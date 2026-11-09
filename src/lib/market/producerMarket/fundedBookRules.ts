@@ -43,6 +43,21 @@ export interface FundedCountryBookRow {
   requested?: number;
   funded?: number;
   filled?: number;
+  /**
+   * Measurement only: the part of `requested` that households placed as
+   * same-turn substitution after their first choice sold out (spillover).
+   * Fill and shortage views subtract it to read first-choice demand. Absent
+   * when no spillover order was placed in the row.
+   */
+  spilloverRequested?: number;
+}
+
+/** Compact regional-only market measurements, in settlement units per turn. */
+export interface FundedRegionalBookRow {
+  stateId: string;
+  commodity: string;
+  funded: number;
+  filled: number;
 }
 
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

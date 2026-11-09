@@ -16,6 +16,11 @@ describe("ownSiteDeliveries", () => {
     expect(r?.products[0]).toMatchObject({ commodity: "steel", share: 1, units: 360 });
   });
 
+  it("values deliveries to short own sites at the captive value", () => {
+    const r = ownSiteDeliveries({ turn: 10, products: [product({ captiveUnitValue: 300 })] }, 10);
+    expect(r?.valueAnchor).toBe(108000);
+  });
+
   it("splits a mixed plant per output", () => {
     const r = ownSiteDeliveries(
       {
@@ -50,6 +55,7 @@ describe("ownSiteLabel", () => {
     expect(ownSiteLabel(1)).toBe("100% to your sites");
     expect(ownSiteLabel(0.404)).toBe("40% to your sites");
     expect(ownSiteLabel(0.001)).toBe("<1% to your sites");
+    expect(ownSiteLabel(0.65, "all output")).toBe("65% of all output to your sites");
   });
   it("is null when nothing went to own sites", () => {
     expect(ownSiteLabel(0)).toBeNull();

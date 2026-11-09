@@ -16,7 +16,7 @@ import {
   shortageResponsiveToleranceSlack,
   SHORTAGE_TOLERANCE_MAX_EXTRA,
 } from "./sourcing";
-import { FREIGHT_CLASS_BY_COMMODITY } from "./freightClass";
+import { FREIGHT_CLASS_BY_COMMODITY, SHIPPED_COMMODITIES, isHauledClass } from "./freightClass";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 
 type Balance = { supply: number; demand: number };
@@ -1749,6 +1749,318 @@ describe("displaced domestic spare is offered abroad (#4504)", () => {
         expect(r.unplacedSupplyByState.get(commodity)!.get("A1")).toBeCloseTo(0);
       }
       expect(destination(r, "natural_gas", "FR")!.unmetUnits).toBeCloseTo(100 - 100 * seaFactor);
+    });
+  });
+});
+
+describe("own shipments first (freight capacity held for the owner)", () => {
+  type Balance = { supply: number; demand: number };
+  const bal = (entries: Partial<Record<CommodityType, Balance>>) =>
+    new Map(Object.entries(entries) as [CommodityType, Balance][]);
+  const hauled = SHIPPED_COMMODITIES.filter((c) => isHauledClass(FREIGHT_CLASS_BY_COMMODITY[c]!));
+  // The competitor's commodity is served BEFORE the owner's, so without a hold
+  // it takes the capacity first.
+  const rival = hauled[0]!;
+  const mine = hauled[hauled.length - 1]!;
+  const route = {
+    commodity: mine,
+    corporationId: "corp1",
+    originStateId: "A2",
+    destStateId: "A3",
+    units: 60,
+  };
+  // A2 sells both goods. corp1 hauls 60 units of its own good to its plant in
+  // A3; A1 buys the rival good at landed price. Freight at A2 is the scarce thing.
+  const world = (freight: number, overrides: Partial<SourcingInputs> = {}): SourcingInputs =>
+    makeInputs({
+      states: [
+        { stateId: "A1", countryId: "US" as CountryId },
+        { stateId: "A2", countryId: "US" as CountryId },
+        { stateId: "A3", countryId: "US" as CountryId },
+      ],
+      byState: new Map([
+        ["A1", bal({ [rival]: { supply: 0, demand: 100 } })],
+        [
+          "A2",
+          bal({
+            [rival]: { supply: 100, demand: 0 },
+            [mine]: { supply: 100, demand: 0 },
+            freight: { supply: freight, demand: 0 },
+          }),
+        ],
+        ["A3", bal({ [mine]: { supply: 0, demand: 100 } })],
+      ]),
+      byCountry: new Map([
+        [
+          "US",
+          bal({ [rival]: { supply: 100, demand: 100 }, [mine]: { supply: 100, demand: 100 } }),
+        ],
+      ]),
+      statePricesFor: () => ({ A1: 100, A2: 90, A3: 100 }),
+      nationalPricesFor: () => ({ US: 95 }),
+      ownRoutes: [route],
+      ...overrides,
+    });
+  type R = ReturnType<typeof runSourcingPass>;
+  const ownUnits = (r: R) => r.ownRouteDelivered.reduce((a, b) => a + b.units, 0);
+  const rivalUnits = (r: R) =>
+    r.flows.filter((f) => f.commodity === rival).reduce((sum, f) => sum + f.units, 0);
+  const ownCap = (teu: number) => new Map([["A2", new Map([["corp1", teu]])]]);
+  const usedTeu = (r: R) => {
+    const used = r.freightTeuByState.get("A2")!;
+    return used.bulk + used.special;
+  };
+  const sumCharges = (r: R) =>
+    [...r.freightChargesByDestState.values()]
+      .flatMap((m) => [...m.values()])
+      .reduce((a, b) => a + b, 0) +
+    r.ownRouteDelivered.reduce((a, b) => a + (b.freightCharge ?? 0), 0);
+  const sumRevenue = (r: R) => [...r.haulRevenueByOriginState.values()].reduce((a, b) => a + b, 0);
+
+  const BIG = 1e9;
+  const everything = runSourcingPass(world(BIG));
+  const allTeu = usedTeu(everything);
+  const ownTeu = runSourcingPass(world(BIG, { ownFreightCapacityByState: ownCap(BIG) }))
+    .ownRouteDelivered[0]!.ownCapacityTeu!;
+  // A pool big enough for the owner's haul and a part of the rival's.
+  const tight = (ownTeu + (allTeu - ownTeu) / 2) / (1 + FREIGHT_CONGESTION_OVERFLOW);
+
+  it("setup: both hauls fit in an open pool and the pool is genuinely scarce when tight", () => {
+    expect(ownUnits(everything)).toBeCloseTo(60);
+    expect(rivalUnits(everything)).toBeGreaterThan(0);
+    expect(ownTeu).toBeGreaterThan(0);
+    expect(tight).toBeLessThan(allTeu);
+  });
+
+  it("flag off: first come, so the earlier rival takes the pool and the owner is short", () => {
+    const r = runSourcingPass(world(tight));
+    expect(r.ownFreightCoveredTeuByState?.size ?? 0).toBe(0);
+    expect(r.ownRouteDelivered.every((d) => d.ownCapacityTeu === undefined)).toBe(true);
+    expect(ownUnits(r)).toBeLessThan(60);
+    expect(sumCharges(r)).toBeCloseTo(sumRevenue(r), 8);
+  });
+
+  it("flag on: the owner's hauls go through first and competitors get the remainder", () => {
+    const off = runSourcingPass(world(tight));
+    const on = runSourcingPass(world(tight, { ownFreightCapacityByState: ownCap(ownTeu) }));
+    expect(ownUnits(on)).toBeCloseTo(60);
+    expect(on.ownRouteDelivered[0]!.ownCapacityTeu).toBeCloseTo(ownTeu, 6);
+    expect(rivalUnits(on)).toBeGreaterThan(0);
+    expect(rivalUnits(on)).toBeLessThan(rivalUnits(off));
+    expect(usedTeu(on)).toBeLessThanOrEqual(tight * (1 + FREIGHT_CONGESTION_OVERFLOW) + 1e-6);
+  });
+
+  it("a company with no freight capacity keeps using the shared pool", () => {
+    const stranger = new Map([["A2", new Map([["corp2", ownTeu]])]]);
+    const off = runSourcingPass(world(tight));
+    const on = runSourcingPass(world(tight, { ownFreightCapacityByState: stranger }));
+    expect(ownUnits(on)).toBeCloseTo(ownUnits(off));
+    expect(rivalUnits(on)).toBeCloseTo(rivalUnits(off));
+  });
+
+  it("capacity the owner does not plan to use is not held back from the rest", () => {
+    const idle = new Map([["A2", new Map([["corp1", ownTeu * 50]])]]);
+    const off = runSourcingPass(world(tight, { ownRoutes: [] }));
+    const on = runSourcingPass(world(tight, { ownRoutes: [], ownFreightCapacityByState: idle }));
+    expect(rivalUnits(on)).toBeCloseTo(rivalUnits(off));
+  });
+
+  it("the covered share is internal supply: the owner is not charged and the fleet is not paid for it", () => {
+    const off = runSourcingPass(world(BIG));
+    const on = runSourcingPass(world(BIG, { ownFreightCapacityByState: ownCap(ownTeu * 2) }));
+    expect(on.ownRouteDelivered[0]!.freightCharge).toBeCloseTo(0, 8);
+    expect(sumCharges(on)).toBeCloseTo(sumRevenue(on), 8);
+    expect(sumCharges(on)).toBeCloseTo(
+      sumCharges(off) - off.ownRouteDelivered[0]!.freightCharge!,
+      6
+    );
+  });
+
+  it("a partly covered haul bills only the uncovered share, and the legs still net", () => {
+    const off = runSourcingPass(world(BIG));
+    const on = runSourcingPass(world(BIG, { ownFreightCapacityByState: ownCap(ownTeu / 4) }));
+    expect(on.ownRouteDelivered[0]!.freightCharge).toBeCloseTo(
+      off.ownRouteDelivered[0]!.freightCharge! * 0.75,
+      6
+    );
+    expect(sumCharges(on)).toBeCloseTo(sumRevenue(on), 8);
+  });
+
+  describe("stage 2: the owner's market sales ride its own trucks first", () => {
+    const marketWorld = (freight: number, overrides: Partial<SourcingInputs> = {}) =>
+      world(freight, { ownRoutes: [], ...overrides });
+    const supplyOf = (units: number, owner = "corp1") =>
+      new Map([[mine, new Map([["A2", new Map([[owner, units]])]])]]);
+    const mineUnits = (r: R) =>
+      r.flows.filter((f) => f.commodity === mine).reduce((sum, f) => sum + f.units, 0);
+    const mineCharges = (r: R) =>
+      [...r.freightChargesByDestState.values()].reduce((a, m) => a + (m.get(mine) ?? 0), 0);
+    const open = runSourcingPass(marketWorld(BIG));
+    const mineTeu = open.flows
+      .filter((f) => f.commodity === mine)
+      .reduce((a, f) => a + f.freightTeuConsumed, 0);
+    const tightM = (mineTeu + (usedTeu(open) - mineTeu) / 2) / (1 + FREIGHT_CONGESTION_OVERFLOW);
+
+    it("setup: the market goods fit in an open pool and are squeezed out when it is tight", () => {
+      expect(mineTeu).toBeGreaterThan(0);
+      expect(mineUnits(runSourcingPass(marketWorld(tightM)))).toBeLessThan(mineUnits(open));
+    });
+
+    it("stage 1 (no market supply passed) leaves market goods first come", () => {
+      const off = runSourcingPass(marketWorld(tightM));
+      const s1 = runSourcingPass(
+        marketWorld(tightM, { ownFreightCapacityByState: ownCap(mineTeu) })
+      );
+      expect(mineUnits(s1)).toBeCloseTo(mineUnits(off));
+      expect(rivalUnits(s1)).toBeCloseTo(rivalUnits(off));
+      expect(s1.ownFreightCoveredTeuByState?.size ?? 0).toBe(0);
+    });
+
+    it("an owner with most of the capacity gets its market goods out before a rival's", () => {
+      const off = runSourcingPass(marketWorld(tightM));
+      const s2 = runSourcingPass(
+        marketWorld(tightM, {
+          ownFreightCapacityByState: ownCap(mineTeu),
+          ownFreightMarketSupply: supplyOf(100),
+        })
+      );
+      expect(mineUnits(s2)).toBeCloseTo(100);
+      expect(mineUnits(s2)).toBeGreaterThan(mineUnits(off));
+      expect(rivalUnits(s2)).toBeLessThan(rivalUnits(off));
+      expect(rivalUnits(s2)).toBeGreaterThan(0);
+      expect(s2.ownFreightCoveredTeuByState!.get("A2")!.get("corp1")).toBeCloseTo(mineTeu, 6);
+      expect(usedTeu(s2)).toBeLessThanOrEqual(tightM * (1 + FREIGHT_CONGESTION_OVERFLOW) + 1e-6);
+    });
+
+    it("a seller with no freight capacity is unchanged", () => {
+      const off = runSourcingPass(marketWorld(tightM));
+      const s2 = runSourcingPass(
+        marketWorld(tightM, {
+          ownFreightCapacityByState: ownCap(mineTeu),
+          ownFreightMarketSupply: supplyOf(100, "corp2"),
+        })
+      );
+      expect(mineUnits(s2)).toBeCloseTo(mineUnits(off));
+      expect(rivalUnits(s2)).toBeCloseTo(rivalUnits(off));
+      expect(s2.ownFreightCoveredTeuByState?.size ?? 0).toBe(0);
+    });
+
+    it("covered goods carry no freight charge or haul revenue, and the legs net", () => {
+      const s2 = runSourcingPass(
+        marketWorld(BIG, {
+          ownFreightCapacityByState: ownCap(mineTeu * 2),
+          ownFreightMarketSupply: supplyOf(100),
+        })
+      );
+      expect(mineCharges(s2)).toBeCloseTo(0, 8);
+      expect(sumCharges(s2)).toBeCloseTo(sumRevenue(s2), 8);
+      expect(sumCharges(s2)).toBeCloseTo(sumCharges(open) - mineCharges(open), 6);
+    });
+
+    it("rivals served earlier cannot run through the overflow band into the owner's held trucks", () => {
+      // The owner holds the whole nominal pool. Rival goods go to two buyers, so
+      // the rival makes a second haul after the first has used part of the
+      // overflow band. Before the hold also guarded that band, the second haul
+      // spent the owner's held trucks and the owner's goods found the state at
+      // its hard ceiling.
+      const split = (freight: number, overrides: Partial<SourcingInputs> = {}) =>
+        marketWorld(freight, {
+          states: [
+            { stateId: "A1", countryId: "US" as CountryId },
+            { stateId: "A2", countryId: "US" as CountryId },
+            { stateId: "A3", countryId: "US" as CountryId },
+            { stateId: "A4", countryId: "US" as CountryId },
+          ],
+          byState: new Map([
+            ["A1", bal({ [rival]: { supply: 0, demand: 50 } })],
+            ["A4", bal({ [rival]: { supply: 0, demand: 50 } })],
+            [
+              "A2",
+              bal({
+                [rival]: { supply: 100, demand: 0 },
+                [mine]: { supply: 100, demand: 0 },
+                freight: { supply: freight, demand: 0 },
+              }),
+            ],
+            ["A3", bal({ [mine]: { supply: 0, demand: 100 } })],
+          ]),
+          statePricesFor: () => ({ A1: 100, A2: 90, A3: 100, A4: 100 }),
+          ...overrides,
+        });
+      const openSplit = runSourcingPass(split(BIG));
+      const mineTeuSplit = openSplit.flows
+        .filter((f) => f.commodity === mine)
+        .reduce((a, f) => a + f.freightTeuConsumed, 0);
+      const pool = mineTeuSplit;
+      const s2 = runSourcingPass(
+        split(pool, {
+          ownFreightCapacityByState: ownCap(pool),
+          ownFreightMarketSupply: supplyOf(100),
+        })
+      );
+      const covered = s2.ownFreightCoveredTeuByState!.get("A2")!.get("corp1")!;
+      expect(covered).toBeCloseTo(pool, 6);
+      expect(usedTeu(s2) - covered).toBeLessThanOrEqual(pool * FREIGHT_CONGESTION_OVERFLOW + 1e-6);
+    });
+
+    describe("owner-level delivery-limited figure", () => {
+      // corp1 makes 60 of the state's 100 `mine` and ships all of it on its own
+      // route. The other 40 belong to sellers with no freight capacity, and the
+      // pool is too small for them: the state figure is high, corp1's is not.
+      const ownerWorld = (freight: number, overrides: Partial<SourcingInputs> = {}) =>
+        marketWorld(freight, {
+          ownRoutes: [route],
+          ownFreightCapacityByState: ownCap(ownTeu),
+          ownFreightMarketSupply: supplyOf(60),
+          ...overrides,
+        });
+      const stateFraction = (r: R) =>
+        (r.deliveryLimitedSupplyByState.get(mine)?.get("A2") ?? 0) / 100;
+      const ownerFraction = (r: R, owner: string) =>
+        r.ownerDeliveryLimitedFractionByState?.get(mine)?.get("A2")?.get(owner);
+
+      it("an owner whose goods all shipped reads low while the state reads high", () => {
+        const r = runSourcingPass(ownerWorld(ownTeu / (1 + FREIGHT_CONGESTION_OVERFLOW)));
+        expect(ownUnits(r)).toBeCloseTo(60);
+        expect(stateFraction(r)).toBeGreaterThan(0.2);
+        expect(ownerFraction(r, "corp1")).toBeCloseTo(0, 6);
+      });
+
+      it("an owner that shipped nothing of its own is stuck at the state rate, pro rata", () => {
+        // Same stuck goods, but corp1 has no route out: it holds its units like
+        // everyone else, so its figure is the state's.
+        const r = runSourcingPass(
+          ownerWorld(ownTeu / (1 + FREIGHT_CONGESTION_OVERFLOW), { ownRoutes: [] })
+        );
+        expect(stateFraction(r)).toBeGreaterThan(0.2);
+        expect(ownerFraction(r, "corp1")).toBeCloseTo(stateFraction(r), 1);
+      });
+
+      it("is bounded 0..1 and absent for sellers without a market-supply entry (state fallback)", () => {
+        const r = runSourcingPass(ownerWorld(ownTeu / (1 + FREIGHT_CONGESTION_OVERFLOW)));
+        for (const f of r.ownerDeliveryLimitedFractionByState?.get(mine)?.get("A2")?.values() ??
+          []) {
+          expect(f).toBeGreaterThanOrEqual(0);
+          expect(f).toBeLessThanOrEqual(1);
+        }
+        expect(ownerFraction(r, "corp2")).toBeUndefined();
+        const off = runSourcingPass(
+          marketWorld(ownTeu, { ownFreightCapacityByState: ownCap(ownTeu) })
+        );
+        expect(off.ownerDeliveryLimitedFractionByState?.size ?? 0).toBe(0);
+      });
+    });
+
+    it("an owner supplying half the state's goods covers only its half, the rest bills", () => {
+      const s2 = runSourcingPass(
+        marketWorld(BIG, {
+          ownFreightCapacityByState: ownCap(mineTeu * 2),
+          ownFreightMarketSupply: supplyOf(50),
+        })
+      );
+      expect(s2.ownFreightCoveredTeuByState!.get("A2")!.get("corp1")).toBeCloseTo(mineTeu / 2, 6);
+      expect(mineCharges(s2)).toBeCloseTo(mineCharges(open) / 2, 6);
+      expect(sumCharges(s2)).toBeCloseTo(sumRevenue(s2), 8);
     });
   });
 });

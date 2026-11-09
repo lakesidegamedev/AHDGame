@@ -2,6 +2,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import ChartsTab from "./ChartsTab";
+import { DenseLineChart } from "./dense/DenseLineChart";
+vi.mock("./dense/DenseLineChart", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./dense/DenseLineChart")>();
+  return { ...actual, DenseLineChart: vi.fn(actual.DenseLineChart) };
+});
 
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({
@@ -20,7 +25,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function showHistory(quote: { marketCapCurrencyCode?: string | null }) {
+async function showHistory(quote: {
+  marketCapCurrencyCode?: string | null;
+  perTurnBondInterestExpense?: number;
+  perTurnBondDragOnNetIncome?: number;
+}) {
   const snapshot = {
     turn: 1,
     sharePrice: 40,
@@ -105,4 +114,11 @@ describe("ChartsTab ledger", () => {
       "true"
     );
   });
+});
+
+it("charts gross interest as a cost, even when a subsidy removes net bond drag", async () => {
+  await showHistory({ perTurnBondInterestExpense: 20, perTurnBondDragOnNetIncome: 0 });
+  fireEvent.click(screen.getByRole("button", { name: "Revenue and costs" }));
+  const props = vi.mocked(DenseLineChart).mock.calls.at(-1)![0];
+  expect(props.series[1].values).toEqual([40, 50]);
 });

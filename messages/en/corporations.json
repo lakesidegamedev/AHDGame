@@ -113,6 +113,25 @@
       }
     },
     "sectorInvestment": {
+      "fundedAdvice": {
+        "title": "Funded buyer demand",
+        "titleTurn": "Funded buyer demand, turn {turn, number, ::group-off}",
+        "unknown": "Not measured",
+        "caption": "Orders and deliveries in commodity units per day",
+        "outputMarket": "Output / market",
+        "funded": "Funded",
+        "delivered": "Delivered",
+        "unfilled": "Unfilled",
+        "regional": "Regional",
+        "national": "National",
+        "scopeNote": "Units per day. National figures include regional buyers; do not add the rows. Only markets this output can serve are shown. International orders are not included in this domestic estimate.",
+        "salesNote": "Unfilled orders are not guaranteed sales at your price. Existing idle capacity and queued builds can reach these buyers first. Mixed-output plants may sell one product while another remains unsold.",
+        "limits": "Funded demand and expansion limits",
+        "someUnfilled": "Funded buyers remain unfilled for at least one output. The table shows each market separately. Automatic sizing also allows for existing capacity, queued builds and every output in this plant's mix.",
+        "someUnknown": "Some funded demand figures have not been measured for this market yet. Missing figures do not mean there are no buyers.",
+        "noneUnfilled": "No unfilled funded domestic orders were recorded for these outputs in this turn. This is not an estimate of international demand or sales you could win from competitors.",
+        "noLocalCompetitors": "No competitors of this sector type are listed in this region. This does not establish buyer demand or exclude competitors in a shared national market."
+      },
       "advertisingCampaignsCounted": "Advertising campaigns counted: {units}/day ({factor} media output factor)",
       "advertisingCampaignsLabel": "Advertising campaigns counted",
       "advertisingCampaignsValue": "{units}/day ({factor} factor)",
@@ -219,7 +238,9 @@
         "cash": "There is not enough cash to build one facility while retaining the operating reserve.",
         "demand": "Measured buyers and queued builds leave room for less than one additional facility."
       },
-      "mixedOrQueuedDemand": "Some outputs have no measured unmet demand, or existing unused capacity and queued builds already cover the available buyers. Extra capacity can leave part of the output unsold."
+      "mixedOrQueuedDemand": "Some outputs have no measured unmet demand, or existing unused capacity and queued builds already cover the available buyers. Extra capacity can leave part of the output unsold.",
+      "reserveOverrideHelp": "Lines whose sales cover their running costs keep running on low cash. Spending below the reserve can slow lines that do not pay for themselves and new lines that have not sold yet, until the cash recovers.",
+      "buildPastReserve": "Build anyway"
     },
     "bankConsole": {
       "eyebrow": {
@@ -825,7 +846,21 @@
       "transferIncome": "Included: income from your sites",
       "transferCharge": "Charges from your sites",
       "transferChargeNote": "The selected internal price for goods delivered by your other sites. The supplying site records matching income; your company’s total cash is unchanged.",
-      "transferIncomeNote": "Included in revenue: the selected internal price allocated by your other sites. No cash enters the company from these deliveries."
+      "transferIncomeNote": "Included in revenue: the selected internal price allocated by your other sites. No cash enters the company from these deliveries.",
+      "fundedIntro": "Your own sites get your output before outside buyers. You can choose to sell to outside buyers first instead.",
+      "fundedOwn": "Own sites first (default)",
+      "fundedMarket": "Open market first",
+      "fundedPriorityNote": "Own sites first: your sites take what they need of your output, then the rest is sold. Open market first: outside buyers get your output first, and your sites use what is left. They buy anything else they need from other sellers.",
+      "fundedScope": "Your sites only take goods they use. Your output reaches your sites in any region, with no freight to arrange. Region-only goods, like local services, stay in the region where they are made.",
+      "fundedConstraints": "This does not make more goods. If your sites need more than your company makes, they buy the rest on the market.",
+      "ownSitesTurn": "Sent to your own sites, turn {turn}",
+      "made": "Made",
+      "toOwnSites": "To your sites",
+      "soldOutside": "Sold to others",
+      "ownSitesNote": "Units per day. Your sites received the same units they were sent.",
+      "noOwnSiteUnits": "None of your output went to your own sites last turn. Your sites only take your output when they use that good.",
+      "ownSiteMemo": "Sent to your own sites (memo)",
+      "ownSiteMemoNote": "Free transfers book no sale, so this is not in revenue or profit. It is what this site sent your other sites, valued at its own asking price, or at what your sites would pay when they were short. This estimate is separate from revenue, profit and net margin."
     },
     "governmentContracts": {
       "featureDisabled": "Government contracts are temporarily disabled. New tenders, bids and awards are paused. Existing signed contracts continue, and you can still cancel tenders or withdraw bids.",
@@ -1064,6 +1099,24 @@
       "noBuyers": "Nobody bought {good} in your market last turn, at any price.",
       "buyersElsewhereState": "Buyers for {good} are short in other states, but services like this sell only to buyers in the state where they are produced, and buyers here were already supplied. Capacity in the short states would sell.",
       "buyersElsewhereCountry": "Buyers for {good} are short in other countries, but your plants could not reach them from this market, and buyers here were already supplied. Capacity where the buyers are, or a route to them, would sell."
+    },
+    "runHold": {
+      "heldByInput": "Kept low after {input} ran short",
+      "heldByCash": "Kept low after a cash cut",
+      "heldByInputHelp": "You sold everything you made, but there was not enough {input} to run your {sites} at their plan. They are held below it, not ramping up. Output returns to the plan once {input} arrives.",
+      "heldByCashHelp": "You sold everything you made, but your company could not pay for the whole run, so your {sites} are held below their plan, not ramping up. Add cash or cut costs to run the full plan."
+    },
+    "commodityMarket": {
+      "supplyOfferedPerDay": "offered per day",
+      "supplyIncludesStock": "includes unsold stock",
+      "supplyOfferedExplanation": "Supply is what producers put up for sale each turn: the stock they could not sell earlier plus what they plan to make now. Stock that stays unsold is counted again every turn, so this can be well above what is actually produced. Producer rankings below use capacity and consumer rankings use estimated plant inputs, so they will not add up to this figure.",
+      "substitutionOrders": "plus {units} substitution orders",
+      "substitutionOrdersExplanation": "Households placed these after their first choice sold out. They are not counted as demand here, so they do not make this good read as short."
+    },
+    "sectorSupplyPriority": {
+      "label": "Sell to outside buyers before my own plants",
+      "help": "Your own plants then get only what outside buyers leave. Off by default.",
+      "failed": "Failed to update"
     }
   }
 }

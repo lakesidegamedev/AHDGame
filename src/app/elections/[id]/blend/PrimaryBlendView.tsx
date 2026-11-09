@@ -25,11 +25,11 @@ import type { PresMapModel, PresMapState } from "./presMap/presMapModel";
 import { STATE_NAMES } from "./presMap/usStates";
 import { mixToward } from "./presMap/dataViews";
 import type { CountySource } from "./presMap/countyStore";
-import { MyCampaignStateBlock, useMyCampaign } from "./useMyCampaign";
+import { useRaceMapCampaign } from "./raceMode/useRaceMapCampaign";
 import { readableInk } from "@/lib/elections/marginTierShade";
 import { useBlendGround } from "@/components/blend/useBlendGround";
 import { useElectionCampaigns, type CampaignSummary } from "../components/useElectionCampaigns";
-import { FogNote, ViewCampaign, campaignFigures } from "./GeneralTicketsTable";
+import { FogNote, ViewCampaign, campaignFigures, type CampaignRace } from "./GeneralTicketsTable";
 import {
   buildPrimaryBlendViewModel,
   type PrimaryBlendVM,
@@ -210,9 +210,11 @@ function StateBoard({
 function MobileCampaignLine({
   campaign,
   loading,
+  race,
 }: {
   campaign: CampaignSummary | undefined;
   loading: boolean;
+  race: CampaignRace;
 }) {
   if (!campaign && !loading) return null;
   const figures = campaignFigures(campaign, loading);
@@ -246,7 +248,7 @@ function MobileCampaignLine({
         <span>{figures.actions} act.</span>
         <span>{figures.levels} lvl</span>
       </span>
-      {campaign ? <ViewCampaign campaign={campaign} /> : null}
+      {campaign ? <ViewCampaign campaign={campaign} race={race} /> : null}
     </div>
   );
 }
@@ -458,14 +460,9 @@ export function PrimaryBlendView({
     [election, partyId, wire, detail, selectedStateId]
   );
 
-  // The reader's own campaign in this race: presence by state on the map, and
-  // building it from the state overview.
-  const myCandidate = election.allCandidates.find((c) => c.isYou) ?? null;
-  const mine = useMyCampaign({
-    enabled: Boolean(myCandidate) && election.countryId === "US",
-    campaignId: myCandidate?.campaignId ?? null,
-    color: myCandidate?.campaignColor ?? myCandidate?.partyColor ?? "#4F8EF7",
-  });
+  // The reader's campaign in this race on the map: presence by state, and what
+  // the state panel offers for it (see useRaceMapCampaign).
+  const mapCampaign = useRaceMapCampaign(election);
   const ground = useBlendGround();
   /**
    * Campaign operations for the field table: funds, actions, levels and the
@@ -515,7 +512,7 @@ export function PrimaryBlendView({
         color: "#fff",
       }}
     >
-      OPEN CAMPAIGN MANAGER
+      OPEN CAMPAIGN
     </Link>
   ) : null;
 
@@ -665,7 +662,7 @@ export function PrimaryBlendView({
             <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
               {figures.levels}
             </span>
-            <span>{campaign ? <ViewCampaign campaign={campaign} /> : null}</span>
+            <span>{campaign ? <ViewCampaign campaign={campaign} race={election} /> : null}</span>
           </div>
         );
       })}
@@ -796,7 +793,7 @@ export function PrimaryBlendView({
                     return {
                       id: f.id,
                       name: f.name,
-                      ...candidateLinks(c, election.countryId),
+                      ...candidateLinks(c, election),
                       partyName: c?.partyName ?? "",
                       color: f.color,
                       figure: `${f.pct}%`,
@@ -810,6 +807,7 @@ export function PrimaryBlendView({
                             <MobileCampaignLine
                               campaign={campaignForRow(f.id)}
                               loading={campaignsLoading}
+                              race={election}
                             />
                           </div>
                           <EndorseControl
@@ -969,12 +967,10 @@ export function PrimaryBlendView({
               counties={vm.board.length > 0 && election.countryId === "US"}
               countySource={countySource}
               focusRequest={focusRequest}
-              presence={mine ? { levels: mine.levels, color: mine.color } : null}
-              panelExtra={
-                mine
-                  ? (stateId) => <MyCampaignStateBlock mine={mine} stateId={stateId} />
-                  : undefined
-              }
+              presence={mapCampaign.presence}
+              inPage={mapCampaign.inPage}
+              panelExtra={mapCampaign.panelExtra}
+              fieldOffices={mapCampaign.fieldOffices}
               model={primaryMapModel}
               electionId={electionId}
               countryId={election.countryId}

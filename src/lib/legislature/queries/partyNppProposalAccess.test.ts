@@ -124,4 +124,35 @@ describe("Regional party NPP sponsor eligibility", () => {
       .insertOne({ _id: new ObjectId(), countryId: "UK", sponsorNppId: first, status: "enacted" });
     expect((await access()).npp?._id).toEqual(first);
   });
+  it("can ignore bill and governor-queue reservations for non-bill actions", async () => {
+    await memory.collection("stateBills").insertMany([
+      {
+        _id: new ObjectId(),
+        countryId: "UK",
+        stateId: "SCO",
+        sponsorNppId: first,
+        status: "active",
+      },
+      {
+        _id: new ObjectId(),
+        countryId: "UK",
+        stateId: "SCO",
+        sponsorNppId: second,
+        status: "passed",
+      },
+    ]);
+    await memory
+      .collection("governorLegislationQueue")
+      .insertOne({ _id: new ObjectId(), countryId: "UK", targetNppId: second, status: "pending" });
+    expect((await access()).npp).toBeNull();
+    const ignoring = await resolvePartyNppProposalAccess(
+      memory as unknown as Db,
+      "UK",
+      "SCO",
+      character,
+      { ignoreBillReservations: true }
+    );
+    expect(ignoring.authorized).toBe(true);
+    expect(ignoring.npp?._id).toEqual(first);
+  });
 });

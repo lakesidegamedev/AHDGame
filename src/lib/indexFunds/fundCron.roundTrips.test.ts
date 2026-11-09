@@ -109,65 +109,71 @@ function quietTurn(w: ReturnType<typeof world>): number {
   throw new Error("every turn of the day holds a fund's rebalance");
 }
 
-describe("index fund cron round trips", () => {
-  it("keeps a rebalance turn inside its round-trip budget", async () => {
-    const w = world(12);
-    const trips = countRoundTrips(w.memory);
-    const result = await runIndexFundCron(w.db, { currentTurn: 48 });
-    expect(result.errors).toEqual([]);
-    expect(result.floatPurchases).toBeGreaterThan(150);
-    // Trade settlement dominates, and a batch costs a handful of trips per
-    // trade rather than the ~50 a one-settlement-per-trade run needed.
-    expect(trips.total() / result.floatPurchases, trips.summary()).toBeLessThan(15);
-    // Fixed per-fund overhead of the non-trade passes.
-    const nonTrade =
-      trips.total() -
-      trips.count("bankMoneyMoves") -
-      trips.count("corporations") -
-      trips.count("equityMarketPools") -
-      trips.count("fundFloatSettlements");
-    expect(nonTrade, trips.summary()).toBeLessThan(40 * w.funds + 60);
-  }, 280_000);
+describe.each([false, true])(
+  "index fund cron round trips (reuse reads: %s)",
+  (reuseRebalanceReads) => {
+    it("keeps a rebalance turn inside its round-trip budget", async () => {
+      const w = world(12);
+      const trips = countRoundTrips(w.memory);
+      const result = await runIndexFundCron(w.db, { currentTurn: 48, reuseRebalanceReads });
+      expect(result.errors).toEqual([]);
+      expect(result.floatPurchases).toBeGreaterThan(150);
+      // Trade settlement dominates, and a batch costs a handful of trips per
+      // trade rather than the ~50 a one-settlement-per-trade run needed.
+      expect(trips.total() / result.floatPurchases, trips.summary()).toBeLessThan(15);
+      // Fixed per-fund overhead of the non-trade passes.
+      const nonTrade =
+        trips.total() -
+        trips.count("bankMoneyMoves") -
+        trips.count("corporations") -
+        trips.count("equityMarketPools") -
+        trips.count("fundFloatSettlements");
+      expect(nonTrade, trips.summary()).toBeLessThan(40 * w.funds + 60);
+    }, 280_000);
 
-  it("keeps a quiet turn at a small, fund-linear number of round trips", async () => {
-    const w = world(12);
-    await runIndexFundCron(w.db, { currentTurn: 48 });
-    const trips = countRoundTrips(w.memory);
-    const result = await runIndexFundCron(w.db, { currentTurn: quietTurn(w) });
-    expect(result.errors).toEqual([]);
-    expect(result.floatPurchases).toBe(0);
-    expect(trips.total(), trips.summary()).toBeLessThan(15 * w.funds + 60);
-    expect(trips.count("shareOrders", "find")).toBeLessThanOrEqual(4);
-    expect(trips.count("indexFundSnapshots")).toBeLessThanOrEqual(2);
-  }, 280_000);
+    it("keeps a quiet turn at a small, fund-linear number of round trips", async () => {
+      const w = world(12);
+      await runIndexFundCron(w.db, { currentTurn: 48, reuseRebalanceReads });
+      const trips = countRoundTrips(w.memory);
+      const result = await runIndexFundCron(w.db, {
+        currentTurn: quietTurn(w),
+        reuseRebalanceReads,
+      });
+      expect(result.errors).toEqual([]);
+      expect(result.floatPurchases).toBe(0);
+      expect(trips.total(), trips.summary()).toBeLessThan(15 * w.funds + 60);
+      expect(trips.count("shareOrders", "find")).toBeLessThanOrEqual(4);
+      expect(trips.count("indexFundSnapshots")).toBeLessThanOrEqual(2);
+    }, 280_000);
 
-  it("reads the equity pools and open bids once for the whole rebalance pass", async () => {
-    const w = world(12);
-    const trips = countRoundTrips(w.memory);
-    const result = await runIndexFundCron(w.db, { currentTurn: 48 });
-    expect(result.errors).toEqual([]);
-    expect(result.floatPurchases).toBeGreaterThan(150);
-    // One snapshot for every quoting fund: buys and sales advance it in memory.
-    expect(trips.count("equityMarketPools", "find"), trips.summary()).toBeLessThanOrEqual(2);
-    // One query for every rebalancing fund's resting bids, not one per fund.
-    expect(trips.count("shareOrders", "find"), trips.summary()).toBeLessThan(w.funds);
-    // The bid escrow journal rows are flushed once for the pass.
-    expect(trips.count("financialTxLog", "insertMany"), trips.summary()).toBeLessThanOrEqual(2);
-  }, 280_000);
+    it("reads the equity pools and open bids once for the whole rebalance pass", async () => {
+      const w = world(12);
+      const trips = countRoundTrips(w.memory);
+      const result = await runIndexFundCron(w.db, { currentTurn: 48, reuseRebalanceReads });
+      expect(result.errors).toEqual([]);
+      expect(result.floatPurchases).toBeGreaterThan(150);
+      // One snapshot for every quoting fund: buys and sales advance it in memory.
+      expect(trips.count("equityMarketPools", "find"), trips.summary()).toBeLessThanOrEqual(2);
+      // One query for every rebalancing fund's resting bids, not one per fund.
+      expect(trips.count("shareOrders", "find"), trips.summary()).toBeLessThan(w.funds);
+      // The bid escrow journal rows are flushed once for the pass.
+      expect(trips.count("financialTxLog", "insertMany"), trips.summary()).toBeLessThanOrEqual(2);
+    }, 280_000);
 
-  it("does not grow the quiet-turn per-fund cost as funds are added", async () => {
-    const small = world(4);
-    await runIndexFundCron(small.db, { currentTurn: 48 });
-    const smallTrips = countRoundTrips(small.memory);
-    await runIndexFundCron(small.db, { currentTurn: quietTurn(small) });
-    const big = world(12);
-    await runIndexFundCron(big.db, { currentTurn: 48 });
-    const bigTrips = countRoundTrips(big.memory);
-    await runIndexFundCron(big.db, { currentTurn: quietTurn(big) });
-    const perFund = (bigTrips.total() - smallTrips.total()) / (big.funds - small.funds);
-    expect(perFund, `${smallTrips.summary()} | ${bigTrips.summary()}`).toBeLessThan(12);
-  }, 280_000);
-});
+    it("does not grow the quiet-turn per-fund cost as funds are added", async () => {
+      const small = world(4);
+      await runIndexFundCron(small.db, { currentTurn: 48, reuseRebalanceReads });
+      const smallTrips = countRoundTrips(small.memory);
+      await runIndexFundCron(small.db, { currentTurn: quietTurn(small), reuseRebalanceReads });
+      const big = world(12);
+      await runIndexFundCron(big.db, { currentTurn: 48, reuseRebalanceReads });
+      const bigTrips = countRoundTrips(big.memory);
+      await runIndexFundCron(big.db, { currentTurn: quietTurn(big), reuseRebalanceReads });
+      const perFund = (bigTrips.total() - smallTrips.total()) / (big.funds - small.funds);
+      expect(perFund, `${smallTrips.summary()} | ${bigTrips.summary()}`).toBeLessThan(12);
+    }, 280_000);
+  }
+);
 
 describe("fund document size", () => {
   it("never reads the in-flight settlement plan on whole-fund reads", async () => {

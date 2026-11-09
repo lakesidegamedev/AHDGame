@@ -1,4 +1,11 @@
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
+import {
+  resolveShortageGrowthFinanceConfig,
+  sectorBookPressure,
+  shortageGrowthCashContributionLimit,
+  type ShortageGrowthFinanceConfig,
+  type ShortageGrowthFinanceConfigInput,
+} from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { loadGroupDirectionMembership } from "./npp/groupDirectionMembership";
 /**
@@ -14,6 +21,8 @@ import {
   computeSectorConcentration,
 } from "@/lib/turn/npp/rules/sectorConcentration";
 import { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
+import { stateServiceHeadroomOn } from "@/lib/turn/npp/rules/stateServiceHeadroom";
+import { liftStateServiceHeadroom } from "@/lib/turn/npp/stateServiceHeadroomShell";
 import { strategyStateNeedsPersist } from "@/lib/turn/npp/rules/strategyCadence";
 export { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
 import {
@@ -21,7 +30,7 @@ import {
   type NppFoundingCashWitness,
 } from "@/lib/turn/npp/foundingCashLedger";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, GameState, ExchangeRate } from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameState, ExchangeRate, State } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
@@ -110,6 +119,7 @@ import { nppAutonomyAtLeast, withNppAutonomySnapshot } from "@/lib/nppAutonomy/f
 import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
 import {
   boundNppConstructionFinanceCandidates,
+  boundNppShortageGrowthFinanceCandidates,
   loadNppConstructionFundingPool,
   NPP_CONSTRUCTION_FINANCE_TERM_TURNS,
   selectNppConstructionFundingContext,
@@ -437,6 +447,8 @@ export async function processNppCorporationDecisions(
   let plants: NppPlantsContext | undefined;
   let conversionPaceShare = 0;
   let fundedRestartStage = 0;
+  let productFillStage = 0;
+  let shortageGrowthFinanceConfig: ShortageGrowthFinanceConfig | null = null;
   let bankRates: RelocationPrimeBank[] | undefined;
   if (plantsEnabled) {
     const gsPlants = await db
@@ -458,12 +470,18 @@ export async function processNppCorporationDecisions(
     const colByState = await loadNppCostOfLivingByState(db);
     const nationalShareOf = buildNppNationalShareResolver(globalSectors);
     const nppGameConfig = await db
-      .collection<{
-        commandEconomyEnabled?: boolean;
-        producerConversionPaceShare?: number;
-        producerFundedRestartStage?: number;
-        wholePlantsStage?: number;
-      }>("gameConfig")
+      .collection<
+        {
+          commandEconomyEnabled?: boolean;
+          producerConversionPaceShare?: number;
+          producerFundedRestartStage?: number;
+          wholePlantsStage?: number;
+          producerCaptiveDeliveryStage?: number;
+          nppStateServiceHeadroomStage?: number;
+          nppDividendAfterTaxStage?: number;
+          nppGrowthPerProductFillStage?: number;
+        } & ShortageGrowthFinanceConfigInput
+      >("gameConfig")
       .findOne(
         { _id: "default" as never },
         {
@@ -472,11 +490,21 @@ export async function processNppCorporationDecisions(
             producerConversionPaceShare: 1,
             producerFundedRestartStage: 1,
             wholePlantsStage: 1,
+            producerCaptiveDeliveryStage: 1,
+            nppStateServiceHeadroomStage: 1,
+            nppShortageGrowthFinanceStage: 1,
+            nppDividendAfterTaxStage: 1,
+            nppGrowthPerProductFillStage: 1,
+            nppShortageGrowthFinanceCandidateLimit: 1,
+            nppShortageGrowthFinanceMaxPaybackTurns: 1,
+            nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
           },
         }
       );
     conversionPaceShare = nppGameConfig?.producerConversionPaceShare ?? 0;
     fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
+    shortageGrowthFinanceConfig = resolveShortageGrowthFinanceConfig(nppGameConfig);
+    productFillStage = nppGameConfig?.nppGrowthPerProductFillStage ?? 0;
     plants = {
       enabled: true,
       year: plantsYear,
@@ -487,12 +515,30 @@ export async function processNppCorporationDecisions(
       commodityDemandOf: (commodity) => priceByCommodity.get(commodity)?.globalDemand ?? null,
       commodityStateDemandOf: (commodity, stateId) =>
         priceByCommodity.get(commodity)?.stateDemand?.[stateId] ?? null,
+      commodityCountryDemandOf: countryDemandResolver(
+        priceByCommodity,
+        await db
+          .collection<State>("states")
+          .find({}, { projection: { _id: 1, countryId: 1 } })
+          .toArray()
+      ),
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
       ...(wholePlantsOn(nppGameConfig?.wholePlantsStage) ? { wholePlants: true } : {}),
+      ...((nppGameConfig?.producerCaptiveDeliveryStage ?? 0) >= 3
+        ? { captiveMarketValue: true }
+        : {}),
+      ...((nppGameConfig?.nppDividendAfterTaxStage ?? 0) >= 2
+        ? { holdExpansionAtCashFloor: true }
+        : {}),
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
     if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;
+    // Local service pools that never refill: read their headroom from the
+    // state book instead (rules/stateServiceHeadroom). Off = no read, no lift.
+    if (stateServiceHeadroomOn(nppGameConfig?.nppStateServiceHeadroomStage)) {
+      await liftStateServiceHeadroom(db, unownedByCountry, placementSignals, plants.eraUnitScale);
+    }
   }
   const unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]> = [];
   // Capacity-decision observations, aggregated in memory and flushed once for
@@ -601,29 +647,56 @@ export async function processNppCorporationDecisions(
     foundingInputByCell.set(key, value);
     return value;
   };
-  // Shortage per recipe from the latest funded settlement, for AI restarts.
+  // Shortage per recipe (AI restarts) and per book (short-lane growth finance)
+  // from the latest funded settlement, in one projected read.
+  const shortageGrowthFinanceOn = shortageGrowthFinanceConfig != null && fundedWorldEpoch != null;
+  const latestFundedOutcome =
+    (fundedRestartStage >= 1 || shortageGrowthFinanceOn) &&
+    transitionFirstFundedTurn != null &&
+    strategyGate?.worldEpochId
+      ? (
+          await db
+            .collection<{
+              worldEpoch: string;
+              turn: number;
+              recipePressure?: Record<string, number>;
+              bookPressure?: Record<string, number>;
+            }>("producerMarketOutcomes")
+            .find(
+              { worldEpoch: strategyGate.worldEpochId, turn: { $lte: turn } },
+              {
+                projection: {
+                  ...(fundedRestartStage >= 1 ? { recipePressure: 1 } : {}),
+                  ...(shortageGrowthFinanceOn ? { bookPressure: 1 } : {}),
+                },
+              }
+            )
+            .sort({ turn: -1 })
+            .limit(1)
+            .toArray()
+        )[0]
+      : undefined;
   const recipePressureByKey =
-    fundedRestartStage >= 1 && transitionFirstFundedTurn != null && strategyGate?.worldEpochId
-      ? new Map(
-          Object.entries(
-            (
-              await db
-                .collection<{
-                  worldEpoch: string;
-                  turn: number;
-                  recipePressure?: Record<string, number>;
-                }>("producerMarketOutcomes")
-                .find(
-                  { worldEpoch: strategyGate.worldEpochId, turn: { $lte: turn } },
-                  { projection: { recipePressure: 1 } }
-                )
-                .sort({ turn: -1 })
-                .limit(1)
-                .toArray()
-            )[0]?.recipePressure ?? {}
-          )
-        )
+    fundedRestartStage >= 1 && latestFundedOutcome
+      ? new Map(Object.entries(latestFundedOutcome.recipePressure ?? {}))
       : null;
+  const bookPressureByBook =
+    shortageGrowthFinanceOn && latestFundedOutcome
+      ? new Map(Object.entries(latestFundedOutcome.bookPressure ?? {}))
+      : null;
+  const shortageGrowthFinance: NppCorpDecisionContext["shortageGrowthFinance"] =
+    shortageGrowthFinanceConfig && bookPressureByBook && bookPressureByBook.size > 0
+      ? {
+          config: shortageGrowthFinanceConfig,
+          pressureOf: (sector) =>
+            sectorBookPressure(
+              sector.producerSettlement as Parameters<typeof sectorBookPressure>[0],
+              fundedWorldEpoch,
+              bookPressureByBook,
+              productFillStage >= 1
+            ),
+        }
+      : undefined;
   const groupMembership = await loadGroupDirectionMembership(
     db,
     strategyGate?.subsidiaryCorporationsEnabled === true,
@@ -745,6 +818,8 @@ export async function processNppCorporationDecisions(
       fundedRestartPressureOf: recipePressureByKey
         ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
         : undefined,
+      ...(shortageGrowthFinance && !autopilot ? { shortageGrowthFinance } : {}),
+      ...(productFillStage >= 1 ? { productFillStage } : {}),
     };
     let decision = makeNppCorpDecision(
       decisionContext,
@@ -797,9 +872,21 @@ export async function processNppCorporationDecisions(
         decision.conversionCharge.cost
       );
     if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
+      // A short-lane growth request may put in cash below the floor, read from
+      // the cash left after this decision's own builds (rules/shortageGrowthFinance).
+      const cashAfterDecisionLocal = (corp.liquidCapital ?? 0) + decision.liquidCapitalDelta;
       for (const intent of decision.constructionFinanceIntents ?? []) {
         constructionFinanceCandidates.push({
           ...intent,
+          ...(intent.shortageGrowth
+            ? {
+                cashContributionLimitLocal: shortageGrowthCashContributionLimit(
+                  cashAfterDecisionLocal,
+                  decision.cashFloorLocal ?? 0,
+                  plants?.holdExpansionAtCashFloor === true
+                ),
+              }
+            : {}),
           corporation: corp,
           currency: corpCurrency,
           buildContext: {
@@ -935,9 +1022,26 @@ export async function processNppCorporationDecisions(
   // per-corp `insertOne` would have put it, before the caller reads bonds again.
   await relocationCreditBatch?.flush();
 
+  // Short-lane growth requests rank under their own cap with exposure and cash
+  // limits (rules/shortageGrowthFinance); every other request keeps the
+  // ordinary cap. With the stage off no candidate carries shortageGrowth.
+  const shortageCandidates = constructionFinanceCandidates.filter((c) => c.shortageGrowth);
+  const ordinaryCandidates =
+    shortageCandidates.length > 0
+      ? constructionFinanceCandidates.filter((c) => !c.shortageGrowth)
+      : constructionFinanceCandidates;
   const boundedConstructionFinance = nppConstructionFinanceEnabled
-    ? boundNppConstructionFinanceCandidates(constructionFinanceCandidates)
+    ? boundNppConstructionFinanceCandidates(ordinaryCandidates)
     : { selected: [] as NppConstructionFinanceCandidate[], backlogCount: 0 };
+  if (nppConstructionFinanceEnabled && shortageCandidates.length > 0) {
+    const bounded = boundNppShortageGrowthFinanceCandidates(
+      shortageCandidates,
+      shortageGrowthFinanceConfig,
+      constructionFundingPool
+    );
+    boundedConstructionFinance.selected.push(...bounded.selected);
+    boundedConstructionFinance.backlogCount += bounded.backlogCount;
+  }
   const constructionFinanceRequests: NppConstructionFinanceRequest[] = [];
   let constructionFinanceBacklogCount =
     boundedConstructionFinance.backlogCount +
@@ -1005,5 +1109,29 @@ export async function processNppCorporationDecisions(
     constructionFinanceBacklogCount,
     ...(foundingCashWitnesses.length ? { foundingCashWitnesses } : {}),
     ...(reinvestmentCashWitnesses.length ? { reinvestmentCashWitnesses } : {}),
+  };
+}
+
+/** Country demand per commodity: the sum of its states' demand, memoised per lookup. */
+function countryDemandResolver(
+  priceByCommodity: ReadonlyMap<string, { stateDemand?: Record<string, number> | null }>,
+  states: readonly Pick<State, "_id" | "countryId">[]
+): (commodity: string, countryId: string) => number | null {
+  const statesByCountry = new Map<string, string[]>();
+  for (const s of states) {
+    const list = statesByCountry.get(String(s.countryId)) ?? [];
+    list.push(String(s._id));
+    statesByCountry.set(String(s.countryId), list);
+  }
+  const memo = new Map<string, number | null>();
+  return (commodity, countryId) => {
+    const key = `${commodity}|${countryId}`;
+    if (memo.has(key)) return memo.get(key)!;
+    const byState = priceByCommodity.get(commodity)?.stateDemand;
+    const ids = statesByCountry.get(countryId) ?? [];
+    const value =
+      byState && ids.length ? ids.reduce((n, id) => n + (Number(byState[id]) || 0), 0) : null;
+    memo.set(key, value);
+    return value;
   };
 }

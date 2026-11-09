@@ -30,7 +30,9 @@ describe("FULLTREE data", () => {
     expect(armor?.nodes[0]?.name).toBe("Tank Commander");
   });
   it("exposes spec profiles + seeds + stat meta", () => {
-    expect(SPEC_PROFILE.armor.branch).toBe("Army");
+    expect(SPEC_PROFILE.armor.reputation).toBeTruthy();
+    // A general has no branch of their own; the defence holder assigns units of any branch.
+    expect("branch" in SPEC_PROFILE.armor).toBe(false);
     expect(SPEC_SEED.armor.length).toBeGreaterThan(0);
     expect(STAT_META.length).toBeGreaterThan(0);
   });
@@ -42,7 +44,7 @@ describe("findTreeNode + specProfile", () => {
     expect(findTreeNode("nope")).toBeNull();
   });
   it("returns a spec profile (fallback to armor)", () => {
-    expect(specProfile("naval").branch).toBe("Navy");
+    expect(specProfile("naval")).toBe(SPEC_PROFILE.naval);
     expect(specProfile("bogus" as never).reputation).toBeTruthy();
   });
 });

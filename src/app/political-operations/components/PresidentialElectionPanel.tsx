@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { StateOrganizationTab } from "./StateOrganizationTab";
+import { campaignPageHref } from "@/lib/campaignManager/links";
 
 interface Props {
   activePresidentialCandidacy: {
@@ -57,7 +58,10 @@ export function PresidentialElectionPanel({ activePresidentialCandidacy }: Props
       {sub === "stateOrg" && <StateOrganizationTab />}
       {sub === "campaignManager" && activePresidentialCandidacy && (
         <iframe
-          src={`/campaign/${activePresidentialCandidacy.campaignId}?embedded=political-operations`}
+          src={campaignPageHref({
+            campaignId: activePresidentialCandidacy.campaignId,
+            embedded: true,
+          })}
           className="h-[700px] w-full rounded border border-card-border"
           title="Campaign manager"
         />

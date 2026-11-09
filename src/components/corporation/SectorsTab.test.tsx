@@ -14,6 +14,7 @@ import messages from "../../../messages/en/corporations.json";
 import type { ReactElement, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SectorsTab from "./SectorsTab";
+import { siteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { SectorDetail } from "./CorporationPageTypes";
 
 vi.mock("./ExpandMarketModal", () => ({
@@ -641,5 +642,50 @@ describe("SectorsTab quick mothball (suggestion 412)", () => {
       />
     );
     expect(screen.queryByRole("button", { name: "Mothball" })).toBeNull();
+  });
+});
+
+describe("SectorsTab plants total reconciliation", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const withStatement = (id: string, input: Parameters<typeof siteStatement>[0]) =>
+    sector({
+      _id: id,
+      sectorType: "manufacturing",
+      displayName: `Works ${id}`,
+      siteStatement: siteStatement(input),
+    });
+
+  it("explains the gap when internal supply charges have no matching income in the table", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[
+          withStatement("a", { revenue: 1000, totalCost: 400, charge: 300 }),
+          withStatement("b", { revenue: 2000, totalCost: 900, charge: 200 }),
+        ]}
+      />
+    );
+    const note = screen.getByTestId("sector-total-reconciliation");
+    expect(note.textContent).toMatch(/^Rows add to /);
+    expect(note.getAttribute("title")).toMatch(/charged .* for supplies from your other sites/);
+    expect(screen.getByText("Internal transfers excluded")).toBeTruthy();
+  });
+
+  it("shows no reconciliation when internal income and charges offset", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[
+          withStatement("a", { revenue: 1000, totalCost: 400, income: 300 }),
+          withStatement("b", { revenue: 2000, totalCost: 900, charge: 300 }),
+        ]}
+      />
+    );
+    expect(screen.queryByTestId("sector-total-reconciliation")).toBeNull();
   });
 });

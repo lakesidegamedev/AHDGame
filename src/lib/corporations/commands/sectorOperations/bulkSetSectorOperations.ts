@@ -30,6 +30,7 @@ import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFla
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -363,6 +364,7 @@ async function bulkSetCapacity(
   }
 
   const now = new Date();
+  const currentTurn = await getCurrentTurn(db).catch(() => 0);
   const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
     eligible.map((s) => ({
       updateOne: {
@@ -373,7 +375,14 @@ async function bulkSetCapacity(
           constructionPropertyTransition: { $exists: false },
           "constructionFinancing.status": { $nin: ["awaiting_approval", "funding"] },
         },
-        update: { $set: { mothballed, activeCapacityPercent: 100, updatedAt: now } },
+        update: {
+          $set: {
+            mothballed,
+            activeCapacityPercent: 100,
+            updatedAt: now,
+            ...(s.mothballed === true && !mothballed ? ownerRestartFields(currentTurn) : {}),
+          },
+        },
       },
     }))
   );
@@ -385,7 +394,7 @@ async function bulkSetCapacity(
     characterId: corporation.ceoId,
     userId,
     actionType: mothballed ? "mothballSector" : "reactivateSector",
-    turn: await getCurrentTurn(db).catch(() => 0),
+    turn: currentTurn,
     characterName: corporation.name,
     countryId: scope.countryId,
     result: {

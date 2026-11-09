@@ -945,6 +945,13 @@ export interface DemographicEffect {
   /** Bucket key within `dim` ("no_college", "white", "degree_plus", …). */
   bucket?: string;
   direction: number; // -1 to +1, rate of change per cycle
+  /**
+   * Which enacted option score scales this effect. Absent = "economic" (the
+   * legacy behavior for every seeded effect). "social" is for laws whose options
+   * vary only on the social axis (their economic score is 0, so the default
+   * strength would be 0 and the effect could never move).
+   */
+  strengthAxis?: "economic" | "social";
   /** Target field. Absent = "population" — legacy seed data behaves exactly as before. */
   target?: DemographicEffectTarget;
   /**

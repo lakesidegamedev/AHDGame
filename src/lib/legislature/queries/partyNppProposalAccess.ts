@@ -23,7 +23,12 @@ export async function resolvePartyNppProposalAccess(
   db: Db,
   countryId: CountryId,
   stateId: string,
-  character: Pick<Character, "_id" | "party" | "countryId"> | null | undefined
+  character: Pick<Character, "_id" | "party" | "countryId"> | null | undefined,
+  /**
+   * Impeachment articles are not a bill, so a legislator already carrying a bill or a queued
+   * governor bill can still file them. Bill proposals leave this off.
+   */
+  options: { ignoreBillReservations?: boolean } = {}
 ): Promise<{ authorized: boolean; npp: Pick<NPP, "_id" | "name" | "party"> | null }> {
   const denied = { authorized: false, npp: null };
   if (!character?.party || !isSameCountry(character, { countryId })) return denied;
@@ -66,6 +71,7 @@ export async function resolvePartyNppProposalAccess(
     seat.nppId && hasPartyNppSeats(seat.seatsHeld) ? [seat.nppId] : []
   );
   if (!ids.length) return { authorized: true, npp: null };
+  const skipReservations = options.ignoreBillReservations === true;
   const [npps, busy, queued] = await Promise.all([
     db
       .collection<NPP>("npps")
@@ -75,23 +81,27 @@ export async function resolvePartyNppProposalAccess(
       )
       .sort({ _id: 1 })
       .toArray(),
-    db
-      .collection<StateBill>("stateBills")
-      .find(
-        {
-          status: { $nin: STATE_TERMINAL_STATUSES },
-          $or: [{ sponsorNppId: { $in: ids } }, { isNPP: true, nppId: { $in: ids } }],
-        },
-        { projection: { sponsorNppId: 1, nppId: 1 } }
-      )
-      .toArray(),
-    db
-      .collection<GovernorQueuedBill>("governorLegislationQueue")
-      .find(
-        { countryId, status: "pending", targetNppId: { $in: ids } },
-        { projection: { targetNppId: 1 } }
-      )
-      .toArray(),
+    skipReservations
+      ? Promise.resolve([] as Pick<StateBill, "sponsorNppId" | "nppId">[])
+      : db
+          .collection<StateBill>("stateBills")
+          .find(
+            {
+              status: { $nin: STATE_TERMINAL_STATUSES },
+              $or: [{ sponsorNppId: { $in: ids } }, { isNPP: true, nppId: { $in: ids } }],
+            },
+            { projection: { sponsorNppId: 1, nppId: 1 } }
+          )
+          .toArray(),
+    skipReservations
+      ? Promise.resolve([] as Pick<GovernorQueuedBill, "targetNppId">[])
+      : db
+          .collection<GovernorQueuedBill>("governorLegislationQueue")
+          .find(
+            { countryId, status: "pending", targetNppId: { $in: ids } },
+            { projection: { targetNppId: 1 } }
+          )
+          .toArray(),
   ]);
   const unavailable = new Set([
     ...busy.flatMap((bill) => [bill.sponsorNppId?.toString(), bill.nppId?.toString()]),

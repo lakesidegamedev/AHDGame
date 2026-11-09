@@ -1,6 +1,8 @@
 /**
  * Internal supply policy settings. The CEO chooses market, own-plant or wholly
  * owned group priority. Changes take effect in the next plants-tier clearing.
+ * In a funded world own sites come first unless the company explicitly chose
+ * the open market, and the read reports what own sites sent each other.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,10 +15,14 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import {
   DEFAULT_INTERNAL_SUPPLY_POLICY,
+  FUNDED_DEFAULT_SUPPLY_POLICY,
+  type InternalSupplyPolicy,
   ownRouteIdentity,
   resolveSupplyPolicies,
 } from "@/lib/market/internalSupply/rules";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
+import { TURNS_PER_DAY } from "@/lib/constants/corporations";
+import { ownSiteSupplySummary } from "@/lib/corporations/rules/ownSiteSupplySummary";
 import type { Corporation, CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 
 export const internalSupplyPolicySchema = z
@@ -88,24 +94,55 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     ).get(corporation._id.toString());
     const inherited =
       effective?.root !== undefined && effective.root !== corporation._id.toString();
+    // Funded worlds send own output to own sites first unless the company
+    // explicitly chose the open market (issue 5505), so an unset policy reads
+    // as own sites first there. Elsewhere the unset default stays the market.
+    const unsetPolicy: InternalSupplyPolicy = fundedMarket
+      ? FUNDED_DEFAULT_SUPPLY_POLICY
+      : DEFAULT_INTERNAL_SUPPLY_POLICY;
+    const effectivePolicy =
+      !effective || effective.policy === DEFAULT_INTERNAL_SUPPLY_POLICY
+        ? unsetPolicy
+        : effective.policy;
     if (request.method === "GET") {
       const sectors = await db
         .collection<CorporateSector>("corporateSectors")
         .find(
           { corporationId: corporation._id },
           {
-            projection: {
-              internalSupplyReceipt: 1,
-            },
+            projection: fundedMarket
+              ? {
+                  "producerSettlement.turn": 1,
+                  "producerSettlement.products.commodity": 1,
+                  "producerSettlement.products.producedUnits": 1,
+                  "producerSettlement.products.soldUnits": 1,
+                  "producerSettlement.products.internalDeliveredUnits": 1,
+                  "producerSettlement.products.askingUnitPrice": 1,
+                  "producerSettlement.products.captiveUnitValue": 1,
+                }
+              : {
+                  internalSupplyReceipt: 1,
+                },
           }
         )
         .toArray();
-      const lastTurn = Math.max(0, ...sectors.map((s) => s.internalSupplyReceipt?.turn ?? 0));
+      // Funded worlds never write the legacy reservation record; the settled
+      // receipts say what each site sent the company's other sites.
+      const ownSites = fundedMarket
+        ? ownSiteSupplySummary(
+            sectors.map((s) => s.producerSettlement),
+            world?.currentTurn ?? 0,
+            TURNS_PER_DAY
+          )
+        : null;
+      const lastTurn = fundedMarket
+        ? 0
+        : Math.max(0, ...sectors.map((s) => s.internalSupplyReceipt?.turn ?? 0));
       const received: Record<string, number> = {};
       const reserved: Record<string, number> = {};
       let discountCostAnchor = 0;
       for (const s of sectors) {
-        if (s.internalSupplyReceipt?.turn !== lastTurn) continue;
+        if (!lastTurn || s.internalSupplyReceipt?.turn !== lastTurn) continue;
         for (const [key, units] of Object.entries(s.internalSupplyReceipt.received))
           received[key] = (received[key] ?? 0) + (units ?? 0);
         for (const [key, units] of Object.entries(s.internalSupplyReceipt.reserved))
@@ -133,14 +170,15 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
         {
           ownHaulTurn: network?.turn ?? null,
           ownHauls,
-          policy: corporation.internalSupplyPolicy ?? DEFAULT_INTERNAL_SUPPLY_POLICY,
-          effectivePolicy: effective?.policy ?? DEFAULT_INTERNAL_SUPPLY_POLICY,
+          policy: corporation.internalSupplyPolicy ?? unsetPolicy,
+          effectivePolicy,
           inherited,
           parentId: inherited ? effective?.root : null,
           available,
           groupCoordinationActive,
           fundedMarket,
-          lastTurn: lastTurn || null,
+          lastTurn: (ownSites ? ownSites.turn : lastTurn) || null,
+          ownSites,
           received,
           reserved,
           discountCostAnchor,

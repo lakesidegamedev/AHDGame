@@ -52,7 +52,7 @@ const plants = {
     fillAdjustedMarginPct: 9.8,
     breakEven: { status: "profitable_now", turns: null },
   },
-} as never;
+} as unknown as PlantsData;
 
 describe("MarketMoneyPanel period and scope labels", () => {
   it("separates per-unit averages, daily totals, turns, and SOE remittance (ticket #1072)", () => {
@@ -104,6 +104,28 @@ describe("signed cost lines (ticket 1122)", () => {
     },
     truth: null,
   } as never;
+
+  it("ticket 1773: the Selling tile prints the same share as the sold chip, not 100% of output", () => {
+    render(
+      <MarketMoneyPanel
+        plants={
+          {
+            ...plants,
+            producedUnits: 195,
+            soldUnits: 139,
+            unsoldUnits: 56,
+            fillRate: 139 / 195,
+            truth: { ...plants.truth, soldFraction: 139 / 195 },
+          } as PlantsData
+        }
+        sectorType="manufacturing"
+        financials={null}
+        corporation={{ _id: "natcorp-1", name: "VEB Kombinat", isStateOwned: true }}
+      />
+    );
+    expect(screen.getAllByText("71% sold").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("100% of output")).toBeNull();
+  });
 
   it("renders a negative running-cost line as a credit and totals the real bill", () => {
     render(
@@ -200,6 +222,33 @@ it("names own-site charges and identifies allocated income already included in r
   expect(screen.getByText("Charges from your sites")).toBeTruthy();
 });
 
+it("shows a free supplier's own-site deliveries as a memo, not as revenue (issue 5385)", () => {
+  const free = plants as PlantsData;
+  render(
+    <MarketMoneyPanel
+      plants={{ ...free, pnl: { ...free.pnl, ownSiteMemoAnchor: 4_200 } }}
+      sectorType="manufacturing"
+      financials={null}
+      corporation={{ _id: "fixture", name: "Synthetic producer" }}
+    />
+  );
+  expect(screen.getByText("Sent to your own sites (memo)")).toBeTruthy();
+  expect(screen.getByText("M4200")).toBeTruthy();
+  expect(screen.getByText("M895000")).toBeTruthy();
+});
+
+it("shows no memo line when nothing was sent free", () => {
+  render(
+    <MarketMoneyPanel
+      plants={plants}
+      sectorType="manufacturing"
+      financials={null}
+      corporation={{ _id: "fixture", name: "Synthetic producer" }}
+    />
+  );
+  expect(screen.queryByText("Sent to your own sites (memo)")).toBeNull();
+});
+
 describe("own-site deliveries (ticket 1757)", () => {
   it("names output handed to the company's own sites and does not call it unsold", () => {
     render(
@@ -235,5 +284,37 @@ describe("own-site deliveries (ticket 1757)", () => {
     );
     expect(screen.getByText(/75 units went free to your company's own sites/)).toBeTruthy();
     expect(screen.queryByText(/went unsold/)).toBeNull();
+  });
+
+  it("says priced transfers were charged to own sites and shows the value", () => {
+    const base = plants as PlantsData;
+    render(
+      <MarketMoneyPanel
+        plants={{
+          ...base,
+          ownSiteUnits: 75,
+          pnl: { ...base.pnl, internalSupplyIncomeAnchor: 900 },
+        }}
+        sectorType="energy"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Exxon Mobil" }}
+      />
+    );
+    expect(screen.getByText(/those sites were charged M900/)).toBeTruthy();
+    expect(screen.queryByText(/went free/)).toBeNull();
+  });
+
+  it("says free transfers were free and shows the memo value", () => {
+    const base = plants as PlantsData;
+    render(
+      <MarketMoneyPanel
+        plants={{ ...base, ownSiteUnits: 75, pnl: { ...base.pnl, ownSiteMemoAnchor: 4_200 } }}
+        sectorType="energy"
+        financials={null}
+        corporation={{ _id: "corp-1", name: "Exxon Mobil" }}
+      />
+    );
+    expect(screen.getByText(/went free to your company's own sites/)).toBeTruthy();
+    expect(screen.getByText(/worth about M4200 at your asking price/)).toBeTruthy();
   });
 });

@@ -23,6 +23,7 @@ import {
   facilityVocabulary,
 } from "@/lib/constants/facilityVocabulary";
 import RunMeter from "../components/RunMeter";
+import RunReport from "../components/RunReport";
 import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
@@ -266,6 +267,16 @@ export default function PlantPanel({
         <p className="mb-2 mt-5 text-body-sm font-medium text-muted">Today&apos;s run</p>
         {hasRun ? (
           <>
+            {plants.runReport && (
+              <RunReport
+                report={plants.runReport}
+                capacityUnits={plants.capacityUnits ?? 0}
+                producedUnits={plants.producedUnits ?? 0}
+                idleCauses={plants.idleCauses}
+                sectorType={sectorType}
+                mothballed={mothballed}
+              />
+            )}
             <RunMeter
               capacityUnits={plants.capacityUnits ?? 0}
               producedUnits={plants.producedUnits ?? 0}
@@ -305,6 +316,13 @@ export default function PlantPanel({
           </p>
         )}
       </div>
+
+      {isCeo && !mothballed && plants.autopilotHoldUntilTurn != null && (
+        <div className="mt-4 rounded-lg border border-card-border bg-muted/10 px-3 py-2 text-body-sm text-foreground">
+          Autopilot will leave this sector running until turn {plants.autopilotHoldUntilTurn}. You
+          restarted it, so autopilot will not park it before then. You can still park it yourself.
+        </div>
+      )}
 
       {isCeo && !mothballed && idleRetirement && (
         <div className="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">

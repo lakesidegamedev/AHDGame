@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { BLEND, FONT } from "@/components/blend/tokens";
+import { useRaceModeSlots } from "./raceMode/RaceModeContext";
 
 export { presidentialTitle } from "./presidentialTitle";
 
@@ -222,6 +223,9 @@ export function PresidentialStage({
   battleground,
 }: PresidentialStageProps) {
   const [view, setView] = useState<BoardView>("map");
+  const modeSlots = useRaceModeSlots();
+  const campaignBody = modeSlots?.campaign ?? null;
+  const mapAbove = Boolean(modeSlots?.mapAbove);
   const statusBar = useStatusBarHeight();
   const boards: Record<BoardView, ReactNode> = { map, squares, battleground };
   const views = (Object.keys(boards) as BoardView[]).filter((v) => v === "map" || boards[v]);
@@ -289,6 +293,97 @@ export function PresidentialStage({
     </div>
   ) : null;
 
+  const header = (
+    <header
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        flexWrap: "wrap",
+        gap: 16,
+        padding: "16px 20px 12px",
+        borderBottom: `1px solid ${BLEND.hairline}`,
+      }}
+    >
+      <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+        {kicker ? (
+          <div
+            style={{
+              fontFamily: FONT.mono,
+              fontSize: 10.5,
+              letterSpacing: ".16em",
+              textTransform: "uppercase",
+              color: BLEND.muted,
+            }}
+          >
+            {kicker}
+          </div>
+        ) : null}
+        <h1
+          style={{
+            margin: "6px 0 0",
+            fontFamily: FONT.sans,
+            fontSize: "clamp(24px, 2.6vw, 44px)",
+            lineHeight: 1.05,
+            fontWeight: 650,
+            letterSpacing: "-0.025em",
+          }}
+        >
+          {title}
+        </h1>
+        {deck ? (
+          <p style={{ margin: "8px 0 0", fontSize: 15, lineHeight: 1.4, color: BLEND.muted }}>
+            {deck}
+          </p>
+        ) : null}
+      </div>
+      {modeSlots?.switcher}
+      {campaignBody ? null : toggle}
+    </header>
+  );
+
+  // Campaign mode keeps the masthead and the ticker and swaps the race body
+  // (rails, board) for the campaign workspace, which scrolls with the page. On a
+  // US race the map stays above the workspace: it is where a state's campaign
+  // actions are reached.
+  if (campaignBody) {
+    return (
+      <section
+        style={{
+          background: BLEND.page,
+          color: BLEND.ink,
+          fontFamily: FONT.sans,
+          borderBottom: `1px solid ${BLEND.hairlineStrong}`,
+        }}
+      >
+        {header}
+        {actions ? (
+          <div
+            style={{ padding: "10px 20px", borderBottom: `1px solid ${BLEND.hairline}` }}
+            data-testid="stage-actions"
+          >
+            {actions}
+          </div>
+        ) : null}
+        {ticker}
+        {nav ? <div style={{ padding: "10px 20px 0" }}>{nav}</div> : null}
+        {mapAbove ? (
+          <div
+            data-testid="campaign-map"
+            style={{
+              position: "relative",
+              height: "min(78vh, 680px)",
+              minHeight: 360,
+              borderBottom: `1px solid ${BLEND.hairlineStrong}`,
+            }}
+          >
+            {map}
+          </div>
+        ) : null}
+        <div data-testid="campaign-mode">{campaignBody}</div>
+      </section>
+    );
+  }
+
   return (
     <section
       className={right ? "pres-stage" : "pres-stage pres-stage--no-right"}
@@ -310,49 +405,7 @@ export function PresidentialStage({
       </aside>
 
       <div className="pres-stage__centre">
-        <header
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 16,
-            padding: "16px 20px 12px",
-            borderBottom: `1px solid ${BLEND.hairline}`,
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {kicker ? (
-              <div
-                style={{
-                  fontFamily: FONT.mono,
-                  fontSize: 10.5,
-                  letterSpacing: ".16em",
-                  textTransform: "uppercase",
-                  color: BLEND.muted,
-                }}
-              >
-                {kicker}
-              </div>
-            ) : null}
-            <h1
-              style={{
-                margin: "6px 0 0",
-                fontFamily: FONT.sans,
-                fontSize: "clamp(24px, 2.6vw, 44px)",
-                lineHeight: 1.05,
-                fontWeight: 650,
-                letterSpacing: "-0.025em",
-              }}
-            >
-              {title}
-            </h1>
-            {deck ? (
-              <p style={{ margin: "8px 0 0", fontSize: 15, lineHeight: 1.4, color: BLEND.muted }}>
-                {deck}
-              </p>
-            ) : null}
-          </div>
-          {toggle}
-        </header>
+        {header}
         {actions ? (
           <div
             style={{ padding: "10px 20px", borderBottom: `1px solid ${BLEND.hairline}` }}

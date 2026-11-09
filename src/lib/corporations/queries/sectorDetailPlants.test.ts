@@ -89,6 +89,65 @@ describe("buildSectorPlantsSection", () => {
         (s.pnl.internalSupplyChargeAnchor ?? 0)
     ).toBeCloseTo(s.pnl.profitAnchor, 8);
   });
+  it("keeps a free supplier estimate separate from its actual loss on legacy payloads", () => {
+    // Everything went to own sites for free: no revenue, the whole bill booked.
+    const money = {
+      ...BASE_ARGS.money,
+      realizedRevenueAnchor: 0,
+      maintenanceNetAnchor: 600,
+      profitAnchor: -850,
+    };
+    const supplier = sectorFixture({
+      soldUnits: 0,
+      producerSettlement: {
+        turn: 99,
+        products: [
+          { commodity: "steel", producedUnits: 5, internalDeliveredUnits: 5, askingUnitPrice: 20 },
+        ],
+      } as unknown as CorporateSector["producerSettlement"],
+    });
+    const booked = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      sector: sectorFixture({ soldUnits: 0 }),
+      money,
+    });
+    expect(booked.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
+    expect(booked.pnl.ownSiteMemoAnchor).toBeUndefined();
+    const s = buildSectorPlantsSection({ ...BASE_ARGS, eraUnitScale: 1, sector: supplier, money });
+    // 5 units a turn at 20, over a 24-turn day.
+    expect(s.pnl.ownSiteMemoAnchor).toBe(2400);
+    expect(s.pnl.revenueAnchor).toBe(0);
+    expect(s.pnl.profitAnchor).toBe(-850);
+    expect(s.truth.fillAdjustedMarginPct).toBe(NET_MARGIN_FLOOR_PCT);
+  });
+  it("adds no memo once the deliveries were priced", () => {
+    const s = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      eraUnitScale: 1,
+      sector: sectorFixture({
+        producerSettlement: {
+          turn: 99,
+          products: [
+            {
+              commodity: "steel",
+              producedUnits: 5,
+              internalDeliveredUnits: 5,
+              askingUnitPrice: 20,
+            },
+          ],
+        } as unknown as CorporateSector["producerSettlement"],
+      }),
+      money: {
+        ...BASE_ARGS.money,
+        realizedRevenueAnchor: 1040,
+        profitAnchor: 190,
+        internalSupplyIncomeAnchor: 40,
+      },
+    });
+    expect(s.pnl.ownSiteMemoAnchor).toBeUndefined();
+    expect(s.truth.fillAdjustedMarginPct).toBeCloseTo((190 / 1040) * 100, 8);
+  });
   it("does not attribute all idle output to an unquantified deposit constraint", () => {
     const result = buildSectorPlantsSection({
       ...BASE_ARGS,
@@ -161,6 +220,36 @@ describe("buildSectorPlantsSection", () => {
     expect(s.ownSiteUnits).toBeCloseTo(75.23, 1);
     expect(s.unsoldUnits).toBeCloseTo(0, 1);
     expect(s.idleCauses.some((c) => c.cause === "demand")).toBe(false);
+  });
+
+  it("says a sold-out run cut by an input is held by it, not ramping (ticket 1765)", () => {
+    const settled = (over: Record<string, unknown>) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          capitalStock: 1_000,
+          producedUnits: 300,
+          soldUnits: 300,
+          labourStaffingFactor: 1,
+          producerSettlement: {
+            turn: 100,
+            activeUnits: 100,
+            offeredUnits: 30,
+            producedUnits: 30,
+            soldUnits: 30,
+            plannedRunShare: 0.4,
+            ...over,
+          } as unknown as CorporateSector["producerSettlement"],
+        }),
+      }).idleCauses;
+    expect(settled({}).map((c) => c.cause)).toEqual(["ramping", "inputs"]);
+    const byInput = settled({ runCutBy: ["inputs"], bindingInput: "iron" });
+    expect(byInput.map((c) => c.cause)).toEqual(["held", "inputs"]);
+    expect(byInput[0]?.heldInput).toBe("Iron Ore");
+    const byCash = settled({ runCutBy: ["cash"] });
+    expect(byCash.map((c) => c.cause)).toEqual(["held", "cash"]);
+    expect(byCash[0]?.heldInput).toBeUndefined();
   });
 
   it("falls back to the pre-migration visible facility count", () => {
@@ -456,8 +545,9 @@ describe("buildSectorPlantsSection", () => {
           soldByCommodity: { steel: 0.2, coal: 0.1 },
         }),
       });
-      // The engine's weighted soldFraction wins over the units ratio.
-      expect(s.truth.soldFraction).toBeCloseTo(0.147, 6);
+      // The units ratio (120 sold of 150 made) wins over the stored engine value,
+      // so the tile cannot disagree with the Offered / Sold / Unsold rows.
+      expect(s.truth.soldFraction).toBeCloseTo(120 / 150, 6);
       expect(s.truth.soldByCommodity).toEqual([
         { commodity: "steel", fraction: 0.2 },
         { commodity: "coal", fraction: 0.1 },
@@ -468,6 +558,30 @@ describe("buildSectorPlantsSection", () => {
       expect(s.truth.costPerUnitAnchor).toBeCloseTo(800 / 150, 6);
       // Net margin: profit 150 over realized revenue 1000.
       expect(s.truth.fillAdjustedMarginPct).toBeCloseTo((150 / 1000) * 100, 6);
+    });
+
+    it("ticket 1773: stored 100% beside 139 sold of 195 made reads 71%, not 100%", () => {
+      const s = buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({ producedUnits: 195, soldUnits: 139, soldFraction: 1 }),
+      });
+      expect(s.truth.soldFraction).toBeCloseTo(139 / 195, 6);
+      expect(s.fillRate).toBeCloseTo(139 / 195, 6);
+      expect(s.unsoldUnits).toBeCloseTo(56, 6);
+    });
+
+    it("falls back to the stored engine value only when unit counts are missing", () => {
+      const s = buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          producedUnits: undefined,
+          soldUnits: undefined,
+          soldFraction: 0.4,
+        }),
+      });
+      expect(s.truth.soldFraction).toBeCloseTo(0.4, 6);
     });
 
     it("falls back to the units ratio when the engine wrote no soldFraction", () => {

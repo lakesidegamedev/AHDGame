@@ -922,6 +922,7 @@ export default function CorporationDetailPage() {
     isPrivate: !!corporation.isPrivate,
     isCeo,
     viewerIsControllingParentCeo: !!corporation.viewerIsControllingParentCeo,
+    viewerIsShareholder: !!corporation.viewerIsShareholder,
     modViewEnabled,
   });
   const baseTabs = isNationalCorp
@@ -1410,6 +1411,12 @@ export default function CorporationDetailPage() {
 
                   {tab === "sectors" && (
                     <div className="space-y-6">
+                      {isCeo && (
+                        <LegacyProductProjects
+                          corporationId={id}
+                          currencyCode={corporation.liquidCurrencyCode}
+                        />
+                      )}
                       <ProductStudio corporationId={id} onUpdate={fetchCorporation} />
                       {isCeo && corporation.mediaOperatingModelsEnabled === true && (
                         <AdvertisingAgreementsPanel
@@ -1417,7 +1424,6 @@ export default function CorporationDetailPage() {
                           ownsMediaSector={sectors.some((sector) => sector.sectorType === "media")}
                         />
                       )}
-                      {isCeo && <LegacyProductProjects corporationId={id} />}
                       <SectorsTab
                         sectors={sectors}
                         isCeo={isCeo}
@@ -1487,24 +1493,25 @@ export default function CorporationDetailPage() {
             deep link on a private corp mounts SharesTab on the FIRST render with
             the redacted payload (totalShares etc. stripped for non-CEO viewers)
             and crashes before the effect can fall back (GlitchTip AHD-A1). */}
-                  {tab === "shares" && !(corpIsPrivate && !isCeo) && (
-                    <SharesTab
-                      corporation={corporation}
-                      myCharacterId={myCharacterId}
-                      myCashOnHand={myCashOnHand}
-                      myCurrencyBalances={myCurrencyBalances}
-                      myHomeCurrency={myHomeCurrency}
-                      autoConvertEnabled={myAutoConvertEnabled}
-                      onAutoConvertChange={setMyAutoConvertEnabled}
-                      isCeo={isCeo}
-                      myCorporation={myCorporation}
-                      corpId={id}
-                      onRefresh={() => {
-                        void fetchCorporation();
-                        void fetchViewerContext();
-                      }}
-                    />
-                  )}
+                  {tab === "shares" &&
+                    !(corpIsPrivate && !isCeo && !corporation.viewerIsShareholder) && (
+                      <SharesTab
+                        corporation={corporation}
+                        myCharacterId={myCharacterId}
+                        myCashOnHand={myCashOnHand}
+                        myCurrencyBalances={myCurrencyBalances}
+                        myHomeCurrency={myHomeCurrency}
+                        autoConvertEnabled={myAutoConvertEnabled}
+                        onAutoConvertChange={setMyAutoConvertEnabled}
+                        isCeo={isCeo}
+                        myCorporation={myCorporation}
+                        corpId={id}
+                        onRefresh={() => {
+                          void fetchCorporation();
+                          void fetchViewerContext();
+                        }}
+                      />
+                    )}
 
                   {tab === "credit" &&
                     (() => {

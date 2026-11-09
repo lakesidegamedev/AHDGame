@@ -54,6 +54,9 @@ const WageLevelPanel = dynamic(() => import("./sections/WageLevelPanel"), {
 });
 const PricingPanel = dynamic(() => import("./sections/PricingPanel"), { loading: PanelFallback });
 const CapitalPanel = dynamic(() => import("./sections/CapitalPanel"), { loading: PanelFallback });
+const SupplyPriorityPanel = dynamic(() => import("./sections/SupplyPriorityPanel"), {
+  ssr: false,
+});
 const InventoryPanel = dynamic(() => import("./sections/InventoryPanel"), {
   loading: PanelFallback,
 });
@@ -110,6 +113,8 @@ export default function SectorDetailPage() {
   const [capacityBusy, setCapacityBusy] = useState(false);
   const [reviewStrategyId, setReviewStrategyId] = useState<string | null>(null);
   const [capacityMessage, setCapacityMessage] = useState("");
+  // The build the operating reserve refused, ready to resend with the override.
+  const [reserveRetry, setReserveRetry] = useState<Record<string, unknown> | null>(null);
 
   const [state, dispatch] = useSectorPageState();
   const { showToast } = useToast();
@@ -282,6 +287,7 @@ export default function SectorDetailPage() {
     async (body: Record<string, unknown>) => {
       setCapacityBusy(true);
       setCapacityMessage("");
+      setReserveRetry(null);
       try {
         const res = await fetch(`/api/corporations/${corpId}/sectors/${sectorId}/build`, {
           method: "POST",
@@ -295,6 +301,11 @@ export default function SectorDetailPage() {
           return true;
         }
         setCapacityMessage((data as { error?: string }).error ?? "That did not work. Try again.");
+        if (
+          (data as { code?: string }).code === "OPERATING_RESERVE_SHORT" &&
+          body.action === "build"
+        )
+          setReserveRetry({ ...body, overrideOperatingReserve: true });
         return false;
       } catch {
         setCapacityMessage("Network error. Nothing was changed.");
@@ -948,6 +959,7 @@ export default function SectorDetailPage() {
                 liquidCurrencyCode={corporation?.liquidCurrencyCode}
                 currentTurn={gameTurn?.currentTurn ?? 0}
                 prospectingEnabled={prospectingEnabled}
+                corpCanProspect={corporation?.canProspect === true}
               />
             )}
 
@@ -981,6 +993,14 @@ export default function SectorDetailPage() {
                 sectorId={sectorId}
                 isCeo={isCeo}
                 inventory={plants.truth.inventory}
+              />
+            )}
+
+            {isCeo && plants?.truth && (
+              <SupplyPriorityPanel
+                corporationId={corpId}
+                sectorId={sectorId}
+                sellOutsideFirst={plants.truth.sellOutsideFirst === true}
               />
             )}
 
@@ -1190,6 +1210,9 @@ export default function SectorDetailPage() {
             }
             onSubmit={(units, financing) =>
               runCapacityAction({ action: "build", units, ...(financing ? { financing } : {}) })
+            }
+            onOverrideReserve={
+              reserveRetry ? () => void runCapacityAction(reserveRetry) : undefined
             }
           />
         )}

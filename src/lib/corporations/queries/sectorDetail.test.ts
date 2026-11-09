@@ -161,6 +161,8 @@ describe("getCorporationSectorDetail", () => {
     expect(data.sector.sectorType).toBe("technology");
     expect(data.sector.stateId).toBe("CA");
     expect(data.isCeo).toBe(false);
+    // A non-extraction company viewing a non-extraction sector is not offered Prospect.
+    expect(data.corporation.canProspect).toBe(false);
     // The withheld figures are labelled so the client shows "why" rather than a
     // bare ", " that reads as $0. Anonymous viewer of a private corp → signed-out.
     expect(data.financialVisibility).toEqual({ hidden: true, reason: "signed-out" });
@@ -505,4 +507,92 @@ describe("getCorporationSectorDetail", () => {
     expect(data.sector.unionName).toBe("United Steelworkers");
     expect(data.sector.unionWageDemand).toBeNull();
   });
+  it.each([0, 100, 200])(
+    "uses the saved internal price in the header and plants statement, income %s",
+    async (income) => {
+      const corporationId = new ObjectId();
+      const sectorId = new ObjectId();
+      const owner = new ObjectId();
+      const { getAuthUser } = await import("@/lib/auth");
+      vi.mocked(getAuthUser).mockResolvedValueOnce({ userId: owner.toString() } as Awaited<
+        ReturnType<typeof getAuthUser>
+      >);
+      db.collectionMocks.corporations.findOne.mockResolvedValue({
+        _id: corporationId,
+        userId: owner,
+        sequentialId: 6,
+        name: "Supplier",
+        type: "manufacturing",
+        countryId: "US",
+        liquidCurrencyCode: "USD",
+      });
+      db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
+        _id: sectorId,
+        corporationId,
+        stateId: "CA",
+        countryId: "US",
+        sectorType: "manufacturing",
+        strategyId: "standard",
+        revenue: 1000,
+        realizedRevenue: 0,
+        capitalStock: 10,
+        producedUnits: 240,
+        soldUnits: 0,
+        currentGrowthCost: 0,
+        plantsPnl: {
+          source: "funded",
+          turn: 12,
+          revenue: 0,
+          totalCost: 2400,
+          profit: -2400,
+          internalSupplyIncome: income * 24,
+        },
+        producerSettlement: {
+          turn: 12,
+          producedUnits: 10,
+          soldUnits: 0,
+          inputsConsumed: 60,
+          labourPaid: 20,
+          otherOperatingPaid: 20,
+          products: [
+            {
+              commodity: "steel",
+              producedUnits: 10,
+              internalDeliveredUnits: 10,
+              askingUnitPrice: 20,
+            },
+          ],
+        },
+      });
+      db.collection("gameConfig").findOne.mockResolvedValue({ marketSystemMode: "plants" });
+      const response = await getCorporationSectorDetail(
+        new Request(`http://localhost/api/corporations/6/sectors/${sectorId}`),
+        { params: Promise.resolve({ id: "6", sectorId: sectorId.toString() }) }
+      );
+      const data = await response.json();
+      expect(response.status).toBe(200);
+      const header = data.financials.siteStatement;
+      const panel = data.plants.pnl.statement;
+      expect(header).toEqual(panel);
+      expect(header).toMatchObject({
+        turn: 12,
+        revenue: income * 24,
+        totalCost: 2400,
+        profit: (income - 100) * 24,
+      });
+      expect(data.plants.pnl.revenueAnchor).toBe(header.revenue);
+      expect(data.plants.pnl.profitAnchor).toBe(header.profit);
+      expect(data.plants.truth.fillAdjustedMarginPct).toBe(header.netMarginPct);
+      const pnl = data.plants.pnl;
+      expect(
+        pnl.revenueAnchor -
+          pnl.inputsAnchor -
+          pnl.labourAnchor -
+          pnl.upkeepAnchor -
+          pnl.complianceAnchor -
+          pnl.otherOperatingAnchor -
+          pnl.growthAndBuildAnchor
+      ).toBeCloseTo(pnl.profitAnchor);
+    }
+  );
 });

@@ -169,6 +169,14 @@ export interface GameConfig {
    */
   producerDemandPlanStage?: number;
   /**
+   * Funded producer market (#5451, #5453): >= 1 gives household orders demand
+   * curves (a price ladder per good sharing one budget) and income-dependent
+   * basket weights, so cheaper supply sells more units and richer households
+   * shift spending toward discretionary goods; the spent share responds to the
+   * prime rate. 0 or absent = off.
+   */
+  producerDemandCurveStage?: number;
+  /**
    * Funded producer market: >= 1 re-clears household spend that was stranded in
    * sold-out lanes onto the household's other lanes with unsold supply, once, at
    * the same posted prices. 0 or absent = off.
@@ -183,6 +191,17 @@ export interface GameConfig {
    */
   producerOwnSitesFirstStage?: number;
   /**
+   * Freight network: >= 1 gives a company's own cross-state hauls first use of
+   * the freight capacity that company owns in the origin state (the covered
+   * share is internal supply: no charge, no haul revenue); only the rest of its
+   * capacity joins the shared pool. >= 2 extends this to everything the company
+   * sells to the general market out of that state (its output share of the
+   * state's shipments rides its own trucks first; rivals get the remainder).
+   * 0 or absent = one shared first-come pool.
+   * Needs freightSettlementMode "active" (own routes only run then).
+   */
+  ownFreightFirstStage?: number;
+  /**
    * Funded producer market: >= 1 keeps a share of each public budget line's
    * unfilled money in the public wallet for the next turn (instead of burning
    * it at close), capped at four turns of the line's outlay. Support and grants
@@ -191,6 +210,13 @@ export interface GameConfig {
   producerPublicCarryStage?: number;
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
+  /**
+   * Funded producer market (issue #5454): >= 1 lets a public line draw at most
+   * half its fresh outlay from the carry each turn, holding the rest for later
+   * turns, so supply landing on a long-short line does not unlock several
+   * turns of budget at once. 0 or absent = off.
+   */
+  producerPublicCarryReleaseStage?: number;
   /**
    * Funded producer market: > 0 limits how much of last turn's run a plant may
    * shed in one turn (for example 0.15 = at most 15% a turn), so output and
@@ -244,6 +270,31 @@ export interface GameConfig {
    */
   producerFundedBookStage?: number;
   /**
+   * Funded producer market: >= 1 counts orders from stateless national wallets
+   * (public, military and investment buyers) in their country's national
+   * supply and demand. Before, they reached the world total only, so every
+   * engine reader of national demand (national price leg, margin modifier,
+   * latent shortage, NPP placement for reachable goods) missed government
+   * demand. State books are unchanged. 0 or absent = off.
+   */
+  producerNationalPublicDemandStage?: number;
+  /**
+   * Funded producer market: >= 1 lets each public buyer's world-book order
+   * clear sellers in its own country before the ordinary book pass. Before, a
+   * scarce world book went to buyers in order-id order, which for public
+   * buyers is their country code, so foreign governments bought out a
+   * country's own ordnance before its order came up. Needs country tags
+   * (producerFundedBookStage). 0 or absent = off.
+   */
+  producerPublicHomeFirstStage?: number;
+  /**
+   * Funded producer market: >= 1 clears each price level of the world book
+   * across public buyers together, pro rata to what each still wants, after
+   * any home-first pass. Before, the leftover went to governments in order-id
+   * order, which is alphabetical by country code. 0 or absent = off.
+   */
+  producerPublicFairShareStage?: number;
+  /**
    * Funded producer market: >= 1 pays a share of the public funding left after
    * the line carry, transition support and grants to the same country's
    * households (weighted by wages) instead of burning it at close. Nothing is
@@ -262,6 +313,15 @@ export interface GameConfig {
    * company's sites as sales for the demand plan and the zero-sales counter
    * (valued at its asking price for the profit test), so a captive supplier is
    * not read as idle and mothballed. Settlement is unchanged. 0 or absent = off.
+   * >= 2 values them at
+   * what those sites bid (capped at the reference, never under the ask) when the
+   * company's own sites were left short of that good, so a plant feeding its
+   * own short consumers is not cut for a market price below its cost.
+   * >= 3 also books every own-site delivery in the site accounts at that turn's
+   * clearing price for the good (the selling site's ask when it did not trade):
+   * income for the selling site and the same charge for the receiving site, so
+   * company totals and cash are unchanged. Companies with their own internal
+   * transfer price keep it.
    */
   producerCaptiveDeliveryStage?: number;
   /**
@@ -275,14 +335,171 @@ export interface GameConfig {
    */
   producerJointRunStage?: number;
   /**
+   * Funded producer market: >= 1 plans a plant's run from the share it planned
+   * last turn, not only what it made, so a run cut by short inputs or cash does
+   * not lower the next plan; a plant that sold out at a profit grows by a fixed
+   * step of capacity a turn; and only a second glut turn in a row drops a plant
+   * to its floor (one glut turn steps it down). >= 2: the never-below-last-
+   * turn's-sales floor subtracts stock held beyond producerStockCover turns of
+   * sales, so a plant sitting on a pile sells from it instead of making more.
+   * >= 3: a line whose sold units lost money after inputs, wages and site costs
+   * steps down a cut a turn, below last turn's sales if need be.
+   * 0 or absent = off.
+   */
+  producerRunPlanStage?: number;
+  /**
+   * Funded producer market: >= 1 judges whether a cash-short company's run
+   * pays for itself (the sales advance) with its inputs at last turn's
+   * clearing price, never above the bid ceiling, instead of at the ceiling.
+   * At the ceiling a run whose sales clearly cover it read as losing money,
+   * so a company that spent its cash on construction stayed held to that cash
+   * turn after turn. The advance stays capped by the run's expected revenue.
+   * 0 or absent = off.
+   */
+  producerSalesAdvancePriceStage?: number;
+  /**
+   * Funded producer market: >= 1 lets an idle plant of a company that cannot
+   * fund a run, and that sold nothing last turn, run a small probe (5% of its
+   * capacity) on intra-turn credit against its output's market price, when
+   * other buyers have funded demand for that output and the probe pays for
+   * itself at market input prices. The probe's sales repay the credit in the
+   * same settlement; what they do not cover stays an ordinary payable. A plant
+   * stops probing after 3 probe turns in a row that did not pay for
+   * themselves (restartProbeRules). 0 or absent = off.
+   */
+  producerZombieRestartStage?: number;
+  /**
+   * Funded producer market: >= 1 makes a household's basket budget its spend
+   * share of this turn's wages plus producerHouseholdSavingsDrawShare of the
+   * rest of its cash, instead of its spend share of all its cash, so money it
+   * could not spend in a shortage is not budgeted again every turn
+   * (householdSpendRules). 0 or absent = off.
+   */
+  producerHouseholdIncomeSpendStage?: number;
+  /** Share of savings a household spends each turn under producerHouseholdIncomeSpendStage. Absent = 0.3. */
+  producerHouseholdSavingsDrawShare?: number;
+  /**
+   * Funded producer market: >= 1 lets an automatic seller that sold out last
+   * turn, in a lane where buyers asked for more than they got, ask a step above
+   * last turn's clearing price instead of at it (shortageAskRules). The step is
+   * 0.25 x (requested / delivered - 1), capped by producerShortageAskMaxStep,
+   * and the ask never passes reference x producerPriceMaxMultiplier. >= 2: a
+   * seller that sold out steps from the higher of the clearing and its own last
+   * ask, so a cheap seller's share of the average cannot pin the lane. 0 or
+   * absent = off.
+   */
+  producerShortageAskStage?: number;
+  /** Largest raise in one turn under producerShortageAskStage. Absent = 0.05. */
+  producerShortageAskMaxStep?: number;
+  /**
+   * Share of a run's expected sales a company may borrow against to run on
+   * little or no cash (salesAdvanceRules). Inside (0, 1]; absent = 0.9.
+   */
+  producerSalesAdvanceRevenueShare?: number;
+  /**
+   * Turns an AI company may stay insolvent and cashless before it is wound down
+   * and its plants pass to funded owners (nppInsolvencyDissolution). Whole
+   * number >= 1; absent = 30.
+   */
+  nppInsolvencyGraceTurns?: number;
+  /**
+   * Funded producer market: >= 1 makes an automatic seller choose, among asks
+   * within 1% of its best expected profit, the one the most buyers can pay
+   * (quoteProducer buyerTieBreak). Stops a whole lane posting a hair above a
+   * household ceiling and selling nothing to households. >= 2: the seller's
+   * sales estimate also assumes competitors quoted at or above a price will
+   * match it. 0 or absent = off.
+   */
+  producerAskBuyerTieStage?: number;
+  /**
+   * Capacity builds paid from cash must leave this many turns of the plants'
+   * running bills (wages, site bills, inputs from their last receipts) unless
+   * the CEO confirms an override (suggestion 409). Absent = 3, 0 = off.
+   */
+  capacityBuildReserveTurns?: number;
+  /**
    * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
    * turn whose recipe's running plants face a measured shortage (units asked
    * over delivered at least 1.5), instead of waiting on the legacy price
    * ratio. 0 or absent = off.
    */
   producerFundedRestartStage?: number;
+  /**
+   * NPP pass: >= 1 reads the unowned headroom of a local service cell
+   * (healthcare, real estate, construction) as the larger of the pool and the
+   * state book's unmet demand net of capacity already in flight. The pool never
+   * refills once incumbents drew it to zero, which closed short states to new
+   * entrants and autopilot growth (rules/stateServiceHeadroom). 0 or absent = off.
+   */
+  nppStateServiceHeadroomStage?: number;
+  /**
+   * NPP pass: >= 1 lets an AI company's existing sector whose main output lane
+   * went short last turn (units asked over delivered at least 1.33) and whose
+   * plant repays a new unit within the payback horizon size one growth step and
+   * ask a bank to fund it, even below its cash floor. Bank underwriting still
+   * applies (rules/shortageGrowthFinance). 0 or absent = off.
+   */
+  nppShortageGrowthFinanceStage?: number;
+  /**
+   * AI company growth gate: >= 1 reads an existing sector's fill as the best
+   * per-product sell-through (sold plus own-site deliveries over offered)
+   * instead of sold over produced across all co-products, and scores
+   * short-lane pressure on the plant's most pressed product. 0 or absent = off.
+   */
+  nppGrowthPerProductFillStage?: number;
+  /**
+   * AI company profit payout: >= 1 pays the household dividend on profit after
+   * this turn's tax (60% of the after-tax profit), never out of opening cash and
+   * not while opening cash is negative. >= 2 also holds AI sector founding and
+   * capacity builds unless opening cash covers a reserve of coupons and running
+   * costs. 0 or absent = off (60% of pre-tax profit).
+   */
+  nppDividendAfterTaxStage?: number;
+  /** Short-lane growth finance requests a turn, on top of the ordinary cap. Absent = 128. */
+  nppShortageGrowthFinanceCandidateLimit?: number;
+  /** Payback horizon (turns) a short-lane growth step must earn back within. Absent = 100. */
+  nppShortageGrowthFinanceMaxPaybackTurns?: number;
+  /** Outstanding construction finance cap in turns of average profit. Absent = 24. */
+  nppShortageGrowthFinanceMaxExposureProfitTurns?: number;
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
+  /**
+   * Funded producer market: >= 1 raises a plant's wages toward
+   * producerWageShareTarget of the value it added last turn, taking at most
+   * producerWageShareSurplusCap of the surplus left after base wages and site
+   * bills, so households earn more of what plants make and no plant is pushed
+   * into a loss on last turn's numbers (wageShareRules.ts). 0 or absent = off.
+   */
+  producerWageShareStage?: number;
+  /** Target wage share (0 to 1) of value added with the stage on. Absent = 0.6. */
+  producerWageShareTarget?: number;
+  /** Largest share (0 to 1) of surplus after base wages the raise takes. Absent = 0.75. */
+  producerWageShareSurplusCap?: number;
+  /**
+   * Funded producer market: >= 1 sets each plant's wage share target from its
+   * state's unemployment instead of producerWageShareTarget (turns the wage
+   * share raise on by itself), moving at most producerLabourWageStep a turn,
+   * and builds every country's economicFactors.wageGrowth from its states'
+   * labour markets (wageShareRules.ts). 0 or absent = off.
+   */
+  producerLabourWageStage?: number;
+  /** Unemployment (%) at or below which the target is at its maximum. Absent = 4.5. */
+  producerLabourWageNaturalRate?: number;
+  /** Unemployment (%) at or above which the target is at its floor. Absent = 12. */
+  producerLabourWageSlackRate?: number;
+  /** Target wage share (0 to 1) in a tight labour market. Absent = 0.55. */
+  producerLabourWageMaxShare?: number;
+  /** Target wage share (0 to 1) in a slack labour market. Absent = 0.3. */
+  producerLabourWageFloorShare?: number;
+  /** Largest move of a plant's effective target a turn (share of value added). Absent = 0.03. */
+  producerLabourWageStep?: number;
+  /**
+   * Labour system: >= 1 lets each country's national minimum wage law in force
+   * set its minimum wage Kaitz ratio, so the law floors low-pay sectors' wages
+   * (src/lib/labour/rules/minimumWageLaw.ts). An admin-set
+   * federalBudget.minimumWageKaitzRatio still wins. 0 or absent = off.
+   */
+  minimumWageLawStage?: number;
   /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
@@ -386,6 +603,15 @@ export interface GameConfig {
    * absent = off.
    */
   fundedValuationStage?: number;
+  /**
+   * With fundedValuationStage on: 1 values a supplier site whose output goes to
+   * its own company's other sites at this turn's lane price for those units
+   * (the receiving site carries the matching charge), so it is not valued at
+   * its book floor while its sister sites get the goods free. Valuation only:
+   * no site account, cash or profit line changes. Companies that book their own
+   * own-site entries are left as they are. 0 or absent = off.
+   */
+  fundedValuationOwnSiteCreditStage?: number;
   /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.
@@ -730,6 +956,25 @@ export interface GameConfig {
    * simulation report from scripts/sim/ per CONTRIBUTING.md.
    */
   sovereignIssuanceConsolidationEnabled?: boolean;
+  /**
+   * Stage gate for consolidated sovereign maturity refinancing. When true the
+   * novation, forced pool rollover and refunding paths add their replacement
+   * units to one shared bond per issuer, currency, coupon, term and turn
+   * instead of inserting one bond per maturing claim. Money, debt and units
+   * are identical either way; only the number of bond documents changes.
+   * Absent or false keeps one replacement bond per claim.
+   */
+  sovereignRolloverConsolidationEnabled?: boolean;
+  /**
+   * Stage gate for grouped sovereign coupon accrual. When true the Treasury
+   * phase freezes each turn's coupons as one claim per budget, currency and
+   * payee group (players apart from the bond pool, index funds and NPPs)
+   * instead of one claim per bond, so an unfunded Treasury's arrears queue
+   * grows by a couple of documents a turn rather than one per bond. Every
+   * payee is owed exactly what its per-bond claims summed to. Absent or false
+   * keeps one claim per bond.
+   */
+  sovereignCouponGroupedAccrualEnabled?: boolean;
   /** Dark gate for the index-fund 20 percent sovereign-bond allocation target. */
   indexFundBondLiquidityEnabled?: boolean;
   /**
@@ -1055,6 +1300,10 @@ export interface GameConfig {
    * tenders, bids, awards and offer acceptance are gated; existing settlement,
    * delivery, expiry and cancellation continue. Preserved with gameConfig. */
   governmentContractsEnabled?: boolean;
+
+  /** Temporary confidence-gauge freeze. Missing means frozen. Explicitly enable
+   * to resume drift, events and formation changes. Preserved across resets. */
+  governmentConfidenceEnabled?: boolean;
 
   /**
    * Unified action audit spine master flag (forensics/alt-detection rework

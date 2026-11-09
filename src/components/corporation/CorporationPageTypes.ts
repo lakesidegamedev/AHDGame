@@ -1,3 +1,4 @@
+import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
@@ -221,7 +222,7 @@ export interface CorporationDetail {
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   rdScoreNetChange?: number;
-  /** Active product projects paid from the R&D budget before generic research. */
+  /** Active product projects paid from part of the R&D budget. */
   rdDevelopmentProjects?: {
     id: string;
     stage: string;
@@ -321,6 +322,7 @@ export interface CorporationDetail {
   isPrivate?: boolean;
   /** The viewer is CEO of the corporation that controls this subsidiary. */
   viewerIsControllingParentCeo?: boolean;
+  viewerIsShareholder?: boolean;
   /** Global feature gate — when true, the decade-gated Tech tab is shown. */
   techTreesEnabled?: boolean;
   /** Global feature gate — when true, the private supply-agreements panel is shown to the CEO. */
@@ -833,6 +835,20 @@ export interface SectorDetail {
    * Insider-only; null when none.
    */
   ownSiteShare?: number | null;
+  /** TEU the company's own trucks hauled out of this state last turn (logistics rows). Insider-only. */
+  ownTruckHaulTeu?: number | null;
+  /**
+   * Profit with income and charges between the company's own sites counted
+   * (priced internal transfers). Display only; null when there are none.
+   */
+  managementProfit?: number | null;
+  /** Site accounts in the corporation currency per financial day. */
+  siteStatement?: SiteStatement | null;
+  /**
+   * Free internal transfers: what this site sent to the company's own sites,
+   * at its own asking price, per day. A memo, never booked. Insider-only.
+   */
+  ownSiteMemoValue?: number | null;
   /**
    * Share of offered output (0-1) no freight network could place. The part of
    * the fill shortfall that is a DELIVERY failure rather than a demand

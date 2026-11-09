@@ -8,6 +8,7 @@ import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
 import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
+import { attemptNppConstructionFinance } from "./nppConstructionFinanceAttempts";
 import { producerStageEnv, runFundedProducerTurn } from "./fundedProducerTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -22,7 +23,7 @@ import { applyCorporationCashWrites } from "@/lib/turn/npp/foundingCashLedger";
 import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
 import { ObjectId } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { Character } from "@/lib/db/types";
+import type { Character, GameState } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { State } from "@/lib/db/types/state";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
@@ -57,8 +58,8 @@ import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sect
 import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { loadSettleableSupplyAgreements } from "./loadSettleableSupplyAgreements";
+import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
-  buildMinWageRatioByCountry,
   buildUnionLawBiasByCountry,
   buildUnionsBannedByCountry,
   type LabourContext,
@@ -71,7 +72,7 @@ import {
   fireStrikeStartedPulse,
   fireStrikeResolvedPulse,
 } from "@/lib/corporations/sentimentEvents";
-import { processRdInnovations } from "./rdInnovation";
+import { processRdInnovations, seedDepositLookup } from "./rdInnovation";
 import { processVoteReminders, processVoteAutoResolve } from "./voteReminders";
 import { processImfBailoutPayments } from "@/lib/turn/imfBailoutTurn";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -111,7 +112,6 @@ import {
 } from "./corporationTurnPhases";
 import { getGameState } from "@/lib/gameState";
 import { deleteDivestedNppSectors } from "../npp/divestmentPersistence";
-import { requestConstructionFinance } from "@/lib/banking/constructionFinance";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { logger } from "../../observability/logger";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
@@ -288,6 +288,8 @@ export async function processCorporationTurn(
       : Promise.resolve(null),
   ]);
   await resolvePhaseLookups(db, marketGovernorConfig, turn ?? gameState?.currentTurn ?? 0, lookups);
+  // Where an unstamped sector's build deliveries catch up from (#5169).
+  lookups.worldBuildsSettledTurn = gameState?.buildDeliverySettledTurn;
   if (
     mediaProductSlatesEnabled &&
     lookups.mediaProductProjectsByCorpId &&
@@ -378,9 +380,16 @@ export async function processCorporationTurn(
         loadUndergroundStrengthByCountrySector(db, bannedUnionCountryIds),
       ])
     : [undefined, undefined, undefined, undefined];
+  const wagesEnabled = labourAtLeast(labourMode, "wages");
   const labour: LabourContext = {
-    wagesEnabled: labourAtLeast(labourMode, "wages"),
-    minWageRatioByCountry: buildMinWageRatioByCountry(lookups.federalBudgets),
+    wagesEnabled,
+    // minimumWageLawStage: the national minimum wage law in force sets the
+    // floor. Below the wages tier the floor is unused, so the law is not read.
+    minWageRatioByCountry: await resolveMinWageRatioByCountry(
+      db,
+      lookups.federalBudgets,
+      wagesEnabled ? marketGovernorConfig?.minimumWageLawStage : undefined
+    ),
     // v3 Phase 5/6: gates the NPC unionization metric + strikes.
     unionsEnabled: labourAtLeast(labourMode, "unions"),
     // v3 Phase 7b: gates union-law bias + union-busting.
@@ -922,6 +931,8 @@ export async function processCorporationTurn(
   for (const snapshot of corpSnapshots) {
     const distribution = funded?.deferredDistributions?.get(snapshot.corpId.toHexString());
     if (distribution) snapshot.deferredProducerDistributions = distribution;
+    if (distribution && (marketGovernorConfig?.nppDividendAfterTaxStage ?? 0) >= 1)
+      snapshot.distributionAfterTax = true;
   }
   // Merge NPP corp updates into the main corpOps
   for (const nppUpdate of nppCorpUpdates) {
@@ -1000,6 +1011,13 @@ export async function processCorporationTurn(
     // `$push` after the main update) stay together and in order.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await partitionedBulkWrite(db.collection("corporateSectors"), sectorOps as any[]);
+  }
+  // After the sector writes, which carry each sector's own stamp: a sector
+  // founded before the next run catches its builds up from this turn (#5169).
+  if (typeof turn === "number") {
+    await db
+      .collection<GameState>("gameState")
+      .updateOne({ _id: "current" }, { $set: { buildDeliverySettledTurn: turn } });
   }
   mark("sectorBulkWrite");
   if (corpOps.length > 0 || manufacturingDevelopmentCashOps.length > 0) {
@@ -1080,33 +1098,12 @@ export async function processCorporationTurn(
     }
     mark("productVentures");
   }
-  let constructionFinanceFundedCount = 0;
-  let constructionFinancePendingCount = 0;
-  let constructionFinanceFailedCount = nppConstructionFinanceBacklogCount;
-  for (const candidate of nppConstructionFinanceRequests) {
-    const result = await requestConstructionFinance({
-      db,
-      enabled: true,
-      sector: candidate.sector,
-      corporation: candidate.corporation,
-      bankId: candidate.bankId,
-      requestId: `npp-${turn ?? 0}-${candidate.sector._id.toHexString()}`,
-      principal: candidate.principal,
-      termTurns: candidate.termTurns,
-      constructionCostLocal: candidate.costLocal,
-      collateralCostLocal: candidate.costLocal,
-      maximumCostLocal: candidate.costLocal,
-      order: candidate.order,
-      preloadedFundingContext: candidate.preloadedFundingContext,
-      buildContext: candidate.buildContext,
-    });
-    if (!result.ok) {
-      constructionFinanceFailedCount += 1;
-      continue;
-    }
-    if (result.pending) constructionFinancePendingCount += 1;
-    else constructionFinanceFundedCount += 1;
-  }
+  const constructionFinance = await attemptNppConstructionFinance({
+    db,
+    turn: turn ?? 0,
+    requests: nppConstructionFinanceRequests,
+    backlogCount: nppConstructionFinanceBacklogCount,
+  });
   if (nppConstructionFinanceCandidateCount > 0) {
     corpAuditEntries.push({
       source: "turn",
@@ -1118,9 +1115,10 @@ export async function processCorporationTurn(
       meta: {
         candidates: nppConstructionFinanceCandidateCount,
         attempted: nppConstructionFinanceRequests.length,
-        funded: constructionFinanceFundedCount,
-        pendingApproval: constructionFinancePendingCount,
-        deferredOrRejected: constructionFinanceFailedCount,
+        funded: constructionFinance.funded,
+        pendingApproval: constructionFinance.pending,
+        deferredOrRejected: constructionFinance.failed,
+        failureReasons: constructionFinance.failureReasons,
         turn,
       },
     });
@@ -1411,7 +1409,8 @@ export async function processCorporationTurn(
       turn,
       now,
       makeSeededRng(`rdInnovation:${turn}${CORP_TURN_RNG_SALT}`),
-      market.plantsEnabled
+      market.plantsEnabled,
+      seedDepositLookup(gameState?.preset)
     );
     if (sectorBoostOps.length > 0) {
       // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid
@@ -1973,8 +1972,7 @@ export async function processCorporationTurn(
     totalIncomeGenerated: Math.round(totalIncomeGenerated),
     currencyIncomeInternalByCharacterId,
     currencyIncomeFaceByCharacterId,
-    // Clearing book invariant breaches (issue #2054) for the turn warning
-    // channel. Empty unless market clearing ran and a book breached.
-    turnWarnings: clearingInvariantBreaches,
+    // Market planning/ownership diagnostics join clearing invariant warnings.
+    turnWarnings: [...clearingInvariantBreaches, ...(funded?.turnWarnings ?? [])],
   };
 }

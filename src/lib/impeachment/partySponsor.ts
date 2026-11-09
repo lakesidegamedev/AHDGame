@@ -18,7 +18,9 @@ export async function resolvePartyImpeachmentSponsor(
   }
   if (office === "governor") {
     if (!state) return { authorized: false, npp: null };
-    return resolvePartyNppProposalAccess(db, countryId, state, character);
+    return resolvePartyNppProposalAccess(db, countryId, state, character, {
+      ignoreBillReservations: true,
+    });
   }
   const lowerOffice = getLowerChamberOfficeType(countryId);
   const access = await resolveNationalPartyNppAccess(db, countryId, character, [

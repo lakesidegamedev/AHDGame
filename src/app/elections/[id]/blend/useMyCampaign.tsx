@@ -6,6 +6,13 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import { BLEND, BLEND_LABEL, FONT } from "@/components/blend/tokens";
+import { campaignPageHref } from "@/lib/campaignManager/links";
+import {
+  presenceBuildAccess,
+  presenceLevelsFor,
+  type RacePresenceEntry,
+} from "@/lib/campaignManager/mapActions";
+import { useFieldOfficeMapControl } from "./presMap/fieldOfficeMapContext";
 
 interface PresenceRow {
   stateId: string;
@@ -16,11 +23,15 @@ interface PresenceRow {
 
 export interface MyCampaign {
   campaignId: string | null;
+  /** The race, for the link into the campaign's field offices. */
+  race: { id: string; countryId: string };
   color: string;
   /** Campaign Presence level per state. */
   levels: Record<string, number>;
   rows: Record<string, PresenceRow>;
   canBuild: boolean;
+  /** The viewer may open field offices for this campaign (manager or nominee). */
+  canOpenFieldOffice: boolean;
   busy: string | null;
   error: string | null;
   build: (stateId: string) => Promise<void>;
@@ -29,14 +40,39 @@ export interface MyCampaign {
 /**
  * The reader's own presidential campaign, for the map: Campaign Presence by
  * state and the action to build it, from the same routes the Political
- * Operations tab uses. Null when the reader is not running in this race.
+ * Operations tab uses. The candidate builds from their own list; an appointed
+ * manager reads and builds the ticket's list by naming the campaign. The running
+ * mate sees the ticket's levels (presence is public in the race-wide list) but
+ * cannot build, as the build route enforces. Null when the reader is not on a
+ * campaign in this race.
  */
 export function useMyCampaign(args: {
   enabled: boolean;
   campaignId: string | null;
+  race: { id: string; countryId: string };
   color: string;
+  /** The ticket whose presence is shown; for the candidate this is the reader. */
+  candidateId?: string | null;
+  /** The reader is the candidate. Their own list is the one they build. */
+  viewerIsCandidate?: boolean;
+  /** The reader runs the campaign on screen as an appointed manager (never the running mate). */
+  canManage?: boolean;
+  /** The reader may open field offices for the campaign. */
+  canOpenFieldOffice?: boolean;
 }): MyCampaign | null {
-  const { enabled, campaignId, color } = args;
+  const {
+    enabled,
+    campaignId,
+    race,
+    color,
+    candidateId = null,
+    viewerIsCandidate = true,
+    canManage = false,
+    canOpenFieldOffice = true,
+  } = args;
+  const access = presenceBuildAccess({ viewerIsCandidate, canManage, campaignId });
+  const buildCampaignId = access?.kind === "campaign" ? access.campaignId : null;
+  const hasBuildAccess = access !== null;
   const [rows, setRows] = useState<Record<string, PresenceRow>>({});
   const [canBuild, setCanBuild] = useState(false);
   const [fxRate, setFxRate] = useState<number>(1);
@@ -46,14 +82,38 @@ export function useMyCampaign(args: {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    fetchJson<{ canBuild?: boolean; fxRate?: number; states?: PresenceRow[] }>(
-      "/api/political-operations/state-org/list",
+    fetchJson<{
+      canBuild?: boolean;
+      fxRate?: number;
+      states?: PresenceRow[];
+      racePresence?: RacePresenceEntry[];
+    }>(
+      buildCampaignId
+        ? `/api/political-operations/state-org/list?campaignId=${encodeURIComponent(buildCampaignId)}`
+        : "/api/political-operations/state-org/list",
       { signal: controller.signal, feature: "presidential-map-presence" }
     )
       .then((body) => {
-        setCanBuild(Boolean(body.canBuild));
-        if (typeof body.fxRate === "number") setFxRate(body.fxRate);
-        setRows(Object.fromEntries((body.states ?? []).map((r) => [r.stateId, r])));
+        // The candidate's own list, or the ticket's list for a manager: rows,
+        // prices and whether the server will take a build all come with it.
+        if (hasBuildAccess) {
+          setCanBuild(Boolean(body.canBuild));
+          if (typeof body.fxRate === "number") setFxRate(body.fxRate);
+          setRows(Object.fromEntries((body.states ?? []).map((r) => [r.stateId, r])));
+          return;
+        }
+        // Someone else's ticket: the list's own rows are the reader's character,
+        // not the campaign's. The race-wide list carries the ticket's levels.
+        setCanBuild(false);
+        const levels = presenceLevelsFor(body.racePresence, candidateId);
+        setRows(
+          Object.fromEntries(
+            Object.entries(levels).map(([stateId, level]) => [
+              stateId,
+              { stateId, level, nextCost: 0 },
+            ])
+          )
+        );
       })
       .catch((err: unknown) => {
         // fetchJson reports the failure; the map just shows no presence layer.
@@ -61,7 +121,7 @@ export function useMyCampaign(args: {
           setError("Could not load your campaign.");
       });
     return () => controller.abort();
-  }, [enabled]);
+  }, [enabled, hasBuildAccess, buildCampaignId, candidateId]);
 
   const build = useCallback(
     async (stateId: string) => {
@@ -71,7 +131,9 @@ export function useMyCampaign(args: {
         const res = await fetch("/api/political-operations/state-org/build", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stateId }),
+          body: JSON.stringify(
+            buildCampaignId ? { stateId, campaignId: buildCampaignId } : { stateId }
+          ),
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -93,16 +155,18 @@ export function useMyCampaign(args: {
         setBusy(null);
       }
     },
-    [fxRate]
+    [fxRate, buildCampaignId]
   );
 
   if (!enabled) return null;
   return {
     campaignId,
+    race,
     color,
     levels: Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, r.level])),
     rows,
     canBuild,
+    canOpenFieldOffice,
     busy,
     error,
     build,
@@ -113,6 +177,17 @@ export function useMyCampaign(args: {
 export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stateId: string }) {
   const row = mine.rows[stateId];
   const level = row?.level ?? 0;
+  // On the race page's map the link flies into the state's counties instead of
+  // leaving for the field tab. A phone has no room for both, so it gets the
+  // list of counties under this block and no link.
+  const mapControl = useFieldOfficeMapControl();
+  const linkStyle = {
+    marginTop: 10,
+    display: "block",
+    fontSize: 13,
+    color: BLEND.accentInk,
+    textDecoration: "none",
+  } as const;
   return (
     <section
       style={{
@@ -160,20 +235,33 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
           {mine.error}
         </p>
       ) : null}
-      {mine.campaignId ? (
-        <Link
-          href={`/campaign/${mine.campaignId}?tab=field&region=${stateId}`}
-          className="hover:underline"
-          style={{
-            marginTop: 10,
-            display: "block",
-            fontSize: 13,
-            color: BLEND.accentInk,
-            textDecoration: "none",
-          }}
-        >
-          Open a field office in this state
-        </Link>
+      {mine.campaignId && mine.canOpenFieldOffice ? (
+        mapControl ? (
+          mapControl.canZoom ? (
+            <button
+              type="button"
+              onClick={() => mapControl.showFieldOffices(stateId)}
+              className="hover:underline"
+              style={{ ...linkStyle, padding: 0, border: 0, background: "none", cursor: "pointer" }}
+            >
+              Open a field office in this state
+            </button>
+          ) : null
+        ) : (
+          <Link
+            href={campaignPageHref({
+              campaignId: mine.campaignId,
+              electionId: mine.race.id,
+              countryId: mine.race.countryId,
+              tab: "field",
+              region: stateId,
+            })}
+            className="hover:underline"
+            style={linkStyle}
+          >
+            Open a field office in this state
+          </Link>
+        )
       ) : null}
     </section>
   );

@@ -6,6 +6,7 @@
  * derivations are unit-testable.
  */
 
+import { campaignPageHref } from "@/lib/campaignManager/links";
 import type {
   CandidateDetail,
   ElectionDetail,
@@ -499,7 +500,8 @@ export function buildPrimaryBlendViewModel(inp: PrimaryBlendInput): PrimaryBlend
       : null;
 
   // ── Header and vitals ─────────────────────────────────────────────────────
-  const headline = `The ${selectedName} primary`;
+  // Party names like "The Mafia" already carry the article.
+  const headline = `The ${selectedName.replace(/^the\s+/i, "")} primary`;
   const standfirst = `${candidates.length} filed. ${advanceText}`;
   const turnReadout = [
     currentTurn != null ? `TURN ${grouped(currentTurn)}` : null,
@@ -533,7 +535,13 @@ export function buildPrimaryBlendViewModel(inp: PrimaryBlendInput): PrimaryBlend
     },
   ];
 
-  const campaignHref = me?.campaignId ? `/campaign/${me.campaignId}` : null;
+  const campaignHref = me?.campaignId
+    ? campaignPageHref({
+        campaignId: me.campaignId,
+        electionId: election.id,
+        countryId: election.countryId,
+      })
+    : null;
 
   return {
     headline,

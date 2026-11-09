@@ -19,6 +19,8 @@ export interface SourcingOwnRoute {
   destStateId: string;
   units: number;
   freightCharge?: number;
+  /** TEU of this delivery carried on the owner's own freight capacity (no charge). */
+  ownCapacityTeu?: number;
   ownFirstAcrossStates?: boolean;
   /** Shared budgets across alternative routes; spent only by successful hauls. */
   originSupplyUnits?: number;
@@ -114,4 +116,57 @@ export function buildOwnRoutes(args: {
     }
   }
   return routes;
+}
+
+/**
+ * Freight capacity each route owner holds per state, keyed like route
+ * identities, for the own-shipments-first rule. Only sectors under a non-market
+ * supply policy count, since only they plan own routes.
+ */
+export function buildOwnFreightCapacity(args: {
+  sectors: readonly OwnRouteSector[];
+  supplyBySector: ReadonlyMap<string, ReadonlyMap<CommodityType, number>>;
+  policies: ReadonlyMap<string, { root: string; policy: InternalSupplyPolicy }>;
+}): Map<string, Map<string, number>> {
+  const out = new Map<string, Map<string, number>>();
+  for (const sector of args.sectors) {
+    const setting = args.policies.get(sector.corporationId);
+    if (!setting || setting.policy.priority === "market" || !sector.stateId) continue;
+    const units = args.supplyBySector.get(sector.sectorId)?.get("freight") ?? 0;
+    if (!(Number.isFinite(units) && units > 0)) continue;
+    const routeId = ownRouteIdentity(sector.corporationId, setting);
+    let byRoute = out.get(sector.stateId);
+    if (!byRoute) out.set(sector.stateId, (byRoute = new Map()));
+    byRoute.set(routeId, (byRoute.get(routeId) ?? 0) + units);
+  }
+  return out;
+}
+
+/**
+ * What each route owner produces of each commodity per state, for the
+ * own-shipments-first rule's market-sales extension (stage 2): an owner's
+ * freight capacity first carries its share of the goods that leave a state for
+ * the general market. Same owner identity and policy filter as
+ * `buildOwnFreightCapacity`, so a seller without capacity there changes nothing.
+ */
+export function buildOwnMarketSupply(args: {
+  sectors: readonly OwnRouteSector[];
+  supplyBySector: ReadonlyMap<string, ReadonlyMap<CommodityType, number>>;
+  policies: ReadonlyMap<string, { root: string; policy: InternalSupplyPolicy }>;
+}): Map<CommodityType, Map<string, Map<string, number>>> {
+  const out = new Map<CommodityType, Map<string, Map<string, number>>>();
+  for (const sector of args.sectors) {
+    const setting = args.policies.get(sector.corporationId);
+    if (!setting || setting.policy.priority === "market" || !sector.stateId) continue;
+    const routeId = ownRouteIdentity(sector.corporationId, setting);
+    for (const [commodity, units] of args.supplyBySector.get(sector.sectorId) ?? []) {
+      if (commodity === "freight" || !(Number.isFinite(units) && units > 0)) continue;
+      let byState = out.get(commodity);
+      if (!byState) out.set(commodity, (byState = new Map()));
+      let byRoute = byState.get(sector.stateId);
+      if (!byRoute) byState.set(sector.stateId, (byRoute = new Map()));
+      byRoute.set(routeId, (byRoute.get(routeId) ?? 0) + units);
+    }
+  }
+  return out;
 }

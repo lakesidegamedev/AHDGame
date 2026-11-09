@@ -154,7 +154,13 @@ export default function HeroCard({
           <span className="text-sm font-bold tabular-nums text-success">
             {financials ? (
               <>
-                {fmtMoney(Math.round((financials.realizedRevenue ?? financials.revenue) / 24))}
+                {fmtMoney(
+                  Math.round(
+                    (financials.siteStatement?.revenue ??
+                      financials.realizedRevenue ??
+                      financials.revenue) / 24
+                  )
+                )}
                 <span className="text-[10px] font-normal text-muted">/turn</span>
               </>
             ) : (
@@ -165,11 +171,11 @@ export default function HeroCard({
         <div className="min-w-[90px] shrink-0 px-4 py-3">
           <span className="block text-body-sm font-medium text-muted">Net profit</span>
           <span
-            className={`text-sm font-bold tabular-nums ${financials ? (financials.profit >= 0 ? "text-success" : "text-error") : ""}`}
+            className={`text-sm font-bold tabular-nums ${financials ? ((financials.siteStatement?.profit ?? financials.profit) >= 0 ? "text-success" : "text-error") : ""}`}
           >
             {financials ? (
               <>
-                {fmtMoney(Math.round(financials.profit / 24))}
+                {fmtMoney(Math.round((financials.siteStatement?.profit ?? financials.profit) / 24))}
                 <span className="text-[10px] font-normal text-muted">/turn</span>
               </>
             ) : (
@@ -178,11 +184,19 @@ export default function HeroCard({
           </span>
         </div>
         <div className="min-w-[90px] shrink-0 px-4 py-3">
-          <span className="block text-body-sm font-medium text-muted">Eff. Margin</span>
+          <span className="block text-body-sm font-medium text-muted">
+            {financials?.siteStatement ? "Net margin" : "Eff. Margin"}
+          </span>
           <span className="text-sm font-bold tabular-nums text-foreground">
             {/* Rounded for display: the margin is a computed float, and the raw
                 value renders as "37.40833333333334%" in this narrow stat cell. */}
-            {margins ? `${margins.effective.toFixed(1)}%` : hiddenMarker}
+            {financials?.siteStatement
+              ? financials.siteStatement.netMarginPct == null
+                ? "n/a"
+                : `${financials.siteStatement.netMarginPct.toFixed(1)}%`
+              : margins
+                ? `${margins.effective.toFixed(1)}%`
+                : hiddenMarker}
           </span>
         </div>
         <div className="min-w-[90px] shrink-0 px-4 py-3">

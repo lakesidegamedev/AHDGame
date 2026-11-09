@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { createAsyncIterableCursor, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import {
   CAPACITY_ANCHOR_YEAR,
   CAPACITY_BUILD_CANCEL_REFUND,
@@ -530,6 +530,143 @@ describe("buildCapacity — build", () => {
     );
   });
 
+  describe("operating reserve (suggestion 409)", () => {
+    // Plants that ran 40M a turn last turn: a 3-turn reserve of 120M is more
+    // than the corp's 100M, so any cash build breaks it.
+    const wireReceipts = (turn = CURRENT_TURN - 1) =>
+      db.collectionMocks.corporateSectors.find.mockReturnValue(
+        createAsyncIterableCursor([
+          {
+            _id: SECTOR_ID,
+            producerSettlement: {
+              turn,
+              labourPaid: 20_000_000,
+              otherOperatingPaid: 5_000_000,
+              purchases: 15_000_000,
+            },
+          },
+        ])
+      );
+
+    it("refuses a cash build that leaves less than three turns of running bills", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      const res = await buildCapacity(request({ action: "build", units: 1_000 }), { params });
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body.code).toBe("OPERATING_RESERVE_SHORT");
+      expect(body.reserveTurns).toBe(3);
+      expect(body.operatingReserveLocal).toBe(120_000_000);
+      expect(body.maxAffordableLocal).toBe(0);
+      expect(String(body.error)).toContain("$120,000,000 your plants need to run for 3 turns");
+      expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
+    });
+
+    it("builds past the reserve when the CEO confirms the override", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      const res = await buildCapacity(
+        request({ action: "build", units: 1_000, overrideOperatingReserve: true }),
+        { params }
+      );
+      expect(res.status).toBe(201);
+      expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalled();
+    });
+
+    const financing = (principal: number) => ({
+      bankId: new ObjectId().toHexString(),
+      requestId: "build-quote",
+      principal,
+      termTurns: 48,
+      maximumCostLocal: 1e12,
+      maximumRatePercent: 5,
+      pledgeConsent: true,
+    });
+
+    it("holds a financed build to the reserve for the part the lender does not fund (ticket 1785)", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      vi.mocked(loadBankingPolicy).mockResolvedValue(BANKING_POLICY_ALL_ON);
+      // A bond that covers a sliver of the cost leaves the rest on the running cash.
+      const res = await buildCapacity(
+        request({ action: "build", units: 1_000, financing: financing(1_000) }),
+        { params }
+      );
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as Record<string, unknown>).code).toBe("OPERATING_RESERVE_SHORT");
+      expect(requestConstructionFinance).not.toHaveBeenCalled();
+    });
+
+    it("lets a financed build through when the lender funds all of it", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      vi.mocked(loadBankingPolicy).mockResolvedValue(BANKING_POLICY_ALL_ON);
+      vi.mocked(requestConstructionFinance).mockResolvedValue({
+        ok: true,
+        pending: true,
+        loanId: "loan",
+        claimId: "claim",
+      });
+      const res = await buildCapacity(
+        request({ action: "build", units: 1_000, financing: financing(1e12) }),
+        { params }
+      );
+      expect(res.status).toBe(200);
+      expect(requestConstructionFinance).toHaveBeenCalled();
+    });
+
+    it("quotes the bills and sales behind the next-run warning", async () => {
+      await wireMocks(sectorDoc());
+      db.collectionMocks.corporateSectors.find.mockReturnValue(
+        createAsyncIterableCursor([
+          {
+            _id: SECTOR_ID,
+            producerSettlement: {
+              turn: CURRENT_TURN - 1,
+              labourPaid: 20_000_000,
+              purchases: 10_000_000,
+              revenue: 25_000_000,
+              internalSupplyIncome: 5_000_000,
+            },
+          },
+        ])
+      );
+      const res = await buildCapacity(request({ action: "build", units: 1_000, preview: true }), {
+        params,
+      });
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body.runningBillsLocal).toBe(30_000_000);
+      expect(body.runRevenueLocal).toBe(30_000_000);
+    });
+
+    it("quotes the reserve on a preview", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      const res = await buildCapacity(request({ action: "build", units: 1_000, preview: true }), {
+        params,
+      });
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body.belowOperatingReserve).toBe(true);
+      expect(body.operatingReserveLocal).toBe(120_000_000);
+    });
+
+    it("keeps no reserve on stale receipts or when the config turns it off", async () => {
+      await wireMocks(sectorDoc());
+      wireReceipts(CURRENT_TURN - 10);
+      expect(
+        (await buildCapacity(request({ action: "build", units: 1_000 }), { params })).status
+      ).toBe(201);
+      vi.clearAllMocks();
+      await wireMocks(sectorDoc());
+      wireReceipts();
+      db.collectionMocks.gameConfig.findOne.mockResolvedValue({ capacityBuildReserveTurns: 0 });
+      expect(
+        (await buildCapacity(request({ action: "build", units: 1_000 }), { params })).status
+      ).toBe(201);
+    });
+  });
+
   it("rejects an owner build while an NPP operates the corporation", async () => {
     await wireMocks(sectorDoc());
     const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
@@ -705,6 +842,24 @@ describe("buildCapacity — mothball / reactivate", () => {
     const res = await buildCapacity(request({ action: "reactivate" }), { params });
     expect(res.status).toBe(200);
     expect(sectorSet().mothballed).toBe(false);
+  });
+
+  it("owner reactivate clears the loss counters and records the restart turn", async () => {
+    await wireMocks(sectorDoc({ mothballed: true }));
+    await buildCapacity(request({ action: "reactivate" }), { params });
+    expect(sectorSet()).toMatchObject({
+      mothballed: false,
+      pnlLossTurns: 0,
+      producerZeroSalesTurns: 0,
+      manualReactivatedTurn: CURRENT_TURN,
+    });
+  });
+
+  it("owner mothball does not write a restart marker", async () => {
+    await wireMocks(sectorDoc());
+    await buildCapacity(request({ action: "mothball" }), { params });
+    expect(sectorSet()).not.toHaveProperty("manualReactivatedTurn");
+    expect(sectorSet()).not.toHaveProperty("pnlLossTurns");
   });
 
   it("rejects a no-op toggle", async () => {

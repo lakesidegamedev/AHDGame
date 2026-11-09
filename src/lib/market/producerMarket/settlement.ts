@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { performance } from "node:perf_hooks";
+import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import { accountId } from "@/lib/ledger/accounts";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -7,11 +9,13 @@ import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { encodeReceipt, decodeReceipt, stageReceiptChunks } from "./receiptStorage";
+import { roundStageTimings, stageClock, type StageTimings } from "./stageTimings";
 import { verifyOpeningProducerPayables, publishProducerPayables } from "./payablesSettlement";
 import { producerPayableReceiptKeys, type ProducerPayable } from "./payablesRules";
 import { advanceProducerCapacity, type ProducerCapacityState } from "./capacityRules";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { advanceProducerEconomy } from "./production";
+import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
 
@@ -54,10 +58,12 @@ interface ProducerTurnRecord {
   payload: string;
   status: "frozen" | "settled";
   /**
-   * Turn warnings observed while settling (ownership drift). Stored beside the
+   * Turn warnings observed while settling (planning limits and ownership drift). Stored beside the
    * receipt so a retry after the turn is marked settled returns the same list.
    */
   settlementWarnings?: string[];
+  /** Timing diagnostics (ms) for the call that froze the turn; outside the hashed payload. */
+  stageTimingsMs?: StageTimings;
 }
 
 async function readFrozen(db: Db, record: ProducerTurnRecord): Promise<FrozenProducerTurn> {
@@ -330,7 +336,9 @@ async function verifyPhysicalTargets(
       sector.producerCapacity.turn !== state.completedTurn ||
       !samePhysicalImage(sector, state)
     )
-      throw new Error("Producer physical opening changed or was not reconciled");
+      throw new Error(
+        `Producer physical opening changed or was not reconciled: sector ${target.sectorId} (capacity ${sector.producerCapacity?.worldEpoch === frozen.worldEpoch ? `turn ${sector.producerCapacity?.turn} vs ${state.completedTurn}` : "other world"}, stock ${sector.capitalStock} vs ${state.ownedDailyUnits}, queue ${(sector.buildQueue ?? []).length} vs ${(state.buildQueue ?? []).length})`
+      );
     if (
       comparableInventory(sector.producerInventory) !==
       comparableInventory(
@@ -491,7 +499,7 @@ export interface SettlementClose {
 export type SettledEconomyResult = EconomyResult & {
   close?: SettlementClose;
   /**
-   * Deterministic warnings for sectors that settled with their frozen owner,
+   * Frozen planning-limit and ownership warnings,
    * for the corporation host to forward to the turn warning channel.
    */
   turnWarnings?: string[];
@@ -533,25 +541,49 @@ export async function settleProducerTurn(
   input: {
     worldEpoch: string;
     production: ProducerTurnProduction;
+    /** Cooperative market budget; a clearing pass and final settlement are never interrupted. */
+    planningBudgetMs?: number;
+    /** Compute and receipt-preparation ceiling; expiry stops before claiming or moving cash. */
+    executionBudgetMs?: number;
     bindings: readonly ProducerCashBinding[];
     targets: readonly ProducerSectorTarget[];
     /** Closing transfers computed from the settled market, frozen with it. */
     close?: (result: EconomyResult) => SettlementClose;
+    /** Timing-only sink the caller may read afterwards; never part of the receipt or digest. */
+    stageTimingsMs?: StageTimings;
   }
 ): Promise<SettledEconomyResult> {
+  const timings: StageTimings = input.stageTimingsMs ?? {};
+  const phaseSteps = substepMarker();
+  const startedAt = performance.now();
+  const clock = stageClock(timings);
   const turn = input.production.turn;
   const key = JSON.stringify([input.worldEpoch, turn]);
   await assertProducerTurnFence(db, input.worldEpoch, turn);
   const turns = db.collection<ProducerTurnRecord>("producerEconomyTurns");
   let record = await turns.findOne({ _id: key });
+  clock.lap("fenceAndLookupMs");
   let claimedPayload: FrozenProducerTurn | undefined;
   if (!record) {
+    const started = performance.now();
+    if (
+      input.executionBudgetMs != null &&
+      (!Number.isFinite(input.executionBudgetMs) || input.executionBudgetMs <= 0)
+    )
+      throw new Error("Invalid producer execution budget");
+    const checkBudget = () => {
+      if (input.executionBudgetMs != null && performance.now() - started >= input.executionBudgetMs)
+        throw new Error(
+          `Producer market execution deadline exceeded before settlement (stage timings ms: ${JSON.stringify(roundStageTimings(timings))})`
+        );
+    };
     await verifyOpeningProducerPayables(db, {
       worldEpoch: input.worldEpoch,
       turn,
       bindings: input.bindings,
       payables: input.production.payables ?? [],
     });
+    clock.lap("verifyOpeningPayablesMs");
     const plans = new Map(input.production.producers.map((plan) => [plan.id, plan]));
     const capacities = input.targets.map((target) => {
       const plan = plans.get(target.producerId);
@@ -575,6 +607,7 @@ export async function settleProducerTurn(
         capacityUnits: capacityByProducer.get(plan.id)?.capacityUnits ?? NaN,
       })),
     };
+    clock.lap("capacityMs");
     const payload: FrozenProducerTurn = {
       version: 1,
       createdAt: new Date().toISOString(),
@@ -584,7 +617,22 @@ export async function settleProducerTurn(
       targets: input.targets,
       capacities,
       result: (() => {
-        const market = advanceProducerEconomy(production);
+        phaseSteps.mark("producerMarket.prepare");
+        const market = advanceProducerEconomy(
+          production,
+          input.planningBudgetMs == null && input.executionBudgetMs == null
+            ? undefined
+            : {
+                maximumElapsedMs: input.planningBudgetMs ?? Number.MAX_VALUE,
+                elapsedMs: () => performance.now() - started,
+                checkBudget,
+              },
+          timings
+        );
+        clock.lap("advanceEconomyMs"); // total; the economy's own stages are itemised by advanceProducerEconomy
+        // Freeze the actual pass count so offline replay does not need a clock.
+        // The requested ceiling and stop reason remain in the diagnostics.
+        if (market.planning) production.maximumPlanningPasses = market.planning.passes;
         return input.close
           ? applySettlementClose(
               market,
@@ -594,8 +642,15 @@ export async function settleProducerTurn(
           : market;
       })(),
     };
+    clock.lap("closeMs");
     validateTargets(payload);
+    clock.lap("validateTargetsMs");
+    // The market is fully computed here. The execution deadline guards the
+    // expensive clearing only: encoding and staging a finished receipt must not
+    // discard it, because a retry recomputes the same market against the same
+    // ceiling. The phase timeout still bounds this tail and keeps late completion.
     const encoded = encodeReceipt(payload);
+    clock.lap("encodeReceiptMs");
     const candidate: ProducerTurnRecord = {
       _id: key,
       worldEpoch: input.worldEpoch,
@@ -607,8 +662,13 @@ export async function settleProducerTurn(
     // Validate native balances and restricted cash targets before claiming any receipt.
     const verification = await verifyPhysicalTargets(db, payload);
     cashWithLedger(redirectFrozenOwnerCash(payload, verification.cashRedirect), candidate.digest);
-    candidate.settlementWarnings = verification.turnWarnings;
+    candidate.settlementWarnings = [
+      ...verification.turnWarnings,
+      ...producerPlanningWarnings(payload.result.planning),
+    ];
+    clock.lap("verifyPhysicalAndCashMs");
     await stageReceiptChunks(db, encoded.chunks);
+    clock.lap("stageChunksMs");
     try {
       await turns.insertOne(candidate);
       record = candidate;
@@ -619,6 +679,7 @@ export async function settleProducerTurn(
       record = await turns.findOne({ _id: key });
       if (!record) throw new Error("Missing claimed producer receipt");
     }
+    clock.lap("insertReceiptMs");
   }
   const frozen = claimedPayload ?? (await readFrozen(db, record));
   if (
@@ -630,7 +691,9 @@ export async function settleProducerTurn(
   if (record.status === "settled")
     return { ...frozen.result, turnWarnings: record.settlementWarnings ?? [] };
   validateTargets(frozen);
+  clock.lap("validateTargetsMs");
   const verification = await verifyPhysicalTargets(db, frozen);
+  clock.lap("verifyPhysicalAgainMs");
   const prepared = redirectFrozenOwnerCash(frozen, verification.cashRedirect);
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const capacities = new Map(frozen.capacities.map((row) => [row.producerId, row.closing]));
@@ -638,7 +701,9 @@ export async function settleProducerTurn(
   const closingInventories = inventoryImages(frozen, true);
   const cash = cashWithLedger(prepared, record.digest);
   await assertProducerTurnFence(db, frozen.worldEpoch, turn);
+  clock.lap("settlePrepMs");
   const settled = await settleTransition(db, cash);
+  clock.lap("settleTransitionMs");
   if (settled.status !== "applied" && settled.status !== "replayed")
     throw new Error(settled.error ?? "Producer cash settlement is incomplete");
   await publishProducerPayables(db, {
@@ -648,6 +713,7 @@ export async function settleProducerTurn(
     openingPayables: prepared.request.payables ?? [],
     closingPayables: prepared.result.payables,
   });
+  clock.lap("publishPayablesMs");
   const results = new Map(frozen.result.producers.map((p) => [p.id, p]));
   // Only turn-owned absolute receipt fields are published here. Replaying a
   // completed batch changes no cash, stock quantity or user command field.
@@ -706,11 +772,32 @@ export async function settleProducerTurn(
     if (published.matchedCount !== targets.length)
       throw new Error("Producer receipt publication lost its target");
   }
+  clock.lap("sectorBulkWriteMs");
+  // Only the call that froze this turn records timings; replays and resumes skip them.
+  const stageTimingsMs = claimedPayload
+    ? { ...roundStageTimings(timings), settleTotalMs: Math.round(performance.now() - startedAt) }
+    : undefined;
   await turns.updateOne(
     { _id: key, digest: record.digest, status: "frozen" },
-    { $set: { status: "settled", settlementWarnings: verification.turnWarnings } }
+    {
+      $set: {
+        status: "settled",
+        ...(stageTimingsMs ? { stageTimingsMs } : {}),
+        settlementWarnings: [
+          ...verification.turnWarnings,
+          ...producerPlanningWarnings(frozen.result.planning),
+        ],
+      },
+    }
   );
-  return { ...frozen.result, turnWarnings: verification.turnWarnings };
+  phaseSteps.mark("producerMarket.publish");
+  return {
+    ...frozen.result,
+    turnWarnings: [
+      ...verification.turnWarnings,
+      ...producerPlanningWarnings(frozen.result.planning),
+    ],
+  };
 }
 
 /** Recover before preparing a new turn from sectors that may already have advanced. */

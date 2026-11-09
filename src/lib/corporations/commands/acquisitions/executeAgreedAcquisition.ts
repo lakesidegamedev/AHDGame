@@ -39,7 +39,16 @@ import {
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
 import { moveSectorToCorp } from "@/lib/corporations/moveSector";
-import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
+import {
+  assumeCorporateLoans,
+  corporateLoanAssumptionCheck,
+} from "@/lib/banking/corporateLoanAssumption";
+import {
+  emptyConstructionBorrowerTransferPlan,
+  prepareConstructionBorrowerTransfers,
+  securedSiteMergeRefusal,
+  settleConstructionBorrowerTransfers,
+} from "@/lib/banking/constructionBorrowerTransfer";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { assertMergerClearance } from "@/lib/corporations/mergerReview/gate";
 import { attachMergerRemedy } from "@/lib/corporations/mergerReview/lifecycle";
@@ -539,19 +548,39 @@ async function runAgreedAcquisition(
     plan,
   });
 
-  if (!subsidiary && targetSectors.some(hasProtectedConstructionProperty)) {
-    if (fresh) await releaseAcquisitionTarget(db, target._id, offer._id);
-    return {
-      ok: false,
-      error: "Resolve secured construction before completing this acquisition",
-      status: 409,
-    };
+  // The target corporation is deleted and its sites move to the acquirer, so a
+  // secured construction loan moves with its site: the acquirer becomes the
+  // borrower and keeps servicing it. Checked and locked before any money moves.
+  // Its ordinary bank loans move with it the same way, checked here too.
+  let constructionTransfers = emptyConstructionBorrowerTransferPlan();
+  if (!subsidiary) {
+    const mergeRefusal =
+      (await securedSiteMergeRefusal(db, targetSectors, acquirer._id)) ??
+      (await corporateLoanAssumptionCheck(db, {
+        fromId: target._id,
+        toCurrency: acquirerCurrency ?? undefined,
+      }));
+    const prepared = mergeRefusal
+      ? ({ ok: false, error: mergeRefusal } as const)
+      : await prepareConstructionBorrowerTransfers(db, {
+          sectors: targetSectors,
+          toId: acquirer._id,
+          toCurrency: acquirerCurrency,
+          operationKey: `acquisition:${offer._id.toHexString()}`,
+          turn: currentTurn,
+        });
+    if (!prepared.ok) {
+      if (fresh) await releaseAcquisitionTarget(db, target._id, offer._id);
+      return { ok: false, error: prepared.error, status: 409 };
+    }
+    constructionTransfers = prepared.plan;
   }
 
   // A pinned plan from an earlier attempt rules: on replay the recorded legs
   // are the only amounts ever applied, never the recomputed plan above. A
   // compensated record (withdraw/reject raced the retry) closes the run here.
   if (!fresh && settlement.status === "compensated") {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
     return {
       ok: false,
       error: "This acquisition was closed and compensated; open a new offer to try again.",
@@ -560,6 +589,7 @@ async function runAgreedAcquisition(
     };
   }
   if (fresh && plan.unpayable.length > 0) {
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
     const first = plan.unpayable[0];
     const reason = `holder ${first.key} is gone (${first.reason})`;
     await compensateAcquisitionSettlement(db, settlement, {
@@ -680,9 +710,11 @@ async function runAgreedAcquisition(
         targetFxRate,
         acquirerCurrency,
         acquirerFxRate,
-        now
+        now,
+        constructionTransfers
       );
     }
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
     const sectorsRemain = await db
       .collection<CorporateSector>("corporateSectors")
       .countDocuments({ corporationId: target._id });
@@ -695,7 +727,12 @@ async function runAgreedAcquisition(
     await markAcquisitionProgress(db, offer._id, { sectorsMoved: sectorsMovedTotal });
     settlement.sectorsMoved = sectorsMovedTotal;
 
-    // 7. Tear down the target shell.
+    // 7. The acquirer now owes the target's ordinary bank loans. Moved after
+    // every step that can fail and before the delete, so a retry still finds
+    // any that are left on the target.
+    await assumeCorporateLoans(db, { fromId: target._id, toId: acquirer._id });
+
+    // 8. Tear down the target shell.
     const forexEnabledNow = await isForexEnabled();
     await cleanupShareMarketActivityForCorporations(db, [target._id], now, forexEnabledNow);
     await stampSubjectDeleted(db, target._id, {
@@ -767,6 +804,10 @@ async function runAgreedAcquisition(
       };
     }
     throw err;
+  } finally {
+    // Every loan follows only a site that actually moved; the rest keep their
+    // borrower. Either way no lock outlives this attempt.
+    await settleConstructionBorrowerTransfers(db, constructionTransfers);
   }
 }
 

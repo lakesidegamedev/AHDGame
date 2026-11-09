@@ -45,8 +45,13 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
 ];
 
 export interface FundedReceipt {
+  /** Settled source turn, carried with the accounts rather than inferred by readers. */
+  turn?: number;
   internalSupplyIncome?: number;
   internalSupplyCharge?: number;
+  /** Anchor per turn, valuation only: own-site deliveries credited / charged at lane prices. */
+  valuationCredit?: number;
+  valuationCharge?: number;
   /** Anchor per turn. */
   revenue: number;
   /** Anchor per turn: revenue minus inputs consumed, wages and site bills. */
@@ -193,6 +198,7 @@ export function fundedSectorOpsAll(
             }
           : {}),
         plantsPnl: {
+          ...(receipt.turn != null ? { turn: receipt.turn } : {}),
           revenue: daily(result.hourlyRevenue),
           profit: daily(result.hourlyRevenue - result.costs),
           totalCost: daily(result.costs),

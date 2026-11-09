@@ -31,42 +31,56 @@ export interface RouteOffer {
 export type RouteOpen = (commodity: string, exporter: string, importer: string) => boolean;
 
 /**
- * Eligible offer ids per order. Orders that share a commodity and buyer country
- * share one list, so the cost is per (commodity, country), not per order.
+ * Eligible offer ids per order whose route set is restricted. Orders that share
+ * a commodity and buyer country share one list, so the cost is per (commodity,
+ * country), not per order. An order every seller can reach is omitted.
  */
 export function routeEligibility(
   orders: readonly RouteOrder[],
   offers: readonly RouteOffer[],
   open: RouteOpen
 ): Record<string, readonly string[]> {
-  const byCommodityCountry = new Map<string, Map<string, string[]>>();
-  for (const o of offers) {
-    const byCountry = byCommodityCountry.get(o.commodity) ?? new Map<string, string[]>();
-    const ids = byCountry.get(o.sellerCountry) ?? [];
-    ids.push(o.id);
-    byCountry.set(o.sellerCountry, ids);
-    byCommodityCountry.set(o.commodity, byCountry);
-  }
-  const cache = new Map<string, readonly string[]>();
+  const listFor = createRouteEligibility(offers, open);
   const out: Record<string, readonly string[]> = {};
   for (const order of orders) {
-    const key = `${order.commodity}|${order.buyerCountry}`;
-    let list = cache.get(key);
-    if (!list) {
-      const ids: string[] = [];
-      const byCountry = byCommodityCountry.get(order.commodity);
-      for (const [seller, offerIds] of [...(byCountry ?? new Map<string, string[]>())].sort(
-        ([a], [b]) => (a < b ? -1 : 1)
-      )) {
-        if (seller === order.buyerCountry || open(order.commodity, seller, order.buyerCountry))
-          ids.push(...offerIds);
-      }
-      list = ids;
-      cache.set(key, list);
-    }
-    out[order.id] = list;
+    const list = listFor(order.commodity, order.buyerCountry);
+    if (list) out[order.id] = list;
   }
   return out;
+}
+
+/** One immutable offer index and route cache for every buyer in a prepared turn. */
+export function createRouteEligibility(offers: readonly RouteOffer[], open: RouteOpen) {
+  const grouped = new Map<string, Map<string, string[]>>();
+  for (const offer of offers) {
+    let countries = grouped.get(offer.commodity);
+    if (!countries) grouped.set(offer.commodity, (countries = new Map()));
+    let ids = countries.get(offer.sellerCountry);
+    if (!ids) countries.set(offer.sellerCountry, (ids = []));
+    ids.push(offer.id);
+  }
+  const sorted = new Map(
+    [...grouped].map(([commodity, countries]) => [
+      commodity,
+      [...countries].sort(([a], [b]) => (a < b ? -1 : 1)),
+    ])
+  );
+  // undefined means unrestricted; an empty array means no reachable sellers.
+  const cache = new Map<string, readonly string[] | undefined>();
+  return (commodity: string, buyerCountry: string): readonly string[] | undefined => {
+    const key = `${commodity}|${buyerCountry}`;
+    if (cache.has(key)) return cache.get(key);
+    const ids: string[] = [];
+    let closed = false;
+    for (const [seller, offerIds] of sorted.get(commodity) ?? []) {
+      if (seller === buyerCountry || open(commodity, seller, buyerCountry)) {
+        for (const id of offerIds) ids.push(id);
+      } else closed = true;
+    }
+    const list = closed ? ids : undefined;
+    cache.set(key, list);
+    return list;
+  };
 }
 
 export interface CrossBorderTrade {

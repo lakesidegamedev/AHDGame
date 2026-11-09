@@ -3,7 +3,9 @@ import type { CorporateSector } from "@/lib/db/types";
 import {
   hasProtectedConstructionClaim,
   hasProtectedConstructionProperty,
+  unclaimedConstructionFilter,
 } from "@/lib/banking/rules/constructionProperty";
+import type { ConstructionBorrowerTransferPlan } from "@/lib/banking/constructionBorrowerTransfer";
 export {
   hasProtectedConstructionClaim,
   hasProtectedConstructionProperty,
@@ -11,7 +13,11 @@ export {
   unprotectedConstructionPropertyFilter,
 } from "@/lib/banking/rules/constructionProperty";
 
-/** Claim an already-loaded property row before a multi-write disposition. */
+/**
+ * Claim an already-loaded property row before a multi-write disposition.
+ * `claimFilter` replaces the default "no secured claim" match for a financed
+ * site whose loan a borrower transfer has already locked.
+ */
 export async function acquireConstructionPropertyTransition(
   db: Db,
   sector: Pick<
@@ -21,11 +27,12 @@ export async function acquireConstructionPropertyTransition(
   key: string,
   kind: string,
   resumeSameKind = false,
-  allowSameKeyResume = false
+  allowSameKeyResume = false,
+  claimFilter?: Record<string, unknown>
 ): Promise<boolean> {
   const marker = sector.constructionPropertyTransition;
   if (
-    hasProtectedConstructionProperty(sector) &&
+    (claimFilter ? !!marker : hasProtectedConstructionProperty(sector)) &&
     !(allowSameKeyResume && marker?.key === key) &&
     !(resumeSameKind && marker?.kind === kind)
   )
@@ -43,23 +50,7 @@ export async function acquireConstructionPropertyTransition(
             ...(resumeSameKind ? [{ "constructionPropertyTransition.kind": kind }] : []),
           ],
         },
-        {
-          $or: [
-            { constructionFinancing: { $exists: false } },
-            {
-              $and: [
-                { "constructionFinancing.status": { $in: ["released", "cancelled"] } },
-                { "constructionFinancing.escrowLocal": 0 },
-                {
-                  $or: [
-                    { "constructionFinancing.cancellation": { $exists: false } },
-                    { "constructionFinancing.cancellation.cleanupCompleted": true },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
+        claimFilter ?? unclaimedConstructionFilter(),
       ],
     },
     { $set: { constructionPropertyTransition: { key, kind } } }
@@ -113,13 +104,19 @@ export async function reserveSectorsForTransition(
   >,
   kind: string,
   keyPrefix: string,
-  allowSameKeyResume = false
+  allowSameKeyResume = false,
+  /** Financed sites whose loans already follow them to the new owner. */
+  constructionTransfers?: ConstructionBorrowerTransferPlan
 ): Promise<string[] | null> {
+  const transferring = (sector: (typeof sectors)[number]) =>
+    constructionTransfers?.hasTransfer(sector._id) === true;
   if (
     sectors.some((sector) => {
       const key = `${keyPrefix}:${sector._id.toHexString()}`;
       return (
-        hasProtectedConstructionProperty(sector) &&
+        (transferring(sector)
+          ? !!sector.constructionPropertyTransition
+          : hasProtectedConstructionProperty(sector)) &&
         !(
           allowSameKeyResume &&
           sector.constructionPropertyTransition?.kind === kind &&
@@ -140,7 +137,8 @@ export async function reserveSectorsForTransition(
         key,
         kind,
         false,
-        allowSameKeyResume
+        allowSameKeyResume,
+        transferring(sector) ? constructionTransfers!.claimFilterFor(sector) : undefined
       ))
     ) {
       await Promise.all(

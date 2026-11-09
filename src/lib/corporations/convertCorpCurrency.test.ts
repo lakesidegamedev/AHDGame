@@ -186,7 +186,7 @@ describe("convertCorpCurrency", () => {
 
     expect(result).toMatchObject({
       ok: false,
-      error: expect.stringContaining("secured construction"),
+      error: expect.stringContaining("construction loan"),
     });
     expect(db.collectionMocks.shareOrders).toBeUndefined();
     expect(db.collectionMocks.shareListings).toBeUndefined();

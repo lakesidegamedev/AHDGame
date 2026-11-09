@@ -1,3 +1,4 @@
+import { productionOrderOutcomes } from "./productionOrderOutcomes";
 /**
  * Plants turn purchased inputs and paid work into deliverable output.
  * Input shortages constrain the whole recipe; purchases and consumed stock
@@ -13,10 +14,8 @@ import {
 import {
   quoteProducer,
   settleProducerMarket,
-  type MarketAccount,
   type ProducerOffer,
   type ProducerQuotePolicy,
-  type ProducerTradeReceipt,
   type PurchaseOrder,
 } from "./rules";
 import {
@@ -28,19 +27,44 @@ import {
   creditRunShare,
   payablesNotShrinkingSince,
   producerCreditHeadroom,
-  type ProducerCreditPolicy,
 } from "./producerCreditRules";
 import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
 import { householdPurchaseOrders } from "./householdRules";
 import { makeDoOutput, minorInputShortfallCost, minorInputs } from "./makeDoRules";
+import type {
+  ProducerEconomyInput,
+  ProducerEconomyResult,
+  ProducerPlanningExecution,
+} from "./productionTypes";
 import { feasibleProduction } from "./productionFeasibilityRules";
+import {
+  producerPlanningSiteChange,
+  producerPlanningStop,
+  type ProducerPlanningDiagnostics,
+} from "./planningRules";
 import { spilloverOrders } from "./spilloverRules";
 import { laneKeyOf } from "./laneKey";
+import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
+import { shortageAsk } from "./shortageAskRules";
+import { householdSpendBase } from "./householdSpendRules";
 import {
+  decisionProfit,
   internalTransferUnitPrice,
   type InternalTransferPricing,
 } from "./internalTransferPricingRules";
-import { deferredBillFraction, salesAdvanceAmount, salesFundedRunShare } from "./salesAdvanceRules";
+import {
+  deferredBillFraction,
+  expectedInputUnitPrice,
+  salesAdvanceAmount,
+  salesFundedRunShare,
+} from "./salesAdvanceRules";
+import {
+  nextProbeFailures,
+  probePaidForItself,
+  restartProbe,
+  RESTART_PROBE_RUN_SHARE,
+} from "./restartProbeRules";
+import { addStageTiming, listStageTiming, stageClock, type StageTimings } from "./stageTimings";
 
 export interface PurchasedStock {
   commodity: string;
@@ -60,6 +84,13 @@ export interface ProducedStock {
 export interface ProductionPlan {
   id: string;
   internalTransferPricing?: { mode: InternalTransferPricing; discount?: number };
+  /**
+   * Opt in to own-site deliveries booked at market value (captiveMarketValue).
+   * Unset for a company on Free transfer pricing, which books no entries.
+   */
+  ownSiteMarketValue?: boolean;
+  /** The sector's opt-in to sell to outside buyers before the company's own plants. */
+  sellOutsideFirst?: boolean;
   accountId: string;
   /** State the plant site is in; freight buys its own state's offers first. */
   stateId?: string;
@@ -105,14 +136,23 @@ export interface ProductionPlan {
   recentSoldUnits?: number;
   /** Units delivered per output last turn, keyed `${commodity}|${book}`; overrides the plant total. */
   recentSoldByOutput?: Readonly<Record<string, number>>;
+  /** Own ask per output last turn, keyed like recentSoldByOutput (producerShortageAskStage >= 2). */
+  recentAskByOutput?: Readonly<Record<string, number>>;
   /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
   plannedRunShare?: number;
+  /** Consecutive glut turns before this one (producerRunPlanStage); echoed on the receipt. */
+  priorGlutTurns?: number;
   /**
    * Revenue one unit of physical output is expected to earn, from last turn's
    * realized prices and sell-through (salesAdvanceRules). Lets a run be
    * financed against its own sales; absent or 0 = no sales advance.
    */
   expectedUnitRevenue?: number;
+  /**
+   * Consecutive restart probes before this turn that did not pay for
+   * themselves (restartProbeRules), read from last turn's receipt.
+   */
+  restartProbeFailures?: number;
 }
 
 /** Why a plant made less than its planned run this turn, recorded on its receipt. */
@@ -133,7 +173,11 @@ function idleUpkeep(p: ProductionPlan): number {
  * the share of this its free cash covers; the state operating advance sizes
  * itself from the same total so the two cannot drift.
  */
-export function producerRunBudget(plans: readonly ProductionPlan[]): {
+export function producerRunBudget(
+  plans: readonly ProductionPlan[],
+  /** Price per input unit; absent = the bid ceiling. */
+  inputUnitPrice?: (recipe: ProductionPlan["inputs"][number]) => number
+): {
   fixedBills: Map<string, number>;
   variableNeed: Map<string, number>;
 } {
@@ -147,7 +191,9 @@ export function producerRunBudget(plans: readonly ProductionPlan[]): {
       const stock = p.inputStock
         .filter((s) => s.commodity === recipe.commodity)
         .reduce((n, s) => n + s.units, 0);
-      spend += Math.max(0, full * recipe.unitsPerOutput - stock) * recipe.maximumUnitPrice;
+      spend +=
+        Math.max(0, full * recipe.unitsPerOutput - stock) *
+        (inputUnitPrice ? inputUnitPrice(recipe) : recipe.maximumUnitPrice);
     }
     fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + idle);
     variableNeed.set(
@@ -172,12 +218,21 @@ export interface ProducerOperatingResult {
   /** Matching management-account entries between own sites; no treasury cash moves. */
   internalSupplyIncome?: number;
   internalSupplyCharge?: number;
+  /** Own-site deliveries at the lane price, valuation only; they net to zero per company. */
+  valuationCredit?: number;
+  valuationCharge?: number;
   capacityUnits: number;
   activeUnits: number;
   /** Physical proposal before funded order matching constrains actual production. */
   plannedUnits: number;
   /** The plan's run share before input and cash cuts, read back by next turn's run rule. */
   plannedRunShare?: number;
+  /** Consecutive glut turns before this turn, read back by the plan-recovery rule. */
+  priorGlutTurns?: number;
+  /** True when this turn's run was a restart probe financed against its own sales (restartProbeRules). */
+  restartProbe?: boolean;
+  /** Consecutive restart probes through this turn that did not pay for themselves; absent when 0. */
+  restartProbeFailures?: number;
   /**
    * Share of the funded run that was actually made, when short inputs cut it:
    * wages and the running part of the site bill were billed on this share.
@@ -238,6 +293,18 @@ export interface ProducerOperatingResult {
     deliveredUnits: number;
     revenue: number;
     askingUnitPrice: number;
+    /**
+     * Value of own-site deliveries: what the company's short sites bid (stage
+     * 2), otherwise the booked market value per unit (stage 3); absent otherwise.
+     */
+    captiveUnitValue?: number;
+    /**
+     * This plant's share of what the company's other sites asked for this good
+     * this turn, filled from own supply or the market. Shared across the
+     * company's plants of the good by active capacity. Absent when no own site
+     * asked for it.
+     */
+    ownSiteDemandUnits?: number;
     realizedUnitPrice: number | null;
     unsoldUnits: number;
     lostUnits: number;
@@ -308,58 +375,12 @@ function recentSoldOf(p: ProductionPlan, commodity: string, book: string): numbe
     : p.recentSoldUnits;
 }
 
-export function advanceProducerEconomy(input: {
-  turn: number;
-  accounts: readonly MarketAccount[];
-  payables?: readonly ProducerPayable[];
-  producers: readonly ProductionPlan[];
-  externalOffers?: readonly ProducerOffer[];
-  externalOrders?: readonly PurchaseOrder[];
-  inputReservations?: readonly ProducerInputReservation[];
-  households?: readonly Omit<Parameters<typeof householdPurchaseOrders>[0], "cash">[];
-  /** Explicit route/scope eligibility; missing entries allow only the offer's own book. */
-  eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
-  maximumPlanningPasses?: number;
-  /**
-   * Same-turn spillover of household spend stranded in sold-out lanes onto the
-   * buyer's other lanes with unsold supply (spilloverRules). 0 or absent = off.
-   */
-  spilloverShare?: number;
-  /** Own sites take the company's own output before outside buyers, nearest first (settleProducerMarket). */
-  ownSitesFirst?: boolean;
-  /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
-  carryLossByCommodity?: Readonly<Record<string, number>>;
-  /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
-  stockCoverTurns?: number;
-  /** Last turn's clearing price per lane (`laneKeyOf`), the anchor for automatic asks. */
-  clearingPriceByLane?: Readonly<Record<string, number>>;
-  /** Country of a producing site, so offers and its input orders carry one. */
-  countryOfProducer?: (producerId: string) => string | undefined;
-  /** Build the per-country funded book on the final settlement (see fundedBookRules). */
-  trackCountryBooks?: boolean;
-  /** Private companies that may owe wages and site bills to keep running (producerCreditRules). */
-  credit?: ProducerCreditPolicy;
-}): {
-  accounts: MarketAccount[];
-  payables: ProducerPayable[];
-  payablePayments: ProducerPayable[];
-  producers: ProducerOperatingResult[];
-  tradeReceipt: ProducerTradeReceipt;
-  prices: ReturnType<typeof settleProducerMarket>["prices"];
-  /** Units each buyer order asked for and received, for demand telemetry. */
-  orderOutcomes: Array<{
-    commodity: string;
-    book: string;
-    /** Buyer account, so demand can be placed where the buyer is. */
-    accountId: string;
-    requestedUnits: number;
-    deliveredUnits: number;
-  }>;
-  /** Household spend stranded in sold-out lanes and how much the extra clearing placed. */
-  spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
-  /** Per-country funded book from the settled clearing, when `trackCountryBooks` is on. */
-  countryBooks?: ReturnType<typeof settleProducerMarket>["countryBooks"];
-} {
+export function advanceProducerEconomy(
+  input: ProducerEconomyInput,
+  execution?: ProducerPlanningExecution,
+  timings?: StageTimings
+): ProducerEconomyResult {
+  const clock = stageClock(timings);
   const carryRates: Readonly<Record<string, number>> =
     input.carryLossByCommodity ?? COMMODITY_SPOILAGE_PER_TURN;
   const countryOfProducer = input.countryOfProducer;
@@ -486,6 +507,17 @@ export function advanceProducerEconomy(input: {
   // of cash runs smaller instead of paying every wage with nothing left for
   // materials, and owes no wages or running costs for a run that never happened.
   const { fixedBills, variableNeed } = producerRunBudget(plans);
+  // The same run with inputs at what they are expected to cost, for the sales
+  // advance: a run that pays for itself at market prices is not held to its
+  // opening cash because the bid ceiling is several times the market.
+  const expectedNeed = input.salesAdvanceAtClearing
+    ? producerRunBudget(plans, (recipe) =>
+        expectedInputUnitPrice(
+          recipe.maximumUnitPrice,
+          input.clearingPriceByLane?.[laneKeyOf(recipe.commodity, recipe.book)]
+        )
+      ).variableNeed
+    : undefined;
   // A private company on the credit line may run past its cash: it buys the
   // inputs with cash and owes the wages and site bills it cannot cover, up to
   // its headroom (producerCreditRules). `inputReserve` is the cash kept back
@@ -530,10 +562,22 @@ export function advanceProducerEconomy(input: {
       // back by the cash the company happens to hold at the open.
       const salesFunded = Math.max(
         cashOnly,
-        salesFundedRunShare({ free, need, expectedRevenue: expectedRevenue.get(id) ?? 0 })
+        salesFundedRunShare({
+          free,
+          need,
+          expectedRevenue: expectedRevenue.get(id) ?? 0,
+          revenueShare: input.salesAdvanceRevenueShare,
+          ...(expectedNeed ? { expectedNeed: expectedNeed.get(id) ?? need } : {}),
+        })
       );
       const advance = () => {
-        const amount = salesAdvanceAmount({ free, need, runShare: salesFunded });
+        const amount = salesAdvanceAmount({
+          free,
+          need,
+          runShare: salesFunded,
+          revenueShare: input.salesAdvanceRevenueShare,
+          ...(expectedNeed ? { expectedRevenue: expectedRevenue.get(id) ?? 0 } : {}),
+        });
         if (salesFunded > cashOnly * (1 + 1e-12) + 1e-15 && amount > 0)
           salesAdvance.set(id, amount);
         return [id, salesFunded] as const;
@@ -560,10 +604,95 @@ export function advanceProducerEconomy(input: {
       return [id, share] as const;
     })
   );
+  // Restart probes: a plant of a company that cannot fund even a probe-sized
+  // run, with no sales last turn to borrow against, may run a small share of
+  // its capacity on credit against its output's market price, when other
+  // buyers have funded demand for it there and the probe pays for itself.
+  const probeShare = new Map<string, number>();
+  if (input.restartProbes) {
+    const candidates = plans.filter((p) => {
+      const share = runShare.get(p.accountId) ?? 1;
+      return (
+        share < RESTART_PROBE_RUN_SHARE &&
+        !inputReserve.has(p.accountId) &&
+        !((p.expectedUnitRevenue ?? 0) > 0) &&
+        p.capacityUnits * p.activeFraction * p.outputMultiplier > 0
+      );
+    });
+    if (candidates.length > 0) {
+      // Highest funded bid per lane and buyer at the open: public and other
+      // outside orders, household baskets, and the inputs of other plants.
+      const bids = new Map<string, Map<string, number>>();
+      const bid = (lane: string, accountId: string, price: number) => {
+        if (!((cash.get(accountId) ?? 0) > 0) || !(price > 0)) return;
+        const row = bids.get(lane) ?? new Map<string, number>();
+        row.set(accountId, Math.max(row.get(accountId) ?? 0, price));
+        bids.set(lane, row);
+      };
+      for (const o of input.externalOrders ?? [])
+        if (o.units > 0) bid(laneKeyOf(o.commodity, o.book), o.accountId, o.maximumUnitPrice);
+      for (const h of input.households ?? [])
+        if (h.spendFraction > 0)
+          for (const product of h.products)
+            if (product.weight > 0)
+              bid(
+                laneKeyOf(product.commodity, product.book),
+                h.accountId,
+                product.maximumUnitPrice
+              );
+      for (const p of plans)
+        if (p.capacityUnits * p.activeFraction * p.outputMultiplier > 0)
+          for (const recipe of p.inputs)
+            if (recipe.unitsPerOutput > 0)
+              bid(laneKeyOf(recipe.commodity, recipe.book), p.accountId, recipe.maximumUnitPrice);
+      const fundedBuyers = (lane: string, ownAccount: string, price: number) => {
+        for (const [accountId, top] of bids.get(lane) ?? [])
+          if (accountId !== ownAccount && top >= price) return true;
+        return false;
+      };
+      for (const p of candidates) {
+        const outputs = p.outputs.map((o) => {
+          const lane = laneKeyOf(o.commodity, o.book);
+          const marketUnitPrice = input.clearingPriceByLane?.[lane];
+          return {
+            unitsPerOutput: o.unitsPerOutput,
+            ...(marketUnitPrice != null ? { marketUnitPrice } : {}),
+            fundedBuyers:
+              marketUnitPrice != null &&
+              marketUnitPrice > 0 &&
+              fundedBuyers(lane, p.accountId, marketUnitPrice),
+          };
+        });
+        const probe = restartProbe({
+          fullUnits: p.capacityUnits * p.activeFraction * p.outputMultiplier,
+          labourCost: p.labourCost,
+          runningSiteCost: p.otherOperatingCost - idleUpkeep(p),
+          inputs: p.inputs.map((recipe) => {
+            const clearingUnitPrice =
+              input.clearingPriceByLane?.[laneKeyOf(recipe.commodity, recipe.book)];
+            return {
+              unitsPerOutput: recipe.unitsPerOutput,
+              maximumUnitPrice: recipe.maximumUnitPrice,
+              ...(clearingUnitPrice != null ? { clearingUnitPrice } : {}),
+              stockUnits: p.inputStock
+                .filter((s) => s.commodity === recipe.commodity)
+                .reduce((n, s) => n + s.units, 0),
+            };
+          }),
+          outputs,
+          priorFailures: p.restartProbeFailures,
+        });
+        if (!probe) continue;
+        probeShare.set(p.id, probe.runShare);
+        salesAdvance.set(p.accountId, (salesAdvance.get(p.accountId) ?? 0) + probe.advance);
+      }
+    }
+  }
+  const shareOf = (p: ProductionPlan) => probeShare.get(p.id) ?? runShare.get(p.accountId) ?? 1;
   // Wages and site running costs follow the run the company can fund; idle
   // capacity keeps its cold upkeep.
   plans = plans.map((p) => {
-    const share = runShare.get(p.accountId) ?? 1;
+    const share = shareOf(p);
     if (share >= 1) return p;
     const idle = idleUpkeep(p);
     return {
@@ -621,6 +750,18 @@ export function advanceProducerEconomy(input: {
     const line = Math.max(0, amount - (deferredBills.get(id) ?? 0));
     if (line > 0) inputCredit[id] = line;
   }
+  // The cash a household's basket budget is read from (householdSpendRules).
+  const householdBudgetCash = (household: { accountId: string; spendFraction: number }) => {
+    const held = cash.get(household.accountId)!;
+    return input.householdIncomeSpend
+      ? householdSpendBase({
+          cash: held,
+          income: credits.get(household.accountId) ?? 0,
+          spendFraction: household.spendFraction,
+          savingsDrawShare: input.householdIncomeSpend.savingsDrawShare,
+        })
+      : held;
+  };
   const householdIds = new Set<string>();
   let consumerOrders = [...(input.externalOrders ?? [])];
   for (const household of input.households ?? []) {
@@ -628,7 +769,7 @@ export function advanceProducerEconomy(input: {
       throw new Error("Duplicate or unknown household wallet");
     householdIds.add(household.accountId);
     consumerOrders.push(
-      ...householdPurchaseOrders({ ...household, cash: cash.get(household.accountId)! })
+      ...householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
     );
   }
   const orders = [...consumerOrders];
@@ -639,7 +780,7 @@ export function advanceProducerEconomy(input: {
       p.capacityUnits *
         p.activeFraction *
         p.outputMultiplier *
-        (runShare.get(p.accountId) ?? 1) *
+        shareOf(p) *
         // A run on credit or on its own sales is fully staffed: what cash did
         // not pay is owed until the sales pay it.
         (inputReserve.has(p.accountId) || salesAdvance.has(p.accountId)
@@ -790,6 +931,7 @@ export function advanceProducerEconomy(input: {
           units,
           maximumUnitPrice: recipe.maximumUnitPrice,
           priority: 1,
+          fairShare: true,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
           ...(p.stateId ? { stateId: p.stateId } : {}),
@@ -884,8 +1026,25 @@ export function advanceProducerEconomy(input: {
       const weight =
         outputValue > 0 ? (output.unitsPerOutput * output.referenceUnitPrice) / outputValue : 0;
       const recentSold = recentSoldOf(p, output.commodity, output.book);
-      const clearingUnitPrice =
+      const lastClearingUnitPrice =
         input.clearingPriceByLane?.[laneKeyOf(output.commodity, output.book)];
+      // A seller that sold out into a short lane anchors a step above the
+      // clearing (shortageAskRules). Both quote passes read this anchor, so the
+      // competitor pass cannot pull the ask back under it.
+      const clearingUnitPrice =
+        lastClearingUnitPrice != null && input.shortageAsk && output.policy.kind === "automatic"
+          ? shortageAsk({
+              clearingUnitPrice: lastClearingUnitPrice,
+              referenceUnitPrice: output.referenceUnitPrice,
+              pressure: input.shortageAsk.pressureByLane[laneKeyOf(output.commodity, output.book)],
+              soldOut: recentSold != null && recentSold > 0 && stock <= recentSold * 0.01,
+              ownAskUnitPrice: p.recentAskByOutput?.[laneKeyOf(output.commodity, output.book)],
+              ...(input.shortageAsk.maxStep != null ? { maxStep: input.shortageAsk.maxStep } : {}),
+              ...(input.shortageAsk.maxMultiplier != null
+                ? { maxMultiplier: input.shortageAsk.maxMultiplier }
+                : {}),
+            })
+          : lastClearingUnitPrice;
       const quoteInput = {
         policy: output.policy,
         referenceUnitPrice: output.referenceUnitPrice,
@@ -901,6 +1060,8 @@ export function advanceProducerEconomy(input: {
           (level) => ({ units: level.units, maximumUnitPrice: level.unitPrice })
         ),
         competitors: [],
+        ...(input.askBuyerTieBreak ? { buyerTieBreak: true } : {}),
+        ...(input.askCompetitorsMatch ? { competitorsMatch: true } : {}),
       };
       const quote = quoteProducer({
         ...quoteInput,
@@ -925,6 +1086,7 @@ export function advanceProducerEconomy(input: {
           unitPrice: quote.unitPrice,
           ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
           ...(p.stateId ? { stateId: p.stateId } : {}),
+          ...(p.sellOutsideFirst ? { sellOutsideFirst: true as const } : {}),
         },
         quote: quoteInput,
       });
@@ -962,7 +1124,11 @@ export function advanceProducerEconomy(input: {
     });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
+  // Units each household order gained from spillover; measurement only.
+  let spilloverUnits = new Map<string, number>();
+  let trialRuns = 0; // timing only
   const trial = (track = false) => {
+    trialRuns++;
     const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? [])];
     for (const p of plans)
       for (const output of p.outputs) {
@@ -976,13 +1142,21 @@ export function advanceProducerEconomy(input: {
         });
       }
     return settleProducerMarket({
+      checkBudget: execution?.checkBudget,
       turn: input.turn,
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
       orders: [...consumerOrders, ...inputOrders()],
       ...(track ? { trackCountryBooks: true } : {}),
+      ...(track && spilloverUnits.size > 0 ? { spilloverUnitsByOrder: spilloverUnits } : {}),
       ...(Object.keys(inputCredit).length > 0 ? { credit: { ...inputCredit } } : {}),
       ...(input.ownSitesFirst ? { ownSitesFirst: true } : {}),
+      ...(input.marketFirstAccounts?.length
+        ? { marketFirstAccounts: input.marketFirstAccounts }
+        : {}),
+      ...(input.captiveMarketValue || input.ownSiteValuationCredit
+        ? { trackInternalDeliveries: true }
+        : {}),
     });
   };
   // Cut the input line of every company whose sales did not cover what it
@@ -1014,6 +1188,21 @@ export function advanceProducerEconomy(input: {
   const passes = input.maximumPlanningPasses ?? 128;
   if (!Number.isSafeInteger(passes) || passes < 1 || passes > 1024)
     throw new Error("Invalid planning-pass limit");
+  if (execution && (!Number.isFinite(execution.maximumElapsedMs) || execution.maximumElapsedMs < 0))
+    throw new Error("Invalid planning runtime budget");
+  const planning: ProducerPlanningDiagnostics = {
+    passes: 0,
+    maximumPasses: passes,
+    converged: false,
+    stopReason: "pass_limit",
+    siteChanges: [],
+  };
+  const referenceUnitValues = new Map(
+    plans.map((p) => [
+      p.id,
+      p.outputs.reduce((sum, output) => sum + output.unitsPerOutput * output.referenceUnitPrice, 0),
+    ])
+  );
   // Make do with short inputs (makeDoRules.ts): each pass reads every input's
   // fill rate at the current plan and sets output from its physical maximum, so
   // shortages settle at a proportional cut instead of compounding to zero.
@@ -1033,10 +1222,14 @@ export function advanceProducerEconomy(input: {
   // and settles by fill rate like everyone else.
   for (const p of plans)
     if (!(plannedById.get(p.id)! > 0)) plannedById.set(p.id, physicalMaximum.get(p.id)!);
+  clock.lap("economySetupMs");
   for (let pass = 0; pass < passes; pass++) {
+    const passStarted = performance.now();
     market = trial();
+    clock.lap("planningTrialMs");
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
     let changed = cutShortCredit(market);
+    planning.siteChanges = [];
     for (const p of plans) {
       const previous = plannedById.get(p.id)!;
       const fills = p.inputs.map((recipe) => {
@@ -1062,10 +1255,35 @@ export function advanceProducerEconomy(input: {
       const damped = target <= previous ? target : (previous + target) / 2;
       // A plan that has decayed to a negligible share of the original is zero.
       const next = damped < originalPlan.get(p.id)! * 1e-9 ? 0 : damped;
-      if (Math.abs(next - previous) > Math.max(1e-9, previous * 1e-4)) changed = true;
+      const siteChange = producerPlanningSiteChange(
+        p.id,
+        previous,
+        next,
+        referenceUnitValues.get(p.id)!
+      );
+      if (siteChange) {
+        changed = true;
+        planning.siteChanges.push(siteChange);
+      }
       plannedById.set(p.id, Math.max(0, Math.min(originalPlan.get(p.id)!, next)));
     }
-    if (!changed) break;
+    planning.passes = pass + 1;
+    clock.lap("planningOtherMs");
+    listStageTiming(timings, "planningPassMs", performance.now() - passStarted);
+    const elapsedMs = execution?.elapsedMs() ?? 0;
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0)
+      throw new Error("Invalid planning elapsed time");
+    const stop = producerPlanningStop({
+      changed,
+      passes: planning.passes,
+      maximumPasses: passes,
+      deadlineReached: execution != null && elapsedMs >= execution.maximumElapsedMs,
+    });
+    if (stop) {
+      planning.stopReason = stop;
+      planning.converged = stop === "converged";
+      break;
+    }
   }
   // Bills follow output (owner decision 2026-10-30). Wages and site running
   // costs were sized and paid for the funded run, before short inputs cut it.
@@ -1119,12 +1337,17 @@ export function advanceProducerEconomy(input: {
     consumerOrders = [
       ...(input.externalOrders ?? []),
       ...(input.households ?? []).flatMap((household) =>
-        householdPurchaseOrders({ ...household, cash: cash.get(household.accountId)! })
+        householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
       ),
     ];
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
+  clock.lap("billingMs");
+  addStageTiming(timings, "planningTrialRuns", trialRuns);
+  const trialsBeforeFinal = trialRuns;
   market = settleWithinCredit(input.trackCountryBooks === true);
+  clock.lap("finalClearingMs");
+  addStageTiming(timings, "finalClearingTrialRuns", trialRuns - trialsBeforeFinal);
   if (!market) throw new Error("Missing producer market settlement");
   let spillover: { strandedSpend: number; extraRequested: number; recovered: number } | undefined;
   if ((input.spilloverShare ?? 0) > 0 && householdIds.size > 0) {
@@ -1160,13 +1383,42 @@ export function advanceProducerEconomy(input: {
       };
       const before = spend(market.orders);
       consumerOrders = next.orders;
+      spilloverUnits = next.extraUnits;
+      const trialsBeforeSpillover = trialRuns;
+      clock.lap("spilloverPrepMs");
       market = settleWithinCredit(input.trackCountryBooks === true);
+      clock.lap("spilloverClearingMs");
+      addStageTiming(timings, "spilloverTrialRuns", trialRuns - trialsBeforeSpillover);
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
   }
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
+  // Own-site deliveries at market value, for plans that opt in (never Free or priced companies).
+  const captiveValue = input.captiveMarketValue
+    ? captiveMarketValue({
+        deliveries: market.internalDeliveries ?? [],
+        offers: postedOffers,
+        clearingByLane: laneClearingPrices(market.prices),
+        valuedAccounts: new Set(
+          plans
+            .filter((p) => p.ownSiteMarketValue && !internalAccountingAccounts.has(p.accountId))
+            .map((p) => p.accountId)
+        ),
+      })
+    : null;
+  // Same prices, valuation only, for accounts that book no entries of their own.
+  const valuationValue = input.ownSiteValuationCredit
+    ? ownSiteCredit({
+        deliveries: market.internalDeliveries ?? [],
+        offers: postedOffers,
+        prices: market.prices,
+        plans,
+        pricedAccounts: internalAccountingAccounts,
+        marketValueBooked: input.captiveMarketValue === true,
+      })
+    : null;
   // Unsold supply per book and ask, read back to name the input that cut a run.
   const unsoldByBook = new Map<string, { unitPrice: number; units: number }[]>();
   for (const offer of market.tradeReceipt.offers) {
@@ -1268,6 +1520,7 @@ export function advanceProducerEconomy(input: {
     }
     let purchases = 0;
     let internalSupplyCharge = 0;
+    let valuationCharge = 0;
     for (const recipe of p.inputs) {
       const bought = orderIdsForInput(p.id, recipe.commodity).reduce(
         (total, id) => {
@@ -1275,7 +1528,10 @@ export function advanceProducerEconomy(input: {
           return {
             deliveredUnits: total.deliveredUnits + order.deliveredUnits,
             cost: total.cost + order.cost,
-            internalCost: total.internalCost + (order.internalCost ?? 0),
+            internalCost:
+              total.internalCost +
+              (order.internalCost ?? 0) +
+              (captiveValue?.chargeByOrder.get(id) ?? 0),
           };
         },
         { deliveredUnits: 0, cost: 0, internalCost: 0 }
@@ -1289,6 +1545,8 @@ export function advanceProducerEconomy(input: {
       stock.value += bought.cost;
       purchases += bought.cost;
       internalSupplyCharge += bought.internalCost;
+      for (const id of orderIdsForInput(p.id, recipe.commodity))
+        valuationCharge += valuationValue?.chargeByOrder.get(id) ?? 0;
       stocks.set(recipe.commodity, stock);
     }
     // Make do: the plant produces its settled plan and uses up to what it has
@@ -1342,6 +1600,7 @@ export function advanceProducerEconomy(input: {
       stock.value *= 1 - loss;
     }
     let internalSupplyIncome = 0;
+    let valuationCredit = 0;
     let revenue = 0,
       offeredUnits = 0,
       soldUnits = 0,
@@ -1351,8 +1610,10 @@ export function advanceProducerEconomy(input: {
     const products: ProducerOperatingResult["products"] = [];
     const outputStock = p.outputs.map((output) => {
       const sold = offersById.get(JSON.stringify([p.id, "output", output.commodity]))!;
+      const marketValue = captiveValue?.incomeByOffer.get(sold.id) ?? 0;
       revenue += sold.revenue;
-      internalSupplyIncome += sold.internalValue ?? 0;
+      internalSupplyIncome += (sold.internalValue ?? 0) + marketValue;
+      valuationCredit += valuationValue?.incomeByOffer.get(sold.id) ?? 0;
       offeredUnits += sold.offeredUnits;
       soldUnits += sold.soldUnits;
       deliveredUnits += sold.deliveredUnits;
@@ -1426,6 +1687,9 @@ export function advanceProducerEconomy(input: {
         revenue: sold.revenue,
         askingUnitPrice: postedOffers.get(JSON.stringify([p.id, "output", output.commodity]))!
           .unitPrice,
+        ...(marketValue > 0 && sold.internalDeliveredUnits > 0
+          ? { captiveUnitValue: marketValue / sold.internalDeliveredUnits }
+          : {}),
         realizedUnitPrice: sold.soldUnits > 0 ? sold.revenue / sold.soldUnits : null,
         unsoldUnits: unsold,
         lostUnits: unsold - kept,
@@ -1460,14 +1724,52 @@ export function advanceProducerEconomy(input: {
       consumed + minorInputPremium + inventoryWriteOff + p.labourCost + p.otherOperatingCost,
       "production expense"
     );
+    // A probe that did not pay for itself counts toward its stop; one that
+    // paid, or any run that paid, clears the count.
+    const probeFields = (() => {
+      if (!input.restartProbes) return {};
+      const probed = probeShare.has(p.id);
+      const failures = nextProbeFailures({
+        priorFailures: p.restartProbeFailures,
+        probed,
+        // At market-valued own-site deliveries, a probe judged on its management
+        // account: output its own company took counts as sold (decisionProfit).
+        paid: probePaidForItself({
+          revenue: revenue + (input.captiveMarketValue ? internalSupplyIncome : 0),
+          profit: decisionProfit(
+            {
+              profit:
+                revenue -
+                consumed -
+                minorInputPremium -
+                inventoryWriteOff -
+                p.labourCost -
+                p.otherOperatingCost,
+              internalSupplyIncome,
+              internalSupplyCharge,
+            },
+            input.captiveMarketValue === true
+          ),
+          idleOperatingCost: idleUpkeep(p),
+        }),
+      });
+      return {
+        ...(probed ? { restartProbe: true } : {}),
+        ...(failures > 0 ? { restartProbeFailures: failures } : {}),
+      };
+    })();
     results.push({
       id: p.id,
       ...(internalSupplyIncome > 0 ? { internalSupplyIncome } : {}),
       ...(internalSupplyCharge > 0 ? { internalSupplyCharge } : {}),
+      ...(valuationCredit > 0 ? { valuationCredit } : {}),
+      ...(valuationCharge > 0 ? { valuationCharge } : {}),
       capacityUnits: p.capacityUnits,
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,
       ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
+      ...(p.priorGlutTurns != null ? { priorGlutTurns: p.priorGlutTurns } : {}),
+      ...probeFields,
       ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
       ...(() => {
         const binding = billedRunShare.has(p.id) ? bindingInputOf(p) : undefined;
@@ -1476,7 +1778,7 @@ export function advanceProducerEconomy(input: {
       ...(() => {
         const reasons: RunCutReason[] = [];
         if (
-          (runShare.get(p.accountId) ?? 1) < 1 - 1e-12 ||
+          shareOf(p) < 1 - 1e-12 ||
           (!inputReserve.has(p.accountId) &&
             !salesAdvance.has(p.accountId) &&
             (funding.get(p.accountId) ?? 1) < 1 - 1e-12)
@@ -1562,6 +1864,96 @@ export function advanceProducerEconomy(input: {
     Math.abs(openingTotal - closingTotal) > Math.max(1e-7, Math.abs(openingTotal) * 1e-12)
   )
     throw new Error("Producer market cash did not reconcile");
+  // What the company's own sites asked for each good, shared across its plants
+  // of that good by active capacity: the next run plan reads it so a plant that
+  // supplies its own company ramps toward that demand (captiveDeliveryRules).
+  {
+    const settledById = new Map(market.orders.map((o) => [o.id, o]));
+    const asked = new Map<string, { units: number; bySite: Map<string, number> }>();
+    for (const p of plans)
+      for (const recipe of p.inputs) {
+        const o = settledById.get(JSON.stringify([p.id, "input", recipe.commodity]));
+        if (!o || !(o.requestedUnits > 0)) continue;
+        const key = p.accountId + "|" + recipe.commodity;
+        const row = asked.get(key) ?? { units: 0, bySite: new Map<string, number>() };
+        row.units += o.requestedUnits;
+        row.bySite.set(p.id, (row.bySite.get(p.id) ?? 0) + o.requestedUnits);
+        asked.set(key, row);
+      }
+    if (asked.size > 0) {
+      const resultById = new Map(results.map((x) => [x.id, x]));
+      const weight = new Map<string, number>();
+      const weightOf = (p: (typeof plans)[number], commodity: string) =>
+        p.outputs
+          .filter((o) => o.commodity === commodity)
+          .reduce((n, o) => n + o.unitsPerOutput, 0) * (resultById.get(p.id)?.activeUnits ?? 0);
+      for (const p of plans)
+        for (const commodity of new Set(p.outputs.map((o) => o.commodity))) {
+          const key = p.accountId + "|" + commodity;
+          if (!asked.has(key)) continue;
+          weight.set(key, (weight.get(key) ?? 0) + weightOf(p, commodity));
+        }
+      for (const p of plans) {
+        const r = resultById.get(p.id);
+        if (!r) continue;
+        const seen = new Set<string>();
+        for (const product of r.products) {
+          // One share per good, on its first row, so a good on two books is not counted twice.
+          if (seen.has(product.commodity)) continue;
+          seen.add(product.commodity);
+          const key = p.accountId + "|" + product.commodity;
+          const row = asked.get(key);
+          const total = weight.get(key) ?? 0;
+          if (!row || !(total > 0)) continue;
+          // A site's own input order for a good it makes is not demand on itself.
+          const others = row.units - (row.bySite.get(p.id) ?? 0);
+          const units = (others * weightOf(p, product.commodity)) / total;
+          if (units > 0) product.ownSiteDemandUnits = units;
+        }
+      }
+    }
+  }
+  // A company whose own sites were cut short by a good it also makes values what
+  // its plants sent them at what those sites bid (capped at the reference, never
+  // under the ask), not at a market price below its cost
+  // (captiveDeliveryRules, producerCaptiveDeliveryStage >= 2).
+  if (input.captiveShortValue) {
+    const resultById = new Map(results.map((x) => [x.id, x]));
+    const shortBid = new Map<string, number>();
+    const markShort = (accountId: string, commodity: string, bid: number) => {
+      const key = accountId + "|" + commodity;
+      shortBid.set(key, Math.max(shortBid.get(key) ?? 0, bid));
+    };
+    // Short by the order: an own input order the book left partly unfilled.
+    const settledOrders = new Map(market.orders.map((o) => [o.id, o]));
+    for (const order of inputOrders()) {
+      const o = settledOrders.get(order.id);
+      if (o && o.requestedUnits > o.deliveredUnits * (1 + 1e-9) + 1e-9)
+        markShort(order.accountId, order.commodity, order.maximumUnitPrice);
+    }
+    for (const p of plans) {
+      const r = resultById.get(p.id);
+      if (!r?.runCutBy?.includes("inputs") || !r.bindingInput) continue;
+      // Short by the run: the input cut what the site could make before it ordered.
+      const recipe = p.inputs.find((i) => i.commodity === r.bindingInput);
+      if (!recipe) continue;
+      markShort(p.accountId, recipe.commodity, recipe.maximumUnitPrice);
+    }
+    if (shortBid.size > 0)
+      for (const p of plans) {
+        const r = resultById.get(p.id);
+        if (!r) continue;
+        for (const product of r.products) {
+          const bid = shortBid.get(p.accountId + "|" + product.commodity);
+          const output = p.outputs.find((o) => o.commodity === product.commodity);
+          if (bid == null || !output || !(product.internalDeliveredUnits > 0)) continue;
+          product.captiveUnitValue = Math.max(
+            product.askingUnitPrice,
+            Math.min(bid, output.referenceUnitPrice)
+          );
+        }
+      }
+  }
   return {
     accounts: closingAccounts,
     payables: [...closingPayables.values()].sort((a, b) =>
@@ -1569,23 +1961,16 @@ export function advanceProducerEconomy(input: {
     ),
     payablePayments: prior.payments,
     producers: results,
+    planning,
     tradeReceipt: market.tradeReceipt,
     prices: market.prices,
     ...(spillover ? { spillover } : {}),
     ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),
-    orderOutcomes: (() => {
-      const meta = new Map(
-        [...consumerOrders, ...inputOrders()].map((o) => [
-          o.id,
-          { commodity: o.commodity, book: o.book, accountId: o.accountId },
-        ])
-      );
-      return market.orders.flatMap((o) => {
-        const m = meta.get(o.id);
-        return m
-          ? [{ ...m, requestedUnits: o.requestedUnits, deliveredUnits: o.deliveredUnits }]
-          : [];
-      });
-    })(),
+    ...(market.regionalBooks ? { regionalBooks: market.regionalBooks } : {}),
+    orderOutcomes: productionOrderOutcomes(
+      [...consumerOrders, ...inputOrders()],
+      market.orders,
+      spilloverUnits
+    ),
   };
 }

@@ -153,6 +153,38 @@ describe("sector page profit under plants (ticket 1122)", () => {
     expect(panelIdentity(s.pnl) - (s.pnl.freightCostAnchor ?? 0)).toBe(40);
   });
 
+  it("puts internal supply income and charges on the same basis as the profit (ticket 1763)", () => {
+    const engine = enginePnl({
+      revenue: 1000,
+      inputs: 500,
+      labour: 100,
+      upkeep: 10,
+      compliance: 20,
+      otherOpex: 30,
+      policyCredit: 0,
+    });
+    // Profit with the internal lines counted: 340 booked + 400 in - 100 out.
+    const s = buildSectorPlantsSection({
+      ...BASE_ARGS,
+      sector: sectorFixture(),
+      money: {
+        realizedRevenueAnchor: 1400,
+        maintenanceNetAnchor: 630,
+        labourAnchor: 100,
+        growthCostAnchor: 0,
+        profitAnchor: 640,
+        inputsAnchor: 500,
+        internalSupplyIncomeAnchor: 400,
+        internalSupplyChargeAnchor: 100,
+        enginePnl: engine,
+      },
+    });
+    expect(s.pnl.revenueAnchor).toBe(1400);
+    expect(s.truth?.fillAdjustedMarginPct).toBeCloseTo((640 / 1400) * 100);
+    expect(panelIdentity(s.pnl) - (s.pnl.internalSupplyChargeAnchor ?? 0)).toBe(640);
+    expect(s.pnl.avgSalePriceAnchor).toBeCloseTo(1000 / (s.soldUnits ?? 1));
+  });
+
   it("shows the engine's profit, not revenue, when the derived margin saturates at 100", () => {
     // Washington DC newsroom, prod 6a779f41e464c15609c01cbf. The policy credit
     // outruns the operating bill, so operating cost is negative and the booked

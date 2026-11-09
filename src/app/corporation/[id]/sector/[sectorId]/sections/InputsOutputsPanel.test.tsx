@@ -111,6 +111,32 @@ describe("InputsOutputsPanel own supply", () => {
     expect(screen.getByText(/Choose own plants first/)).toBeTruthy();
   });
 
+  it("gives funded reasons: own output used up, and how much was made", () => {
+    const { container } = panel({
+      sourceStateIds: ["HOK"],
+      sourceStateNames: ["Hokkaido"],
+      reasons: ["used_by_own_sites", "made_only"],
+      output: { made: 48, ownSites: 48, soldOutside: 0 },
+    });
+    const note = container.querySelector("[data-own-supply-note]");
+    expect(note?.textContent).toContain(
+      "Your own output of Pharmaceuticals was fully used by your other sites."
+    );
+    expect(note?.textContent).toContain("Your sites made only 48 a day.");
+    expect(note?.textContent).not.toContain("hauled");
+    expect(note?.textContent).not.toMatch(/[\u2013\u2014]/);
+  });
+
+  it("names an explicit open market choice and what outside buyers took", () => {
+    panel({
+      sourceStateIds: ["HOK"],
+      sourceStateNames: ["Hokkaido"],
+      reasons: ["sold_first", "made_only"],
+      output: { made: 48, ownSites: 8, soldOutside: 40 },
+    });
+    expect(screen.getByText(/outside buyers took 40 a day/)).toBeTruthy();
+  });
+
   it("stays quiet once the input is fully covered", () => {
     const { container } = panel(
       { sourceStateIds: ["HOK"], sourceStateNames: ["Hokkaido"], reasons: ["no_route"] },
@@ -395,5 +421,121 @@ describe("InputsOutputsPanel layout", () => {
     expect(within(row("Vehicles & Machinery")).getByText("3.6")).toBeTruthy();
     expect(within(row("Vehicles & Machinery")).getByText(/950/)).toBeTruthy();
     expect(within(row("Vehicles & Machinery")).queryByText(/1,000/)).toBeNull();
+  });
+});
+
+describe("sold share beside own-site use", () => {
+  it("shows the own-site value next to the sold share", () => {
+    render(
+      <InputsOutputsPanel
+        commodities={{
+          ...commodities,
+          supplies: [
+            flow({
+              commodity: "advertising",
+              label: "Advertising & Media",
+              icon: "Ad",
+              soldFraction: 0.7,
+              ownSite: { units: 30, share: 0.3, valueAnchor: 1234 },
+            }),
+          ],
+        }}
+        plants={plants}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+    expect(screen.getByText(/70% sold · .*worth about .*1,?234.* to your sites/)).toBeTruthy();
+  });
+});
+
+describe("short input rows", () => {
+  const healthcare: CommoditiesData = {
+    supplies: [],
+    demands: [
+      flow({
+        commodity: "pharmaceuticals",
+        label: "Pharmaceuticals",
+        icon: "Rx",
+        inputAvailability: 1,
+      }),
+      flow({
+        commodity: "real_estate_services",
+        label: "Real Estate Services",
+        icon: "RE",
+        inputAvailability: 0.286,
+      }),
+    ],
+    commodityMarginModifier: 0,
+    throughput: { bindingInput: "real_estate_services", applied: 0.286, projected: 0.286 },
+  };
+  const idlePlants = {
+    fillRate: 0.39,
+    capacityUnits: 2470,
+    producedUnits: 967.56,
+    idleCauses: [{ cause: "inputs", units: 1502 }],
+  } as PlantsData;
+  const renderPanel = (c: CommoditiesData, p: PlantsData) =>
+    render(
+      <InputsOutputsPanel
+        commodities={c}
+        plants={p}
+        countryId="US"
+        isExtraction={false}
+        forexEnabled={false}
+        exchangeRates={{}}
+      />
+    );
+
+  it("marks only the input that ran short and links its sellers", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ enabled: true, offers: [{ side: "sell", own: false }] }),
+      })
+    );
+    const { container } = renderPanel(healthcare, idlePlants);
+    const marked = container.querySelectorAll("[data-short-input]");
+    expect(Array.from(marked).map((n) => n.getAttribute("data-short-input"))).toEqual([
+      "real_estate_services",
+    ]);
+    expect(within(marked[0] as HTMLElement).getByText("Ran short")).toBeTruthy();
+    const link = await within(marked[0] as HTMLElement).findByText("1 seller offering");
+    expect(link.getAttribute("href")).toBe("/commodity/real_estate_services/offers");
+  });
+
+  it("marks the engine's binding input when the world market shows full cover", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) => ({ ...d, inputAvailability: 1 })),
+    };
+    const { container } = renderPanel(c, idlePlants);
+    expect(container.querySelector("[data-short-input='real_estate_services']")).not.toBeNull();
+    expect(container.querySelector("[data-short-input='pharmaceuticals']")).toBeNull();
+  });
+
+  it("says so when inputs stopped the run but no input row is short", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) => ({ ...d, inputAvailability: 1 })),
+      throughput: { bindingInput: null, applied: null, projected: 1 },
+    };
+    const { container } = renderPanel(c, idlePlants);
+    expect(container.querySelector("[data-short-input]")).toBeNull();
+    expect(container.querySelector("[data-unmarked-input-stop]")).not.toBeNull();
+  });
+
+  it("marks nothing and stays quiet when no input ran short", () => {
+    const c: CommoditiesData = {
+      ...healthcare,
+      demands: healthcare.demands.map((d) => ({ ...d, inputAvailability: 1 })),
+      throughput: { bindingInput: null, applied: 1, projected: 1 },
+    };
+    const { container } = renderPanel(c, { fillRate: 1 } as PlantsData);
+    expect(container.querySelector("[data-short-input]")).toBeNull();
+    expect(container.querySelector("[data-unmarked-input-stop]")).toBeNull();
   });
 });

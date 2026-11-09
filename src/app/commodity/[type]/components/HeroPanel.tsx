@@ -19,6 +19,7 @@ import {
 import { postImportBalance } from "@/lib/trade/postImportGap";
 import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 
 interface HeroPanelProps {
@@ -38,6 +39,7 @@ export default function HeroPanel({
   exchangeRates,
   onSelectExchange,
 }: HeroPanelProps) {
+  const t = useTranslations("corporations.commodityMarket");
   const registered = useRegisteredCountries();
   // Exchange tabs follow the runtime registered set, filtered to countries that
   // actually run a market (exchangeName). A latent SCO/WAL surfaces here only once
@@ -209,7 +211,10 @@ export default function HeroPanel({
           <span className="text-base font-bold tabular-nums text-success">
             {formatUnits(marketScope.supply, data.unit)}
           </span>
-          <span className="text-xs text-muted">per day</span>
+          <span className="text-xs text-muted">{t("supplyOfferedPerDay")}</span>
+          <span className="text-[10px] text-muted" title={t("supplyOfferedExplanation")}>
+            {t("supplyIncludesStock")}
+          </span>
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">
@@ -218,7 +223,21 @@ export default function HeroPanel({
           <span className="text-base font-bold tabular-nums text-error">
             {formatUnits(marketScope.demand, data.unit)}
           </span>
-          <span className="text-xs text-muted">per day</span>
+          <span className="text-xs text-muted">
+            {marketScope.demandBasis === "funded_orders" ? "ordered per day" : "per day"}
+          </span>
+          {marketScope.filled !== null ? (
+            <span className="text-[10px] text-muted">
+              {formatUnits(marketScope.filled, data.unit)} received
+            </span>
+          ) : null}
+          {marketScope.spilloverRequested > 0 ? (
+            <span className="text-[10px] text-muted" title={t("substitutionOrdersExplanation")}>
+              {t("substitutionOrders", {
+                units: formatUnits(marketScope.spilloverRequested, data.unit),
+              })}
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-1 flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">Balance</span>

@@ -197,6 +197,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             federalTaxPaid: 1,
             stateTaxPaid: 1,
             perTurnBondCouponIncome: 1,
+            perTurnBondInterestExpense: 1,
             perTurnBondDragOnNetIncome: 1,
             taxPaidByCountry: 1,
             taxPaidByState: 1,

@@ -451,6 +451,7 @@ export function processSector(
     sectorFxRate,
     eraUnitScale: lookups.eraUnitScale,
     preset: lookups.preset,
+    worldBuildsSettledTurn: lookups.worldBuildsSettledTurn,
   });
   // C4: the turn's queue write is a delta, never a whole-array $set.
   // `nextBuildQueue` is a snapshot; `$set`-ing it would erase an order a CEO
@@ -1526,6 +1527,9 @@ export function processSector(
     sectorUpdateDoc.$set = {
       ...sectorUpdateDoc.$set,
       constructionInProgressAnchor: Math.max(0, Math.round(constructionInProgressAnchor)),
+      // Deliveries above cover every turn up to this one; record that in the
+      // same update so a replay or a later catch-up starts here.
+      buildDeliverySettledTurn: currentTurn,
     };
   }
   sectorOps.push({

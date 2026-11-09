@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   demandPlanRunShare,
+  GLUT_TURNS_TO_FLOOR,
+  glutTurnsThrough,
   liveLineReceipt,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
@@ -8,6 +10,9 @@ import {
   OUTPUT_GROW_STEP,
   OUTPUT_RUN_FLOOR,
   pacedRunShare,
+  planBaseRunShare,
+  planRecoveryRunShare,
+  PLAN_RECOVERY_STEP,
   type PriorReceipt,
   type ReceiptLine,
 } from "./outputResponseRules";
@@ -360,5 +365,195 @@ describe("a sold-out line short of inputs holds its plan", () => {
       runCutBy: ["inputs"],
     });
     expect(demandPlanRunShare(over)).toBe(demandPlanRunShare({ ...over, runCutBy: undefined }));
+  });
+});
+
+describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
+  // A sold-out mine whose cash cut its run to half of what it planned.
+  const cut = receipt({
+    plannedRunShare: 0.4,
+    producedUnits: 20,
+    offeredUnits: 20,
+    soldUnits: 20,
+    revenue: 400,
+    inputsConsumed: 100,
+    runCutBy: ["cash"],
+  });
+
+  it("never plans below what sold last turn, even at a loss (owner invariant)", () => {
+    // Sold out at a price below its running cost: the loss brake fires, but the
+    // plan may not fall under the 0.5 of capacity buyers actually took.
+    const losing = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 50,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 400,
+    });
+    expect(planRecoveryRunShare(losing, { demandPlan: true })).toBeGreaterThanOrEqual(0.5);
+    // A partial seller with held stock still plans at least what it sold.
+    const partial = receipt({
+      plannedRunShare: 0.8,
+      producedUnits: 80,
+      offeredUnits: 160,
+      soldUnits: 60,
+      revenue: 600,
+      inputsConsumed: 100,
+    });
+    expect(planRecoveryRunShare(partial, { demandPlan: true })).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("stage 2: stock beyond the cover lowers the never-below-sales floor", () => {
+    // A gas plant that sold what it made and carried an equal pile on top.
+    const piled = receipt({
+      plannedRunShare: 1,
+      producedUnits: 100,
+      offeredUnits: 260,
+      soldUnits: 100,
+      revenue: 1000,
+      inputsConsumed: 100,
+    });
+    const before = planRecoveryRunShare(piled, { demandPlan: true });
+    const after = planRecoveryRunShare(piled, { demandPlan: true, stockCoverTurns: 1 });
+    // Held 160 against a one-turn cover of 100: 60 excess, floor (100 - 60) / 100.
+    expect(before).toBeGreaterThanOrEqual(1);
+    expect(after).toBeLessThan(before);
+    expect(after).toBeGreaterThanOrEqual(0.4);
+    // No pile beyond the cover: the floor is unchanged.
+    const lean = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 90,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 400,
+    });
+    expect(
+      planRecoveryRunShare(lean, { demandPlan: true, stockCoverTurns: 1 })
+    ).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("stage 3: a sold-out line selling below its running cost steps down below its sales", () => {
+    // Sold all 50 it made at 2 a unit; inputs 1, wages 2 and site 1 a unit.
+    const losing = receipt({
+      plannedRunShare: 0.5,
+      producedUnits: 50,
+      offeredUnits: 50,
+      soldUnits: 50,
+      revenue: 100,
+      inputsConsumed: 50,
+      labourPaid: 100,
+      otherOperatingPaid: 50,
+    });
+    const held = planRecoveryRunShare(losing, { demandPlan: true });
+    const cut = planRecoveryRunShare(losing, { demandPlan: true, lossCutBelowSales: true });
+    expect(held).toBeGreaterThanOrEqual(0.5);
+    expect(cut).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 10);
+    // A sold-out line that pays its running costs keeps growing.
+    const paying = receipt({ ...losing, revenue: 400 });
+    expect(
+      planRecoveryRunShare(paying, { demandPlan: true, lossCutBelowSales: true })
+    ).toBeGreaterThan(0.5);
+  });
+
+  it("an input or cash cut does not lower the next plan", () => {
+    for (const runCutBy of [["cash"], ["inputs"]]) {
+      const next = planRecoveryRunShare({ ...cut, runCutBy }, { demandPlan: true });
+      expect(next).toBeGreaterThanOrEqual(0.4);
+      expect(next).toBeCloseTo(0.4 + PLAN_RECOVERY_STEP, 10);
+    }
+    // The flag-off rules restart from the cut output instead.
+    expect(nextRunShare(cut)).toBeCloseTo(0.2 * (1 + OUTPUT_GROW_STEP), 10);
+  });
+
+  it("a plant short of an input every turn keeps its plan instead of ratcheting down", () => {
+    let plan = 0.6;
+    for (let turn = 0; turn < 10; turn++) {
+      const prior = receipt({
+        plannedRunShare: plan,
+        producedUnits: plan * 100 * 0.5,
+        offeredUnits: plan * 100 * 0.5,
+        soldUnits: plan * 100 * 0.5,
+        revenue: plan * 100 * 0.5 * 10,
+        inputsConsumed: plan * 100 * 0.5 * 2,
+        runCutBy: ["inputs"],
+      });
+      const next = planRecoveryRunShare(prior, { demandPlan: true });
+      expect(next).toBeGreaterThanOrEqual(plan);
+      plan = next;
+    }
+    expect(plan).toBe(1);
+  });
+
+  it("a loss cut steps down from the plan, not from the cut output", () => {
+    const losing = { ...cut, revenue: 20, inputsConsumed: 100 };
+    expect(planRecoveryRunShare(losing)).toBeCloseTo(0.4 * (1 - OUTPUT_CUT_STEP), 10);
+  });
+
+  it("one glut turn steps down; only a second glut turn in a row drops to the floor", () => {
+    const glut = receipt({
+      plannedRunShare: 0.8,
+      producedUnits: 80,
+      offeredUnits: 80,
+      soldUnits: 1,
+    });
+    expect(glutTurnsThrough(glut)).toBe(1);
+    expect(planRecoveryRunShare(glut)).toBeCloseTo(0.8 * (1 - OUTPUT_CUT_STEP), 10);
+    const second = { ...glut, priorGlutTurns: GLUT_TURNS_TO_FLOOR - 1 };
+    expect(glutTurnsThrough(second)).toBe(GLUT_TURNS_TO_FLOOR);
+    expect(planRecoveryRunShare(second, { floor: LOW_USE_RUN_FLOOR })).toBe(LOW_USE_RUN_FLOOR);
+    // A turn that sold resets the streak.
+    expect(glutTurnsThrough({ ...second, soldUnits: 80 })).toBe(0);
+    // The flag-off rule floors on the first glut turn.
+    expect(nextRunShare(glut)).toBe(OUTPUT_RUN_FLOOR);
+  });
+
+  it("recovers from the floor to a full run in about seven turns", () => {
+    let plan = LOW_USE_RUN_FLOOR;
+    let turns = 0;
+    while (plan < 1 && turns < 50) {
+      const units = plan * 100;
+      plan = planRecoveryRunShare(
+        receipt({
+          plannedRunShare: plan,
+          producedUnits: units,
+          offeredUnits: units,
+          soldUnits: units,
+          revenue: units * 10,
+          inputsConsumed: units * 2,
+        }),
+        { floor: LOW_USE_RUN_FLOOR, demandPlan: true }
+      );
+      turns++;
+    }
+    expect(turns).toBe(7);
+  });
+
+  it("shortage growth still grows faster than the step", () => {
+    const soldOut = receipt({ plannedRunShare: 0.5, producedUnits: 50 });
+    expect(planRecoveryRunShare(soldOut, { soldOutGrowth: 1.6 })).toBeCloseTo(0.8, 10);
+  });
+
+  it("falls back to the produced share when the receipt has no plan", () => {
+    expect(planBaseRunShare(receipt())).toBe(0.5);
+    expect(planRecoveryRunShare(receipt())).toBeCloseTo(0.5 + PLAN_RECOVERY_STEP, 10);
+  });
+
+  it("paces a fall from the plan when asked", () => {
+    expect(pacedRunShare(0.1, cut, 0.25, OUTPUT_RUN_FLOOR, true)).toBeCloseTo(0.3, 10);
+    expect(pacedRunShare(0.1, cut, 0.25)).toBeCloseTo(0.15, 10);
+  });
+
+  it("partial sell-through still plans from expected sales on the demand plan", () => {
+    const partial = receipt({ plannedRunShare: 0.5, producedUnits: 50, soldUnits: 25 });
+    expect(
+      planRecoveryRunShare(partial, { demandPlan: true, floor: LOW_USE_RUN_FLOOR })
+    ).toBeCloseTo(
+      // Expected sales less held stock would be (25 * 1.1 - 25) / 100, but the
+      // owner invariant keeps the plan at what sold: 25 of 100.
+      Math.max((25 * 1.1 - 25) / 100, 0.25),
+      10
+    );
   });
 });

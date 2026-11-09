@@ -97,6 +97,58 @@ describe("buildCommodityMarketScope", () => {
     expect(scope.syntheticDemandSources).toEqual([]);
   });
 
+  it("reads a country from the funded book, public buyers included, and labels it", () => {
+    const data = makeCommodityDetail({
+      // Stored national demand only counts buyers placed in a state.
+      nationalSupply: { DE: 200, US: 800 },
+      nationalDemand: { DE: 20, US: 1100 },
+      nationalBalanceSource: "funded_book",
+      fundedCountryBooks: {
+        DE: {
+          supply: 200,
+          demand: 600,
+          spilloverRequested: 25,
+          filled: 180,
+          funded: 500,
+          imports: 0,
+          exports: 20,
+        },
+      },
+    });
+
+    const scope = buildCommodityMarketScope(data, "DE");
+
+    expect(scope.supply).toBe(200);
+    expect(scope.demand).toBe(600);
+    expect(scope.balance).toBe(-400);
+    expect(scope.demandBasis).toBe("funded_orders");
+    expect(scope.filled).toBe(180);
+    expect(scope.spilloverRequested).toBe(25);
+    expect(scope.marketCaption).toBe(
+      "Filtered to Germany. Supply and demand are last turn's market orders."
+    );
+  });
+
+  it("reads a country absent from the funded book as empty, not as its state sums", () => {
+    const data = makeCommodityDetail({
+      nationalBalanceSource: "funded_book",
+      fundedCountryBooks: {},
+    });
+
+    const scope = buildCommodityMarketScope(data, "DE");
+
+    expect(scope.supply).toBe(0);
+    expect(scope.demand).toBe(0);
+    expect(scope.demandBasis).toBe("funded_orders");
+  });
+
+  it("keeps the stored national figures when there is no funded book", () => {
+    const scope = buildCommodityMarketScope(makeCommodityDetail(), "DE");
+
+    expect(scope.demandBasis).toBe("stored");
+    expect(scope.filled).toBeNull();
+  });
+
   it("passing a null activeState keeps prior Global behavior unchanged", () => {
     const data = makeCommodityDetail();
 
