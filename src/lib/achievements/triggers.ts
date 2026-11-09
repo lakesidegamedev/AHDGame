@@ -139,6 +139,30 @@ export async function checkElectionEntryAchievements(
   }
 }
 
+/** Elections this character has won, from their career log. */
+export async function countElectionWins(characterId: ObjectId): Promise<number> {
+  const db = await getDb();
+  const [row] = await db
+    .collection("characters")
+    .aggregate<{ wins: number }>([
+      { $match: { _id: characterId } },
+      {
+        $project: {
+          wins: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$careerHistory", []] },
+                cond: { $eq: ["$$this.type", "elected"] },
+              },
+            },
+          },
+        },
+      },
+    ])
+    .toArray();
+  return row?.wins ?? 0;
+}
+
 export async function checkElectionWinAchievements(
   userId: ObjectId,
   characterId: ObjectId,
@@ -156,8 +180,9 @@ export async function checkElectionWinAchievements(
     const slug = typeSlugs[electionType];
     if (slug) slugs.push(slug);
 
-    const db = await getDb();
-    const wins = await db.collection("electedOfficials").countDocuments({ characterId });
+    // Wins are counted from the career log, not from seats held now: a
+    // re-elected single-seat winner holds one row and an ex-holder none.
+    const wins = await countElectionWins(characterId);
     if (wins >= 3) slugs.push("three_terms");
 
     await awardAchievements(userId, slugs, characterId);
