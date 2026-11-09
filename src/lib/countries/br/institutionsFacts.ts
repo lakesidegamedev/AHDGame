@@ -144,7 +144,6 @@ export const BR_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "br_archetypes",
   executiveTermLimit: {
     officeKey: "president",
     maxTermsPerCharacter: 2,

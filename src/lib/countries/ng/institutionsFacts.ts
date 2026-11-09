@@ -148,7 +148,6 @@ export const NG_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "ng_archetypes",
   executiveTermLimit: {
     officeKey: "president",
     maxTermsPerCharacter: 2,

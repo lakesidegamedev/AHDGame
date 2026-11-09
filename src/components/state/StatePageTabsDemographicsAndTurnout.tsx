@@ -3,7 +3,6 @@
 import { describeMediaPull } from "@/lib/mediaEditorial/opinionPullCopy";
 import { useState, type ReactNode } from "react";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { REGION_CENSUS_LABELS } from "@/lib/constants/regionCensusLabels";
 import { LocalTime } from "@/components/time/LocalTime";
 import { LivePopulationPanel } from "@/components/demographics/LivePopulationPanel";
@@ -14,7 +13,7 @@ import type { RegionPartyPosition } from "@/lib/demographics/preferredParty";
 import type {
   SerializedStateDemographics,
   Layer1Config,
-  ArchetypeRegionCensus,
+  IntlRegionCensus,
 } from "./StatePageTabsTypes";
 
 interface TurnoutData {
@@ -583,11 +582,11 @@ export function DemographicsAndTurnoutTab({
   stateId: string;
   demographics: SerializedStateDemographics | null;
   categories: DemographicCategory[];
-  censusData: Layer1Config | ArchetypeRegionCensus | null;
+  censusData: Layer1Config | IntlRegionCensus | null;
   /**
    * Per-bucket electorate profile, computed server-side from the same granular
    * units the vote engine uses. Null when the region has no Layer-1 substrate,
-   * in which case the archetype fallback below still renders.
+   * in which case the fallback below still renders.
    */
   bucketProfile?: BucketProfileSection[] | null;
   isAdmin?: boolean;
@@ -597,14 +596,7 @@ export function DemographicsAndTurnoutTab({
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("combined");
   const kpi = computeKpiProps({ demographics, turnoutData });
-  // Archetype-based view applies to every country whose demographicProfileId
-  // is `<cc>_archetypes` (UK, JP, DE, IE, CN, BR). Single config-driven gate; no
-  // caller has to pass a per-country boolean.
   const upperCountryId = countryId?.toUpperCase() as CountryId | undefined;
-  const profileId = upperCountryId
-    ? COUNTRY_CLIENT_CONFIGS[upperCountryId]?.demographicProfileId
-    : undefined;
-  const isArchetypeBased = /^[a-z]{2}_archetypes$/.test(profileId ?? "");
 
   if (!censusData && !demographics) {
     // Census-share / polling demographics are unconfigured — but the LIVE cohort
@@ -658,9 +650,9 @@ export function DemographicsAndTurnoutTab({
     }));
   };
 
-  // Archetype-based census cards (UK, JP, DE, IE, CN, BR, DD) — labels resolved
+  // International census cards (UK, JP, DE, IE, CN, BR, DD) — labels resolved
   // per country from REGION_CENSUS_LABELS.
-  if (isArchetypeBased && censusData && "ethnicity" in censusData) {
+  if (censusData && "ethnicity" in censusData) {
     const data = censusData as unknown as Record<string, Record<string, number>>;
     const labels = upperCountryId ? REGION_CENSUS_LABELS[upperCountryId] : undefined;
 
@@ -1019,10 +1011,9 @@ export function DemographicsAndTurnoutTab({
     );
   }
 
-  // Fallback: an archetype-profile country with demographics stored but no
-  // Layer-1 census file yet. Renders the live panel and an explicit notice so
+  // Fallback: a region with demographics stored but no Layer-1 census file yet. Renders the live panel and an explicit notice so
   // the tab is never blank and never claims data it does not have.
-  if (isArchetypeBased && demographics) {
+  if (demographics) {
     return (
       <div className="space-y-3">
         {countryId && <LivePopulationPanel stateId={stateId} countryId={countryId} />}

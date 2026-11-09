@@ -113,7 +113,6 @@ export const RO_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "ro_archetypes",
   centralBank: {
     name: "National Bank of Romania",
     abbreviation: "BNR",

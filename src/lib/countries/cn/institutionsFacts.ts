@@ -422,7 +422,6 @@ export const CN_CONFIG: CountryConfig = {
     viceChair: "Deputy General Secretary",
     committee: "Secretariat",
   },
-  demographicProfileId: "cn_archetypes",
   hasLeaderConfidenceModel: true,
   mapOverlay: "partyOrg",
   centralBank: {

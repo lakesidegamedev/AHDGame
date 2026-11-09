@@ -131,7 +131,6 @@ export const IT_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "it_archetypes",
   centralBank: {
     name: "Banca d'Italia",
     abbreviation: "BdI",

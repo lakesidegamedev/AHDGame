@@ -132,7 +132,6 @@ export const UK_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "uk_archetypes",
   centralBank: {
     name: "Bank of England",
     abbreviation: "BoE",

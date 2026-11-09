@@ -158,7 +158,6 @@ export const JP_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "jp_archetypes",
   centralBank: {
     name: "Bank of Japan",
     abbreviation: "BoJ",

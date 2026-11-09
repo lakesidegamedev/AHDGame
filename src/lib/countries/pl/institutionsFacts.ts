@@ -115,7 +115,6 @@ export const PL_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "pl_archetypes",
   centralBank: {
     name: "National Bank of Poland",
     abbreviation: "NBP",

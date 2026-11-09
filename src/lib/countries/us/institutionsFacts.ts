@@ -160,7 +160,6 @@ export const US_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "us_archetypes",
   executiveTermLimit: {
     officeKey: "president",
     maxTermsPerCharacter: 2,

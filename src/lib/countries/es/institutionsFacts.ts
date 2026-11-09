@@ -132,7 +132,6 @@ export const ES_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "es_archetypes",
   centralBank: {
     name: "Banco de España",
     abbreviation: "BdE",

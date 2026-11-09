@@ -117,7 +117,6 @@ export const BG_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "bg_archetypes",
   centralBank: {
     name: "Bulgarian National Bank",
     abbreviation: "BNB",

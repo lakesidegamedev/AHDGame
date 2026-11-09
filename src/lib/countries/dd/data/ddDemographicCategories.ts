@@ -4,7 +4,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  * East Germany Voter Archetypes — 6 groups of the 1979 GDR.
  *   defaultEconomicLean: -5 (planned/socialist) … +5 (market/reform)
  *   defaultSocialLean:   -5 (secular/liberal) … +5 (traditional)
- * demographicProfileId "dd_archetypes"; category _id "dd_voterGroups".
  */
 export const ddDemographicCategories: DemographicCategory[] = [
   {
