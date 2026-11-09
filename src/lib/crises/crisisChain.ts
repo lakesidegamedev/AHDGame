@@ -198,21 +198,3 @@ export async function openVietnamChain(
 
   return { started: true, crisisIds, level: opened.level };
 }
-
-/**
- * Open the Vietnam family once the world reaches its era window.
- *
- * Called every turn. Delegates to `openVietnamChain`, which owns the whole
- * start: the opening rung, both commitment decisions and the press coverage.
- * The generic auto-spawner cannot do any of this. It rewrites `countryIds` to a
- * single nation, a Vietnam rung is addressed to BOTH superpowers at once, and it
- * has no notion of a family that must open exactly once.
- */
-export async function processVietnamChainOpening(
-  db: Db,
-  currentTurn: number,
-  currentYear: number | null | undefined
-): Promise<{ spawned: number }> {
-  const result = await openVietnamChain(db, currentTurn, currentYear);
-  return { spawned: result.crisisIds.length };
-}

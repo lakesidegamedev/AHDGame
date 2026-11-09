@@ -269,7 +269,7 @@ export const WAVE_FAMILY_TABLES: Record<string, WaveFamilyTable> = {
     scale: HARM_SCALE,
   },
   [ORBITAL_DEBRIS_KEY]: {
-    fromYear: 2040,
+    fromYear: 2042,
     opening: {
       baseAnnual: 0.01,
       capAnnual: 0.15,
