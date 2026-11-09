@@ -197,7 +197,7 @@ async function main() {
   console.log("\n=== DE Seed Complete ===");
   console.log(
     `Bundesländer: ${deRegions.length}, Parties: ${deParties.length}, ` +
-      `Groups: ${groupCount}, Party Orgs: ${deStatePartyOrgs.length}, ` +
+      `Party Orgs: ${deStatePartyOrgs.length}, ` +
       `Metrics: ${deStateMetrics.length}, Baselines: ${deStateBaselines.length}, ` +
       `Legislation Types: ${deLegislationTypes.length}`
   );

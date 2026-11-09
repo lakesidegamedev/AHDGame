@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getUkModel } from "./layer1Model";
 import { censusStateLean } from "@/lib/demographics/censusLean";
-import {
-  computeDerivedComposition,
-  editorConfigFromCountryModel,
-} from "@/lib/positionEditor/derive";
+import { editorConfigFromCountryModel } from "@/lib/positionEditor/derive";
+import { computeDerivedComposition } from "@/lib/positionEditor/preview";
 
 describe("UK 1991 social attitudes derive from demographic inputs", () => {
   const model = getUkModel("1991");

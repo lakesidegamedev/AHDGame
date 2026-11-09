@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { stateConfigToCsv, allStatesLeanToCsv } from "./csv";
-import { editorConfigFromSeed, computeDerivedComposition } from "./derive";
+import { editorConfigFromSeed } from "./derive";
+import { computeDerivedComposition } from "./preview";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 
 const CFG: Layer1Config = {

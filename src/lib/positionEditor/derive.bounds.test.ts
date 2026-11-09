@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getUkModel } from "@/lib/countries/uk/layer1Model";
-import { computeDerivedComposition, editorConfigFromCountryModel } from "./derive";
+import { editorConfigFromCountryModel } from "./derive";
+import { computeDerivedComposition } from "./preview";
 
 describe("regional position editor bounds", () => {
   it.each([5, -5])(

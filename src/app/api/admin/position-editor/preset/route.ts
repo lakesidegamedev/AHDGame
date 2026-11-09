@@ -4,10 +4,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import {
   editorConfigFromSeed,
-  computeDerivedComposition,
   editorConfigFromCountryModel,
   applyOverrideToEditorConfig,
 } from "@/lib/positionEditor/derive";
+import { computeDerivedComposition } from "@/lib/positionEditor/preview";
 import { stateCensusData } from "@/lib/seeds/stateCensusData";
 import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
 import { stateCensusData1979 } from "@/lib/seeds/stateCensusData1979";

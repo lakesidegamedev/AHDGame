@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
-import { editorConfigFromCountryModel, computeDerivedComposition } from "./derive";
+import { editorConfigFromCountryModel } from "./derive";
+import { computeDerivedComposition } from "./preview";
 
 const COUNTRIES = ["UK", "DE", "JP", "IE", "BR", "CN"] as const;
 

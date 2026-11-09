@@ -151,7 +151,7 @@ async function main() {
   console.log("\n=== UK Seed Complete ===");
   console.log(
     `Regions: ${ukRegions.length}, Parties: ${ukParties.length}, ` +
-      `Groups: ${groupCount}, Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
+      `Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
   );
 }
 

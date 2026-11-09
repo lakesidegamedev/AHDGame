@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeDerivedComposition, editorConfigFromSeed } from "./derive";
+import { editorConfigFromSeed } from "./derive";
+import { computeDerivedComposition } from "./preview";
 import { censusStateLean } from "@/lib/demographics/censusLean";
 import { stateCensusData } from "@/lib/seeds/stateCensusData";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
