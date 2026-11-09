@@ -174,6 +174,18 @@ async function incTreasuryBalance(
   return (result?.matchedCount ?? 0) > 0;
 }
 
+/** The country's Treasury account identity, for receipts that must freeze the exact document. */
+async function loadTreasuryAccount(
+  db: Db,
+  countryId: CountryId
+): Promise<{ _id: FederalBudget["_id"] }> {
+  const treasury = await db
+    .collection<FederalBudget>("federalBudget")
+    .findOne({ countryId }, { projection: { _id: 1 } });
+  if (!treasury) throw new Error(`Treasury for ${countryId} is unavailable`);
+  return treasury;
+}
+
 /** Resolve the denomination of the persisted treasury, including 2027 EUR budgets. */
 export async function loadTreasuryCurrency(db: Db, countryId: CountryId): Promise<CurrencyCode> {
   const budget = await db
@@ -519,6 +531,103 @@ export async function creditTreasuryProceedsFromAnchor(
 }
 
 /**
+ * Collect a corporation's payment (a fine or assessment) into spendable
+ * Treasury cash as one durable receipt: the guarded corporation debit, the
+ * Treasury credit and the signed fiscal projection settle together under `key`.
+ * Returns `null` when the funded Treasury ledger is off (the caller keeps its
+ * legacy path), `0` when the corporation cannot cover the payment (nothing
+ * moved) and the Treasury amount credited otherwise.
+ */
+export async function collectFundedCorporationPayment(
+  db: Db,
+  input: {
+    countryId: CountryId;
+    corpId: ObjectId;
+    corpCurrency: CurrencyCode;
+    amountLocal: number;
+    key: string;
+    now: Date;
+    flow: "regulatory_fine";
+    site: string;
+    ledger?: TreasuryCashOptions;
+  }
+): Promise<number | null> {
+  const options = await resolveTreasuryCashOptions(db, input.ledger);
+  const context = options.context;
+  if (!context?.treasuryCashLedgerEnabled) return null;
+  const amount = Math.round(input.amountLocal);
+  if (!(amount > 0)) return 0;
+
+  const treasuryCurrency =
+    context.treasuryCurrencies.get(input.countryId) ??
+    COUNTRY_CURRENCY_MAP[input.countryId] ??
+    "USD";
+  const corporationRate = context.rates.get(input.corpCurrency) ?? 1;
+  const treasuryRate = treasuryAnchorValuation({
+    countryId: input.countryId,
+    currencyCode: treasuryCurrency,
+    preset: context.preset,
+    observedRate: context.rates.get(treasuryCurrency),
+  }).anchorRate;
+  const treasuryAmount = roundSavingsAmount(
+    (amount / corporationRate) * treasuryRate,
+    treasuryCurrency
+  );
+  if (!(treasuryAmount > 0)) return 0;
+  const treasury = await loadTreasuryAccount(db, input.countryId);
+
+  const key = `treasury-corporation-payment:${input.key}`;
+  const settled = await settleTransition(db, {
+    key,
+    kind: "treasury_corporation_payment",
+    turn: context.turn,
+    currency: input.corpCurrency,
+    legs: [
+      {
+        kind: "debit",
+        amount,
+        valuation: { currencyCode: input.corpCurrency, localPerAnchor: corporationRate },
+        collection: "corporations",
+        filter: { _id: input.corpId, liquidCapital: { $gte: amount } },
+        path: "liquidCapital",
+        note: "Take the fine or assessment from the corporation's actual cash",
+      },
+      {
+        kind: "credit",
+        amount: treasuryAmount,
+        valuation: { currencyCode: treasuryCurrency, localPerAnchor: treasuryRate },
+        collection: "federalBudget",
+        filter: { _id: treasury._id, countryId: input.countryId },
+        path: "treasuryCashLocal",
+        note: "Deliver the payment to spendable Treasury cash",
+      },
+    ],
+    projections: [
+      {
+        collection: "federalBudget",
+        filter: { _id: treasury._id },
+        update: { $inc: { treasuryBalance: treasuryAmount }, $set: { updatedAt: input.now } },
+        note: "Update signed fiscal position after the funded corporation payment",
+      },
+    ],
+    event: {
+      kind: "monetary.executed",
+      command: input.site,
+      subjectType: "corporation",
+      subjectId: input.corpId.toString(),
+      amount: treasuryAmount,
+      meta: { flow: input.flow },
+    },
+  });
+  if (settled.status === "replayed" && !settled.error) return treasuryAmount;
+  if (settled.status === "rejected" && (await refusedBeforeAnyCashMoved(db, key))) return 0;
+  if (settled.status !== "applied") {
+    throw new Error(settled.error ?? "Funded corporation payment is incomplete");
+  }
+  return treasuryAmount;
+}
+
+/**
  * Cover an SOE operating-loss shortfall (spec §11.2 — SOEs cannot go bankrupt).
  * Unconditional debit of the treasury in home currency (the national budget's
  * cash account). `shortfallAnchor` is the positive ₳ amount needed to bring the
@@ -740,10 +849,7 @@ export async function remitToTreasury(
     }).anchorRate;
     const amountAnchor = amount / corporationRate;
     const treasuryAmount = roundSavingsAmount(amountAnchor * treasuryRate, treasuryCurrency);
-    const treasury = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: input.countryId }, { projection: { _id: 1 } });
-    if (!treasury) throw new Error(`Treasury for ${input.countryId} is unavailable`);
+    const treasury = await loadTreasuryAccount(db, input.countryId);
     const settled = await settleTransition(db, {
       key,
       kind: "soe_profit_remittance",

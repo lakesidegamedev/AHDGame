@@ -14,7 +14,10 @@ import type { MergerReview, PendingDivestiture } from "@/lib/db/types/mergerRevi
 import type { CountryId } from "@/lib/constants/countries";
 import { createNotification } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
-import { creditTreasuryProceedsFromAnchor } from "@/lib/nationalization/treasury";
+import {
+  collectFundedCorporationPayment,
+  creditTreasuryProceedsFromAnchor,
+} from "@/lib/nationalization/treasury";
 import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import {
@@ -253,23 +256,38 @@ export async function fineOverdueDivestitures(
     );
     if (fineLocal <= 0) continue;
 
-    const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, fineLocal, {
-      corporateObligation: true,
+    const fundedPaid = await collectFundedCorporationPayment(db, {
+      countryId: obligation.countryId as CountryId,
+      corpId: corp._id,
+      corpCurrency: (resolveCorpLiquidCurrencyCode(corp) ?? "USD") as CurrencyCode,
+      amountLocal: fineLocal,
+      key: `merger-overdue-fine:${corp._id.toString()}:${obligation.reviewId.toString()}:${obligation.sectorType}:${currentTurn}`,
+      now,
+      flow: "regulatory_fine",
+      site: "mergerReview:fineOverdueDivestitures",
     });
-    if (!debit.ok) continue; // Cannot pay this turn; the order stands and it is retried next turn.
+    if (fundedPaid === 0) continue;
+    if (fundedPaid === null) {
+      const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, fineLocal, {
+        corporateObligation: true,
+      });
+      if (!debit.ok) continue; // Cannot pay this turn; the order stands and it is retried next turn.
+    }
 
     // The fine was DEBITED in the corporation's currency, but the reviewing
     // country's treasury keeps its books in its OWN currency. Credit the ₳
     // amount converted for the receiving country, not the payer's local figure
     // — otherwise a cross-border acquirer over- or under-pays the government by
     // the exchange-rate difference.
-    await creditTreasuryProceedsFromAnchor(
-      db,
-      obligation.countryId as CountryId,
-      corpLiquidCapitalToAnchor(fineLocal, corp, fxRate),
-      now,
-      { flow: "regulatory_fine" }
-    );
+    if (fundedPaid === null) {
+      await creditTreasuryProceedsFromAnchor(
+        db,
+        obligation.countryId as CountryId,
+        corpLiquidCapitalToAnchor(fineLocal, corp, fxRate),
+        now,
+        { flow: "regulatory_fine" }
+      );
+    }
     await emitTx(db, {
       type: "corp_fine",
       turn: currentTurn,
