@@ -63,9 +63,16 @@ describe("evaluatePreflight", () => {
     expect(evaluatePreflight(input({ gameState: rest, mode: "fresh" }))).toEqual([]);
   });
 
-  it("warns when NPP autonomy is below v5", () => {
+  it("warns when NPP autonomy is not v6, in both modes", () => {
     const found = evaluatePreflight(input({ gameState: { ...allTrue, nppAutonomyLevel: "v4" } }));
     expect(found.map((f) => [f.severity, f.check])).toEqual([["warn", "npp-autonomy-level"]]);
+    const v5 = evaluatePreflight(
+      input({ gameState: { ...allTrue, nppAutonomyLevel: "v5" }, mode: "fresh" })
+    );
+    expect(v5.map((f) => f.check)).toEqual(["npp-autonomy-level"]);
+    expect(
+      evaluatePreflight(input({ gameState: { ...allTrue, nppAutonomyLevel: "v6" }, mode: "fresh" }))
+    ).toEqual([]);
     const unset = evaluatePreflight(
       input({ gameState: { ...allTrue, nppAutonomyLevel: undefined } })
     );

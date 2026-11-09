@@ -48,8 +48,8 @@ export const REMOVED_ALWAYS_ON_FLAGS: readonly string[] = Object.freeze([
   "livingConflictsEnabled",
 ]);
 
-/** Autonomy levels at which NPP governments pursue persistent goals. */
-const HIGH_AUTONOMY_LEVELS: readonly string[] = ["v5", "v6"];
+/** The level fresh and live worlds run AI-run countries at (NPP engine 6). */
+const EXPECTED_AUTONOMY_LEVEL = "v6";
 
 /** Flags that gate behaviour for a fresh world only and must not be on in a running one. */
 export const FRESH_WORLD_ONLY_FLAGS: readonly string[] = Object.freeze([
@@ -142,11 +142,11 @@ function flagFindings(input: PreflightInput): PreflightFinding[] {
     });
   }
   const level = state.nppAutonomyLevel;
-  if (typeof level !== "string" || !HIGH_AUTONOMY_LEVELS.includes(level)) {
+  if (level !== EXPECTED_AUTONOMY_LEVEL) {
     out.push({
       severity: "warn",
       check: "npp-autonomy-level",
-      detail: `NPP autonomy is ${typeof level === "string" ? level : "unset"}, below v5: NPP-run countries govern without persistent goals or ministerial commitments`,
+      detail: `NPP autonomy is ${typeof level === "string" ? level : "unset"}, expected ${EXPECTED_AUTONOMY_LEVEL}: NPP-run countries lose the engine 6 decision and governance behaviour`,
     });
   }
   const stray = FRESH_WORLD_ONLY_FLAGS.filter((flag) => state[flag] === true);
