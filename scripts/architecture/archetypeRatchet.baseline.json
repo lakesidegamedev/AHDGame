@@ -16,7 +16,6 @@
     "src/app/country/[code]/executive/cabinet/[positionId]/office/components/infra/PipelineTab.tsx": 2,
     "src/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice.ts": 2,
     "src/app/country/[code]/legislature/ProposeLegislationModal.tsx": 1,
-    "src/app/country/[code]/map/components/StateLeanPanel.tsx": 1,
     "src/app/country/[code]/parties/[id]/components/TreasuryGotvControl.test.tsx": 1,
     "src/app/country/[code]/referendums/[regionId]/page.tsx": 1,
     "src/app/country/[code]/region/[id]/office/tabs/address/DeliverAddressModal.tsx": 2,
