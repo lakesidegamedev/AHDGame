@@ -215,12 +215,6 @@ export async function resolveOneGeneralElection(
         currentTurn
       );
       if (certified) {
-        await db
-          .collection<Election>("elections")
-          .updateOne(
-            { _id: election._id },
-            { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-          );
         await voidDebateSessionsForElection(db, election._id, now);
         return { resolved: true, newsOutcomes: [] };
       }

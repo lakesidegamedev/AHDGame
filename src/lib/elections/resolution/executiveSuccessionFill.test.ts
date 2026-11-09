@@ -204,7 +204,7 @@ describe("legislature and party votes", () => {
     });
     await processSuccessionFills(db, 130, now);
     const seated = m.officialBulk.mock.calls[0]![0][0].updateOne.update.$set;
-    expect(seated.nppId).toBe(npp.nppId);
+    expect(seated.nppId).toEqual(npp.nppId);
     expect(seated.isNPP).toBe(true);
     expect(seated.characterId).toBeNull();
     const query = m.officialFind.mock.calls.at(-1)![0];

@@ -90,6 +90,7 @@ describe("two-round special presidential election", () => {
     expect(m.seat.mock.calls[0]![1].winnerCandidate._id).toBe(ids[0]);
     expect(m.candidateBulk).not.toHaveBeenCalled();
     expect(m.tallyUpdate.mock.calls[0]![1].$set).toMatchObject({ finalized: true });
+    expect(m.electionUpdate.mock.calls.at(-1)![1].$set).toMatchObject({ status: "resolved" });
   });
 
   it("opens a runoff between the top two when nobody passes half", async () => {
@@ -109,6 +110,7 @@ describe("two-round special presidential election", () => {
       endTurn: 372,
     });
     expect(m.initTally).toHaveBeenCalledTimes(1);
+    expect(m.electionUpdate.mock.calls.at(-1)![1].$set).toMatchObject({ status: "resolved" });
   });
 
   it("seats the runoff plurality winner", async () => {

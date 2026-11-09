@@ -7,7 +7,8 @@
 
 import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import type { Campaign, Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { initElectionVoteTally } from "@/lib/electionEngine/tallyManagement";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
@@ -57,7 +58,9 @@ async function openRunoff(
       recordedAt: now,
     });
   }
-  await db.collection<Election>("elections").updateOne(
+  await (
+    await getElectionsCollection(db)
+  ).updateOne(
     { _id: electionId },
     {
       $setOnInsert: {
@@ -83,8 +86,14 @@ async function openRunoff(
   );
 }
 
+async function markResolved(db: Db, election: Election, now: Date): Promise<void> {
+  await (
+    await getElectionsCollection(db)
+  ).updateOne({ _id: election._id }, { $set: { status: "resolved", updatedAt: now } });
+}
+
 /**
- * True once the round is certified, null when there is nothing to count so the
+ * True once the round is certified and the race marked resolved, null when there is nothing to count so the
  * caller falls back to the generic no-vote handling.
  */
 export async function resolveSpecialPresidentElection(
@@ -100,8 +109,9 @@ export async function resolveSpecialPresidentElection(
     .find({ electionId: election._id, ...(tally.finalized ? {} : { status: "active" }) })
     .toArray();
   if (tally.finalized) {
-    await db.collection("campaigns").deleteMany({ electionId: election._id });
+    await db.collection<Campaign>("campaigns").deleteMany({ electionId: election._id });
     await captureElectionResultSnapshot(db, election, now);
+    await markResolved(db, election, now);
     return true;
   }
   const votes = Object.fromEntries(
@@ -139,7 +149,8 @@ export async function resolveSpecialPresidentElection(
       { electionId: election._id },
       { $set: { finalized: true, resolvedAtTurn: turn, updatedAt: now } }
     );
-  await db.collection("campaigns").deleteMany({ electionId: election._id });
+  await db.collection<Campaign>("campaigns").deleteMany({ electionId: election._id });
   await captureElectionResultSnapshot(db, election, now);
+  await markResolved(db, election, now);
   return true;
 }
