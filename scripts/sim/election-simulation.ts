@@ -14,7 +14,7 @@
  *     incumbentSeatShareByParty + support deltas
  *
  * The script builds a synthetic 15-state US-shaped electorate with
- * three archetypes (blue/red/swing) and runs eight scenarios:
+ * three blocs (blue/red/swing) and runs eight scenarios:
  *   General  G1: baseline two-party
  *   General  G2: Dem 5x funds advantage
  *   General  G3: support polarization (Dem 80, Rep 30)
@@ -74,37 +74,37 @@ interface SimState {
   name: string;
   pop: number; // millions
   ev: number; // electoral votes
-  archetype: "blue" | "red" | "swing";
+  bloc: "blue" | "red" | "swing";
 }
 
 const STATES: SimState[] = [
-  { id: "CA", name: "California", pop: 25, ev: 54, archetype: "blue" },
-  { id: "TX", name: "Texas", pop: 19, ev: 40, archetype: "red" },
-  { id: "FL", name: "Florida", pop: 15, ev: 30, archetype: "red" },
-  { id: "NY", name: "New York", pop: 13, ev: 28, archetype: "blue" },
-  { id: "PA", name: "Pennsylvania", pop: 9, ev: 19, archetype: "swing" },
-  { id: "IL", name: "Illinois", pop: 9, ev: 19, archetype: "blue" },
-  { id: "OH", name: "Ohio", pop: 8, ev: 17, archetype: "red" },
-  { id: "GA", name: "Georgia", pop: 7, ev: 16, archetype: "swing" },
-  { id: "NC", name: "North Carolina", pop: 7, ev: 16, archetype: "swing" },
-  { id: "MI", name: "Michigan", pop: 7, ev: 15, archetype: "swing" },
-  { id: "AZ", name: "Arizona", pop: 5, ev: 11, archetype: "swing" },
-  { id: "WI", name: "Wisconsin", pop: 4, ev: 10, archetype: "swing" },
-  { id: "MN", name: "Minnesota", pop: 4, ev: 10, archetype: "blue" },
-  { id: "OK", name: "Oklahoma", pop: 3, ev: 7, archetype: "red" },
-  { id: "KS", name: "Kansas", pop: 2, ev: 6, archetype: "red" },
+  { id: "CA", name: "California", pop: 25, ev: 54, bloc: "blue" },
+  { id: "TX", name: "Texas", pop: 19, ev: 40, bloc: "red" },
+  { id: "FL", name: "Florida", pop: 15, ev: 30, bloc: "red" },
+  { id: "NY", name: "New York", pop: 13, ev: 28, bloc: "blue" },
+  { id: "PA", name: "Pennsylvania", pop: 9, ev: 19, bloc: "swing" },
+  { id: "IL", name: "Illinois", pop: 9, ev: 19, bloc: "blue" },
+  { id: "OH", name: "Ohio", pop: 8, ev: 17, bloc: "red" },
+  { id: "GA", name: "Georgia", pop: 7, ev: 16, bloc: "swing" },
+  { id: "NC", name: "North Carolina", pop: 7, ev: 16, bloc: "swing" },
+  { id: "MI", name: "Michigan", pop: 7, ev: 15, bloc: "swing" },
+  { id: "AZ", name: "Arizona", pop: 5, ev: 11, bloc: "swing" },
+  { id: "WI", name: "Wisconsin", pop: 4, ev: 10, bloc: "swing" },
+  { id: "MN", name: "Minnesota", pop: 4, ev: 10, bloc: "blue" },
+  { id: "OK", name: "Oklahoma", pop: 3, ev: 7, bloc: "red" },
+  { id: "KS", name: "Kansas", pop: 2, ev: 6, bloc: "red" },
 ];
 
 const TOTAL_EV = STATES.reduce((acc, s) => acc + s.ev, 0);
 
-// Per-archetype lean overrides — pushes group lean / turnout into the
-// archetype. Blue states: urban tilts harder left, low-inc votes harder.
+// Per-bloc lean overrides — pushes group lean / turnout into the
+// bloc. Blue states: urban tilts harder left, low-inc votes harder.
 // Red states: rural tilts harder right, high-inc more dominant.
 
 function demographicsForState(s: SimState): StateDemographics {
-  const isBlue = s.archetype === "blue";
-  const isRed = s.archetype === "red";
-  const isSwing = s.archetype === "swing";
+  const isBlue = s.bloc === "blue";
+  const isRed = s.bloc === "red";
+  const isSwing = s.bloc === "swing";
 
   const populationByGroup: Record<string, number> = {
     low_inc: isRed ? 28 : isBlue ? 35 : 30,
@@ -182,7 +182,7 @@ function toEnriched(c: SimCandidate): EnrichedCandidate {
   };
 }
 
-// ─── Per-state Reg/Org by archetype ─────────────────────────────────────
+// ─── Per-state Reg/Org by bloc ─────────────────────────────────────
 
 interface PerStatePartyConfig {
   reg: number; // 0..100
@@ -190,9 +190,9 @@ interface PerStatePartyConfig {
 }
 
 function partyOrgRegForState(s: SimState, party: string): PerStatePartyConfig {
-  // Defaults: majors have substantial reg/org; tilt by archetype.
-  const isBlue = s.archetype === "blue";
-  const isRed = s.archetype === "red";
+  // Defaults: majors have substantial reg/org; tilt by bloc.
+  const isBlue = s.bloc === "blue";
+  const isRed = s.bloc === "red";
 
   if (party === "DEM") {
     if (isBlue) return { reg: 65, org: 75 };
@@ -1051,7 +1051,7 @@ const DEM_PRIMARY_PURE_IDEOLOGY: PrimaryScenario = {
 
 function main(): void {
   // Note: IA / NH are not in our STATES fixture (we only modeled 15 EV-
-  // weighted states). Use first two by archetype for "early primary" flavor.
+  // weighted states). Use first two by bloc for "early primary" flavor.
   // Re-route primaries to start with WI (small swing) and OK (small red).
   DEM_PRIMARY_SCENARIO.states = ["MN", "PA", "CA", "NY", "GA", "MI"];
   REP_PRIMARY_SCENARIO.states = ["KS", "OK", "TX", "FL", "OH", "NC"];
