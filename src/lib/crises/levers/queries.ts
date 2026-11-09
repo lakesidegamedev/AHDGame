@@ -34,6 +34,8 @@ export interface AvailableLever {
   actionCost: number;
   /** True when pulling it raises an emergency bill rather than acting directly. */
   viaBill: boolean;
+  /** False when pulling it cannot ease severity (no mitigation, or severity follows a tracked clock). */
+  cutsSeverity?: boolean;
   /** Plain-language tradeoff of a stance choice (lockdown vs open, bailout vs reform). */
   tradeoff?: string;
   /** Present on an aid pledge, which the holder sizes before pulling. */
@@ -230,7 +232,8 @@ export async function getAvailableLevers(
         cooldownTurns: lever.cooldownTurns ?? 0,
         actionCost: leverActionCost(lever.cost.politicalCapital),
         viaBill: lever.role === "legislature",
-        ...(stanceTradeoff(lever.id) ? { tradeoff: stanceTradeoff(lever.id) } : {}),
+        ...(stanceTradeoff(def.id, lever.id) ? { tradeoff: stanceTradeoff(def.id, lever.id) } : {}),
+        cutsSeverity: lever.mitigation > 0 && def.pacing?.kind !== "tracked",
         ...(lever.legacy?.kind === "aid" && aidRanges.has(crisis._id.toString())
           ? { aid: aidRanges.get(crisis._id.toString()) }
           : {}),

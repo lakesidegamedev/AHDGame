@@ -18,6 +18,7 @@ vi.mock("@/lib/country/countryTier", () => ({
     backgroundIds: [...tiers.map].filter(([, t]) => t === "background").map(([id]) => id),
   }),
 }));
+vi.mock("@/lib/era/context", () => ({ getEraContext: async () => ({ preset: null, year: 2030 }) }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn() }));
 vi.mock("@/lib/observability/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), fatal: vi.fn() },

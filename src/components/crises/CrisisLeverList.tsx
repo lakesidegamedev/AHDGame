@@ -81,8 +81,10 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
               <div className="min-w-0">
                 <div className="text-sm font-medium text-foreground">{lever.label}</div>
                 <div className="text-xs text-muted">
-                  As {ROLE_LABEL[lever.role].toLowerCase()}. Cuts severity by about{" "}
-                  {Math.round(lever.mitigation)} per turn.
+                  As {ROLE_LABEL[lever.role].toLowerCase()}.
+                  {lever.cutsSeverity !== false && Math.round(lever.mitigation) > 0
+                    ? ` Cuts severity by about ${Math.round(lever.mitigation)} per turn.`
+                    : ""}
                 </div>
                 {lever.tradeoff && (
                   <div className="mt-0.5 text-xs text-foreground/80">{lever.tradeoff}</div>

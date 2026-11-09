@@ -4,10 +4,12 @@ import {
   NPP_APPROVAL_FLOOR,
   NPP_EXECUTIVE_ROLES,
   chooseNppLevers,
+  chooseNppStance,
   interventionismFromPersonality,
   seededRng,
   type NppResponseInput,
 } from "./nppResponse";
+import { stanceLeversFor } from "./stanceLevers";
 import type { CrisisRole } from "./types";
 
 function input(patch: Partial<NppResponseInput> = {}): NppResponseInput {
@@ -88,5 +90,47 @@ describe("NPP lever policy", () => {
     expect(chooseNppLevers(input({ ...quiet, interventionism: cautious, rng: () => 0 }))).toEqual(
       []
     );
+  });
+});
+
+describe("chooseNppStance", () => {
+  const PAN = "lc.second_pandemic";
+  const base = () => ({
+    definitionId: PAN,
+    levers: stanceLeversFor("second_pandemic"),
+    stage: "peak" as const,
+    roles: new Set<CrisisRole>(["headOfState", "financeMinister", "centralBankChair"]),
+    blockedLeverIds: new Set<string>(),
+    alreadyTookStance: false,
+    budget: { treasuryBalance: 1e12, approval: 60 },
+    interventionism: 0.8,
+    severity: 80,
+  });
+
+  it("is never offered by the severity chooser", () => {
+    const picks = chooseNppLevers({
+      def: { levers: stanceLeversFor("second_pandemic"), thresholds: {} as never },
+      stage: "peak",
+      severity: 90,
+      roles: new Set<CrisisRole>(["headOfState", "financeMinister", "centralBankChair"]),
+      blockedLeverIds: new Set(),
+      budget: { treasuryBalance: 1e12, approval: 60 },
+      interventionism: 0.9,
+      rng: () => 0,
+    });
+    expect(picks).toEqual([]);
+  });
+
+  it("picks an active stance for an interventionist government", () => {
+    const pick = chooseNppStance(base());
+    expect(pick?.lever.id).toBe("health-bond-issue");
+  });
+
+  it("takes no stance twice in one crisis for a country", () => {
+    expect(chooseNppStance({ ...base(), alreadyTookStance: true })).toBeNull();
+  });
+
+  it("leaves restrained governments with nothing an NPP can pay for", () => {
+    expect(chooseNppStance({ ...base(), interventionism: 0.2 })).toBeNull();
   });
 });

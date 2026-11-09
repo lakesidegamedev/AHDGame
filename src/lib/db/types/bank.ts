@@ -108,6 +108,8 @@ export interface BankCharter {
   confidence?: number;
   /** Contagion panic remaining; counts down by 1 each bankSolvencyTurn (floor 0). */
   panicTurns?: number;
+  /** Crisis bank stress not yet worth a whole panic turn; see crises/v2/bankStress. */
+  stressCarry?: number;
   /** Published warning band one turn ahead of NPC flight bite (players see this). */
   warningBand?: "green" | "amber" | "red";
   /**

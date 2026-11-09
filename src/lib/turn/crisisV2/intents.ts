@@ -9,6 +9,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { getCountryModifiersCollection } from "@/lib/db/collections/countryModifiers";
 import type { CrisisEffect, CrisisV2Output } from "@/lib/db/types/crisis";
 import type { CountryModifier } from "@/lib/db/types/events";
+import { STRESS_PER_PANIC_TURN } from "@/lib/crises/v2/bankStress";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import {
   INVESTOR_CONFIDENCE_BASELINE,
@@ -234,14 +235,45 @@ async function applyMigration(
   await Promise.all(writes);
 }
 
-/** Starts a panic of the given length in every active bank in the countries. */
+/**
+ * Adds stress to every active bank in the countries. A bank panics only when
+ * its accumulated stress reaches a whole turn (see settleBankStress), so a
+ * fractional push builds up instead of starting a full panic. The update is one
+ * pipeline per call that mirrors that rule on each bank's own carry.
+ */
 export async function applyBankStress(db: Db, delta: number, countryIds: string[]): Promise<void> {
-  const panicTurns = Math.min(MAX_PANIC_TURNS, Math.ceil(delta));
-  if (panicTurns <= 0 || countryIds.length === 0) return;
+  if (!(delta > 0) || countryIds.length === 0) return;
   const corporations = await getCorporationsCollection(db);
+  const carry = "$bankCharter.stressCarry";
+  const due = { $gte: [carry, STRESS_PER_PANIC_TURN] };
   await corporations.updateMany(
     { "bankCharter.status": "active", countryId: { $in: countryIds as CountryId[] } },
-    { $max: { "bankCharter.panicTurns": panicTurns } }
+    [
+      {
+        $set: {
+          "bankCharter.stressCarry": { $round: [{ $add: [{ $ifNull: [carry, 0] }, delta] }, 6] },
+        },
+      },
+      {
+        $set: {
+          "bankCharter.panicTurns": {
+            $cond: [
+              due,
+              {
+                $max: [
+                  { $ifNull: ["$bankCharter.panicTurns", 0] },
+                  { $min: [MAX_PANIC_TURNS, { $floor: carry }] },
+                ],
+              },
+              "$bankCharter.panicTurns",
+            ],
+          },
+          "bankCharter.stressCarry": {
+            $round: [{ $subtract: [carry, { $cond: [due, { $floor: carry }, 0] }] }, 6],
+          },
+        },
+      },
+    ] as never
   );
 }
 

@@ -679,6 +679,7 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
         await routeStanceConsequences(db, {
           crisisId: crisis._id,
+          definitionId: def.id,
           turn,
           accepted: step.accepted,
           rows,
@@ -809,26 +810,40 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
 /**
  * Sends each accepted stance pull's package (bonds, banks, jobs, approval,
- * election swing) to the country the holder acted for. The turn claim already
- * fences replays, and a pull is accepted once, so a package lands once.
+ * election swing) to the country the holder acted for. The pulls are marked
+ * applied before anything is routed, so a crash between the two drops a package
+ * rather than replaying it onto a country twice.
  */
 async function routeStanceConsequences(
   db: Db,
   args: {
     crisisId: ObjectId;
+    definitionId: string;
     turn: number;
     accepted: readonly { use: { leverId: string; holderId: string; intensity?: number } }[];
     rows: readonly CrisisLeverUse[];
     stateIdsByCountry: ReadonlyMap<string, string[]>;
   }
 ): Promise<void> {
+  const packages: { row: CrisisLeverUse; intents: EffectIntent[] }[] = [];
   for (const { use } of args.accepted) {
-    const intents = stanceIntents(use.leverId, use.intensity ?? 1);
+    const intents = stanceIntents(args.definitionId, use.leverId, use.intensity ?? 1);
     if (intents.length === 0) continue;
-    const countryId = args.rows.find(
-      (row) => row.leverId === use.leverId && row.holderId === use.holderId
-    )?.countryId;
-    if (!countryId) continue;
+    const row = args.rows.find(
+      (candidate) => candidate.leverId === use.leverId && candidate.holderId === use.holderId
+    );
+    if (!row?.countryId) continue;
+    packages.push({ row, intents });
+  }
+  if (packages.length === 0) return;
+  await db
+    .collection<CrisisLeverUse>("crisisLeverUses")
+    .updateMany(
+      { _id: { $in: packages.map(({ row }) => row._id) }, appliedTurn: null },
+      { $set: { appliedTurn: args.turn } }
+    );
+  for (const { row, intents } of packages) {
+    const countryId = row.countryId as string;
     await routeEffectIntents(db, intents, {
       stateIds: args.stateIdsByCountry.get(countryId) ?? [],
       countryIds: [countryId],

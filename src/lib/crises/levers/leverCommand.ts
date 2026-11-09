@@ -2,6 +2,8 @@ import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { ObjectId, type Db } from "mongodb";
 import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
+import { campaignAnchorToLocal, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
+import { getEraContext } from "@/lib/era/context";
 import type { CountryId } from "@/lib/constants/countries";
 import { scaleCost } from "@/lib/crises/v2/accountability";
 import { leverActionCost } from "@/lib/crises/v2/leverActions";
@@ -272,7 +274,20 @@ export async function commitLeverUse(
   args: CommitLeverArgs
 ): Promise<LeverResult<LeverUseSummary>> {
   const { crisis, lever, holderId, turn } = args;
-  const cost = scaleCost(lever.cost, args.intensity);
+  const anchorCost = scaleCost(lever.cost, args.intensity);
+  // Lever prices are written in anchor currency; the treasury is charged in its own.
+  const cost =
+    anchorCost.treasuryCash && args.countryId
+      ? {
+          ...anchorCost,
+          treasuryCash: campaignAnchorToLocal(
+            anchorCost.treasuryCash,
+            args.countryId,
+            await loadCampaignCurrencyRates(db),
+            (await getEraContext(db)).preset ?? undefined
+          ),
+        }
+      : anchorCost;
   const { politicalCapital, ...chargeable } = cost;
   const actionsSpent = leverActionCost(politicalCapital);
   const holder = holderId.toString();

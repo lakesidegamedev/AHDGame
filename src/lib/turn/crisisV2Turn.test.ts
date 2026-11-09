@@ -479,16 +479,16 @@ describe("director integration", () => {
 describe("stance levers", () => {
   const pulled = (leverId: string, countryId?: string) => {
     registerCrisisDefinition(
-      makeDefinition({ id: "stance-test", levers: stanceLeversFor("second_pandemic") })
+      makeDefinition({ id: "lc.second_pandemic", levers: stanceLeversFor("second_pandemic") })
     );
     const crisis = liveCrisis({
-      ...createCrisisInstance(makeDefinition({ id: "stance-test" }), 0),
+      ...createCrisisInstance(makeDefinition({ id: "lc.second_pandemic" }), 0),
       stage: "peak",
       stageStartTurn: 1,
       severity: 60,
     });
     const data = baseData();
-    data.crises = [{ ...crisis, v2: { ...crisis.v2, definitionId: "stance-test" } }];
+    data.crises = [{ ...crisis, v2: { ...crisis.v2, definitionId: "lc.second_pandemic" } }];
     data.leverUses = [
       {
         _id: new ObjectId(),

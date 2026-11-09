@@ -17,6 +17,8 @@ export const AI_LABOUR_SHOCK_DEF_KEY = "ai_labour_shock";
 /** A lever plus the package it sends to the holder's country when pulled. */
 export interface StanceLever {
   lever: CrisisLeverDef;
+  /** Which kind of government reaches for it when an NPP picks a stance. */
+  lean: "interventionist" | "restrained";
   /** Short plain-language line on the tradeoff, shown beside the button. */
   tradeoff: string;
   /** Consequences at full intensity; the shell scales them by the pull's intensity. */
@@ -29,11 +31,12 @@ const PANDEMIC_LEVERS: readonly StanceLever[] = [
       id: "lockdown",
       role: "headOfState",
       label: "Order a lockdown",
-      mitigation: 6,
+      mitigation: 0,
       cost: { politicalCapital: 5, treasuryCash: 3_000_000_000 },
       cooldownTurns: 12,
       stages: ["onset", "peak"],
     },
+    lean: "interventionist",
     tradeoff:
       "Saves lives and calms the hospitals, but shuts workplaces, lifts unemployment and strains lenders.",
     consequences: [
@@ -50,11 +53,12 @@ const PANDEMIC_LEVERS: readonly StanceLever[] = [
       id: "stay-open",
       role: "headOfState",
       label: "Keep the economy open",
-      mitigation: 0.5,
+      mitigation: 0,
       cost: { politicalCapital: 2 },
       cooldownTurns: 12,
       stages: ["onset", "peak"],
     },
+    lean: "restrained",
     tradeoff:
       "Protects jobs and lenders for now, but more people fall ill and voters remember who held back.",
     consequences: [
@@ -69,10 +73,11 @@ const PANDEMIC_LEVERS: readonly StanceLever[] = [
       id: "health-bond-issue",
       role: "financeMinister",
       label: "Issue emergency health bonds",
-      mitigation: 3,
+      mitigation: 0,
       cost: { treasuryCash: 2_000_000_000 },
       cooldownTurns: 8,
     },
+    lean: "interventionist",
     tradeoff: "Pays for surge care now and pushes up what the state pays to borrow.",
     consequences: [
       { kind: "metric", category: "society", field: "publicHealth", delta: 0.01 },
@@ -85,10 +90,11 @@ const PANDEMIC_LEVERS: readonly StanceLever[] = [
       id: "central-bank-backstop",
       role: "centralBankChair",
       label: "Backstop lenders and bond markets",
-      mitigation: 2,
+      mitigation: 0,
       cost: { politicalCapital: 4 },
       cooldownTurns: 6,
     },
+    lean: "interventionist",
     tradeoff: "Keeps credit flowing and eases borrowing costs, at the price of higher prices.",
     consequences: [
       { kind: "bondYield", deltaBps: -30 },
@@ -103,11 +109,12 @@ const LABOUR_LEVERS: readonly StanceLever[] = [
       id: "bail-out-sectors",
       role: "headOfState",
       label: "Bail out the hardest-hit sectors",
-      mitigation: 3,
+      mitigation: 0,
       cost: { politicalCapital: 3, treasuryCash: 5_000_000_000 },
       cooldownTurns: 12,
       stages: ["onset", "peak"],
     },
+    lean: "interventionist",
     tradeoff:
       "Protects jobs this year, but the bill raises borrowing costs and keeps the old model.",
     consequences: [
@@ -121,11 +128,12 @@ const LABOUR_LEVERS: readonly StanceLever[] = [
       id: "structural-reform",
       role: "headOfState",
       label: "Push structural reform",
-      mitigation: 7,
+      mitigation: 0,
       cost: { politicalCapital: 6, treasuryCash: 2_000_000_000 },
       cooldownTurns: 12,
       stages: ["onset", "peak"],
     },
+    lean: "restrained",
     tradeoff:
       "Retrains and rebuilds the safety net for the long run. Jobs get worse first and voters punish it.",
     consequences: [
@@ -140,10 +148,11 @@ const LABOUR_LEVERS: readonly StanceLever[] = [
       id: "wage-subsidy-scheme",
       role: "financeMinister",
       label: "Fund a wage subsidy scheme",
-      mitigation: 3,
+      mitigation: 0,
       cost: { treasuryCash: 3_000_000_000 },
       cooldownTurns: 8,
     },
+    lean: "interventionist",
     tradeoff: "Keeps displaced workers paid and spending. Costs the budget, lifting bond yields.",
     consequences: [
       { kind: "metric", category: "economic", field: "unemploymentRate", delta: -0.002 },
@@ -156,15 +165,14 @@ const LABOUR_LEVERS: readonly StanceLever[] = [
       id: "lender-forbearance",
       role: "centralBankChair",
       label: "Allow lender forbearance",
-      mitigation: 2,
+      mitigation: 0,
       cost: { politicalCapital: 4 },
       cooldownTurns: 6,
     },
-    tradeoff: "Stops a wave of defaults on loans to automated firms, but hides risk in the banks.",
-    consequences: [
-      { kind: "bankStress", delta: 0.15 },
-      { kind: "bondYield", deltaBps: -15 },
-    ],
+    lean: "restrained",
+    tradeoff:
+      "Stops a wave of defaults on loans to automated firms and eases borrowing costs, but hides risk in the banks.",
+    consequences: [{ kind: "bondYield", deltaBps: -15 }],
   },
 ];
 
@@ -173,20 +181,44 @@ export const STANCE_LEVERS: Readonly<Record<string, readonly StanceLever[]>> = {
   [AI_LABOUR_SHOCK_DEF_KEY]: LABOUR_LEVERS,
 };
 
-const BY_LEVER_ID: ReadonlyMap<string, StanceLever> = new Map(
-  Object.values(STANCE_LEVERS).flatMap((entries) =>
-    entries.map((entry) => [entry.lever.id, entry] as const)
+const BY_KEY: ReadonlyMap<string, StanceLever> = new Map(
+  Object.entries(STANCE_LEVERS).flatMap(([defKey, entries]) =>
+    entries.map((entry) => [stanceKey(defKey, entry.lever.id), entry] as const)
   )
 );
+
+function stanceKey(defKey: string, leverId: string): string {
+  return `${defKey}|${leverId}`;
+}
+
+/** Prefix a living-conflict mirror puts on its definition id (see livingConflict/rules/crisisV2). */
+const CAMPAIGN_ID_PREFIX = "lc.";
+
+/** Strips the campaign prefix from a definition id, leaving the campaign key. */
+export function stanceDefKey(definitionId: string): string {
+  return definitionId.startsWith(CAMPAIGN_ID_PREFIX)
+    ? definitionId.slice(CAMPAIGN_ID_PREFIX.length)
+    : definitionId;
+}
+
+/** Which kind of government reaches for a stance lever; undefined for any other lever. */
+export function stanceLean(definitionId: string, leverId: string): StanceLever["lean"] | undefined {
+  return BY_KEY.get(stanceKey(stanceDefKey(definitionId), leverId))?.lean;
+}
 
 /** The levers a living-conflict mirror offers; empty for any other campaign. */
 export function stanceLeversFor(defKey: string): CrisisLeverDef[] {
   return (STANCE_LEVERS[defKey] ?? []).map((entry) => entry.lever);
 }
 
+/** Whether a lever on this definition is a stance lever (no severity effect, own package). */
+export function isStanceLever(definitionId: string, leverId: string): boolean {
+  return BY_KEY.has(stanceKey(stanceDefKey(definitionId), leverId));
+}
+
 /** Plain-language tradeoff for a stance lever, or undefined for any other lever. */
-export function stanceTradeoff(leverId: string): string | undefined {
-  return BY_LEVER_ID.get(leverId)?.tradeoff;
+export function stanceTradeoff(definitionId: string, leverId: string): string | undefined {
+  return BY_KEY.get(stanceKey(stanceDefKey(definitionId), leverId))?.tradeoff;
 }
 
 function scaleIntent(intent: EffectIntent, scale: number): EffectIntent {
@@ -211,8 +243,12 @@ function scaleIntent(intent: EffectIntent, scale: number): EffectIntent {
  * The consequences of one stance pull, scaled by its intensity. Empty for a
  * lever with no stance package or a zero-strength pull.
  */
-export function stanceIntents(leverId: string, intensity = 1): EffectIntent[] {
-  const entry = BY_LEVER_ID.get(leverId);
+export function stanceIntents(
+  definitionId: string,
+  leverId: string,
+  intensity = 1
+): EffectIntent[] {
+  const entry = BY_KEY.get(stanceKey(stanceDefKey(definitionId), leverId));
   const scale = clamp(intensity, 0, 1);
   if (!entry || scale <= 0) return [];
   return entry.consequences.map((intent) => scaleIntent(intent, scale));

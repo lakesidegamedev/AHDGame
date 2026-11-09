@@ -1,4 +1,5 @@
 import { scaleCost } from "./accountability";
+import { stanceLean } from "./stanceLevers";
 import {
   clamp,
   type ActiveCrisisStage,
@@ -107,6 +108,8 @@ export function chooseNppLevers(input: NppResponseInput): NppLeverPick[] {
       (lever) =>
         input.roles.has(lever.role) &&
         !input.blockedLeverIds.has(lever.id) &&
+        // A lever with no mitigation (a stance choice) cannot ease severity; it has its own picker.
+        lever.mitigation > 0 &&
         !lever.cost.corpCash &&
         !lever.cost.politicalCapital &&
         (!lever.stages || lever.stages.includes(input.stage)) &&
@@ -144,6 +147,56 @@ export function chooseNppLevers(input: NppResponseInput): NppLeverPick[] {
     picks.push({ lever: candidate.lever, intensity, cost: candidate.cost });
   }
   return picks;
+}
+
+export interface NppStanceInput {
+  definitionId: string;
+  levers: readonly CrisisLeverDef[];
+  stage: ActiveCrisisStage;
+  roles: ReadonlySet<CrisisRole>;
+  blockedLeverIds: ReadonlySet<string>;
+  /** True when this country already took a stance on this crisis (player or NPP). */
+  alreadyTookStance: boolean;
+  budget: NppResponseBudget;
+  /** 0..1 appetite for acting early and spending; from the government's archetype. */
+  interventionism: number;
+  severity: number;
+}
+
+/**
+ * The one stance lever an NPP government may pull on a crisis for its country,
+ * or null. Stance levers are political choices, not severity tools: an
+ * interventionist government (at or above one half) reaches for the active
+ * options, a restrained one for the hands-off ones. At most one per crisis per
+ * country, and only options the game can charge an NPP for (no political capital
+ * or corporate cash), within its treasury and approval limits.
+ */
+export function chooseNppStance(input: NppStanceInput): NppLeverPick | null {
+  if (input.alreadyTookStance) return null;
+  if (input.severity * STAGE_URGENCY[input.stage] < 30) return null;
+  const lean = input.interventionism >= 0.5 ? "interventionist" : "restrained";
+  const intensity =
+    Math.round(clamp(input.severity / 100 + 0.2 * input.interventionism, 0.3, 1) * 10) / 10;
+  const spendLeft = spendLimit(input.budget);
+  const approvalLeft = Math.max(0, input.budget.approval - NPP_APPROVAL_FLOOR);
+  const options = input.levers
+    .filter(
+      (lever) =>
+        stanceLean(input.definitionId, lever.id) === lean &&
+        input.roles.has(lever.role) &&
+        !input.blockedLeverIds.has(lever.id) &&
+        !lever.cost.corpCash &&
+        !lever.cost.politicalCapital &&
+        (!lever.stages || lever.stages.includes(input.stage))
+    )
+    .sort((a, b) => a.id.localeCompare(b.id));
+  for (const lever of options) {
+    const cost = scaleCost(lever.cost, intensity);
+    if ((cost.treasuryCash ?? 0) > spendLeft) continue;
+    if ((cost.approval?.points ?? 0) > approvalLeft) continue;
+    return { lever, intensity, cost };
+  }
+  return null;
 }
 
 /** Deterministic 0..1 stream from a string seed, so a replayed turn picks the same levers. */

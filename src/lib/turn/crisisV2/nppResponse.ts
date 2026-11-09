@@ -1,14 +1,18 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
+import { campaignLocalRate, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
+import { getEraContext } from "@/lib/era/context";
 import { commitLeverUse } from "@/lib/crises/levers/leverCommand";
 import { leverBlock } from "@/lib/crises/levers/availability";
 import {
   NPP_EXECUTIVE_ROLES,
   chooseNppLevers,
+  chooseNppStance,
   interventionismFromPersonality,
   seededRng,
 } from "@/lib/crises/v2/nppResponse";
+import { isStanceLever } from "@/lib/crises/v2/stanceLevers";
 import type { CrisisRole } from "@/lib/crises/v2/types";
 import { loadCountryTiers } from "@/lib/country/countryTier";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
@@ -72,7 +76,13 @@ interface Purse {
   approval: number;
 }
 
+/**
+ * Purses are in anchor currency, the unit lever prices are written in, so the
+ * chooser compares like with like. The charge converts back to local currency.
+ */
 async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<string, Purse>> {
+  const [rates, era] = await Promise.all([loadCampaignCurrencyRates(db), getEraContext(db)]);
+  const preset = era.preset ?? undefined;
   const [budgets, approvals] = await Promise.all([
     (await getFederalBudgetCollection(db))
       .find(
@@ -88,9 +98,11 @@ async function loadPurses(db: Db, countryIds: readonly string[]): Promise<Map<st
   const approvalOf = new Map(approvals.map((row) => [String(row._id), row.approvalRating]));
   const result = new Map<string, Purse>();
   for (const budget of budgets) {
+    const rate = campaignLocalRate(budget.countryId, rates, preset);
+    const output = resolveRatioGdp(budget);
     result.set(budget.countryId, {
-      treasuryBalance: budget.treasuryBalance ?? 0,
-      output: resolveRatioGdp(budget) || undefined,
+      treasuryBalance: (budget.treasuryBalance ?? 0) / rate,
+      output: output ? output / rate : undefined,
       approval: approvalOf.get(budget.countryId) ?? 50,
     });
   }
@@ -115,6 +127,39 @@ async function loadLastPulls(
     latest.set(key, Math.max(latest.get(key) ?? -Infinity, row.submittedTurn));
   }
   return latest;
+}
+
+/** Keys `crisisId|countryId` of crises where a country already took a stance. */
+async function loadStanceTaken(
+  db: Db,
+  work: readonly { doc: { _id: ObjectId; v2: { definitionId: string } }; countryId: string }[]
+): Promise<Set<string>> {
+  const stanceIds = new Set<string>();
+  const crisisIds: ObjectId[] = [];
+  const countryIds = new Set<string>();
+  for (const { doc, countryId } of work) {
+    const def = getCrisisDefinition(doc.v2.definitionId);
+    const ids = (def?.levers ?? [])
+      .filter((lever) => isStanceLever(doc.v2.definitionId, lever.id))
+      .map((lever) => lever.id);
+    if (ids.length === 0) continue;
+    for (const id of ids) stanceIds.add(id);
+    crisisIds.push(doc._id);
+    countryIds.add(countryId);
+  }
+  if (crisisIds.length === 0) return new Set();
+  const rows = await db
+    .collection<CrisisLeverUse>("crisisLeverUses")
+    .find(
+      {
+        crisisId: { $in: crisisIds },
+        leverId: { $in: [...stanceIds] },
+        countryId: { $in: [...countryIds] },
+      },
+      { projection: { crisisId: 1, countryId: 1, leverId: 1 } }
+    )
+    .toArray();
+  return new Set(rows.map((row) => `${row.crisisId.toString()}|${row.countryId}`));
 }
 
 export interface NppResponseResult {
@@ -163,6 +208,8 @@ export async function runNppCrisisResponse(db: Db, turn: number): Promise<NppRes
         ? new Map<string, number>()
         : await loadLastPulls(db, [...new Set(work.map((item) => item.doc._id))], headIds);
 
+    const stanceTaken = await loadStanceTaken(db, work);
+
     work.sort(
       (a, b) =>
         b.doc.v2.severity - a.doc.v2.severity ||
@@ -206,8 +253,8 @@ export async function runNppCrisisResponse(db: Db, turn: number): Promise<NppRes
         interventionism: government.interventionism,
         rng: seededRng(`${doc._id.toString()}:${countryId}:${turn}`),
       });
-      for (const pick of picks) {
-        if (pulls >= MAX_NPP_PULLS_PER_TURN) break;
+      const pull = async (pick: (typeof picks)[number]) => {
+        if (pulls >= MAX_NPP_PULLS_PER_TURN) return;
         try {
           const committed = await commitLeverUse(db, {
             crisis: doc,
@@ -232,6 +279,25 @@ export async function runNppCrisisResponse(db: Db, turn: number): Promise<NppRes
             leverId: pick.lever.id,
           });
         }
+      };
+      for (const pick of picks) await pull(pick);
+      // A stance is a political choice, not a severity tool: at most one per
+      // crisis per country, chosen by the government's interventionism, and
+      // priced after the severity pulls above have spent from the purse.
+      const stance = chooseNppStance({
+        definitionId: doc.v2.definitionId,
+        levers: def.levers,
+        stage: doc.v2.stage,
+        roles,
+        blockedLeverIds: blocked,
+        alreadyTookStance: stanceTaken.has(`${doc._id.toString()}|${countryId}`),
+        budget: purse,
+        interventionism: government.interventionism,
+        severity: doc.v2.severity,
+      });
+      if (stance) {
+        await pull(stance);
+        stanceTaken.add(`${doc._id.toString()}|${countryId}`);
       }
     }
   } catch (error) {
