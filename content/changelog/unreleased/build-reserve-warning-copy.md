@@ -6,7 +6,7 @@ summary: >-
   pay for themselves and new lines with no sales yet.
 tags: [corporations, construction]
 badges: [patch]
-areas: [ui]
+areas: [frontend]
 ---
 
 - Lines whose sales cover their running costs keep running when cash is low. The warning no longer suggests every plant slows down.
