@@ -1,6 +1,6 @@
 /**
  * US state seat and electoral-vote tables live in statesTables and the preset selectors in
- * states/rules/usStates.
+ * states/rules/seatSelectors.
  * This module forwards both so existing imports keep working.
  */
 export * from "./statesTables";
@@ -17,4 +17,4 @@ export {
   isUsPartyOrganizationJurisdiction,
   isNonPartyOrganizationUsRegion,
   getTravelActionCost,
-} from "@/lib/states/rules/usStates";
+} from "@/lib/states/rules/seatSelectors";

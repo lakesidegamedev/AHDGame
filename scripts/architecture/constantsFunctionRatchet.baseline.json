@@ -76,6 +76,7 @@
     "src/lib/constants/sectorStrategies.ts": 5,
     "src/lib/constants/settlementCrisis.ts": 10,
     "src/lib/constants/stateAdjacency.ts": 1,
+    "src/lib/constants/statesTables.ts": 1,
     "src/lib/constants/techTree/breakthrough.ts": 4,
     "src/lib/constants/techTree/costs.ts": 4,
     "src/lib/constants/techTree/decades.ts": 4,

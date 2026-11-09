@@ -4705,6 +4705,14 @@
       "longBlocks": 1,
       "narrativeLines": 2
     },
+    "src/lib/constants/countriesCoreTables.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/constants/countriesTables.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 1
+    },
     "src/lib/constants/countryClientConfig.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -4888,6 +4896,10 @@
     "src/lib/constants/stateAdjacency.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
+    },
+    "src/lib/constants/statesTables.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 2
     },
     "src/lib/constants/techTree/costs.ts": {
       "longBlocks": 1,
@@ -6322,6 +6334,10 @@
       "narrativeLines": 1
     },
     "src/lib/countries/ru/ruPresidencyTransition.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/countries/rules/countries.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -9293,6 +9309,10 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/metrics/rules/metricDefinitions.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
     "src/lib/migrations/entries/2026-04-15-bond-currency-stamp.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -11794,6 +11814,10 @@
       "narrativeLines": 1
     },
     "src/lib/states/regionalExecutive.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/states/rules/seatSelectors.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
