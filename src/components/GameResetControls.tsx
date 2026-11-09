@@ -319,7 +319,9 @@ export function GameResetControls() {
             } else if (event.type === "error") {
               setMessage(`Error: ${event.message ?? "Reset failed"}`);
             }
-          } catch {}
+          } catch {
+            // A partial or malformed event line; wait for the next full event.
+          }
         }
       }
     } catch {
