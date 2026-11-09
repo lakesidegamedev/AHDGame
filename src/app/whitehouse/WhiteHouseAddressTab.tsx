@@ -19,7 +19,6 @@ interface AddressResponse {
   viewerIsAdmin: boolean;
   mostRecentAddress: MostRecentAddressSummary | null;
   addressAvailableAtTurn: number;
-  demographicGroups: { id: string; name: string }[];
 }
 
 interface Props {

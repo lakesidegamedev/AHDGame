@@ -24,7 +24,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Campaign, Election } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { applyDiminishingReturns } from "@/lib/utils/diminishingReturns";
-import { resolveCanvassGroup } from "@/lib/demographics/countryDemographics";
 import { randomUUID } from "node:crypto";
 import { applyCanvassSpend } from "@/lib/canvassing/canvassSpend";
 import { getMoneyFlowReceiptsCollection } from "@/lib/db/collections/moneyFlowReceipts";
@@ -94,8 +93,7 @@ export async function GET(req: NextRequest) {
     const targets = new Map<string, { dimension: string; bucket: string }>();
     for (const cell of audience?.cells ?? [])
       for (const [dimension, bucket] of Object.entries(cell.buckets))
-        if (nativeAllowed || resolveCanvassGroup(auth.user.character.countryId, dimension, bucket))
-          targets.set(`${dimension}:${bucket}`, { dimension, bucket });
+        targets.set(`${dimension}:${bucket}`, { dimension, bucket });
     const target = {
       dimension: req.nextUrl.searchParams.get("category") ?? "",
       bucket: req.nextUrl.searchParams.get("group") ?? "",
@@ -182,8 +180,6 @@ export async function POST(req: NextRequest) {
     ) {
       return errorResponse(400, "Invalid demographic group");
     }
-    const resolved = resolveCanvassGroup(user.character.countryId, category, group);
-    const modifierCategoryKey = resolved?.categoryKey ?? category;
 
     const db = await getDb();
 
@@ -224,12 +220,6 @@ export async function POST(req: NextRequest) {
       electionId ??
         (usingSurrogate && mateEligibility.ok ? mateEligibility.electionId.toString() : undefined)
     );
-    if (!resolved && !nativeAllowed)
-      return errorResponse(
-        400,
-        "This race uses legacy canvassing groups. Choose one of its original demographic groups."
-      );
-
     const totalFundsCost = COST_FUNDS * count;
     const totalActionsCost = COST_ACTIONS * count;
 
@@ -251,7 +241,7 @@ export async function POST(req: NextRequest) {
       return errorResponse(400, "Invalid Idempotency-Key header");
     }
     const flowKey = headerKey ?? randomUUID();
-    const fingerprint = `${user.character._id.toHexString()}:${stateId}:${modifierCategoryKey}:${group}:${count}`;
+    const fingerprint = `${user.character._id.toHexString()}:${stateId}:${category}:${group}:${count}`;
     const receipts = await getMoneyFlowReceiptsCollection(db);
     // A completed retry sees balances and pools *after* the first request, so
     // read its receipt before the mutable balance checks below. An
@@ -290,47 +280,45 @@ export async function POST(req: NextRequest) {
     const audience = await loadCampaignAudience(db, user.character.countryId, stateId, turnoutData);
     const target = { dimension: category, bucket: group };
     const targetInfo = audience ? targetAudience(audience.cells, target) : null;
-    if (!resolved && !targetInfo) return errorResponse(400, "Invalid demographic group");
+    if (!targetInfo) return errorResponse(400, "Invalid demographic group");
     const charPosition = user.character.policies;
     const candidatePosition = {
       economicLean: charPosition.economic,
       socialLean: charPosition.social,
     };
-    const targetPosition = targetInfo?.position ?? {
-      economicLean: resolved!.economicLean,
-      socialLean: resolved!.socialLean,
-    };
-    const boost = resolved
-      ? calculateCanvassingBoost(
-          charPosition,
-          { economic: resolved.economicLean, social: resolved.socialLean },
-          isActiveCampaign
-        )
-      : 0;
+    const targetPosition = targetInfo.position;
+    // Races stamped before the campaign rules read the legacy `modifiers`
+    // snapshot, so the same bucket also gets the legacy diminishing-returns
+    // boost there.
+    const boost = calculateCanvassingBoost(
+      charPosition,
+      { economic: targetPosition.economicLean, social: targetPosition.socialLean },
+      isActiveCampaign
+    );
     const campaignModifiers = structuredClone(
       turnoutData.campaignModifiers ?? turnoutData.modifiers
     );
-    const modernCategory = (campaignModifiers[modifierCategoryKey] ??= {});
+    const modernCategory = (campaignModifiers[category] ??= {});
     const beforeModifier = modernCategory[group] ?? 0;
     const modernBoost = canvassingBoost(candidatePosition, targetPosition, isActiveCampaign);
     modernCategory[group] = addTurnoutBoost(beforeModifier, modernBoost, count);
     const realizedContact = modernCategory[group] - beforeModifier;
     const campaignContactModifiers = structuredClone(turnoutData.campaignContactModifiers ?? {});
-    const contactCategory = (campaignContactModifiers[modifierCategoryKey] ??= {});
+    const contactCategory = (campaignContactModifiers[category] ??= {});
     contactCategory[group] = Math.max(
       -TURNOUT_CAP,
       Math.min(TURNOUT_CAP, (contactCategory[group] ?? 0) + realizedContact)
     );
     const afterAudience = audience?.build({ ...turnoutData, campaignModifiers });
     const turnoutBefore =
-      nativeAllowed && targetInfo && audience ? audienceTurnout(audience.cells, target) : null;
+      nativeAllowed && audience ? audienceTurnout(audience.cells, target) : null;
     const turnoutAfter =
-      nativeAllowed && targetInfo && afterAudience?.campaignCells
+      nativeAllowed && afterAudience?.campaignCells
         ? audienceTurnout(afterAudience.campaignCells, target)
         : null;
 
     // Apply boost iteratively with diminishing returns for each canvass
-    const categoryModifiers = turnoutData.modifiers[modifierCategoryKey];
+    const categoryModifiers = turnoutData.modifiers[category];
     let currentModifier = categoryModifiers?.[group] ?? 0;
     let totalBoost = 0;
 
@@ -351,7 +339,7 @@ export async function POST(req: NextRequest) {
         turnout: {
           stateId,
           lastUpdated: turnoutData.lastUpdated,
-          modifierPath: `modifiers.${modifierCategoryKey}.${group}`,
+          modifierPath: `modifiers.${category}.${group}`,
           modifierValue: currentModifier,
           campaignModifiers,
           campaignContactModifiers,

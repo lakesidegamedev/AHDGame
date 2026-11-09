@@ -54,7 +54,6 @@ import {
   calculateStateGOTVBoost,
   calculateCanvassingBoost,
 } from "./demographicTurnoutCalculations";
-import { resolveCanvassGroup } from "@/lib/demographics/countryDemographics";
 import { resolvePartyTurnoutTargetLean } from "@/lib/demographics/partyTurnoutTargetResolver";
 import {
   calculateRegistrationDriveBoost,
@@ -684,8 +683,8 @@ export async function processPartyGOTV(
       const targetGroup = budget.gotvTargetGroup;
 
       if (targetCategory && targetGroup) {
-        // Party targeting now accepts the same Layer-1 bucket catalog as the
-        // region Demographics tab while preserving established targets.
+        // Party targets are census buckets, the same catalog as the region
+        // Demographics tab. A stale target resolves to null and is not charged.
         const lean = resolvePartyTurnoutTargetLean(
           budgetCountryId,
           targetCategory,
@@ -1376,9 +1375,7 @@ export async function processPlayerCanvassing(
     const state = stateTurnout.find((s) => s._id === action.stateId);
     if (!state) continue;
 
-    // Country-aware lean lookup off the canvassed region's own country
-    // (US-only lookup collapsed non-US targets to a (0,0) lean).
-    const canvassLean = resolveCanvassGroup(
+    const canvassLean = resolvePartyTurnoutTargetLean(
       state.countryId,
       action.demographic.category,
       action.demographic.group

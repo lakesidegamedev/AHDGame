@@ -27,10 +27,7 @@ export function TreasurySuppressionControl({
   onSave,
   targetSections,
 }: TreasurySuppressionControlProps) {
-  const { categories, targets: targetableDemos } = buildPartyTurnoutTargetCatalog(
-    countryId,
-    targetSections
-  );
+  const { categories, targets: targetableDemos } = buildPartyTurnoutTargetCatalog(targetSections);
 
   const supSpend = Math.floor(party.expectedHourlyIncome * (suppressionForm.percent / 100));
   const selectedSupDemo =

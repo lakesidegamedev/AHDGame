@@ -9,7 +9,6 @@ import { MAX_WATCHLIST, WATCH_ID_PATTERNS } from "@/lib/sidebarWidgets/watchlist
 import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
-import { getAllDemographicCategoryKeys } from "@/lib/demographics/countryDemographics";
 
 function moderatedNameSchema(
   label: string,
@@ -273,21 +272,16 @@ export const partyDonateSchema = z.object({
 
 export const MAX_GOTV_PERCENT = 25;
 
-// Valid GOTV/suppression target categories. Layer-1 dimensions power new
-// selections; the legacy voter-group categories remain accepted so existing
-// live budgets can still be edited while they are migrated.
+// Valid GOTV/suppression target categories: the census bucket dimensions.
 const demographicCategories = [
-  ...new Set([
-    "race",
-    "age",
-    "education",
-    "wealth",
-    "ethnicity",
-    "income",
-    "religion",
-    "urbanization",
-    ...getAllDemographicCategoryKeys(),
-  ]),
+  "race",
+  "age",
+  "education",
+  "wealth",
+  "ethnicity",
+  "income",
+  "religion",
+  "urbanization",
 ] as [string, ...string[]];
 
 export const gotvBudgetSchema = z.object({

@@ -6,7 +6,20 @@ import type { Character } from "@/lib/db/types";
 import type { CanvassSpendInput } from "@/lib/canvassing/canvassSpend";
 
 vi.mock("@/lib/campaignTargeting/audience", () => ({
-  loadCampaignAudience: vi.fn().mockResolvedValue(null),
+  loadCampaignAudience: vi.fn().mockResolvedValue({
+    cells: [
+      {
+        id: "cell",
+        share: 1,
+        turnout: 0.6,
+        economicLean: 0,
+        socialLean: 0,
+        buckets: { race: "white", education: "tertiary", age: "young" },
+        identities: {},
+      },
+    ],
+    build: () => null,
+  }),
 }));
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -322,12 +335,12 @@ describe("POST /api/canvassing — country-aware groups", () => {
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
 
-  it("writes a JP canvass to modifiers.jp_voterGroups.<group>", async () => {
+  it("writes a JP canvass to modifiers.<dimension>.<bucket>", async () => {
     const character = authedCharacter({ homeState: "JP-13", countryId: "JP" } as never);
     const turnoutCollection = {
       findOne: vi.fn().mockResolvedValue({
         _id: "JP-13",
-        modifiers: { jp_voterGroups: {} },
+        modifiers: { education: {} },
         lastUpdated: new Date(),
       }),
       updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
@@ -344,8 +357,8 @@ describe("POST /api/canvassing — country-aware groups", () => {
     const res = await POST(
       makeRequest({
         stateId: "JP-13",
-        category: "jp_voterGroups",
-        group: "komeito_faithful",
+        category: "education",
+        group: "tertiary",
         count: 1,
       }) as never
     );
@@ -358,11 +371,9 @@ describe("POST /api/canvassing — country-aware groups", () => {
     expect(input).not.toHaveProperty("surrogateCampaignId");
     const turnout = input.turnout;
     expect(turnout.stateId).toBe("JP-13");
-    expect(turnout.modifierPath).toBe("modifiers.jp_voterGroups.komeito_faithful");
+    expect(turnout.modifierPath).toBe("modifiers.education.tertiary");
     expect(turnout.modifierValue).toEqual(expect.any(Number));
-    expect(input.fingerprint).toBe(
-      `${character._id.toHexString()}:JP-13:jp_voterGroups:komeito_faithful:1`
-    );
+    expect(input.fingerprint).toBe(`${character._id.toHexString()}:JP-13:education:tertiary:1`);
   });
 
   it("rejects a UK group id submitted by a JP character", async () => {
@@ -377,7 +388,7 @@ describe("POST /api/canvassing — country-aware groups", () => {
     const res = await POST(
       makeRequest({
         stateId: "JP-13",
-        category: "jp_voterGroups",
+        category: "education",
         group: "new_britons",
         count: 1,
       }) as never
@@ -593,64 +604,19 @@ describe("canvassing campaign turnout integration", () => {
     vi.mocked(loadCampaignAudience).mockImplementation(actual.loadCampaignAudience);
   }, 120_000);
 
-  it.each(["UK", "JP", "DE", "IE", "CN", "BR", "DD"])(
-    "rejects a native-only target in a legacy %s race without spending",
-    async (countryId) => {
-      const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
-      vi.mocked(requireAuthWithCharacter).mockResolvedValue({
-        ok: true,
-        user: {
-          userId: "u1",
-          character: authedCharacter({ countryId: countryId as Character["countryId"] }),
-        },
-      } as never);
+  it.each(["uk_voterGroups", "jp_voterGroups", "ideology"])(
+    "rejects the legacy %s category before spending",
+    async (category) => {
       db.collection("elections").find.mockReturnValue({
         toArray: async () => [{ _id: new ObjectId(), status: "active" }],
       });
       const { POST } = await import("./route");
-      const result = await POST(
-        new NextRequest(makeRequest({ ...payload, category: "education", group: "tertiary" }))
-      );
+      const result = await POST(new NextRequest(makeRequest({ ...payload, category, group: "x" })));
       expect(result.status).toBe(400);
-      expect((await result.json()).error).toContain("legacy canvassing groups");
+      expect((await result.json()).error).toBe("Invalid demographic group");
       expect(db.collection("characters").updateOne).not.toHaveBeenCalled();
-      const { getStateDemographicTurnoutCollection } = await import("@/lib/db/collections");
-      expect((await getStateDemographicTurnoutCollection()).updateOne).not.toHaveBeenCalled();
-    }
-  );
-
-  it.each(["UK", "JP", "DE", "IE", "CN", "BR", "DD"])(
-    "still applies original voter-group canvassing in a legacy %s race",
-    async (countryId) => {
-      const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
-      vi.mocked(requireAuthWithCharacter).mockResolvedValue({
-        ok: true,
-        user: {
-          userId: "u1",
-          character: authedCharacter({ countryId: countryId as Character["countryId"] }),
-        },
-      } as never);
-      db.collection("elections").find.mockReturnValue({
-        toArray: async () => [{ _id: new ObjectId(), status: "active" }],
-      });
-      const { getDemographicCategoriesForCountry } =
-        await import("@/lib/demographics/countryDemographics");
-      const category = getDemographicCategoriesForCountry(countryId)[0];
-      const { POST } = await import("./route");
-      const result = await POST(
-        new NextRequest(
-          makeRequest({ ...payload, category: category.key, group: category.groups[0].id })
-        )
-      );
-      expect(result.status).toBe(200);
-      expect(Number((await result.json()).effect.legacyBoost)).toBeGreaterThan(0);
-      const input = await spendCall();
-      expect(input.totalFundsCostLocal).toBe(500);
-      expect(input.totalActionsCost).toBe(5);
-      const turnout = input.turnout;
-      expect(turnout.stateId).toBe("GA");
-      expect(turnout.modifierPath).toBe(`modifiers.${category.key}.${category.groups[0].id}`);
-      expect(turnout.modifierValue).toEqual(expect.any(Number));
+      const { applyCanvassSpend } = await import("@/lib/canvassing/canvassSpend");
+      expect(applyCanvassSpend).not.toHaveBeenCalled();
     }
   );
 
@@ -663,24 +629,20 @@ describe("canvassing campaign turnout integration", () => {
     expect(db.collection("characters").updateOne).not.toHaveBeenCalled();
   });
 
-  it("keeps legacy US ideology canvassing available and reports the legacy boost", async () => {
+  it("canvasses a census bucket in a race stamped before the campaign rules", async () => {
     db.collection("elections").find.mockReturnValue({
       toArray: async () => [{ campaignRulesVersion: undefined }],
     });
-    const { getDemographicCategoriesForCountry } =
-      await import("@/lib/demographics/countryDemographics");
-    const group = getDemographicCategoriesForCountry("US").find(
-      (category) => category.key === "ideology"
-    )!.groups[0].id;
     const { POST } = await import("./route");
-    const result = await POST(
-      new NextRequest(makeRequest({ ...payload, category: "ideology", group }))
-    );
+    const result = await POST(new NextRequest(makeRequest(payload)));
     expect(result.status).toBe(200);
     const { effect } = await result.json();
     expect(effect.campaignRulesVersion).toBe(0);
     expect(Number(effect.boost)).toBeGreaterThan(0);
     expect(effect.boost).toBe(effect.legacyBoost);
+    expect(effect.turnoutBefore).toBeNull();
+    const input = await spendCall();
+    expect(input.turnout.modifierPath).toBe("modifiers.race.white");
   });
 
   it("rate-limits previews before deriving any cells", async () => {
@@ -764,6 +726,21 @@ describe("POST /api/canvassing — Idempotency-Key replay after balance changes"
   let db: MockDb;
 
   async function setupReplay(character: Character, receipt: Record<string, unknown> | null) {
+    const { loadCampaignAudience } = await import("@/lib/campaignTargeting/audience");
+    vi.mocked(loadCampaignAudience).mockResolvedValue({
+      cells: [
+        {
+          id: "cell",
+          share: 1,
+          turnout: 0.6,
+          economicLean: 0,
+          socialLean: 0,
+          buckets: { race: "white" },
+          identities: {},
+        },
+      ],
+      build: () => null,
+    } as never);
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
