@@ -11,7 +11,7 @@ import type { CensusGroupView } from "@/lib/db/types";
  * character is expressed through the mix, not dedicated regional-identity
  * slots zeroed out elsewhere.
  *
- * Group IDs match `uk_voterGroups` in ukDemographicCategories.ts.
+ * Group IDs match `uk_voterGroups` in the country Layer-1 model.
  */
 export const ukRegionDemographics: CensusGroupView[] = [
   // ── London ─────────────────────────────────────────────────────────────────

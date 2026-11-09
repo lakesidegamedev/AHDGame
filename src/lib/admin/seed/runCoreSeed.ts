@@ -5,7 +5,6 @@ import { selectStatesBundleForPreset } from "./seedStates";
 import { policies } from "@/lib/seeds/reference/policies";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
 import { STALE_PER_WORLD_GAME_CONFIG_UNSET, coreGameConfigUpdate } from "./coreGameConfigUpdate";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { registerAndGenerate, stateCensusData } from "@/lib/seeds/stateDemographics";
 import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
 import { stateCensusData1979 } from "@/lib/seeds/stateCensusData1979";
@@ -46,7 +45,6 @@ import type {
   State,
   Policy,
   GameConfig,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   PoliticalParty,
@@ -162,15 +160,6 @@ export const RESET_DROP_COLLECTIONS: ReadonlyArray<{
     name: "formulaGrants",
     scope: "global",
     note: "US-only by construction — seedBudgets drops and rebuilds it.",
-  },
-  {
-    name: "demographicCategories",
-    scope: "global",
-    note:
-      "⚠️ Looks global and is not, quite: `_id` is a category KEY, and 20 country " +
-      "seeders each upsert their own. Only the ONE row the shared constant owns " +
-      "(`voterGroups`) belongs to runSeed, so the delete is scoped to that " +
-      "constant's ids rather than the collection.",
   },
 ];
 
@@ -340,7 +329,6 @@ export async function runSeed(
     // Scoped to the US, because that is all `runSeed` rebuilds. See
     // RESET_DROP_COLLECTIONS for the measured cost of doing this globally.
     const usStateIds = statesBundle.map((st) => st._id as string);
-    const ownedCategoryIds = demographicCategories.map((c) => c._id);
     let deleted = 0;
     for (const entry of RESET_DROP_COLLECTIONS) {
       const filter =
@@ -348,9 +336,7 @@ export async function runSeed(
           ? { countryId: US_COUNTRY_ID }
           : entry.scope === "stateIds"
             ? { _id: { $in: usStateIds } }
-            : entry.name === "demographicCategories"
-              ? { _id: { $in: ownedCategoryIds } }
-              : {};
+            : {};
       try {
         const res = await db
           .collection(entry.name)
@@ -409,14 +395,6 @@ export async function runSeed(
       .updateOne({ _id: policy._id }, { $set: policy }, { upsert: true });
   }
   log(`Seeded ${policies.length} policies`);
-
-  // Demographic categories
-  for (const category of demographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-  }
-  log(`Seeded ${demographicCategories.length} demographic categories`);
 
   // State demographics — era-aware. The preset's census bundle is generated
   // through the Layer-1 pipeline with that era's composition (turnout rates,

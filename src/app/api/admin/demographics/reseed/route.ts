@@ -1,10 +1,9 @@
 /**
  * POST /api/admin/demographics/reseed
  *
- * Upserts demographic categories and state demographics from seed data.
- * Admin-only. Removes legacy categories (race, gender, education, wealth, age,
- * ideology) so only the voterGroups schema remains. Clears stored polls from
- * all characters so they commission fresh polls with the new voter groups.
+ * Upserts state demographics from seed data.
+ * Admin-only. Clears stored polls from all characters so they commission
+ * fresh polls from the reseeded electorate.
  *
  * Optional JSON body:
  *   { era?: EraId, countryId?: string, skipPollClear?: boolean }
@@ -26,14 +25,11 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import type { Db } from "mongodb";
-import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import type { State, StateDemographics } from "@/lib/db/types";
 import { registerAndGenerate } from "@/lib/seeds/stateDemographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
-
-const LEGACY_CATEGORY_IDS = ["race", "gender", "education", "wealth", "age", "ideology"] as const;
 
 const VALID_ERAS = SEED_ERA_IDS;
 
@@ -150,20 +146,6 @@ export async function POST(request: Request) {
     const stateIds = regenerated.map((r) => r._id);
     const snapshotId = await takeSnapshot(db, countryId, era, stateIds, auth.admin.username);
 
-    // Upsert demographic categories (US-only; international uses country-specific categories)
-    for (const category of demographicCategories) {
-      await db
-        .collection<DemographicCategory>("demographicCategories")
-        .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-    }
-
-    // Remove legacy categories so only voterGroups remains
-    if (LEGACY_CATEGORY_IDS.length > 0) {
-      await db
-        .collection<DemographicCategory>("demographicCategories")
-        .deleteMany({ _id: { $in: LEGACY_CATEGORY_IDS } });
-    }
-
     // Clear stored polls (skippable to avoid disrupting active players)
     let charactersCleared = 0;
     if (!skipPollClear) {
@@ -206,19 +188,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const groupsPerCategory = demographicCategories.reduce(
-      (s, c) => s + (c.groups?.length ?? 0),
-      0
-    );
     return NextResponse.json({
       success: true,
       countryId,
       era,
       snapshotId,
       skipPollClear,
-      message: `Reseeded ${demographicCategories.length} category (${groupsPerCategory} voter archetypes) and ${regenerated.length} state demographics (era ${era}). ${skipPollClear ? "Poll clear skipped." : `Cleared stored polls from ${charactersCleared} characters.`}`,
-      categoriesCount: demographicCategories.length,
-      groupsCount: groupsPerCategory,
+      message: `Reseeded ${regenerated.length} state demographics (era ${era}). ${skipPollClear ? "Poll clear skipped." : `Cleared stored polls from ${charactersCleared} characters.`}`,
       statesCount: regenerated.length,
       charactersCleared,
     });

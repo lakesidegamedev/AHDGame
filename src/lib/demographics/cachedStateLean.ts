@@ -4,7 +4,7 @@ import type {
   StateDemographicTurnout,
 } from "@/lib/db/types";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
-import { calculateStateLean, type CalculatedLean } from "@/lib/utils/demographics";
+import { electorateMeanLean, type ElectorateLean } from "./electorateLean";
 
 export interface CachedStateLeanContext {
   countryId: string;
@@ -24,7 +24,7 @@ export interface CachedStateLeanContext {
 export function censusCachedStateLean(
   demographics: StateDemographics,
   context: CachedStateLeanContext
-): CalculatedLean | null {
+): ElectorateLean | null {
   const substrate = buildGranularElectorateSubstrate({
     countryId: context.countryId,
     stateId: context.stateId,
@@ -38,7 +38,7 @@ export function censusCachedStateLean(
     enriched: [],
   });
   if (!substrate) return null;
-  return calculateStateLean(substrate.demographics, substrate.categories);
+  return electorateMeanLean(substrate.electorate);
 }
 
 /** Same lean, but a region without a census is an error rather than a null. */
@@ -46,7 +46,7 @@ export function calculateStateLeanForCache(
   demographics: StateDemographics,
   _categories: DemographicCategory[],
   context: CachedStateLeanContext
-): CalculatedLean {
+): ElectorateLean {
   const lean = censusCachedStateLean(demographics, context);
   if (!lean) {
     throw new Error(`No census electorate for ${context.countryId} region ${context.stateId}`);

@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StateMetrics,
@@ -127,7 +126,6 @@ export async function seedDDDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "dd_voterGroups" as never });
     await db.collection("stateDemographics").deleteMany({ countryId: "DD" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "DD" });
   }
@@ -138,13 +136,6 @@ export async function seedDDDemographics(
   if (!isDividedGermanyEra(preset)) {
     log("[DD] skipped demographics (unified era)");
     return;
-  }
-  const { ddDemographicCategories } = await import("@/lib/seeds/dd/ddDemographicCategories");
-  for (const cat of ddDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");

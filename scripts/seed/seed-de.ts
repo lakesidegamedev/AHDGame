@@ -4,7 +4,6 @@
  * Seeding order (dependency-safe):
  *   1. DE regions (states collection, countryId: "DE")
  *   2. DE political parties (politicalParties collection)
- *   3. DE demographic categories (demographicCategories collection)
  *   4. DE region demographics (stateDemographics + demographicDefaults collections)
  *   5. DE demographic turnout modifiers (stateDemographicTurnout collection)
  *   6. DE state party orgs (statePartyOrg collection — one per Land × party)
@@ -28,7 +27,6 @@ import { connectDb, closeDb } from "../utils/db";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   CensusGroupView,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -39,7 +37,6 @@ import type { GovernmentFormation } from "../../src/lib/db/types/governmentForma
 import type { LegislationType } from "../../src/lib/db/types/legislation";
 import { deRegions } from "../../src/lib/seeds/de/deRegions";
 import { deParties } from "../../src/lib/seeds/de/deParties";
-import { deDemographicCategories } from "../../src/lib/seeds/de/deDemographicCategories";
 import { deRegionDemographics } from "../../src/lib/seeds/de/deRegionDemographics";
 import { deDemographicTurnout } from "../../src/lib/seeds/de/deDemographicTurnout";
 import { calculateDEStatePartyOrgs } from "../../src/lib/seeds/de/deStatePartyOrgCalculations";
@@ -91,18 +88,6 @@ async function main() {
     }
   }
   console.log(`   ✓ Upserted ${deParties.length} DE parties.`);
-
-  // ── 3. DE Demographic Categories ──────────────────────────────────────────
-  console.log("3. Seeding DE demographic categories (voter groups)...");
-  for (const category of deDemographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-  }
-  const groupCount = deDemographicCategories.reduce((s, c) => s + c.groups.length, 0);
-  console.log(
-    `   ✓ Upserted ${deDemographicCategories.length} category (${groupCount} DE voter groups).`
-  );
 
   // ── 4. DE Region Demographics ─────────────────────────────────────────────
   console.log("4. Seeding DE region demographics...");

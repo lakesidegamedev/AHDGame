@@ -208,7 +208,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from ngDemographicCategories.ts) ──────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ──────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   northern_muslim_conservative: { economicLean: 2, socialLean: 3 },

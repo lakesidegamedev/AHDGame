@@ -3,7 +3,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateMetrics,
   StateMetricValue,
@@ -35,58 +34,6 @@ export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 function isModernTransitionPreset(preset: string): boolean {
   return preset === "2027-default";
 }
-
-interface TransitionCountryConfig {
-  categoryId: string;
-  categoryName: string;
-}
-
-const TRANSITION_COUNTRIES: Record<ModernTransitionCountryId, TransitionCountryConfig> = {
-  PL: { categoryId: "pl_voterGroups", categoryName: "Poland Voter Groups" },
-  RO: { categoryId: "ro_voterGroups", categoryName: "Romania Voter Groups" },
-  RU: { categoryId: "ru_voterGroups", categoryName: "Russia Voter Groups" },
-  BG: { categoryId: "bg_voterGroups", categoryName: "Bulgaria Voter Groups" },
-};
-
-/** Display names + turnout for the modern Layer-1 groups (leans come from the model). */
-const GROUP_META: Record<
-  ModernTransitionCountryId,
-  Record<string, { name: string; turnout: number }>
-> = {
-  PL: {
-    rural_conservative: { name: "Rural Conservative", turnout: 76 },
-    urban_civic: { name: "Urban Civic", turnout: 76 },
-    agrarian_centre: { name: "Agrarian Centre", turnout: 74 },
-    progressive_left: { name: "Progressive Left", turnout: 68 },
-    libertarian_nationalist: { name: "Libertarian Nationalist", turnout: 66 },
-    silesian_minority: { name: "Silesian Minority", turnout: 58 },
-  },
-  RO: {
-    social_rural: { name: "Social Rural", turnout: 54 },
-    urban_reformist: { name: "Urban Reformist", turnout: 56 },
-    nationalist_populist: { name: "Nationalist Populist", turnout: 54 },
-    liberal_centre: { name: "Liberal Centre", turnout: 52 },
-    hungarian_minority: { name: "Hungarian Minority", turnout: 58 },
-    green_youth: { name: "Green Youth", turnout: 46 },
-  },
-  RU: {
-    urban_18_34: { name: "Urban 18-34", turnout: 55 },
-    urban_35_49: { name: "Urban 35-49", turnout: 55 },
-    urban_50_64: { name: "Urban 50-64", turnout: 55 },
-    urban_65_plus: { name: "Urban 65+", turnout: 55 },
-    rural_18_34: { name: "Rural 18-34", turnout: 55 },
-    rural_35_49: { name: "Rural 35-49", turnout: 55 },
-    rural_50_64: { name: "Rural 50-64", turnout: 55 },
-    rural_65_plus: { name: "Rural 65+", turnout: 55 },
-  },
-  BG: {
-    social_conservative: { name: "Social Conservative", turnout: 48 },
-    urban_reformist: { name: "Urban Reformist", turnout: 46 },
-    centre_right: { name: "Centre Right", turnout: 44 },
-    turkish_minority: { name: "Turkish Minority", turnout: 46 },
-    nationalist: { name: "Nationalist", turnout: 40 },
-  },
-};
 
 async function loadRegionBundle(countryId: ModernTransitionCountryId): Promise<State[]> {
   if (countryId === "PL") {
@@ -207,9 +154,7 @@ export async function seedModernTransitionDemographics(
     log(`[${countryId}] skipping modern demographics (preset ${preset})`);
     return;
   }
-  const { categoryId, categoryName } = TRANSITION_COUNTRIES[countryId];
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: categoryId as never });
     await db.collection("stateDemographics").deleteMany({ countryId });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId });
   }
@@ -222,26 +167,6 @@ export async function seedModernTransitionDemographics(
     log(`[${countryId}] no Layer-1 model — skipping demographics`);
     return;
   }
-  // Modern voter-category model built from the Layer-1 roster: group leans are
-  // single-sourced from the model's defaultLeans (never the 1979 communist
-  // archetypes); only display names and turnout live here.
-  const meta = GROUP_META[countryId];
-  const category: DemographicCategory = {
-    _id: categoryId,
-    name: categoryName,
-    defaultWeight: 100,
-    groups: model.groupIds.map((gid) => ({
-      id: gid,
-      name: meta[gid]?.name ?? gid,
-      defaultEconomicLean: model.defaultLeans[gid]?.economicLean ?? 0,
-      defaultSocialLean: model.defaultLeans[gid]?.socialLean ?? 0,
-      defaultTurnout: meta[gid]?.turnout ?? 60,
-    })),
-  };
-  const { _id, ...catData } = category;
-  await db
-    .collection<DemographicCategory>("demographicCategories")
-    .updateOne({ _id }, { $set: catData }, { upsert: true });
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
     const { _id: demoId, groups: _groups, ...demoData } = raw;

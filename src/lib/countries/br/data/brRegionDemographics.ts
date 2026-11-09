@@ -6,7 +6,7 @@ import type { CensusGroupView } from "@/lib/db/types";
  * baseline lean and turnout. Regional character comes from mix weight, not
  * archetype-specific lean variation or exclusion; every archetype has a
  * non-zero population in every region. categoryWeights references the profile
- * in brDemographicCategories.ts.
+ * in the country Layer-1 model.
  */
 export const brRegionDemographics: CensusGroupView[] = [
   // ── Norte ──────────────────────────────────────────────────────────────────

@@ -13,7 +13,6 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import * as primaryProjection from "@/lib/primaryProjection";
 import { runPrimaryStaggerWaveIfDue } from "./primaryStaggerPhase";
-import { invalidateDemographicCategoryCache } from "@/lib/demographics/categoryCatalog";
 import type { Election } from "@/lib/db/types";
 
 // `fetchEnrichedCandidates` reaches for its own handle rather than taking the
@@ -89,8 +88,6 @@ async function runIowaWave(
   campaignAds = false,
   campaignRulesVersion = 1
 ): Promise<Record<string, number>> {
-  invalidateDemographicCategoryCache();
-
   const tallyUpdate = vi.fn().mockResolvedValue({ modifiedCount: 1 });
 
   const cursor = (docs: unknown[]) => {
@@ -145,22 +142,6 @@ async function runIowaWave(
           all: { population: 3_000_000, economicLean: -1, socialLean: -1, turnout: 60 },
         },
         lastUpdated: new Date(),
-      },
-    ],
-    demographicCategories: [
-      {
-        _id: "voterGroups",
-        name: "Voter Groups",
-        defaultWeight: 100,
-        groups: [
-          {
-            id: "all",
-            name: "All voters",
-            defaultEconomicLean: -1,
-            defaultSocialLean: -1,
-            defaultTurnout: 60,
-          },
-        ],
       },
     ],
     characters: [characterDoc(TARGET_CHAR, "Target", -2), characterDoc(RIVAL_CHAR, "Rival", 1)],
@@ -223,7 +204,6 @@ async function runIowaWave(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  invalidateDemographicCategoryCache();
 });
 
 describe("vote suppression in the primary wave", () => {

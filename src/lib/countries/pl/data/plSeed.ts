@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { plRegions } from "@/lib/seeds/pl/plRegions";
 import { plRegions1953 } from "@/lib/seeds/pl/plRegions1953";
 import { plParties } from "@/lib/seeds/pl/plParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -97,10 +96,8 @@ export function getPlSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "PL",
-    categoryId: "pl_voterGroups",
     regions,
     parties: plParties,
-    categories: makeEasternBlocCategories("pl_voterGroups", "Poland Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

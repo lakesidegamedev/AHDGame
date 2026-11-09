@@ -67,7 +67,7 @@ const AdminTab = dynamic(
 import type { StateOverviewResult } from "@/lib/states/overview/types";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import type { UKRegion } from "@/lib/constants/uk";
-import type { State, StateDemographics, DemographicCategory } from "@/lib/db/types";
+import type { State, StateDemographics } from "@/lib/db/types";
 import type {
   PartyOrgDisplay,
   SerializedPlayer,
@@ -96,7 +96,6 @@ interface UKRegionPageTabsProps {
       })
     | null;
   demographics: (Omit<StateDemographics, "lastUpdated"> & { lastUpdated: string | null }) | null;
-  categories: DemographicCategory[];
   censusData: RegionCensus | null;
   partyOrg: PartyOrgDisplay[];
   calculatedLeans: { economicLean: number; socialLean: number } | null;
@@ -125,7 +124,6 @@ export function UKRegionPageTabs({
   region,
   state,
   demographics,
-  categories,
   censusData,
   partyOrg,
   calculatedLeans,
@@ -260,7 +258,6 @@ export function UKRegionPageTabs({
           <DemographicsAndTurnoutTab
             stateId={region.id}
             demographics={demographics}
-            categories={categories}
             censusData={censusData}
             turnoutData={turnoutData ?? null}
             countryId="UK"

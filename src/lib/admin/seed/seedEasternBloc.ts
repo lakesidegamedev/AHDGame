@@ -1,12 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
-import type {
-  State,
-  PoliticalParty,
-  DemographicCategory,
-  StateDemographics,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { State, PoliticalParty, StateDemographics, StateMetrics } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -18,10 +12,8 @@ import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
 
 export interface EasternBlocSeedConfig {
   countryId: CountryId;
-  categoryId: string; // e.g. "hu_voterGroups"
   regions: State[];
   parties: PartySeed[];
-  categories: DemographicCategory[];
   metrics: StateMetrics[];
   baselines: StateMetricBaseline[];
 }
@@ -38,7 +30,7 @@ export async function seedEasternBlocCountry(
   preset: string,
   cfg: EasternBlocSeedConfig
 ) {
-  const { countryId, categoryId, regions, parties, categories, metrics, baselines } = cfg;
+  const { countryId, regions, parties, metrics, baselines } = cfg;
 
   // Warsaw-Pact one-party structure only existed in Cold-War eras; skip
   // in 1991/2019 rather than seeding Soviet-era structure into successors.
@@ -53,7 +45,6 @@ export async function seedEasternBlocCountry(
 
   if (reset) {
     await db.collection("states").deleteMany({ countryId });
-    await db.collection("demographicCategories").deleteMany({ _id: categoryId as never });
     await db.collection("stateDemographics").deleteMany({ countryId });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId });
     await db.collection("macroMetrics").deleteMany({ _id: { $in: regionIds } as never });
@@ -98,13 +89,6 @@ export async function seedEasternBlocCountry(
         updatedAt: now,
       } as PoliticalParty);
     }
-  }
-
-  for (const cat of categories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
 
   const { getCountryLayer1Model, buildModelRegionDemographics } =

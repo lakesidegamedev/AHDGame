@@ -25,7 +25,6 @@ export async function seedBG2027(
     await db.collection("statePartyOrg").deleteMany({ countryId: "BG" });
     await db.collection("stateDemographics").deleteMany({ countryId: "BG" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "BG" });
-    await db.collection("demographicCategories").deleteMany({ _id: "bg_voterGroups" as never });
     await db.collection("macroMetrics").deleteMany({ countryId: "BG" });
     await db.collection("stateBaselines").deleteMany({
       _id: {

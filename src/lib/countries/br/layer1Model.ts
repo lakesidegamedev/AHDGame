@@ -233,7 +233,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from brDemographicCategories.ts) ──────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ──────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   evangelical_conservative: { economicLean: 1, socialLean: 4 },

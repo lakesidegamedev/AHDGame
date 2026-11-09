@@ -3,7 +3,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -106,7 +105,6 @@ export async function seedDEDemographics(
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "DE" });
   }
 
-  const { deDemographicCategories } = await import("@/lib/seeds/de/deDemographicCategories");
   const { deRegionDemographics: deRegionDemographicsStatic } =
     await import("@/lib/seeds/de/deRegionDemographics");
   const { deDemographicTurnout } = await import("@/lib/seeds/de/deDemographicTurnout");
@@ -134,12 +132,6 @@ export async function seedDEDemographics(
     log(
       `[DE] Using Layer-1-derived demographics (${deRegionDemographics.length} regions, era ${era})`
     );
-  }
-
-  for (const category of deDemographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
   }
 
   for (const raw of deRegionDemographics) {
@@ -177,7 +169,7 @@ export async function seedDEDemographics(
   }
 
   log(
-    `Seeded DE demographics (preset: ${preset}, ${deDemographicCategories.length} categories, ${deRegionDemographics.length} regions, ${deDemographicTurnout.length} turnout)`
+    `Seeded DE demographics (preset: ${preset}, ${deRegionDemographics.length} regions, ${deDemographicTurnout.length} turnout)`
   );
 }
 

@@ -12,7 +12,7 @@ import type { CensusGroupView } from "@/lib/db/types";
  * Design principle: every archetype has a non-zero population in every region;
  * regional character is expressed through the population mix.
  *
- * Group IDs match jpDemographicCategories.ts `jp_voterGroups` groups.
+ * Group IDs match the country Layer-1 model `jp_voterGroups` groups.
  */
 export const jpRegionDemographics: CensusGroupView[] = [
   // ── Hokkaido ──────────────────────────────────────────────────────────────

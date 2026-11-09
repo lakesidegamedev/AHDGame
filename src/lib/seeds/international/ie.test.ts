@@ -20,83 +20,22 @@
  *
  * The test harness mirrors the real game pipeline:
  *   getIeModel(era) → deriveCountryGroupLean/Populations/Turnout
- *   → CensusGroupView → calculateStateLean → getDisplayLean
+ *   → turnout-weighted region lean → getDisplayLean
  */
 
 import { describe, it, expect } from "vitest";
 import { getIeModel, ieLayer1Model, ieGroupIds } from "./ie";
-import {
-  deriveCountryGroupPopulations,
-  deriveCountryGroupLean,
-  deriveCountryGroupTurnout,
-} from "./derive";
-import { ieDemographicCategories } from "@/lib/seeds/ie/ieDemographicCategories";
-import { calculateStateLean } from "@/lib/utils/demographics";
-import type { CensusGroupView } from "@/lib/db/types";
+import { modelRegionLean } from "./modelRegionLean";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function getRegionSocialLean(region: string, era: EraId): number {
-  const model = getIeModel(era);
-  const censusConfig = model.census[region];
-  if (!censusConfig) throw new Error(`No census for region ${region} in era ${era}`);
-
-  const pops = deriveCountryGroupPopulations(model, censusConfig);
-
-  const groups: CensusGroupView["groups"] = {};
-  for (const gid of ieGroupIds) {
-    const lean = deriveCountryGroupLean(model, gid, censusConfig);
-    const turnout = deriveCountryGroupTurnout(model, gid);
-    groups[gid] = {
-      population: pops[gid] ?? 0,
-      economicLean: lean.economicLean,
-      socialLean: lean.socialLean,
-      turnout,
-    };
-  }
-
-  const demographics: CensusGroupView = {
-    _id: region,
-    countryId: "IE",
-    categoryWeights: { ie_voterGroups: 100 },
-    groups,
-    lastUpdated: new Date(),
-  };
-
-  const { socialLean } = calculateStateLean(demographics, ieDemographicCategories);
-  return socialLean;
+  return modelRegionLean(getIeModel(era), region).socialLean;
 }
 
 function getRegionEconomicLean(region: string, era: EraId): number {
-  const model = getIeModel(era);
-  const censusConfig = model.census[region];
-  if (!censusConfig) throw new Error(`No census for region ${region} in era ${era}`);
-
-  const pops = deriveCountryGroupPopulations(model, censusConfig);
-
-  const groups: CensusGroupView["groups"] = {};
-  for (const gid of ieGroupIds) {
-    const lean = deriveCountryGroupLean(model, gid, censusConfig);
-    const turnout = deriveCountryGroupTurnout(model, gid);
-    groups[gid] = {
-      population: pops[gid] ?? 0,
-      economicLean: lean.economicLean,
-      socialLean: lean.socialLean,
-      turnout,
-    };
-  }
-
-  const demographics: CensusGroupView = {
-    _id: region,
-    countryId: "IE",
-    categoryWeights: { ie_voterGroups: 100 },
-    groups,
-    lastUpdated: new Date(),
-  };
-
-  const { economicLean } = calculateStateLean(demographics, ieDemographicCategories);
-  return economicLean;
+  return modelRegionLean(getIeModel(era), region).economicLean;
 }
 
 // ── Backwards-compatibility: exported symbols ─────────────────────────────────

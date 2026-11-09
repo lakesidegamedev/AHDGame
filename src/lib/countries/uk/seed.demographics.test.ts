@@ -3,7 +3,6 @@ import type { Db } from "mongodb";
 import type { CensusGroupView } from "@/lib/db/types";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { buildModelRegionDemographics } from "@/lib/seeds/international/derive";
-import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
 import { getUkModel } from "./layer1Model";
 import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
 import { seedUKDemographics } from "./seed";
@@ -23,9 +22,6 @@ describe("UK demographic seeding respects the selected era", () => {
 
   async function seed() {
     const db = createMockDb();
-    db.collection("demographicCategories").find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(ukDemographicCategories),
-    });
     await seedUKDemographics(db as unknown as Db, false, () => {}, "1991-default");
     return db;
   }

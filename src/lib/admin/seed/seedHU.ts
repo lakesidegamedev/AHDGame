@@ -3,7 +3,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateMetrics,
   StatePartyOrg,
@@ -108,17 +107,8 @@ export async function seedHUDemographics(
     return;
   }
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "hu_voterGroups" as never });
     await db.collection("stateDemographics").deleteMany({ countryId: "HU" });
     await db.collection("stateDemographicTurnout").deleteMany({ countryId: "HU" });
-  }
-  const { huDemographicCategories } =
-    await import("@/lib/countries/hu/data/huDemographicCategories");
-  for (const cat of huDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");

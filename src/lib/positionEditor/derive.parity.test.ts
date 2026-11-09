@@ -1,50 +1,58 @@
 import { describe, it, expect } from "vitest";
-import { computeDerivedComposition, editorConfigFromSeed, editorPositionsTable } from "./derive";
-import { deriveGroupLeanFromLayer1, type Layer1Config } from "@/lib/seeds/stateDemographics";
+import { computeDerivedComposition, editorConfigFromSeed } from "./derive";
+import { censusStateLean } from "@/lib/demographics/censusLean";
+import { stateCensusData } from "@/lib/seeds/stateCensusData";
+import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 
-const CFG: Layer1Config = {
-  race: { white: 60, black: 20, hispanic: 12, asian: 5, other: 3 },
-  education: { no_college: 55, college: 30, graduate: 15 },
-  wealth: { low: 30, middle: 50, high: 20 },
-  age: { young: 25, mid: 28, mature: 25, senior: 22 },
-  ideology: {
-    evangelicals: 15,
-    environmentalists: 15,
-    libertarians: 10,
-    progressives: 18,
-    patriots: 18,
-    gunowners: 14,
-  },
-};
+const CFG = (stateCensusData as unknown as Record<string, Layer1Config>).CA;
 
-describe("editor derive parity", () => {
-  it("archetype leans match deriveGroupLeanFromLayer1 with positionsOverride", () => {
-    const editor = editorConfigFromSeed("XX", "US", "2019", CFG);
+describe("editor preview reads the census buckets", () => {
+  it("an unedited state previews the census lean the seed caches", () => {
+    const editor = editorConfigFromSeed("CA", "US", "2019", CFG);
     const derived = computeDerivedComposition(editor);
-    const positionsOverride = editorPositionsTable(editor);
-    for (const a of derived.archetypes) {
-      const engine = deriveGroupLeanFromLayer1(a.id, CFG, "2019", positionsOverride);
-      expect(a.economicLean).toBeCloseTo(engine.economicLean, 5);
-      expect(a.socialLean).toBeCloseTo(engine.socialLean, 5);
+    const census = censusStateLean(
+      { _id: "CA", countryId: "US", categoryWeights: {}, lastUpdated: new Date(0) },
+      { countryId: "US", stateId: "CA", preset: "2019-default" }
+    );
+    expect(derived.stateEconomicLean).toBeCloseTo(census.economicLean, 1);
+    expect(derived.stateSocialLean).toBeCloseTo(census.socialLean, 1);
+  });
+
+  it("every dimension's bucket shares sum to 100", () => {
+    const derived = computeDerivedComposition(editorConfigFromSeed("CA", "US", "2019", CFG));
+    expect(derived.buckets.length).toBeGreaterThan(0);
+    for (const section of derived.buckets) {
+      const total = section.buckets.reduce((s, b) => s + b.sharePct, 0);
+      expect(total, section.dim).toBeCloseTo(100, 4);
     }
   });
 
-  it("voting-pool shares sum to ~100", () => {
-    const editor = editorConfigFromSeed("XX", "US", "2019", CFG);
-    const derived = computeDerivedComposition(editor);
-    const sum = derived.archetypes.reduce((s, a) => s + a.votingPoolShare, 0);
-    expect(sum).toBeCloseTo(100, 1);
+  it("editing a position moves that bucket and the state lean", () => {
+    const editor = editorConfigFromSeed("CA", "US", "2019", CFG);
+    const before = computeDerivedComposition(editor);
+    editor.layer1.race.white.economicLean = Math.max(-5, editor.layer1.race.white.economicLean - 2);
+    const after = computeDerivedComposition(editor);
+    const white = (d: typeof before) =>
+      d.buckets.find((s) => s.dim === "race")!.buckets.find((b) => b.id === "race:white")!;
+    expect(white(after).economicLean).toBeLessThan(white(before).economicLean);
+    expect(after.stateEconomicLean).toBeLessThan(before.stateEconomicLean);
   });
 
-  it("editing a Layer-1 position changes the derived archetype lean", () => {
+  it("editing a share moves the lean toward the bigger bucket", () => {
+    const editor = editorConfigFromSeed("CA", "US", "2019", CFG);
+    const before = computeDerivedComposition(editor).stateEconomicLean;
+    const edited = structuredClone(editor);
+    const { black, white } = edited.layer1.race;
+    black.share += 20;
+    white.share -= 20;
+    const after = computeDerivedComposition(edited).stateEconomicLean;
+    expect(Math.sign(after - before)).toBe(Math.sign(black.economicLean - white.economicLean));
+  });
+
+  it("falls back to the editor entries for a region with no census", () => {
     const editor = editorConfigFromSeed("XX", "US", "2019", CFG);
-    const before = computeDerivedComposition(editor).archetypes.find(
-      (a) => a.id === "evangelicals"
-    )!;
-    editor.layer1.ideology.evangelicals.economicLean = -5;
-    const after = computeDerivedComposition(editor).archetypes.find(
-      (a) => a.id === "evangelicals"
-    )!;
-    expect(after.economicLean).toBeLessThan(before.economicLean);
+    const derived = computeDerivedComposition(editor);
+    expect(Number.isFinite(derived.stateEconomicLean)).toBe(true);
+    expect(derived.buckets.map((s) => s.dim)).toEqual(editor.dims);
   });
 });

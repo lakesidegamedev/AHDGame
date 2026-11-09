@@ -240,7 +240,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from ukDemographicCategories.ts) ─────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ─────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   post_industrial_workers: { economicLean: -2, socialLean: 2 },

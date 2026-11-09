@@ -16,13 +16,12 @@
  */
 
 import { connectDb, closeDb } from "../utils/db";
-import { demographicCategories } from "../../src/lib/seeds/demographicCategories";
 import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
 import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
-import type { DemographicCategory, State, CensusGroupView } from "../../src/lib/db/types";
+import type { State, CensusGroupView } from "../../src/lib/db/types";
 
 async function main() {
-  console.log("Seed: Demographics (categories + state demographics)\n");
+  console.log("Seed: Demographics (state demographics)\n");
   console.log(
     "  Base census data (race, education, wealth, age, ideology) → voter groups per state"
   );
@@ -33,15 +32,6 @@ async function main() {
   const db = await connectDb();
 
   try {
-    // Upsert demographic categories (voter groups)
-    for (const category of demographicCategories) {
-      await db
-        .collection<DemographicCategory>("demographicCategories")
-        .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-    }
-    const groupsCount = demographicCategories.reduce((s, c) => s + (c.groups?.length ?? 0), 0);
-    console.log(`Upserted ${demographicCategories.length} category (${groupsCount} voter groups).`);
-
     // Upsert state demographics and demographicDefaults (game reset restores from defaults)
     for (const sd of stateDemographics) {
       const { groups: _groups, ...storedDemographics } = sd;

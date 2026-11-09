@@ -9,7 +9,7 @@ import type { CensusGroupView } from "@/lib/db/types";
  * region.
  *
  * `categoryWeights: { cn_voterGroups: 100 }` references the profile in
- * cnDemographicCategories.ts.
+ * the country Layer-1 model.
  */
 export const cnRegionDemographics: CensusGroupView[] = [
   // ── Dongbei (Northeast) ────────────────────────────────────────────────────

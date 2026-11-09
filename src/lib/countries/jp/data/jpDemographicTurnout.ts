@@ -5,7 +5,7 @@ import { JP_REGION_IDS } from "./jpRegionDirectory";
  * Japan region demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV or canvassing boosts applied yet.
- * Keys match the JP voter group IDs defined in jpDemographicCategories.ts.
+ * Keys match the JP voter group IDs defined in the country Layer-1 model.
  *
  * The category key is "jp_voterGroups" to match the JP demographic profile
  * and to avoid collision with US/UK documents in the same collection.

@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * Soviet Union region demographic turnout modifier seeds (spec §5.1).
  *
  * All modifiers start at 0: no GOTV, canvassing, or suppression effects yet.
- * Keys match the SU voter group IDs from ruDemographicCategories.ts (category
+ * Keys match the SU voter group IDs from the country Layer-1 model (category
  * `_id` "su_voterGroups", profile "su_archetypes").
  *
  * One document per region, all 14. Ukraine, Byelorussia and the Baltics are
