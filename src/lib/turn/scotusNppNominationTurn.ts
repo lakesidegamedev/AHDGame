@@ -10,7 +10,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { ElectedOfficial } from "@/lib/db/types";
+import { getElectedOfficialsCollection } from "@/lib/db/collections";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { createJusticeNomination } from "@/lib/scotus/nominateJustice";
 import {
@@ -44,9 +44,8 @@ export async function processScotusNppNominations(
     .toArray();
   if (vacantSeats.length === 0) return { nominated: 0, skipped: "no-vacancy" };
 
-  const president = await database
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId: "US", officeType: "president" });
+  const officials = await getElectedOfficialsCollection(database);
+  const president = await officials.findOne({ countryId: "US", officeType: "president" });
   const presidency: ScotusPresidencySnapshot = president?.characterId
     ? { kind: "player", party: president.party }
     : president?.nppId
@@ -57,8 +56,7 @@ export async function processScotusNppNominations(
   const senate =
     presidency.kind === "vacant"
       ? (
-          await database
-            .collection<ElectedOfficial>("electedOfficials")
+          await officials
             .find(
               { countryId: "US", officeType: "senate" },
               { projection: { party: 1, seatsHeld: 1 } }
