@@ -495,7 +495,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         const d = await r.json();
         setUser(d.user);
       }
-    } catch {}
+    } catch {
+      setMsg("✗ Could not load your account. Check your connection and refresh.");
+    }
   }, []);
 
   const fetchParty = useCallback(async () => {
@@ -515,6 +517,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         setLinkedStateIds(memberStates);
       }
     } catch {
+      setMsg("✗ Could not load party details. Check your connection and refresh.");
     } finally {
       setLoading(false);
     }
@@ -533,7 +536,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
           .map((row: { regionId: string }) => row.regionId);
         if (ids.length > 0) setLinkedStateIds(ids);
       }
-    } catch {}
+    } catch {
+      setMsg("✗ Could not load linked states. Check your connection and refresh.");
+    }
   }, [id, requestedCountry]);
 
   const fetchElections = useCallback(async () => {
@@ -543,7 +548,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         { credentials: "same-origin" }
       );
       if (r.ok) setElectionData(await r.json());
-    } catch {}
+    } catch {
+      setMsg("✗ Could not load party elections. Check your connection and refresh.");
+    }
   }, [id, requestedCountry]);
 
   const fetchCommittee = useCallback(async () => {
@@ -553,7 +560,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         { credentials: "same-origin" }
       );
       if (r.ok) setCommitteeData(await r.json());
-    } catch {}
+    } catch {
+      setMsg("✗ Could not load committee details. Check your connection and refresh.");
+    }
   }, [id, requestedCountry]);
 
   const fetchEligibleStates = useCallback(async () => {
@@ -566,7 +575,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         const data = await res.json();
         setEligibleStates(data.states ?? []);
       }
-    } catch {}
+    } catch {
+      setMsg("✗ Could not load eligible states. Check your connection and refresh.");
+    }
   }, [id, requestedCountry]);
 
   const fetchAnalytics = useCallback(async () => {
@@ -578,7 +589,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
       if (!response.ok) return;
       const payload = (await response.json()) as PartyAnalyticsPayload;
       setAnalyticsData(payload);
-    } catch {}
+    } catch {
+      setMsg("✗ Could not load party analytics. Check your connection and refresh.");
+    }
   }, [id, requestedCountry, modViewEnabled]);
 
   useEffect(() => {
@@ -1413,6 +1426,7 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
     stateParty,
     currentTurn,
     loading,
+    loadError,
     fetchUser,
     fetchStateParty,
     taxRate,
@@ -1445,6 +1459,10 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   const [nppSubtab, setNppSubtab] = useState<"recruitment" | "management">("recruitment");
   const [msg, setMsg] = useState("");
   const [analyticsData, setAnalyticsData] = useState<StatePartyAnalyticsPayload | null>(null);
+
+  useEffect(() => {
+    if (loadError) setMsg("✗ Could not load state party data. Check your connection and refresh.");
+  }, [loadError]);
 
   const treasury = useStatePartyTreasuryActions({
     countryCode,
@@ -1561,7 +1579,11 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   if (!stateParty) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted">State party not found.</div>
+        <div className="text-muted">
+          {loadError
+            ? "Could not load this state party. Check your connection and refresh."
+            : "State party not found."}
+        </div>
       </div>
     );
   }

@@ -154,6 +154,7 @@ function CoalitionDetailContent({ params }: { params: Promise<{ code: string; id
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [discordInviteUrl, setDiscordInviteUrl] = useState("");
   const [savingDiscordLink, setSavingDiscordLink] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Chair's Office action state
   const [transferTarget, setTransferTarget] = useState<number | "">("");
@@ -175,7 +176,9 @@ function CoalitionDetailContent({ params }: { params: Promise<{ code: string; id
         const d = await r.json();
         setUser(d.user);
       }
-    } catch {}
+    } catch {
+      setLoadError("Could not load your account. Check your connection and refresh.");
+    }
   }, []);
 
   const fetchCoalition = useCallback(async () => {
@@ -187,6 +190,7 @@ function CoalitionDetailContent({ params }: { params: Promise<{ code: string; id
         setCoalition(d);
       }
     } catch {
+      setLoadError("Could not load this coalition. Check your connection and refresh.");
     } finally {
       setLoading(false);
     }
@@ -199,7 +203,9 @@ function CoalitionDetailContent({ params }: { params: Promise<{ code: string; id
         const d = await r.json();
         setAllParties(d.parties ?? d ?? []);
       }
-    } catch {}
+    } catch {
+      setLoadError("Could not load the party list. Check your connection and refresh.");
+    }
   }, [effectiveCountry]);
 
   useEffect(() => {
@@ -420,9 +426,11 @@ function CoalitionDetailContent({ params }: { params: Promise<{ code: string; id
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold mb-2">Coalition not found</p>
+          <p className="text-lg font-semibold mb-2">
+            {loadError ? "Could not load coalition" : "Coalition not found"}
+          </p>
           <p className="text-sm text-muted mb-4">
-            This coalition may not exist or may have been disbanded.
+            {loadError ?? "This coalition may not exist or may have been disbanded."}
           </p>
           <Link
             href={`/country/${effectiveCountry}/parties`}
@@ -452,6 +460,11 @@ function CoalitionDetailContent({ params }: { params: Promise<{ code: string; id
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-5xl px-6 py-8 overflow-x-hidden">
+        {loadError ? (
+          <div className="mb-4 rounded-lg border border-error/40 bg-error/10 p-3 text-body-sm text-error">
+            {loadError}
+          </div>
+        ) : null}
         {/* Back link */}
         <Link
           href={`/country/${effectiveCountry}/parties`}
