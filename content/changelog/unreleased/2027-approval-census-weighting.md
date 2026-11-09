@@ -13,3 +13,4 @@ areas: [backend]
 
 - Region and national approval weight each issue by the leanings of the region's census groups at the current in-game year, rather than a stored voter-group table.
 - A region with no census data keeps the plain, unweighted average.
+- Missing census data is only tolerated for background countries. A playable or NPP-run country with a region that has no census now fails loudly instead of silently dropping the weighting.

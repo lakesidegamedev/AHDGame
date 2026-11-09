@@ -13,7 +13,7 @@
     "export:seed-audit-reference": "tsx scripts/exportSeedAuditReference.ts",
     "build": "node scripts/build-with-cache-recovery.mjs && tsx scripts/postbuild-quality.ts",
     "start": "next start",
-    "start:turn-worker": "NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=3072 --max-semi-space-size=64\" tsx scripts/turn-worker.ts",
+    "start:turn-worker": "NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=3072 --max-semi-space-size=128\" tsx scripts/turn-worker.ts",
     "lint": "eslint --cache --cache-strategy content --cache-location .cache/eslint/.eslintcache",
     "format": "prettier --write .",
     "format:check": "prettier --check . --cache --cache-strategy content --cache-location .cache/prettier/.prettier-cache",

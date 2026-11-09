@@ -49,6 +49,7 @@ import {
   type ActiveModifier,
 } from "@/lib/utils/approvalModifiers";
 import { electorateUnitsByRegion } from "@/lib/demographics/electorateWeights";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import { eraYearContextFromGameState, getEraContext } from "@/lib/era/context";
 import { isMetricActive } from "@/lib/era/metricCatalog";
 import { getActiveNationalAddressModifier } from "@/lib/governorOffice/address/activeAddressModifiers";
@@ -286,12 +287,17 @@ export function effectiveMetricWeight(
   return popSum > 0 ? weighted / popSum : 1;
 }
 
+/** Countries whose regions must have census cells, per loaded electorate map. */
+const fullSimCountriesByGroups = new WeakMap<object, ReadonlySet<string>>();
+
 /**
  * P6d — each state's census electorate as voter units for electorate-weighted
  * approval, keyed by `${countryId}:${stateId}` so a cross-country state-ID
- * collision (CN HB / DE HB) never returns the wrong electorate. A state without
- * census cells has no entry and its approval stays unweighted. Pass a Mongo
- * filter to scope the read (e.g. `{ countryId }` or `{ _id: { $in: stateIds }, countryId }`).
+ * collision (CN HB / DE HB) never returns the wrong electorate. A background
+ * country's state without census cells has no entry and its approval stays
+ * unweighted; {@link weightingFor} throws for the same gap in a playable or
+ * NPP-run country. Pass a Mongo filter to scope the read (e.g. `{ countryId }`
+ * or `{ _id: { $in: stateIds }, countryId }`).
  */
 export async function loadElectorateGroups(
   db: Db,
@@ -303,7 +309,7 @@ export async function loadElectorateGroups(
     layer1PositionOverrides: 1,
     layer1TurnoutOverrides: 1,
   };
-  const [docs, defaultDocs, gameState] = await Promise.all([
+  const [docs, defaultDocs, gameState, tiers] = await Promise.all([
     db.collection<StateDemographics>("stateDemographics").find(filter, { projection }).toArray(),
     db.collection<StateDemographics>("demographicDefaults").find(filter, { projection }).toArray(),
     getGameStateCollection(db).then((col) =>
@@ -312,22 +318,33 @@ export async function loadElectorateGroups(
         { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
       )
     ),
+    loadCountryTiers(db),
   ]);
-  return electorateUnitsByRegion(
+  const groups = electorateUnitsByRegion(
     docs,
     new Map(defaultDocs.map((d) => [`${d.countryId}:${d._id}`, d])),
     { preset: gameState?.preset, ...eraYearContextFromGameState(gameState) }
   );
+  fullSimCountriesByGroups.set(groups, new Set(tiers.fullSimulationIds));
+  return groups;
 }
 
-/** Build the optional `weighting` arg for a state from a composite-keyed group map. */
+/**
+ * Build the optional `weighting` arg for a state from a composite-keyed group map.
+ * A region with no census is unweighted only in a background country; in a
+ * playable or NPP-run country it is missing data and throws.
+ */
 export function weightingFor(
   groupsByState: Map<string, StateDemographicGroup[]>,
   countryId: string,
   stateId: string
 ): { groups: StateDemographicGroup[] } | undefined {
   const groups = groupsByState.get(`${countryId}:${stateId}`);
-  return groups && groups.length > 0 ? { groups } : undefined;
+  if (groups && groups.length > 0) return { groups };
+  if (fullSimCountriesByGroups.get(groupsByState)?.has(countryId)) {
+    throw new Error(`Approval weighting: no census electorate for ${countryId}:${stateId}`);
+  }
+  return undefined;
 }
 
 /**
