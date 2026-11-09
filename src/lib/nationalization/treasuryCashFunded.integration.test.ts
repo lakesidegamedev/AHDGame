@@ -11,6 +11,7 @@ import {
 import { loadTreasuryCashContext } from "./treasuryLedger";
 import { withInjectedCrash, InjectedCrash } from "@/lib/test-utils/faultyDb";
 import { settleFundedWholeCorpShareholderPool } from "./ownershipTransition";
+import { completeCompensationRecovery } from "./clawbackCompensation";
 import type { Character, Corporation } from "@/lib/db/types";
 
 function world() {
@@ -561,5 +562,40 @@ describe("funded Treasury corporation transfers", () => {
       treasuryBalance: 50,
     });
     expect(db.collection("bankMoneyMoves").docs).toEqual([]);
+  });
+
+  it("lands a recovery debited before the funded ledger was on without throwing", async () => {
+    const { db, corpId } = world();
+    await db.collection("corporations").updateOne(
+      { _id: corpId },
+      {
+        $set: {
+          pendingCompensationRecoveries: {
+            s1_3: {
+              sectorId: new ObjectId("650000000000000000000031"),
+              takenAtTurn: 3,
+              countryId: "CN",
+              anchor: 30,
+              stage: "debited",
+              paidAnchor: 30,
+            },
+          },
+        },
+      }
+    );
+
+    const result = await completeCompensationRecovery(
+      db as unknown as Db,
+      corpId,
+      "s1_3",
+      new Date()
+    );
+
+    expect(result).toMatchObject({ recoveredAnchor: 30, owedAnchor: 0 });
+    expect(db.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 40,
+      treasuryBalance: 40,
+    });
+    expect(db.collection("corporations").docs[0]?.pendingCompensationRecoveries).toEqual({});
   });
 });
