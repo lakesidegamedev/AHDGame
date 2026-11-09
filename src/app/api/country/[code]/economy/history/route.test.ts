@@ -36,17 +36,27 @@ describe("GET /api/country/[code]/economy/history", () => {
     expect(response.headers.get("cache-control")).toBe(
       "public, max-age=15, s-maxage=60, stale-while-revalidate=120"
     );
-    expect(mocks.build).toHaveBeenCalledWith({}, "US", 120);
+    expect(mocks.build).toHaveBeenCalledWith({}, "US", 120, null);
   });
 
   it("passes a requested window through for clamping", async () => {
     await GET(request("?turns=48"), params("jp"));
-    expect(mocks.build).toHaveBeenCalledWith({}, "JP", 48);
+    expect(mocks.build).toHaveBeenCalledWith({}, "JP", 48, null);
   });
 
   it("falls back to the default window on junk input", async () => {
     await GET(request("?turns=lots"), params("us"));
-    expect(mocks.build).toHaveBeenCalledWith({}, "US", 120);
+    expect(mocks.build).toHaveBeenCalledWith({}, "US", 120, null);
+  });
+
+  it("passes the completed turn a client refetched for through to the loader", async () => {
+    await GET(request("?until=740"), params("us"));
+    expect(mocks.build).toHaveBeenCalledWith({}, "US", 120, 740);
+  });
+
+  it("treats a junk turn marker as no marker", async () => {
+    await GET(request("?until=soon"), params("us"));
+    expect(mocks.build).toHaveBeenCalledWith({}, "US", 120, null);
   });
 
   it("rejects an unknown country code with 400", async () => {

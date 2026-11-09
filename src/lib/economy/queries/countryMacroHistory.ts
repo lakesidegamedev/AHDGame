@@ -50,7 +50,8 @@ const EMPTY_TURN = 0;
 export async function buildCountryMacroHistory(
   db: Db,
   countryId: CountryId,
-  requestedTurns?: number | null
+  requestedTurns?: number | null,
+  requestedUntil?: number | null
 ): Promise<CountryMacroHistory> {
   const turns = normalizeHistoryTurns(requestedTurns);
   const currencyCode = COUNTRY_CONFIGS[countryId].currencyCode;
@@ -77,6 +78,15 @@ export async function buildCountryMacroHistory(
     iterationNumber: gameState.iteration?.number ?? null,
   });
 
+  // Telemetry rows are written while a turn is still running, so a turn that
+  // has not committed can leave rows above the world clock. The series is a
+  // record of completed turns only: the window ends at the world clock, or at
+  // the turn the caller says it is refetching for, never past it.
+  const upperTurn =
+    typeof requestedUntil === "number" && Number.isFinite(requestedUntil)
+      ? Math.min(Math.max(0, Math.floor(requestedUntil)), currentTurn)
+      : currentTurn;
+
   // One read per metric keeps both queries fully index-covered: the unique
   // (world, country, region, metric, turn) index supplies equality on the
   // first four fields and the turn window as a suffix range, so no sort stage
@@ -86,7 +96,7 @@ export async function buildCountryMacroHistory(
     worldId,
     country: countryId,
     region: null,
-    turn: { $gte: Math.max(0, currentTurn - turns + 1) },
+    turn: { $gte: Math.max(0, upperTurn - turns + 1), $lte: upperTurn },
   };
   const projection = { _id: 0, turn: 1, year: 1, value: 1 };
 

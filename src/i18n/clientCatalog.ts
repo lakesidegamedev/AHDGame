@@ -124,7 +124,7 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
   {
     prefix: "/country",
     pattern: "/country/:code/economy",
-    namespaces: ["nav", "tutorial"],
+    namespaces: ["economyHistory", "nav", "tutorial"],
   },
   {
     prefix: "/country",
@@ -166,6 +166,7 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
     prefix: "/country",
     namespaces: [
       "corporations",
+      "economyHistory",
       "elections",
       "governmentConfidence",
       "layout",
