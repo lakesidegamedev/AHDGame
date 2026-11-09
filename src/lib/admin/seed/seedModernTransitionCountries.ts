@@ -244,7 +244,7 @@ export async function seedModernTransitionDemographics(
     .updateOne({ _id }, { $set: catData }, { upsert: true });
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
-    const { _id: demoId, ...demoData } = raw;
+    const { _id: demoId, groups: _groups, ...demoData } = raw;
     await db
       .collection<StateDemographics>("stateDemographics")
       .updateOne({ _id: demoId }, { $set: demoData }, { upsert: true });

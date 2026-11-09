@@ -34,7 +34,7 @@ import { ukRegionDemographics } from "../../src/lib/seeds/uk/ukRegionDemographic
 import { ukDemographicTurnout } from "../../src/lib/seeds/uk/ukDemographicTurnout";
 import { ukStateMetrics } from "../../src/lib/seeds/uk/ukStateMetrics";
 import { calculateUKStatePartyOrgs } from "../../src/lib/seeds/uk/ukStatePartyOrgCalculations";
-import { calculateStateLean } from "../../src/lib/utils/demographics";
+import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
 import { ObjectId } from "mongodb";
 import { getNextSequentialId } from "../../src/lib/db/sequentialId";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -97,19 +97,20 @@ async function main() {
   // ── 4. UK Region Demographics ──────────────────────────────────────────────
   console.log("4. Seeding UK region demographics...");
   for (const sd of ukRegionDemographics) {
+    const { groups: _groups, ...storedDemographics } = sd;
     await db
       .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
     await db
       .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
 
-    // Cache economic/social lean on the region document
-    const allCategories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-    const lean = calculateStateLean(sd, allCategories);
+    const lean = calculateStateLeanForCache(sd, [], {
+      countryId: "UK",
+      stateId: sd._id,
+      preset: "2019-default",
+      demographicDefaults: sd,
+    });
     await db.collection<State>("states").updateOne(
       { _id: sd._id },
       {

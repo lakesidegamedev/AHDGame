@@ -110,7 +110,7 @@ export async function seedDEDemographics(
   const { deRegionDemographics: deRegionDemographicsStatic } =
     await import("@/lib/seeds/de/deRegionDemographics");
   const { deDemographicTurnout } = await import("@/lib/seeds/de/deDemographicTurnout");
-  const { calculateStateLean } = await import("@/lib/utils/demographics");
+  const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
   const { applyEra1991DemographicAdjustments } = is1991
     ? await import("@/lib/seeds/reference/stateDemographics1991")
@@ -144,18 +144,20 @@ export async function seedDEDemographics(
 
   for (const raw of deRegionDemographics) {
     const sd = is1991 ? applyEra1991DemographicAdjustments(raw, "DE") : raw;
+    const { groups: _groups, ...storedDemographics } = sd;
     await db
       .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
     await db
       .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
 
-    const allCategories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-    const lean = calculateStateLean(sd, allCategories);
+    const lean = calculateStateLeanForCache(sd, [], {
+      countryId: "DE",
+      stateId: sd._id,
+      preset,
+      demographicDefaults: sd,
+    });
     await db.collection<State>("states").updateOne(
       { _id: sd._id },
       {

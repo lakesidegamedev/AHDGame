@@ -449,14 +449,15 @@ export async function runSeed(
       positions: override?.positions,
       turnout: override?.turnout,
     });
-    const calculatedLean = calculateStateLeanForCache(sd, demographicCategories, {
+    const calculatedLean = calculateStateLeanForCache(sd, [], {
       countryId: "US",
       stateId: sd._id,
       preset,
       demographicDefaults: sd,
     });
+    const { groups: _groups, ...storedDemographics } = sd;
     const cachedDemographics = {
-      ...sd,
+      ...storedDemographics,
       cachedEconomicLean: calculatedLean.economicLean,
       cachedSocialLean: calculatedLean.socialLean,
     };

@@ -137,7 +137,7 @@ export async function seedJPDemographics(
   }
   for (const raw of jpRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "JP") : raw;
-    const { _id, ...demoData } = demo;
+    const { _id, groups: _groups, ...demoData } = demo;
     await db
       .collection<StateDemographics>("stateDemographics")
       .updateOne({ _id }, { $set: demoData }, { upsert: true });

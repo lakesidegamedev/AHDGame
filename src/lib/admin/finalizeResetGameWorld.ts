@@ -180,7 +180,6 @@ export async function finalizeResetGameWorld(
         {
           $set: {
             categoryWeights: defaultDemo.categoryWeights,
-            groups: defaultDemo.groups,
             lastUpdated: now,
           },
         },
@@ -190,9 +189,9 @@ export async function finalizeResetGameWorld(
     }
   }
 
-  const leanBackfill = await backfillMissingRegionLeans(db, now);
+  const leanBackfill = await backfillMissingRegionLeans(db, now, preset);
   log(
-    `Regional leans: ${leanBackfill.written} filled; ${leanBackfill.missingDemographics} missing demographics; ${leanBackfill.missingCategories} missing weighted categories`
+    `Regional leans: ${leanBackfill.written} filled; ${leanBackfill.missingDemographics} missing demographics; ${leanBackfill.missingCategories} with no census electorate`
   );
 
   const presetConfig = getPresetById(preset);

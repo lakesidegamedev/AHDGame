@@ -1,13 +1,14 @@
 /**
  * Seeded regions receive electorate leans before a reset opens the new world.
- * Missing caches are derived from live seeded demographics; valid existing
- * region leans are retained. Unsupported regions remain visibly unfilled.
+ * Missing caches are derived from each region's census electorate; valid
+ * existing region leans are retained. Regions with no census remain visibly
+ * unfilled.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
-import { calculateStateLean } from "@/lib/utils/demographics";
+import type { State, StateDemographics } from "@/lib/db/types";
+import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
 
-export async function backfillMissingRegionLeans(db: Db, now: Date) {
+export async function backfillMissingRegionLeans(db: Db, now: Date, preset: string) {
   const states = await db
     .collection<State>("states")
     .find(
@@ -27,15 +28,13 @@ export async function backfillMissingRegionLeans(db: Db, now: Date) {
     .collection<StateDemographics>("stateDemographics")
     .find(
       { _id: { $in: missing.map((row) => row._id) } },
-      { projection: { countryId: 1, categoryWeights: 1, groups: 1 } }
-    )
-    .toArray();
-  const categories = await db
-    .collection<DemographicCategory>("demographicCategories")
-    .find(
-      {},
       {
-        projection: { groups: 1, defaultWeight: 1 },
+        projection: {
+          countryId: 1,
+          categoryWeights: 1,
+          layer1PositionOverrides: 1,
+          layer1TurnoutOverrides: 1,
+        },
       }
     )
     .toArray();
@@ -46,25 +45,16 @@ export async function backfillMissingRegionLeans(db: Db, now: Date) {
     missingCategories = 0;
   for (const state of missing) {
     const demo = byRegion.get(state._id);
-    if (!demo || demo.countryId !== state.countryId || !demo.groups) {
+    if (!demo || demo.countryId !== state.countryId) {
       missingDemographics++;
       continue;
     }
-    const supported = categories.some(
-      (category) =>
-        Number(demo.categoryWeights?.[category._id]) > 0 &&
-        category.groups.some(
-          (group) =>
-            Number(demo.groups[group.id]?.population) > 0 &&
-            Number(demo.groups[group.id]?.turnout ?? group.defaultTurnout ?? 55) > 0
-        )
-    );
-    if (!supported) {
-      missingCategories++;
-      continue;
-    }
-    const lean = calculateStateLean(demo, categories);
-    if (!valid(lean.economicLean) || !valid(lean.socialLean)) {
+    const lean = censusCachedStateLean(demo, {
+      countryId: demo.countryId,
+      stateId: state._id,
+      preset,
+    });
+    if (!lean || !valid(lean.economicLean) || !valid(lean.socialLean)) {
       missingCategories++;
       continue;
     }

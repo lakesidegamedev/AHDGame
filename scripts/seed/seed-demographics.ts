@@ -18,7 +18,7 @@
 import { connectDb, closeDb } from "../utils/db";
 import { demographicCategories } from "../../src/lib/seeds/demographicCategories";
 import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
-import { calculateStateLean } from "../../src/lib/utils/demographics";
+import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
 import type { DemographicCategory, State, StateDemographics } from "../../src/lib/db/types";
 
 async function main() {
@@ -44,13 +44,19 @@ async function main() {
 
     // Upsert state demographics and demographicDefaults (game reset restores from defaults)
     for (const sd of stateDemographics) {
+      const { groups: _groups, ...storedDemographics } = sd;
       await db
         .collection<StateDemographics>("stateDemographics")
-        .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+        .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
       await db
         .collection<StateDemographics>("demographicDefaults")
-        .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
-      const calculatedLean = calculateStateLean(sd, demographicCategories);
+        .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
+      const calculatedLean = calculateStateLeanForCache(sd, [], {
+        countryId: "US",
+        stateId: sd._id,
+        preset: "2019-default",
+        demographicDefaults: sd,
+      });
       await db.collection<State>("states").updateOne(
         { _id: sd._id },
         {

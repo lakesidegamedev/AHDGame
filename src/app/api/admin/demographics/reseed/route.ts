@@ -29,7 +29,6 @@ import type { Db } from "mongodb";
 import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { registerAndGenerate } from "@/lib/seeds/stateDemographics";
-import { calculateStateLean } from "@/lib/utils/demographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
@@ -92,21 +91,20 @@ export async function POST(request: Request) {
       const regionIds = regionDemographics.map((r) => r._id);
       const snapshotId = await takeSnapshot(db, countryId, era, regionIds, auth.admin.username);
 
-      // Categories must come from the DB, not the US static import: region leans
-      // only sum categories in categoryWeights, so US groups yield a silent 0/0.
-      const countryCategories = await db
-        .collection<DemographicCategory>("demographicCategories")
-        .find({})
-        .toArray();
-
       for (const sd of regionDemographics) {
+        const { groups: _groups, ...storedDemographics } = sd;
         await db
           .collection<StateDemographics>("stateDemographics")
-          .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+          .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
         await db
           .collection<StateDemographics>("demographicDefaults")
-          .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
-        const calculatedLean = calculateStateLean(sd, countryCategories);
+          .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
+        const calculatedLean = calculateStateLeanForCache(sd, [], {
+          countryId,
+          stateId: sd._id,
+          preset: `${era}-default`,
+          demographicDefaults: sd,
+        });
         await db.collection<State>("states").updateOne(
           { _id: sd._id },
           {
@@ -176,14 +174,15 @@ export async function POST(request: Request) {
     }
 
     for (const sd of regenerated) {
-      const calculatedLean = calculateStateLeanForCache(sd, demographicCategories, {
+      const calculatedLean = calculateStateLeanForCache(sd, [], {
         countryId: "US",
         stateId: sd._id,
         preset: `${era}-default`,
         demographicDefaults: sd,
       });
+      const { groups: _groups, ...storedDemographics } = sd;
       const cachedDemographics = {
-        ...sd,
+        ...storedDemographics,
         cachedEconomicLean: calculatedLean.economicLean,
         cachedSocialLean: calculatedLean.socialLean,
       };

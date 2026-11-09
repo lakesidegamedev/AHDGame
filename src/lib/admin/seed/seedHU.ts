@@ -131,7 +131,7 @@ export async function seedHUDemographics(
   }
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
-    const { _id, ...demoData } = raw;
+    const { _id, groups: _groups, ...demoData } = raw;
     await db
       .collection<StateDemographics>("stateDemographics")
       .updateOne({ _id }, { $set: demoData }, { upsert: true });
