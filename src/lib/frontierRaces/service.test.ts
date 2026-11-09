@@ -73,6 +73,24 @@ function makeDb(initial: Doc[] = [], corp?: { _id: ObjectId; rdScore: number; na
       return doc;
     },
     find: () => ({ toArray: async () => [...races.values()] }),
+    bulkWrite: async (
+      ops: {
+        updateOne: {
+          filter: Record<string, unknown>;
+          update: Record<string, Record<string, unknown>>;
+        };
+      }[]
+    ) => {
+      let modifiedCount = 0;
+      for (const { updateOne } of ops) {
+        const doc = races.get(updateOne.filter._id as string);
+        if (doc && matches(doc, updateOne.filter)) {
+          apply(doc, updateOne.update);
+          modifiedCount += 1;
+        }
+      }
+      return { modifiedCount };
+    },
   };
   const corpsCol = {
     updateOne: async (f: Record<string, unknown>, u: Record<string, Record<string, unknown>>) => {

@@ -121,9 +121,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         processCrisisV2Turn(db, newTurn)
       );
       // Winners and licences write approval through the same state writers.
-      const frontierRaceResult = await runtime.runPhase("frontierRaces", () =>
-        processFrontierRaces(db, newTurn)
-      );
+      await runtime.runPhase("frontierRaces", () => processFrontierRaces(db, newTurn));
       // Intelligence upkeep resolves before navair, so a later phase's sabotage
       // lands on the dispositions this turn actually fights on. Note the honest
       // limit: navair RECOMPUTES sea control and air superiority from live units
@@ -377,7 +375,6 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       : null;
     phaseResults.crisisTurn = { crisisesProcessed: crisisResult ?? 0 };
     phaseResults.crisisV2Turn = crisisV2Result ?? null;
-    phaseResults.frontierRaces = frontierRaceResult ?? null;
     phaseResults.ministerialOrders = ministerialOrdersResult ?? null;
     (phaseResults as Record<string, unknown>).navairOperations = navairResult ?? null;
     phaseResults.topSectorsRecompute = topSectorsResult ?? null;

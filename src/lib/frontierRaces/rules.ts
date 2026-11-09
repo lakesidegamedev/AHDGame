@@ -1,16 +1,4 @@
-/**
- * Frontier programme races for the 2040s.
- *
- * Three programmes (fusion power, orbital industry, biotech platforms) each
- * open in a given year. Nations fund them from the treasury and corporations
- * from research points. The first entrant to reach the programme's threshold
- * wins the method; everyone else who put in a meaningful stake is converted:
- * corporations get a weaker licence after a sunset delay, nations take a small
- * approval hit and a smaller approval gain once the licence arrives.
- *
- * Plain data in, plain data out. Time arrives as a turn number or year, ids are
- * strings, and nothing here reads the database.
- */
+/** Rules for the 2040s frontier programme races: pure data in, data out, no I/O. */
 
 export type FrontierRaceId = "fusion" | "orbital" | "biotech";
 export type FrontierEntrantKind = "country" | "corporation";

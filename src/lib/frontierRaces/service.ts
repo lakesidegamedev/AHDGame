@@ -30,6 +30,7 @@ import {
   raceStatus,
   rankEntrants,
   resolveRace,
+  type RaceOutcome,
   type FrontierEntrantKind,
   type FrontierRaceDef,
   type FrontierRaceStatus,
@@ -178,18 +179,30 @@ export async function processFrontierRaces(db: Db, turn: number): Promise<Fronti
   const docs = await races.find({}).toArray();
   const byId = new Map(docs.map((doc) => [doc._id as string, doc]));
   const result: FrontierRacePhaseResult = { racesWon: 0, licencesIssued: 0 };
-  const corps = await getCorporationsCollection(db);
 
+  const wins: { def: FrontierRaceDef; doc: FrontierRaceState; outcome: RaceOutcome }[] = [];
+  const dueLicences: { def: FrontierRaceDef; doc: FrontierRaceState }[] = [];
   for (const def of FRONTIER_RACES) {
     const doc = byId.get(def.id);
     if (!doc || (era.year ?? 0) < def.opensYear) continue;
-
     if (!doc.winner) {
       const outcome = resolveRace(doc.contributions, def.threshold, turn);
-      if (!outcome) continue;
-      const claimed = await races.updateOne(
-        { _id: def.id, winner: { $exists: false } },
-        {
+      if (outcome) wins.push({ def, doc, outcome });
+    } else if (
+      !doc.licencesSettled &&
+      typeof doc.licenceTurn === "number" &&
+      turn >= doc.licenceTurn
+    ) {
+      dueLicences.push({ def, doc });
+    }
+  }
+
+  // Claims are guarded writes, so a replayed turn cannot name a winner twice.
+  const claims = [
+    ...wins.map(({ def, outcome }) => ({
+      updateOne: {
+        filter: { _id: def.id, winner: { $exists: false } },
+        update: {
           $set: {
             winner: { key: outcome.winner.key, points: outcome.winner.points, turn },
             losers: outcome.losers.map((l) => ({ key: l.key, points: l.points })),
@@ -197,43 +210,54 @@ export async function processFrontierRaces(db: Db, turn: number): Promise<Fronti
             licencesSettled: false,
             updatedAt: new Date(),
           },
-        }
-      );
-      if (claimed.modifiedCount === 0) continue;
-      result.racesWon += 1;
-      await applyWinner(
-        db,
-        def,
-        doc,
-        outcome.winner.key,
-        outcome.losers.map((l) => l.key),
-        turn
-      );
-      continue;
-    }
+        },
+      },
+    })),
+    ...dueLicences.map(({ def }) => ({
+      updateOne: {
+        filter: { _id: def.id, licencesSettled: false },
+        update: { $set: { licencesSettled: true, updatedAt: new Date() } },
+      },
+    })),
+  ];
+  if (claims.length === 0) return result;
+  const written = await races.bulkWrite(claims, { ordered: false });
+  if (written.modifiedCount !== claims.length) {
+    logger.warn(COMPONENT, "race claims partly refused, skipping effects", {
+      claims: claims.length,
+      modified: written.modifiedCount,
+    });
+    return result;
+  }
 
-    if (!doc.licencesSettled && typeof doc.licenceTurn === "number" && turn >= doc.licenceTurn) {
-      const claimed = await races.updateOne(
-        { _id: def.id, licencesSettled: false },
-        { $set: { licencesSettled: true, updatedAt: new Date() } }
-      );
-      if (claimed.modifiedCount === 0) continue;
-      for (const loser of doc.losers ?? []) {
-        const parsed = parseEntrantKey(loser.key);
-        if (!parsed) continue;
-        if (parsed.kind === "country") {
-          await applyCountryApproval(db, parsed.id, LICENCE_APPROVAL, turn);
-        } else {
-          await grantCorporationMethod(
-            corps,
-            parsed.id,
-            def,
-            "licence",
-            conversionReturn(loser.points)
-          );
-        }
-        result.licencesIssued += 1;
+  for (const { def, doc, outcome } of wins) {
+    result.racesWon += 1;
+    await applyWinner(
+      db,
+      def,
+      doc,
+      outcome.winner.key,
+      outcome.losers.map((l) => l.key),
+      turn
+    );
+  }
+  const corps = await getCorporationsCollection(db);
+  for (const { def, doc } of dueLicences) {
+    for (const loser of doc.losers ?? []) {
+      const parsed = parseEntrantKey(loser.key);
+      if (!parsed) continue;
+      if (parsed.kind === "country") {
+        await applyCountryApproval(db, parsed.id, LICENCE_APPROVAL, turn);
+      } else {
+        await grantCorporationMethod(
+          corps,
+          parsed.id,
+          def,
+          "licence",
+          conversionReturn(loser.points)
+        );
       }
+      result.licencesIssued += 1;
     }
   }
   return result;
