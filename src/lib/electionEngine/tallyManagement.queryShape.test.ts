@@ -39,7 +39,6 @@ vi.mock("./candidateEnrichment", () => ({ fetchEnrichedCandidates: vi.fn() }));
 vi.mock("./voteDistribution", () => ({ distributeVotesByGroupLevelAllocation: vi.fn() }));
 vi.mock("./voteDistributionSwingFlow", () => ({ distributeVotesBySwingFlow: vi.fn() }));
 vi.mock("./resolvedTurnout", () => ({
-  resolveTurnout: vi.fn(),
   scalePoolToRegistered: (pool: number) => pool,
   // Real behavior, kept live in the mock: several tests pin the electorate
   // ceiling through the distributor's slice argument.
@@ -195,7 +194,6 @@ async function setupHappyPath(electionId: ObjectId, election: Election) {
   const candidate = makeCandidate({ electionId });
   const enriched = [makeEnriched(candidate._id.toString())];
 
-  const { resolveTurnout } = await import("./resolvedTurnout");
   const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
   const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
   const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
@@ -218,10 +216,6 @@ async function setupHappyPath(electionId: ObjectId, election: Election) {
   });
   db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-  vi.mocked(resolveTurnout).mockReturnValue({
-    byGroup: { liberal: 60, conservative: 60 },
-    totalPool: 100_000,
-  });
   vi.mocked(fetchEnrichedCandidates).mockResolvedValue(enriched);
   const distribution = {
     votesPerCandidate: { [enriched[0].candidateId]: 5000 },

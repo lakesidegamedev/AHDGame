@@ -47,7 +47,6 @@ vi.mock("./voteDistributionSwingFlow", () => ({
 }));
 
 vi.mock("./resolvedTurnout", () => ({
-  resolveTurnout: vi.fn(),
   // Registered-voter gate: no pool doc in these fixtures, so passthrough — the
   // real function is identity when `unregistered` is absent.
   scalePoolToRegistered: (pool: number) => pool,
@@ -346,7 +345,6 @@ describe("accumulateVoteTurn — early exits", () => {
   });
 
   it("returns without updating when state document is missing", async () => {
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const electionId = new ObjectId();
@@ -368,10 +366,6 @@ describe("accumulateVoteTurn — early exits", () => {
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    vi.mocked(resolveTurnout).mockReturnValue({
-      byGroup: { liberal: 60, conservative: 60 },
-      totalPool: 600_000,
-    });
     vi.mocked(getStateApprovalForElection).mockResolvedValue(50);
 
     await accumulateVoteTurn(electionId, 1, new Date());
@@ -710,7 +704,6 @@ describe("accumulateVoteTurn — vote accumulation", () => {
     const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const existingVotes = opts.existingTallyVotes ?? {};
@@ -746,10 +739,6 @@ describe("accumulateVoteTurn — vote accumulation", () => {
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    vi.mocked(resolveTurnout).mockReturnValue({
-      byGroup: { liberal: 60, conservative: 60 },
-      totalPool,
-    });
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(enriched);
     vi.mocked(distributeVotesByGroupLevelAllocation).mockReturnValue({
       votesPerCandidate: voteResult,
@@ -1171,9 +1160,7 @@ describe("accumulateVoteTurn — vote accumulation", () => {
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
-    vi.mocked(resolveTurnout).mockReturnValue({ byGroup: {}, totalPool: 100_000 });
     vi.mocked(getStateApprovalForElection).mockResolvedValue(50);
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue([makeEnriched(activeId)]);
     vi.mocked(distributeVotesByGroupLevelAllocation).mockReturnValue({
@@ -1296,7 +1283,6 @@ describe("accumulateVoteTurn — Hamilton seat allocation for multi-seat races",
     const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const _candidates = Object.keys(opts.candidateVotes).map((_id) => {
@@ -1348,7 +1334,6 @@ describe("accumulateVoteTurn — Hamilton seat allocation for multi-seat races",
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    vi.mocked(resolveTurnout).mockReturnValue({ byGroup: {}, totalPool: 100_000 });
     vi.mocked(getStateApprovalForElection).mockResolvedValue(50);
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(enrichedList);
     vi.mocked(distributeVotesByGroupLevelAllocation).mockReturnValue({
@@ -1473,7 +1458,6 @@ describe("accumulateVoteTurn — Hamilton seat allocation for multi-seat races",
     const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     await import("./voteDistributionSwingFlow");
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const electionId = new ObjectId();
@@ -1497,7 +1481,6 @@ describe("accumulateVoteTurn — Hamilton seat allocation for multi-seat races",
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    vi.mocked(resolveTurnout).mockReturnValue({ byGroup: {}, totalPool: 100_000 });
     vi.mocked(getStateApprovalForElection).mockResolvedValue(50);
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue([makeEnriched(candidate._id.toString())]);
     vi.mocked(distributeVotesByGroupLevelAllocation).mockReturnValue({
@@ -1521,7 +1504,6 @@ describe("accumulateVoteTurn — preload option", () => {
     const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const electionId = new ObjectId();
@@ -1539,7 +1521,6 @@ describe("accumulateVoteTurn — preload option", () => {
     const preloadedDemographics = makeDemographics();
     const preloadedCategories = [makeCategory()];
 
-    vi.mocked(resolveTurnout).mockReturnValue({ byGroup: {}, totalPool: 80_000 });
     vi.mocked(getStateApprovalForElection).mockResolvedValue(50);
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue([makeEnriched(candidateId)]);
     vi.mocked(distributeVotesByGroupLevelAllocation).mockReturnValue({
@@ -1582,7 +1563,6 @@ describe("accumulateVoteTurn — approvalMap option", () => {
     const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     await import("./voteDistributionSwingFlow");
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const electionId = new ObjectId();
@@ -1604,7 +1584,6 @@ describe("accumulateVoteTurn — approvalMap option", () => {
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    vi.mocked(resolveTurnout).mockReturnValue({ byGroup: {}, totalPool: 100_000 });
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue([makeEnriched(candidate._id.toString())]);
     vi.mocked(distributeVotesByGroupLevelAllocation).mockReturnValue({
       votesPerCandidate: { [candidate._id.toString()]: 1_000 },
@@ -1914,7 +1893,6 @@ describe("accumulateVoteTurn — granular electorate substrate", () => {
     const { fetchEnrichedCandidates } = await import("./candidateEnrichment");
     const { distributeVotesByGroupLevelAllocation } = await import("./voteDistribution");
     const { distributeVotesBySwingFlow } = await import("./voteDistributionSwingFlow");
-    const { resolveTurnout } = await import("./resolvedTurnout");
     const { getStateApprovalForElection } = await import("@/lib/utils/getStateApprovalForElection");
 
     const electionId = new ObjectId();
@@ -1948,10 +1926,6 @@ describe("accumulateVoteTurn — granular electorate substrate", () => {
     });
     db.collectionMocks.stateDemographicTurnout.findOne.mockResolvedValue(null);
 
-    vi.mocked(resolveTurnout).mockReturnValue({
-      byGroup: { liberal: 60, conservative: 60 },
-      totalPool: 600_000,
-    });
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(enriched);
     const voteResult = { [candidate._id.toString()]: 5000 };
     const sharesPct = { [candidate._id.toString()]: 100 };

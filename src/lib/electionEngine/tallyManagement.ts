@@ -17,7 +17,7 @@ import {
   type RaceCampaignEffectsMemo,
 } from "@/lib/campaigns/raceCampaignEffects";
 import { getStateLean } from "@/lib/utils/demographics";
-import { applyNationalAds } from "@/lib/campaignTargeting/nationalAds";
+import { buildNationalSubstrate } from "./nationwideElectorate";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 import { getDb } from "@/lib/mongodb";
@@ -88,7 +88,6 @@ import {
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
-  resolveTurnout,
   scalePoolToRegistered,
   capTurnSliceToElectorate,
   capTurnSliceToRemainingElectorate,
@@ -410,7 +409,7 @@ export async function accumulateVoteTurn(
   // ── Granular-cell electorate substrate ─────────────────────────────────────
   // The electorate is Layer-1 cells. Same engines, same appeal formula.
   // Regional contests need a census row. A nationwide contest (the region id
-  // is the country id) has none and counts the stored national aggregate.
+  // is the country id) folds every region's census cells together.
   let effDemographics = demographics;
   let effCategories = categories;
   let effLiveTurnouts: Record<string, number> = {};
@@ -470,21 +469,31 @@ export async function accumulateVoteTurn(
       effPartyGroupFavorabilityByKey =
         substrate.partyGroupFavorabilityByKey ?? partyGroupFavorabilityByKey;
       participationSummary = substrate.participationSummary;
-    } else if (stateId === electionCountryId) {
-      const national = resolveTurnout(electorate, demographics, categories, turnoutDoc);
-      effLiveTurnouts = national.byGroup;
+    } else if (stateId === electionCountryId && options?.preload) {
+      const national = buildNationalSubstrate({
+        countryId: electionCountryId,
+        nationalDemographics: demographics,
+        stateMap: options.preload.stateMap,
+        demographicsMap: options.preload.demographicsMap,
+        turnoutByState: options.preload.turnoutByState,
+        demographicDefaultsByState: options.preload.demographicDefaultsByState,
+        election,
+        currentTurn: turnNumber,
+        preset,
+        year: eraYear.year,
+        startingYear: eraYear.startingYear,
+        enriched,
+        partyGroupFavorabilityByKey,
+      });
+      effDemographics = national.demographics;
+      effCategories = national.categories;
+      effLiveTurnouts = national.liveTurnouts;
       effTotalPool = national.totalPool;
       effEffectiveTurnPool =
         turnVoteWeight(totalTurns, turnIndex, national.totalPool) * strengthMultiplier;
-      effEnriched = await applyNationalAds(
-        db,
-        electionCountryId,
-        turnNumber,
-        enriched,
-        Object.keys(demographics.groups),
-        options?.preload?.stateMap,
-        election.campaignRulesVersion ?? 0
-      );
+      effEnriched = national.enriched;
+      effPartyGroupFavorabilityByKey =
+        national.partyGroupFavorabilityByKey ?? partyGroupFavorabilityByKey;
     } else {
       throw new Error(`No census electorate for ${electionCountryId} region ${stateId}`);
     }

@@ -29,7 +29,6 @@ vi.mock("@/lib/utils/getStateApprovalForElection", () => ({
 }));
 vi.mock("./resolvedTurnout", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./resolvedTurnout")>()),
-  resolveTurnout: vi.fn(() => ({ byGroup: { liberal: 60, conservative: 60 }, totalPool: 100_000 })),
 }));
 // A pure share split of the pool: halving the pool halves every candidate.
 const SHARES = [0.41, 0.27, 0.19, 0.13];
