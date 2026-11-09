@@ -12,7 +12,6 @@ import {
   distributeVotesByGroupLevelAllocation,
   calcStateTurnout,
   resolveTurnout,
-  buildLiveTurnouts,
 } from "@/lib/electionEngine";
 import type { EnrichedCandidate } from "@/lib/electionEngine";
 import type {
@@ -20,9 +19,6 @@ import type {
   DemographicCategory,
   StateDemographicTurnout,
 } from "@/lib/db/types";
-// Side-effect import — populates stateCensusData with all US states so the
-// Layer-1 derivation path in resolveTurnout/buildLiveTurnouts can find configs.
-import "@/lib/seeds/stateDemographics";
 
 // Test data: Simplified demographics
 const TEST_CATEGORIES: DemographicCategory[] = [
@@ -337,150 +333,6 @@ describe("Turnout-to-election wiring integration", () => {
 
       // Suppression should change the Dem share
       expect(suppressedResult.sharesPct["dem"]).not.toBe(normalResult.sharesPct["dem"]);
-    });
-  });
-
-  describe("buildLiveTurnouts compatibility", () => {
-    it("produces turnout values compatible with pollCalculations", () => {
-      const turnoutDoc: StateDemographicTurnout = {
-        _id: "TEST_STATE",
-        countryId: "US",
-        modifiers: {
-          voterGroups: {
-            college_liberals: 8,
-            suburban_moderates: -5,
-          },
-        },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      };
-
-      const liveTurnouts = buildLiveTurnouts(TEST_DEMOGRAPHICS, TEST_CATEGORIES, turnoutDoc);
-
-      // Verify structure matches what pollCalculations expects
-      expect(liveTurnouts["college_liberals"]).toBe(68); // 60 + 8
-      expect(liveTurnouts["rural_conservatives"]).toBe(70); // unchanged
-      expect(liveTurnouts["suburban_moderates"]).toBe(60); // 65 - 5
-
-      // Verify all groups are present
-      expect(Object.keys(liveTurnouts)).toHaveLength(3);
-    });
-
-    it("handles null turnoutDoc gracefully", () => {
-      const liveTurnouts = buildLiveTurnouts(TEST_DEMOGRAPHICS, TEST_CATEGORIES, null);
-
-      // Should return baseline turnouts
-      expect(liveTurnouts["college_liberals"]).toBe(60);
-      expect(liveTurnouts["rural_conservatives"]).toBe(70);
-      expect(liveTurnouts["suburban_moderates"]).toBe(65);
-    });
-  });
-
-  // US canvassing and GOTV write modifiers keyed by Layer-1 demographic group
-  // (e.g. modifiers.race.white). The archetype-keyed lookup never matches these,
-  // so we re-derive archetype turnouts through deriveGroupTurnout. These tests
-  // pin that wiring so canvassing keeps affecting US elections.
-  describe("US Layer-1 demographic modifiers (canvassing/GOTV)", () => {
-    const US_CATEGORIES: DemographicCategory[] = [
-      {
-        _id: "voterGroups",
-        name: "Voter Groups",
-        defaultWeight: 100,
-        groups: [
-          {
-            id: "evangelicals",
-            name: "Evangelicals",
-            defaultEconomicLean: 2,
-            defaultSocialLean: 4,
-            defaultTurnout: 55,
-          },
-          {
-            id: "young_renters",
-            name: "Young Renters",
-            defaultEconomicLean: -1,
-            defaultSocialLean: -1,
-            defaultTurnout: 35,
-          },
-          {
-            id: "union_trades",
-            name: "Union Trades",
-            defaultEconomicLean: -2,
-            defaultSocialLean: 0,
-            defaultTurnout: 50,
-          },
-        ],
-      },
-    ];
-
-    const GA_DEMOGRAPHICS: StateDemographics = {
-      _id: "GA",
-      countryId: "US",
-      categoryWeights: { voterGroups: 100 },
-      groups: {
-        evangelicals: { population: 10, turnout: 60, economicLean: 2, socialLean: 4 },
-        young_renters: { population: 10, turnout: 35, economicLean: -1, socialLean: -1 },
-        union_trades: { population: 10, turnout: 50, economicLean: -2, socialLean: 0 },
-      },
-      lastUpdated: new Date("2024-01-01"),
-    };
-
-    it("applies race.white modifier to white-heavy archetypes through deriveGroupTurnout", () => {
-      const baseline = resolveTurnout(1_000_000, GA_DEMOGRAPHICS, US_CATEGORIES, null);
-      const withMod = resolveTurnout(1_000_000, GA_DEMOGRAPHICS, US_CATEGORIES, {
-        _id: "GA",
-        countryId: "US",
-        modifiers: { race: { white: -10 } },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      });
-
-      // evangelicals composition includes race.white — should decrease
-      expect(withMod.byGroup["evangelicals"]).toBeLessThan(baseline.byGroup["evangelicals"]);
-      // union_trades composition includes race.white (small weight) — should decrease
-      expect(withMod.byGroup["union_trades"]).toBeLessThan(baseline.byGroup["union_trades"]);
-      // young_renters composition has no race component — unchanged
-      expect(withMod.byGroup["young_renters"]).toBe(baseline.byGroup["young_renters"]);
-    });
-
-    it("applies age.young modifier to young-heavy archetypes", () => {
-      const baseline = resolveTurnout(1_000_000, GA_DEMOGRAPHICS, US_CATEGORIES, null);
-      const withMod = resolveTurnout(1_000_000, GA_DEMOGRAPHICS, US_CATEGORIES, {
-        _id: "GA",
-        countryId: "US",
-        modifiers: { age: { young: 15 } },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      });
-
-      // young_renters composition is heavy on age.young — should increase
-      expect(withMod.byGroup["young_renters"]).toBeGreaterThan(baseline.byGroup["young_renters"]);
-    });
-
-    it("buildLiveTurnouts surfaces Layer-1 modifiers for polls", () => {
-      const baseline = buildLiveTurnouts(GA_DEMOGRAPHICS, US_CATEGORIES, null);
-      const withMod = buildLiveTurnouts(GA_DEMOGRAPHICS, US_CATEGORIES, {
-        _id: "GA",
-        countryId: "US",
-        modifiers: { race: { black: 15 } },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      });
-
-      // union_trades has race.black weight — should increase
-      expect(withMod["union_trades"]).toBeGreaterThan(baseline["union_trades"]);
-    });
-
-    it("changes totalPool with positive Layer-1 modifier", () => {
-      const baseline = resolveTurnout(1_000_000, GA_DEMOGRAPHICS, US_CATEGORIES, null);
-      const withMod = resolveTurnout(1_000_000, GA_DEMOGRAPHICS, US_CATEGORIES, {
-        _id: "GA",
-        countryId: "US",
-        modifiers: { race: { white: 10, black: 10, hispanic: 10, asian: 10, other: 10 } },
-        lastDecayApplied: new Date(),
-        lastUpdated: new Date(),
-      });
-
-      expect(withMod.totalPool).toBeGreaterThan(baseline.totalPool);
     });
   });
 });

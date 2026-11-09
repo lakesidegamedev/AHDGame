@@ -1,103 +1,11 @@
 /**
- * Resolved turnout calculator for elections and polls.
- *
- * Bridges the gap between static StateDemographics.turnout and dynamic
- * StateDemographicTurnout.modifiers applied via GOTV, canvassing, and suppression.
- *
- * Why this matters:
- * - StateDemographics stores baseline turnout rates per group
- * - StateDemographicTurnout stores runtime modifiers (-20 to +20 percentage points)
- * - Elections and polls use the combined (baseline + modifier) rate
+ * Turnout for nationwide contests that have no regional census row, plus the
+ * per-turn pool caps. Regional contests take turnout from the census cells
+ * (`buildGranularElectorateSubstrate`).
  */
 
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
-import { stateCensusData, deriveGroupTurnout } from "@/lib/seeds/stateDemographics";
-import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
-import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
-import { getUsSubstrateForYear, getUsTurnoutRatesForYear } from "@/lib/seeds/eraSubstrateForYear";
-import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
-import type { Layer1Config } from "@/lib/seeds/stateDemographicsPure";
-import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-
-const LAYER1_DIMS = ["race", "age", "education", "wealth", "ideology"] as const;
-type Layer1Dim = (typeof LAYER1_DIMS)[number];
-
-/**
- * For US-style states (those with a Layer-1 census config registered in
- * stateCensusData), recompute each group's effective turnout from the
- * Layer-1 baselines + per-dimension modifiers on turnoutDoc.
- *
- * US canvassing/GOTV write modifiers keyed by demographic group
- * (`modifiers.race.white = -9.6`), not group ID, so the group-keyed
- * lookup alone would silently drop them. deriveGroupTurnout reuses the same
- * composition that built the stored turnouts.
- *
- * Returns null for non-US states so callers use the stored group turnout +
- * group-keyed modifier path.
- */
-function computeLayer1DerivedGroupTurnouts(
-  stateId: string,
-  categories: DemographicCategory[],
-  turnoutDoc: StateDemographicTurnout | null | undefined,
-  preset?: string,
-  year?: number | null,
-  startingYear?: number | null
-): Record<string, number> | null {
-  // Membership in the 2019 US bundle is the "is this a Layer-1 US state"
-  // discriminator; the actual census shares come from the era bundle matching
-  // the world's reset preset (falls back to 2019 for unregistered presets).
-  if (!stateCensusData[stateId]) return null;
-  // Year-driven when the era clock is live, so the stored-group baseline sees
-  // the same electorate the granular cells do.
-  const yearSubstrate =
-    year != null
-      ? getUsSubstrateForYear(stateId, year, { startingYear: startingYear ?? null })
-      : null;
-  const config =
-    (yearSubstrate?.config as Layer1Config | null) ??
-    (getRegionCensusData("US", stateId, preset) as Layer1Config | null) ??
-    stateCensusData[stateId];
-  const era = year != null ? eraIdForYear(year) : eraForPreset(preset ?? DEFAULT_SEED_PRESET);
-  const eraRates =
-    year != null
-      ? (getUsTurnoutRatesForYear(stateId, year, {
-          startingYear: startingYear ?? null,
-        }) as unknown as Record<string, Record<string, number>>)
-      : null;
-
-  const stateSpecificTurnout: Record<Layer1Dim, Record<string, number>> = {
-    race: {},
-    age: {},
-    education: {},
-    wealth: {},
-    ideology: {},
-  };
-  for (const dim of LAYER1_DIMS) {
-    const baselines = (eraRates?.[dim] ??
-      (DEMOGRAPHIC_TURNOUT_RATES[dim] as Record<string, number>)) as Record<string, number>;
-    const dimModifiers = turnoutDoc?.modifiers?.[dim] ?? {};
-    for (const [key, baseline] of Object.entries(baselines)) {
-      stateSpecificTurnout[dim][key] = baseline + (dimModifiers[key] ?? 0);
-    }
-  }
-
-  const result: Record<string, number> = {};
-  for (const category of categories) {
-    for (const group of category.groups) {
-      const baseTurnout = group.defaultTurnout ?? 55;
-      result[group.id] = deriveGroupTurnout(
-        group.id,
-        config,
-        baseTurnout,
-        era,
-        stateSpecificTurnout
-      );
-    }
-  }
-  return result;
-}
 
 export interface ResolvedTurnout {
   /** Effective turnout percentage (0-100) for each group ID */
@@ -113,21 +21,6 @@ export interface ResolvedTurnoutOptions {
   minTurnout?: number;
   /** Clamp maximum turnout to this value (default: 100) */
   maxTurnout?: number;
-  /**
-   * Reset-preset id of the current world (e.g. "1991-default"). Selects the
-   * era-correct US census bundle + turnout-rate table for Layer-1 derivation.
-   * Defaults to the 2019 era when omitted.
-   */
-  preset?: string;
-  /**
-   * Live in-game year (`gameState.currentYear`). When set, the Layer-1 census
-   * bundle AND the turnout-rate baselines resolve from the year rather than
-   * the seed preset, matching the granular substrate. Null keeps legacy
-   * preset-driven behavior exactly.
-   */
-  year?: number | null;
-  /** World `gameState.startingYear` — gates era-checkpoint de-duplication. */
-  startingYear?: number | null;
 }
 
 /**
@@ -160,19 +53,6 @@ export function resolveTurnout(
       return w > 0 ? sum + w : sum;
     }, 0) || 100;
 
-  // For US-style states this recomputes group turnouts with Layer-1
-  // modifiers folded in (race/age/edu/wealth/ideology); null for UK/JP, where
-  // we keep using the stored group turnout and apply group-keyed
-  // modifiers below.
-  const layer1Derived = computeLayer1DerivedGroupTurnouts(
-    demographics._id,
-    categories,
-    turnoutDoc,
-    options.preset,
-    options.year ?? null,
-    options.startingYear ?? null
-  );
-
   for (const category of categories) {
     const categoryWeight = demographics.categoryWeights[category._id] ?? 0;
     if (categoryWeight <= 0) continue;
@@ -180,18 +60,9 @@ export function resolveTurnout(
     for (const group of category.groups) {
       const stateGroup = demographics.groups[group.id];
 
-      // Baseline turnout: Layer-1-derived (US, modifiers already folded in)
-      // > stored group turnout > default.
       const baselineTurnout =
-        layer1Derived?.[group.id] ??
-        (typeof stateGroup?.turnout === "number"
-          ? stateGroup.turnout
-          : (group.defaultTurnout ?? 55));
+        typeof stateGroup?.turnout === "number" ? stateGroup.turnout : (group.defaultTurnout ?? 55);
 
-      // Apply group-keyed modifiers from turnoutDoc (UK/JP voterGroups,
-      // or any new-format US modifier). For US Layer-1 modifiers the inner
-      // keys are demographic groups, not group IDs, so this loop is a
-      // no-op for them — their effect is already in baselineTurnout.
       let modifier = 0;
       if (turnoutDoc?.modifiers) {
         for (const [_categoryId, groupModifiers] of Object.entries(turnoutDoc.modifiers)) {
@@ -225,96 +96,6 @@ export function resolveTurnout(
   // whatever the category/group data looks like. Turnout ≤ 100% already keeps
   // it under normally; this is the backstop against malformed demographics.
   return { byGroup, totalPool: Math.round(Math.min(totalPool, statePopulation)) };
-}
-
-/**
- * Calculate effective turnout for a single demographic group.
- *
- * Use this when you only need one group's turnout without computing the full state.
- *
- * @param groupId - The demographic group ID (e.g., "college_liberals")
- * @param baselineTurnout - Baseline turnout percentage for the group
- * @param turnoutDoc - Optional turnout modifiers document
- * @param options - Optional overrides and clamping
- * @returns Effective turnout percentage (0-100)
- */
-export function resolveSingleGroupTurnout(
-  groupId: string,
-  baselineTurnout: number,
-  turnoutDoc: StateDemographicTurnout | null | undefined,
-  options: ResolvedTurnoutOptions = {}
-): number {
-  const { modifierOverrides, minTurnout = 0, maxTurnout = 100 } = options;
-
-  let modifier = 0;
-  if (turnoutDoc?.modifiers) {
-    for (const groupModifiers of Object.values(turnoutDoc.modifiers)) {
-      if (groupModifiers && typeof groupModifiers === "object") {
-        const groupModifier = groupModifiers[groupId];
-        if (typeof groupModifier === "number") {
-          modifier += groupModifier;
-        }
-      }
-    }
-  }
-
-  if (modifierOverrides?.[groupId] != null) {
-    modifier = modifierOverrides[groupId];
-  }
-
-  return Math.max(minTurnout, Math.min(maxTurnout, baselineTurnout + modifier));
-}
-
-/**
- * Build a liveTurnouts lookup compatible with pollCalculations.computePollData.
- *
- * This produces a Record<groupId, turnoutPct> that can be passed as the
- * liveTurnouts parameter to computePollData for unified poll/election behavior.
- *
- * @param demographics - Static demographic data
- * @param categories - Active demographic categories
- * @param turnoutDoc - Optional turnout modifiers
- * @param options - Optional overrides
- * @returns Record mapping group IDs to effective turnout percentages
- */
-export function buildLiveTurnouts(
-  demographics: StateDemographics,
-  categories: DemographicCategory[],
-  turnoutDoc: StateDemographicTurnout | null | undefined,
-  options: ResolvedTurnoutOptions = {}
-): Record<string, number> {
-  const liveTurnouts: Record<string, number> = {};
-
-  const layer1Derived = computeLayer1DerivedGroupTurnouts(
-    demographics._id,
-    categories,
-    turnoutDoc,
-    options.preset,
-    options.year ?? null,
-    options.startingYear ?? null
-  );
-
-  for (const category of categories) {
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const baselineTurnout =
-        layer1Derived?.[group.id] ??
-        (typeof stateGroup?.turnout === "number"
-          ? stateGroup.turnout
-          : (group.defaultTurnout ?? 55));
-
-      const effectiveTurnout = resolveSingleGroupTurnout(
-        group.id,
-        baselineTurnout,
-        turnoutDoc,
-        options
-      );
-
-      liveTurnouts[group.id] = effectiveTurnout;
-    }
-  }
-
-  return liveTurnouts;
 }
 
 /**

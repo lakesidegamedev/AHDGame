@@ -19,7 +19,6 @@ import { turnoutForElection } from "@/lib/campaignTargeting/rules";
  * Per-state (and ME/NE district) vote accumulation; Electoral College resolution.
  */
 
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -79,7 +78,6 @@ import type {
   PlayerEndorsement,
 } from "@/lib/db/types";
 import {
-  resolveTurnout,
   scalePoolToRegistered,
   capTurnSliceToRemainingElectorate,
 } from "@/lib/electionEngine/resolvedTurnout";
@@ -405,43 +403,33 @@ export async function accumulatePresidentVoteTurn(
   const gsDoc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
   const { electoralVoteUnits } = await loadApportionment(db, gsDoc?.preset, gsDoc?.currentYear);
   const uniqueStateIds = [...new Set(electoralVoteUnits.map((u) => u.stateId))];
-  // Granular-cell electorate engine (fail-closed): swap the stored group
-  // categories for Layer-1 cells in the per-state distribution loop below.
   // Live era clock.
   const eraYear = eraYearContextFromGameState(gsDoc);
 
-  const [
-    categories,
-    states,
-    demographics,
-    statePartyOrgs,
-    turnoutDocs,
-    registrationPools,
-    approvalMap,
-  ] = await Promise.all([
-    loadDemographicCategories(db),
-    db
-      .collection<State>("states")
-      .find({ _id: { $in: uniqueStateIds } })
-      .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({ _id: { $in: uniqueStateIds } })
-      .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .find({ stateId: { $in: uniqueStateIds } })
-      .toArray(),
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .find({ _id: { $in: uniqueStateIds } })
-      .toArray(),
-    db
-      .collection<StateRegistrationPool>("stateRegistrationPool")
-      .find({ stateId: { $in: uniqueStateIds } })
-      .toArray(),
-    getAllStateApprovalsForElection(),
-  ]);
+  const [states, demographics, statePartyOrgs, turnoutDocs, registrationPools, approvalMap] =
+    await Promise.all([
+      db
+        .collection<State>("states")
+        .find({ _id: { $in: uniqueStateIds } })
+        .toArray(),
+      db
+        .collection<StateDemographics>("stateDemographics")
+        .find({ _id: { $in: uniqueStateIds } })
+        .toArray(),
+      db
+        .collection<StatePartyOrg>("statePartyOrg")
+        .find({ stateId: { $in: uniqueStateIds } })
+        .toArray(),
+      db
+        .collection<StateDemographicTurnout>("stateDemographicTurnout")
+        .find({ _id: { $in: uniqueStateIds } })
+        .toArray(),
+      db
+        .collection<StateRegistrationPool>("stateRegistrationPool")
+        .find({ stateId: { $in: uniqueStateIds } })
+        .toArray(),
+      getAllStateApprovalsForElection(),
+    ]);
 
   // Seeded snapshots for the granular substrate's legislation lean-drift fold.
   const demographicDefaultsByState = new Map(
@@ -840,77 +828,57 @@ export async function accumulatePresidentVoteTurn(
     const electorate =
       (state.votingEligiblePopulation ?? state.population) * (unit.electorateShare ?? 1);
 
-    // Use resolved turnout with GOTV/canvassing/suppression modifiers applied
-    const { totalPool: resolvedTotalPool, byGroup: liveTurnouts } = resolveTurnout(
-      electorate,
-      demographics,
-      categories,
-      turnoutDoc,
-      { preset: gsDoc?.preset, year: eraYear.year, startingYear: eraYear.startingYear }
-    );
-
     // Granular-cell electorate substrate — same
     // swap as tallyManagement: cells replace stored groups as the iterated
     // electorate; approvals/favorability remap onto cells.
-    // Null substrate (no Layer-1 census) → legacy path. Flag OFF: eff* are
-    // the legacy values, byte-identical behavior.
-    let effDemographics = demographics;
-    let effCategories = categories;
-    let effLiveTurnouts = liveTurnouts;
-    let effTotalPool = resolvedTotalPool;
-    let effEnriched = enriched;
-    let effPartyGroupFavorabilityByKey = partyGroupFavorabilityByKey;
-    let participationSummary: ParticipationSummary | undefined;
+    const substrate = buildGranularElectorateSubstrate({
+      campaignRulesVersion: election.campaignRulesVersion,
+      currentTurn: turnNumber,
+      countryId: electionCountryId,
+      stateId,
+      preset: gsDoc?.preset,
+      year: eraYear.year,
+      startingYear: eraYear.startingYear,
+      turnoutDoc,
+      statePopulation: electorate,
+      demographics,
+      enriched,
+      partyGroupFavorabilityByKey,
+      demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
+      ...(demographicsV2.demographicsV2Countries.has(electionCountryId) &&
+      demographicsV2.regionDemographicsByState.has(stateId)
+        ? {
+            v2: {
+              regionAges: demographicsV2.regionDemographicsByState.get(stateId)!.ages,
+              votingAge: demographicsV2.votingAgeByCountry.get(electionCountryId) ?? 18,
+              registeredShare: (() => {
+                const unregistered = registrationPoolMap.get(stateId)?.unregistered;
+                return typeof unregistered === "number" && Number.isFinite(unregistered)
+                  ? 1 - Math.max(0, Math.min(100, unregistered)) / 100
+                  : 1;
+              })(),
+              contactByBucket: campaignContactByBucket(rawTurnoutDoc),
+            },
+          }
+        : {}),
+    });
+    if (!substrate) {
+      throw new Error(`No census electorate for ${electionCountryId} region ${stateId}`);
+    }
+    const effDemographics = substrate.demographics;
+    const effCategories = substrate.categories;
+    const effLiveTurnouts = substrate.liveTurnouts;
+    const effTotalPool = substrate.totalPool;
+    const effEnriched = substrate.enriched;
+    const effPartyGroupFavorabilityByKey =
+      substrate.partyGroupFavorabilityByKey ?? partyGroupFavorabilityByKey;
     // Per-cell census bucketWeights for the ledger's bucket-appeal aggregation.
-    // Populated only on the granular substrate; a state without a census leaves
-    // it undefined so the ledger emits no bucket appeal.
-    let effLedgerBucketWeights: Map<string, Record<string, number>> | undefined;
-    {
-      const substrate = buildGranularElectorateSubstrate({
-        campaignRulesVersion: election.campaignRulesVersion,
-        currentTurn: turnNumber,
-        countryId: electionCountryId,
-        stateId,
-        preset: gsDoc?.preset,
-        year: eraYear.year,
-        startingYear: eraYear.startingYear,
-        turnoutDoc,
-        statePopulation: electorate,
-        demographics,
-        enriched,
-        partyGroupFavorabilityByKey,
-        demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
-        ...(demographicsV2.demographicsV2Countries.has(electionCountryId) &&
-        demographicsV2.regionDemographicsByState.has(stateId)
-          ? {
-              v2: {
-                regionAges: demographicsV2.regionDemographicsByState.get(stateId)!.ages,
-                votingAge: demographicsV2.votingAgeByCountry.get(electionCountryId) ?? 18,
-                registeredShare: (() => {
-                  const unregistered = registrationPoolMap.get(stateId)?.unregistered;
-                  return typeof unregistered === "number" && Number.isFinite(unregistered)
-                    ? 1 - Math.max(0, Math.min(100, unregistered)) / 100
-                    : 1;
-                })(),
-                contactByBucket: campaignContactByBucket(rawTurnoutDoc),
-              },
-            }
-          : {}),
-      });
-      if (substrate) {
-        effDemographics = substrate.demographics;
-        effCategories = substrate.categories;
-        effLiveTurnouts = substrate.liveTurnouts;
-        effTotalPool = substrate.totalPool;
-        effEnriched = substrate.enriched;
-        effPartyGroupFavorabilityByKey =
-          substrate.partyGroupFavorabilityByKey ?? partyGroupFavorabilityByKey;
-        effLedgerBucketWeights = new Map(substrate.units.map((u) => [u.id, u.bucketWeights]));
-        participationSummary = substrate.participationSummary;
-        if (participationSummary) {
-          participationRows.push({ share: electorate, ledger: participationSummary });
-        }
-      }
+    const effLedgerBucketWeights: Map<string, Record<string, number>> = new Map(
+      substrate.units.map((u) => [u.id, u.bucketWeights])
+    );
+    const participationSummary: ParticipationSummary | undefined = substrate.participationSummary;
+    if (participationSummary) {
+      participationRows.push({ share: electorate, ledger: participationSummary });
     }
 
     // Registered-voter gate — the unregistered slice cannot cast a ballot.

@@ -46,9 +46,5 @@ export { fetchEnrichedCandidates } from "./electionEngine/candidateEnrichment";
 export { accumulateVoteTurn, initElectionVoteTally } from "./electionEngine/tallyManagement";
 
 // Resolved turnout (unifies static demographics with dynamic GOTV/canvassing/suppression modifiers)
-export {
-  resolveTurnout,
-  resolveSingleGroupTurnout,
-  buildLiveTurnouts,
-} from "./electionEngine/resolvedTurnout";
+export { resolveTurnout } from "./electionEngine/resolvedTurnout";
 export type { ResolvedTurnout, ResolvedTurnoutOptions } from "./electionEngine/resolvedTurnout";

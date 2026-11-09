@@ -9,14 +9,13 @@
 
 import { primaryWinMomentumFromTally } from "@/lib/elections/primaryRegional/rules";
 import { loadPrimaryFieldOffices } from "@/lib/elections/primaryRegional/fieldOffices";
-import { turnoutForElection, usesCampaignAds } from "@/lib/campaignTargeting/rules";
+import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type {
   CharacterStateOrg,
-  DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
@@ -44,7 +43,6 @@ import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichmen
 import { loadLiveStateActions } from "@/lib/elections/primaryStateActions";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
@@ -497,16 +495,14 @@ export async function runPrimaryStaggerWaveIfDue(
       // night, and a momentum penalty for "missing" an expectation that never
       // accounted for the attack. One purchase, one effect.
       // Paid ad advantages belong in expectations too, so they are not upsets.
-      campaignContext: usesCampaignAds(election, enriched)
-        ? {
-            campaignRulesVersion: election.campaignRulesVersion ?? 0,
-            currentTurn,
-            preset: delegatePreset,
-            ...eraYear,
-            turnoutByState: turnoutMap,
-            defaultsByState: demographicDefaultsByState ?? new Map(),
-          }
-        : undefined,
+      campaignContext: {
+        campaignRulesVersion: election.campaignRulesVersion ?? 0,
+        currentTurn,
+        preset: delegatePreset,
+        ...eraYear,
+        turnoutByState: turnoutMap,
+        defaultsByState: demographicDefaultsByState ?? new Map(),
+      },
       stateActions: liveStateActions,
       currentTurn,
       candidates: partyCandidates,
@@ -613,33 +609,10 @@ export async function runPrimaryStaggerWaveIfDue(
       const rawDemographicsDoc = demographicsMap.get(stateId);
       if (!state || !rawDemographicsDoc) continue;
 
-      // Primary electorate: resolve GOTV/Layer-1 turnouts on the GENERAL
-      // demographics first, then apply the same directional-alignment retention
-      // `projectPrimaryByState` uses via `shiftDemographicsForPrimary`.
-      //
-      // Critical ordering: US `resolveTurnout` rebuilds archetype rates from
-      // Layer-1 census baselines and ignores any turnout already written onto
-      // demographics.groups. If we shift first and then pass those Layer-1
-      // liveTurnouts into distribution, the primary electorate is wiped and
-      // every state can flip vs projection (general-electorate winners vs
-      // primary-base winners). Retention must land on the live map itself.
-      const { byGroup: generalTurnouts } = resolveTurnout(
-        state.population,
-        rawDemographicsDoc,
-        categories,
-        turnoutForElection(turnoutMap.get(stateId), election),
-        { preset: delegatePreset, year: eraYear.year, startingYear: eraYear.startingYear }
-      );
-
-      // Granular-cell electorate substrate: swap the archetype substrate for
-      // Layer-1 cells BEFORE the primary retention/shift steps: those helpers
-      // are generic over group ids, so the directional-alignment retention
-      // applies to cells unchanged. Null substrate (no Layer-1 census) → legacy
-      // archetype path.
-      let effBaseDemographics = rawDemographicsDoc;
-      let effCategories = categories;
-      let effGeneralTurnouts = generalTurnouts;
-      let effPartyCandidates = partyCandidates;
+      // Primary electorate: the census cells carry the live turnouts. Retention
+      // must land on that live map itself: shifting the electorate first and
+      // then passing the cell turnouts into distribution would wipe the
+      // primary electorate and flip states against the projection.
       const substrate = buildGranularElectorateSubstrate({
         campaignRulesVersion: election.campaignRulesVersion,
         currentTurn: currentTurn,
@@ -654,12 +627,13 @@ export async function runPrimaryStaggerWaveIfDue(
         enriched: partyCandidates,
         demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
       });
-      if (substrate) {
-        effBaseDemographics = substrate.demographics;
-        effCategories = substrate.categories;
-        effGeneralTurnouts = substrate.liveTurnouts;
-        effPartyCandidates = substrate.enriched;
+      if (!substrate) {
+        throw new Error(`No census electorate for ${election.countryId ?? "US"} region ${stateId}`);
       }
+      const effBaseDemographics = substrate.demographics;
+      const effCategories = substrate.categories;
+      const effGeneralTurnouts = substrate.liveTurnouts;
+      const effPartyCandidates = substrate.enriched;
 
       const liveTurnouts = applyPrimaryTurnoutRetention(
         effGeneralTurnouts,

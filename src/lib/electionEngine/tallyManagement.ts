@@ -364,16 +364,6 @@ export async function accumulateVoteTurn(
 
   const campaignContact = demographicsV2Active ? campaignContactByBucket(turnoutDoc) : {};
   turnoutDoc = turnoutForElection(turnoutDoc, election) ?? null;
-  // GOTV/canvassing/suppression from turnoutDoc overlay the static demographic turnouts.
-  const { totalPool: resolvedTotalPool, byGroup: liveTurnouts } = resolveTurnout(
-    electorate,
-    demographics,
-    categories,
-    turnoutDoc,
-    { preset, year: eraYear.year, startingYear: eraYear.startingYear }
-  );
-
-  const turnPool = turnVoteWeight(totalTurns, turnIndex, resolvedTotalPool);
 
   // Party strength: state government approval times office strength. Scales the vote pool.
   // Approval is centered at 50% (no boost) and swings +/-10% at the 0%/100% extremes
@@ -416,17 +406,16 @@ export async function accumulateVoteTurn(
   );
   const strengthMultiplier =
     approvalVoteMultiplier(approvalDecimal, LEGISLATIVE_APPROVAL_VOTE_SLOPE) * officeStrength;
-  const effectiveTurnPool = turnPool * strengthMultiplier;
 
   // ── Granular-cell electorate substrate ─────────────────────────────────────
   // The electorate is Layer-1 cells. Same engines, same appeal formula.
-  // A null substrate means this state has no census row yet (newly admitted,
-  // mid-migration): a data-integrity fallback, not an engine selection.
+  // Regional contests need a census row. A nationwide contest (the region id
+  // is the country id) has none and counts the stored national aggregate.
   let effDemographics = demographics;
   let effCategories = categories;
-  let effLiveTurnouts = liveTurnouts;
-  let effTotalPool = resolvedTotalPool;
-  let effEffectiveTurnPool = effectiveTurnPool;
+  let effLiveTurnouts: Record<string, number> = {};
+  let effTotalPool = 0;
+  let effEffectiveTurnPool = 0;
   let effEnriched = enriched;
   let effPartyGroupFavorabilityByKey = partyGroupFavorabilityByKey;
   let participationSummary: ParticipationSummary | undefined;
@@ -482,6 +471,11 @@ export async function accumulateVoteTurn(
         substrate.partyGroupFavorabilityByKey ?? partyGroupFavorabilityByKey;
       participationSummary = substrate.participationSummary;
     } else if (stateId === electionCountryId) {
+      const national = resolveTurnout(electorate, demographics, categories, turnoutDoc);
+      effLiveTurnouts = national.byGroup;
+      effTotalPool = national.totalPool;
+      effEffectiveTurnPool =
+        turnVoteWeight(totalTurns, turnIndex, national.totalPool) * strengthMultiplier;
       effEnriched = await applyNationalAds(
         db,
         electionCountryId,
@@ -491,6 +485,8 @@ export async function accumulateVoteTurn(
         options?.preload?.stateMap,
         election.campaignRulesVersion ?? 0
       );
+    } else {
+      throw new Error(`No census electorate for ${electionCountryId} region ${stateId}`);
     }
   }
   // ── Physical electorate ceiling ────────────────────────────────────────────

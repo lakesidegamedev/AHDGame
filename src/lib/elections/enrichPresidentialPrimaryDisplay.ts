@@ -5,7 +5,6 @@ import {
   activePrimaryNights,
   primaryNightForParty,
 } from "@/lib/elections/liveResults/primaryNight";
-import { usesCampaignAds } from "@/lib/campaignTargeting/rules";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import type { Db } from "mongodb";
 import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
@@ -66,12 +65,10 @@ export async function applyPresidentialPrimaryDisplay(
   // this display path stays coherent with the race's actual calendar even if a
   // future schedule ever changes membership.
   const staggerStateIds = getAllStaggerStates(schedule);
-  const campaignContext = usesCampaignAds({ campaignRulesVersion }, candidates)
-    ? {
-        ...(await loadCampaignProjectionContext(db, staggerStateIds)),
-        campaignRulesVersion: campaignRulesVersion ?? 0,
-      }
-    : undefined;
+  const campaignContext = {
+    ...(await loadCampaignProjectionContext(db, staggerStateIds)),
+    campaignRulesVersion: campaignRulesVersion ?? 0,
+  };
   const [categories, states, demographics, resolvedStatePartyOrgs, engineEnriched] =
     await Promise.all([
       loadDemographicCategories(db),

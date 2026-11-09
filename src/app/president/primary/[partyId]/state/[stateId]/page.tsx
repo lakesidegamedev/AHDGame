@@ -17,6 +17,7 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
+import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import { fetchEnrichedCandidates } from "@/lib/electionEngine";
 import {
   PRIMARY_WAVES,
@@ -224,6 +225,10 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const projection = projectPrimaryByState({
+    campaignContext: {
+      ...(await loadCampaignProjectionContext(db, ALL_STATE_IDS)),
+      campaignRulesVersion: election.campaignRulesVersion ?? 0,
+    },
     candidates: enriched,
     candidateMeta,
     stateIds: ALL_STATE_IDS,

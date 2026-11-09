@@ -417,26 +417,16 @@ describe("what the builder feeds the projection", () => {
     return vi.mocked(projectPrimaryByState).mock.calls[0][0];
   }
 
-  it("resolves turnout per state, so the board reads the channel the wave does", async () => {
+  it("projects from the census cells, so the board reads the channel the wave does", async () => {
     // Party GOTV, canvassing and turnout suppression all write
-    // stateDemographicTurnout. The stagger has always read it; the board did
-    // not, so all three moved the result and left the projection alone.
+    // stateDemographicTurnout. The projection builds the same census cells the
+    // wave counts, from a context that carries those modifiers.
     const input = await projectionInput({
       states: [{ _id: "IA", countryId: "US", name: "Iowa", population: 3_000_000 }],
-      stateDemographics: [
-        {
-          _id: "IA",
-          countryId: "US",
-          categoryWeights: { voterGroups: 100 },
-          groups: { all: { population: 3_000_000, economicLean: -1, socialLean: -1, turnout: 60 } },
-        },
-      ],
-      stateDemographicTurnout: [
-        { _id: "IA", countryId: "US", modifiers: { voterGroups: { all: -5 } } },
-      ],
+      stateDemographicTurnout: [{ _id: "IA", countryId: "US", modifiers: { race: { white: -5 } } }],
     });
-    expect(input.liveTurnouts).toBeDefined();
-    expect(input.liveTurnouts?.IA).toBeDefined();
+    expect(input.campaignContext).toBeDefined();
+    expect(input.campaignContext?.turnoutByState.get("IA")).toBeDefined();
   });
 
   it("passes the live attack rows and the turn they are measured against", async () => {

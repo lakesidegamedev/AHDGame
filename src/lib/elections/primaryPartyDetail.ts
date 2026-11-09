@@ -16,7 +16,6 @@
 import { primaryNightForParty } from "@/lib/elections/liveResults/primaryNight";
 import { primaryWinMomentumFromTally } from "@/lib/elections/primaryRegional/rules";
 import { loadPrimaryFieldOffices } from "@/lib/elections/primaryRegional/fieldOffices";
-import { usesCampaignAds } from "@/lib/campaignTargeting/rules";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 
 import { ObjectId, type Db } from "mongodb";
@@ -32,7 +31,6 @@ import type {
   PoliticalParty,
   State,
   StateDemographics,
-  StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
 import { projectPrimaryByState, type ProjectionResult } from "@/lib/primaryProjection";
@@ -46,8 +44,6 @@ import {
   travelStateIds,
 } from "@/lib/elections/stateTravelOptions";
 import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
-import { eraYearContextFromGameState } from "@/lib/era/context";
 import { loadLiveStateActions } from "@/lib/elections/primaryStateActions";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
@@ -218,7 +214,7 @@ export async function loadPrimaryPartyData(
     };
   });
 
-  const [categoriesDocs, statesDocs, demographicsDocs, enriched, turnoutDocs] = await Promise.all([
+  const [categoriesDocs, statesDocs, demographicsDocs, enriched] = await Promise.all([
     loadDemographicCategories(db),
     db
       .collection<State>("states")
@@ -229,10 +225,6 @@ export async function loadPrimaryPartyData(
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
       .toArray(),
     fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId }),
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .find({ _id: { $in: TRAVEL_STATE_IDS } })
-      .toArray(),
   ]);
   const stateMap = new Map(statesDocs.map((s) => [s._id as string, s]));
   const demographicsMap = new Map(demographicsDocs.map((d) => [d._id as string, d]));
@@ -265,32 +257,6 @@ export async function loadPrimaryPartyData(
     }>("gameState")
     .findOne({ _id: "current" });
   const apportionmentPreset = gameStateDoc?.preset;
-  const eraYear = eraYearContextFromGameState(gameStateDoc);
-  const turnoutDocMap = new Map(turnoutDocs.map((t) => [t._id as string, t]));
-
-  // The stagger resolves turnout per state and feeds it into distribution; the
-  // board never did, so party GOTV, canvassing and turnout suppression all
-  // moved the wave and left the projection showing the old number. Same
-  // function, same options, so the two read the same modifiers the same way.
-  //
-  // Scope: this makes the projection's GROUP WEIGHTS respond to modifiers. It
-  // does NOT make the pools match — the projection keeps
-  // `population * PRIMARY_TURNOUT_FACTOR` and the stagger keeps resolveTurnout's
-  // weighted total. Reconciling those is a separate change with its own balance
-  // consequences.
-  const liveTurnouts: Record<string, Record<string, number>> = {};
-  for (const stateId of TRAVEL_STATE_IDS) {
-    const stateDoc = stateMap.get(stateId);
-    const demographicsDoc = demographicsMap.get(stateId);
-    if (!stateDoc || !demographicsDoc) continue;
-    liveTurnouts[stateId] = resolveTurnout(
-      stateDoc.population,
-      demographicsDoc,
-      categoriesDocs,
-      turnoutDocMap.get(stateId),
-      { preset: apportionmentPreset, year: eraYear.year, startingYear: eraYear.startingYear }
-    ).byGroup;
-  }
 
   const gameTime = await getGameTime();
   const liveStateActions = await loadLiveStateActions(db, {
@@ -298,12 +264,10 @@ export async function loadPrimaryPartyData(
     currentTurn: gameTime.currentTurn,
   });
 
-  const campaignContext = usesCampaignAds(election, enriched)
-    ? {
-        ...(await loadCampaignProjectionContext(db, TRAVEL_STATE_IDS)),
-        campaignRulesVersion: election.campaignRulesVersion ?? 0,
-      }
-    : undefined;
+  const campaignContext = {
+    ...(await loadCampaignProjectionContext(db, TRAVEL_STATE_IDS)),
+    campaignRulesVersion: election.campaignRulesVersion ?? 0,
+  };
   const projection = projectPrimaryByState({
     // Same seed as the live wave, so the projection sees the same state swing.
     regionalSeed: String(election._id),
@@ -317,7 +281,6 @@ export async function loadPrimaryPartyData(
     demographicsMap,
     categories: categoriesDocs,
     statePartyOrgs: orgMap,
-    liveTurnouts,
     stateActions: liveStateActions,
     currentTurn: gameTime.currentTurn,
     partyPosition: {

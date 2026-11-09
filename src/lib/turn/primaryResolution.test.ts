@@ -56,9 +56,12 @@ vi.mock("@/lib/primaryScore", () => {
     effectivePartyInfluenceForPresidentialPrimary: (v: number) => Math.max(0, v),
   };
 });
-vi.mock("@/lib/electionEngine/resolvedTurnout", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/electionEngine/resolvedTurnout")>();
-  return { ...actual, resolveTurnout: vi.fn(actual.resolveTurnout) };
+vi.mock("@/lib/demographics/granularElectorate", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/demographics/granularElectorate")>();
+  return {
+    ...actual,
+    buildGranularElectorateSubstrate: vi.fn(actual.buildGranularElectorateSubstrate),
+  };
 });
 vi.mock("@/lib/utils/getStateApprovalForElection", () => ({
   getAllStateApprovalsForElection: vi.fn().mockResolvedValue(new Map()),
@@ -1219,8 +1222,9 @@ describe("recordPrimarySnapshots: half-hour split turns", () => {
     db = createMockDb();
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
-    const { resolveTurnout } = await import("@/lib/electionEngine/resolvedTurnout");
-    vi.mocked(resolveTurnout).mockReturnValue({ totalPool: 1_000_000, byGroup: {} } as never);
+    const { buildGranularElectorateSubstrate } =
+      await import("@/lib/demographics/granularElectorate");
+    vi.mocked(buildGranularElectorateSubstrate).mockReturnValue({ totalPool: 1_000_000 } as never);
     const { calcPrimaryScore } = await import("@/lib/primaryScore");
     vi.mocked(calcPrimaryScore).mockReturnValue(50);
   });

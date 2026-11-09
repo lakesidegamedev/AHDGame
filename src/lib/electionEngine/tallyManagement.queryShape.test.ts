@@ -40,7 +40,6 @@ vi.mock("./voteDistribution", () => ({ distributeVotesByGroupLevelAllocation: vi
 vi.mock("./voteDistributionSwingFlow", () => ({ distributeVotesBySwingFlow: vi.fn() }));
 vi.mock("./resolvedTurnout", () => ({
   resolveTurnout: vi.fn(),
-  buildLiveTurnouts: vi.fn(),
   scalePoolToRegistered: (pool: number) => pool,
   // Real behavior, kept live in the mock: several tests pin the electorate
   // ceiling through the distributor's slice argument.

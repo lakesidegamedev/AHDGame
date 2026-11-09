@@ -25,7 +25,6 @@ import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type {
-  DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
@@ -48,7 +47,6 @@ import {
 } from "@/lib/primaryScore";
 import { parseSeatId } from "@/lib/seats/seatId";
 import { type CountryId } from "@/lib/constants/countries";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
 import { resolveTurnWindow } from "@/lib/electionEngine/voteCalculations";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
@@ -128,7 +126,6 @@ export async function recordPrimarySnapshots(
     regionDemographicsDocs,
     regionTurnoutDocs,
     regionDefaultsDocs,
-    demographicCategoryDocs,
     existingPrimaryTallies,
     snapshotGameState,
   ] = await Promise.all([
@@ -181,9 +178,6 @@ export async function recordPrimarySnapshots(
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographics[]),
-    snapshotRegionIds.length > 0
-      ? db.collection<DemographicCategory>("demographicCategories").find({}).toArray()
-      : Promise.resolve([] as DemographicCategory[]),
     db
       .collection<ElectionVoteTally>("electionVoteTallies")
       .find({ electionId: { $in: electionIds } }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY })
@@ -247,8 +241,8 @@ export async function recordPrimarySnapshots(
   const presPreset = hasPresident ? snapshotGameState?.preset : undefined;
 
   // ── Primary ballot accrual inputs ─────────────────────────────────────────
-  // Per-region turnout pool via the SAME resolveTurnout the general vote
-  // engine uses, and per-region party registration shares. Regions missing any
+  // Per-region turnout pool from the same census cells the general vote
+  // engine counts, and per-region party registration shares. Regions missing any
   // of the inputs simply never enter these maps, and their races keep the
   // legacy score-share behavior end to end.
   const eraYear = eraYearContextFromGameState(snapshotGameState);
@@ -263,19 +257,24 @@ export async function recordPrimarySnapshots(
   }
   const turnoutPoolByRegionKey = new Map<string, number>();
   for (const key of uniqueSnapshotRegionKeys) {
-    const [, regionId] = key.split(":");
+    const [country, regionId] = key.split(":");
     const stateDoc = stateMap.get(key);
     const demographics = demographicsByRegion.get(regionId);
-    if (!stateDoc || !demographics || demographicCategoryDocs.length === 0) continue;
+    if (!stateDoc || !demographics) continue;
     const electorate = stateDoc.votingEligiblePopulation ?? stateDoc.population;
     if (!(electorate > 0)) continue;
-    const { totalPool } = resolveTurnout(
-      electorate,
-      demographics,
-      demographicCategoryDocs,
-      turnoutDocByRegion.get(regionId),
-      { preset: snapshotGameState?.preset, year: eraYear.year, startingYear: eraYear.startingYear }
-    );
+    const totalPool =
+      buildGranularElectorateSubstrate({
+        countryId: country,
+        stateId: regionId,
+        preset: snapshotGameState?.preset,
+        ...eraYear,
+        currentTurn,
+        turnoutDoc: turnoutDocByRegion.get(regionId),
+        statePopulation: electorate,
+        demographics,
+        enriched: [],
+      })?.totalPool ?? 0;
     if (totalPool > 0) turnoutPoolByRegionKey.set(key, totalPool);
   }
   const modernRegionKeys = new Set(
@@ -735,11 +734,7 @@ async function recordPresidentialStatePollingSnapshots(
   const { loadRegionalBonusMaps } = await import("@/lib/primaryRegionalBonusLoader");
   const { ELECTORAL_VOTE_UNITS } = await import("@/lib/constants/states");
   const stateIds = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
-  const campaignContext = presElections.some((e) =>
-    usesCampaignAds(e, candidatesByElection.get(e._id.toString()) ?? [])
-  )
-    ? await loadCampaignProjectionContext(db, stateIds)
-    : undefined;
+  const campaignContext = await loadCampaignProjectionContext(db, stateIds);
 
   // One-shot fetch for demographics + state + categories used across all
   // pres elections in this turn.
@@ -839,10 +834,10 @@ async function recordPresidentialStatePollingSnapshots(
         // Same seed as the live wave, so the projection sees the same state swing.
         regionalSeed: String(election._id),
         winMomentum: winMomentumByElection.get(String(election._id)),
-        campaignContext:
-          usesCampaignAds(election, enriched) && campaignContext
-            ? { ...campaignContext, campaignRulesVersion: election.campaignRulesVersion ?? 0 }
-            : undefined,
+        campaignContext: {
+          ...campaignContext,
+          campaignRulesVersion: election.campaignRulesVersion ?? 0,
+        },
         candidates: enriched,
         candidateMeta,
         stateIds,
