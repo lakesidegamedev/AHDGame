@@ -1,6 +1,6 @@
 {
   "note": "Literal country-code branches outside src/lib/countries. Counts may only go down. Move the rule into the country folder, then run `npm run country-branches:lower`.",
-  "total": 740,
+  "total": 731,
   "files": {
     "src/app/api/admin/country/[code]/cabinet-nominations/route.ts": 1,
     "src/app/api/admin/country/[code]/region/[id]/redistrict/trigger/route.ts": 1,
@@ -9,7 +9,7 @@
     "src/app/api/admin/elections/sync-date/route.ts": 9,
     "src/app/api/admin/heal/executive-duplicates/route.ts": 1,
     "src/app/api/admin/heal/federal-budgets/route.ts": 1,
-    "src/app/api/admin/position-editor/preset/route.ts": 7,
+    "src/app/api/admin/position-editor/preset/route.ts": 1,
     "src/app/api/admin/setup/route.ts": 4,
     "src/app/api/character/relocate/route.ts": 1,
     "src/app/api/country/[code]/assembly/list-vacancies/route.ts": 3,
@@ -169,7 +169,6 @@
     "src/lib/currency/rules/euroAdoption.ts": 4,
     "src/lib/currency/rules/rubleTransition.ts": 1,
     "src/lib/db/types/governorOfficeState.ts": 1,
-    "src/lib/demographics/cachedStateLean.ts": 1,
     "src/lib/demographics/granularElectorate.ts": 1,
     "src/lib/demographics/legislativePriorities/rules.ts": 1,
     "src/lib/demographics/regionTurnout.ts": 1,
@@ -226,7 +225,6 @@
     "src/lib/nppAutonomy/ministerialGovernance.ts": 1,
     "src/lib/politicalLegislation/validate.ts": 2,
     "src/lib/politicalMetrics/derive/opening1991.ts": 2,
-    "src/lib/positionEditor/derive.ts": 2,
     "src/lib/publicApi/economy.ts": 9,
     "src/lib/referendum/grantReferendum.ts": 1,
     "src/lib/referendum/processReferendumLifecycle.ts": 1,

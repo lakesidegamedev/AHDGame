@@ -3177,18 +3177,18 @@
     "src/lib/admin/seed/seedAT.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedBG2027.ts": {
       "politicalParties": 2,
       "states": 2,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedBR.ts": {
       "gameState": 1,
       "politicalParties": 3,
       "states": 2,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedBudgets.ts": {
       "corporateSectors": 1,
@@ -3204,7 +3204,7 @@
     "src/lib/admin/seed/seedCN.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedCnStatePartyOrg.ts": {
       "untyped": 1
@@ -3230,7 +3230,7 @@
     "src/lib/admin/seed/seedDD.ts": {
       "politicalParties": 3,
       "states": 3,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedDdStatePartyOrg.ts": {
       "untyped": 1
@@ -3249,7 +3249,7 @@
       "federalBudget": 2,
       "politicalParties": 3,
       "states": 4,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedEasternBlocStatePartyOrg.ts": {
       "gameState": 1,
@@ -3266,12 +3266,12 @@
     "src/lib/admin/seed/seedES.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedFI.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedForex.ts": {
       "gameState": 1
@@ -3279,7 +3279,7 @@
     "src/lib/admin/seed/seedFR.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedGameConfig.ts": {
       "untyped": 1
@@ -3287,18 +3287,18 @@
     "src/lib/admin/seed/seedGR.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedHU.ts": {
       "politicalParties": 4,
       "states": 2,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedIE.ts": {
       "gameState": 1,
       "politicalParties": 3,
       "states": 2,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedInfraProjects.ts": {
       "states": 1,
@@ -3307,7 +3307,7 @@
     "src/lib/admin/seed/seedIT.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedLegislationTypes.ts": {
       "untyped": 2
@@ -3331,7 +3331,7 @@
     "src/lib/admin/seed/seedModernTransitionCountries.ts": {
       "politicalParties": 4,
       "states": 2,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedNationalManpower.ts": {
       "states": 1
@@ -3342,7 +3342,7 @@
       "npps": 1,
       "politicalParties": 3,
       "states": 2,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/admin/seed/seedNgBudgets.ts": {
       "untyped": 1
@@ -3379,7 +3379,7 @@
     "src/lib/admin/seed/seedSE.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedSeats.ts": {
       "states": 1,
@@ -3419,7 +3419,7 @@
     "src/lib/admin/seed/seedTR.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/admin/seed/seedUnions.ts": {
       "corporateSectors": 1,
@@ -4066,9 +4066,6 @@
       "characters": 5,
       "elections": 1,
       "npps": 1
-    },
-    "src/lib/campaignTargeting/nationalAds.ts": {
-      "states": 1
     },
     "src/lib/campaignTargeting/poll.ts": {
       "elections": 1
@@ -5201,7 +5198,7 @@
       "npps": 3,
       "politicalParties": 3,
       "states": 2,
-      "untyped": 8
+      "untyped": 7
     },
     "src/lib/countries/jp/seedBudgets.ts": {
       "corporateSectors": 1,
@@ -5388,7 +5385,7 @@
     "src/lib/countries/ru/seedRU.ts": {
       "politicalParties": 3,
       "states": 2,
-      "untyped": 9
+      "untyped": 8
     },
     "src/lib/countries/ru/seedRuBudgets.ts": {
       "federalBudget": 2,
@@ -5470,8 +5467,7 @@
       "politicalParties": 1
     },
     "src/lib/countries/uk/judicialReviewTurn.ts": {
-      "politicalParties": 1,
-      "untyped": 1
+      "politicalParties": 1
     },
     "src/lib/countries/uk/leadership/leadershipCommands.ts": {
       "characters": 5,
