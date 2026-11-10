@@ -117,3 +117,33 @@ describe("NavairCommandClient repair", () => {
     expect(controls.every((control) => control.disabled)).toBe(true);
   });
 });
+
+describe("NavairCommandClient station labels", () => {
+  const stations = [
+    { id: "weu", name: "Western Europe", allowed: true },
+    { id: "nam", name: "North America", allowed: false, blockedReason: "land" as const },
+    { id: "cas", name: "Central Asia", allowed: false, blockedReason: "no-port" as const },
+  ];
+
+  it("does not call a land region with a port rating 'no port'", () => {
+    render(<NavairCommandClient {...props} stations={stations} formations={[formation()]} />);
+    const nam = screen
+      .getAllByRole("option")
+      .find((o) => /North America/.test(o.textContent ?? ""));
+    expect(nam?.textContent).not.toMatch(/no port/);
+    expect(nam?.textContent).toMatch(/land region/);
+    expect((nam as HTMLOptionElement).disabled).toBe(true);
+  });
+
+  it("still says landlocked for a region with no port", () => {
+    render(<NavairCommandClient {...props} stations={stations} formations={[formation()]} />);
+    const cas = screen.getAllByRole("option").find((o) => /Central Asia/.test(o.textContent ?? ""));
+    expect(cas?.textContent).toMatch(/landlocked, no port/);
+  });
+
+  it("adds no suffix to an allowed region", () => {
+    render(<NavairCommandClient {...props} stations={stations} formations={[formation()]} />);
+    const weu = screen.getAllByRole("option").find((o) => o.textContent === "Western Europe");
+    expect(weu).toBeDefined();
+  });
+});

@@ -275,7 +275,8 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
   const advice = planSupply(stationed, supplyContext);
   const supportByUnit = new Map(stationed.map((u, i) => [String(u._id), advice[i]]));
   stationed.forEach((u, i) => {
-    if (u.supply !== advice[i].supply) touchedByMission.add(u);
+    // Supply can change even when the formation has no new orders or damage.
+    if ((u.supply ?? 100) !== advice[i].supply) touchedByMission.add(u);
     u.supply = advice[i].supply;
   });
 
