@@ -223,6 +223,8 @@ export function electionToLarpYear(
       return years.seRiksdag + (cycle - 1) * 4;
     case "milletMeclisi":
       return years.trMeclis + (cycle - 1) * 4;
+    case "caCommons":
+      return (years.caCommons ?? years.governorStateSenate) + (cycle - 1) * 4;
     default:
       return years.governorStateSenate + (cycle - 1) * 4;
   }

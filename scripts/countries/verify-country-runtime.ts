@@ -935,7 +935,6 @@ ABSENT_UPSTREAM.CA = {
     "no row in the seed-diagnostic registry; the seed runner is the authority",
   ORDERS_BY_COUNTRY: "the cabinet stage authors Canada's ministerial orders",
   MECHANICS_BY_COUNTRY: "the cabinet stage authors Canada's cabinet mechanics",
-  SPAWN_ELECTIONS_REGISTRY: "the elections stage registers Canada's spawners",
   CENSUS_BUNDLES: "the elections stage authors the 2027 census bundle",
   DOMAIN_BUCKET_AFFINITIES: "the elections stage authors the bucket affinity table",
   COUNTRY_BUCKET_LABELS: "the elections stage authors the bucket labels",

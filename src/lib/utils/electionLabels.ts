@@ -74,6 +74,7 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   congresoDiputados: "Congress of Deputies",
   riksdag: "Riksdag",
   milletMeclisi: "Grand National Assembly",
+  caCommons: "House of Commons",
 };
 
 /** Short labels used in win/loss notifications (space-constrained contexts). */
@@ -131,6 +132,7 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   congresoDiputados: "Congreso",
   riksdag: "Riksdag",
   milletMeclisi: "Meclis",
+  caCommons: "Commons",
 };
 
 /**
@@ -219,6 +221,7 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "congresoDiputados",
   "riksdag",
   "milletMeclisi",
+  "caCommons",
   // AT/FI/GR lower chambers: multi-seat regional PR like their FR/IT/ES
   // siblings. Without this their first resolved election runs the
   // single-winner path, which deletes the whole seeded delegation.

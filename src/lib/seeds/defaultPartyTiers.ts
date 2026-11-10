@@ -6,7 +6,7 @@ import { BR_ELECTIONS } from "@/lib/countries/br/elections";
 import { IE_ELECTIONS } from "@/lib/countries/ie/elections";
 import { CN_ELECTIONS } from "@/lib/countries/cn/elections";
 import { NG_ELECTIONS } from "@/lib/countries/ng/elections";
-import { CA_ELECTIONS } from "@/lib/countries/ca/elections";
+import { CA_MAJOR_DEFAULT_PARTIES } from "@/lib/countries/ca/data/caParties";
 
 export interface MajorDefaultParty {
   abbr: string;
@@ -34,7 +34,7 @@ export const MAJOR_DEFAULT_PARTIES: Record<string, MajorDefaultParty[] | undefin
   JP: JP_ELECTIONS.majorDefaultParties,
   BR: BR_ELECTIONS.majorDefaultParties,
   IE: IE_ELECTIONS.majorDefaultParties,
-  CA: CA_ELECTIONS.majorDefaultParties,
+  CA: CA_MAJOR_DEFAULT_PARTIES,
   CN: CN_ELECTIONS.majorDefaultParties,
   NG: NG_ELECTIONS.majorDefaultParties,
 };

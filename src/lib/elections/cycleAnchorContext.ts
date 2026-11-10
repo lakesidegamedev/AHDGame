@@ -185,6 +185,12 @@ export interface PresetElectionYears {
    * The Cold War Supreme Soviet families keep `ruSupremeSoviet`.
    */
   ruUnionCongress?: number | null;
+  /**
+   * CA House of Commons. Canada exists only in the 2027 world, so every other
+   * preset leaves this unset. The 2025 election resets the four-year fixed-date
+   * clock, which puts the next regular election in 2029.
+   */
+  caCommons?: number | null;
 }
 
 /**
@@ -514,6 +520,7 @@ export const CANONICAL_REAL_ELECTION_YEARS_BY_PRESET: Record<string, PresetElect
     ruSupremeSoviet: null,
     ruRepublicSoviet: null,
     ddVolkskammer: null,
+    caCommons: 2029, // fixed-date term from the 2025 election
   },
 };
 
@@ -571,6 +578,8 @@ export interface CycleAnchors {
   huNationalAssembly: number | null;
   /** `null` outside the 1991 preset (see PresetElectionYears). */
   ruUnionCongress: number | null;
+  /** `null` = no CA election cycle in this era (Canada exists in 2027 only). */
+  caCommons: number | null;
 }
 
 /** End-of-LARP-year-Y anchor: `(Y − startingYear + 1) × TURNS_PER_YEAR (+ offset)`. */
@@ -639,6 +648,7 @@ export function getCycleAnchors(ctx: CycleAnchorContext): CycleAnchors {
       years.huNationalAssembly == null ? null : endOfYear(years.huNationalAssembly, sy, off),
     ruUnionCongress:
       years.ruUnionCongress == null ? null : endOfYear(years.ruUnionCongress, sy, off),
+    caCommons: years.caCommons == null ? null : endOfYear(years.caCommons, sy, off),
   };
 }
 

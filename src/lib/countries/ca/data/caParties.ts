@@ -1,4 +1,5 @@
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
+import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 
 /**
  * Canada's default parties for the 2027 world.
@@ -168,3 +169,6 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_green_horizon: 1,
   },
 };
+
+/** Default parties that seed as Major; every other default party seeds Minor. */
+export const CA_MAJOR_DEFAULT_PARTIES: MajorDefaultParty[] = [{ abbr: "FUP" }, { abbr: "NPA" }];

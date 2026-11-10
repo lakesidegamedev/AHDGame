@@ -87,7 +87,8 @@ const BETA_PARLIAMENT_CYCLES: Record<
       | "ruRepublicSoviet"
       | "ddVolkskammer"
       | "csFederalAssembly"
-      | "ruUnionCongress";
+      | "ruUnionCongress"
+      | "caCommons";
     periodHours: number;
   }
 > = {
@@ -99,6 +100,8 @@ const BETA_PARLIAMENT_CYCLES: Record<
   congresoDiputados: { anchor: "esCongreso", periodHours: 192 },
   // SE Riksdag: 4-year cycle (192 turns; real cadence 3y 1970-1994, modeled as 4).
   riksdag: { anchor: "seRiksdag", periodHours: 192 },
+  // CA House of Commons: fixed four-year term (192 turns); era-gated by a null anchor.
+  caCommons: { anchor: "caCommons", periodHours: 192 },
   // TR Grand National Assembly: 4-year cycle (192 turns).
   milletMeclisi: { anchor: "trMeclis", periodHours: 192 },
   // GR Vouli ton Ellinon: 4-year cycle (192 turns).
