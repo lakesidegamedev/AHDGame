@@ -34,6 +34,11 @@ import { REPAIR, type BasingKey } from "@/lib/navair/config";
 import type { NavairUnit } from "@/lib/navair/types";
 import type { FormationWarning, ForceSummary, RepairNote } from "./NavairCommandClient";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
+import { getNavairBasingCollection } from "@/lib/db/collections/navairBasing";
+import { planSupply, type SupplyAdvice, type SupplyContext } from "@/lib/navair/rules/supply";
+import { BasingAccess } from "./BasingAccess";
+import { stationOf } from "@/lib/navair/turn";
+import { FIGHTING_CONFLICT_STATUSES } from "@/lib/military/conflictLifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -92,11 +97,10 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
   // What this force is actually achieving. Without it the page is a list of objects with
   // dropdowns, and a commander cannot tell what problem they are being asked to solve.
   const channels = await loadNavairChannels(db);
-  const wars = await getConflictsCollection(db)
+  const allWars = await getConflictsCollection(db)
     .find(
       {
-        status: "active",
-        $or: [{ "sideA.countries": countryId }, { "sideB.countries": countryId }],
+        status: { $in: [...FIGHTING_CONFLICT_STATUSES] },
       },
       {
         projection: {
@@ -109,6 +113,9 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
       }
     )
     .toArray();
+  const wars = allWars.filter(
+    (w) => w.sideA.countries.includes(countryId) || w.sideB.countries.includes(countryId)
+  );
 
   const holding = REGIONS.map((r) => ({
     region: r.name,
@@ -138,9 +145,29 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
 
   // Basing decides both how fast a formation mends and how far free repair can carry it,
   // and basing depends on who this country is fighting. Same rosters the turn pass reads.
-  const [blocs, arsenal] = await Promise.all([
+  const [blocs, arsenal, agreements, otherUnits] = await Promise.all([
     loadMilitaryBlocs(db),
     getNationalArsenal(db, countryId),
+    getNavairBasingCollection(db)
+      .find({ status: { $in: ["active", "offered"] } })
+      .toArray(),
+    getMilitaryUnitsCollection(db)
+      .find(
+        { countryId: { $ne: countryId }, domain: { $in: ["naval", "air"] } },
+        {
+          projection: {
+            countryId: 1,
+            domain: 1,
+            type: 1,
+            station: 1,
+            stationSetByPlayer: 1,
+            theaterId: 1,
+            mission: 1,
+            integrity: 1,
+          },
+        }
+      )
+      .toArray(),
   ]);
   const enemyCountryIds = new Set(
     wars.flatMap((w) => {
@@ -159,6 +186,46 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
     navalLots: arsenal.stock.naval ?? 0,
     airLots: arsenal.stock.air ?? 0,
   };
+
+  const theaters = new Map(
+    allWars.flatMap((w) => (w.region ? [[String(w._id), w.region] as const] : []))
+  );
+  const positioned = units.map((u) => ({ ...u, station: stationOf(u, theaters) }));
+  const worldUnits = [
+    ...otherUnits.map((u) => ({ ...u, station: stationOf(u as NavairUnit, theaters) })),
+    ...positioned,
+  ] as NavairUnit[];
+  const enemies: Record<string, string[]> = {};
+  for (const war of allWars) {
+    for (const own of war.sideA.countries) (enemies[own] ??= []).push(...war.sideB.countries);
+    for (const own of war.sideB.countries) (enemies[own] ??= []).push(...war.sideA.countries);
+  }
+  const context: SupplyContext = { blocs, agreements, enemies };
+  const supplyPreviews: Record<string, Record<string, SupplyAdvice>> = {};
+  const previewCache = new Map<string, Record<string, SupplyAdvice>>();
+  // Pure previews only expose the acting nation's estimates, never foreign rosters.
+  for (let index = 0; index < positioned.length; index++) {
+    const unit = positioned[index];
+    const key = `${unit.domain}:${unit.type}:${unit.mission}:${unit.station}:${(unit.integrity ?? 100) > 0}`;
+    const cached = previewCache.get(key);
+    if (cached) {
+      supplyPreviews[String(unit._id)] = cached;
+      continue;
+    }
+    const candidates: Record<string, SupplyAdvice> = {};
+    for (const region of REGIONS) {
+      const candidate = { ...unit, station: region.id };
+      const roster = [...worldUnits];
+      roster[otherUnits.length + index] = candidate;
+      const advice = planSupply(roster, context)[otherUnits.length + index];
+      candidates[region.id] = {
+        ...advice,
+        base: `${regionOf(advice.base)?.name ?? advice.base}${advice.host ? ` (${COUNTRY_CONFIGS[advice.host].name})` : ""}`,
+      };
+    }
+    supplyPreviews[String(unit._id)] = candidates;
+    previewCache.set(key, candidates);
+  }
 
   const formations: CommandFormation[] = units
     .map((u) => ({
@@ -179,7 +246,13 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
       warnings: warningsFor(u, frontRegions),
       repair: repairNoteFor(
         u,
-        u.station ? basingStatus(u.station, countryId, blocs, enemyCountryIds) : "home"
+        supplyPreviews[String(u._id)]?.[u.station ?? ""]?.access === "Home"
+          ? "home"
+          : supplyPreviews[String(u._id)]?.[u.station ?? ""]?.access === "Agreed access"
+            ? "allied"
+            : u.station
+              ? basingStatus(u.station, countryId, blocs, enemyCountryIds)
+              : "home"
       ),
     }))
     .sort((a, b) => a.stationName.localeCompare(b.stationName) || a.name.localeCompare(b.name));
@@ -195,10 +268,12 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
     desc: AIR_MISSIONS[key].desc,
   }));
 
-  const stations: StationOption[] = REGIONS.map((r) => ({
+  const stations: StationOption[] = REGIONS.map((r): StationOption => ({
     id: r.id,
     name: r.name,
     allowed: isWaterAccessible(r.id) && isNavigable(r.id),
+    port: r.port,
+    blockedReason: !isWaterAccessible(r.id) ? "land" : !isNavigable(r.id) ? "no-port" : undefined,
   })).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -208,6 +283,7 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
 
       <div className="mt-6">
         <NavairCommandClient
+          key={formations.map((f) => `${f.id}:${f.station}:${f.mission}:${f.supply}`).join("|")}
           conflictsEnabled={conflictsEnabled}
           summary={summary}
           countryCode={code}
@@ -216,6 +292,16 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
           navalMissions={navalMissions}
           airMissions={airMissions}
           stations={stations}
+          supplyPreviews={supplyPreviews}
+        />
+        <BasingAccess
+          country={countryId}
+          positionId={positionId}
+          enabled={conflictsEnabled}
+          agreements={agreements.filter((a) => a.host === countryId || a.guest === countryId)}
+          countries={Object.entries(COUNTRY_CONFIGS)
+            .filter(([id]) => id !== countryId)
+            .map(([id, c]) => ({ id, name: c.name }))}
         />
       </div>
     </main>
@@ -235,7 +321,7 @@ function warningsFor(unit: NavairUnit, frontRegions: readonly string[]): Formati
   if ((unit.supply ?? 100) <= MIN_SUPPLY) {
     out.push({
       severity: "bad",
-      text: "Out of supply: too far from home or based in unfriendly waters. It fights at a fraction of strength here.",
+      text: "Low supply: review the supply breakdown and resupply locations below. This reduces combat strength.",
     });
   }
 
