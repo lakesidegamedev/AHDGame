@@ -1,89 +1,17 @@
 /** Game-calibrated v2 political positions, shared by previews, voting and enactment. */
 import { bucketAffinitiesFor } from "@/lib/bucketAffinities";
-import type { LawChoice } from "./eligibility";
-import type { PolicyDomain } from "@/lib/archetypeAffinities";
 import { familyApprovalAffinities } from "./voterApprovalProfiles";
 
-type Axis = "economic" | "social";
-interface PoliticalRoute {
-  axis: Axis;
-  domain: PolicyDomain;
-  fallbackDomain?: PolicyDomain;
-}
-
-// Explicit family coverage: do not send an unfamiliar family to an economic default.
-export const V2_POLITICAL_ROUTES: Readonly<Record<string, PoliticalRoute>> = {
-  L01: { axis: "economic", domain: "welfare" },
-  L02: { axis: "economic", domain: "welfare" },
-  L03: { axis: "economic", domain: "economic" },
-  L04: { axis: "economic", domain: "economic" },
-  L05: { axis: "economic", domain: "economic" },
-  L06: { axis: "economic", domain: "economic" },
-  L07: { axis: "economic", domain: "economic" },
-  L08: { axis: "economic", domain: "economic" },
-  L09: { axis: "economic", domain: "economic" },
-  L10: { axis: "economic", domain: "education" },
-  L11: { axis: "economic", domain: "education" },
-  L12: { axis: "social", domain: "education" },
-  L13: { axis: "economic", domain: "education" },
-  L14: { axis: "economic", domain: "education" },
-  L15: { axis: "economic", domain: "technology", fallbackDomain: "education" },
-  L16: { axis: "economic", domain: "healthcare" },
-  L17: { axis: "economic", domain: "healthcare" },
-  L18: { axis: "economic", domain: "healthcare" },
-  L19: { axis: "economic", domain: "healthcare" },
-  L20: { axis: "economic", domain: "healthcare" },
-  L21: { axis: "economic", domain: "healthcare" },
-  L22: { axis: "economic", domain: "infrastructure" },
-  L23: { axis: "economic", domain: "welfare" },
-  L24: { axis: "economic", domain: "welfare" },
-  L25: { axis: "economic", domain: "infrastructure" },
-  L26: { axis: "economic", domain: "infrastructure" },
-  L27: { axis: "economic", domain: "infrastructure" },
-  L28: { axis: "economic", domain: "infrastructure" },
-  L29: { axis: "economic", domain: "infrastructure" },
-  L30: { axis: "economic", domain: "environment" },
-  L31: { axis: "economic", domain: "environment" },
-  L32: { axis: "economic", domain: "environment" },
-  L33: { axis: "economic", domain: "environment" },
-  L34: { axis: "social", domain: "criminal_justice" },
-  L35: { axis: "social", domain: "criminal_justice" },
-  L36: { axis: "social", domain: "criminal_justice" },
-  L37: { axis: "economic", domain: "agriculture", fallbackDomain: "economic" },
-  L38: { axis: "economic", domain: "welfare" },
-  L39: { axis: "social", domain: "immigration" },
-  L40: { axis: "social", domain: "welfare" },
-  L41: { axis: "social", domain: "governance" },
-  L42: { axis: "economic", domain: "infrastructure" },
-  L43: { axis: "social", domain: "governance" },
-  L44: { axis: "social", domain: "governance" },
-  L45: { axis: "social", domain: "governance" },
-  L46: { axis: "social", domain: "governance" },
-  L47: { axis: "social", domain: "mediaInformation" },
-  L48: { axis: "economic", domain: "economic" },
-  L49: { axis: "social", domain: "immigration" },
-  L50: { axis: "social", domain: "criminal_justice" },
-  L51: { axis: "social", domain: "healthcare" },
-  L52: { axis: "economic", domain: "immigration" },
-};
-
-const CHOICES = ["far_left", "center_left", "center", "center_right", "far_right"] as const;
-const SCORES = [-5, -2.5, 0, 2.5, 5];
-
-export interface V2PoliticalProvision {
-  familyId: string;
-  choice: LawChoice;
-  currentChoiceSnapshot: LawChoice;
-}
-
-/** Federalism is not an ideology rung; leave_to_states has no invented axis position. */
-export function v2VotePosition(
-  provision: Pick<V2PoliticalProvision, "familyId" | "choice">
-): { economic?: number; social?: number; includeNeutral: true } | null {
-  const route = V2_POLITICAL_ROUTES[provision.familyId];
-  const index = CHOICES.findIndex((choice) => choice === provision.choice);
-  return route && index >= 0 ? { [route.axis]: SCORES[index], includeNeutral: true } : null;
-}
+import {
+  V2_POLITICAL_ROUTES,
+  v2VotePosition,
+  type V2PoliticalProvision,
+} from "./politicalPositions";
+export {
+  V2_POLITICAL_ROUTES,
+  v2VotePosition,
+  type V2PoliticalProvision,
+} from "./politicalPositions";
 
 /** Maximum combined cell approval change for one full left-to-right family change.
  * Dimension maxima, rather than individual buckets, bound overlapping identities.
@@ -94,6 +22,8 @@ export const V2_FAMILY_APPROVAL_SPAN = 4;
 export function voterAffinityCountry(countryId: string): string {
   return countryId === "SCO" || countryId === "WAL" ? "UK" : countryId;
 }
+
+const CHOICES = ["far_left", "center_left", "center", "center_right", "far_right"] as const;
 
 /** Endpoint potentials telescope: reversing or splitting a policy move cannot farm rewards. */
 export function v2EnactmentApproval(
@@ -126,7 +56,14 @@ export function v2EnactmentApproval(
     for (const [bucket, preference] of Object.entries(affinities)) {
       const potential = (index: number) =>
         Math.trunc(
-          (((SCORES[index]! / 10) * V2_FAMILY_APPROVAL_SPAN * preference) / normalization) * 100
+          ((((v2VotePosition({ familyId: provision.familyId, choice: CHOICES[index]! })?.[
+            route.axis
+          ] ?? 0) /
+            10) *
+            V2_FAMILY_APPROVAL_SPAN *
+            preference) /
+            normalization) *
+            100
         );
       const change = potential(after) - potential(before);
       cents[bucket] = (cents[bucket] ?? 0) + change;

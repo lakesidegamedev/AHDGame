@@ -32,6 +32,7 @@ describe("runRequiredStartupMigrations", () => {
 
     expect(REQUIRED_STARTUP_MIGRATIONS.map((migration) => migration.id)).toEqual([
       "2026-10-21-backfill-mechanical-law-types",
+      "2026-11-09-successor-tax-types",
       "2026-10-14-contest-account-history",
       "2026-10-14-government-contract-bidding",
       "2026-10-15-income-tax-policy-parity",

@@ -191,6 +191,22 @@ afterEach(() => {
 });
 
 describe("GuidedLegislationModal", () => {
+  it("shows both leans for privacy options and preserves them through review", async () => {
+    const fixture = structuredClone(catalog);
+    fixture.families[0]!.familyId = "L46";
+    stubCatalog(fixture);
+    renderModal();
+    fireEvent.change(await screen.findByLabelText("Policy domain"), {
+      target: { value: "Health and care" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /Primary care access/ }));
+    expect(screen.getAllByText("Economic").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Social").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /Community clinic expansion/ }));
+    expect(screen.getByText("Economic")).toBeTruthy();
+    expect(screen.getByText("Social")).toBeTruthy();
+  });
+
   it.each(["embargo", "end_embargo"] as const)("submits a national Trade %s", async (action) => {
     stubCatalog();
     mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
