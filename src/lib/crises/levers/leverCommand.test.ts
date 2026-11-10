@@ -13,12 +13,23 @@ const creditTreasury = vi.hoisted(() => vi.fn());
 const debitCorp = vi.hoisted(() => vi.fn());
 const refundCorp = vi.hoisted(() => vi.fn());
 const roles = vi.hoisted(() => ({ derived: [] as string[] }));
+const rates = vi.hoisted(() => ({ current: {} as Record<string, number> }));
 
 vi.mock("@/lib/budget/treasurySpend", () => ({ spendFromTreasury, creditTreasury }));
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
   atomicallyDebitCorpLiquidCapital: debitCorp,
   refundCorpLiquidCapital: refundCorp,
 }));
+vi.mock("@/lib/campaigns/campaignCurrency", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/campaigns/rules/currency")>(
+    "@/lib/campaigns/rules/currency"
+  );
+  return {
+    campaignAnchorToLocal: actual.campaignAnchorToLocal,
+    loadCampaignCurrencyRates: async () => rates.current,
+  };
+});
+vi.mock("@/lib/era/context", () => ({ getEraContext: async () => ({ preset: null }) }));
 vi.mock("@/lib/gameState", () => ({ getGameState: async () => ({ currentTurn: 10 }) }));
 vi.mock("@/lib/crises/interactionEngine", () => ({
   resolveCharacterRoles: async () => roles.derived,
@@ -145,6 +156,7 @@ function freshStore(overrides: Partial<Store> = {}): Store {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rates.current = {};
   roles.derived = ["any", "headOfState"];
   spendFromTreasury.mockResolvedValue({});
   creditTreasury.mockResolvedValue({});
@@ -418,5 +430,18 @@ describe("pullLever", () => {
     const store = freshStore();
     await pull(store, "stimulus", { intensity: 0.5 });
     expect(spendFromTreasury).toHaveBeenCalledWith(expect.anything(), "US", 500, expect.anything());
+  });
+
+  it("charges the treasury in its own currency, not anchor units", async () => {
+    rates.current = { USD: 150 };
+    const store = freshStore();
+    const result = await pull(store);
+    expect(result).toMatchObject({ ok: true, cost: { treasuryCash: 150_000 } });
+    expect(spendFromTreasury).toHaveBeenCalledWith(
+      expect.anything(),
+      "US",
+      150_000,
+      expect.anything()
+    );
   });
 });

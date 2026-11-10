@@ -106,7 +106,21 @@ describe("routeEffectIntents", () => {
     );
   });
 
-  it("panics active banks in the crisis countries once", async () => {
+  it("adds fractional stress to active banks without a direct panic", async () => {
+    const { db, collections } = makeDb();
+    await routeEffectIntents(db, [{ kind: "bankStress", delta: 0.3 }], targets());
+    const update = collections.get("corporations")!.updateMany;
+    expect(update).toHaveBeenCalledTimes(1);
+    const [filter, pipeline] = update.mock.calls[0] as unknown as [unknown, unknown[]];
+    expect(filter).toEqual({ "bankCharter.status": "active", countryId: { $in: ["US"] } });
+    expect(Array.isArray(pipeline)).toBe(true);
+    expect(JSON.stringify(pipeline[0])).toContain("stressCarry");
+    expect(JSON.stringify(pipeline[0])).toContain("0.3");
+    // The panic only starts where the accumulated carry reaches a whole turn.
+    expect(JSON.stringify(pipeline[1])).toContain("$gte");
+  });
+
+  it("sums stress from several intents into one bank update", async () => {
     const { db, collections } = makeDb();
     await routeEffectIntents(
       db,
@@ -118,10 +132,8 @@ describe("routeEffectIntents", () => {
     );
     const update = collections.get("corporations")!.updateMany;
     expect(update).toHaveBeenCalledTimes(1);
-    expect(update).toHaveBeenCalledWith(
-      { "bankCharter.status": "active", countryId: { $in: ["US"] } },
-      { $max: { "bankCharter.panicTurns": 3 } }
-    );
+    const [, pipeline] = update.mock.calls[0] as unknown as [unknown, unknown[]];
+    expect(JSON.stringify(pipeline[0])).toContain("2.2");
   });
 
   it("widens the borrowing premium by lowering investor confidence", async () => {

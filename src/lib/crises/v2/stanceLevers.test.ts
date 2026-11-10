@@ -6,10 +6,14 @@ import {
   AI_LABOUR_SHOCK_DEF_KEY,
   SECOND_PANDEMIC_DEF_KEY,
   STANCE_LEVERS,
+  isStanceLever,
   stanceIntents,
   stanceLeversFor,
   stanceTradeoff,
 } from "./stanceLevers";
+
+const PAN = "lc.second_pandemic";
+const LAB = "lc.ai_labour_shock";
 
 describe("stance levers", () => {
   it("offers a lockdown and an open-economy choice on the second pandemic", () => {
@@ -41,8 +45,8 @@ describe("stance levers", () => {
   });
 
   it("makes lockdown and staying open pull opposite ways on health, jobs and votes", () => {
-    const lockdown = stanceIntents("lockdown");
-    const open = stanceIntents("stay-open");
+    const lockdown = stanceIntents(PAN, "lockdown");
+    const open = stanceIntents(PAN, "stay-open");
     const health = (intents: ReturnType<typeof stanceIntents>) =>
       intents.find((i) => i.kind === "metric" && i.field === "publicHealth");
     expect(health(lockdown)).toMatchObject({ delta: expect.any(Number) });
@@ -54,8 +58,8 @@ describe("stance levers", () => {
   });
 
   it("makes a bailout cheap on jobs and dear on bonds, and reform the reverse on jobs", () => {
-    const bailout = stanceIntents("bail-out-sectors");
-    const reform = stanceIntents("structural-reform");
+    const bailout = stanceIntents(LAB, "bail-out-sectors");
+    const reform = stanceIntents(LAB, "structural-reform");
     const jobs = (intents: ReturnType<typeof stanceIntents>) =>
       (
         intents.find((i) => i.kind === "metric" && i.field === "unemploymentRate") as {
@@ -69,20 +73,39 @@ describe("stance levers", () => {
   });
 
   it("scales a package by intensity and drops a zero-strength pull", () => {
-    const full = stanceIntents("bail-out-sectors", 1).find((i) => i.kind === "bondYield");
-    const half = stanceIntents("bail-out-sectors", 0.5).find((i) => i.kind === "bondYield");
+    const full = stanceIntents(LAB, "bail-out-sectors", 1).find((i) => i.kind === "bondYield");
+    const half = stanceIntents(LAB, "bail-out-sectors", 0.5).find((i) => i.kind === "bondYield");
     expect((half as { deltaBps: number }).deltaBps).toBeCloseTo(
       (full as { deltaBps: number }).deltaBps / 2
     );
-    expect(stanceIntents("bail-out-sectors", 0)).toEqual([]);
-    expect(stanceIntents("not-a-lever")).toEqual([]);
+    expect(stanceIntents(LAB, "bail-out-sectors", 0)).toEqual([]);
+    expect(stanceIntents(PAN, "not-a-lever")).toEqual([]);
   });
 
   it("gives every stance lever a plain tradeoff line", () => {
-    for (const { lever } of Object.values(STANCE_LEVERS).flat()) {
-      const text = stanceTradeoff(lever.id);
-      expect(text).toBeTruthy();
-      expect(text).not.toMatch(/[–—]/);
+    for (const [key, entries] of Object.entries(STANCE_LEVERS)) {
+      for (const { lever } of entries) {
+        const text = stanceTradeoff(`lc.${key}`, lever.id);
+        expect(text).toBeTruthy();
+        expect(text).not.toMatch(/[\u2013\u2014]/);
+      }
     }
+  });
+
+  it("gives stance levers no mitigation, since they cannot ease severity", () => {
+    for (const { lever } of Object.values(STANCE_LEVERS).flat()) expect(lever.mitigation).toBe(0);
+  });
+
+  it("keys a package by definition and lever, not the bare lever id", () => {
+    expect(stanceIntents(LAB, "lockdown")).toEqual([]);
+    expect(stanceTradeoff("lc.other_campaign", "lockdown")).toBeUndefined();
+    expect(isStanceLever(PAN, "lockdown")).toBe(true);
+    expect(isStanceLever("some.other.def", "lockdown")).toBe(false);
+  });
+
+  it("no longer starts an immediate bank panic from lender forbearance", () => {
+    expect(stanceIntents(LAB, "lender-forbearance").some((i) => i.kind === "bankStress")).toBe(
+      false
+    );
   });
 });
