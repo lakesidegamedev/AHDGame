@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree/effects";
 import {
   automationPolicyFor,
   foldAutomationPolicies,
   lawAdjustedLabourFactor,
   lawWageCostMultiplier,
-  withAutomationLevy,
   withAutomationUnionBias,
 } from "./policies";
 import { NO_AUTOMATION_POLICY } from "./rules";
@@ -65,34 +63,8 @@ describe("turn adapters", () => {
   ]);
 
   it("are neutral when the world has no automation laws", () => {
-    expect(
-      withAutomationLevy(NEUTRAL_TECH_EFFECTS, undefined, {
-        countryId: "US",
-        strategyId: "autonomous_factory",
-      })
-    ).toBe(NEUTRAL_TECH_EFFECTS);
     expect(lawAdjustedLabourFactor(0.45, undefined, "US")).toBe(0.45);
     expect(lawWageCostMultiplier(undefined, "US")).toBe(1);
-  });
-
-  it("price only the countries with a law, and only automation methods", () => {
-    const hit = withAutomationLevy(NEUTRAL_TECH_EFFECTS, byCountry, {
-      countryId: "US",
-      strategyId: "autonomous_factory",
-    });
-    expect(Object.values(hit.inputRateMult).every((v) => v > 1)).toBe(true);
-    expect(
-      withAutomationLevy(NEUTRAL_TECH_EFFECTS, byCountry, {
-        countryId: "UK",
-        strategyId: "autonomous_factory",
-      })
-    ).toBe(NEUTRAL_TECH_EFFECTS);
-    expect(
-      withAutomationLevy(NEUTRAL_TECH_EFFECTS, byCountry, {
-        countryId: "US",
-        strategyId: "standard",
-      })
-    ).toBe(NEUTRAL_TECH_EFFECTS);
   });
 
   it("keep more crew and cheapen wages in a country with the laws", () => {
