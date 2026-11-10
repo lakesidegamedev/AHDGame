@@ -537,6 +537,8 @@ export async function applyBackgroundForeignPolicy(
   warsJoined: number;
   responses: number;
   responsesRefused: number;
+  cyberOperations: number;
+  cyberStandDowns: number;
 }> {
   const tariffOps: AnyBulkWriteOperation<Tariff>[] = [];
   const embargoOps: AnyBulkWriteOperation<TradeEmbargo>[] = [];
@@ -687,5 +689,21 @@ export async function applyBackgroundForeignPolicy(
       }
     }
   }
-  return { tariffs: tariffOps.length, sanctions, lifted, warsJoined, responses, responsesRefused };
+  let cyber = { launched: 0, standDowns: 0 };
+  try {
+    const { applyScriptedCyber } = await import("./backgroundCyber");
+    cyber = await applyScriptedCyber(db, plans, turn);
+  } catch {
+    // A cyber step failure never blocks the rest of the kernel tick.
+  }
+  return {
+    tariffs: tariffOps.length,
+    sanctions,
+    lifted,
+    warsJoined,
+    responses,
+    responsesRefused,
+    cyberOperations: cyber.launched,
+    cyberStandDowns: cyber.standDowns,
+  };
 }
