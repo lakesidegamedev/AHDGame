@@ -1,8 +1,13 @@
 "use client";
 
-import { PositionBadges } from "@/components/PositionBadges";
-import { v2VotePosition } from "@/lib/resetLegislation/rules/politicalPositions";
-import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
+import { OptionLeanBadges, TaxLeanBadges } from "./LegislationLeanBadges";
+import {
+  changeClass,
+  metricDirectionClass,
+  money,
+  observedDirection,
+  resetMetricCountry,
+} from "./guidedLegislationFormat";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -19,7 +24,6 @@ import type { BillCategory } from "@shared/constants/legislation";
 import { primaryMetricById, primaryMetrics } from "@/lib/resetMetrics/catalog";
 import { playerMetricDescription } from "@/lib/resetMetrics/presentation";
 import { estimateObservedMetricChange } from "@/lib/resetMetrics/rules/effectForecast";
-import type { ResetMetricScoreCountry } from "@/lib/resetMetrics/conditionScore";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
@@ -152,33 +156,6 @@ function subsidyTargetKey(provision: {
 }
 
 type Step = "starting" | "family" | "level" | "review" | "overview";
-
-function money(value: number): string {
-  const sign = value < 0 ? "-" : value > 0 ? "+" : "";
-  const absolute = Math.abs(value);
-  const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
-  return `${sign}${compact.format(absolute)}/yr`;
-}
-
-function changeClass(value: number, lowerIsGood: boolean): string {
-  if (Math.abs(value) < 0.0001) return "text-muted";
-  const good = lowerIsGood ? value < 0 : value > 0;
-  return good ? "text-success" : "text-error";
-}
-
-function resetMetricCountry(countryId: CountryId): ResetMetricScoreCountry | null {
-  const normalized = countryId.toUpperCase();
-  return normalized === "US" || normalized === "UK" || normalized === "JP" ? normalized : null;
-}
-
-function observedDirection(delta: number): string {
-  if (Math.abs(delta) < 0.000001) return "At equilibrium";
-  return delta > 0 ? "▲" : "▼";
-}
-
-function metricDirectionClass(indicator: string): string {
-  return indicator === "▲" || indicator === "▼" ? "inline-block text-sm leading-none" : "";
-}
 
 function categoryForDomain(domain: string, scope: "national" | "regional"): BillCategory {
   const normalized = domain.toLowerCase();
@@ -1011,13 +988,10 @@ export function GuidedLegislationModal({
                             {current ? " · current law" : ""}
                           </span>
                           <span className="mt-1 block font-semibold">{candidate.title}</span>
-                          <PositionBadges
-                            {...v2VotePosition({
-                              familyId: family.familyId,
-                              choice: candidate.option.choice,
-                            })}
+                          <OptionLeanBadges
+                            familyId={family.familyId}
+                            choice={candidate.option.choice}
                             countryId={countryId}
-                            align="items-start"
                             className="mt-2"
                           />
                           <span className="mt-2 block text-xs text-muted">
@@ -1105,11 +1079,7 @@ export function GuidedLegislationModal({
                     </div>
                   </div>
                   {taxRate !== "" && Number.isFinite(taxRate) && (
-                    <PositionBadges
-                      economic={taxSliderNpcEconomic(taxEstimate, taxEstimate.currentRate, taxRate)}
-                      countryId={countryId}
-                      align="items-start"
-                    />
+                    <TaxLeanBadges estimate={taxEstimate} rate={taxRate} countryId={countryId} />
                   )}
                   <div className="flex gap-2">
                     <button
@@ -1232,13 +1202,10 @@ export function GuidedLegislationModal({
                         Proposed policy
                       </p>
                       <h4 className="mt-1 font-semibold">{option.title}</h4>
-                      <PositionBadges
-                        {...v2VotePosition({
-                          familyId: family.familyId,
-                          choice: option.option.choice,
-                        })}
+                      <OptionLeanBadges
+                        familyId={family.familyId}
+                        choice={option.option.choice}
                         countryId={countryId}
-                        align="items-start"
                         className="mt-2"
                       />
                       <p className="mt-2 text-sm text-muted">{option.description}</p>
@@ -1304,14 +1271,10 @@ export function GuidedLegislationModal({
                   ) : tax && taxEstimate && taxRateValid ? (
                     <div className="rounded-xl border border-card-border bg-background/40 p-5">
                       <h4 className="font-semibold">{tax.title}</h4>
-                      <PositionBadges
-                        economic={taxSliderNpcEconomic(
-                          taxEstimate,
-                          taxEstimate.currentRate,
-                          Number(taxRate)
-                        )}
+                      <TaxLeanBadges
+                        estimate={taxEstimate}
+                        rate={Number(taxRate)}
                         countryId={countryId}
-                        align="items-start"
                         className="mt-2"
                       />
                       <p className="mt-2 text-sm">
@@ -1393,13 +1356,10 @@ export function GuidedLegislationModal({
                         >
                           <div>
                             {provision.kind === "law" && (
-                              <PositionBadges
-                                {...v2VotePosition({
-                                  familyId: provision.family.familyId,
-                                  choice: provision.option.option.choice,
-                                })}
+                              <OptionLeanBadges
+                                familyId={provision.family.familyId}
+                                choice={provision.option.option.choice}
                                 countryId={countryId}
-                                align="items-start"
                               />
                             )}
                             <p className="font-medium">
