@@ -163,6 +163,18 @@ describe("legislature and party votes", () => {
     fillByTurn: 172,
   });
 
+  it("writes the successor's name onto the seat instead of keeping the predecessor's", async () => {
+    const successor = { ...legislator("1"), characterName: "New Premier" };
+    world({
+      govs: [{ _id: "CN", succession: partyVote }],
+      officials: [{ ...premierRow, characterName: "Old Premier" }, successor],
+    });
+    await processSuccessionFills(db, 130, now);
+    const seated = m.officialBulk.mock.calls[0]![0][0].updateOne;
+    expect(seated.update.$set.nppId).toEqual(successor.nppId);
+    expect(seated.update.$set.characterName).toBe("New Premier");
+  });
+
   it("seats a member of the largest bloc and clears the succession", async () => {
     const bloc = [legislator("1"), legislator("1"), legislator("2")];
     world({

@@ -314,6 +314,9 @@ async function holdSuccessionVotesWith(
     }
     if (!winner) continue;
     const nppId = new ObjectId(winner.id);
+    // The seat keeps the holder's name for the public API and wiki, so the
+    // successor's name replaces the predecessor's rather than inheriting it.
+    const winnerName = names.get(winner.id) ?? "";
     officialOps.push({
       updateOne: {
         filter: { _id: row._id, characterId: null, nppId: null },
@@ -325,7 +328,9 @@ async function holdSuccessionVotesWith(
             characterId: null,
             electedAt: now,
             updatedAt: now,
+            ...(winnerName ? { characterName: winnerName } : {}),
           },
+          ...(winnerName ? {} : { $unset: { characterName: "" } }),
         },
       },
     });
@@ -344,7 +349,7 @@ async function holdSuccessionVotesWith(
         update: {
           $unset: { succession: "" },
           ...(installsLeader
-            ? { $set: { pmNppId: nppId, pmCharacterId: null, pmName: names.get(winner.id) ?? "" } }
+            ? { $set: { pmNppId: nppId, pmCharacterId: null, pmName: winnerName } }
             : {}),
         },
       },

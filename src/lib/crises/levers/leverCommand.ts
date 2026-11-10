@@ -144,9 +144,31 @@ async function chargeCost(
   }
 ): Promise<LeverResult<{ applied: Charge[] }>> {
   const applied: Charge[] = [];
+  try {
+    return await chargeCostSteps(db, args, applied);
+  } catch (error) {
+    // A throw after an earlier step (treasury debit, corp debit) would otherwise
+    // leave money taken with nothing for the caller to undo.
+    for (const charge of applied.reverse()) {
+      try {
+        await charge.undo();
+      } catch (undoError) {
+        logger.error(COMPONENT, "lever refund failed", undoError, { receiptKey: args.receiptKey });
+      }
+    }
+    logger.error(COMPONENT, "lever charge threw; refunded", error, { receiptKey: args.receiptKey });
+    return fail("charge_failed", "Could not complete this response");
+  }
+}
+
+async function chargeCostSteps(
+  db: Db,
+  args: Parameters<typeof chargeCost>[1],
+  applied: Charge[]
+): Promise<LeverResult<{ applied: Charge[] }>> {
   const { cost, countryId, corporationId, receiptKey, actions } = args;
   const unwind = async () => {
-    for (const charge of applied.reverse()) {
+    for (const charge of applied.splice(0).reverse()) {
       try {
         await charge.undo();
       } catch (error) {
