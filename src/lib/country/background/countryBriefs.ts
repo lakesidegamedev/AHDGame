@@ -122,7 +122,7 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
     // One nearest-maturity bond per country. A global limit would let a country
     // whose bonds all mature late be crowded out by the others.
     db
-      .collection("bonds")
+      .collection<BondDoc>("bonds")
       .aggregate<{ _id: string; couponRate: number; marketPrice: number }>([
         {
           $match: {
