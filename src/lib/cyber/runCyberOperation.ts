@@ -1,15 +1,8 @@
 /**
- * Shell for cyber operations: loads the two resilience scores and the pair history, runs the
- * pure resolver, and routes the result through systems that already exist.
- *
- * - A success opens a Cyber Attack crisis on the target (grid outage, output and growth
- *   losses, a response decision for its head of state), scaled by the capability margin.
- * - An attributed operation is a world event: tension rises, the wire names the sponsor, and
- *   the sponsor's government takes an approval hit through a short exposure crisis.
- * - Standing down opens a truce that refuses further operations between the pair and
- *   relieves tension.
- * Operations are logged on the intelligence op log (domain "cyber"), which is also where the
- * pair history and truce are read back from.
+ * Shell for cyber operations. Loads resilience and pair history, runs the pure resolver, and
+ * routes the result through existing systems: a Cyber Attack crisis on the target, tension,
+ * news and an exposure crisis on attribution, and a truce on stand-down. Operations are logged
+ * on the intelligence op log with domain "cyber".
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -17,7 +10,7 @@ import { applyTensionEvent } from "@/lib/coldwar/tension";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { CYBER_ATTACK_TEMPLATE } from "@/lib/crises/templates";
 import type { CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import type { IntelligenceOpLog } from "@/lib/db/types/intelligence";
 import {
   creditIntelligenceAppropriation,
@@ -200,9 +193,9 @@ export async function launchCyberOperation(args: LaunchCyberArgs): Promise<Launc
 
   let cost = 0;
   if (args.chargeAppropriation) {
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: attackerId }, { projection: { gdp: 1 } });
+    const budget = await (
+      await getFederalBudgetCollection(db)
+    ).findOne({ countryId: attackerId }, { projection: { gdp: 1 } });
     cost = Math.round(operationCost("action", budget?.gdp ?? 0));
     if (!(await debitIntelligenceAppropriation(db, attackerId, cost))) {
       return { ok: false, status: 409, error: "The appropriation cannot cover that operation." };
