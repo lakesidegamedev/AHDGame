@@ -18,6 +18,7 @@ import { ensureIndex } from "./helpers";
  */
 export async function seedNavairIndexes(db: Db, log: (msg: string) => void) {
   log("Naval and air indexes:");
+  await ensureIndex(db, "navairBasing", { status: 1 }, { name: "navairBasing_status" }, log);
 
   await ensureIndex(
     db,
