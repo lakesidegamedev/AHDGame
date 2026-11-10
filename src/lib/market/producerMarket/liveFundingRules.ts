@@ -391,22 +391,41 @@ export function backgroundReturnMoves(
     }));
 }
 
-/**
- * Moves each country's collected import tariffs (producerTariffStage) out of
- * its tariff account. A country with a budget receives them as Treasury cash;
- * one without (a background country with no budget) has them leave the world
- * economy, as its trading budget does. Two kinds, so each batches on its own.
- */
-export function tariffRevenueMoves(
+interface RevenueFlow {
+  /** Move key and ledger kind stem, e.g. "tariff" gives producer-tariff-treasury. */
+  stem: string;
+  collected: string;
+  intoTreasury: string;
+  noBudget: string;
+}
+
+const TARIFF_FLOW: RevenueFlow = {
+  stem: "tariff",
+  collected: "import tariffs collected this turn",
+  intoTreasury: "import tariffs into Treasury cash",
+  noBudget: "import tariffs of a country without a budget",
+};
+
+const AUTOMATION_LEVY_FLOW: RevenueFlow = {
+  stem: "automation_levy",
+  collected: "automation levies collected this turn",
+  intoTreasury: "automation levies into Treasury cash",
+  noBudget: "automation levies of a country without a budget",
+};
+
+export type RevenueRow = WalletAmount & { countryId: string; budgetId: string | null };
+
+function collectedRevenueMoves(
+  flow: RevenueFlow,
   worldEpoch: string,
   turn: number,
-  rows: readonly (WalletAmount & { countryId: string; budgetId: string | null })[]
+  rows: readonly RevenueRow[]
 ): MoneyMove[] {
   return rows
     .filter((r) => positive(r.amountLocal) > 0)
     .map((r) => ({
-      key: `producer-tariff-${r.budgetId ? "treasury" : "return"}:${worldEpoch}:${turn}:${r.countryId}`,
-      kind: r.budgetId ? "producer_tariff_treasury" : "producer_tariff_return",
+      key: `producer-${flow.stem.replaceAll("_", "-")}-${r.budgetId ? "treasury" : "return"}:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: `producer_${flow.stem}_${r.budgetId ? "treasury" : "return"}`,
       turn,
       legs: [
         {
@@ -416,7 +435,7 @@ export function tariffRevenueMoves(
           collection: PRODUCER_ACCOUNTS,
           filter: { _id: r.walletId, cash: { $gte: r.amountLocal } },
           path: "cash",
-          note: "import tariffs collected this turn",
+          note: flow.collected,
         },
         r.budgetId
           ? {
@@ -426,16 +445,43 @@ export function tariffRevenueMoves(
               collection: "federalBudget",
               filter: { _id: r.budgetId },
               path: "treasuryCashLocal",
-              note: "import tariffs into Treasury cash",
+              note: flow.intoTreasury,
             }
           : {
               kind: "burn" as const,
               amount: r.amountLocal,
               valuation: valuation(r),
-              note: "import tariffs of a country without a budget",
+              note: flow.noBudget,
             },
       ],
     }));
+}
+
+/**
+ * Moves each country's collected import tariffs (producerTariffStage) out of
+ * its tariff account. A country with a budget receives them as Treasury cash;
+ * one without (a background country with no budget) has them leave the world
+ * economy, as its trading budget does. Two kinds, so each batches on its own.
+ */
+export function tariffRevenueMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly RevenueRow[]
+): MoneyMove[] {
+  return collectedRevenueMoves(TARIFF_FLOW, worldEpoch, turn, rows);
+}
+
+/**
+ * The same sweep for automation levies, under their own ledger kinds
+ * (producer_automation_levy_treasury and producer_automation_levy_return) so
+ * levy revenue is told apart from tariff revenue.
+ */
+export function automationLevyRevenueMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly RevenueRow[]
+): MoneyMove[] {
+  return collectedRevenueMoves(AUTOMATION_LEVY_FLOW, worldEpoch, turn, rows);
 }
 
 /**

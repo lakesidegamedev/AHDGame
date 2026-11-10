@@ -7,8 +7,6 @@
  * Plain data in, plain data out: law levels arrive already read.
  */
 
-import type { AggregatedTechEffects } from "@/lib/constants/techTree/effects";
-
 const clamp = (value: number, lower: number, upper: number) =>
   Math.max(lower, Math.min(upper, value));
 
@@ -142,22 +140,6 @@ const WAGE_COST_MULT = [1, 0.995, 0.985, 0.97, 0.95] as const;
 
 export function subsidisedWageMultiplier(hiringSubsidy: number): number {
   return WAGE_COST_MULT[level(hiringSubsidy)];
-}
-
-/**
- * Fold the levies into a sector's tech aggregate as dearer inputs. Returns the
- * same object when nothing applies.
- */
-export function applyAutomationLevy(
-  effects: AggregatedTechEffects,
-  penalty: number,
-  commodities: readonly string[]
-): AggregatedTechEffects {
-  if (!(penalty > 0)) return effects;
-  const inputRateMult: Record<string, number> = { ...effects.inputRateMult };
-  for (const commodity of commodities)
-    inputRateMult[commodity] = (inputRateMult[commodity] ?? 1) * (1 + penalty);
-  return { ...effects, inputRateMult };
 }
 
 // ─── Unions ─────────────────────────────────────────────────────────────────

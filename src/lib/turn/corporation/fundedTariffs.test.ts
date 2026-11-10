@@ -198,9 +198,51 @@ describe("funded tariffs on the turn", () => {
       heldLocal: new Map([["tariff-US", 3]]),
       budgetIdOf: () => "federal",
       rateOf: () => 1,
+      levyAnchorByCountry: new Map([["US", 3]]),
     });
-    expect(moves.map((m) => m.key)).toEqual(["producer-tariff-treasury:w:9:US"]);
+    expect(moves.map((m) => [m.key, m.kind])).toEqual([
+      ["producer-automation-levy-treasury:w:9:US", "producer_automation_levy_treasury"],
+    ]);
     const legs = producerMoveLedgerLegs(moves[0])!;
     expect(legs.reduce((n, leg) => n + leg.anchorAmount, 0)).toBeCloseTo(0, 12);
+  });
+
+  it("splits one collection account into a tariff move and a levy move that add up to its cash", () => {
+    const moves = tariffSweepMoves({
+      worldEpoch: "w",
+      turn: 9,
+      collectors: [
+        { countryId: "US", walletId: "tariff-US", currency: "USD" },
+        { countryId: "FR", walletId: "tariff-FR", currency: "EUR" },
+      ],
+      heldLocal: new Map([
+        ["tariff-US", 10],
+        ["tariff-FR", 9],
+      ]),
+      budgetIdOf: (c) => (c === "US" ? "federal" : null),
+      rateOf: (c) => (c === "EUR" ? 0.9 : 1),
+      levyAnchorByCountry: { US: 4, FR: 100 },
+    });
+    expect(moves.map((m) => [m.kind, m.legs[0].amount])).toEqual([
+      ["producer_tariff_treasury", 6],
+      ["producer_automation_levy_treasury", 4],
+      ["producer_automation_levy_return", 9],
+    ]);
+    for (const move of moves) {
+      const legs = producerMoveLedgerLegs(move)!;
+      expect(legs.reduce((n, leg) => n + leg.anchorAmount, 0)).toBeCloseTo(0, 12);
+    }
+  });
+
+  it("books no levy move when no levy was collected", () => {
+    const moves = tariffSweepMoves({
+      worldEpoch: "w",
+      turn: 9,
+      collectors: [{ countryId: "US", walletId: "tariff-US", currency: "USD" }],
+      heldLocal: new Map([["tariff-US", 5]]),
+      budgetIdOf: () => "federal",
+      rateOf: () => 1,
+    });
+    expect(moves.map((m) => m.kind)).toEqual(["producer_tariff_treasury"]);
   });
 });
