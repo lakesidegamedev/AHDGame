@@ -35,7 +35,6 @@ export const REMOVED_ALWAYS_ON_FLAGS: readonly string[] = Object.freeze([
   "subsidiaryCorporationsEnabled",
   "redistrictingEnabled",
   "demographicsLayer1PositionsEnabled",
-  "eraSystemEnabled",
   "sectorTechTreesEnabled",
   "coldWarEnabled",
   "crisisInteractionEnabled",
@@ -44,6 +43,14 @@ export const REMOVED_ALWAYS_ON_FLAGS: readonly string[] = Object.freeze([
   "seasonRecapEnabled",
   "settlementCrisisEnabled",
   "macroGrowthV1",
+]);
+
+/**
+ * Emergency kill switches. They default on and a stored false really switches
+ * the system off, so it is worth a warning rather than a failure.
+ */
+export const KILL_SWITCH_FLAGS: readonly string[] = Object.freeze([
+  "eraSystemEnabled",
   "autoDisastersEnabled",
   "livingConflictsEnabled",
 ]);
@@ -131,6 +138,14 @@ function flagFindings(input: PreflightInput): PreflightFinding[] {
       severity: "fail",
       check: "removed-flags",
       detail: `explicitly false, and the gate no longer exists so the feature turns on: ${off.join(", ")}`,
+    });
+  }
+  const killed = KILL_SWITCH_FLAGS.filter((flag) => state[flag] === false);
+  if (killed.length > 0) {
+    out.push({
+      severity: "warn",
+      check: "kill-switches",
+      detail: `kill switch off, so the system will not run: ${killed.join(", ")}`,
     });
   }
   const absent = REMOVED_ALWAYS_ON_FLAGS.filter((flag) => !(flag in state));

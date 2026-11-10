@@ -15,6 +15,7 @@
 import type { Db } from "mongodb";
 import { resumePendingDemographicFlowReceipts } from "@/lib/demographics/flowJournal";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
+import { migration as restoreKillSwitchFlags } from "./entries/2026-11-10-singleplayer-restore-kill-switch-flags";
 import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
 import { MIGRATIONS } from "./registry";
 import { runMigrations, type RunSummary } from "./runner";
@@ -39,6 +40,7 @@ export const SINGLEPLAYER_MIGRATIONS: readonly Migration[] = [
   ...MIGRATIONS,
   countyPopulations,
   ukJpSubdivisionPopulations,
+  restoreKillSwitchFlags,
 ];
 
 function datedOnOrAfter(id: string, cutoff: string): boolean {
