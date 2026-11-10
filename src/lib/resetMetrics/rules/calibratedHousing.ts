@@ -13,6 +13,7 @@ import { HOUSING_REFERENCE_INPUTS, type HousingPublicationSource } from "./housi
 import { housingFunding, type HousingRole } from "./housingFunding";
 import { advanceHousing, type HousingModelState, type HousingState } from "./housing";
 import { deliveredLawFactor, type MetricLawProgram, type MetricLawSettlement } from "./lawDelivery";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const HOUSING_MODEL_ASSUMPTIONS = [
   "Synthetic residential model for complete 1991 US, UK and JP household cohorts, not a dwelling register or housing survey. All regional stock geography is modeled from household counts.",
@@ -201,12 +202,11 @@ export function prepareCalibratedHousing(input: {
       openingCells.reduce((a, c) => a + c.marketIncome! * c.households!, 0) /
       openingCells.reduce((a, c) => a + c.households!, 0);
     if (!Number.isFinite(mean) || mean <= 0) return fail("invalid-housing-income-anchor");
-    const vacantShare =
-      input.countryId === "US"
-        ? 10316268 / 102263678
-        : input.countryId === "UK"
-          ? 0.04
-          : 3940000 / 42007300;
+    const vacantShare = countryHasFeature("usSeeds", input.countryId)
+      ? 10316268 / 102263678
+      : countryHasFeature("ukSeeds", input.countryId)
+        ? 0.04
+        : 3940000 / 42007300;
     const prior = input.priorStates.get(h.regionId);
     if (
       prior &&

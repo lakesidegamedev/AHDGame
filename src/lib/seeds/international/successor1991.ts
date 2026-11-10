@@ -18,6 +18,7 @@ import { huRegions1991 } from "@/lib/countries/hu/data/huRegions1991";
 import { roRegions1991 } from "@/lib/countries/ro/data/roRegions1991";
 import { bgRegions1991 } from "@/lib/countries/bg/data/bgRegions1991";
 import { yuRegions1991 } from "@/lib/countries/yu/data/yuRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const regions = {
   RU: sovietUnionRegions1991,
@@ -48,17 +49,15 @@ const primaryShare = { RU: 29, PL: 34, CS: 24, HU: 33, RO: 40, BG: 36, YU: 39 } 
  */
 export function getSuccessor1991Model(countryId: Successor1991CountryId): CountryLayer1Model {
   const states = regions[countryId];
-  const population =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_POPULATION
-      : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
-          (sum, count) => sum + count,
-          0
-        );
-  const nationalGdp =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
-      : SUCCESSOR_NOMINAL_GDP_1991[countryId];
+  const population = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_POPULATION
+    : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+  const nationalGdp = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
+    : SUCCESSOR_NOMINAL_GDP_1991[countryId];
   const nationalGdpPerResident = nationalGdp / population;
   const measured = states.map((state) => {
     const anchor = demographicAnchor1991(countryId, state._id);
@@ -68,20 +67,21 @@ export function getSuccessor1991Model(countryId: Successor1991CountryId): Countr
       anchor,
       incomeRatio,
       rawUrban:
-        countryId === "YU" || (countryId === "RU" && state._id.startsWith("SU_"))
+        countryHasFeature("yuSeeds", countryId) ||
+        (countryHasFeature("ruSeeds", countryId) && state._id.startsWith("SU_"))
           ? anchor.urban
           : anchor.urban + 8 * Math.log(incomeRatio),
     };
   });
   // Keep the WDI national urban share exactly when its regions share one control.
   const urbanOffset =
-    countryId === "YU" || countryId === "CS"
+    countryHasFeature("yuSeeds", countryId) || countryHasFeature("csSeeds", countryId)
       ? 0
       : measured.reduce(
           (sum, row) => sum + (row.rawUrban - row.anchor.urban) * row.state.population,
           0
         ) /
-        (countryId === "RU"
+        (countryHasFeature("ruSeeds", countryId)
           ? measured
               .filter((row) => !row.state._id.startsWith("SU_"))
               .reduce((sum, row) => sum + row.state.population, 0)
@@ -93,16 +93,19 @@ export function getSuccessor1991Model(countryId: Successor1991CountryId): Countr
       // are direct observations; only national-control countries need a
       // modeled regional deviation.
       const ageDeviation =
-        countryId === "HU" ||
-        countryId === "YU" ||
-        (countryId === "RU" && state._id.startsWith("SU_"))
+        countryHasFeature("huSeeds", countryId) ||
+        countryHasFeature("yuSeeds", countryId) ||
+        (countryHasFeature("ruSeeds", countryId) && state._id.startsWith("SU_"))
           ? 0
           : Math.log(incomeRatio);
       const young = clamp(anchor.young - 1.5 * ageDeviation, 10, 46);
       const senior = clamp(anchor.senior + ageDeviation, 3, 25);
       const working = 100 - young - senior;
       const urban = clamp(
-        rawUrban - (countryId === "RU" && state._id.startsWith("SU_") ? 0 : urbanOffset),
+        rawUrban -
+          (countryHasFeature("ruSeeds", countryId) && state._id.startsWith("SU_")
+            ? 0
+            : urbanOffset),
         20,
         95
       );
@@ -110,7 +113,10 @@ export function getSuccessor1991Model(countryId: Successor1991CountryId): Countr
       const suburban = urban - coreUrban;
       const university = clamp(universityShare[countryId] + 3 * Math.log(incomeRatio), 3, 25);
       const primary = clamp(primaryShare[countryId] - 5 * Math.log(incomeRatio), 12, 55);
-      const vocational = countryId === "RO" || countryId === "YU" ? 24 : 29;
+      const vocational =
+        countryHasFeature("roSeeds", countryId) || countryHasFeature("yuSeeds", countryId)
+          ? 24
+          : 29;
       const highIncome = clamp(11 + 5 * Math.log(incomeRatio), 4, 25);
       const lowIncome = clamp(29 - 8 * Math.log(incomeRatio), 12, 50);
       return [

@@ -8,6 +8,7 @@ import {
 import { loadMetricLawDelivery } from "./loadLawDelivery";
 import { deliveredMetricEffects, metricLawApplies } from "./rules/lawDelivery";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const MAX_COMBINED_POLICY_PRESSURE = 1.2;
 
@@ -21,8 +22,8 @@ export function cabinetActionApplies(
   return (
     boardScope === "regional" &&
     ((scope === "NI" && regionId === "NIR") ||
-      (scope === "SCT" && regionId === "SCO") ||
-      (scope === "WAL" && regionId === "WAL"))
+      (scope === "SCT" && countryHasFeature("scoSeeds", regionId)) ||
+      (countryHasFeature("walSeeds", scope) && countryHasFeature("walSeeds", regionId)))
   );
 }
 

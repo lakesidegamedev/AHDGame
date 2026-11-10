@@ -5,6 +5,7 @@ import { plRegions2027 } from "@/lib/countries/pl/data/plRegions2027";
 import { huRegions2027 } from "@/lib/countries/hu/data/huRegions2027";
 import { roRegions2027 } from "@/lib/countries/ro/data/roRegions2027";
 import { bgRegions1991 } from "@/lib/countries/bg/data/bgRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * January 2019 national population and current-price GDP in local currency,
@@ -63,17 +64,20 @@ export function modernRegions2019(countryId: Modern2019CountryId): State[] {
     Math.round(national.gdp / 1_000_000),
     base.map((region) => region.gdp ?? 0)
   );
-  const houseSeats =
-    countryId === "RU"
-      ? 450
-      : countryId === "PL"
-        ? 460
-        : countryId === "HU"
-          ? 199
-          : countryId === "RO"
-            ? 329
-            : 240;
-  const senateSeats = countryId === "PL" ? 100 : countryId === "RO" ? 136 : 0;
+  const houseSeats = countryHasFeature("ruSeeds", countryId)
+    ? 450
+    : countryHasFeature("plSeeds", countryId)
+      ? 460
+      : countryHasFeature("huSeeds", countryId)
+        ? 199
+        : countryHasFeature("roSeeds", countryId)
+          ? 329
+          : 240;
+  const senateSeats = countryHasFeature("plSeeds", countryId)
+    ? 100
+    : countryHasFeature("roSeeds", countryId)
+      ? 136
+      : 0;
   const weights = Object.fromEntries(
     base.map((region, index) => [String(region._id), population[index]!])
   );

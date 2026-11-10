@@ -15,6 +15,7 @@ import { huRegions1991 } from "@/lib/countries/hu/data/huRegions1991";
 import { roRegions1991 } from "@/lib/countries/ro/data/roRegions1991";
 import { bgRegions1991 } from "@/lib/countries/bg/data/bgRegions1991";
 import { yuRegions1991 } from "@/lib/countries/yu/data/yuRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * 1991 national anchors: World Bank WDI annual indicators, with CS weighted
@@ -117,23 +118,21 @@ export const SUCCESSOR_STATE_METRICS_1991: StateMetrics[] = (
 ).flatMap((countryId) => {
   const profile = profiles[countryId];
   const states = regions[countryId];
-  const population =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_POPULATION
-      : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
-          (sum, count) => sum + count,
-          0
-        );
-  const nationalGdp =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
-      : SUCCESSOR_NOMINAL_GDP_1991[countryId];
+  const population = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_POPULATION
+    : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+  const nationalGdp = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
+    : SUCCESSOR_NOMINAL_GDP_1991[countryId];
   const nationalGdpPerResident = nationalGdp / population;
   const overrides = Object.fromEntries(
     states.map((state) => {
       const relative = (state.gdp * 1_000_000) / state.population / nationalGdpPerResident;
       const regionalUrban =
-        countryId === "RU" && state._id.startsWith("SU_")
+        countryHasFeature("ruSeeds", countryId) && state._id.startsWith("SU_")
           ? demographicAnchor1991(countryId, state._id).urban
           : clamp(profile.urban + 8 * Math.log(relative), 20, 95);
       return [
@@ -159,7 +158,9 @@ export const SUCCESSOR_STATE_METRICS_1991: StateMetrics[] = (
     ...row,
     economic: {
       ...row.economic,
-      smallBusinessFormation: metric(countryId === "PL" || countryId === "HU" ? 4 : 2),
+      smallBusinessFormation: metric(
+        countryHasFeature("plSeeds", countryId) || countryHasFeature("huSeeds", countryId) ? 4 : 2
+      ),
       matchingFriction: metric(6),
       laborParticipation: metric(68),
       economicFreedom: metric(profile.freedom),

@@ -53,6 +53,7 @@ import { modelHouseholdIncome } from "./rules/modelHouseholdIncome";
 import { resolveRegionalBudgetCadence } from "@/simulation/phases/regionalBudgetCadence";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -294,13 +295,13 @@ export async function collectResetMetricOwnerReadings(
     : [];
   const taxesByRegion = new Map(modeledRegionalTaxes.map((r) => [r._id, r]));
   // UK and JP regional tax owners publish annual assessments, not StateBudget rates.
-  const cohortRegionalBudgets = automaticCountries.some((c) => c !== "US")
+  const cohortRegionalBudgets = automaticCountries.some((c) => !countryHasFeature("usSeeds", c))
     ? await db
         .collection<RegionalBudget>("regionalBudgets")
         .find(
           {
             _id: { $in: regionalIds },
-            countryId: { $in: automaticCountries.filter((c) => c !== "US") },
+            countryId: { $in: automaticCountries.filter((c) => !countryHasFeature("usSeeds", c)) },
           },
           {
             projection: {
@@ -348,7 +349,7 @@ export async function collectResetMetricOwnerReadings(
                   costOfLiving:
                     macroByRegion.get(b.regionId!)?.economic?.costOfLiving?.value ?? NaN,
                   regionalTaxes: tax?.countryId === countryId ? tax.taxRates : undefined,
-                  ...(pack?.model && countryId !== "US"
+                  ...(pack?.model && !countryHasFeature("usSeeds", countryId)
                     ? {
                         annualHouseholdLevy:
                           regionalBudget?.countryId === countryId &&
@@ -669,7 +670,8 @@ export async function collectResetMetricOwnerReadings(
           const readiness = nationalForceReadiness(
             unitsByCountry.get(board.countryId) ?? [],
             turn,
-            board.countryId === "SCO" || board.countryId === "WAL"
+            countryHasFeature("scoSeeds", board.countryId) ||
+              countryHasFeature("walSeeds", board.countryId)
           );
           if (readiness !== null) {
             updates["57"] = {

@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Scale guard: a preset's money values must sit in bands relative to that
  * preset's own GDP, population and era price level. A value carried over from
@@ -108,12 +109,13 @@ export function checkBudgetScale(input: BudgetScaleInput): ScaleFinding[] {
  * without a rate are skipped; the rate gap is reported by the coverage check.
  */
 export function checkDollarIncome(inputs: readonly BudgetScaleInput[]): ScaleFinding[] {
-  const us = inputs.find((input) => input.countryId === "US");
+  const us = inputs.find((input) => countryHasFeature("usSeeds", input.countryId));
   if (!us) return [];
   const usIncome = us.gdp / us.population;
   const findings: ScaleFinding[] = [];
   for (const input of inputs) {
-    if (input.countryId === "US" || !(input.lcuPerUsd && input.lcuPerUsd > 0)) continue;
+    if (countryHasFeature("usSeeds", input.countryId) || !(input.lcuPerUsd && input.lcuPerUsd > 0))
+      continue;
     const ratio = input.gdp / input.population / input.lcuPerUsd / usIncome;
     if (!inBand(ratio, DOLLAR_INCOME_VS_US_BAND)) {
       findings.push({

@@ -9,6 +9,7 @@ import {
 } from "@/lib/politicalLegislation/regionalDefaults";
 import { LAW_COUNTRY_IDS } from "@/lib/politicalLegislation/types";
 import { DD_LAND_STATE_IDS } from "@/lib/politicalLegislation/laws/ddLandLaws";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Backfill the level-0 regional default law for every new-generation `both`
@@ -40,7 +41,9 @@ async function backfillRegionalDefaultLaws(db: Db, dryRun: boolean): Promise<Mig
     if (laws.length === 0) continue;
 
     // Same guard the seeder uses: a drifted world must not invent Bezirke.
-    const allowed = countryId === "DD" ? new Set<string>(DD_LAND_STATE_IDS) : null;
+    const allowed = countryHasFeature("ddSeeds", countryId)
+      ? new Set<string>(DD_LAND_STATE_IDS)
+      : null;
     const states = await db
       .collection<{ _id: string }>("states")
       .find({ countryId })
