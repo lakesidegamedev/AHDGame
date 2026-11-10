@@ -20,7 +20,7 @@ import {
 } from "./navbar/navbarTypes";
 import { isActionRequiredType } from "@/lib/inbox/priority";
 import type { NotificationType } from "@/lib/db/types/notifications";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname } from "next/navigation";

@@ -1,3 +1,5 @@
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
+import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -396,6 +398,7 @@ export const MIGRATIONS: Migration[] = [
   incomeTaxPolicyParity,
   incomeTaxTiers,
   backfillMechanicalLawTypes,
+  successorTaxTypes,
   bankMoneyMoveUnprojectedIndex,
   turnGrowthIndexes,
   playerReadIndexes,
@@ -403,6 +406,7 @@ export const MIGRATIONS: Migration[] = [
   partyNppRegionalBills,
   nationalPartyNppBills,
   archiveNonPresidentialCampaigns,
+  financialTxLogTurnOrderIndex,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

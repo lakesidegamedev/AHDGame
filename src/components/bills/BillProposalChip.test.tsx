@@ -15,9 +15,12 @@ describe("BillProposalChip", () => {
     expect(screen.queryByText("Referendum passed")).toBeNull();
   });
 
-  it("shows 'Referendum passed' for a reunification consent bill", () => {
-    render(<BillProposalChip adminProposed category="reunification" />);
-    expect(screen.getByText("Referendum passed")).toBeTruthy();
-    expect(screen.queryByText("Admin proposed")).toBeNull();
-  });
+  it.each(["reunification", "independence"])(
+    "shows 'Referendum passed' for a %s consent bill",
+    (category) => {
+      render(<BillProposalChip adminProposed category={category} />);
+      expect(screen.getByText("Referendum passed")).toBeTruthy();
+      expect(screen.queryByText("Admin proposed")).toBeNull();
+    }
+  );
 });
