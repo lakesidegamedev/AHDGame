@@ -91,7 +91,7 @@ export async function reconcileCommandEconomyUnowned(
     return empty;
   }
 
-  const preset = opts.preset ?? presetFromDb ?? "1953-default";
+  const preset = opts.preset ?? presetFromDb;
   const year = resolveSeedYear(preset, gameState?.currentYear ?? null);
 
   const states = await db

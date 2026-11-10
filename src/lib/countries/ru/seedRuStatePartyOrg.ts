@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { getRuRegionOrg, getRuPartyTreasury } from "@/lib/seeds/ru/ruStatePartyOrgCalculations";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
@@ -38,7 +39,8 @@ export async function seedRuStatePartyOrg(
   log: (msg: string) => void,
   preset?: string
 ): Promise<void> {
-  const activePreset = preset ?? (await getGameStatePreset(db)) ?? "1953-default";
+  const activePreset = preset ?? (await getGameStatePreset(db));
+  if (activePreset == null) throw missingPresetEntry("(none)", "ru-state-party-org");
 
   // CPSU + USSR exist only in Cold-War (1953/1979) eras; RU regions are
   // era-gated the same way in bootstrapGameWorld. Without this guard, the
