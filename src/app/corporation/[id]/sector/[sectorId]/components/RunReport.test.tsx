@@ -38,6 +38,29 @@ describe("run report card", () => {
     expect(sold.container.textContent ?? "").not.toContain("did not sell");
   });
 
+  it("shows what your own sites charged this sector, and only when something was charged", () => {
+    const props = {
+      capacityUnits: 1000,
+      producedUnits: 900,
+      idleCauses: [],
+      sectorType: "healthcare" as const,
+    };
+    const base = { ...losing, unitPrice: 600, unitMaterials: 300, unitWages: 100, unitSite: 50 };
+    const charged = render(<RunReport report={{ ...base, unitOwnSiteCharge: 100 }} {...props} />);
+    const text = charged.container.textContent ?? "";
+    expect(text).toContain("100 charged by your sites");
+    expect(text).toContain("income to those sites");
+    expect(text).toMatch(/Earns ₳50 a unit/);
+    expect(text).not.toMatch(/[–—]/);
+    cleanup();
+    for (const none of [0, null, undefined]) {
+      const plain = render(<RunReport report={{ ...base, unitOwnSiteCharge: none }} {...props} />);
+      expect(plain.container.textContent ?? "").not.toContain("charged by your sites");
+      expect(plain.container.textContent ?? "").toMatch(/Earns ₳150 a unit/);
+      cleanup();
+    }
+  });
+
   it("names a loss-cut mine as losing, shows the unit loss, and leads with the price fix (ticket 1765)", () => {
     const { container } = render(
       <RunReport
