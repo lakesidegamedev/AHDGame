@@ -38,7 +38,14 @@ describe("reset tax instruments", () => {
   });
 
   it("does not reuse UK tax instruments for successor-country budgets", () => {
-    expect(resetTaxesFor("SCO", "national")).toEqual([]);
-    expect(resetTaxesFor("WAL", "national")).toEqual([]);
+    for (const country of ["SCO", "WAL"] as const) {
+      const taxes = resetTaxesFor(country, "national");
+      expect(taxes).toHaveLength(11);
+      expect(
+        taxes.every((tax) =>
+          tax.existingLegislationTypeId.startsWith(country === "SCO" ? "sco." : "wls.")
+        )
+      ).toBe(true);
+    }
   });
 });

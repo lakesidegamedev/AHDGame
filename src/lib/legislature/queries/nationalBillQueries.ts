@@ -1,3 +1,4 @@
+import { v2VotePosition } from "@/lib/resetLegislation/rules/politicalPositions";
 import { billVotePositions } from "@/lib/legislature/votePositions";
 /**
  * National bills display the active legislature and its current voting mandates.
@@ -524,6 +525,16 @@ export async function listNationalLegislatureBills(
           return {
             legislationTypeId: provision.type,
             legislationTypeName,
+            ...(provision.type === "reset_law"
+              ? {
+                  ...v2VotePosition(provision),
+                  positionLabel:
+                    formatBillPositionLabel(
+                      v2VotePosition(provision)?.economic,
+                      v2VotePosition(provision)?.social
+                    ) ?? undefined,
+                }
+              : {}),
             effectDirection: 0,
             directionLabel: "Center" as const,
             effectTargetLabel: undefined,
@@ -591,7 +602,9 @@ export async function listNationalLegislatureBills(
     const headlinePositionLabel =
       firstPolicy && (firstPolicy.economic != null || firstPolicy.social != null)
         ? formatBillPositionLabel(firstPolicy.economic, firstPolicy.social)
-        : null;
+        : firstDisplayProvision && "positionLabel" in firstDisplayProvision
+          ? (firstDisplayProvision.positionLabel ?? null)
+          : null;
     const headlineEffectTargetLabel = (() => {
       if (firstPolicy?.policyOptionId && headlineLegislationType?.policyOptions) {
         const option = headlineLegislationType.policyOptions.find(

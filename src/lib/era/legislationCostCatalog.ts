@@ -6,6 +6,7 @@
  *
  * Spec: docs/superpowers/specs/2026-07-06-era-legislation-costs-design.md
  */
+import { successorTaxInstrumentIds } from "@/lib/resetLegislation/successorTaxTypes";
 import { MECHANICAL_TYPE_IDS } from "@/lib/mechanicalLaws/legislation";
 import { getIncomeAnchor } from "./metricCatalog";
 import { bankingSeparationLegislationTypes } from "@/lib/seeds/shared/bankingSeparationLegislation";
@@ -29,6 +30,8 @@ const BANKING_SEPARATION_COST_CLASSES: Record<string, CostClass> = Object.fromEn
 
 /** Per-type cost class. Populated in Task 3 (full coverage, validated). */
 export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
+  // Successor tax instruments collect revenue and have no spending-side cost.
+  ...Object.fromEntries(successorTaxInstrumentIds.map((id) => [id, "none" as const])),
   ...BANKING_SEPARATION_COST_CLASSES,
   // Mechanical laws (competition, subsidiary limits, foreign investment) cost nothing.
   ...Object.fromEntries(MECHANICAL_TYPE_IDS.map((id) => [id, "none" as CostClass])),

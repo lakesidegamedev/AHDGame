@@ -243,7 +243,8 @@ describe("buildSectorPlantsSection", () => {
           } as unknown as CorporateSector["producerSettlement"],
         }),
       }).idleCauses;
-    expect(settled({}).map((c) => c.cause)).toEqual(["ramping", "inputs"]);
+    // No recorded cut and no arrears: the stop is unexplained, so it is not blamed on inputs.
+    expect(settled({}).map((c) => c.cause)).toEqual(["ramping", "other"]);
     const byInput = settled({ runCutBy: ["inputs"], bindingInput: "iron" });
     expect(byInput.map((c) => c.cause)).toEqual(["held", "inputs"]);
     expect(byInput[0]?.heldInput).toBe("Iron Ore");

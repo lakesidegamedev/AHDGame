@@ -1,3 +1,4 @@
+import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
@@ -52,6 +53,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // The Competition, Subsidiary Limits and Foreign Investment Acts must exist
   // before the merger gate reads them, or every new country fails open.
   backfillMechanicalLawTypes,
+  successorTaxTypes,
   // Ownership and achievement definitions must exist before the next reset or settlement.
   contestAccountHistory,
   governmentContractBidding,

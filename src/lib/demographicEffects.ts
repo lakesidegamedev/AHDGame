@@ -75,6 +75,8 @@ import {
   type DurableShiftAccumulators,
 } from "@/lib/demographics/durableRealignment";
 import type { ActivePolicy, LegislationTypeMap } from "./policyEffects";
+import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
+import { regionalFamilyLeanPolicies } from "@/lib/resetLegislation/familyLeanEffects";
 
 /**
  * Population shift rate per turn at maximum policy strength.
@@ -768,6 +770,7 @@ export async function processAllStateDemographics(
           currentYear: 1,
           startingYear: 1,
           eraSystemEnabled: 1,
+          resetWorldId: 1,
         },
       }
     ),
@@ -800,6 +803,22 @@ export async function processAllStateDemographics(
   const legTypeMap: LegislationTypeMap = new Map();
   for (const legType of allLegTypes) {
     legTypeMap.set(legType._id, legType);
+  }
+
+  // Enacted regional reset-law programs push their region's lean like state
+  // policies do. One bulk read, only with the lean flag on and a reset world.
+  let regionalFamilyPolicies = new Map<string, ActivePolicy[]>();
+  if (v2Enabled && gameState?.resetWorldId) {
+    const programs = await db
+      .collection<ResetLawProgramDocument>("resetLawPrograms")
+      .find(
+        { worldId: gameState.resetWorldId, scope: "regional" },
+        { projection: { regionId: 1, familyId: 1, choice: 1, scope: 1 } }
+      )
+      .toArray();
+    const { policiesByRegion, types } = regionalFamilyLeanPolicies(programs);
+    regionalFamilyPolicies = policiesByRegion;
+    for (const [id, type] of types) legTypeMap.set(id, type);
   }
 
   // Group policies by stateId
@@ -866,7 +885,11 @@ export async function processAllStateDemographics(
       ...p,
       scopeMultiplier: 1.0,
     }));
-    const policies = [...stateWithMultiplier, ...nationalPolicies];
+    const policies = [
+      ...stateWithMultiplier,
+      ...(regionalFamilyPolicies.get(state._id) ?? []),
+      ...nationalPolicies,
+    ];
 
     // Legacy fast-path only: with v2 on, policy-less states still decay
     // toward baseline.

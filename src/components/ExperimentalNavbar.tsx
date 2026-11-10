@@ -18,7 +18,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCountryContext } from "@/hooks/useCountryContext";
