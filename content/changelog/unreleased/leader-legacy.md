@@ -20,8 +20,8 @@ areas: [frontend, backend]
   crisis scars for 10%. Terms under 24 turns count proportionally less.
 - The legacy appears on the country executive page and on the leader's party
   page, with the numbers behind it and how much of its effect is left.
-- It gives the leader's party a vote-share shift of up to 2 points and a shift of
+- It gives the leader's party a shift of up to 2 percent of its vote and a shift of
   up to 5 points in the approval that party renewal sees for a governing party.
   Both halve every 96 turns and stop after 288, and the election shift is bounded
-  together with crisis credit and blame at 3 points.
+  together with crisis credit and blame at 3 percent of the party's vote.
 - A line goes to the news feed when a leader with a real term leaves.

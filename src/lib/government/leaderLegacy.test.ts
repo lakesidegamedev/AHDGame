@@ -16,6 +16,7 @@ const LEADER = new ObjectId();
 
 function world(opts: { legacies?: Row[]; policies?: Row[]; crises?: Row[] } = {}) {
   const legacies: Row[] = opts.legacies ?? [];
+  const crisisFind = vi.fn((_filter: Row) => ({ toArray: vi.fn(async () => opts.crises ?? []) }));
   const db = {
     collection: vi.fn((name: string) => {
       switch (name) {
@@ -48,15 +49,13 @@ function world(opts: { legacies?: Row[]; policies?: Row[]; crises?: Row[] } = {}
             find: vi.fn(() => ({ toArray: vi.fn(async () => opts.policies ?? []) })),
           };
         case "crises":
-          return {
-            find: vi.fn(() => ({ toArray: vi.fn(async () => opts.crises ?? []) })),
-          };
+          return { find: crisisFind };
         default:
           throw new Error(`unexpected collection ${name}`);
       }
     }),
   } as unknown as Db;
-  return { db, legacies };
+  return { db, legacies, crisisFind };
 }
 
 const departure = {
@@ -139,6 +138,17 @@ describe("recordLeaderDeparture", () => {
     expect(rough!.inputs.crisisPoints).toBeLessThan(0);
     expect(rough!.inputs.scarMagnitude).toBeCloseTo(0.1, 5);
     expect(rough!.score).toBeLessThan(calm!.score);
+  });
+});
+
+describe("legacy crisis read", () => {
+  it("includes global crises as well as the country's own", async () => {
+    const w = world();
+    await recordLeaderDeparture(w.db, departure);
+    expect(w.crisisFind).toHaveBeenCalled();
+    expect(w.crisisFind.mock.calls[0]![0]).toMatchObject({
+      $or: [{ countryIds: "US" }, { scope: "global" }],
+    });
   });
 });
 
