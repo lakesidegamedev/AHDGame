@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
     }
     const { stateId, campaignId } = parsed.data;
 
-    if (!campaignId && character.countryId !== "US") {
+    if (!campaignId && !countryHasFeature("stateOrganisations", character.countryId)) {
       return NextResponse.json(
         forbidden("Campaign Presence is currently a US-only feature").toJson(),
         { status: 403 }

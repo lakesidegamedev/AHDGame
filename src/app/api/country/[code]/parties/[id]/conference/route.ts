@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
@@ -28,7 +29,7 @@ async function getHandler(_request: Request, { params }: RouteParams) {
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    if (countryId !== "UK") {
+    if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
       return errorResponse(400, "Party conferences are a UK mechanic");
     }
 

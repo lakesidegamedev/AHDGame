@@ -11,6 +11,7 @@
  * identical `catalog`/`party`/`isPartyLeader`. This answers the whole page in
  * two queries. The per-election route stays for POST (save/lock).
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -36,7 +37,7 @@ export const GET = withNoStore(
       if (!COUNTRY_CONFIGS[countryId]) {
         return errorResponse(400, "Invalid country");
       }
-      if (countryId !== "UK") {
+      if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
         return errorResponse(400, "Manifestos are UK-only");
       }
 

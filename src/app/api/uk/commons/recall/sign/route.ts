@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ObjectId } from "mongodb";
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
         headers: NO_STORE,
       });
     }
-    if (auth.user.character.countryId !== "UK") {
+    if (!countryHasFeature("ukRecall", auth.user.character.countryId)) {
       return NextResponse.json(forbidden("Only UK characters may sign a Commons recall").toJson(), {
         status: 403,
         headers: NO_STORE,
