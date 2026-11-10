@@ -1,10 +1,11 @@
 import type { Db } from "mongodb";
-import type { Bond, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { evaluateEligibility, type EligibilityResult } from "./eligibility";
 import { getDesignatedSectorTypes, corpHasStrategicSector } from "./strategicSectors";
 import { fetchMarketSharePercentForSectors } from "@/lib/corporations/marketShare";
 import { loadGroupTopMarketShares } from "./monopolyTrigger";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface ResolvedCorpEligibility {
   ownerKind: "player" | "npc";
@@ -41,7 +42,7 @@ export async function resolveCorpEligibilityBatch(
 
   const corpIds = corps.map((c) => c._id);
   const [defaultedBondCorpIds, allSectors, designatedTypes] = await Promise.all([
-    db.collection<Bond>("bonds").distinct("corporationId", {
+    bondsCollection(db).distinct("corporationId", {
       corporationId: { $in: corpIds },
       defaulted: true,
       matured: false,

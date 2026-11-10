@@ -34,6 +34,7 @@ import {
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { interleaveByKey, runInLanes, type KeyedQueue } from "@/lib/turn/settlementLanes";
 import type { PartialTxEntry } from "@/lib/turn/bondTurnLedger";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 type WaveBond = SovereignMaturityWaveCountry["bonds"][number];
@@ -180,8 +181,7 @@ async function resumeWaveReceipts(
   const rows =
     ids.length === 0
       ? []
-      : await db
-          .collection<Bond>("bonds")
+      : await bondsCollection(db)
           .find(
             { _id: { $in: ids } },
             {
@@ -340,7 +340,7 @@ async function freezeWaveQuotes(
 ): Promise<Map<string, MaturityClaim> | undefined> {
   const missing = waveCountry.bonds.filter(({ bond }) => !bond.sovereignMaturityClaim);
   if (missing.length > 0) {
-    await db.collection<Bond>("bonds").bulkWrite(
+    await bondsCollection(db).bulkWrite(
       missing.map(({ bond, plan }) => ({
         updateOne: {
           filter: {
@@ -381,8 +381,7 @@ async function freezeWaveQuotes(
       }))
     );
   }
-  const rows = await db
-    .collection<Bond>("bonds")
+  const rows = await bondsCollection(db)
     .find(
       { _id: { $in: waveCountry.bonds.map(({ bond }) => bond._id) } },
       { projection: { _id: 1, sovereignMaturityClaim: 1 } }
@@ -435,7 +434,7 @@ async function reserveWaveFundingTurn(
       },
     };
   });
-  const result = await db.collection<Bond>("bonds").bulkWrite(writes);
+  const result = await bondsCollection(db).bulkWrite(writes);
   return result.matchedCount === writes.length;
 }
 

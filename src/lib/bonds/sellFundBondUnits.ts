@@ -21,6 +21,7 @@ import {
 import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface SellFundBondsResult {
   proceedsAnchor: number;
@@ -51,8 +52,7 @@ export async function sellFundBondHoldingsForCash(
   const result: SellFundBondsResult = { proceedsAnchor: 0, unitsSold: 0, bondsTouched: 0 };
   if (!(neededAnchor > 0)) return result;
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       matured: false,
       defaulted: { $ne: true },
@@ -89,7 +89,7 @@ export async function sellFundBondHoldingsForCash(
 
     const debit = await debitBondPoolGated(db, currency, proceedsLocal, "salesOut", now);
     if (!debit.ok) continue;
-    const release = await db.collection<Bond>("bonds").updateOne(
+    const release = await bondsCollection(db).updateOne(
       {
         _id: bond._id,
         sovereignMaturityClaim: { $exists: false },
@@ -101,7 +101,7 @@ export async function sellFundBondHoldingsForCash(
       await refundBondPoolDebit(db, currency, proceedsLocal, "salesOut", now);
       continue;
     }
-    await db.collection<Bond>("bonds").updateOne({ _id: bond._id }, {
+    await bondsCollection(db).updateOne({ _id: bond._id }, {
       $pull: { holders: { fundId: fund._id, units: { $lte: 0 } } },
     } as unknown as UpdateFilter<Bond>);
 

@@ -45,6 +45,7 @@ import {
   type BondSaleIntent,
   type BondSaleSettlementOps,
 } from "@/lib/bonds/saleRecovery";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -111,9 +112,10 @@ function roundBondSaleCents(value: number): number {
 function buildBondSaleFallbackOps(db: Db, intent: BondSaleIntent): BondSaleSettlementOps {
   return {
     claimLanded: async () => {
-      const bondDoc = await db
-        .collection<Bond>("bonds")
-        .findOne({ _id: intent.bondId }, { projection: { holders: 1 } });
+      const bondDoc = await bondsCollection(db).findOne(
+        { _id: intent.bondId },
+        { projection: { holders: 1 } }
+      );
       return (
         bondDoc?.holders.some(
           (holder) =>
@@ -175,7 +177,7 @@ function buildBondSaleFallbackOps(db: Db, intent: BondSaleIntent): BondSaleSettl
       return seller ? "already" : "missing";
     },
     restoreClaim: async () => {
-      await db.collection<Bond>("bonds").updateOne(
+      await bondsCollection(db).updateOne(
         {
           _id: intent.bondId,
           holders: {
@@ -292,7 +294,7 @@ async function runBondSaleFallbackSettlement(
 
   let claimed: boolean;
   try {
-    const claimResult = await db.collection<Bond>("bonds").updateOne(claimFilter, claimUpdate);
+    const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate);
     claimed = claimResult.modifiedCount > 0;
   } catch (error) {
     if (await ops.claimLanded()) {
@@ -319,7 +321,7 @@ async function runBondSaleFallbackSettlement(
         { status: "rejected", error: "insufficient holdings" },
         reportMarkError
       );
-      const refreshedBond = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+      const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
       const refreshedUnits = refreshedBond
         ? readHolderUnits(refreshedBond, seller.holderKey, seller.holderId)
         : 0;
@@ -352,9 +354,10 @@ async function cleanupEmptyHolderBestEffort(
   now: Date
 ) {
   try {
-    await db
-      .collection("bonds")
-      .updateOne({ _id: bondId }, buildHolderCleanupUpdate(holderKey, holderId, now));
+    await bondsCollection(db).updateOne(
+      { _id: bondId },
+      buildHolderCleanupUpdate(holderKey, holderId, now)
+    );
   } catch (error) {
     // The sale is already financially complete. A zero-unit holder row is
     // harmless and can be removed later; rolling the sale back here would
@@ -402,7 +405,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid bond ID");
     }
 
-    const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
       return errorResponse(404, "Bond not found");
     }
@@ -497,9 +500,9 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (currentUnits < units) {
             throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
           }
-          const claimResult = await db
-            .collection<Bond>("bonds")
-            .updateOne(claimFilter, claimUpdate, { session });
+          const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
+            session,
+          });
           if (claimResult.modifiedCount === 0) {
             throw badRequest("Insufficient bond holdings");
           }
@@ -524,13 +527,11 @@ export async function POST(request: Request, { params }: RouteParams) {
             throw notFound("Corporation not found");
           }
 
-          await db
-            .collection("bonds")
-            .updateOne(
-              { _id: bond._id },
-              buildHolderCleanupUpdate("corporationId", corp._id, now),
-              { session }
-            );
+          await bondsCollection(db).updateOne(
+            { _id: bond._id },
+            buildHolderCleanupUpdate("corporationId", corp._id, now),
+            { session }
+          );
         },
         async () => {
           const seller: BondSaleSeller = {
@@ -630,9 +631,9 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (currentUnits < units) {
             throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
           }
-          const claimResult = await db
-            .collection<Bond>("bonds")
-            .updateOne(claimFilter, claimUpdate, { session });
+          const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
+            session,
+          });
           if (claimResult.modifiedCount === 0) {
             throw badRequest("Insufficient bond holdings");
           }
@@ -653,13 +654,11 @@ export async function POST(request: Request, { params }: RouteParams) {
             throw notFound("Imperial character not found");
           }
 
-          await db
-            .collection("bonds")
-            .updateOne(
-              { _id: bond._id },
-              buildHolderCleanupUpdate("imperialCharacterId", imperial._id, now),
-              { session }
-            );
+          await bondsCollection(db).updateOne(
+            { _id: bond._id },
+            buildHolderCleanupUpdate("imperialCharacterId", imperial._id, now),
+            { session }
+          );
         },
         async () => {
           const seller: BondSaleSeller = {
@@ -753,9 +752,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (currentUnits < units) {
           throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
         }
-        const claimResult = await db
-          .collection<Bond>("bonds")
-          .updateOne(claimFilter, claimUpdate, { session });
+        const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
+          session,
+        });
         if (claimResult.modifiedCount === 0) {
           throw badRequest("Insufficient bond holdings");
         }
@@ -776,13 +775,11 @@ export async function POST(request: Request, { params }: RouteParams) {
           throw notFound("Character not found");
         }
 
-        await db
-          .collection("bonds")
-          .updateOne(
-            { _id: bond._id },
-            buildHolderCleanupUpdate("characterId", character._id, now),
-            { session }
-          );
+        await bondsCollection(db).updateOne(
+          { _id: bond._id },
+          buildHolderCleanupUpdate("characterId", character._id, now),
+          { session }
+        );
       },
       async () => {
         const seller: BondSaleSeller = {

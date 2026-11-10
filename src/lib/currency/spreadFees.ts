@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants/currencies";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const SETTLED_KEYS_FIELD = "settledKeys";
 const SETTLED_KEYS_CAP = 200;
@@ -64,7 +65,7 @@ export async function distributeSpreadFee(
   const destroyed = totalFee - toCentralBank;
 
   if (toCentralBank > 0) {
-    const banks = db.collection<CentralBank>("centralBanks");
+    const banks = centralBanksCollection(db);
     const sourceBankId = getBankId(sourceCountryId);
     const reserveCountryId = destinationCountryId ?? sourceCountryId;
     const reserveBankId = getBankId(reserveCountryId);
@@ -136,7 +137,7 @@ export async function reverseSpreadFee(
   const toReserveBalance = Math.round(totalFee * SPREAD_FEE_RESERVE_RATIO);
   const toForexRevenue = Math.round(totalFee * SPREAD_FEE_FOREX_REVENUE_RATIO);
   if (toReserveBalance === 0 && toForexRevenue === 0) return;
-  const banks = db.collection<CentralBank>("centralBanks");
+  const banks = centralBanksCollection(db);
   const sourceBankId = getBankId(sourceCountryId);
   const reserveBankId = getBankId(destinationCountryId ?? sourceCountryId);
   const errors: unknown[] = [];

@@ -81,6 +81,9 @@ import {
 } from "@/lib/banking/creditBands";
 import { ZERO_BANKING_TURN_SUMMARY, type BankingTurnSummary } from "@/lib/turn/bankingTurnSummary";
 import { serviceInterbankAndCbMargin } from "./bankingInterbankTurn";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+
+const BROAD_MONEY_ONLY = { projection: { externalBroadMoney: 1 } };
 
 // Re-exported for the turn's tests and dashboards; defined in the rules zone.
 export { ARREARS_DEFAULT_TURNS, MAX_NPC_FLOW_PER_TURN_FRACTION };
@@ -185,8 +188,7 @@ async function runBankingTurn(
       .collection<Corporation>("corporations")
       .find({ "bankCharter.status": "active" }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({})
       .project({ _id: 1, primeRate: 1, inflationHistory: 1, externalBroadMoney: 1, chairInfamy: 1 })
       .toArray() as Promise<CbLite[]>,
@@ -1316,9 +1318,7 @@ async function serviceNpcBulkBook(
           { $group: { _id: null, total: { $sum: "$outstanding" } } },
         ])
         .toArray(),
-      db
-        .collection<CentralBank>("centralBanks")
-        .findOne({ _id: state.cbDocId }, { projection: { externalBroadMoney: 1 } }),
+      centralBanksCollection(db).findOne({ _id: state.cbDocId }, BROAD_MONEY_ONLY),
     ]);
     if (state.cb && pool) state.cb.externalBroadMoney = pool.externalBroadMoney;
     // New journals freeze the original income split with their claim. Older
@@ -1635,9 +1635,7 @@ export async function serviceDeadNpcBulkLoan(
   const cbDocId = getBankId(getCountryIdForCurrency(currency));
   const cb =
     preloadedHouseholdPool === undefined
-      ? await db
-          .collection<CentralBank>("centralBanks")
-          .findOne({ _id: cbDocId }, { projection: { externalBroadMoney: 1 } })
+      ? await centralBanksCollection(db).findOne({ _id: cbDocId }, BROAD_MONEY_ONLY)
       : undefined;
   const pool =
     preloadedHouseholdPool === undefined

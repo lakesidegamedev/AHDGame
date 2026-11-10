@@ -34,6 +34,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Whole plants conversion (one time, between turns, before
@@ -526,8 +527,7 @@ async function pendingCredits(db: Db) {
   const txIds = rows.map((r) => r.txId);
   const existingTx = new Set(
     (
-      await db
-        .collection("financialTxLog")
+      await financialTxLogCollection(db)
         .find({ _id: { $in: txIds } }, { projection: { _id: 1 } })
         .toArray()
     ).map((d) => String(d._id))

@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import type { EconomicVitalSigns } from "@/lib/db/types/economicVitalSigns";
 import { ALLOWED_FEATURE_FLAGS, METRIC_DEFINITION_VERSION } from "@/lib/clientStatistics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -142,8 +143,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
       .collection("countryState")
       .find({}, { projection: { _id: 1, governmentType: 1, rulingPartyId: 1 } })
       .toArray(),
-    db
-      .collection("federalBudget")
+    federalBudgetCollection(db)
       .find({}, { projection: { "economicFactors.inflationRate": 1 } })
       .toArray(),
     db

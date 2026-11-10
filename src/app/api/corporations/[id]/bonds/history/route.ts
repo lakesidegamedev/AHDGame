@@ -6,6 +6,8 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { bondHistoryQuerySchema, type BondHistoryDirection } from "@/lib/api/schemas/bondHistory";
 import type { Bond, Corporation, FinancialTxLogEntry } from "@/lib/db/types";
 import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -86,8 +88,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // 1. Distinct turns (newest first). With server-side direction filter,
     //    this returns only turns that actually have rows on the requested
     //    side — UI never sees "Page 3 of 5" with 0 visible accordions.
-    const turnAgg = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const turnAgg = await financialTxLogCollection(db)
       .aggregate<{ _id: number }>([
         { $match: matchFilter },
         { $group: { _id: "$turn" } },
@@ -107,8 +108,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const rows: FinancialTxLogEntry[] =
       pageTurns.length === 0
         ? []
-        : await db
-            .collection<FinancialTxLogEntry>("financialTxLog")
+        : await financialTxLogCollection(db)
             .find({ ...matchFilter, turn: { $in: pageTurns } })
             .sort({ createdAt: -1, _id: -1 })
             .toArray();
@@ -124,8 +124,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const bondDocs =
       bondIdStrings.length === 0
         ? []
-        : await db
-            .collection<Bond>("bonds")
+        : await bondsCollection(db)
             .find({ _id: { $in: bondIdStrings.map((s) => new ObjectId(s)) } })
             .project<
               Pick<

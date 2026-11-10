@@ -13,6 +13,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import { accountId } from "@/lib/ledger/accounts";
 import type { BalanceSnapshot } from "@/lib/ledger/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -211,12 +212,12 @@ async function collectBalanceState(
     add(balances, accountId("economy_wallet", wallet._id, currency), wallet.cash / rate);
   }
   const accountValuations: NonNullable<BalanceSnapshot["accountValuations"]> = {};
-  const budgets = db.collection<{
+  const budgets = federalBudgetCollection<{
     countryId?: string;
     treasuryBalance?: number;
     treasuryCashLocal?: number;
     currencyCode?: CurrencyCode;
-  }>("federalBudget");
+  }>(db);
   const budgetCursor = budgets.find(
     {},
     {

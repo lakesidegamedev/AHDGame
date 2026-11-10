@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, FederalBudget } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import { DEFENCE_CONTRACT_SUPPLIER_SHARE } from "@/lib/military/defenceContractLimits";
 import {
@@ -9,6 +9,7 @@ import {
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { applyMoneyMove } from "@/lib/banking/moneyMove";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface Clawback {
   contractId: string;
@@ -106,7 +107,7 @@ async function survey(db: Db): Promise<Survey> {
       .collection<DefenceContract>("defenceContracts")
       .find({ lotsDelivered: { $gt: 0 } })
       .toArray(),
-    db.collection<FederalBudget>("federalBudget").find({}).toArray(),
+    federalBudgetCollection(db).find({}).toArray(),
   ]);
   const budgetByCountry = new Map(budgets.map((budget) => [budget.countryId, budget]));
   const defenseLineByCountry = new Map(

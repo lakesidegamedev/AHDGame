@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Bill, Tariff, TariffProvision } from "@/lib/db/types";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { FederalBudget, FederalTaxRates } from "@/lib/db/types/budget";
+import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { sectorPolicyTargetMatches, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -23,6 +23,7 @@ import {
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getCurrentTurn } from "@/lib/currentTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function finiteRate(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -449,7 +450,7 @@ export async function applyTariffProvision(
   // (e.g., write-failed mid-enactment) is still healed on next replay.
   if (provision.scopeType === "economy_wide") {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     const normalizedTaxRates = normalizeFederalTaxRates(budget?.taxRates);
     if (
       budget &&
@@ -489,7 +490,7 @@ export async function applyTariffProvision(
         sourcedImports
       );
       const newSurplus = newRevenue.total - (budget.spending?.total ?? 0);
-      await db.collection<FederalBudget>("federalBudget").updateOne(
+      await federalBudgetCollection(db).updateOne(
         { _id: budgetId },
         {
           $set: {

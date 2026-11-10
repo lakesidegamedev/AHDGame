@@ -23,6 +23,7 @@ import {
   releaseLocBookAdmission,
   validateLocDrawAdmission,
 } from "./bookAdmission";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface LocEffect {
   locAfter?: Character["lineOfCredit"];
@@ -311,13 +312,11 @@ async function resumeLocRecord(
   if (published.status === "rejected") return reject(published.error!);
   for (const [i, credit] of plan.effect.reserves.entries()) {
     if (credit.createIfMissing)
-      await db
-        .collection("centralBanks")
-        .updateOne(
-          { _id: credit.bankId as never },
-          { $setOnInsert: { _id: credit.bankId as never } },
-          { upsert: true }
-        );
+      await centralBanksCollection(db).updateOne(
+        { _id: credit.bankId as never },
+        { $setOnInsert: { _id: credit.bankId as never } },
+        { upsert: true }
+      );
     const reserve = await publishLocTarget(db, key, {
       token: `reserve${i}`,
       collection: "centralBanks",
@@ -394,12 +393,11 @@ export function locInterestCredits(amounts: Partial<Record<CurrencyCode, number>
 export async function recoverPendingLoc(db: Db, turn: number) {
   const journal = db.collection<LocRecord>(MONEY_MOVE_COLLECTION);
   const [banks, characters] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        pendingLocBookMutationId?: string;
-        pendingLocReserveCredit?: { key: string };
-      }>("centralBanks")
+    centralBanksCollection<{
+      _id: string;
+      pendingLocBookMutationId?: string;
+      pendingLocReserveCredit?: { key: string };
+    }>(db)
       .find(
         {
           $or: [

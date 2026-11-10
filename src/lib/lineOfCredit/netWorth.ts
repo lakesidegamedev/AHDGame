@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
-import type { Bond, Corporation, BondHolder } from "@/lib/db/types";
+import type { Corporation, BondHolder } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { Shareholder } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
@@ -14,6 +14,7 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { getBondCountryId, isCorporateBond } from "@/lib/bonds/sovereign";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { sumObligationInternal, toInternalUnits } from "./locMath";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Total player net worth in internal units: liquid + savings + stocks + bonds.
@@ -50,8 +51,7 @@ export async function computePlayerNetWorthInternal(
     if (rate && rate > 0) stockInternal += toInternalUnits(value, rate);
   }
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ "holders.characterId": charId, matured: false })
     .project({ holders: 1, marketPrice: 1, corporationId: 1, currencyCode: 1, countryId: 1 })
     .toArray();

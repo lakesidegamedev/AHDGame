@@ -7,6 +7,7 @@ import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/political
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import type { TriggerClause, TriggerCondition, TriggerMetric } from "@/lib/db/types/crisis";
 import { loadLossShareSignal } from "./marketAdjustment/signals";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface MetricPoint {
   turn: number;
@@ -66,12 +67,10 @@ export async function loadNationalSnapshot(
           .collection<HistoryDoc & { _id: string }>("macroMetricsHistory")
           .findOne({ _id: nationalDocId })
       : null,
-    db
-      .collection<{
-        countryId: CountryId;
-        economicFactors?: { inflationRate?: number };
-      }>("federalBudget")
-      .findOne({ countryId }),
+    federalBudgetCollection<{
+      countryId: CountryId;
+      economicFactors?: { inflationRate?: number };
+    }>(db).findOne({ countryId }),
     db
       .collection<{ countryId: CountryId; approvalRating?: number }>("governmentApprovals")
       .findOne({ countryId }),

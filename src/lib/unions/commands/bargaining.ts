@@ -10,7 +10,6 @@ import type {
   CollectiveAgreement,
   Corporation,
   CorporateSector,
-  FederalBudget,
   GameConfig,
   State,
   StateMetrics,
@@ -52,6 +51,7 @@ import { rejectIfTurnProcessing, resolveOwnedUnion, type UnionActionResult } fro
 // through `persistBargainingSettlement` here, this one opens a ballot there,
 // and both references are resolved at call time, never at module init.
 import { openSettlementRatification } from "./ratifySettlement";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -115,9 +115,10 @@ export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"
           .collection<StateMetrics>("macroMetrics")
           .findOne({ _id: nationalDocId }, { projection: { "economic.unemploymentRate": 1 } })
       : null,
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { unionLawBias: 1 } }),
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) },
+      { projection: { unionLawBias: 1 } }
+    ),
     db
       .collection<State>("states")
       .find({ countryId }, { projection: { _id: 1 } })

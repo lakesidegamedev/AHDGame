@@ -9,7 +9,6 @@ import type {
   Character,
   CommodityPrice,
   GameState,
-  FederalBudget,
   StateBudget,
   Union,
   Tariff,
@@ -41,6 +40,7 @@ import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import type { SiblingCorpProjection } from "./sectorDetailTypes";
 import type { AuthUser } from "@/lib/auth";
 import type { Db, WithId } from "mongodb";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -281,7 +281,7 @@ export async function loadSectorDetailContext({
   }
   const [federalBudget, allFederalBudgets, allSiblingStateBudgets, coveringIndustryUnionDoc] =
     await Promise.all([
-      db.collection<FederalBudget>("federalBudget").findOne(
+      federalBudgetCollection(db).findOne(
         { countryId: sectorCountryId },
         {
           projection: {
@@ -299,8 +299,7 @@ export async function loadSectorDetailContext({
           },
         }
       ),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           { countryId: { $in: [...siblingCountryIds] } },
           {

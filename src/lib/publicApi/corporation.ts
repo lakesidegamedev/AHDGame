@@ -2,7 +2,6 @@ import type { Db, ObjectId } from "mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { Corporation, Character } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import {
@@ -10,6 +9,7 @@ import {
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
 import { corpFinancials } from "./corpFinancials";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -43,7 +43,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
           .collection<Character>("characters")
           .findOne({ _id: corp.ceoId }, { projection: { name: 1 } })
       : Promise.resolve(null),
-    db.collection<Bond>("bonds").find({ corporationId: corp._id }).toArray(),
+    bondsCollection(db).find({ corporationId: corp._id }).toArray(),
     db.collection<CorporateSector>("corporateSectors").find({ corporationId: corp._id }).toArray(),
     holderCharacterIds.length > 0
       ? db

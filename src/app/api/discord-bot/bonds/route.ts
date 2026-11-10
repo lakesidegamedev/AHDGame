@@ -4,7 +4,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -13,6 +13,7 @@ import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corpo
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -63,12 +64,13 @@ export async function GET(request: Request) {
       $or: [{ countryId: { $in: enabledCountries } }, { countryId: { $exists: false } }],
     };
 
-    const totalCount = await db
-      .collection<Bond>("bonds")
-      .countDocuments({ matured: false, ...corpFilter, ...countryFilter });
+    const totalCount = await bondsCollection(db).countDocuments({
+      matured: false,
+      ...corpFilter,
+      ...countryFilter,
+    });
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ matured: false, ...corpFilter, ...countryFilter })
       .sort({ createdAt: -1 })
       .skip((page - 1) * perPage)

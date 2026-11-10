@@ -31,7 +31,8 @@ import {
 } from "@/lib/constants/commandEconomy";
 import { isPrivateEnterprisePermittedAtLevel } from "./privateEnterpriseRegime";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export class PrivateEnterpriseBlockedError extends Error {
   readonly countryId: string;
@@ -82,8 +83,7 @@ export async function loadLiveMarketizationLevels(db: Db): Promise<Map<CountryId
     .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
   const currentYear = gameState?.currentYear ?? null;
 
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       { _id: { $in: ids.map((id) => getNationalBudgetId(id)) } },
       { projection: { "economicFactors.marketizationLevel": 1 } }

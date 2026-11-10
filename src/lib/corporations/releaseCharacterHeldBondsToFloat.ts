@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Bond } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface ReleaseCharacterHeldBondsResult {
   unitsReleased: number;
@@ -23,7 +23,7 @@ export async function releaseCharacterHeldBondsToFloat(
     return { unitsReleased: 0, bondsCleared: 0 };
   }
 
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
   const charIdSet = new Set(characterIds.map((id) => id.toString()));
 
   const held = await bonds

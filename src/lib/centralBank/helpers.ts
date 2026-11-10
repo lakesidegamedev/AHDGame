@@ -8,6 +8,7 @@ import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export function getBankId(countryId: CountryId): string {
   return COUNTRY_CLIENT_CONFIGS[countryId]?.centralBank.sharedBankId ?? countryId;
@@ -21,7 +22,7 @@ export function getBankId(countryId: CountryId): string {
  * selection / nomination pipeline. No-op for banks without a committee.
  */
 export async function vacateFomcChairSeat(db: Db, bankId: string): Promise<void> {
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bankId, "fomcBoard.isChair": true },
     {
       $set: {

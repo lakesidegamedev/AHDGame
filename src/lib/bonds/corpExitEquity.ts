@@ -29,6 +29,7 @@ import {
 } from "@/lib/corporations/sectorProfitBasis";
 import { getGameState } from "@/lib/gameState";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Σ face value, in ₳, of the bonds `corporationId` holds as a CREDITOR.
@@ -185,8 +186,7 @@ export async function loadCorpExitEquityAnchor(
   }
 ): Promise<CorpExitEquity> {
   const [heldBonds, gameState, eraUnitScale] = await Promise.all([
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ "holders.corporationId": input.corporationId, matured: false })
       .toArray(),
     getGameState(db),

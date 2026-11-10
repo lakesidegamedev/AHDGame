@@ -1,12 +1,13 @@
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import {
   generateCountryOwnedSeedData,
   generateStateBudgets,
   getInitialNationalBudgetsForPreset,
 } from "@/lib/seeds/reference/budgets";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const COUNTRY_IDS = ["RU", "PL", "HU", "RO", "BG"] as const;
 
@@ -25,13 +26,11 @@ export async function seedModernBudgets2019(
   if (budgets.length !== countries.length)
     throw new Error("Missing 2019 transition national budget");
   if (reset) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .deleteMany({ countryId: { $in: countries } });
+    await federalBudgetCollection(db).deleteMany({ countryId: { $in: countries } });
     await db.collection<StateBudget>("stateBudgets").deleteMany({ countryId: { $in: countries } });
   }
   const now = new Date();
-  await db.collection<FederalBudget>("federalBudget").bulkWrite(
+  await federalBudgetCollection(db).bulkWrite(
     budgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: { ...budget, updatedAt: now } }, upsert: true },
     }))

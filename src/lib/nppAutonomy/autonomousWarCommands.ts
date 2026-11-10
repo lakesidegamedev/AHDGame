@@ -17,6 +17,7 @@ import {
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface AutonomousWarCommandResult {
   acted: boolean;
@@ -167,9 +168,9 @@ export async function prepareAutonomousWarEntry(
   }
   const [approval, budget] = await Promise.all([
     db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
-    db
-      .collection<{ countryId: CountryId; debtToGdpRatio?: number }>("federalBudget")
-      .findOne({ countryId }),
+    federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
+      countryId,
+    }),
   ]);
   // A missing document means "not measured yet", NOT "nobody approves". Only
   // `active` countries and current belligerents are snapshotted into

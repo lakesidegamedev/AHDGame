@@ -11,7 +11,7 @@ import type { StateBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { regionalGrantAmount } from "@/lib/budget/regionalGrantField";
-import type { CentralBank, GameConfig, GameState } from "@/lib/db/types";
+import type { GameConfig, GameState } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
 import { calculateFederalRevenue, loadLatestSourcedImportAggregates } from "@/lib/budget/revenue";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
@@ -34,6 +34,8 @@ import {
 import { loadDefenseFunding } from "./defenseFunding";
 import { loadOrganizationContributions } from "./organizationContributions";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -306,21 +308,19 @@ export async function loadFederalBudgetDetail(params: {
   }
 
   const [storedNationalBudgetDoc, gameState, centralBank, gameConfig] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
     db
       .collection<GameState>("gameState")
       .findOne(
         { _id: "current" },
         { projection: { currentTurn: 1, currentYear: 1, startingYear: 1 } }
       ),
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne(
-        COUNTRY_CONFIGS[countryId].centralBank.sharedBankId
-          ? { _id: COUNTRY_CONFIGS[countryId].centralBank.sharedBankId }
-          : { countryId },
-        { projection: { primeRate: 1, reserveBalance: 1 } }
-      ),
+    centralBanksCollection(db).findOne(
+      COUNTRY_CONFIGS[countryId].centralBank.sharedBankId
+        ? { _id: COUNTRY_CONFIGS[countryId].centralBank.sharedBankId }
+        : { countryId },
+      { projection: { primeRate: 1, reserveBalance: 1 } }
+    ),
     db.collection<GameConfig>("gameConfig").findOne(
       { _id: "default" },
       {

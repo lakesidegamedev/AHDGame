@@ -11,7 +11,6 @@ import type { Db } from "mongodb";
 import { type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { InternationalOrganizationId } from "@/lib/constants/internationalOrganizations";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import {
   convertLocal,
@@ -19,6 +18,7 @@ import {
   localToUsd,
   resolveOrgFundCurrencyCountry,
 } from "./organizationFund";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Aid packages disburse from the organization's pooled fund (capitalized by
@@ -145,7 +145,7 @@ export async function payOrganizationAid(
     // Aid credits cash, not income: revenue/spending/surplus are untouched, and
     // `debt.principal` belongs to the bond ledger (see bonds/sovereignPrincipal.ts),
     // so a cash-only $inc correctly leaves it alone (#1975).
-    const credit = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const credit = await federalBudgetCollection(db).updateOne(
       { countryId: recipient },
       {
         $inc: { treasuryBalance: recipientLocal },

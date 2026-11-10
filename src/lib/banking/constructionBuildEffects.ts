@@ -1,7 +1,6 @@
 /** Freeze build fees and market ownership before loan funding is admitted. */
 import { ObjectId, type Db, type Document } from "mongodb";
 import type { CorporateSector, UnownedSector } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import {
   CURRENCY_ANCHOR_COUNTRY,
   SPREAD_FEE_FOREX_REVENUE_RATIO,
@@ -13,6 +12,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { unownedPoolDrawdown, type UnownedPoolBucket } from "@/lib/market/unownedPoolDraw";
 import { oid, type BankingTransition, type TransitionLeg } from "./rules/boundary";
 import type { ConstructionBuildEffects } from "./rules/constructionBuild";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function prepareConstructionBuildEffects(input: {
   db: Db;
@@ -74,8 +74,7 @@ export async function prepareConstructionBuildEffects(input: {
         ...(reserve > 0 ? [destinationBankId] : []),
       ]),
     ];
-    const banks = await db
-      .collection<CentralBank>("centralBanks")
+    const banks = await centralBanksCollection(db)
       .find({ _id: { $in: ids } }, { projection: { _id: 1 } })
       .toArray();
     if (banks.length !== ids.length)

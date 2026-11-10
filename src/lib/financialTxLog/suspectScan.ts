@@ -3,6 +3,7 @@ import type { Collection, Db } from "mongodb";
 import type { FinancialTxLogEntry, FinancialSuspectFlag } from "@/lib/db/types/financialTxLog";
 import type { PortfolioHistory, SystemSettings } from "@/lib/db/types";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 interface ScanConfig {
   windowTurns: number; // default 6 — coarse pair-velocity / round-trip window
@@ -105,7 +106,7 @@ export async function runFinancialSuspectScan(db: Db, currentTurn: number): Prom
     const minTurn = currentTurn - config.windowTurns + 1;
     const now = new Date();
 
-    const col = db.collection<FinancialTxLogEntry>("financialTxLog");
+    const col = financialTxLogCollection(db);
     await ensureFinancialTxTurnIndex(col);
     const window = await col
       .find(

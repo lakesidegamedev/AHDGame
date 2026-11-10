@@ -1,9 +1,10 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db, type Filter } from "mongodb";
 import type { Bill, TariffProvision } from "@/lib/db/types";
-import type { FederalBudget, Tariff } from "@/lib/db/types";
+import type { Tariff } from "@/lib/db/types";
 import { applyTariffProvision, tariffProvisionFilter } from "@/lib/tariffs/tariffEffects";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const BASELINE_TARIFF_COUNTRIES = [
   COUNTRY_CONFIGS.US.id,
@@ -38,9 +39,9 @@ async function ensureBaselineEconomyWideTariffs(db: Db, countryId?: CountryId): 
     });
     if (existingTariff) continue;
 
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(baselineCountryId) });
+    const budget = await federalBudgetCollection(db).findOne({
+      _id: getNationalBudgetId(baselineCountryId),
+    });
     const rate = budget?.taxRates?.tariffs;
     if (typeof rate !== "number") continue;
 

@@ -6,14 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
-import type {
-  Corporation,
-  CorporateSector,
-  State,
-  StateMetrics,
-  Bond,
-  CentralBank,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import {
@@ -52,6 +45,8 @@ import {
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -97,8 +92,7 @@ export async function GET(request: Request) {
         .collection<CorporateSector>("corporateSectors")
         .find({ corporationId: corporation._id })
         .toArray(),
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({ corporationId: corporation._id, matured: false })
         .sort({ createdAt: -1 })
         .toArray(),
@@ -389,9 +383,7 @@ export async function GET(request: Request) {
 
     const countryId = corporation.countryId;
     // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-    const centralBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: getBankId(countryId) });
+    const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
     const primeRate =
       centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
     const effectiveCouponRate = getBondCouponRate(primeRate, creditRating.rating);

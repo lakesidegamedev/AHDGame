@@ -22,6 +22,7 @@ import {
 } from "@/lib/constants/currencies";
 import { getGameState } from "@/lib/gameState";
 import { getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -83,7 +84,7 @@ async function authorizeChair(countryId: CountryId): Promise<GuardSuccess | Guar
   const db = await getDb();
   const scope = await getMonetaryPolicyScope(db, countryId);
   const fxCountryId = scope.currencyCode === "EUR" ? "DE" : countryId;
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: scope.bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: scope.bankId });
   if (!bank) {
     return {
       ok: false,

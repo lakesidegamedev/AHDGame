@@ -1,10 +1,11 @@
 import type { Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Auto-resolve lingering corporate defaults.
@@ -30,7 +31,7 @@ export async function autoResolveLingeringDefaults(args: {
   let bondsAutoRestructured = 0;
   let bondsAutoRefinanced = 0;
   const phase7Notifications: NotificationInput[] = [];
-  const lingeringDefaultCorpIds = await db.collection<Bond>("bonds").distinct("corporationId", {
+  const lingeringDefaultCorpIds = await bondsCollection(db).distinct("corporationId", {
     matured: false,
     defaulted: true,
     defaultedAtTurn: { $lt: turn },
@@ -62,8 +63,7 @@ export async function autoResolveLingeringDefaults(args: {
       // replacement bond's term (defaults to 96 / 2yr when none is a valid
       // BondMaturityTurns) so a refinanced long-dated bond isn't silently
       // shortened.
-      const corpDefaultedBonds = await db
-        .collection<Bond>("bonds")
+      const corpDefaultedBonds = await bondsCollection(db)
         .find({ corporationId: corp._id, matured: false, defaulted: true })
         .project({ maturityTurns: 1 })
         .toArray();

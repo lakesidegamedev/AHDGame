@@ -19,6 +19,7 @@ import {
   type SubhourGrowthMetricBase,
   type SubhourGrowthStateBase,
 } from "./stepBase";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type GrowthState = Pick<State, "_id" | "countryId" | "gdp" | "outputGap" | "subhourStep"> & {
   subhourBase?: State["subhourBase"];
@@ -107,8 +108,7 @@ export async function runGrowthHalfStep(
         subhourBase: 1,
       })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "economicFactors" | "subhourStep">>({
         countryId: 1,
@@ -265,7 +265,7 @@ export async function runGrowthHalfStep(
   if (metricOps.length > 0)
     await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: false });
   if (budgetOps.length > 0)
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(budgetOps, { ordered: false });
+    await federalBudgetCollection(db).bulkWrite(budgetOps, { ordered: false });
 
   return {
     regions: stateOps.length,

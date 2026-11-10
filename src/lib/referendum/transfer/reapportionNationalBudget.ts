@@ -24,6 +24,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { FederalBudget, State } from "@/lib/db/types";
 
 import { shiftNumericMap } from "./rules/fiscalCurrency";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 type NumMap = Record<string, number>;
 
 export async function reapportionNationalBudget(
@@ -68,8 +69,8 @@ export async function reapportionNationalBudget(
   if (weight === 1 && !sourceDissolving) return;
 
   const [from, to] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: fromCountryId }),
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: toCountryId }),
+    federalBudgetCollection(db).findOne({ _id: fromCountryId }),
+    federalBudgetCollection(db).findOne({ _id: toCountryId }),
   ]);
   if (!from || !to) return;
   const now = new Date();
@@ -91,7 +92,7 @@ export async function reapportionNationalBudget(
   );
   const grant = (from.baselineStateGrants ?? 0) * weight;
 
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { _id: fromCountryId },
     {
       $set: {
@@ -102,7 +103,7 @@ export async function reapportionNationalBudget(
       },
     }
   );
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { _id: toCountryId },
     {
       $set: {

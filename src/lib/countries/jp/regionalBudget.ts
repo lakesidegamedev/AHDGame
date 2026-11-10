@@ -18,9 +18,9 @@ import {
 } from "@/lib/governmentFinance/regionalProgramClaims";
 import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSettlement";
 import { resolveAnnualRegionalGrantPool } from "@/lib/governmentFinance/grantTransfers";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -190,9 +190,10 @@ export async function processJPRegionalBudgets(
 
   const nationalPopulation = jpRegions.reduce((sum, r) => sum + r.population, 0);
   const nationalBudget = regionalFinanceEnabled
-    ? await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: "JP" }, { projection: { departmentAccounts: 1 } })
+    ? await federalBudgetCollection(db).findOne(
+        { countryId: "JP" },
+        { projection: { departmentAccounts: 1 } }
+      )
     : null;
   const departmentGrant = regionalFinanceEnabled
     ? resolveAnnualRegionalGrantPool({

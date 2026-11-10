@@ -198,7 +198,6 @@ import {
 import { runMigrations } from "@/lib/migrations/runner";
 import { MIGRATIONS } from "@/lib/migrations/registry";
 import { saveFiscalYearSnapshot } from "@/lib/budget/fiscalYear";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
 import { seedOfficeStates } from "@/lib/governorOffice/seedOfficeStates";
@@ -225,9 +224,10 @@ import { getBalSeedConfig } from "@/lib/seeds/bal/balSeed";
 import { isEasternBlocEra } from "@/lib/seeds/presetSelector";
 import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
-  const budgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+  const budgets = await federalBudgetCollection(db).find({}).toArray();
   // The budget docs are already in hand and the turn is one shared singleton,
   // so both are handed down rather than re-read once per country.
   const gameState = await db

@@ -18,7 +18,7 @@ import {
 } from "@/lib/labour/laborCost";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
 import { buildStateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
-import type { Corporation, CorporateSector, FederalBudget } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   getTariffBlendWeights,
   buildSectorPresenceKeys,
@@ -72,6 +72,7 @@ import { RUN_REPORT_STAGE_PROJECTION } from "@/lib/corporations/queries/sectorRu
 import { computeTechGrowthCostReductionPct, loadSectorTechContext } from "./sectorTechContext";
 import { loadSectorDetailContext } from "./sectorDetailContext";
 import { buildSectorDetailPlantsTier } from "./sectorDetailPlantsTier";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -209,12 +210,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const [economicModelByCountry, ownerBudget] = await Promise.all([
       loadEconomicModelsByCountry(db, [sectorCountryId]),
       ownerCountryId && ownerCountryId !== sectorCountryId
-        ? db
-            .collection<FederalBudget>("federalBudget")
-            .findOne(
-              { countryId: ownerCountryId },
-              { projection: { stateOwnershipConcentration: 1 } }
-            )
+        ? federalBudgetCollection(db).findOne(
+            { countryId: ownerCountryId },
+            { projection: { stateOwnershipConcentration: 1 } }
+          )
         : Promise.resolve(federalBudget),
     ]);
     const ownershipTerms = computeOwnershipMarginTerms({

@@ -4,7 +4,7 @@
  * budget reads. The rules live in `./rules`.
  */
 import type { Db } from "mongodb";
-import type { EnactedLaw, FederalBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw } from "@/lib/db/types/budget";
 import type { AgeSexVector } from "@/lib/demographics/cohortVector";
 import { keepLatestActiveLawPerType } from "@/lib/budget/keepLatestActiveLawPerType";
 import { lifeExpectancyGain } from "@/lib/demographics/rules/demographicPaths";
@@ -16,6 +16,7 @@ import {
   societyLawPositionsByCountry,
   type SocietyLawPositions,
 } from "./rules/laws";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export { presetUsesSocietyPressures } from "./preset";
 
@@ -75,8 +76,7 @@ export async function persistAgingCostPressure(
   const countryIds = [...vectors.keys()];
   if (countryIds.length === 0) return;
   const [budgets, laws] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { countryId: { $in: countryIds } },
         { projection: { countryId: 1, agingCostPressure: 1 } }
@@ -108,5 +108,5 @@ export async function persistAgingCostPressure(
       },
     ];
   });
-  if (ops.length > 0) await db.collection<FederalBudget>("federalBudget").bulkWrite(ops);
+  if (ops.length > 0) await federalBudgetCollection(db).bulkWrite(ops);
 }

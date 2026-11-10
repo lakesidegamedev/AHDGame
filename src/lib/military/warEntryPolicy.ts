@@ -13,6 +13,7 @@ import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 import type { InternationalOrganizationDef } from "@/lib/constants/internationalOrganizations";
 import { getTrucesCollection, trucePairId } from "@/lib/military/truce";
 import { opposedBelligerents } from "@/lib/military/occupation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type WarEntryOrganization = Pick<
   InternationalOrganizationDef,
@@ -177,9 +178,9 @@ export async function assessWarEntryPoliticalPressure(params: {
     db.collection<CountryAlignment>("countryAlignments").findOne({ entityId: countryId }),
     db.collection<PersistedSphereMembership>("sphereMemberships").findOne({ entityId: countryId }),
     db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
-    db
-      .collection<{ countryId: CountryId; debtToGdpRatio?: number }>("federalBudget")
-      .findOne({ countryId }),
+    federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
+      countryId,
+    }),
     db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray(),
   ]);
 

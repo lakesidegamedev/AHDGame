@@ -21,6 +21,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -54,7 +55,7 @@ export async function GET() {
     const db = await getDb();
 
     // ── National budget diagnostics ──────────────────────────────────────
-    const nationalBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+    const nationalBudgets = await federalBudgetCollection(db).find({}).toArray();
     const nationalDiagnostics = [];
     // Era year gates which cost forms the per-law breakdown uses, so it matches
     // `recalcSpending` (calculateFederalSpending). Null (flag off) ⇒ legacy costs.
@@ -349,7 +350,7 @@ export async function POST() {
     }
 
     // ── Step 2: Heal national budgets ────────────────────────────────────
-    const nationalBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+    const nationalBudgets = await federalBudgetCollection(db).find({}).toArray();
     let nationalHealed = 0;
 
     // Pre-fetch all legislation types with taxRateChange for rate sync
@@ -405,7 +406,7 @@ export async function POST() {
 
       const surplus = revenue.total - finalSpending.total;
 
-      await db.collection<FederalBudget>("federalBudget").updateOne(
+      await federalBudgetCollection(db).updateOne(
         { _id: budget._id },
         {
           $set: {

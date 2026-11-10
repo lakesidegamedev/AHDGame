@@ -110,6 +110,7 @@ export function applyEraRevenueCap(
 }
 
 import { initializeCapitalGainsTaxRates } from "./rules/capitalGainsTax";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type LegacyFederalTaxRates = Partial<FederalTaxRates> & {
   corporateTax?: number;
@@ -234,7 +235,7 @@ export async function calculateNationalGDP(db: Db, budgetId: string = "federal")
   // A1 SSOT (design §5.4): national GDP = Σ regional `state.gdp` — the per-turn
   // grown truth (the metric engine compounds each region's level every turn).
   // `state.gdp` is stored in MILLIONS; the national figure is in full units.
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   const countryId = budget?.countryId ?? (budgetId === "federal" ? "US" : budgetId);
 
   // Scope the query to this country up front — the previous global
@@ -310,7 +311,7 @@ export async function calculateFederalRevenue(
   const federalBudget =
     prefetchedBudget && prefetchedBudget._id === budgetId
       ? prefetchedBudget
-      : await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+      : await federalBudgetCollection(db).findOne({ _id: budgetId });
 
   // Spec B revenue ceiling: non-null year (flag on) ⇒ Laffer soft-cap on the total.
   // Defensive: a mock db without a gameState collection ⇒ flag off (legacy).
@@ -542,8 +543,7 @@ export async function calculateFederalRevenue(
 }
 
 export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[]): Promise<number> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(budgetIds?.length ? { _id: { $in: budgetIds } } : {})
     .toArray();
 
@@ -698,7 +698,7 @@ export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[])
   const ops = results.filter((op): op is NonNullable<typeof op> => op !== null);
   if (ops.length === 0) return 0;
 
-  await db.collection<FederalBudget>("federalBudget").bulkWrite(ops);
+  await federalBudgetCollection(db).bulkWrite(ops);
   return ops.length;
 }
 

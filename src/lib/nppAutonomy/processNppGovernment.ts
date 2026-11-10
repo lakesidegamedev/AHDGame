@@ -82,6 +82,7 @@ import {
   annualPerformanceReviewDue,
   shouldRecomputeGoverningAgenda,
 } from "./rules/agendaReview";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Routine agenda review interval, measured in game-calendar years (48 turns).
@@ -374,7 +375,7 @@ async function computeAndPersistGoverningAgenda(
   // (their distress signal is shortage/overhang, read by computePlanStance
   // below, not sovereign debt), so `planned` countries pass no debt figure and
   // this driver simply stays inert for them.
-  const budget = await db.collection("federalBudget").findOne(
+  const budget = await federalBudgetCollection(db).findOne(
     { countryId },
     {
       projection: {

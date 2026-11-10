@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Promise<{
   corporations: number;
@@ -44,8 +45,7 @@ async function releaseFundHeldBonds(db: Awaited<ReturnType<typeof getDb>>): Prom
   bonds: number;
   units: number;
 }> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ "holders.fundId": { $exists: true } }, { projection: { _id: 1, holders: 1 } })
     .toArray();
 
@@ -70,7 +70,7 @@ async function releaseFundHeldBonds(db: Awaited<ReturnType<typeof getDb>>): Prom
   }
 
   if (ops.length > 0) {
-    await db.collection<Bond>("bonds").bulkWrite(ops);
+    await bondsCollection(db).bulkWrite(ops);
   }
 
   return { bonds: ops.length, units: releasedUnits };

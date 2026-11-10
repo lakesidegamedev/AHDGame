@@ -33,6 +33,7 @@ import { reserveBondUnitsForHolder } from "@/lib/bonds/bondHolderOps";
 import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Keep this many days of revenue as operating cash. Revenue is already daily. */
 export const NPP_TREASURY_REVENUE_DAYS = 1;
@@ -186,8 +187,7 @@ async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<numb
     }
   }
 
-  const liveBonds = await db
-    .collection<Bond>("bonds")
+  const liveBonds = await bondsCollection(db)
     .find({
       matured: { $ne: true },
       defaulted: { $ne: true },

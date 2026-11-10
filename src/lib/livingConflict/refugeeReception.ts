@@ -21,6 +21,7 @@ import {
   type RefugeeReceptionOrder,
   type RefugeeReceptionResult,
 } from "./rules/refugeeReception";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
@@ -132,12 +133,10 @@ export async function prepareRefugeeReceptionOrder(
         { defKey: spec.conflictKey },
         { projection: { hasOpened: 1, status: 1, tracks: 1 } }
       ),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { countryId: countryId as FederalBudget["countryId"] },
-        { projection: { gdp: 1, gdpSmoothed: 1 } }
-      ),
+    federalBudgetCollection(db).findOne(
+      { countryId: countryId as FederalBudget["countryId"] },
+      { projection: { gdp: 1, gdpSmoothed: 1 } }
+    ),
     loadRefugeeAdmissionAuthorization(db, countryId),
   ]);
   if (!gameState || !Number.isSafeInteger(gameState.currentTurn) || gameState.currentTurn < 1)

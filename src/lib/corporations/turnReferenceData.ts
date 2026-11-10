@@ -9,6 +9,7 @@ import type {
   CentralBank,
 } from "@/lib/db/types";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type TurnStateProjection = Pick<
   State,
@@ -90,7 +91,7 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
         }
       )
       .toArray() as Promise<TurnStateBudgetProjection[]>,
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
   ]);
 
   const activeFtaPairs = await loadActiveFtaPairs(db);

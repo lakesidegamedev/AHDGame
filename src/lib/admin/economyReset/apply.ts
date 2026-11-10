@@ -56,6 +56,9 @@ import {
   type EconomyResetPhase,
   type EconomyResetPlan,
 } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 type Log = (message: string) => void;
 
@@ -209,7 +212,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
   );
   for (const ids of chunks(plan.corporateBondIds.map(oid), 5000)) {
     await db.collection("bondHistory").deleteMany({ bondId: { $in: ids } });
-    await db.collection("bonds").deleteMany({ _id: { $in: ids }, ...CORPORATE_BOND_FILTER });
+    await bondsCollection<Document>(db).deleteMany({ _id: { $in: ids }, ...CORPORATE_BOND_FILTER });
   }
 
   const claims = db.collection<{ _id: string; claim: Document }>(
@@ -245,8 +248,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
   // Unpaid maturity quotes drop their private legs and holders; the quote
   // shrinks by the planned amount, and any funded escrow stays on the bond.
   for (const patches of chunks(plan.maturityClaims, 1000)) {
-    const bonds = await db
-      .collection<Document>("bonds")
+    const bonds = await bondsCollection<Document>(db)
       .find(
         { _id: { $in: patches.map((patch) => oid(patch.bondId)) } },
         { projection: { "sovereignMaturityClaim.holderLegs": 1 } }
@@ -278,8 +280,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
   }
 
   if (plan.legacyCouponClaims.length > 0) {
-    const budgets = await db
-      .collection<Document>("federalBudget")
+    const budgets = await federalBudgetCollection<Document>(db)
       .find(
         { _id: { $in: plan.legacyCouponClaims.map((row) => row.budgetId) } as never },
         { projection: { sovereignCouponClaims: 1 } }
@@ -328,7 +329,7 @@ async function phaseCentralBanks(db: Db, plan: EconomyResetPlan): Promise<void> 
     }))
   );
   // Every private deposit is gone; the turn recomputes this from savings.
-  await db.collection("centralBanks").updateMany({}, { $set: { nationalSavingsBalance: 0 } });
+  await centralBanksCollection(db).updateMany({}, { $set: { nationalSavingsBalance: 0 } });
 }
 
 async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Promise<void> {
@@ -337,8 +338,7 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
     credit.set(sweep.budgetId, (credit.get(sweep.budgetId) ?? 0) + sweep.treasuryCredit);
   const release = new Map<string, number>();
   for (const row of plan.defenceReleases) release.set(row.countryId, row.release);
-  const budgets = await db
-    .collection<Document>("federalBudget")
+  const budgets = await federalBudgetCollection<Document>(db)
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   const ops: AnyBulkWriteOperation<Document>[] = [];
@@ -363,7 +363,7 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
   await bulk(db, "federalBudget", ops);
   // The fiscal scale measured the economy the reset deletes; it restarts from
   // the rebuilt economy's first funded turn.
-  await db.collection("federalBudget").updateMany({}, { $unset: { fiscalScale: "" } });
+  await federalBudgetCollection(db).updateMany({}, { $unset: { fiscalScale: "" } });
   await db.collection("playerIncomeTaxAssessments").deleteMany(VOIDED_INCOME_TAX_FILTER);
 }
 
@@ -504,9 +504,10 @@ async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Prom
     .find({ _id: { $in: dissolved } }, { projection: { currencyCode: 1 } })
     .toArray();
   await db.collection("exchangeRates").deleteMany({});
-  await db
-    .collection("centralBanks")
-    .updateMany({}, { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } });
+  await centralBanksCollection(db).updateMany(
+    {},
+    { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } }
+  );
   const { seedForex } = await import("@/lib/admin/seed/seedForex");
   await seedForex(db, log, plan.preset);
   if (liveCodes.length > 0)
@@ -573,8 +574,7 @@ async function phaseWitness(
 
 async function phaseDiagnostic(db: Db, plan: EconomyResetPlan, log: Log): Promise<number> {
   const [sovereign, corporations] = await Promise.all([
-    db
-      .collection<Document>("bonds")
+    bondsCollection<Document>(db)
       .find(
         { issuerType: "sovereign", matured: false },
         { projection: { corporationId: 1, countryId: 1 } }

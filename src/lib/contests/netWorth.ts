@@ -6,10 +6,9 @@
  * arrived from outside a character's own play (wires, loan principal), which
  * the contest nets out of growth.
  */
-import type { Db, ObjectId } from "mongodb";
+import type { Db, Document, ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
 import type { Corporation } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -21,6 +20,8 @@ import {
   shareTradeAnchorValue,
 } from "@/lib/currency/corporationCapital";
 import { fetchExchangeRateMap, getRateDoc, toInternalAmount } from "@/lib/world/forex";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 const add = (m: Map<string, number>, key: string, value: number) =>
   m.set(key, (m.get(key) ?? 0) + value);
@@ -49,8 +50,7 @@ export async function loadCharacterNetWorths(
         { projection: { shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { "holders.characterId": { $in: characterIds } },
         { projection: { holders: 1, marketPrice: 1, currencyCode: 1 } }
@@ -131,8 +131,7 @@ export async function loadExternalInflows(
   const totals = new Map<string, number>();
   if (characterIds.length === 0) return totals;
   const [rows, fx] = await Promise.all([
-    db
-      .collection("financialTxLog")
+    financialTxLogCollection<Document>(db)
       .find(
         {
           type: { $in: Object.keys(INFLOW_SIGN) },

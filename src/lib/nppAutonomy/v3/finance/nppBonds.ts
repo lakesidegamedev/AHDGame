@@ -23,6 +23,7 @@ import { bondPoolCurrency, creditBondPool, loadBondQuote } from "@/lib/bonds/mar
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export type NppBondBuyResult =
   | {
@@ -67,7 +68,7 @@ export async function nppBuyBond(
   const bond =
     bondSnapshot?._id.equals(bondId) === true
       ? bondSnapshot
-      : await db.collection<Bond>("bonds").findOne({ _id: bondId });
+      : await bondsCollection(db).findOne({ _id: bondId });
   if (!bond) return { ok: false, reason: "Bond not found." };
   if (bond.maturityTurn <= currentTurn) return { ok: false, reason: "Bond has matured." };
   if ((bond.publicFloat ?? 0) < units) {

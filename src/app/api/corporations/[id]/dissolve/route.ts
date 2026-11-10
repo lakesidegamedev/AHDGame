@@ -6,7 +6,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Bond, Character, Corporation, CorporateSector, CentralBank } from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { logWireEvent, wireHeadlineCorpDissolved } from "@/lib/wireEvent";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -51,6 +51,8 @@ import {
 import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -139,7 +141,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       }
     }
 
-    const outstandingBonds = await db.collection<Bond>("bonds").countDocuments({
+    const outstandingBonds = await bondsCollection(db).countDocuments({
       corporationId: corporation._id,
       matured: false,
     });
@@ -181,8 +183,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
         // snapshotting; cross-corp equity is distributed in-kind below (NOT
         // cashed at market price — that was the money-mint).
         const [heldBonds, fxByCurrency] = await Promise.all([
-          db
-            .collection<Bond>("bonds")
+          bondsCollection(db)
             .find({ "holders.corporationId": corporation._id, matured: false })
             .toArray(),
           loadFxRatesByCurrency(db),
@@ -219,7 +220,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           // restoring float, orphaning the units: the issuer kept totalIssued
           // on its books but had zero outstanding units, so coupons stopped and
           // nothing settled at maturity (the "bonds disappeared" report).
-          await db.collection<Bond>("bonds").updateOne(
+          await bondsCollection(db).updateOne(
             { _id: bond._id },
             {
               $pull: { holders: { corporationId: corporation._id } },
@@ -500,12 +501,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
               corpHomeCurrency,
               corpFxRate
             );
-            await db
-              .collection<CentralBank>("centralBanks")
-              .updateOne(
-                { _id: cbId },
-                { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } }
-              );
+            await centralBanksCollection(db).updateOne(
+              { _id: cbId },
+              { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } }
+            );
 
             dissolutionTxEntries.push({
               type: "corp_dissolution_distribution",

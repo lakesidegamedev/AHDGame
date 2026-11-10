@@ -2,7 +2,6 @@ import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { COUNTRY_REGIONS } from "@/lib/world/worldEntityManifest";
 import { loadCountryTiers } from "@/lib/country/countryTier";
-import type { Bond } from "@/lib/db/types/bond";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
@@ -40,6 +39,7 @@ import type {
 import { logWireEvent } from "@/lib/wireEvent";
 import { logger } from "@/lib/observability/logger";
 import { getCrisisDefinition } from "./registry";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const COMPONENT = "crisisV2Spillover";
 
@@ -100,8 +100,7 @@ async function loadAllianceWeights(db: Db): Promise<ChannelWeights> {
  * sized against the holder's GDP.
  */
 async function loadFinanceWeights(db: Db): Promise<ChannelWeights> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(
       { issuerType: "sovereign", defaulted: false },
       {

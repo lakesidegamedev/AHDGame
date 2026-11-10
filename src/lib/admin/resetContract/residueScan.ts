@@ -14,8 +14,8 @@ import {
   type ResidueViolation,
   type TurnStampEvidence,
 } from "@/lib/admin/resetContract/rules/residueScan";
-import type { FederalBudget } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Runtime collections a reset deliberately leaves documents in. Every other
@@ -175,8 +175,7 @@ export async function runResidueScan(
     }
   }
 
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       {},
       {

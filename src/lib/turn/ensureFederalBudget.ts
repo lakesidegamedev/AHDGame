@@ -11,6 +11,7 @@ import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Per-process dedup so the unexpected-miss warning fires once, not every turn. */
 const warnedUnexpectedMisses = new Set<string>();
@@ -95,8 +96,7 @@ export async function ensureFederalBudgets(
  * as a data-integrity error instead of turns silently no-oping.
  */
 export async function findCountriesMissingFederalBudget(db: Db): Promise<string[]> {
-  const banks = await db
-    .collection("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   if (banks.length === 0) return [];

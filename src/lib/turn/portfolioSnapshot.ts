@@ -40,6 +40,7 @@ import {
 import { computeCorporationLiabilityValueAnchor } from "@/lib/corporations/netWorth";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Snapshot portfolio values for all characters who hold shares and/or bonds.
@@ -122,8 +123,7 @@ export async function snapshotPortfolioValues(
         countryId: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false, "holders.0": { $exists: true } })
       .project<Bond>({ holders: 1, marketPrice: 1, currencyCode: 1, countryId: 1 })
       .toArray(),
@@ -395,8 +395,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
         imfFacilityPrincipalOutstanding: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false })
       .project<Bond>({
         holders: 1,

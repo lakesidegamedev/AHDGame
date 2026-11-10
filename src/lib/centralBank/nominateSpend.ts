@@ -10,8 +10,8 @@ import {
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { Character } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CentralBankNomination {
   characterId: ObjectId;
@@ -75,7 +75,7 @@ export async function applyNominateSpend(
   }
 
   const characters = db.collection<Character>("characters");
-  const centralBanks = db.collection<CentralBank>("centralBanks");
+  const centralBanks = centralBanksCollection(db);
   const receipts = await getMoneyFlowReceiptsCollection(db);
   const now = new Date();
 

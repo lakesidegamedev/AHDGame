@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Propagate a character name change to all denormalized collections.
@@ -66,43 +67,36 @@ export async function propagateCharacterNameChange(
   ]);
 
   // ── 4. Central bank ───────────────────────────────────────────────────────
-  await db
-    .collection("centralBanks")
-    .updateMany({ chairCharacterId: characterId }, { $set: { chairCharacterName: newName } });
+  await centralBanksCollection(db).updateMany(
+    { chairCharacterId: characterId },
+    { $set: { chairCharacterName: newName } }
+  );
 
   // Central bank nested arrays: nominations and lobbying pool
   await Promise.all([
-    db
-      .collection("centralBanks")
-      .updateMany(
-        { "nominations.characterId": characterId },
-        { $set: { "nominations.$[elem].characterName": newName } },
-        { arrayFilters: [{ "elem.characterId": characterId }] }
-      ),
-    db
-      .collection("centralBanks")
-      .updateMany(
-        { "nominations.nominatedById": characterId },
-        { $set: { "nominations.$[elem].nominatedByName": newName } },
-        { arrayFilters: [{ "elem.nominatedById": characterId }] }
-      ),
+    centralBanksCollection(db).updateMany(
+      { "nominations.characterId": characterId },
+      { $set: { "nominations.$[elem].characterName": newName } },
+      { arrayFilters: [{ "elem.characterId": characterId }] }
+    ),
+    centralBanksCollection(db).updateMany(
+      { "nominations.nominatedById": characterId },
+      { $set: { "nominations.$[elem].nominatedByName": newName } },
+      { arrayFilters: [{ "elem.nominatedById": characterId }] }
+    ),
     // lobbyingPool: targetCharacterId is who is being lobbied for (has stored name)
     // lobbyistCharacterId has no stored name field — skip it
-    db
-      .collection("centralBanks")
-      .updateMany(
-        { "lobbyingPool.targetCharacterId": characterId },
-        { $set: { "lobbyingPool.$[elem].targetCharacterName": newName } },
-        { arrayFilters: [{ "elem.targetCharacterId": characterId }] }
-      ),
+    centralBanksCollection(db).updateMany(
+      { "lobbyingPool.targetCharacterId": characterId },
+      { $set: { "lobbyingPool.$[elem].targetCharacterName": newName } },
+      { arrayFilters: [{ "elem.targetCharacterId": characterId }] }
+    ),
     // rateHistory.changedBy is stored as ObjectId — must query with ObjectId, not string
-    db
-      .collection("centralBanks")
-      .updateMany(
-        { "rateHistory.changedBy": characterId },
-        { $set: { "rateHistory.$[elem].changedByName": newName } },
-        { arrayFilters: [{ "elem.changedBy": characterId }] }
-      ),
+    centralBanksCollection(db).updateMany(
+      { "rateHistory.changedBy": characterId },
+      { $set: { "rateHistory.$[elem].changedByName": newName } },
+      { arrayFilters: [{ "elem.changedBy": characterId }] }
+    ),
   ]);
 
   // ── 5. Leadership nominations (nominee + nominator) ───────────────────────

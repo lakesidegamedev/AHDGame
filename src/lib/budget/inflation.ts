@@ -22,7 +22,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { fractionalAlpha } from "@/lib/turn/subhour/stepFraction";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
@@ -42,6 +41,7 @@ import { TARIFF_INFLATION_BASELINE } from "@/lib/tariffs/rules/tariffInflationEx
 import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -774,7 +774,7 @@ export async function calculateCountryInflation(
       nationalDocId
         ? db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
         : null,
-      db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) }),
+      centralBanksCollection(db).findOne({ _id: getBankId(countryId) }),
       hasMeasuredTariffRate
         ? Promise.resolve([])
         : db.collection<Tariff>("tariffs").find({ countryId }).toArray(),

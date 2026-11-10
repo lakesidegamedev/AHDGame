@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector, FederalRevenue, StateMetrics } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { type CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -33,6 +32,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { soeCapacityReplacementCostAnchor } from "@/lib/economy/soe";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -146,9 +146,10 @@ export async function loadPlantsBudgetContext(
  * corps. Returns 0 when unavailable, in which case the caller skips the clamp.
  */
 async function readCountryGdp(db: Db, countryId: CountryId): Promise<number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { gdp: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { gdp: 1 } }
+  );
   return typeof budget?.gdp === "number" && budget.gdp > 0 ? budget.gdp : 0;
 }
 

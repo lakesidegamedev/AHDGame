@@ -13,13 +13,13 @@
 
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
 import { computeLawCost } from "@/lib/politicalLegislation/costEngine";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const GDP_MILLIONS = 1_000_000;
 
@@ -64,12 +64,10 @@ export async function processRURegionalBudgets(
   const regions = await db.collection<State>("states").find({ countryId: "RU" }).toArray();
   if (regions.length === 0) return { regionsProcessed: 0 };
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne(
-      { _id: getNationalBudgetId("RU") },
-      { projection: { spending: 1, baselineStateGrants: 1 } }
-    );
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId("RU") },
+    { projection: { spending: 1, baselineStateGrants: 1 } }
+  );
   if (!budget) return { regionsProcessed: 0 };
   // `stateGrants` is normally the live pool, but a negative value is an invalid
   // allocation, not a valid negative regional grant. Treat it like a missing

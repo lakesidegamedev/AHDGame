@@ -52,12 +52,7 @@ import type { LawCountryId } from "@/lib/politicalLegislation/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { needsPhaseIn, stepTaxRate } from "@/lib/budget/taxRatePhaseIn";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type {
-  FederalBudget,
-  FederalTaxRates,
-  StateBudget,
-  StateTaxRates,
-} from "@/lib/db/types/budget";
+import type { FederalTaxRates, StateBudget, StateTaxRates } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import { applyElectoralLawProvision } from "@/lib/elections/electoralLaws";
 import type {
@@ -66,7 +61,7 @@ import type {
   ElectoralLawProvision,
 } from "@/lib/db/types/legislation";
 import { applyEconomicSystemReformProvision } from "@/lib/economy/economicSystemReform";
-import { FOMC_COMMITTEE_COUNTRY_IDS, type CentralBank } from "@/lib/db/types/centralBank";
+import { FOMC_COMMITTEE_COUNTRY_IDS } from "@/lib/db/types/centralBank";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { seedFomcBoards } from "@/lib/centralBank/seedFomcBoard";
 import { scrutinyAfterRevocation } from "@/lib/centralBank/independence";
@@ -110,6 +105,8 @@ import {
   separationPolicyFromOptionId,
 } from "@/lib/banking/separationBill";
 import { applyResetLawBillEnactment } from "@/lib/resetLegislation/enactBill";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -198,7 +195,7 @@ async function applyTaxRateChange(
     const countryId =
       countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     if (!budget) return;
     const normalizedTaxRates = normalizeFederalTaxRates(budget.taxRates);
     if (!normalizedTaxRates) return;
@@ -267,7 +264,7 @@ async function applyTaxRateChange(
     );
     const newSurplus = newRevenue.total - budget.spending.total;
 
-    const written = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const written = await federalBudgetCollection(db).updateOne(
       { _id: budgetId, taxRates: budget.taxRates },
       {
         $set: {
@@ -419,7 +416,7 @@ export async function applyCentralBankIndependenceProvision(
     return;
   }
   const governmentControlled = provision.action === "revoke";
-  const banks = db.collection<CentralBank>("centralBanks");
+  const banks = centralBanksCollection(db);
   const bankId = getBankId(countryId);
 
   // Revoking independence costs the institution credibility; otherwise

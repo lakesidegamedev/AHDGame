@@ -31,11 +31,11 @@ import type {
   GameConfig,
   GameState,
   User,
-  CentralBank,
 } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const marketOrderSchema = z
   .object({
@@ -63,8 +63,7 @@ export async function GET() {
     // (the spread-fee reserve bucket; home lending reserves are excluded),
     // valued in ₳ for ranking. The #1 is the "leading exchange currency" and
     // carries the volatility buff.
-    const banks = await db
-      .collection<CentralBank>("centralBanks")
+    const banks = await centralBanksCollection(db)
       .find({}, { projection: { spreadFeeReserveBalances: 1 } })
       .toArray();
     const rateMap = Object.fromEntries(rates.map((r) => [r.currencyCode, r.rate])) as Partial<

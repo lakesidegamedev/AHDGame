@@ -5,7 +5,7 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { isParliamentarySystem } from "@/lib/constants/countriesCore";
 import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countryOfficesClient";
 import type { ElectedOfficial, State } from "@/lib/db/types";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
@@ -17,6 +17,7 @@ import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
 import { populationWeightedAverage } from "@/lib/metrics/populationWeightedAverage";
 import { loadViewerCharacter } from "./viewerContext";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface OfficeDashboardWidgetData {
   scope: "state" | "nation";
@@ -98,9 +99,9 @@ async function nationOffice(db: Db, countryId: CountryId): Promise<OfficeDashboa
     db
       .collection<GovernmentApproval>("governmentApprovals")
       .findOne({ _id: countryId }, { projection: { approvalRating: 1 } }),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      {
         projection: {
           countryId: 1,
           currencyCode: 1,
@@ -108,7 +109,8 @@ async function nationOffice(db: Db, countryId: CountryId): Promise<OfficeDashboa
           "spending.total": 1,
           "economicFactors.gdpGrowth": 1,
         },
-      }),
+      }
+    ),
     db
       .collection<State>("states")
       .find({ countryId }, { projection: { _id: 1, population: 1 } })

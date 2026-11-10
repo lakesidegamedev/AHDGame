@@ -15,7 +15,6 @@ import type {
   CommodityPriceHistory,
   Corporation,
   CorporateSector,
-  FederalBudget,
   State,
 } from "@/lib/db/types";
 import {
@@ -70,6 +69,7 @@ import {
   inputDemandRealPhaseStartTurnFrom,
   sectorPriceLeg,
 } from "@/lib/market/inputDemandRealPhase";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -856,8 +856,7 @@ export async function getCommodityDetailData(
 
     // Government healthcare expenditure (national budgets: Medicare, NHS, etc.)
     if (commodity === "healthcare_services") {
-      const federalBudgets = await db
-        .collection<FederalBudget>("federalBudget")
+      const federalBudgets = await federalBudgetCollection(db)
         // Whole category map, and alias-resolved below, so this panel reports
         // the same number the turn books. UK/CN/IE spell the category `health`
         // and were silently contributing nothing here too.

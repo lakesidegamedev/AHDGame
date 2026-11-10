@@ -17,7 +17,8 @@ import {
   ZOD_ACTIVE_CURRENCY_ENUM,
 } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { CentralBank, Character, ExchangeRate } from "@/lib/db/types";
+import type { Character, ExchangeRate } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -66,7 +67,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const db = await getDb();
     const bankId = getBankId(countryId);
-    const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+    const bank = await centralBanksCollection(db).findOne({ _id: bankId });
     if (!bank) throw notFound("Central bank not found");
 
     const isChair = !!bank.chairCharacterId && myChar._id.equals(bank.chairCharacterId);
@@ -104,7 +105,7 @@ export async function POST(request: Request, context: RouteContext) {
       throw badRequest("Exchange amount is too small at current rates");
     }
 
-    const result = await db.collection<CentralBank>("centralBanks").updateOne(
+    const result = await centralBanksCollection(db).updateOne(
       { _id: bankId, [`spreadFeeReserveBalances.${fromCurrency}`]: { $gte: amount } },
       {
         $inc: {

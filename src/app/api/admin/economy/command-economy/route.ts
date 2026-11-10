@@ -13,6 +13,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { MARKETIZATION_SCHEDULE, plannedShare } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { presentPlannedEconomy } from "@/lib/economy/presentPlannedEconomy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function GET() {
   try {
@@ -32,8 +33,7 @@ export async function GET() {
           { _id: "default" },
           { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
         ),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           { _id: { $in: scheduledIds.map((id) => getNationalBudgetId(id)) } },
           {

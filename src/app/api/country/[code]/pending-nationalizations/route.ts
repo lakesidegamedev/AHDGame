@@ -10,14 +10,10 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type {
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  PendingNationalization,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, PendingNationalization } from "@/lib/db/types";
 import type { NationalizationTrigger } from "@/lib/nationalization/eligibility";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -38,9 +34,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Signed national treasury balance (local currency) — the unified pool that
     // takings, draws, and privatization proceeds move. Negative ⇒ national debt.
-    const fb = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId }, { projection: { treasuryBalance: 1, "debt.principal": 1 } });
+    const fb = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { treasuryBalance: 1, "debt.principal": 1 } }
+    );
     const treasuryReserve = fb?.treasuryBalance ?? -(fb?.debt?.principal ?? 0);
     const currencyCode = COUNTRY_CURRENCY_MAP[countryId] ?? "USD";
 

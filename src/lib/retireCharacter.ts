@@ -12,11 +12,9 @@ import type {
   GameState,
   ElectedOfficial,
   CabinetMember,
-  CentralBank,
 } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
 import type { Corporation } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import type { RetiredCharacter, RetiredCharacterSnapshot } from "@/lib/db/types/retiredCharacter";
@@ -44,6 +42,8 @@ import { deriveHighestOffice } from "@/lib/character/deriveHighestOffice";
 import type { GameIteration } from "@/lib/db/types/gameState";
 import type { CharacterRecap } from "@/lib/recap/types";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -119,8 +119,7 @@ export async function retireCharacter(
         { projection: { _id: 1, shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { "holders.characterId": characterId },
         { projection: { _id: 1, holders: 1, marketPrice: 1, currencyCode: 1 } }
@@ -289,8 +288,7 @@ export async function retireCharacter(
       .collection<CabinetMember>("cabinetMembers")
       .find({ characterId }, { projection: { countryId: 1, party: 1 } })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({ chairCharacterId: characterId }, { projection: { countryId: 1 } })
       .toArray(),
   ]).catch(() => null);

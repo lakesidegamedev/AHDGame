@@ -19,7 +19,6 @@ import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   FISCAL_SCALE_STAGE,
   bookPrimarySpendingPerTurn,
@@ -131,6 +130,7 @@ import {
   runCorporationProducerMarket,
   type ProducerWalletScope,
 } from "./producerMarketPhase";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -1701,8 +1701,7 @@ async function loadTreasuryFundingBudgets(
 ): Promise<
   Map<string, { budgetId: string; cashLocal: number; scale: number; bookPrimaryPerTurn: number }>
 > {
-  const rows = await db
-    .collection<FederalBudget>("federalBudget")
+  const rows = await federalBudgetCollection(db)
     .find(
       {},
       {

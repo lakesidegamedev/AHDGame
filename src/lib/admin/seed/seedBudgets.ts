@@ -1,7 +1,8 @@
 import type { Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget, FormulaGrant } from "@/lib/db/types/budget";
+import type { EnactedLaw, StateBudget, FormulaGrant } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -19,7 +20,7 @@ export async function seedBudgets(
 ) {
   if (reset) {
     // Only delete US-specific budget data, not UK/JP
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId: "US" });
+    await federalBudgetCollection(db).deleteMany({ countryId: "US" });
     const usStateIds = (
       await db.collection("states").find({ countryId: "US" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
@@ -61,9 +62,11 @@ export async function seedBudgets(
   const usNationalBudgets = presetBudgets.filter((b) => b.countryId === "US");
   for (const nationalBudget of usNationalBudgets) {
     const { _id, ...budgetData } = nationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${usNationalBudgets.length} US national budget(s)`);
 

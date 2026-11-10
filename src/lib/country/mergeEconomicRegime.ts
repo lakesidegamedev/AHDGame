@@ -27,6 +27,7 @@ import {
   scheduledMarketizationLevel,
   setStoredMarketizationLevel,
 } from "@/lib/constants/commandEconomy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface MergeEconomicRegimeArgs {
   fromCountryId: CountryId;
@@ -46,7 +47,7 @@ export async function mergeEconomicRegime(
   args: MergeEconomicRegimeArgs
 ): Promise<MergeEconomicRegimeResult> {
   const { fromCountryId, toCountryId, currentYear } = args;
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
 
   const [from, to] = await Promise.all([
     budgets.findOne({ _id: fromCountryId }),

@@ -38,6 +38,7 @@ import type {
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -204,9 +205,10 @@ async function handleGET() {
      * Chair bonus is independent of currentOffice: the role lives on
      * centralBanks.chairCharacterId and stacks with any elected seat.
      */
-    const chairBankRow = await db
-      .collection("centralBanks")
-      .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } });
+    const chairBankRow = await centralBanksCollection(db).findOne(
+      { chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    );
     const chairActionBonus = chairBankRow ? (config?.chairActionBonus ?? 3) : 0;
     const baseActionsPerTurn = Math.max(config?.baseActionsPerTurn ?? 0, MIN_BASE_ACTIONS_PER_TURN);
     // Chamber leadership and Supreme Court AP, as granted at the last refresh.

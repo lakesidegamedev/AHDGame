@@ -16,13 +16,14 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bond } from "@/lib/db/types/bond";
-import type { EnactedLaw, FederalBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { resyncSovereignPrincipalFromBonds } from "@/lib/bonds/sovereign";
 import { countryFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
 import { resolveMergeFxScale } from "./mergeFxScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface MergeNationalFiscArgs {
   fromCountryId: CountryId;
@@ -83,7 +84,7 @@ export async function mergeNationalFisc(
   } = args;
   const now = new Date();
   const scale = await resolveMergeFxScale(db, fromCountryId, toCountryId);
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
 
   // ── Treasury + defence account ─────────────────────────────────────────────
   const from = await budgets.findOne({ _id: fromCountryId });
@@ -177,7 +178,7 @@ export async function mergeNationalFisc(
 
   // ── Sovereign bonds ────────────────────────────────────────────────────────
   const toCurrency = COUNTRY_CURRENCY_MAP[toCountryId];
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
   const absorbedBonds = await bonds
     .find({ issuerType: "sovereign", countryId: fromCountryId, matured: false })
     .toArray();

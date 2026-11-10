@@ -6,13 +6,7 @@
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import { type Db, type AnyBulkWriteOperation } from "mongodb";
-import type {
-  Character,
-  FederalBudget,
-  StateBudget,
-  ExchangeRate,
-  GameState,
-} from "@/lib/db/types";
+import type { Character, StateBudget, ExchangeRate, GameState } from "@/lib/db/types";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -33,6 +27,8 @@ import {
   playerIncomeTax,
   annualizedIncome,
 } from "./rules/incomeTaxTiers";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Pass-through distributions already taxed at source (the owner tax on
@@ -83,8 +79,7 @@ export async function processPlayerIncomeTax(
     conversions,
     imperialCharacters,
   ] = await Promise.all([
-    db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    financialTxLogCollection(db)
       .find(
         {
           subjectType: "character",
@@ -121,8 +116,7 @@ export async function processPlayerIncomeTax(
         }
       )
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1, priceIndex: 1 } })
       .toArray(),
     db

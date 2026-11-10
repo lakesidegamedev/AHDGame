@@ -5,8 +5,8 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CabinetMember } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { incompatibleBankHolders } from "./rules/officeCompatibility";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function getIncompatibleOfficeHolders(
   db: Db,
@@ -23,8 +23,7 @@ export async function getIncompatibleOfficeHolders(
       members.flatMap((member) => (member.characterId ? [member.characterId.toString()] : []))
     );
   }
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find(
       {
         $or: [

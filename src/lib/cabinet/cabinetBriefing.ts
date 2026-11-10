@@ -107,9 +107,6 @@ import { getTreasuryOperationsCollection } from "@/lib/db/collections/treasuryOp
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { StateMetrics, PoliticalParty, Character } from "@/lib/db/types";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { Bond } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { resolveNationalMetricValue } from "@/lib/cabinet/nationalMetricSource";
@@ -146,6 +143,9 @@ import type { ResetCabinetActionState } from "@/lib/resetCabinet/rules/actionSta
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 
 import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -318,13 +318,12 @@ export async function buildCabinetBriefing(
             .find({ _id: { $in: stateIds } })
             .toArray()
         : Promise.resolve([]),
-      db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-      db
-        .collection<Bond>("bonds")
+      federalBudgetCollection(db).findOne({ _id: budgetId }),
+      bondsCollection(db)
         .find({ issuerType: "sovereign", countryId, matured: false, defaulted: false })
         .toArray(),
       needsCentralBank
-        ? db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) })
+        ? centralBanksCollection(db).findOne({ _id: getBankId(countryId) })
         : Promise.resolve(null),
     ]);
 
@@ -697,8 +696,7 @@ export async function buildCabinetBriefing(
   if (resolveFinancePosition(countryId) === positionId) {
     // `bank` may be null above when no nationalMetric needs it — fetch for finance.
     const financeBank =
-      bank ??
-      (await db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) }));
+      bank ?? (await centralBanksCollection(db).findOne({ _id: getBankId(countryId) }));
     const [fx, opDoc] = await Promise.all([
       db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId }),
       getTreasuryOperationsCollection(db).findOne({ _id: countryId }),

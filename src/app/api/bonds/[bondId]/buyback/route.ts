@@ -8,7 +8,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Bond, Corporation, GameState } from "@/lib/db/types";
+import type { Corporation, GameState } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
@@ -26,6 +26,7 @@ import { distributeConversionSpread } from "@/lib/currency/marketMaker";
 import { creditBondPool, loadBondQuote } from "@/lib/bonds/marketPool";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -66,7 +67,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid bond ID");
     }
 
-    const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
       return errorResponse(404, "Bond not found");
     }
@@ -179,7 +180,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       };
     }
 
-    const floatClaim = await db.collection<Bond>("bonds").updateOne(bondUpdateFilter, {
+    const floatClaim = await bondsCollection(db).updateOne(bondUpdateFilter, {
       $inc: { publicFloat: -units, totalIssued: -retiredFaceValue },
       $set: bondUpdate,
     });
@@ -191,7 +192,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           { _id: issuingCorp._id },
           { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: new Date() } }
         );
-      const refreshedBond = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+      const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
       return errorResponse(
         400,
         `Only ${refreshedBond?.publicFloat ?? 0} units available in public float`
@@ -225,7 +226,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
     });
 
-    const refreshedBond = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+    const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
     const remainingPublicFloat =
       refreshedBond?.publicFloat ?? Math.max(0, bond.publicFloat - units);
     const newTotalIssued = refreshedBond?.totalIssued ?? bond.totalIssued - retiredFaceValue;
@@ -234,7 +235,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       (refreshedBond?.holders?.reduce((sum, h) => sum + h.units, 0) ?? holderUnits) <= 0;
 
     if (fullyRetired && refreshedBond && !refreshedBond.matured) {
-      await db.collection<Bond>("bonds").updateOne(
+      await bondsCollection(db).updateOne(
         { _id: refreshedBond._id, matured: false, publicFloat: { $lte: 0 } },
         {
           $set: {

@@ -11,6 +11,8 @@ import { invalidateCachedCountryState } from "@/lib/countryState/cache";
 import { getCountryStateCollection } from "@/lib/db/collections/countryState";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { StateRegistrationPool } from "@/lib/db/types/stateRegistrationPool";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -192,14 +194,12 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     if (corporation.ceoType === "npp") keep(corporation.ceoId);
     for (const holder of corporation.shareholders ?? []) keep(holder.nppId);
   }
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({})
     .project<Pick<Bond, "holders">>({ holders: 1 })
     .toArray();
   for (const bond of bonds) for (const holder of bond.holders ?? []) keep(holder.nppId);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project<Pick<CentralBank, "chairNppId" | "fomcBoard">>({ chairNppId: 1, fomcBoard: 1 })
     .toArray();

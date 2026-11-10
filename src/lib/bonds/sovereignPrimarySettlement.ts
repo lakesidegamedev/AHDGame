@@ -24,6 +24,7 @@ import {
   fiscalScalePoolCashPerFace,
   fiscalScaleStageActive,
 } from "@/lib/budget/rules/fiscalScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -60,10 +61,11 @@ export async function loadPoolCashPerFaceByCountry(
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (!fiscalScaleStageActive(stage, FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT)) return out;
-  const budgets = await db
-    .collection<{ _id: string; countryId?: string; fiscalScale?: { scale?: number } }>(
-      "federalBudget"
-    )
+  const budgets = await federalBudgetCollection<{
+    _id: string;
+    countryId?: string;
+    fiscalScale?: { scale?: number };
+  }>(db)
     .find({ "fiscalScale.scale": { $gt: 0 } }, { projection: { countryId: 1, fiscalScale: 1 } })
     .toArray();
   for (const budget of budgets) {

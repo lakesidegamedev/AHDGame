@@ -20,7 +20,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { runWithLedgerTurn } from "@/lib/ledger/ledgerTurn";
 import type {
@@ -32,6 +31,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "./types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export interface CompensationProblem {
   field: string;
@@ -330,8 +330,7 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
 
     // emitTxBulk mints its own ids: read them back so a rollback deletes them.
     const receipts = ctx.runId
-      ? await db
-          .collection<FinancialTxLogEntry>("financialTxLog")
+      ? await financialTxLogCollection(db)
           .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
           .toArray()
       : [];
@@ -351,9 +350,10 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
   const verify = async (db: Db): Promise<VerifyResult> => {
     const { byId } = await load(db);
     const marked = spec.credits.filter((c) => byId.get(c.corporationId)?.remediation?.[id]);
-    const receipts = await db
-      .collection("financialTxLog")
-      .countDocuments({ type: "restitution_credit", "meta.compensationId": id });
+    const receipts = await financialTxLogCollection(db).countDocuments({
+      type: "restitution_credit",
+      "meta.compensationId": id,
+    });
     const unmarked = spec.credits.filter((c) => byId.has(c.corporationId)).length - marked.length;
     return {
       ok: unmarked === 0 && receipts >= marked.length,

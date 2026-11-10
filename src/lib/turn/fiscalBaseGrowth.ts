@@ -30,6 +30,7 @@ import {
 } from "@/lib/market/producerMarket/wageShareRules";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
  * each turn, so bases and accrued revenue track the live economy instead of
@@ -269,9 +270,7 @@ export async function processFiscalBaseGrowth(
           set.otherRevenueGdpShareBaseline = currentOther / budgetGdp;
         }
       }
-      await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne({ _id: budget._id }, { $set: set });
+      await federalBudgetCollection(db).updateOne({ _id: budget._id }, { $set: set });
 
       // Recompute federal revenue off the freshly grown bases (calculateFederalRevenue
       // reads the persisted taxBases) so the per-turn treasury accrual tracks growth.
@@ -283,9 +282,10 @@ export async function processFiscalBaseGrowth(
           // A revenue-only write leaves it stale by the grown amount each turn, which
           // the end-of-turn invariant check flags as drift. Persist both in the same write.
           const surplus = federalSurplus({ revenue, spending: budget.spending });
-          await db
-            .collection<FederalBudget>("federalBudget")
-            .updateOne({ _id: budget._id }, { $set: { revenue, surplus } });
+          await federalBudgetCollection(db).updateOne(
+            { _id: budget._id },
+            { $set: { revenue, surplus } }
+          );
         }
       }
       countriesProcessed += 1;

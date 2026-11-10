@@ -30,6 +30,7 @@ import {
   type BondPoolLedgerContext,
 } from "./marketPoolLedger";
 import { SOVEREIGN_ISSUANCE_INTERVAL_TURNS } from "@/lib/bonds/sovereign";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Cash above this multiple of target triggers a sweep... */
 export const BOND_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
@@ -65,8 +66,7 @@ export async function sovereignFaceMaturingSoon(
   currency: CurrencyCode,
   turn: number
 ): Promise<number> {
-  const rows = await db
-    .collection<{ totalIssued?: number }>("bonds")
+  const rows = await bondsCollection<{ totalIssued?: number }>(db)
     .find(
       {
         issuerType: "sovereign",
@@ -86,8 +86,7 @@ export async function sovereignFaceMaturingSoonByCurrency(
   db: Db,
   turn: number
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<{ currencyCode?: string; totalIssued?: number }>("bonds")
+  const rows = await bondsCollection<{ currencyCode?: string; totalIssued?: number }>(db)
     .aggregate<{ _id: string | null; face: number }>([
       {
         $match: {

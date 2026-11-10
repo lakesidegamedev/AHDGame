@@ -12,7 +12,7 @@ import type {
   ElectedOfficial,
   Seat,
 } from "@/lib/db/types";
-import type { StateMetrics, CentralBank, SystemSettings } from "@/lib/db/types";
+import type { StateMetrics, SystemSettings } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_ORDER, COUNTRY_CONFIGS, getOfficeTypeConfig } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -26,6 +26,8 @@ import {
 } from "@/lib/turn/ensureFederalBudget";
 import { summarizeGameHealth } from "@/lib/turn/rules/gameHealth";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -649,8 +651,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
   // would hide them. (#2166): only the discovery key and the inflation rate are
   // read.
   const [centralBanks, simulatedIds, fxRows, budgetDocs] = await Promise.all([
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({}, { projection: { countryId: 1, primeRate: 1 } })
       .toArray(),
     // Every country the engine simulates, not just those with a national
@@ -706,8 +707,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
       // (#2166): only the gdpGrowth value is read below.
       .find({ _id: { $in: nationalIds } }, { projection: { "economic.gdpGrowth.value": 1 } })
       .toArray(),
-    db
-      .collection("bonds")
+    bondsCollection(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         {

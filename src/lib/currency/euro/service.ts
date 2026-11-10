@@ -13,6 +13,7 @@ import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { resolveGameYear } from "@/lib/era/era";
 import { planEuroSettlement, type EuroMonetaryUnion } from "./rules";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function loadEuroMonetaryUnion(db: Db): Promise<EuroMonetaryUnion | undefined> {
   const state = await db
@@ -23,7 +24,7 @@ export async function loadEuroMonetaryUnion(db: Db): Promise<EuroMonetaryUnion |
 
 /** No financial amounts, principal, receipts or account identities are transferred. */
 export async function syncEuroMonetaryPolicy(db: Db, union: EuroMonetaryUnion): Promise<void> {
-  const banks = db.collection<CentralBank>("centralBanks");
+  const banks = centralBanksCollection(db);
   const authority = await banks.findOne(
     { _id: union.authorityId },
     {
@@ -106,8 +107,7 @@ export async function reconcileEuroMonetaryUnion(
         .collection<ExchangeRate>("exchangeRates")
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .find({}, { projection: { _id: 1 } })
         .toArray(),
     ]);

@@ -9,14 +9,7 @@ import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt
 import { heldStakeValueAnchor, transferOwnedSharesToNatCorp } from "./heldEquityTransfer";
 import { ObjectId } from "mongodb";
 import { badRequest } from "@/lib/api/errors";
-import type {
-  Bond,
-  CentralBank,
-  Character,
-  Corporation,
-  CorporateSector,
-  State,
-} from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { NationalizationTaking } from "@/lib/db/types/corporationSector";
 import { splitCompensationBySector } from "./compensationSplit";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
@@ -124,6 +117,8 @@ import {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
 } from "./fundedOwnershipSettlement";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -706,7 +701,7 @@ export async function nationalizeSector(
 
   // Valuation in ₳ via the canonical sector NPV (going-concern, growth-cost-net).
   const [centralBanks, fxByCurrency, donorFxRate, marketMode, gameState] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getCorpFxRate(db, donor),
     getMarketSystemModeForDb(db),
@@ -993,7 +988,7 @@ export async function nationalizeWholeCorp(
   const now = new Date();
   const corps = db.collection<Corporation>("corporations");
   const sectors = db.collection<CorporateSector>("corporateSectors");
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
 
   const target = await corps.findOne({ _id: params.corporationId });
   if (!target) throw new Error("Target corporation not found");
@@ -1146,7 +1141,7 @@ export async function nationalizeWholeCorp(
         { projection: { shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1, countryId: 1 } }
       )
       .toArray(),
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getCorpFxRate(db, target),
     getMarketSystemModeForDb(db),

@@ -9,7 +9,6 @@ import { corporationTypeOfLane } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db, ObjectId } from "mongodb";
 import type {
-  Bond,
   Character,
   Corporation,
   CorporateSector,
@@ -69,6 +68,7 @@ import {
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { getDesignatedSectorTypes } from "./strategicSectors";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -518,8 +518,7 @@ export async function buildNationalCorporationView(
         ) / 10
       : 0;
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ corporationId: corp._id, matured: false })
     .toArray();
   const assumedBonds = bonds.map((b) => ({

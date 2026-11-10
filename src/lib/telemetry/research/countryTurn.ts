@@ -22,8 +22,6 @@ import { isBankGovernmentControlled } from "@/lib/centralBank/governance";
 import { SYSTEM_RATE_ACTOR } from "@/lib/centralBank/rateHistory";
 import { getCountryTurnTelemetryCollection } from "@/lib/db/collections/researchTelemetry";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { Bond } from "@/lib/db/types/bond";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { State } from "@/lib/db/types/state";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
@@ -36,6 +34,9 @@ import {
   weightedMean,
   type CountryTurnRow,
 } from "./rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Recent-first change from the bank's rate ledger when it landed on `turn`. */
 function changeThisTurn(bank: CentralBank, turn: number) {
@@ -69,9 +70,8 @@ export async function buildCountryTurnRows(
   observedAt: Date
 ): Promise<CountryTurnRow[]> {
   const [banks, budgets, rates, states, metrics, sovereignBonds, conflicts] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    centralBanksCollection(db).find({}).toArray(),
+    federalBudgetCollection(db)
       .find({ mergedInto: { $exists: false } })
       .toArray(),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
@@ -92,8 +92,7 @@ export async function buildCountryTurnRows(
         }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         {
           issuerType: "sovereign",

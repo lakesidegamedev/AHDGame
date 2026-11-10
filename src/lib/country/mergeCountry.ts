@@ -53,6 +53,7 @@ import {
   INTERNATIONAL_ORGANIZATIONS,
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -551,12 +552,10 @@ async function mergeNationalCorporations(
         throw new Error("A sector changed during National Corporation consolidation");
       movedSectorIds.push(sector._id);
     }
-    await db
-      .collection("bonds")
-      .updateMany(
-        { corporationId: shell._id },
-        { $set: { corporationId: survivor._id, issuerName: survivor.name, updatedAt: now } }
-      );
+    await bondsCollection(db).updateMany(
+      { corporationId: shell._id },
+      { $set: { corporationId: survivor._id, issuerName: survivor.name, updatedAt: now } }
+    );
     await repointShareholderEntries(db, shell._id, survivor._id, now);
 
     const cash = Number(shell.liquidCapital ?? 0);

@@ -47,7 +47,6 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { computeIpoIssuance } from "@/lib/corporations/ipoIssuance";
 import { CEO_INITIAL_SHARES } from "@/lib/constants/corporations";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { isNominationWindowOpen } from "@/lib/turn/centralBankChairSelection";
 import {
   fnv1aHex,
@@ -68,6 +67,7 @@ import {
   PRIVATE_PROBE_FOUNDING_CAPITAL,
   PROBE_FOUNDER_CASH,
 } from "./actorProbes";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -670,7 +670,7 @@ async function queueSyntheticFedNomination(
 ): Promise<number> {
   const { turn, now, nominator, nominee } = args;
   const { bankId, memberCountries } = await getCentralBankScope(db, "US");
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   if (!bank) return 0;
   const nomineeId = new ObjectId(nominee.characterIdHex);
   const nominations = (bank.nominations ?? []) as Array<{
@@ -687,7 +687,7 @@ async function queueSyntheticFedNomination(
   const execOffice = COUNTRY_CONFIGS.US?.officeTypes.find((o) => o.isExecutive);
   const targetOfficeType = (target.currentOffice as { type?: string } | undefined)?.type;
   if (execOffice && targetOfficeType === execOffice.key) return 0;
-  await db.collection("centralBanks").bulkWrite([
+  await centralBanksCollection(db).bulkWrite([
     {
       updateOne: {
         filter: { _id: bankId },

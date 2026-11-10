@@ -10,6 +10,7 @@ import type { BankingPolicySnapshot } from "@/lib/banking/rules/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { guaranteedDepositorShortfall } from "@/lib/livingConflict/rules/financialRescue";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface FundedGuarantee {
   _id: string;
@@ -130,8 +131,7 @@ export async function processFinancialCrisisGuarantees(
     ...new Set([...refundSourceById.values()].map((source) => source.treasuryId)),
   ];
   const refundBudgets = refundTreasuryIds.length
-    ? await db
-        .collection<FederalBudget>("federalBudget")
+    ? await federalBudgetCollection(db)
         .find(
           { _id: { $in: refundTreasuryIds } },
           { projection: { _id: 1, countryId: 1, currencyCode: 1 } }

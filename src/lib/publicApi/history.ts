@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export const PUBLIC_HISTORY_DEFAULT_POINTS = 48;
 export const PUBLIC_HISTORY_MAX_POINTS = 240;
@@ -183,7 +184,7 @@ export async function queryCountryEconomyHistory(
     ...turnFilter(normalized),
   };
   const [centralBank, fiscalDescending] = await Promise.all([
-    db.collection<PublicCentralBankRow>("centralBanks").findOne(
+    centralBanksCollection<PublicCentralBankRow>(db).findOne(
       { countryId },
       {
         projection: {

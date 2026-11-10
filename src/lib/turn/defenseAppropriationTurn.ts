@@ -12,13 +12,13 @@ import {
 } from "@/lib/military/appropriation";
 import { resolveSeedRosterUpkeep } from "@/lib/military/seedRosterUpkeepPin";
 import { resolveDefenseLineFrom } from "./defenseEnvelope";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import {
   getDefenseAppropriation,
   applyAppropriationSettlementWithOverdraft,
 } from "@/lib/db/collections/defenseAppropriation";
 import { applyReadinessDrift } from "./militaryForceEffects";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export class DefenseAppropriationContentionError extends Error {
   readonly retryable = true;
@@ -70,7 +70,7 @@ export async function applyDefenseAppropriation(
   let settlement: AppropriationSettlement | null = null;
   let settled = false;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ countryId });
+    const budget = await federalBudgetCollection(db).findOne({ countryId });
     if (!budget) return null;
     // An unmigrated budget must be seeded before settling. The seed is idempotent;
     // reload so the CAS includes the persisted pot value.

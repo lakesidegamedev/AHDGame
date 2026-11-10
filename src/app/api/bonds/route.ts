@@ -2,7 +2,7 @@ import { loadSovereignRiskDisclosures } from "@/lib/bonds/sovereignRiskDisclosur
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -22,6 +22,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * GET /api/bonds
@@ -51,8 +52,7 @@ export async function GET(request: Request) {
     // Get all non-matured bonds + FX rates (needed to anchor-normalize the
     // cross-currency `totalOutstanding` summary — A24).
     const [bonds, fxByCurrency] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find(
           { matured: false },
           {

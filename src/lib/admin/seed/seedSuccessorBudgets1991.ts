@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -9,6 +9,7 @@ import {
   getInitialNationalBudgetsForPreset,
 } from "@/lib/seeds/reference/budgets";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const COUNTRY_IDS = [
   "RU",
@@ -29,9 +30,7 @@ export async function seedSuccessorBudgets1991(
 ): Promise<void> {
   if (preset !== "1991-default") return;
   if (reset) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
+    await federalBudgetCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
     await db
       .collection<StateBudget>("stateBudgets")
       .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
@@ -42,7 +41,7 @@ export async function seedSuccessorBudgets1991(
   if (budgets.length !== COUNTRY_IDS.length)
     throw new Error("Missing 1991 transition national budget");
   const now = new Date();
-  await db.collection<FederalBudget>("federalBudget").bulkWrite(
+  await federalBudgetCollection(db).bulkWrite(
     budgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: { ...budget, updatedAt: now } }, upsert: true },
     }))

@@ -7,7 +7,8 @@ import type { Db } from "mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
-import type { CentralBank, TurnSnapshot } from "@/lib/db/types";
+import type { TurnSnapshot } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function loadForexMonetaryPolicy(params: { db: Db }) {
   const { db } = params;
@@ -19,8 +20,7 @@ export async function loadForexMonetaryPolicy(params: { db: Db }) {
   const preset = await getGameStatePresetOrDefault(db);
   const activeCountries = getPresetMonetaryScope(preset).forexCountries;
 
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({ countryId: { $in: activeCountries } })
     .project({
       countryId: 1,

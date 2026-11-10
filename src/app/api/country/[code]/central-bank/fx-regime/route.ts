@@ -12,13 +12,13 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { handleRouteError, forbidden, notFound, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { createSystemNewsPost } from "@/lib/news";
 import { describeTrinity, resolveTrinity, type FxRegime } from "@/lib/currency/exchangeRateRegime";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -83,12 +83,10 @@ export async function POST(request: Request, context: RouteContext) {
     const db = await getDb();
     const scope = await getMonetaryPolicyScope(db, countryId);
     const fxCountryId = scope.currencyCode === "EUR" ? "DE" : countryId;
-    const bank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne(
-        { _id: scope.bankId },
-        { projection: { chairCharacterId: 1, chairControlsLocked: 1 } }
-      );
+    const bank = await centralBanksCollection(db).findOne(
+      { _id: scope.bankId },
+      { projection: { chairCharacterId: 1, chairControlsLocked: 1 } }
+    );
     if (!bank)
       return NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 });
 

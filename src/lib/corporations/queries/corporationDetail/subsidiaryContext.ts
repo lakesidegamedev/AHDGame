@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import {
   acquirerOwnershipPercent,
@@ -33,6 +33,7 @@ import {
   strengthUpkeepActive,
 } from "@/lib/corporations/strengthUpkeep";
 import { spinOffCooldownTurnsRemaining } from "@/lib/corporations/subsidiaries/constants";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 async function buildHostileTakeoverEligibility(
   db: Db,
@@ -60,10 +61,7 @@ async function buildHostileTakeoverEligibility(
     const acqPct = acquirerOwnershipPercent(mc._id, corporation);
     if (acqPct > HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT) {
       const [outstandingBonds, parentCorp] = await Promise.all([
-        db
-          .collection<Bond>("bonds")
-          .find({ corporationId: corporation._id, matured: false })
-          .toArray(),
+        bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
         db.collection<Corporation>("corporations").findOne({ _id: mc._id }),
       ]);
       const outstandingBondDebt = outstandingBonds.reduce((sum, b) => sum + b.totalIssued, 0);

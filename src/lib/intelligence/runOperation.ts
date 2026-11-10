@@ -13,7 +13,6 @@ import type {
   OperationCompromise,
   OperationOutcome,
 } from "@/lib/db/types/intelligence";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   creditIntelligenceAppropriation,
   debitIntelligenceAppropriation,
@@ -35,6 +34,7 @@ import { resolveOperation } from "./resolveOperation";
 import { applyEconomicAction, type EconomicActionResult } from "./economicAction";
 import { applyMilitaryAction, type MilitaryActionResult } from "./militaryAction";
 import { applyStrategicAction, type StrategicActionResult } from "./strategicAction";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export type OperationKind = "collect" | "action";
 
@@ -127,9 +127,7 @@ export async function runOperation(args: RunOperationArgs): Promise<RunOperation
   //
   // Money first, and refunded if the slot claim loses. The reverse ordering would
   // charge for an operation that never ran.
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: agency.countryId });
+  const budget = await federalBudgetCollection(db).findOne({ countryId: agency.countryId });
   const cost = Math.round(operationCost(kind, budget?.gdp ?? 0));
 
   if (!(await debitIntelligenceAppropriation(db, agency.countryId, cost))) {

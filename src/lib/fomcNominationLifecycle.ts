@@ -23,7 +23,8 @@ import { getGameState } from "@/lib/gameState";
 import { nppCabinetVote } from "@/lib/cabinetNominationLifecycle";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial, NPP, Character } from "@/lib/db/types";
-import { FOMC_TERM_TURNS, type CentralBank, type FomcNomination } from "@/lib/db/types/centralBank";
+import { FOMC_TERM_TURNS, type FomcNomination } from "@/lib/db/types/centralBank";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Resolve a player character's owning userId for notifications. */
 async function nomineeUserId(
@@ -97,7 +98,7 @@ async function installConfirmedSeat(
   currentTurn: number,
   cabinetHolders: ReadonlySet<string>
 ): Promise<boolean> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: nom.bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: nom.bankId });
   const targetSeat = bank?.fomcBoard?.find((seat) => seat.seatId === nom.seatId);
   if (!bank?.fomcBoard || !targetSeat) return false;
   if (
@@ -151,7 +152,7 @@ async function installConfirmedSeat(
     }
   }
 
-  await db.collection<CentralBank>("centralBanks").updateOne({ _id: nom.bankId }, { $set: set });
+  await centralBanksCollection(db).updateOne({ _id: nom.bankId }, { $set: set });
   return true;
 }
 

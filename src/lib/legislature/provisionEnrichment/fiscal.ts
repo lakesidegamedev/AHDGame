@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { LegislationType } from "@/lib/db/types";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { countryFiscalBase, regionFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
@@ -10,6 +10,7 @@ import { COST_INCOME_ANCHORS } from "@/lib/politicalLegislation/costAnchors";
 import { isNewGenerationType } from "@/lib/politicalLegislation/project";
 import type { LawCountryId } from "@/lib/politicalLegislation/types";
 import type { FiscalScope, ProvisionFiscal } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * A provision's fiscal profile, priced at the bill's own scope.
@@ -54,12 +55,10 @@ export async function resolveProvisionFiscal(
       const baseKey = STATE_TAX_BASE_KEY[lt.taxSlider.taxType];
       taxBase = baseKey ? (budget?.taxBases?.[baseKey] ?? 0) : 0;
     } else {
-      const budget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne(
-          { _id: getNationalBudgetId(countryId) },
-          { projection: { taxRates: 1, taxBases: 1 } }
-        );
+      const budget = await federalBudgetCollection(db).findOne(
+        { _id: getNationalBudgetId(countryId) },
+        { projection: { taxRates: 1, taxBases: 1 } }
+      );
       currentRate =
         (budget?.taxRates as Record<string, number> | undefined)?.[lt.taxSlider.taxType] ??
         lt.taxSlider.baselineRate;

@@ -1,10 +1,5 @@
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
-import type {
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  NationalizationAuction,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, NationalizationAuction } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import {
@@ -27,6 +22,7 @@ import type {
   TouchedDocs,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -312,8 +308,7 @@ async function survey(db: Db): Promise<Survey> {
       .find({ _id: { $in: sourceCorpIds } })
       .toArray(),
     loadFxRatesByCurrency(db),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ countryId: { $in: ["RU", "UKR"] } })
       .toArray(),
     db.collection<{ _id: string; currentTurn?: number }>("gameState").findOne({ _id: "current" }),
@@ -532,7 +527,7 @@ async function applyCompensation(db: Db, row: CompensationPlan, ctx: HealContext
     appliedAt: ctx.now,
   };
   let modified = 0;
-  const budget = await db.collection<FederalBudget>("federalBudget").updateOne(
+  const budget = await federalBudgetCollection(db).updateOne(
     { _id: row.budgetId, [markerPath]: { $exists: false } },
     {
       $inc: { treasuryBalance: -row.treasuryLocalAmount },

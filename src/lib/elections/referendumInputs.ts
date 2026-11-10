@@ -24,6 +24,7 @@ import type { FederalBudget } from "@/lib/db/types";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { MiseryInputs } from "@/lib/elections/engine/economicReferendum";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Fallbacks when a country has no national metrics doc yet (neutral-ish). */
 const FALLBACK_UNEMPLOYMENT = 6;
@@ -54,12 +55,10 @@ export async function loadReferendumInputs(db: Db, countryId: CountryId): Promis
           }
         )
       : null,
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { _id: getNationalBudgetId(countryId) as FederalBudget["_id"] },
-        { projection: { economicFactors: 1 } }
-      ),
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) as FederalBudget["_id"] },
+      { projection: { economicFactors: 1 } }
+    ),
   ]);
 
   const inflationRate = num(budget?.economicFactors?.inflationRate, FALLBACK_INFLATION);

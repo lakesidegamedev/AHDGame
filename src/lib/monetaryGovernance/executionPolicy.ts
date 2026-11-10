@@ -6,10 +6,10 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { COMMAND_CEILING, scheduledMarketizationLevel } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { StateContext } from "./governanceShell";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type ExecutionPolicy = Pick<StateContext, "fxCommitment" | "commandEconomy">;
 
@@ -30,8 +30,7 @@ export async function loadExecutionPolicies(
       )
       .toArray(),
     commandEconomyEnabled
-      ? db
-          .collection<FederalBudget>("federalBudget")
+      ? federalBudgetCollection(db)
           .find(
             { _id: { $in: ids.map(getNationalBudgetId) } },
             { projection: { "economicFactors.marketizationLevel": 1 } }

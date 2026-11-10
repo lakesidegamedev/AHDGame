@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Bond } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export type BondHolderField = "characterId" | "imperialCharacterId";
 
@@ -15,8 +15,7 @@ export async function holdsAnyBondsInCorp(
   holderField: BondHolderField,
   corpId: ObjectId
 ): Promise<{ holds: boolean; units: number }> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ corporationId: corpId, [`holders.${holderField}`]: holderId })
     .toArray();
 

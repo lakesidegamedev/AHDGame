@@ -8,7 +8,7 @@ import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import type { Character } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function GET(_req: Request) {
   const auth = await requireAuth();
@@ -43,15 +43,13 @@ export async function GET(_req: Request) {
           .toArray()
       : [];
 
-  const activeBailouts = await db
-    .collection<FederalBudget>("federalBudget")
+  const activeBailouts = await federalBudgetCollection(db)
     .find({ imfSovereignBailoutActive: true })
     .toArray();
 
   // Phase 11a: lifetime running tally summed across every country that has
   // paid into the facility (active OR previously-bailed). Anchor units.
-  const paidInLifetime = await db
-    .collection<FederalBudget>("federalBudget")
+  const paidInLifetime = await federalBudgetCollection(db)
     .find({ imfSovereignFacilityCumulativePaidAnchor: { $gt: 0 } })
     .toArray();
   const totalReceivedAnchor = paidInLifetime.reduce(
@@ -61,8 +59,7 @@ export async function GET(_req: Request) {
 
   const nowMs = Date.now();
   const currentTurn = await getCurrentTurn(db);
-  const pendingOverrides = await db
-    .collection<FederalBudget>("federalBudget")
+  const pendingOverrides = await federalBudgetCollection(db)
     .find({
       imfBoardOverrideWindowEndAt: { $exists: true, $ne: null },
       imfBoardOverrideAt: null,

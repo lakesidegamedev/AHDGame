@@ -1,6 +1,7 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Per-turn financial-distress clock for player corporations. Run AFTER this
@@ -34,8 +35,7 @@ export async function trackFinancialDistress(db: Db, turn: number): Promise<void
   if (corps.length === 0) return;
 
   const corpIds = corps.map((c) => c._id);
-  const defaultedBonds = await db
-    .collection<Bond>("bonds")
+  const defaultedBonds = await bondsCollection(db)
     .find(
       { corporationId: { $in: corpIds }, defaulted: true, matured: false },
       { projection: { corporationId: 1 } }

@@ -64,6 +64,7 @@ export const STATE_TAX_BASE_KEY: Record<string, keyof StateTaxBases> = {
 };
 
 import { POLITICAL_LEGISLATION_EXCLUDED_SCOPES as NEW_GENERATION_COUNTRIES } from "@/lib/politicalMetrics/pipelinePreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Attach `estimates` (program laws) / `taxSlider` (slider laws, with the live
@@ -97,12 +98,10 @@ export async function attachPoliticalLegislationEstimates(
       : await countryFiscalBase(db, countryId)
     : null;
   const bandIndex = incomeBandIndexByCountry?.[countryId] ?? null;
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne(
-      { _id: getNationalBudgetId(countryId) },
-      { projection: { taxRates: 1, taxBases: 1, incomeTaxShares: 1 } }
-    );
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(countryId) },
+    { projection: { taxRates: 1, taxBases: 1, incomeTaxShares: 1 } }
+  );
   const hasStateSlider = docs.some((d) => {
     const lt = d as unknown as LegislationType;
     return Boolean(

@@ -4,23 +4,22 @@
  * it never rewrites an existing monetary stock or its issuance history.
  */
 import type { Db } from "mongodb";
-import type { CentralBank, FederalBudget } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { broadMoneyToGdpRatio } from "@/lib/seeds/reference/moneySupply";
 import { campaignLocalRate, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { seedExternalBroadMoney } from "./rules/seed";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function seedMoneySupplyBaselines(db: Db, preset: string): Promise<void> {
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({ externalBroadMoney: { $exists: false } }, { projection: { countryId: 1 } })
     .toArray();
   if (banks.length > 0) {
     const [budgets, rates] = await Promise.all([
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           { _id: { $in: banks.map((bank) => getNationalBudgetId(bank.countryId)) } },
           { projection: { gdp: 1 } }
@@ -30,7 +29,7 @@ export async function seedMoneySupplyBaselines(db: Db, preset: string): Promise<
     ]);
     const gdpById = new Map(budgets.map((budget) => [budget._id, budget.gdp]));
     const now = new Date();
-    await db.collection<CentralBank>("centralBanks").bulkWrite(
+    await centralBanksCollection(db).bulkWrite(
       banks.map((bank) => ({
         updateOne: {
           filter: { _id: bank._id, externalBroadMoney: { $exists: false } },

@@ -29,7 +29,7 @@ describe("data access counter", () => {
   it("leaves getter calls, other collections and dynamic names off the direct counter", () => {
     const source = [
       "const a = await getCharactersCollection(db);",
-      'db.collection<Bond>("bonds").find({});',
+      'db.collection<Bond>("newThing").find({});',
       "db.collection<Doc>(name).find({});",
       '// db.collection("characters") in a comment',
     ].join("\n");
@@ -39,6 +39,16 @@ describe("data access counter", () => {
     expect(countAccess('db.collection("states");', "src/lib/db/collections/states.ts")).toEqual({
       untyped: 1,
     });
+  });
+  it("counts the money collections and exempts the repositories", () => {
+    for (const name of ["federalBudget", "bonds", "centralBanks", "financialTxLog"]) {
+      expect(countAccess(`db.collection<Doc>("${name}").find({});`, "src/lib/x.ts")).toEqual({
+        [name]: 1,
+      });
+      expect(
+        countAccess(`db.collection<Doc>("${name}");`, `src/lib/db/repositories/${name}.ts`)
+      ).toEqual({});
+    }
   });
   it("skips tests and fixtures", () => {
     for (const file of [

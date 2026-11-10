@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { CorporateSector, Corporation } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { sumCorporateSectorNpv } from "@/lib/bonds/corporateCredit";
 import { buildPrimeRateByCountry } from "@/lib/centralBank/helpers";
@@ -9,6 +8,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { getGameState } from "@/lib/gameState";
 import { sumSectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Salvage value (in ₳) a dissolving corp recovers from its operating sectors.
@@ -35,7 +35,7 @@ export async function computeDissolutionSectorSalvageAnchor(
       .collection<CorporateSector>("corporateSectors")
       .find({ corporationId: corporation._id })
       .toArray(),
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     getMarketSystemModeForDb(db),
   ]);
   const plantsEnabled = marketAtLeast(marketMode, "plants");

@@ -15,6 +15,7 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { buildSyncRoleTokens } from "./buildSyncRoles";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -135,9 +136,10 @@ export async function GET(request: Request) {
      * currentOffice, so query it independently. The token stacks on top of any
      * elected-office token (handled inside buildSyncRoleTokens).
      */
-    const chairBank = await db
-      .collection("centralBanks")
-      .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } });
+    const chairBank = await centralBanksCollection(db).findOne(
+      { chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    );
     const isCentralBankChair = chairBank != null;
 
     const country = (character.countryId ?? "US") as CountryId;
@@ -289,8 +291,7 @@ export async function POST(request: Request) {
     bulkSorted.forEach(([id], idx) => bulkInvestorRankMap.set(id, idx + 1));
 
     // Build chair-character set once so each character's chair role check is O(1).
-    const chairBanks = await db
-      .collection("centralBanks")
+    const chairBanks = await centralBanksCollection(db)
       .find({ chairCharacterId: { $ne: null } }, { projection: { chairCharacterId: 1 } })
       .toArray();
     const chairCharIds = new Set(

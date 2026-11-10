@@ -1,7 +1,6 @@
 // src/lib/crises/aidPledge.ts
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CrisisInteraction } from "@/lib/db/types/crisis";
 import type { CrisisAidCommitment } from "@/lib/db/types/crisisAid";
 import { AID_MAX_PCT_GDP } from "@/lib/constants/crises";
@@ -12,6 +11,7 @@ import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import { applyEffectsForCrisis } from "@/lib/crises/interactionEngine";
 import { proposeCrisisAidBill } from "@/lib/legislature/commands/proposeCrisisAidBill";
 import { logWireEvent } from "@/lib/wireEvent";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface SubmitCrisisAidPledgeInput {
   interactionId: ObjectId;
@@ -61,9 +61,7 @@ export async function submitCrisisAidPledge(
     throw badRequest("Invalid aid amount");
   }
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: input.senderCountryId });
+  const budget = await federalBudgetCollection(db).findOne({ countryId: input.senderCountryId });
   const senderGdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   if (senderGdp <= 0) throw badRequest("Sender GDP unavailable");

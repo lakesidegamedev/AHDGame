@@ -40,7 +40,6 @@ import {
 } from "@/lib/actions/officeActionBonus";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
-  Bond,
   Character,
   Corporation,
   CorporationHistory,
@@ -59,6 +58,8 @@ import { buildTurnBriefing } from "@/lib/client/turnBriefing";
 import { loadWidgetExtras } from "@/lib/client/widgetExtras";
 import { buildWidgetPerTurn, type WidgetPerTurn } from "@/lib/client/widgetFigures";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -181,8 +182,7 @@ export async function handleClientStatus(request: Request) {
               .toArray()
           : Promise.resolve([]),
         includeChipData
-          ? db
-              .collection<Bond>("bonds")
+          ? bondsCollection(db)
               .find({
                 "holders.imperialCharacterId": imperial._id,
                 matured: false,
@@ -540,8 +540,7 @@ export async function handleClientStatus(request: Request) {
         })
         .toArray(),
       // Bond coupon income: active bonds held by character
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({ "holders.characterId": character._id, matured: false, defaulted: false })
         .project<{
           couponRate: number;
@@ -555,9 +554,10 @@ export async function handleClientStatus(request: Request) {
       // historical worlds project in their own denomination (issue #798).
       getGameStatePresetOrDefault(db),
       loadCampaignCurrencyRates(db),
-      db
-        .collection("centralBanks")
-        .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } }),
+      centralBanksCollection(db).findOne(
+        { chairCharacterId: character._id },
+        { projection: { _id: 1 } }
+      ),
       db
         .collection<{
           _id: string;

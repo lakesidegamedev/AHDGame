@@ -6,13 +6,7 @@
 import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
-import type {
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  SectorBuildOrder,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, SectorBuildOrder, StateMetrics } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   loadFxRatesByCurrency,
@@ -80,6 +74,7 @@ import {
 } from "./constants";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface MetricOpInput {
   countryId: CountryId;
@@ -970,12 +965,10 @@ async function applyStateCapexGrowth(
   );
   if (candidates.length === 0) return;
   const [budgetDoc, priceDocs, queueDocs] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { countryId },
-        { projection: { debt: 1, sovereignCrisisState: 1, treasuryCashLocal: 1 } }
-      ),
+    federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { debt: 1, sovereignCrisisState: 1, treasuryCashLocal: 1 } }
+    ),
     db
       .collection<CommodityPrice>("commodityPrices")
       .find(

@@ -12,12 +12,12 @@ import { loadCountrySovereignSnapshot } from "@/lib/sovereignDefault/snapshotLoa
 import { computeMarketDemand } from "@/lib/sovereignDefault/marketDemand";
 import { computeDsa } from "@/lib/sovereignDefault/debtSustainability";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -44,9 +44,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
 
   const demand = computeMarketDemand(snapshot);
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(upperCode) });
+  const budget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(upperCode) });
 
   // Live national growth, not `economicFactors.gdpGrowth`. That field is the
   // fiscal-year assumption frozen at the last rollover and can sit points away

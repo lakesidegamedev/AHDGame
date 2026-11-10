@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type {
-  FederalBudget,
   User,
   WealthListSnapshot,
   TurnPhaseTelemetryMap,
@@ -14,6 +13,7 @@ import { getCountryHistoryCollection } from "@/lib/db/collections/countryHistory
 import { captureWorldDepthPosthog } from "./worldDepthAnalytics";
 import { gameEventEnvelope } from "./gameEventEnvelope";
 import { flushServerPosthog, getServerPosthogClient } from "./serverPosthog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -37,8 +37,7 @@ export async function captureTurnPosthog(input: {
         lastActivity: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         isBanned: { $ne: true },
       }),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           {},
           {

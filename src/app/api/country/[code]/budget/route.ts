@@ -24,7 +24,6 @@ import { UK_LAWS } from "@/lib/politicalLegislation/laws/ukLaws";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getEnactedLevels } from "@/lib/politicalLegislation/enactedLevels";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { Bill } from "@/lib/db/types/legislation";
 import {
   getBudgetForFiscalYear,
@@ -37,6 +36,7 @@ import {
   previewAnnualBudget,
   resolveAnnualBudgetAuthority,
 } from "@/lib/countries/uk/budget/annualBudget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const CHANCELLOR_POSITION_ID = "chancellor";
 
@@ -119,7 +119,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [budget, federalBudget, enactedLevels, voteBill] = await Promise.all([
       getBudgetForFiscalYear(ctx.db, ctx.fiscalYear),
-      ctx.db.collection<FederalBudget>("federalBudget").findOne({ _id: "UK" }),
+      federalBudgetCollection(ctx.db).findOne({ _id: "UK" }),
       getEnactedLevels(ctx.db, "UK"),
       // The Budget's vote-vehicle bill (ticket #1268): without this the panel
       // shows a bare "tabled" state while the Commons vote is pending and the

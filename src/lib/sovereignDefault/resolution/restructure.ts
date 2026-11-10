@@ -8,7 +8,6 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget, SovereignCrisisState } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -33,6 +32,8 @@ import {
   RESTRUCTURE_GDP_PENALTY,
   RESTRUCTURE_GDP_PENALTY_TURNS,
 } from "../constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface RestructureResolutionInput {
   countryCode: CountryId;
@@ -63,7 +64,7 @@ export async function applyRestructureResolution(
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -83,8 +84,7 @@ export async function applyRestructureResolution(
   // Cascade: load the bonds we just restructured and write down their holders.
   // Restructure does not flip `defaulted: true`, so filter on the haircut field
   // we just stamped (the mutator stamps every bond with the same RESTRUCTURE_HAIRCUT).
-  const justRestructuredBonds = await db
-    .collection<Bond>("bonds")
+  const justRestructuredBonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       countryId: countryCode,
@@ -107,8 +107,7 @@ export async function applyRestructureResolution(
   // obligations, never cash. Reading the ledger back (rather than scaling the
   // pre-crisis stock) keeps this a pure function of bond state, so crash/retry
   // replay converges to the same value.
-  const postHaircutBonds = await db
-    .collection<Bond>("bonds")
+  const postHaircutBonds = await bondsCollection(db)
     .find(
       { issuerType: "sovereign", countryId: countryCode, matured: false, defaulted: false },
       // The outstanding helper re-checks the query-filtered fields, so they
@@ -155,9 +154,7 @@ export async function applyRestructureResolution(
     debtToGdpRatio: terms.debtToGdpRatio,
   };
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: update });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: update });
 
   if (!input.skipDecisionUpdate) {
     const decisionUpdate: Partial<SovereignCrisisDecision> = {

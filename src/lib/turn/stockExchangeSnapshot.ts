@@ -18,7 +18,6 @@ import type {
   Corporation,
   CorporateSector,
   CorporationHistory,
-  FederalBudget,
   StateBudget,
   State,
   StockExchangeSnapshot,
@@ -77,6 +76,8 @@ import {
   getOperatingSectorType,
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -466,8 +467,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             })
             .toArray(),
           getActiveSubsidies(database),
-          database
-            .collection<FederalBudget>("federalBudget")
+          federalBudgetCollection(database)
             .find(
               {},
               {
@@ -543,7 +543,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const imfFacilityReceiptsDailyByCorpId = new Map<string, number>();
 
       // Fetch outstanding bonds for interest cost calculation + coupon income from held bonds
-      const allBonds = await database.collection<Bond>("bonds").find({ matured: false }).toArray();
+      const allBonds = await bondsCollection(database).find({ matured: false }).toArray();
       const bondsByCorpId = new Map<string, Bond[]>();
       for (const bond of allBonds) {
         if (!bond.corporationId) continue;

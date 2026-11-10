@@ -9,7 +9,6 @@
  * own macro bulk write.
  */
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { countryNamePool } from "@/lib/npp/nameGenerator";
@@ -33,6 +32,7 @@ import {
   initialNationalIndex,
   nationalIndexNav,
 } from "./rules/nationalIndex";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** True for the 2027 world's background countries, which carry a national state. */
 export function isBackgroundNation(
@@ -83,8 +83,7 @@ export async function loadBackgroundNationContext(
   if (nations.length === 0) return null;
   const needParties = nations.filter((n) => !n.nationalPolitics).map((n) => n.entityId);
   const [budgets, parties] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { _id: { $in: nations.map((n) => n.entityId) } },
         { projection: { currencyCode: 1, gdp: 1, "economicFactors.inflationRate": 1 } }

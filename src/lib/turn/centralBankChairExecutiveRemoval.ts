@@ -21,6 +21,7 @@ import { persistVacancy } from "@/lib/turn/centralBankChairSelection";
 import { createNotifications } from "@/lib/notifications";
 import { createSystemNewsPost } from "@/lib/news";
 import { logger } from "../observability/logger";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CentralBankChairExecutiveRemovalResult {
   banksChecked: number;
@@ -39,8 +40,7 @@ export async function processCentralBankChairExecutiveRemoval(
     pendingCleared: 0,
   };
 
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({
       $or: [{ chairCharacterId: { $ne: null } }, { chairSelectionPending: { $ne: null } }],
     })

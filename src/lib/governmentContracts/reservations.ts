@@ -11,6 +11,7 @@ import {
 import { getDefenseAppropriation } from "@/lib/db/collections/defenseAppropriation";
 import { tenders } from "./persistence";
 import type { GovernmentTender } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const marker = (id: string) => `governmentTenderReservations.${id}`;
 const potMarker = (id: string) => `defenseAppropriation.governmentTenderReservations.${id}`;
@@ -59,7 +60,7 @@ export async function reserveDefenceTender(
   );
   if (!quota) return false;
   await getDefenseAppropriation(db, t.countryId);
-  await db.collection("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     {
       countryId: t.countryId,
       [p]: { $exists: false },
@@ -80,9 +81,10 @@ export async function reserveDefenceTender(
       $set: { [p]: { state: "held", amount: t.reservedAmount } },
     }
   );
-  return !!(await db
-    .collection("federalBudget")
-    .findOne({ countryId: t.countryId, [`${p}.state`]: "held" }, { projection: { _id: 1 } }));
+  return !!(await federalBudgetCollection(db).findOne(
+    { countryId: t.countryId, [`${p}.state`]: "held" },
+    { projection: { _id: 1 } }
+  ));
 }
 /** Fence older in-flight requests before they may convert the held quota. */
 export async function fenceDefenceReservation(db: Db, t: GovernmentTender): Promise<boolean> {
@@ -144,7 +146,7 @@ export async function topUpDefenceTenderReservation(
     { projection: { _id: 1 } }
   );
   if (!quota) return false;
-  await db.collection("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     {
       countryId: t.countryId,
       [`${p}.state`]: "held",
@@ -165,12 +167,10 @@ export async function topUpDefenceTenderReservation(
       $set: { [p]: { state: "held", amount: newReservedAmount } },
     }
   );
-  return !!(await db
-    .collection("federalBudget")
-    .findOne(
-      { countryId: t.countryId, [`${p}.state`]: "held", [`${p}.amount`]: newReservedAmount },
-      { projection: { _id: 1 } }
-    ));
+  return !!(await federalBudgetCollection(db).findOne(
+    { countryId: t.countryId, [`${p}.state`]: "held", [`${p}.amount`]: newReservedAmount },
+    { projection: { _id: 1 } }
+  ));
 }
 export async function convertDefenceReservation(
   db: Db,
@@ -219,7 +219,7 @@ export async function convertDefenceReservation(
     { projection: { _id: 1 } }
   );
   if (!quota) return false;
-  await db.collection("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     {
       countryId: t.countryId,
       [`${p}.state`]: "held",
@@ -229,9 +229,10 @@ export async function convertDefenceReservation(
       $set: { [p]: { state: "converted", amount } },
     }
   );
-  const converted = await db
-    .collection("federalBudget")
-    .findOne({ countryId: t.countryId, [`${p}.state`]: "converted" }, { projection: { _id: 1 } });
+  const converted = await federalBudgetCollection(db).findOne(
+    { countryId: t.countryId, [`${p}.state`]: "converted" },
+    { projection: { _id: 1 } }
+  );
   if (!converted)
     throw new Error("Tender quota converted; appropriation conversion needs recovery.");
   return true;
@@ -269,7 +270,7 @@ export async function expireGovernmentTenders(db: Db, turn: number): Promise<voi
   if (!canceled.length) return;
   const defence = canceled.filter((t) => t.terms.type === "defence");
   if (defence.length) {
-    await db.collection("federalBudget").bulkWrite(
+    await federalBudgetCollection(db).bulkWrite(
       defence.map((t) => ({
         updateOne: {
           filter: { countryId: t.countryId },

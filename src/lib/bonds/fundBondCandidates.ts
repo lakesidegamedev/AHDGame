@@ -13,6 +13,8 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { CREDIT_RATINGS, type CreditRating } from "@/lib/db/types/centralBank";
 import type { BondFundUniverse } from "@/lib/indexFunds/fundDefinitions";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export const MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS = 48;
 
@@ -122,8 +124,7 @@ export interface FundBondCandidateSource {
 }
 
 export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandidateCache> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ matured: false, defaulted: { $ne: true }, publicFloat: { $gt: 0 } })
     .toArray();
 
@@ -135,8 +136,7 @@ export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandid
   ];
   const [budgets, corporations, currencyRows] = await Promise.all([
     sovereignCountryIds.length > 0
-      ? db
-          .collection<{ _id: string; creditRating?: string }>("federalBudget")
+      ? federalBudgetCollection<{ _id: string; creditRating?: string }>(db)
           .find(
             { _id: { $in: sovereignCountryIds.map((id) => getNationalBudgetId(id)) } },
             { projection: { creditRating: 1 } }

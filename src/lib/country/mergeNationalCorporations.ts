@@ -36,6 +36,7 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface MergeNationalCorporationsArgs {
   fromCountryId: CountryId;
@@ -59,7 +60,7 @@ export async function mergeNationalCorporations(
   const now = new Date();
   const corps = db.collection<Corporation>("corporations");
   const sectors = db.collection<CorporateSector>("corporateSectors");
-  const bonds = db.collection("bonds");
+  const bonds = bondsCollection(db);
 
   // The survivor's primary exists (or is created) FIRST, so there is always a
   // fold target even when the survivor had no NatCorp tree at all.

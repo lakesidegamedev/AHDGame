@@ -77,9 +77,6 @@
     "src/app/api/admin/config/market/route.ts": {
       "gameState": 1
     },
-    "src/app/api/admin/config/minimum-wage/route.ts": {
-      "federalBudget": 2
-    },
     "src/app/api/admin/conflicts/cold-war/create/route.ts": {
       "gameState": 1
     },
@@ -262,11 +259,9 @@
       "politicalParties": 1
     },
     "src/app/api/admin/economy/budgets/route.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/app/api/admin/economy/command-economy/route.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/app/api/admin/economy/npp-corp-health/route.ts": {
@@ -430,7 +425,6 @@
       "untyped": 3
     },
     "src/app/api/admin/heal/federal-budgets/route.ts": {
-      "federalBudget": 3,
       "gameState": 1,
       "states": 3
     },
@@ -663,9 +657,6 @@
       "politicalParties": 1,
       "states": 1
     },
-    "src/app/api/admin/reapply-tax-rates/route.ts": {
-      "federalBudget": 2
-    },
     "src/app/api/admin/referrals/by-user/[userId]/route.ts": {
       "characters": 1,
       "untyped": 1
@@ -835,7 +826,7 @@
       "characters": 2,
       "corporations": 2,
       "gameState": 1,
-      "untyped": 6
+      "untyped": 2
     },
     "src/app/api/bonds/route.ts": {
       "corporations": 1
@@ -949,9 +940,6 @@
       "electedOfficials": 1,
       "npps": 1,
       "politicalParties": 1
-    },
-    "src/app/api/congress/bills/estimate-cost/route.ts": {
-      "federalBudget": 1
     },
     "src/app/api/congress/bills/route.ts": {
       "electedOfficials": 2,
@@ -1236,14 +1224,8 @@
     "src/app/api/corporations/underwriting-banks/route.ts": {
       "gameState": 1
     },
-    "src/app/api/country/[code]/budget/route.ts": {
-      "federalBudget": 1
-    },
     "src/app/api/country/[code]/central-bank/lobby/route.ts": {
       "characters": 1
-    },
-    "src/app/api/country/[code]/central-bank/monetary-operation/route.ts": {
-      "federalBudget": 1
     },
     "src/app/api/country/[code]/central-bank/nominate/route.ts": {
       "characters": 1
@@ -1330,14 +1312,8 @@
       "politicalParties": 5,
       "untyped": 1
     },
-    "src/app/api/country/[code]/command-economy/gosbank/route.ts": {
-      "federalBudget": 1
-    },
     "src/app/api/country/[code]/command-economy/plan/route.ts": {
       "corporations": 2
-    },
-    "src/app/api/country/[code]/command-economy/repression/route.ts": {
-      "federalBudget": 1
     },
     "src/app/api/country/[code]/command-economy/soe/[corpId]/director/route.ts": {
       "characters": 1,
@@ -1393,9 +1369,6 @@
       "characters": 1,
       "gameState": 2
     },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/bond-profile/route.ts": {
-      "federalBudget": 2
-    },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/commands/route.ts": {
       "characters": 1
     },
@@ -1403,9 +1376,6 @@
       "characters": 1,
       "corporations": 1,
       "untyped": 2
-    },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/department-allocation/route.ts": {
-      "federalBudget": 2
     },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/energy/build/route.ts": {
       "states": 1
@@ -1422,9 +1392,6 @@
     "src/app/api/country/[code]/executive/cabinet/[positionId]/intelligence/assessment/route.ts": {
       "corporations": 1
     },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/intelligence/route.ts": {
-      "federalBudget": 1
-    },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/intelligence/shared.ts": {
       "gameState": 1
     },
@@ -1436,15 +1403,11 @@
       "gameState": 1
     },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/reset-action/route.ts": {
-      "federalBudget": 2,
       "gameState": 1
     },
     "src/app/api/country/[code]/executive/cabinet/route.ts": {
       "characters": 2,
       "politicalParties": 1
-    },
-    "src/app/api/country/[code]/executive/conflicts/[conflictId]/terms/route.ts": {
-      "federalBudget": 1
     },
     "src/app/api/country/[code]/executive/declare-war/route.ts": {
       "characters": 3,
@@ -1459,12 +1422,6 @@
     "src/app/api/country/[code]/executive/orders/route.ts": {
       "gameState": 1,
       "untyped": 2
-    },
-    "src/app/api/country/[code]/executive/peace/[offerId]/route.ts": {
-      "federalBudget": 1
-    },
-    "src/app/api/country/[code]/executive/peace/route.ts": {
-      "federalBudget": 1
     },
     "src/app/api/country/[code]/executive/vice-president/action/route.ts": {
       "characters": 1,
@@ -1488,13 +1445,11 @@
     },
     "src/app/api/country/[code]/fomc/route.ts": {
       "electedOfficials": 1,
-      "federalBudget": 1,
       "npps": 1
     },
     "src/app/api/country/[code]/government-contracts/access/route.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "untyped": 1
     },
     "src/app/api/country/[code]/international-organizations/[orgId]/influence/route.ts": {
@@ -1599,7 +1554,6 @@
     "src/app/api/country/[code]/overview-counts/route.ts": {
       "characters": 1,
       "elections": 2,
-      "federalBudget": 2,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1,
@@ -1802,8 +1756,7 @@
     },
     "src/app/api/country/[code]/pending-nationalizations/route.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/app/api/country/[code]/referendum/[refId]/ground-game/route.ts": {
       "politicalParties": 1
@@ -1995,11 +1948,7 @@
     "src/app/api/country/[code]/scotus/justice/route.ts": {
       "characters": 1
     },
-    "src/app/api/country/[code]/sovereign-resolution/route.ts": {
-      "federalBudget": 2
-    },
     "src/app/api/country/[code]/sovereign-status/route.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/app/api/country/[code]/states/route.ts": {
@@ -2009,11 +1958,9 @@
       "gameState": 1
     },
     "src/app/api/country/[code]/union-enforcement/route.ts": {
-      "characters": 8,
-      "federalBudget": 2
+      "characters": 8
     },
     "src/app/api/crises/[id]/interaction/route.ts": {
-      "federalBudget": 1,
       "untyped": 1
     },
     "src/app/api/debug/demographics/route.ts": {
@@ -2123,8 +2070,7 @@
       "characters": 2,
       "corporations": 2,
       "electedOfficials": 2,
-      "politicalParties": 2,
-      "untyped": 2
+      "politicalParties": 2
     },
     "src/app/api/elections/[id]/campaigns/route.ts": {
       "characters": 2,
@@ -2264,14 +2210,10 @@
       "elections": 2,
       "politicalParties": 1,
       "states": 1,
-      "untyped": 2
-    },
-    "src/app/api/imf/board/override/route.ts": {
-      "federalBudget": 2
+      "untyped": 1
     },
     "src/app/api/imf/overview/route.ts": {
-      "characters": 1,
-      "federalBudget": 3
+      "characters": 1
     },
     "src/app/api/impeachments/route.ts": {
       "characters": 1,
@@ -2561,8 +2503,7 @@
       "corporations": 1
     },
     "src/app/api/unions/leaderboard/route.ts": {
-      "corporateSectors": 1,
-      "federalBudget": 1
+      "corporateSectors": 1
     },
     "src/app/api/upload/avatar/route.ts": {
       "characters": 1,
@@ -2703,7 +2644,6 @@
       "untyped": 2
     },
     "src/app/api/world/sovereign-watch/route.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/app/api/world/trade/tariffs/route.ts": {
@@ -2740,8 +2680,7 @@
     },
     "src/app/character/[id]/page.tsx": {
       "characters": 1,
-      "electedOfficials": 1,
-      "untyped": 1
+      "electedOfficials": 1
     },
     "src/app/charters/[id]/page.tsx": {
       "characters": 1,
@@ -2883,8 +2822,7 @@
       "electedOfficials": 1,
       "gameState": 1,
       "politicalParties": 2,
-      "states": 1,
-      "untyped": 1
+      "states": 1
     },
     "src/app/state/[id]/legislature/page.tsx": {
       "states": 1
@@ -3018,7 +2956,6 @@
     "src/lib/admin/bootstrapGameWorld.ts": {
       "electedOfficials": 5,
       "elections": 3,
-      "federalBudget": 1,
       "gameState": 4,
       "npps": 2,
       "states": 2,
@@ -3034,15 +2971,13 @@
     "src/lib/admin/economyReset/apply.ts": {
       "characters": 1,
       "corporations": 1,
-      "federalBudget": 3,
       "gameState": 1,
       "npps": 3,
       "states": 2,
-      "untyped": 21
+      "untyped": 17
     },
     "src/lib/admin/economyReset/census.ts": {
       "characters": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1,
       "untyped": 7
@@ -3053,7 +2988,6 @@
       "untyped": 2
     },
     "src/lib/admin/economyReset/reseed.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/admin/finalizeResetGameWorld.ts": {
@@ -3080,7 +3014,6 @@
       "untyped": 1
     },
     "src/lib/admin/resetContract/residueScan.ts": {
-      "federalBudget": 1,
       "gameState": 2,
       "untyped": 4
     },
@@ -3090,14 +3023,13 @@
       "elections": 1,
       "gameState": 6,
       "npps": 1,
-      "untyped": 20
+      "untyped": 19
     },
     "src/lib/admin/seed/applyEraCurrencyTopology.ts": {
       "corporations": 1,
-      "federalBudget": 2,
       "npps": 2,
       "states": 1,
-      "untyped": 8
+      "untyped": 5
     },
     "src/lib/admin/seed/backfillMissingRegionLeans.ts": {
       "states": 2
@@ -3160,10 +3092,9 @@
     },
     "src/lib/admin/seed/runCoreSeed.ts": {
       "characters": 3,
-      "federalBudget": 1,
       "politicalParties": 3,
       "states": 4,
-      "untyped": 17
+      "untyped": 16
     },
     "src/lib/admin/seed/seed1991FederationLegislatures.ts": {
       "electedOfficials": 1,
@@ -3193,7 +3124,6 @@
     "src/lib/admin/seed/seedBudgets.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 2,
       "states": 2,
       "untyped": 6
     },
@@ -3223,7 +3153,6 @@
     "src/lib/admin/seed/seedCountryBudgets.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 2,
       "states": 2,
       "untyped": 1
     },
@@ -3246,14 +3175,12 @@
       "states": 1
     },
     "src/lib/admin/seed/seedEasternBloc.ts": {
-      "federalBudget": 2,
       "politicalParties": 3,
       "states": 4,
       "untyped": 6
     },
     "src/lib/admin/seed/seedEasternBlocStatePartyOrg.ts": {
-      "gameState": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/admin/seed/seedEconTierRosters.ts": {
       "politicalParties": 1,
@@ -3322,11 +3249,7 @@
       "untyped": 1
     },
     "src/lib/admin/seed/seedModernBudgets2019.ts": {
-      "federalBudget": 2,
       "states": 1
-    },
-    "src/lib/admin/seed/seedModernTransitionBudgets2027.ts": {
-      "federalBudget": 2
     },
     "src/lib/admin/seed/seedModernTransitionCountries.ts": {
       "politicalParties": 4,
@@ -3362,7 +3285,6 @@
       "untyped": 1
     },
     "src/lib/admin/seed/seedPoliticalLegislation.ts": {
-      "federalBudget": 5,
       "states": 1
     },
     "src/lib/admin/seed/seedPoliticalMetrics.ts": {
@@ -3386,8 +3308,7 @@
       "untyped": 1
     },
     "src/lib/admin/seed/seedSovereignBondInstruments.ts": {
-      "corporations": 2,
-      "federalBudget": 1
+      "corporations": 2
     },
     "src/lib/admin/seed/seedStatePolicies.ts": {
       "untyped": 3
@@ -3404,7 +3325,6 @@
       "states": 3
     },
     "src/lib/admin/seed/seedSuccessorBudgets1991.ts": {
-      "federalBudget": 2,
       "states": 1
     },
     "src/lib/admin/seed/seedSuccessorParties1991.ts": {
@@ -3441,7 +3361,6 @@
     },
     "src/lib/admin/seedDiagnostic/baseline.ts": {
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/admin/seedDiagnostic/conformance.ts": {
@@ -3455,19 +3374,16 @@
     },
     "src/lib/admin/seedDiagnostic/conformanceMacro.ts": {
       "corporations": 1,
-      "federalBudget": 2,
       "gameState": 1,
       "states": 1,
-      "untyped": 4
+      "untyped": 1
     },
     "src/lib/admin/seedDiagnostic/drift.ts": {
-      "federalBudget": 2,
       "gameState": 2
     },
     "src/lib/admin/seedDiagnostic/economicOpening.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "untyped": 2
     },
     "src/lib/admin/seedDiagnostic/index.ts": {
@@ -3535,8 +3451,7 @@
       "gameState": 1
     },
     "src/lib/analytics/turnPosthog.ts": {
-      "elections": 1,
-      "federalBudget": 1
+      "elections": 1
     },
     "src/lib/analytics/worldDepthAnalytics.ts": {
       "corporations": 1,
@@ -3607,12 +3522,10 @@
       "corporations": 1
     },
     "src/lib/banking/bankSovereignClaims.ts": {
-      "corporations": 4,
-      "federalBudget": 6
+      "corporations": 4
     },
     "src/lib/banking/bankTreasury.ts": {
-      "corporations": 9,
-      "federalBudget": 1
+      "corporations": 9
     },
     "src/lib/banking/bankTreasuryReceipt.ts": {
       "corporations": 4
@@ -3679,8 +3592,7 @@
     },
     "src/lib/banking/depositBookReturn.ts": {
       "characters": 2,
-      "corporations": 3,
-      "federalBudget": 4
+      "corporations": 3
     },
     "src/lib/banking/depositorBook.ts": {
       "characters": 2,
@@ -3689,9 +3601,6 @@
     "src/lib/banking/deposits.ts": {
       "characters": 3,
       "corporations": 1
-    },
-    "src/lib/banking/fundedSovereignCoupons.ts": {
-      "federalBudget": 4
     },
     "src/lib/banking/health.ts": {
       "characters": 1,
@@ -3767,9 +3676,6 @@
     "src/lib/banking/snapshot.ts": {
       "corporations": 1
     },
-    "src/lib/banking/sovereignCouponPass.ts": {
-      "federalBudget": 1
-    },
     "src/lib/banking/supervision.ts": {
       "corporations": 2
     },
@@ -3785,7 +3691,6 @@
     },
     "src/lib/billEnactment.ts": {
       "characters": 5,
-      "federalBudget": 2,
       "gameState": 2,
       "npps": 3,
       "untyped": 2
@@ -3799,7 +3704,7 @@
     "src/lib/bonds/executeCorporationBondRefinance.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/bonds/executeCorporationBondRestructure.ts": {
       "characters": 2,
@@ -3807,23 +3712,15 @@
       "corporations": 4,
       "untyped": 1
     },
-    "src/lib/bonds/forcedSovereignRollover.ts": {
-      "federalBudget": 1
-    },
     "src/lib/bonds/fundBondCandidates.ts": {
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/bonds/marketPoolLedger.ts": {
       "gameState": 1
     },
     "src/lib/bonds/primaryMarket.ts": {
       "corporations": 4,
-      "federalBudget": 1,
       "untyped": 1
-    },
-    "src/lib/bonds/publicFloatSovereignNovation.ts": {
-      "federalBudget": 2
     },
     "src/lib/bonds/purchaseBondUnitsForFund.ts": {
       "untyped": 1
@@ -3836,52 +3733,33 @@
     },
     "src/lib/bonds/sovereign.ts": {
       "corporations": 1,
-      "federalBudget": 8,
       "gameState": 1
     },
     "src/lib/bonds/sovereignFunding.ts": {
-      "characters": 1,
-      "federalBudget": 2
-    },
-    "src/lib/bonds/sovereignMaturity.ts": {
-      "federalBudget": 8
+      "characters": 1
     },
     "src/lib/bonds/sovereignMaturityBond.ts": {
-      "corporations": 1,
-      "federalBudget": 2
+      "corporations": 1
     },
     "src/lib/bonds/sovereignMaturityPayoutTargets.ts": {
       "characters": 1,
       "corporations": 1,
       "npps": 1
     },
-    "src/lib/bonds/sovereignMaturityWave.ts": {
-      "federalBudget": 1
-    },
     "src/lib/bonds/sovereignPrimarySettlement.ts": {
-      "federalBudget": 1,
       "gameState": 1
-    },
-    "src/lib/bonds/sovereignRiskDisclosure.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/budget/budgetInvariants.ts": {
-      "federalBudget": 2
     },
     "src/lib/budget/debt.ts": {
       "gameState": 4
     },
     "src/lib/budget/fiscalScaleTurn.ts": {
       "corporateSectors": 1,
-      "federalBudget": 1,
       "untyped": 1
     },
     "src/lib/budget/fiscalStabilizer.ts": {
-      "federalBudget": 1,
       "politicalParties": 1
     },
     "src/lib/budget/fiscalYear.ts": {
-      "federalBudget": 6,
       "gameState": 2,
       "states": 2,
       "untyped": 1
@@ -3893,15 +3771,10 @@
     "src/lib/budget/incomePayout.ts": {
       "characters": 2,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1,
-      "untyped": 9
-    },
-    "src/lib/budget/incomeTaxSeedPolicies.ts": {
-      "federalBudget": 1
+      "untyped": 6
     },
     "src/lib/budget/incomeTaxShares.ts": {
-      "federalBudget": 2,
       "gameState": 1,
       "states": 1
     },
@@ -3912,46 +3785,35 @@
       "states": 1
     },
     "src/lib/budget/playerIncomeTax.ts": {
-      "characters": 2,
-      "federalBudget": 1
+      "characters": 2
     },
     "src/lib/budget/playerIncomeTaxSettlement.ts": {
       "characters": 3,
-      "federalBudget": 2,
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/budget/publicEnterpriseRevenue.ts": {
       "corporateSectors": 2,
       "corporations": 2,
-      "federalBudget": 1,
       "gameState": 2
     },
     "src/lib/budget/revenue.ts": {
-      "federalBudget": 4,
       "states": 2
     },
     "src/lib/budget/spending.ts": {
-      "federalBudget": 3,
       "states": 4
     },
     "src/lib/budget/stockSaleWithholding.ts": {
       "characters": 1,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/budget/treasuryAccrualReceipt.ts": {
       "untyped": 1
     },
     "src/lib/budget/treasuryReserveTransfer.ts": {
-      "federalBudget": 2,
       "gameState": 1,
       "untyped": 1
     },
-    "src/lib/budget/treasurySpend.ts": {
-      "federalBudget": 3
-    },
     "src/lib/budget/validation.ts": {
-      "federalBudget": 1,
       "states": 2
     },
     "src/lib/cabinet/appointActing.ts": {
@@ -3966,7 +3828,6 @@
     "src/lib/cabinet/cabinetBriefing.ts": {
       "characters": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "politicalParties": 1,
       "states": 1,
       "untyped": 1
@@ -4098,9 +3959,6 @@
       "characters": 1,
       "untyped": 4
     },
-    "src/lib/elections/party/caucusChairElections.ts": {
-      "characters": 4
-    },
     "src/lib/centralBank/nominateSpend.ts": {
       "characters": 1
     },
@@ -4165,7 +4023,7 @@
       "elections": 1,
       "politicalParties": 1,
       "states": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/client/widgetExtras.ts": {
       "untyped": 1
@@ -4183,7 +4041,6 @@
     "src/lib/commodities/commodityDetail.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "states": 1
     },
@@ -4329,8 +4186,7 @@
       "elections": 1,
       "gameState": 3,
       "politicalParties": 1,
-      "states": 1,
-      "untyped": 1
+      "states": 1
     },
     "src/lib/contests/history.ts": {
       "characters": 1,
@@ -4338,8 +4194,7 @@
     },
     "src/lib/contests/netWorth.ts": {
       "characters": 1,
-      "corporations": 1,
-      "untyped": 1
+      "corporations": 1
     },
     "src/lib/contests/prize.ts": {
       "characters": 1
@@ -4412,7 +4267,6 @@
       "characters": 1,
       "corporateSectors": 3,
       "corporations": 3,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/corporations/commands/acquisitions/referenceValuation.ts": {
@@ -4764,7 +4618,6 @@
       "untyped": 3
     },
     "src/lib/corporations/queries/corporationDetail/stateViewContext.ts": {
-      "federalBudget": 1,
       "gameState": 2
     },
     "src/lib/corporations/queries/corporationDetail/subsidiaryContext.ts": {
@@ -4783,14 +4636,12 @@
     },
     "src/lib/corporations/queries/sectorDetail.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/corporations/queries/sectorDetailContext.ts": {
       "characters": 1,
       "corporateSectors": 3,
       "corporations": 4,
-      "federalBudget": 2,
       "gameState": 1,
       "npps": 1,
       "states": 2,
@@ -5190,7 +5041,6 @@
       "untyped": 2
     },
     "src/lib/countries/jp/regionalBudget.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/countries/jp/seed.ts": {
@@ -5203,7 +5053,6 @@
     "src/lib/countries/jp/seedBudgets.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 2,
       "states": 2,
       "untyped": 2
     },
@@ -5379,7 +5228,6 @@
       "untyped": 2
     },
     "src/lib/countries/ru/ruRegionalBudget.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/countries/ru/seedRU.ts": {
@@ -5388,7 +5236,6 @@
       "untyped": 8
     },
     "src/lib/countries/ru/seedRuBudgets.ts": {
-      "federalBudget": 2,
       "states": 2,
       "untyped": 1
     },
@@ -5402,9 +5249,6 @@
     "src/lib/countries/ru/testing/councilFormationRuntimeScenario.ts": {
       "npps": 2,
       "untyped": 3
-    },
-    "src/lib/countries/uk/budget/annualBudget.ts": {
-      "federalBudget": 2
     },
     "src/lib/countries/uk/cabinetApi.ts": {
       "characters": 9,
@@ -5474,9 +5318,6 @@
       "electedOfficials": 4,
       "politicalParties": 2
     },
-    "src/lib/countries/uk/nhs/nhsStore.ts": {
-      "federalBudget": 1
-    },
     "src/lib/countries/uk/northernIreland/service.ts": {
       "elections": 3,
       "gameState": 1,
@@ -5497,9 +5338,8 @@
     "src/lib/countries/uk/seedBudgets.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 2,
       "states": 2,
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/countries/uk/ukPartyConferenceTurn.ts": {
       "politicalParties": 4
@@ -5513,9 +5353,6 @@
       "states": 1,
       "untyped": 2
     },
-    "src/lib/country/background/loadBackgroundCountryView.ts": {
-      "federalBudget": 1
-    },
     "src/lib/country/executiveOverview.ts": {
       "characters": 7,
       "electedOfficials": 7,
@@ -5528,21 +5365,16 @@
       "elections": 3,
       "npps": 1,
       "states": 1,
-      "untyped": 15
-    },
-    "src/lib/country/mergeEconomicRegime.ts": {
-      "federalBudget": 1
+      "untyped": 14
     },
     "src/lib/country/mergeMilitary.ts": {
       "untyped": 2
     },
     "src/lib/country/mergeNationalCorporations.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "untyped": 1
+      "corporations": 1
     },
     "src/lib/country/mergeNationalFisc.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/country/mergePartiesIntoCountry.ts": {
@@ -5587,24 +5419,18 @@
       "untyped": 1
     },
     "src/lib/crises/aidPledge.ts": {
-      "federalBudget": 1,
       "untyped": 1
     },
     "src/lib/crises/applyEffects.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "federalBudget": 1,
-      "untyped": 5
-    },
-    "src/lib/crises/autoCrisisConditions.ts": {
-      "federalBudget": 1
+      "untyped": 4
     },
     "src/lib/crises/autoCrisisSpawn.ts": {
       "gameState": 1,
       "states": 1
     },
     "src/lib/crises/autoDisasterSpawn.ts": {
-      "federalBudget": 2,
       "gameState": 1,
       "states": 1
     },
@@ -5615,25 +5441,17 @@
       "states": 1
     },
     "src/lib/crises/financialCrisisBankResponse.ts": {
-      "corporations": 3,
-      "federalBudget": 3
-    },
-    "src/lib/crises/financialCrisisBudgetPolicy.ts": {
-      "federalBudget": 1
+      "corporations": 3
     },
     "src/lib/crises/financialCrisisFiscalResponse.ts": {
-      "characters": 1,
-      "federalBudget": 4,
-      "untyped": 1
+      "characters": 1
     },
     "src/lib/crises/financialCrisisGuarantees.ts": {
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/crises/interactionEngine.ts": {
       "characters": 3,
       "electedOfficials": 1,
-      "federalBudget": 1,
       "politicalParties": 1,
       "states": 2,
       "untyped": 2
@@ -5647,15 +5465,13 @@
     "src/lib/crises/optionActions.ts": {
       "characters": 2,
       "corporateSectors": 3,
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/crises/queries/crisisQueries.ts": {
       "states": 1
     },
     "src/lib/crises/unionBanStrike.ts": {
-      "characters": 3,
-      "federalBudget": 1
+      "characters": 3
     },
     "src/lib/crises/warEmergencyResponse.ts": {
       "untyped": 1
@@ -5681,7 +5497,7 @@
     "src/lib/currency/migration.ts": {
       "characters": 1,
       "corporations": 1,
-      "untyped": 8
+      "untyped": 7
     },
     "src/lib/currentTurn.ts": {
       "gameState": 1
@@ -5749,36 +5565,71 @@
       "untyped": 1
     },
     "src/lib/economy/economicSystemReform.ts": {
-      "federalBudget": 2,
       "gameState": 1
     },
     "src/lib/economy/economicVitalSigns.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1
     },
-    "src/lib/economy/queries/commandEconomyWriteContext.ts": {
-      "federalBudget": 1
-    },
     "src/lib/economy/queries/countryEconomyOutlook.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/economy/queries/loadCommandEconomyDashboard.ts": {
       "characters": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "untyped": 1
     },
     "src/lib/economy/queries/privateEnterpriseGate.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/economy/sectorMix.ts": {
       "corporateSectors": 1,
       "gameState": 1,
+      "states": 1
+    },
+    "src/lib/elections/activeCandidacy.ts": {
+      "elections": 1
+    },
+    "src/lib/elections/apportionment.ts": {
+      "states": 1,
+      "untyped": 1
+    },
+    "src/lib/elections/campaigns/electionHalfTick.ts": {
+      "gameState": 1
+    },
+    "src/lib/elections/campaigns/supportAccrual.ts": {
+      "elections": 1
+    },
+    "src/lib/elections/campaigns/supportDecay.ts": {
+      "elections": 2
+    },
+    "src/lib/elections/cleanupPartyElectionsForBannedUser.ts": {
+      "characters": 1
+    },
+    "src/lib/elections/contingentHouseVoteView.ts": {
+      "characters": 2,
+      "electedOfficials": 1,
+      "politicalParties": 1
+    },
+    "src/lib/elections/contingentProjection.ts": {
+      "characters": 2,
+      "electedOfficials": 2,
+      "elections": 1,
+      "npps": 2
+    },
+    "src/lib/elections/downBallotRedirect.ts": {
+      "elections": 1,
+      "politicalParties": 1
+    },
+    "src/lib/elections/electionParamResolution.ts": {
+      "elections": 2
+    },
+    "src/lib/elections/electoralLaws.ts": {
+      "gameState": 2
+    },
+    "src/lib/elections/electoralVoteService.ts": {
       "states": 1
     },
     "src/lib/elections/engine/candidateEnrichment.ts": {
@@ -5811,40 +5662,6 @@
       "gameState": 1,
       "states": 1
     },
-    "src/lib/elections/activeCandidacy.ts": {
-      "elections": 1
-    },
-    "src/lib/elections/apportionment.ts": {
-      "states": 1,
-      "untyped": 1
-    },
-    "src/lib/elections/cleanupPartyElectionsForBannedUser.ts": {
-      "characters": 1
-    },
-    "src/lib/elections/contingentHouseVoteView.ts": {
-      "characters": 2,
-      "electedOfficials": 1,
-      "politicalParties": 1
-    },
-    "src/lib/elections/contingentProjection.ts": {
-      "characters": 2,
-      "electedOfficials": 2,
-      "elections": 1,
-      "npps": 2
-    },
-    "src/lib/elections/downBallotRedirect.ts": {
-      "elections": 1,
-      "politicalParties": 1
-    },
-    "src/lib/elections/electionParamResolution.ts": {
-      "elections": 2
-    },
-    "src/lib/elections/electoralLaws.ts": {
-      "gameState": 2
-    },
-    "src/lib/elections/electoralVoteService.ts": {
-      "states": 1
-    },
     "src/lib/elections/enrichElection.ts": {
       "characters": 3,
       "npps": 2,
@@ -5874,6 +5691,33 @@
     "src/lib/elections/loadCountryElections.ts": {
       "elections": 1
     },
+    "src/lib/elections/party/caucusChairElections.ts": {
+      "characters": 4
+    },
+    "src/lib/elections/party/nationalCommitteeElections.ts": {
+      "characters": 5,
+      "politicalParties": 4
+    },
+    "src/lib/elections/party/nationalPartyElectionNotifications.ts": {
+      "characters": 9,
+      "politicalParties": 1
+    },
+    "src/lib/elections/party/nationalPartyElections.ts": {
+      "characters": 1,
+      "gameState": 1,
+      "politicalParties": 6,
+      "untyped": 2
+    },
+    "src/lib/elections/party/nationalPartyQuorum.ts": {
+      "characters": 1,
+      "politicalParties": 1,
+      "untyped": 1
+    },
+    "src/lib/elections/party/statePartyElections.ts": {
+      "characters": 10,
+      "gameState": 1,
+      "politicalParties": 1
+    },
     "src/lib/elections/playerEndorsements.ts": {
       "characters": 1,
       "elections": 1
@@ -5895,9 +5739,6 @@
       "characters": 1,
       "elections": 1,
       "npps": 1
-    },
-    "src/lib/elections/referendumInputs.ts": {
-      "federalBudget": 1
     },
     "src/lib/elections/resignExecutiveOffice.ts": {
       "characters": 1,
@@ -6214,34 +6055,20 @@
       "corporateSectors": 2,
       "untyped": 2
     },
-    "src/lib/governmentContracts/presentation.ts": {
-      "federalBudget": 1
-    },
     "src/lib/governmentContracts/queries.ts": {
       "corporations": 2,
       "untyped": 1
     },
     "src/lib/governmentContracts/reservations.ts": {
-      "federalBudget": 7,
-      "untyped": 15
+      "untyped": 8
     },
     "src/lib/governmentContracts/selfDealing.ts": {
       "characters": 1,
       "untyped": 1
     },
-    "src/lib/governmentContracts/signingFee.ts": {
-      "federalBudget": 1
-    },
     "src/lib/governmentContracts/viewerOpportunities.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "federalBudget": 1
-    },
-    "src/lib/governmentFinance/deliveryMultiplier.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/governmentFinance/deliveryMultipliers.ts": {
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/governorOffice/access.ts": {
       "politicalParties": 1
@@ -6254,7 +6081,6 @@
       "states": 1
     },
     "src/lib/governorOffice/devolution/queries.ts": {
-      "federalBudget": 1,
       "gameState": 1,
       "states": 1
     },
@@ -6332,12 +6158,8 @@
       "npps": 4,
       "untyped": 7
     },
-    "src/lib/indexFunds/domesticSovereignCoverage/ensure.ts": {
-      "federalBudget": 1
-    },
     "src/lib/indexFunds/fundBondReserve.ts": {
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/indexFunds/fundCron.ts": {
       "untyped": 1
@@ -6405,7 +6227,6 @@
     "src/lib/indexFunds/sponsorship/charterFund.ts": {
       "corporateSectors": 1,
       "corporations": 3,
-      "federalBudget": 1,
       "untyped": 3
     },
     "src/lib/indexFunds/sponsorship/corporateHolderPayout.ts": {
@@ -6414,7 +6235,6 @@
     },
     "src/lib/indexFunds/sponsorship/eligibility.ts": {
       "corporateSectors": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "untyped": 2
     },
@@ -6430,7 +6250,7 @@
     },
     "src/lib/indexFunds/sponsorship/windUp.ts": {
       "corporations": 1,
-      "untyped": 7
+      "untyped": 5
     },
     "src/lib/indexFunds/subscriptionOrders.ts": {
       "characters": 1,
@@ -6474,18 +6294,13 @@
     "src/lib/intelligence/economicAction.ts": {
       "corporations": 1
     },
-    "src/lib/intelligence/runOperation.ts": {
-      "federalBudget": 1
-    },
     "src/lib/internationalOrganizations/aid.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/internationalOrganizations/ballotRoll.ts": {
       "gameState": 1
     },
     "src/lib/internationalOrganizations/cashLedger.ts": {
-      "federalBudget": 1,
       "gameState": 1,
       "untyped": 2
     },
@@ -6508,12 +6323,6 @@
     "src/lib/internationalOrganizations/founding.ts": {
       "gameState": 1
     },
-    "src/lib/internationalOrganizations/membershipBills.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/internationalOrganizations/organizationFund.ts": {
-      "federalBudget": 1
-    },
     "src/lib/internationalOrganizations/policyHeadSponsors.ts": {
       "characters": 1,
       "electedOfficials": 1,
@@ -6525,9 +6334,6 @@
     "src/lib/internationalOrganizations/queries/leadershipCandidates.ts": {
       "characters": 1
     },
-    "src/lib/internationalOrganizations/queries/worldOrganizations.ts": {
-      "federalBudget": 1
-    },
     "src/lib/internationalOrganizations/reconcileAutonomousWarEntry.ts": {
       "gameState": 1,
       "npps": 1
@@ -6537,12 +6343,6 @@
       "gameState": 1,
       "untyped": 1
     },
-    "src/lib/internationalOrganizations/tribute.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/labour/unionLaws.ts": {
-      "federalBudget": 4
-    },
     "src/lib/landing/cachedLandingData.ts": {
       "characters": 1,
       "gameState": 1,
@@ -6551,7 +6351,6 @@
     "src/lib/ledger/balanceSnapshot.ts": {
       "characters": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1
@@ -6592,7 +6391,6 @@
       "gameState": 1
     },
     "src/lib/legislature/corporateTaxEnactment.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/legislature/discussions/discussionCommands.ts": {
@@ -6605,12 +6403,6 @@
     "src/lib/legislature/lowerChamberSeats.ts": {
       "gameState": 1,
       "states": 5
-    },
-    "src/lib/legislature/provisionEnrichment/corporateTaxApprovalPreview.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/legislature/provisionEnrichment/fiscal.ts": {
-      "federalBudget": 1
     },
     "src/lib/legislature/queries/nationalBillQueries.ts": {
       "characters": 5,
@@ -6666,7 +6458,7 @@
     },
     "src/lib/lineOfCredit/settlement.ts": {
       "characters": 1,
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/livingConflict/arabRegional.ts": {
       "states": 1
@@ -6684,19 +6476,16 @@
     },
     "src/lib/livingConflict/financialExposure.ts": {
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/livingConflict/globalResponse.ts": {
       "characters": 1,
-      "federalBudget": 2,
       "states": 1
     },
     "src/lib/livingConflict/processTurn.ts": {
       "states": 1
     },
     "src/lib/livingConflict/refugeeReception.ts": {
-      "federalBudget": 1,
       "gameState": 2,
       "states": 1
     },
@@ -6795,11 +6584,9 @@
     },
     "src/lib/metricEngine/providers.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "federalBudget": 3
+      "corporations": 1
     },
     "src/lib/metricEngine/spendingProvider.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/migrations/entries/2026-06-01-index-fund-foundation.ts": {
@@ -6812,7 +6599,6 @@
       "untyped": 4
     },
     "src/lib/migrations/entries/2026-08-09-heal-1953-seed-balance.ts": {
-      "federalBudget": 2,
       "gameState": 1
     },
     "src/lib/migrations/entries/2026-08-10-smooth-legacy-build-orders.ts": {
@@ -6859,7 +6645,6 @@
       "corporations": 1
     },
     "src/lib/migrations/entries/2026-09-03-retire-orphan-sovereign-float.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/migrations/entries/2026-09-06-client-diagnostics-ttl-index.ts": {
@@ -6876,9 +6661,6 @@
     },
     "src/lib/migrations/entries/2026-09-11-source-fence-indexes.ts": {
       "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-09-12-reprice-current-sovereign-risk.ts": {
-      "federalBudget": 2
     },
     "src/lib/migrations/entries/2026-09-17-playable-region-texture-residuals.ts": {
       "gameState": 1
@@ -6915,9 +6697,6 @@
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-09-29-union-prosecution-bar-index.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-30-financial-tx-log-counterparty-index.ts": {
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-09-30-loc-recovery-owner-index.ts": {
@@ -7002,19 +6781,14 @@
     },
     "src/lib/migrations/entries/2026-10-14-government-contract-bidding.ts": {
       "corporations": 1,
-      "federalBudget": 2,
       "gameState": 1,
-      "untyped": 7
-    },
-    "src/lib/migrations/entries/2026-10-15-income-tax-policy-parity.ts": {
-      "federalBudget": 1
+      "untyped": 5
     },
     "src/lib/migrations/entries/2026-10-15-live-world-npp-autonomy-v6.ts": {
       "gameState": 2
     },
     "src/lib/migrations/entries/2026-10-16-income-tax-tiers.ts": {
       "characters": 2,
-      "federalBudget": 1,
       "gameState": 1,
       "untyped": 6
     },
@@ -7024,7 +6798,6 @@
     },
     "src/lib/migrations/entries/2026-10-16-stock-holding-tax-tiers.ts": {
       "corporations": 2,
-      "federalBudget": 1,
       "gameState": 5,
       "untyped": 2
     },
@@ -7055,9 +6828,6 @@
     "src/lib/migrations/startupMigrations.ts": {
       "gameState": 1
     },
-    "src/lib/military/applyPeaceTerm.ts": {
-      "federalBudget": 1
-    },
     "src/lib/military/covertCrackdown.ts": {
       "untyped": 1
     },
@@ -7075,20 +6845,8 @@
     "src/lib/military/procurementGate.ts": {
       "gameState": 1
     },
-    "src/lib/military/warEntryPolicy.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/monetaryGovernance/executionPolicy.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/monetaryGovernance/inflationGap.ts": {
-      "federalBudget": 1
-    },
     "src/lib/monetaryPolicy/centralBankPricing.ts": {
       "characters": 1
-    },
-    "src/lib/monetaryPolicy/commands/updatePrimeRate.ts": {
-      "federalBudget": 1
     },
     "src/lib/monetaryPolicy/queries/adminLoanTracker.ts": {
       "characters": 1,
@@ -7096,44 +6854,33 @@
     },
     "src/lib/monetaryPolicy/queries/countryCentralBankDetail.ts": {
       "characters": 3,
-      "federalBudget": 2,
       "npps": 1,
-      "politicalParties": 1,
-      "untyped": 1
+      "politicalParties": 1
     },
     "src/lib/monetaryPolicy/queries/inflationDiagnostics.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/moneySupply/liquidityAdvance.ts": {
       "corporations": 1
     },
     "src/lib/moneySupply/monetaryOperationJournal.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/moneySupply/nppPolicy.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/moneySupply/seed.ts": {
-      "federalBudget": 1,
       "untyped": 1
     },
     "src/lib/moneySupply/snapshot.ts": {
       "characters": 1,
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1,
       "states": 1,
       "untyped": 3
-    },
-    "src/lib/elections/party/nationalCommitteeElections.ts": {
-      "characters": 5,
-      "politicalParties": 4
     },
     "src/lib/nationalization/auctionListing.ts": {
       "characters": 1,
@@ -7152,8 +6899,7 @@
     },
     "src/lib/nationalization/concentration.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "federalBudget": 2
+      "corporations": 1
     },
     "src/lib/nationalization/consequences/apply.ts": {
       "politicalParties": 1,
@@ -7173,14 +6919,10 @@
     },
     "src/lib/nationalization/fundedOwnershipSettlement.ts": {
       "characters": 1,
-      "corporations": 1,
-      "federalBudget": 2
+      "corporations": 1
     },
     "src/lib/nationalization/heldEquityTransfer.ts": {
       "corporations": 1
-    },
-    "src/lib/nationalization/investorConfidence.ts": {
-      "federalBudget": 2
     },
     "src/lib/nationalization/legislativeNationalize.ts": {
       "corporateSectors": 2,
@@ -7253,8 +6995,7 @@
     },
     "src/lib/nationalization/soeOperations.ts": {
       "corporateSectors": 3,
-      "corporations": 3,
-      "federalBudget": 1
+      "corporations": 3
     },
     "src/lib/nationalization/soeRemittance.ts": {
       "corporateSectors": 1,
@@ -7268,32 +7009,14 @@
       "corporateSectors": 1
     },
     "src/lib/nationalization/treasury.ts": {
-      "corporations": 2,
-      "federalBudget": 4
+      "corporations": 2
     },
     "src/lib/nationalization/treasuryLedger.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/nationalMetrics.ts": {
-      "federalBudget": 1,
       "gameState": 2,
       "states": 1
-    },
-    "src/lib/elections/party/nationalPartyElectionNotifications.ts": {
-      "characters": 9,
-      "politicalParties": 1
-    },
-    "src/lib/elections/party/nationalPartyElections.ts": {
-      "characters": 1,
-      "gameState": 1,
-      "politicalParties": 6,
-      "untyped": 2
-    },
-    "src/lib/elections/party/nationalPartyQuorum.ts": {
-      "characters": 1,
-      "politicalParties": 1,
-      "untyped": 1
     },
     "src/lib/nativePush/devices.ts": {
       "untyped": 1
@@ -7396,7 +7119,6 @@
       "npps": 1
     },
     "src/lib/nppAutonomy/autonomousWarCommands.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/nppAutonomy/caretakerMinister.ts": {
@@ -7409,7 +7131,6 @@
       "gameState": 1
     },
     "src/lib/nppAutonomy/foreignPolicy.ts": {
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1
     },
@@ -7426,7 +7147,6 @@
       "npps": 3
     },
     "src/lib/nppAutonomy/nppChairAutoRate.ts": {
-      "federalBudget": 1,
       "npps": 2,
       "states": 1
     },
@@ -7434,10 +7154,8 @@
       "untyped": 1
     },
     "src/lib/nppAutonomy/processNppGovernment.ts": {
-      "federalBudget": 1,
       "gameState": 1,
-      "npps": 1,
-      "untyped": 1
+      "npps": 1
     },
     "src/lib/nppAutonomy/proposeNppEuropeanBill.ts": {
       "politicalParties": 1
@@ -7448,7 +7166,6 @@
       "npps": 1
     },
     "src/lib/nppAutonomy/proposeNppNationalBill.ts": {
-      "federalBudget": 1,
       "gameState": 1,
       "politicalParties": 1
     },
@@ -7693,16 +7410,12 @@
       "corporateSectors": 1,
       "corporations": 1
     },
-    "src/lib/policy/nationalPolicyRecords.ts": {
-      "federalBudget": 1
-    },
     "src/lib/policy/nationalPolicyRecordsList.ts": {
       "corporations": 1
     },
     "src/lib/policy/policyRecordPayload.ts": {
       "characters": 1,
       "electedOfficials": 1,
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/policy/regionPolicyRecordPayload.ts": {
@@ -7727,9 +7440,6 @@
     "src/lib/politicalLegislation/conditionsSignal.ts": {
       "states": 1
     },
-    "src/lib/politicalLegislation/estimates.ts": {
-      "federalBudget": 1
-    },
     "src/lib/politicalLegislation/fiscalBase.ts": {
       "states": 2
     },
@@ -7737,16 +7447,8 @@
       "gameState": 1,
       "states": 1
     },
-    "src/lib/politicalLegislation/programCostScale.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/politicalLegislation/taxSlider.ts": {
-      "federalBudget": 1
-    },
     "src/lib/politicalMetrics/evidence.ts": {
-      "federalBudget": 1,
-      "states": 1,
-      "untyped": 2
+      "states": 1
     },
     "src/lib/politicalMetrics/queries/countryPoliticalMetrics.ts": {
       "gameState": 1,
@@ -7801,7 +7503,7 @@
     },
     "src/lib/propagateNameChange.ts": {
       "electedOfficials": 1,
-      "untyped": 28
+      "untyped": 23
     },
     "src/lib/publicApi/character.ts": {
       "characters": 6,
@@ -7822,7 +7524,6 @@
     },
     "src/lib/publicApi/economy.ts": {
       "electedOfficials": 3,
-      "federalBudget": 1,
       "politicalParties": 2,
       "states": 1
     },
@@ -7846,7 +7547,6 @@
       "politicalParties": 1
     },
     "src/lib/publicApi/nations.ts": {
-      "federalBudget": 1,
       "states": 3
     },
     "src/lib/publicApi/party.ts": {
@@ -7861,7 +7561,6 @@
       "states": 1
     },
     "src/lib/publicApi/sovereigns.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/publicApi/tierLimits.ts": {
@@ -7871,7 +7570,6 @@
       "corporations": 1
     },
     "src/lib/publicFinance/queries/federalBudgetDetail.ts": {
-      "federalBudget": 1,
       "gameState": 2,
       "states": 1
     },
@@ -7940,11 +7638,9 @@
       "corporateSectors": 1
     },
     "src/lib/referendum/secede/promoteEconomyToNational.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/referendum/secede/promoteResetV2.ts": {
-      "federalBudget": 2,
       "gameState": 2,
       "states": 3
     },
@@ -7997,7 +7693,6 @@
       "untyped": 19
     },
     "src/lib/referendum/transfer/reapportionNationalBudget.ts": {
-      "federalBudget": 4,
       "states": 2
     },
     "src/lib/referendum/transfer/regionScopedCollections.ts": {
@@ -8021,10 +7716,7 @@
     "src/lib/remediation/compensation.ts": {
       "corporations": 2,
       "gameState": 1,
-      "untyped": 2
-    },
-    "src/lib/remediation/defects/AHD-1102-uk-vat-revenue-gap.ts": {
-      "federalBudget": 2
+      "untyped": 1
     },
     "src/lib/remediation/defects/AHD-1124-brl-forced-maturity-restitution.ts": {
       "characters": 1,
@@ -8071,8 +7763,7 @@
     },
     "src/lib/remediation/defects/AHD-1749-monroe-bank-restoration.ts": {
       "corporations": 2,
-      "gameState": 1,
-      "untyped": 1
+      "gameState": 1
     },
     "src/lib/remediation/defects/AHD-951-orphan-null-party-seats.ts": {
       "untyped": 2
@@ -8080,17 +7771,14 @@
     "src/lib/remediation/defects/AHD-command-economy-private-sector-ownership.ts": {
       "corporateSectors": 4,
       "corporations": 6,
-      "federalBudget": 2,
       "gameState": 1,
       "untyped": 2
     },
     "src/lib/remediation/defects/AHD-defence-procurement-overaward.ts": {
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/remediation/defects/AHD-defence-supplier-windfall.ts": {
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-dissolution-npp-successors.ts": {
@@ -8115,7 +7803,6 @@
     },
     "src/lib/remediation/defects/AHD-sovereign-maturity-unfunded-rollover.ts": {
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-sovereign-rollover-wall.ts": {
@@ -8124,14 +7811,13 @@
     "src/lib/remediation/defects/AHD-tinky-stale-vote-excess.ts": {
       "characters": 3,
       "corporations": 2,
-      "federalBudget": 3,
       "untyped": 1
     },
     "src/lib/remediation/defects/AHD-whole-plants-conversion.ts": {
       "corporateSectors": 4,
       "corporations": 3,
       "gameState": 1,
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/remediation/guards.ts": {
       "gameState": 1
@@ -8145,19 +7831,11 @@
     "src/lib/resetFinance/seedOpeningDepartments1991.ts": {
       "gameState": 1
     },
-    "src/lib/resetFinance/settleCashTurn.ts": {
-      "federalBudget": 1
-    },
     "src/lib/resetLegislation/enactBill.ts": {
-      "federalBudget": 1,
       "gameState": 2
     },
     "src/lib/resetLegislation/loadReviewedCatalog.ts": {
-      "federalBudget": 1,
       "states": 1
-    },
-    "src/lib/resetLegislation/resolveTaxProvision.ts": {
-      "federalBudget": 1
     },
     "src/lib/resetLegislation/seedOpening1991.ts": {
       "states": 1
@@ -8167,7 +7845,6 @@
       "npps": 1
     },
     "src/lib/resetMetrics/collectOwnerReadings.ts": {
-      "federalBudget": 1,
       "gameState": 1,
       "states": 1
     },
@@ -8280,12 +7957,8 @@
     "src/lib/settlement/commands/commitPlay.ts": {
       "characters": 3
     },
-    "src/lib/settlement/mobilisation.ts": {
-      "federalBudget": 1
-    },
     "src/lib/settlement/queries/dossier.ts": {
       "characters": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "politicalParties": 1,
       "states": 1
@@ -8301,7 +7974,6 @@
     },
     "src/lib/sidebarWidgets/data/officeDashboard.ts": {
       "electedOfficials": 1,
-      "federalBudget": 1,
       "states": 2
     },
     "src/lib/sidebarWidgets/data/viewerContext.ts": {
@@ -8343,7 +8015,7 @@
       "corporateSectors": 3,
       "corporations": 1,
       "gameState": 3,
-      "untyped": 20
+      "untyped": 19
     },
     "src/lib/sim/electionReport.ts": {
       "elections": 1,
@@ -8372,17 +8044,16 @@
       "characters": 4,
       "corporations": 3,
       "politicalParties": 1,
-      "untyped": 18
+      "untyped": 17
     },
     "src/lib/sim/metrics.ts": {
       "corporateSectors": 1,
       "corporations": 1,
       "electedOfficials": 2,
       "elections": 1,
-      "federalBudget": 2,
       "gameState": 1,
       "npps": 1,
-      "untyped": 12
+      "untyped": 11
     },
     "src/lib/sim/oppositionResearchDriver.ts": {
       "elections": 1
@@ -8434,35 +8105,21 @@
       "corporations": 1,
       "electedOfficials": 1,
       "elections": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1,
       "states": 1,
-      "untyped": 14
+      "untyped": 13
     },
     "src/lib/singleplayerTurn.ts": {
       "characters": 2,
       "untyped": 2
     },
-    "src/lib/societyPressures/shell.ts": {
-      "federalBudget": 2
-    },
     "src/lib/sovereignDefault/cascade/cascadeOrchestrator.ts": {
       "corporations": 1
     },
-    "src/lib/sovereignDefault/crisisAutoAction.ts": {
-      "federalBudget": 2
-    },
-    "src/lib/sovereignDefault/crisisDetection.ts": {
-      "federalBudget": 3
-    },
     "src/lib/sovereignDefault/imfSovereignFacilityTurn.ts": {
-      "corporations": 1,
-      "federalBudget": 2
-    },
-    "src/lib/sovereignDefault/interestSpiralRestructure.ts": {
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/sovereignDefault/legislative/applyLegislatorImpactsForChamber.ts": {
       "characters": 1,
@@ -8471,9 +8128,6 @@
     "src/lib/sovereignDefault/npc/getExecutiveLeaderProfile.ts": {
       "characters": 1,
       "npps": 1
-    },
-    "src/lib/sovereignDefault/npc/npcExecutiveAutoPropose.ts": {
-      "federalBudget": 2
     },
     "src/lib/sovereignDefault/npc/npcLegislatorAutoVote.ts": {
       "npps": 1
@@ -8488,32 +8142,8 @@
       "characters": 1,
       "npps": 1
     },
-    "src/lib/sovereignDefault/recovery/recoveryTurn.ts": {
-      "federalBudget": 2
-    },
-    "src/lib/sovereignDefault/requiredIssuance.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/sovereignDefault/resolution/bailout.ts": {
-      "federalBudget": 2
-    },
-    "src/lib/sovereignDefault/resolution/monetize.ts": {
-      "federalBudget": 2
-    },
-    "src/lib/sovereignDefault/resolution/repudiate.ts": {
-      "federalBudget": 2
-    },
-    "src/lib/sovereignDefault/resolution/restructure.ts": {
-      "federalBudget": 2
-    },
     "src/lib/sovereignDefault/snapshotLoader.ts": {
-      "corporations": 1,
-      "federalBudget": 2
-    },
-    "src/lib/elections/party/statePartyElections.ts": {
-      "characters": 10,
-      "gameState": 1,
-      "politicalParties": 1
+      "corporations": 1
     },
     "src/lib/states/approval/getRegionalApprovalData.ts": {
       "gameState": 1,
@@ -8552,19 +8182,12 @@
       "characters": 1,
       "corporations": 1
     },
-    "src/lib/tariffs/reconcileTariffs.ts": {
-      "federalBudget": 1
-    },
-    "src/lib/tariffs/tariffEffects.ts": {
-      "federalBudget": 2
-    },
     "src/lib/telemetry/longHorizon/telemetry.ts": {
       "electedOfficials": 1,
       "gameState": 1,
       "states": 1
     },
     "src/lib/telemetry/research/countryTurn.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/telemetry/research/securities.ts": {
@@ -8574,7 +8197,6 @@
       "gameState": 2
     },
     "src/lib/treasury/emit.ts": {
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/treasury/executeSendToMember.ts": {
@@ -8645,7 +8267,7 @@
     },
     "src/lib/turn/bondTurn.ts": {
       "corporations": 2,
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/turn/bondTurnAutoResolve.ts": {
       "corporations": 1,
@@ -8659,9 +8281,6 @@
       "characters": 1,
       "corporations": 1,
       "untyped": 3
-    },
-    "src/lib/turn/bondTurnMaturities.ts": {
-      "federalBudget": 1
     },
     "src/lib/turn/campaignBoostDecay.ts": {
       "elections": 2
@@ -8694,7 +8313,6 @@
       "untyped": 1
     },
     "src/lib/turn/commandEconomyTurn.ts": {
-      "federalBudget": 2,
       "politicalParties": 1,
       "untyped": 1
     },
@@ -8729,7 +8347,6 @@
     "src/lib/turn/corporation/buildLookupsLoad.ts": {
       "corporateSectors": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/turn/corporation/cashArrears.ts": {
@@ -8737,8 +8354,7 @@
     },
     "src/lib/turn/corporation/corporateTaxPriority.ts": {
       "corporations": 2,
-      "federalBudget": 1,
-      "untyped": 4
+      "untyped": 3
     },
     "src/lib/turn/corporation/corporationSectorShed.ts": {
       "corporateSectors": 1,
@@ -8754,7 +8370,6 @@
     "src/lib/turn/corporation/corporationTurnPhases.ts": {
       "characters": 1,
       "corporations": 1,
-      "federalBudget": 1,
       "untyped": 2
     },
     "src/lib/turn/corporation/corporationTurnSideEffects.ts": {
@@ -8768,7 +8383,6 @@
     "src/lib/turn/corporation/fundedProducerTurn.ts": {
       "corporateSectors": 5,
       "corporations": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "untyped": 1
     },
@@ -8799,12 +8413,10 @@
     },
     "src/lib/turn/corporation/nppInsolvencyDissolution.ts": {
       "corporations": 2,
-      "federalBudget": 1,
       "gameState": 1
     },
     "src/lib/turn/corporation/operatingCashSettlement.ts": {
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/turn/corporation/producerMarketPhase.ts": {
       "corporateSectors": 1,
@@ -8832,8 +8444,7 @@
       "untyped": 9
     },
     "src/lib/turn/corporation/stateRunAdvance.ts": {
-      "corporations": 1,
-      "federalBudget": 1
+      "corporations": 1
     },
     "src/lib/turn/corporation/transitionStruggling.ts": {
       "corporateSectors": 1
@@ -8849,9 +8460,8 @@
     "src/lib/turn/crisisTurn.ts": {
       "characters": 3,
       "corporateSectors": 1,
-      "federalBudget": 1,
       "states": 1,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/turn/decolonizationTurn.ts": {
       "untyped": 1
@@ -8863,9 +8473,6 @@
     "src/lib/turn/defenceWindfallRecoveryTurn.ts": {
       "corporations": 1
     },
-    "src/lib/turn/defenseAppropriationTurn.ts": {
-      "federalBudget": 1
-    },
     "src/lib/turn/demographicTurnoutTurn.ts": {
       "characters": 1,
       "electedOfficials": 1,
@@ -8873,20 +8480,8 @@
       "politicalParties": 2,
       "states": 1
     },
-    "src/lib/elections/campaigns/electionHalfTick.ts": {
-      "gameState": 1
-    },
-    "src/lib/elections/campaigns/supportAccrual.ts": {
-      "elections": 1
-    },
-    "src/lib/elections/campaigns/supportDecay.ts": {
-      "elections": 2
-    },
     "src/lib/turn/endorsements/preloadEndorsementTargets.ts": {
       "elections": 1
-    },
-    "src/lib/turn/ensureFederalBudget.ts": {
-      "untyped": 1
     },
     "src/lib/turn/eraCheckpointTurn.ts": {
       "gameState": 1
@@ -8898,8 +8493,7 @@
       "gameState": 1
     },
     "src/lib/turn/fiscalBaseGrowth.ts": {
-      "corporateSectors": 1,
-      "federalBudget": 2
+      "corporateSectors": 1
     },
     "src/lib/turn/forexLimitOrders.ts": {
       "characters": 1,
@@ -8921,7 +8515,7 @@
       "npps": 2,
       "politicalParties": 4,
       "states": 1,
-      "untyped": 23
+      "untyped": 22
     },
     "src/lib/turn/governmentApprovalFavorability.ts": {
       "electedOfficials": 1
@@ -8963,10 +8557,9 @@
     },
     "src/lib/turn/npp/billSponsorship.ts": {
       "electedOfficials": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/turn/npp/billVoting.ts": {
       "corporateSectors": 1,
@@ -9150,7 +8743,6 @@
       "gameState": 1
     },
     "src/lib/turn/regionalBudget.ts": {
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/turn/reinforcement.ts": {
@@ -9182,7 +8774,6 @@
       "characters": 1,
       "corporateSectors": 1,
       "corporations": 2,
-      "federalBudget": 1,
       "gameState": 1,
       "npps": 1,
       "states": 2,
@@ -9192,7 +8783,6 @@
       "gameState": 1
     },
     "src/lib/turn/subhour/growthHalfStep.ts": {
-      "federalBudget": 2,
       "states": 2
     },
     "src/lib/turn/subhour/halfHourTick.ts": {
@@ -9204,20 +8794,13 @@
     "src/lib/turn/subhour/rewindHalfTick.ts": {
       "untyped": 2
     },
-    "src/lib/turn/subsidyBudgetTurn.ts": {
-      "federalBudget": 1
-    },
     "src/lib/turn/suspiciousDetection.ts": {
       "characters": 2,
       "politicalParties": 1,
       "untyped": 19
     },
-    "src/lib/turn/treasuryEffects.ts": {
-      "federalBudget": 2
-    },
     "src/lib/turn/treasuryTurn.ts": {
       "corporations": 1,
-      "federalBudget": 3,
       "gameState": 1
     },
     "src/lib/turn/turnWorkerHandoff.ts": {
@@ -9226,7 +8809,6 @@
     "src/lib/turn/unions/index.ts": {
       "characters": 4,
       "corporateSectors": 3,
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/turn/unions/labourRelationsTurn.ts": {
@@ -9248,7 +8830,6 @@
     "src/lib/unions/commands/bargaining.ts": {
       "corporateSectors": 4,
       "corporations": 2,
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/unions/commands/foundUnion.ts": {
@@ -9283,8 +8864,7 @@
       "characters": 2
     },
     "src/lib/unions/crackdownLabourApproval.ts": {
-      "characters": 1,
-      "federalBudget": 1
+      "characters": 1
     },
     "src/lib/unions/unionBustingNotice.ts": {
       "characters": 1
@@ -9318,7 +8898,6 @@
     },
     "src/lib/utils/governmentApproval.ts": {
       "electedOfficials": 1,
-      "federalBudget": 1,
       "gameState": 1,
       "states": 1,
       "untyped": 1
@@ -9369,7 +8948,6 @@
       "untyped": 1
     },
     "src/lib/world/macro/backgroundNation.ts": {
-      "federalBudget": 1,
       "politicalParties": 1
     },
     "src/lib/world/macro/macroCountryTurn.ts": {
@@ -9388,24 +8966,14 @@
     },
     "src/lib/world/succession/chooseFirmHeadquarters.ts": {
       "corporations": 1,
-      "federalBudget": 1,
       "states": 1
     },
     "src/lib/world/succession/chooseResidentHome.ts": {
       "characters": 1,
       "states": 1
     },
-    "src/lib/world/succession/continuingServiceTurn.ts": {
-      "federalBudget": 2
-    },
     "src/lib/world/succession/facilityPaymentTurn.ts": {
       "corporations": 2
-    },
-    "src/lib/world/succession/legacyServiceTurn.ts": {
-      "federalBudget": 2
-    },
-    "src/lib/world/succession/loadLiveFinances.ts": {
-      "federalBudget": 1
     },
     "src/lib/world/succession/loadLiveInventory.ts": {
       "corporateSectors": 1,
@@ -9431,9 +8999,6 @@
       "elections": 2,
       "npps": 1,
       "untyped": 3
-    },
-    "src/lib/world/succession/materializeFiscalAccounts.ts": {
-      "federalBudget": 2
     },
     "src/lib/world/succession/materializePrivateFirms.ts": {
       "corporations": 1

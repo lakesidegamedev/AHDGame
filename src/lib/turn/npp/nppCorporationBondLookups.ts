@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Bond, Corporation } from "@/lib/db/types";
 import { isCorporateIssuerBond } from "@/lib/bonds/corporateCredit";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface NppCorporationDecisionPreload {
   groupMembership?: import("@/lib/corporations/groups/groupMembership").GroupMembership;
@@ -24,7 +25,7 @@ export async function loadNppCorporationBondLookups(
 }> {
   if (preloaded) return preloaded;
 
-  const bonds = await db.collection<Bond>("bonds").find({ matured: false }).toArray();
+  const bonds = await bondsCollection(db).find({ matured: false }).toArray();
   const issuerBondsByCorpId = new Map<string, Bond[]>();
   const heldBondsByCorpId = new Map<string, { bond: Bond; units: number }[]>();
   for (const bond of bonds) {

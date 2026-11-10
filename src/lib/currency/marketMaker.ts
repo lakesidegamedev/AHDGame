@@ -28,6 +28,7 @@ import {
   settleMarketMakerReceipt,
   recordMarketMakerRefusal,
 } from "./marketMakerReceipt";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface MarketMakerTradeParams {
   /** Stable accepted income-event identity for garnished residual conversions. */
@@ -152,7 +153,7 @@ export async function distributeConversionSpreadsBatch(
     })
   );
   if (operations.length > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(operations);
+    await centralBanksCollection(db).bulkWrite(operations);
   }
 }
 

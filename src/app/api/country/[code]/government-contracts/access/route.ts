@@ -10,7 +10,7 @@ import {
   suggestedDefenceMaximumPricePerLot,
 } from "@/lib/governmentContracts/defenceLiveFloor";
 import { militaryPriceAnchor } from "@/lib/military/procurement";
-import type { Corporation, CorporateSector, FederalBudget } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { contractContext, contractRouteError, privateJson } from "@/lib/governmentContracts/api";
 import { managementAuthority } from "@/lib/governmentContracts/authority";
 import { getResourceContractAuthority } from "@/lib/extraction/contractAuthority";
@@ -19,6 +19,7 @@ import { contractCurrencyQuotes } from "@/lib/governmentContracts/presentation";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { extractionCapacityQuote } from "@/lib/governmentContracts/rules/presentation";
 import { defenceContractWindow } from "@/lib/military/defenceContractLimits";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
@@ -88,12 +89,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         : [];
     const regionalStateIds = new Set(regional.filter((s) => s.allowed).map((s) => s.stateId));
     const budget = defence
-      ? await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne(
-            { countryId },
-            { projection: { gdp: 1, militaryPriceBaselineGdp: 1, defenseAppropriation: 1 } }
-          )
+      ? await federalBudgetCollection(db).findOne(
+          { countryId },
+          { projection: { gdp: 1, militaryPriceBaselineGdp: 1, defenseAppropriation: 1 } }
+        )
       : null;
     const defenceAnchorPrice = budget
       ? lotPrice(countryId, militaryPriceAnchor(budget.gdp, budget.militaryPriceBaselineGdp))

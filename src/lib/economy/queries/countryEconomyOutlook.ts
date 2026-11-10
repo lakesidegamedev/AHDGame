@@ -13,14 +13,12 @@ import { readNationalMetricRollup } from "@/lib/resetMetrics/readNationalRollup"
 
 import type { Db } from "mongodb";
 import type {
-  CentralBank,
   GameConfig,
   State,
   StockExchangeSnapshot,
   ExchangeRate,
   TurnSnapshot,
 } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
@@ -47,6 +45,8 @@ import {
   householdPriceAdjustedValue,
   HOUSEHOLD_PRICE_INDEX_BASELINE,
 } from "@/lib/economy/householdPriceIndex";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface HistoryPoint {
   turn: number;
@@ -155,10 +155,10 @@ export async function buildCountryEconomyOutlook(
 
   const [bank, budget, states, gameState, exchangeRate, snapshot, sectorMix, gameConfig] =
     await Promise.all([
-      db.collection<CentralBank>("centralBanks").findOne({ _id: bankId }),
-      db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
+      centralBanksCollection(db).findOne({ _id: bankId }),
+      federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+        _id: "federal";
+      }),
       db
         .collection<State>("states")
         .find({ countryId })

@@ -1,9 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, FederalBudget } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -13,6 +12,8 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export const DEFECT_ID = "AHD-tinky-stale-vote-excess";
 
@@ -180,8 +181,7 @@ async function survey(db: Db): Promise<Survey> {
       .collection<Character>("characters")
       .find({ _id: { $in: characterClaims.map((claim) => new ObjectId(claim.destinationId)) } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ countryId: { $in: treasuryCountries } })
       .toArray(),
     db.collection("shareTradeHistory").countDocuments({
@@ -389,7 +389,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   for (const credit of payload.treasuryCredits) {
-    const result = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const result = await federalBudgetCollection(db).updateOne(
       { _id: credit.budgetId, [MARKER_PATH]: { $exists: false } },
       {
         $inc: { treasuryBalance: credit.localAmount },
@@ -496,8 +496,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   );
 
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "admin_transfer", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];
@@ -531,7 +530,7 @@ async function verify(db: Db): Promise<VerifyResult> {
         })
       : 0,
     budgetIds.length > 0
-      ? db.collection<FederalBudget>("federalBudget").countDocuments({
+      ? federalBudgetCollection(db).countDocuments({
           _id: { $in: budgetIds },
           [MARKER_PATH]: { $exists: true },
         })

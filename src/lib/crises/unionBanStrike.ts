@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { Character, FederalBudget, Union } from "@/lib/db/types";
+import type { Character, Union } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { applyUnionLawProvision, isUnionsBanned } from "@/lib/labour/unionLaws";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
@@ -14,6 +14,7 @@ import {
   UNION_BAN_STRIKE_TEMPLATE_KEY,
 } from "./unionBanStrikeCopy";
 import { announceUnionBanStrikeEnd, announceUnionBanStrikeStart } from "./unionBanStrikeWire";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Wildcat general strike triggered by an enacted union ban.
@@ -396,9 +397,10 @@ async function respondWithNegotiation(
   const approval = await countryLabourApproval(db, countryId);
   const settled = Math.random() < negotiateSuccessChance(approval);
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as CountryId }, { projection: { gdp: 1, gdpSmoothed: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId: countryId as CountryId },
+    { projection: { gdp: 1, gdpSmoothed: 1 } }
+  );
   const gdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   const intensity = await countryUndergroundIntensity(db, countryId as CountryId);

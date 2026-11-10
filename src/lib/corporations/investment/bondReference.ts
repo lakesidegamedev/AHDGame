@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
-import type { Bond } from "@/lib/db/types/bond";
 import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { investmentBondReference } from "./rules";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** One thin active-bond read on the capacity page, never a turn-phase loop. */
 export async function loadInvestmentBondReference(
@@ -13,7 +13,7 @@ export async function loadInvestmentBondReference(
   if (!currencyCode || !Number.isInteger(currentTurn)) return null;
   const currency = ZOD_CURRENCY_ENUM.find((code) => code === currencyCode);
   if (!currency) return null;
-  const bond = await db.collection<Bond>("bonds").findOne(
+  const bond = await bondsCollection(db).findOne(
     {
       issuerType: "sovereign",
       currencyCode: currency,

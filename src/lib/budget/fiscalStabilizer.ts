@@ -36,6 +36,7 @@ import {
   type FiscalConsolidationPackage,
   type StabilizerTaxLine,
 } from "./rules/fiscalStabilizer";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Party economic positions run on a -5..+5 scale (see formNppCabinet). */
 const PARTY_POSITION_SCALE = 5;
@@ -239,8 +240,7 @@ export async function loadFiscalConsolidationApprovalEffects(
   db: Db,
   turn: number
 ): Promise<Map<string, number>> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       { "fiscalConsolidation.lastPackage.appliedTurn": { $gt: turn - TURNS_PER_YEAR } },
       {

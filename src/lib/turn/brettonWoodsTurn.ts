@@ -26,7 +26,6 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -39,6 +38,7 @@ import {
   stepGoldCover,
 } from "@/lib/monetary/brettonWoods";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface BrettonWoodsTurnResult {
   /** Always true: the phase runs every turn. Kept for the phase telemetry shape. */
@@ -103,8 +103,7 @@ export async function processBrettonWoodsTurn(
   // Foreign dollar claims and the US reserve position share one projected read.
   // Only the FX reserve bucket counts as claims (same definition the reserve-
   // currency ranking uses); the home lending reserve is domestic, not a claim.
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find(
       {},
       {

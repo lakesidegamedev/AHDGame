@@ -12,6 +12,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Restores banks charged margin interest on central bank liquidity injections
@@ -323,8 +324,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

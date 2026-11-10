@@ -11,7 +11,7 @@ import { incomeTierForTaxKey, incomeTaxRate } from "@/lib/budget/rules/incomeTax
 import type { Db } from "mongodb";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 
 const GRID_EPS = 1e-9;
@@ -56,6 +56,7 @@ export function validateTaxSliderProposal(
  */
 export { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export type ResolvedTaxSliderFields =
   | {
@@ -136,9 +137,10 @@ export async function resolveTaxSliderProvisionFields(
       slider.baselineRate;
   } else {
     const budgetId = getNationalBudgetId(countryId as CountryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId }, { projection: { taxRates: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId },
+      { projection: { taxRates: 1 } }
+    );
     currentRate =
       (incomeTierForTaxKey(slider.taxType) && budget?.taxRates
         ? incomeTaxRate(budget.taxRates, incomeTierForTaxKey(slider.taxType)!)

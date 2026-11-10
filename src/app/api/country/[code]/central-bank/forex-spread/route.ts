@@ -21,7 +21,8 @@ import {
 } from "@/lib/constants/currencies";
 import { getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
-import type { CentralBank, Character, ExchangeRate, GameState } from "@/lib/db/types";
+import type { Character, ExchangeRate, GameState } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -60,7 +61,7 @@ export async function POST(request: Request, context: RouteContext) {
     const db = await getDb();
     const scope = await getMonetaryPolicyScope(db, countryId);
     const bankId = scope.bankId;
-    const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+    const bank = await centralBanksCollection(db).findOne({ _id: bankId });
     if (!bank) throw notFound("Central bank not found");
 
     const isChair = !!bank.chairCharacterId && myChar._id.equals(bank.chairCharacterId);

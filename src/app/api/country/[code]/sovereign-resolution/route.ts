@@ -20,8 +20,8 @@ import { COUNTRY_CONFIGS, getOfficeTypeConfig, type CountryId } from "@/lib/cons
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { buildInitialLegislativePhases } from "@/lib/sovereignDefault/legislative/buildPhases";
 import { MONETIZE_GATE_INFLATION } from "@/lib/sovereignDefault/constants";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const VALID_CHOICES = ["bailout", "repudiate", "restructure", "monetize"] as const;
 
@@ -78,9 +78,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   // orchestrator's gate; the orchestrator itself runs after legislative pass.
   const budgetId = getNationalBudgetId(upper);
   if (choice === "monetize") {
-    const budgetCheck = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId });
+    const budgetCheck = await federalBudgetCollection(db).findOne({ _id: budgetId });
     const inflationFraction = (budgetCheck?.economicFactors?.inflationRate ?? 0) / 100;
     if (inflationFraction > MONETIZE_GATE_INFLATION) {
       return errorResponse(
@@ -121,9 +119,10 @@ export async function POST(req: Request, { params }: RouteParams) {
     return errorResponse(409, "Decision is no longer open (already proposed or expired)");
   }
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: { sovereignCrisisState: "crisisResolving" } });
+  await federalBudgetCollection(db).updateOne(
+    { _id: budgetId },
+    { $set: { sovereignCrisisState: "crisisResolving" } }
+  );
 
   return NextResponse.json({
     ok: true,

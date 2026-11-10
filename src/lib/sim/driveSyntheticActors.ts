@@ -22,7 +22,6 @@
 
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { acceptCentralBankChairSelection } from "@/lib/turn/centralBankChairSelection";
 import {
@@ -32,6 +31,7 @@ import {
 } from "@/lib/crises/interactionEngine";
 import { launchGovernmentProspect } from "@/lib/extraction/commands/launchGovernmentProspect";
 import { buildSyntheticActorPlan } from "./syntheticActors";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface DriveSyntheticActorsOptions {
   seed: string;
@@ -184,7 +184,7 @@ async function driveChairAccept(
   const plan = buildSyntheticActorPlan(seed);
   const nominee = plan.actors.find((a) => a.role === "us-fed-nominee");
   if (!nominee) return;
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId("US") });
+  const bank = await centralBanksCollection(db).findOne({ _id: getBankId("US") });
   const pending = bank?.chairSelectionPending as { characterId?: ObjectId } | undefined;
   if (!pending?.characterId?.equals(new ObjectId(nominee.characterIdHex))) return;
   const result = await acceptCentralBankChairSelection(

@@ -117,6 +117,7 @@ import { unionContributionIncomePerTurn } from "@/lib/unions/unionContributionIn
 import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
 import { isPatreonActive } from "@/lib/db/types";
 import { resolveMemberSince } from "@/lib/character/memberSince";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -533,9 +534,10 @@ export default async function ProfilePage() {
    */
   const apDb = await getDb();
   const [chairBankRow, cabinetSeats, congressLeadershipRows, justiceSeat] = await Promise.all([
-    apDb
-      .collection("centralBanks")
-      .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } }),
+    centralBanksCollection(apDb).findOne(
+      { chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    ),
     getCabinetMembersCollection(apDb)
       .find(
         { characterId: character._id },

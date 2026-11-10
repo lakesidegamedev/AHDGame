@@ -48,6 +48,7 @@ import { computeFiscalImpact } from "@/lib/budget/fiscalImpact";
 import type { SettlementPaymentMode } from "@/lib/db/types/settlementPlay";
 import { loadSettlementActorContext } from "../actorContext";
 import { resolvePersonalFunds } from "../playCost";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -502,12 +503,10 @@ export async function loadGermanQuestionDossier(
   const seatState = seat ? crisis.seats.find((s) => s.id === seat.id) : undefined;
   const budget = seat && seatState ? seatBudgetFor(seatState, seat.id) : null;
   const treasury = seat
-    ? await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne(
-          { countryId: seat.id as FederalBudget["countryId"] },
-          { projection: { treasuryBalance: 1 } }
-        )
+    ? await federalBudgetCollection(db).findOne(
+        { countryId: seat.id as FederalBudget["countryId"] },
+        { projection: { treasuryBalance: 1 } }
+      )
     : null;
 
   const [bundestagSub, laenderSub] = await Promise.all([

@@ -89,6 +89,7 @@ import { countryElectionsUrl, countryUrl, politiciansUrl, regionUrl } from "@/li
 import { truncate, loadCharacterByUrlId } from "./characterLoaders";
 import { buildPublicSummary, getCharacterById, type OverviewStatItem } from "./characterData";
 import { raceHref } from "@/lib/campaignManager/links";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -232,9 +233,10 @@ export default async function CharacterPage({ params }: PageProps) {
   const needsPartyPool = !!(character.party && character.party !== "independent" && party);
   const [chairBankRow, cabinetSeats, congressLeadershipRows, justiceSeat, poolAgg] =
     await Promise.all([
-      apDb
-        .collection("centralBanks")
-        .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } }),
+      centralBanksCollection(apDb).findOne(
+        { chairCharacterId: character._id },
+        { projection: { _id: 1 } }
+      ),
       getCabinetMembersCollection(apDb)
         .find(
           { characterId: character._id },

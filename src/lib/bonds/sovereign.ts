@@ -24,7 +24,6 @@ import { ObjectId, type Db } from "mongodb";
 import type {
   Bond,
   BondMaturityTurns,
-  CentralBank,
   CreditRating,
   Corporation,
   FederalBudget,
@@ -76,6 +75,9 @@ export {
   type SovereignPrincipalResync,
 } from "./sovereignMaturity";
 import { fundSovereignSeries } from "./sovereignFunding";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 export { refreshSovereignDebtTerms } from "./sovereignFunding";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
@@ -359,8 +361,8 @@ async function issueSovereignBondSeries(
 
   const budgetId = getNationalBudgetId(countryId);
   const [budget, centralBank, countryCorporation, democraticSpreadPp] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-    db.collection<CentralBank>("centralBanks").findOne(
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
+    centralBanksCollection(db).findOne(
       { _id: getBankId(countryId) },
       {
         projection: {
@@ -412,9 +414,7 @@ async function issueSovereignBondSeries(
     bondDocs: [bondDoc],
     accounting,
   });
-  const updatedBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId });
+  const updatedBudget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   const issued = funded[0];
   if (!issued || !updatedBudget) return null;
   return {
@@ -475,7 +475,7 @@ export async function issueAdminSovereignBondSeries(
 
   if (issueAmount <= 0 && useQuarterDeficit) {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     if (!budget) return null;
     // Derived, not read. `surplus` is a cache of `revenue.total - spending.total`
     // that drifts intra-turn through every writer's read-modify-write, and this runs
@@ -507,8 +507,7 @@ export async function calculateSovereignRolloverAmount(
   countryId: CountryId,
   turn: number
 ): Promise<number> {
-  const activeBonds = await db
-    .collection<Bond>("bonds")
+  const activeBonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       countryId,
@@ -516,12 +515,12 @@ export async function calculateSovereignRolloverAmount(
       defaulted: false,
     })
     .toArray();
-  const budget = await db
-    .collection<Pick<FederalBudget, "_id" | "debt" | "countryId" | "currencyCode">>("federalBudget")
-    .findOne(
-      { _id: getNationalBudgetId(countryId) },
-      { projection: { debt: 1, countryId: 1, currencyCode: 1 } }
-    );
+  const budget = await federalBudgetCollection<
+    Pick<FederalBudget, "_id" | "debt" | "countryId" | "currencyCode">
+  >(db).findOne(
+    { _id: getNationalBudgetId(countryId) },
+    { projection: { debt: 1, countryId: 1, currencyCode: 1 } }
+  );
   // The pool exchanges its maturing float at par for fresh 48-turn paper
   // (publicFloatSovereignNovation.ts), so that share never needs cash. Only
   // the share that maturity will actually pay out is worth prefunding.
@@ -597,8 +596,7 @@ export async function issueScheduledSovereignBondSeries(
   // Registered, not the raw static list: a dissolved country keeps its budget
   // doc, and the scheduler would otherwise keep rolling over its debt.
   const configuredCountries: CountryId[] = await getRegisteredCountryIds(db);
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({
       _id: { $in: configuredCountries.map((countryId) => getNationalBudgetId(countryId)) },
     })
@@ -622,8 +620,7 @@ export async function issueScheduledSovereignBondSeries(
   // for the debt manager's maturity mix.
   const rateHistoryByCountry = new Map<CountryId, number[]>();
   if (longTenors && sovereignCountries.length > 0) {
-    const banks = await db
-      .collection<CentralBank>("centralBanks")
+    const banks = await centralBanksCollection(db)
       .find(
         { _id: { $in: [...new Set(sovereignCountries.map((countryId) => getBankId(countryId)))] } },
         { projection: { interestRateHistory: { $slice: -DEBT_MANAGER_RATE_HISTORY_TURNS } } }
@@ -665,7 +662,7 @@ export async function issueScheduledSovereignBondSeries(
     // deficit/rollover issuance for that quarter.
     // Also guard against ANY non-reconcile sovereign bond issued this turn,
     // since staggered issuance may issue multiple maturities in one turn.
-    const existingSeries = await db.collection<Bond>("bonds").findOne({
+    const existingSeries = await bondsCollection(db).findOne({
       issuerType: "sovereign",
       countryId,
       issuedAtTurn: turn,
@@ -675,8 +672,8 @@ export async function issueScheduledSovereignBondSeries(
 
     const budgetId = getNationalBudgetId(countryId);
     const [budgetDoc, centralBank, countryCorporation, democraticSpreadPp] = await Promise.all([
-      db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-      db.collection<CentralBank>("centralBanks").findOne(
+      federalBudgetCollection(db).findOne({ _id: budgetId }),
+      centralBanksCollection(db).findOne(
         { _id: getBankId(countryId) },
         {
           projection: {
@@ -816,8 +813,8 @@ export async function reconcileSovereignDebt(
 
   const budgetId = getNationalBudgetId(countryId);
   const [budget, centralBank, countryCorporation, democraticSpreadPp] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-    db.collection<CentralBank>("centralBanks").findOne(
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
+    centralBanksCollection(db).findOne(
       { _id: getBankId(countryId) },
       {
         projection: {
@@ -843,8 +840,7 @@ export async function reconcileSovereignDebt(
 
   // Canonical outstanding stock: active non-defaulted face minus any
   // restructure haircuts (a haircut bond contributes its written-down stock).
-  const activeBonds = await db
-    .collection<Bond>("bonds")
+  const activeBonds = await bondsCollection(db)
     .find({ issuerType: "sovereign", countryId, matured: false, defaulted: false })
     .toArray();
   const coveredByExistingBonds = sumOutstandingSovereignPrincipal(activeBonds);
@@ -912,7 +908,7 @@ export async function reconcileSovereignDebt(
         updatedAt: now,
       };
 
-      const insertResult = await db.collection<Omit<Bond, "_id">>("bonds").insertOne(bondDoc);
+      const insertResult = await bondsCollection<Omit<Bond, "_id">>(db).insertOne(bondDoc);
       tranches.push({
         maturityTurns,
         issueAmount: trancheAmount,
@@ -946,7 +942,7 @@ export async function reconcileSovereignDebt(
     sovereignRiskAnchor: budget.sovereignRiskAnchor,
   });
   if (totalIssued > 0 || newPrincipal !== Math.round(storedPrincipal)) {
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: budgetId },
       {
         $set: {

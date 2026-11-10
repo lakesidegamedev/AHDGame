@@ -1,6 +1,6 @@
 import type { Migration, MigrationResult } from "../types";
 import { FINANCIAL_TX_LOG_TURN_ORDER_INDEX } from "@/lib/admin/seed/indexes/financialTxLog";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * `financialTxLog` turn-order index on a live database.
@@ -18,9 +18,7 @@ export const migration: Migration = {
     const label = `financialTxLog.${options.name}`;
     if (ctx.dryRun)
       return { documentsScanned: 1, documentsUpdated: 0, notes: [`would create ${label}`] };
-    await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
-      .createIndex({ ...keys }, { ...options });
+    await financialTxLogCollection(db).createIndex({ ...keys }, { ...options });
     return { documentsScanned: 1, documentsUpdated: 1, notes: [`created/verified ${label}`] };
   },
 };

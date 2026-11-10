@@ -1,6 +1,5 @@
 /** Database shell for the pure reviewed-option catalog. */
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { resetLawFamilies } from "./catalog";
@@ -15,6 +14,7 @@ import {
   DEPARTMENT_DEFINITIONS,
   resolveDepartmentDefinitionName,
 } from "@/lib/governmentFinance/departmentCatalog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface ReviewedLawFamilyCatalog {
   familyId: string;
@@ -64,9 +64,7 @@ export async function loadReviewedLawCatalog(input: {
           .toArray()
       : Promise.resolve([]),
     scope === "national"
-      ? db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ countryId: country }, { projection: { gdp: 1 } })
+      ? federalBudgetCollection(db).findOne({ countryId: country }, { projection: { gdp: 1 } })
       : Promise.resolve(null),
     scope === "regional"
       ? db

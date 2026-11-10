@@ -14,7 +14,7 @@
  */
 
 import type { Db } from "mongodb";
-import type { FederalBudget, StateBudget } from "@/lib/db/types";
+import type { StateBudget } from "@/lib/db/types";
 import {
   normalizeFederalSpending,
   normalizeStateSpending,
@@ -23,6 +23,7 @@ import {
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export { SUBSIDY_COST_MULTIPLIER } from "@/lib/subsidies/subsidyBudgetCosts";
 
@@ -69,8 +70,7 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
     }
 
     writes.push(
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .updateOne({ _id: budget._id }, { $set: { spending, surplus, updatedAt: now } })
         .then(() => {
           updatedCount++;

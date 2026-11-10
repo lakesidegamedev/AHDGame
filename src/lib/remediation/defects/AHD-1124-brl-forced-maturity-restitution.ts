@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -12,6 +11,7 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Brazil's bondholders were force-converted out of BRL at a rate the engine
@@ -589,8 +589,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // emitTxBulk mints its own ids, so read them back rather than guessing: a
   // rollback has to be able to delete the receipts it created.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

@@ -43,6 +43,8 @@ import {
   type RingFencedCashRow,
   computeEconomicVitalSigns,
 } from "./economicVitalSignsMetrics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -305,7 +307,7 @@ export async function snapshotEconomicVitalSigns(
       .find({ turn: { $gte: windowStart, $lte: turn } })
       .toArray(),
     shareOrdersPromise,
-    db.collection<Bond>("bonds").find({ matured: false }).toArray(),
+    bondsCollection(db).find({ matured: false }).toArray(),
     db.collection<WealthListSnapshot>("wealthListSnapshots").findOne({ _id: "global" }),
     db.collection<MoneySupplySnapshot>("moneySupplySnapshots").find({ turn }).toArray(),
     db.collection<LedgerReconciliation>("ledgerReconciliations").findOne({ turn }),
@@ -377,12 +379,11 @@ export async function snapshotEconomicVitalSigns(
         }
       )
       .toArray(),
-    db
-      .collection<{
-        _id: string;
-        creditRating?: string;
-        economicFactors?: { inflationRate?: number };
-      }>("federalBudget")
+    federalBudgetCollection<{
+      _id: string;
+      creditRating?: string;
+      economicFactors?: { inflationRate?: number };
+    }>(db)
       .find({}, { projection: { creditRating: 1, "economicFactors.inflationRate": 1 } })
       .toArray(),
     db

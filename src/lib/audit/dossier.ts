@@ -10,6 +10,7 @@ import type { ActivityLog, ActivityLogAuth, SuspiciousCharacter } from "@/lib/db
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { AltCluster, AltLink } from "@/lib/db/types/altDetection";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 const DOSSIER_MAX_SESSIONS = 25;
 const DOSSIER_MAX_FINANCIAL_ROWS = 50;
@@ -391,16 +392,14 @@ export async function queryDossier(
       return col.find({ userId }).sort({ lastUpdated: -1 }).limit(50).toArray();
     })(),
     subjectIds.length
-      ? db
-          .collection<FinancialTxLogEntry>("financialTxLog")
+      ? financialTxLogCollection(db)
           .find({ subjectType: "character", subjectId: { $in: subjectIds } })
           .sort({ _id: -1 })
           .limit(DOSSIER_MAX_FINANCIAL_ROWS)
           .toArray()
       : Promise.resolve([] as FinancialTxLogEntry[]),
     subjectIds.length
-      ? db
-          .collection<FinancialTxLogEntry>("financialTxLog")
+      ? financialTxLogCollection(db)
           .aggregate<{ creditsIn: number; debitsOut: number }>([
             { $match: { subjectType: "character", subjectId: { $in: subjectIds } } },
             {

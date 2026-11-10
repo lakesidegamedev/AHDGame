@@ -28,6 +28,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -58,7 +59,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
 
     let bond: Bond | null = null;
     if (ObjectId.isValid(bondId)) {
-      bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+      bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     }
     if (!bond) {
       return errorResponse(404, "Bond not found");

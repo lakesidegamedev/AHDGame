@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -16,6 +15,7 @@ import {
   FREIGHT_OVERBILLING_WINDOW,
   FREIGHT_OVERBILLING_BY_CORPORATION,
 } from "./AHD-1448-freight-overbilling-restitution.data";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Restitution for freight overbilling: the sourcing pass settles the commodity
@@ -228,8 +228,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   // emitTxBulk mints its own ids: read them back so a rollback can delete them.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

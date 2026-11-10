@@ -13,7 +13,6 @@
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { PolicyAxisEffect } from "@/lib/turn/rulingPartyPriorities";
@@ -26,6 +25,7 @@ import type {
   InternalRepressionSignals,
 } from "./popularLegitimacyDrivers";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Neutral inflation target. Real CB inflation targets vary by country
@@ -55,9 +55,7 @@ export async function collectEconomicSignalsForCountry(
 ): Promise<EconomicSignals> {
   // getBankId: shared-bank members (IE → ECB, SCO/WAL → BoE) have no doc under
   // their own id; without it they silently collected neutral signals forever.
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: getBankId(countryId) });
+  const bank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
 
   if (!bank) {
     return {

@@ -13,7 +13,7 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Bond, BondMarketPool, CentralBank, Corporation, FederalBudget } from "@/lib/db/types";
+import type { BondMarketPool, CentralBank, Corporation } from "@/lib/db/types";
 import type { CreditRating } from "@/lib/db/types/centralBank";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -45,6 +45,8 @@ import {
 import { treasuryAdvanceMoneyDelta } from "@/lib/moneySupply/rules/assemble";
 import { ObjectId as MongoObjectId } from "mongodb";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Share of the pool's cash one corporate issue may take at issuance. */
 const CORPORATE_PRIMARY_COMMIT_SHARE = 0.2;
@@ -245,8 +247,7 @@ export async function placeUnsoldBondUnits(
     corporateProceedsByCorp: new Map(),
     sovereignFaceByCountry: new Map(),
   };
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     // Due bonds must retain the holder snapshot that maturity settlement pays.
     .find({
       unsoldUnits: { $gt: 0 },
@@ -441,7 +442,7 @@ export async function placeUnsoldBondUnits(
     const actualPaid = debited;
     advanceBondPoolSnapshot(poolByCurrency, currency, -actualPaid);
     const face = units * BOND_UNIT_FACE_VALUE;
-    const claim = await db.collection<Bond>("bonds").updateOne(
+    const claim = await bondsCollection(db).updateOne(
       {
         _id: bond._id,
         unsoldUnits: { $gte: units },
@@ -518,16 +519,17 @@ export async function monetizeUnsoldSovereignUnits(
   if (args.units <= 0) return false;
   const key = sovereignPlacementKey(args.bondId, args.turn);
   if (await primarySettlementExists(db, key)) return true;
-  const bond = await db.collection<Bond>("bonds").findOne({ _id: args.bondId });
+  const bond = await bondsCollection(db).findOne({ _id: args.bondId });
   if (!bond?.countryId || args.units > (bond.unsoldUnits ?? 0)) return false;
   const currency = bondPoolCurrency(bond);
   const face = args.units * BOND_UNIT_FACE_VALUE;
   const accounting = await loadPrimaryAccounting(db);
   // Funded Treasury cash forbids minting; the units stay unsold.
   if (accounting.treasuryCashLedgerEnabled) return false;
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(bond.countryId) }, { projection: { treasuryBalance: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(bond.countryId) },
+    { projection: { treasuryBalance: 1 } }
+  );
   if (!budget) return false;
   await commitSovereignPrimary(
     db,

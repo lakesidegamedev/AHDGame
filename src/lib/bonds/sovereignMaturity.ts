@@ -1,6 +1,6 @@
 /** Sovereign bond maturity settlement: payout legs, rollover pricing and principal resync. */
 import { type Db, ObjectId } from "mongodb";
-import type { Bond, FederalBudget, CentralBank } from "@/lib/db/types";
+import type { Bond } from "@/lib/db/types";
 import { type CurrencyCode, COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import {
@@ -41,6 +41,9 @@ import {
   loadDemocraticSovereignSpread,
   getSovereignCouponRate,
 } from "./sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function settleSovereignBondMaturity(
   db: Db,
@@ -53,7 +56,7 @@ export async function settleSovereignBondMaturity(
 ): Promise<{ amountLocal: number; currencyCode: CurrencyCode } | null> {
   if (!bond.countryId) return null;
   const budgetId = getNationalBudgetId(bond.countryId);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return null;
   const currencyCode = resolveCountryCurrencyCode(budget) ?? COUNTRY_CURRENCY_MAP[bond.countryId];
   if (bond.currencyCode && bond.currencyCode !== currencyCode) {
@@ -84,7 +87,7 @@ export async function settleSovereignBondMaturity(
   const annualCouponCost = (bond.couponRate / 100) * bond.totalIssued;
   const budgetUpdate = applySovereignDebtAdjustment(budget, -maturedFace, -annualCouponCost);
 
-  const landed = await db.collection<FederalBudget>("federalBudget").updateOne(
+  const landed = await federalBudgetCollection(db).updateOne(
     { _id: budgetId },
     {
       // Rollover issuance credits this same treasury. Redemption must pay its
@@ -108,12 +111,14 @@ export async function settleSovereignBondMaturity(
 /** Coupon a fresh sovereign bond would carry now: prime, term, rating, credibility, democracy. */
 export async function marketSovereignRolloverCoupon(db: Db, countryId: CountryId): Promise<number> {
   const [budget, centralBank, democraticSpreadPp] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { creditRating: 1 } }),
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: getBankId(countryId) }, { projection: { primeRate: 1, chairInfamy: 1 } }),
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) },
+      { projection: { creditRating: 1 } }
+    ),
+    centralBanksCollection(db).findOne(
+      { _id: getBankId(countryId) },
+      { projection: { primeRate: 1, chairInfamy: 1 } }
+    ),
     loadDemocraticSovereignSpread(db, countryId),
   ]);
   const primeRate =
@@ -229,7 +234,7 @@ export async function freezeFundedSovereignBondMaturityQuote(
       sourceCentralBankHoldings: bond.centralBankHoldings,
       holderLegs: holderLegs.map((leg) => ({ ...leg })),
     };
-    await db.collection<Bond>("bonds").updateOne(
+    await bondsCollection(db).updateOne(
       {
         _id: bond._id,
         issuerType: "sovereign",
@@ -246,9 +251,10 @@ export async function freezeFundedSovereignBondMaturityQuote(
       },
       { $set: { sovereignMaturityClaim: candidate, updatedAt: now } }
     );
-    const saved = await db
-      .collection<Bond>("bonds")
-      .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+    const saved = await bondsCollection(db).findOne(
+      { _id: bond._id },
+      { projection: { sovereignMaturityClaim: 1 } }
+    );
     quote = saved?.sovereignMaturityClaim;
   }
   if (!quote || quote.id !== claimId || quote.dueTurn !== dueTurn)
@@ -340,9 +346,10 @@ export async function settleFundedSovereignBondMaturity(
       { projection: { _id: 1, status: 1 } }
     )
     .toArray();
-  const currentBond = await db
-    .collection<Bond>("bonds")
-    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+  const currentBond = await bondsCollection(db).findOne(
+    { _id: bond._id },
+    { projection: { sovereignMaturityClaim: 1 } }
+  );
   const currentQuote = currentBond?.sovereignMaturityClaim;
   if (!currentQuote || currentQuote.id !== claimId)
     throw new Error("Frozen sovereign maturity quote disappeared");
@@ -375,7 +382,7 @@ export async function settleFundedSovereignBondMaturity(
     quote.publicFloatDisposition?.mode === "novation"
       ? quote.publicFloatDisposition.budgetId
       : getNationalBudgetId(sourceCountryId);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return null;
   const budgetCurrency =
     resolveCountryCurrencyCode(budget) ?? COUNTRY_CURRENCY_MAP[sourceCountryId];
@@ -421,9 +428,10 @@ export async function settleFundedSovereignBondMaturity(
       return recovered;
   }
   if (pendingFunding.length > 0) {
-    const refreshed = await db
-      .collection<Bond>("bonds")
-      .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+    const refreshed = await bondsCollection(db).findOne(
+      { _id: bond._id },
+      { projection: { sovereignMaturityClaim: 1 } }
+    );
     const refreshedQuote = refreshed?.sovereignMaturityClaim;
     if (!refreshedQuote || refreshedQuote.id !== claimId)
       throw new Error("Frozen sovereign maturity quote disappeared during funding recovery");
@@ -447,12 +455,10 @@ export async function settleFundedSovereignBondMaturity(
   }
 
   if (quote.escrowLocal < cashAmountLocal) {
-    const currentBudget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { _id: budgetId, ...frozenBudgetIdentity },
-        { projection: { treasuryCashLocal: 1 } }
-      );
+    const currentBudget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId, ...frozenBudgetIdentity },
+      { projection: { treasuryCashLocal: 1 } }
+    );
     const cashOnHand = currentBudget?.treasuryCashLocal ?? 0;
     if (cashOnHand < cashAmountLocal) {
       // An unfundable maturity first rolls its pool holding into a par
@@ -460,7 +466,7 @@ export async function settleFundedSovereignBondMaturity(
       // the rebased claim.
       if (!quote.forcedRollover && bond.countryId) {
         const rolled = await rollOverUnfundedSovereignPoolFloat(db, {
-          bond: (await db.collection<Bond>("bonds").findOne({ _id: bond._id })) ?? bond,
+          bond: (await bondsCollection(db).findOne({ _id: bond._id })) ?? bond,
           claim: quote,
           turn,
           now,
@@ -470,7 +476,7 @@ export async function settleFundedSovereignBondMaturity(
           consolidateReplacement: input.consolidateRollover === true,
         });
         if (rolled) {
-          const rebased = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+          const rebased = await bondsCollection(db).findOne({ _id: bond._id });
           if (!rebased?.sovereignMaturityClaim?.forcedRollover) return null;
           return settleFundedSovereignBondMaturity(db, { ...input, bond: rebased });
         }
@@ -497,17 +503,15 @@ export async function settleFundedSovereignBondMaturity(
         consolidateReplacement: input.consolidateRollover === true,
       });
       if (refunded.status === "refused") return null;
-      const refinanced = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne(
-          { _id: budgetId, ...frozenBudgetIdentity },
-          { projection: { treasuryCashLocal: 1 } }
-        );
+      const refinanced = await federalBudgetCollection(db).findOne(
+        { _id: budgetId, ...frozenBudgetIdentity },
+        { projection: { treasuryCashLocal: 1 } }
+      );
       if ((refinanced?.treasuryCashLocal ?? 0) < cashAmountLocal) return null;
     }
     if (quote.fundingAttemptTurn !== turn) {
       const priorAttemptTurn = quote.fundingAttemptTurn;
-      const reservation = await db.collection<Bond>("bonds").updateOne(
+      const reservation = await bondsCollection(db).updateOne(
         {
           _id: bond._id,
           "sovereignMaturityClaim.id": claimId,
@@ -519,9 +523,10 @@ export async function settleFundedSovereignBondMaturity(
         { $set: { "sovereignMaturityClaim.fundingAttemptTurn": turn } }
       );
       if (reservation.matchedCount !== 1) {
-        const reservedBond = await db
-          .collection<Bond>("bonds")
-          .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+        const reservedBond = await bondsCollection(db).findOne(
+          { _id: bond._id },
+          { projection: { sovereignMaturityClaim: 1 } }
+        );
         const reservedQuote = reservedBond?.sovereignMaturityClaim;
         if (
           !reservedQuote ||
@@ -595,9 +600,10 @@ export async function settleFundedSovereignBondMaturity(
       attempt = await resumeSettlement(db, attemptKey);
     if (attempt.status !== "applied" && !(attempt.status === "replayed" && !attempt.error))
       return attempt;
-    const fundedBond = await db
-      .collection<Bond>("bonds")
-      .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+    const fundedBond = await bondsCollection(db).findOne(
+      { _id: bond._id },
+      { projection: { sovereignMaturityClaim: 1 } }
+    );
     const fundedQuote = fundedBond?.sovereignMaturityClaim;
     if (!fundedQuote || fundedQuote.escrowLocal < cashAmountLocal) return attempt;
     quote = fundedQuote;
@@ -721,9 +727,8 @@ export async function resyncSovereignPrincipalFromBonds(
 ): Promise<SovereignPrincipalResync | null> {
   const budgetId = getNationalBudgetId(countryId);
   const [budget, bonds] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-    db
-      .collection<Bond>("bonds")
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
+    bondsCollection(db)
       .find(
         { issuerType: "sovereign", countryId, matured: false, defaulted: false },
         // The outstanding sum re-checks the query-filtered fields, so they
@@ -752,7 +757,7 @@ export async function resyncSovereignPrincipalFromBonds(
     imfBailoutActive: budget.imfSovereignBailoutActive,
     sovereignRiskAnchor: budget.sovereignRiskAnchor,
   });
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { _id: budgetId },
     {
       $set: {

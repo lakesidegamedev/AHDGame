@@ -84,6 +84,7 @@ import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
 import type { Bill } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -310,9 +311,10 @@ export async function loadConditionsSignal(
   const [budgetDoc, stateMetricsDoc, politicalDomains] = await Promise.all([
     // inflationRate lives on federalBudget.economicFactors.inflationRate for US/UK/etc.
     // For other countries we use the same field (budget docs share the shape).
-    db
-      .collection("federalBudget")
-      .findOne({ countryId }, { projection: { "economicFactors.inflationRate": 1 } }),
+    federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { "economicFactors.inflationRate": 1 } }
+    ),
     nationalDocId && !political
       ? // A country with no board (SCO/WAL, latent until the independence
         // process activates them) has only the economic half to scan. The

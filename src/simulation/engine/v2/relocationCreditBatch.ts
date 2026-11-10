@@ -60,6 +60,8 @@ import type {
   NppMarketEntryDiagnostic,
   NppMarketEntryReason,
 } from "@/lib/turn/npp/entryDiagnostics";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** The longest corporate tenor (7yr = 336 turns), mirrored from `issueRelocationBond`. */
 const RELOCATION_BOND_MATURITY_TURNS: BondMaturityTurns = 336;
@@ -153,8 +155,7 @@ export function createRelocationCreditBatch(input: {
     // singleton the per-corp path reads.
     const [allIssuedBonds, latestIncomeRows, centralBanks, plantsEnabled, gameState, eraUnitScale] =
       await Promise.all([
-        db
-          .collection<Bond>("bonds")
+        bondsCollection(db)
           .find(
             { corporationId: { $in: corpIds } },
             {
@@ -182,8 +183,7 @@ export function createRelocationCreditBatch(input: {
           .toArray(),
         bankRates
           ? Promise.resolve(bankRates as readonly CentralBank[])
-          : db
-              .collection<CentralBank>("centralBanks")
+          : centralBanksCollection(db)
               .find({}, { projection: { _id: 1, countryId: 1, primeRate: 1 } })
               .toArray(),
         getMarketSystemModeForDb(db).then((mode) => marketAtLeast(mode, "plants")),
@@ -306,7 +306,7 @@ export function createRelocationCreditBatch(input: {
     if (pendingBonds.length === 0) return;
     const docs = [...pendingBonds];
     pendingBonds.length = 0;
-    await db.collection<Bond>("bonds").insertMany(docs, { ordered: true });
+    await bondsCollection(db).insertMany(docs, { ordered: true });
   }
 
   return {

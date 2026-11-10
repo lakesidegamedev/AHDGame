@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { CentralBank, TurnSnapshot } from "@/lib/db/types";
+import type { TurnSnapshot } from "@/lib/db/types";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -10,6 +10,7 @@ import { FOREX_AND_MACRO_CHART_HISTORY_TURNS } from "@/lib/constants/turnTime";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const HISTORY_CAP = FOREX_AND_MACRO_CHART_HISTORY_TURNS;
 
@@ -19,7 +20,7 @@ const HISTORY_CAP = FOREX_AND_MACRO_CHART_HISTORY_TURNS;
  * All three histories are capped at HISTORY_CAP entries (5 in-game years).
  */
 export async function snapshotInterestRateHistory(db: Db, turn: number): Promise<void> {
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.length === 0) return;
 
   // World era: countries without a national metrics doc (layer-1) snapshot the
@@ -143,5 +144,5 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
     };
   });
 
-  await db.collection<CentralBank>("centralBanks").bulkWrite(ops);
+  await centralBanksCollection(db).bulkWrite(ops);
 }

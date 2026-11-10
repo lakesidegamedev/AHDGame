@@ -4,7 +4,7 @@
  * and both office dashboards with the same regional calculations.
  */
 import type { Db } from "mongodb";
-import type { FederalBudget, GameState, State, StateMetrics } from "@/lib/db/types";
+import type { GameState, State, StateMetrics } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
 import type { DevolutionPolicy, GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
@@ -25,6 +25,7 @@ import { computeIndependenceDesireDriftSnapshot } from "@/lib/governorOffice/dev
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // Pure surface (driver types + snapshot compute) lives in the domain layer;
 // re-exported here so existing importers keep working.
@@ -93,9 +94,7 @@ export async function loadIndependenceDesireSnapshots(
   const nationalApproval = ukApprovalDoc?.approvalRating ?? DEFAULT_NATIONAL_APPROVAL;
 
   // National inflation (annualised percent) from the UK budget doc.
-  const ukBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId("UK") });
+  const ukBudget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId("UK") });
   const inflationPercent = ukBudget?.economicFactors?.inflationRate ?? DEFAULT_INFLATION_PERCENT;
 
   // Read the regional and Westminster policies together, without another round trip.

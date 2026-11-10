@@ -30,6 +30,7 @@ import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope
 import { extractMacroInputs } from "@/lib/turn/forexTurn";
 import { yearOfTurn } from "@/lib/utils/gameDate";
 import { HALF_TICK_FRACTION, hasSubhourStep, subhourStepStamp } from "./stepFraction";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * :30 half step for forex, under the stepFraction.ts contract: each floating
@@ -373,7 +374,7 @@ export async function runForexHalfStep(
       .collection<ExchangeRate>("exchangeRates")
       .find({}, { projection: ROW_PROJECTION })
       .toArray() as Promise<ForexHalfStepRow[]>,
-    db.collection<CentralBank>("centralBanks").find({}, { projection: BANK_PROJECTION }).toArray(),
+    centralBanksCollection(db).find({}, { projection: BANK_PROJECTION }).toArray(),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),

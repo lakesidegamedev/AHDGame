@@ -30,6 +30,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { BankSovereignClaim } from "@/lib/db/types/budget";
 import type { SovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import type { SovereignMaturityPlan } from "@/lib/bonds/sovereignMaturityWave";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface SovereignBondMaturitySettlementInput {
   db: Db;
@@ -82,7 +84,7 @@ export async function settleSovereignBondMaturityBond(
   });
   const bondIdHex = bond._id.toHexString();
   if (newClaims.length > 0 || bankUnits > 0 || budgetsWithBankClaims.has(budgetId)) {
-    const budgetWithClaims = await db.collection<FederalBudget>("federalBudget").findOne(
+    const budgetWithClaims = await federalBudgetCollection(db).findOne(
       { _id: budgetId },
       {
         projection: {
@@ -212,9 +214,10 @@ async function fundBankMaturityClaims(
   const { bond, dueClaims, budget, countryId, budgetId, bondCcy, turn, now, consolidateRollover } =
     input;
   const claimId = `sovereign-maturity:${bond._id.toHexString()}:${bond.maturityTurn}`;
-  const stored = await db
-    .collection<Bond>("bonds")
-    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1, matured: 1 } });
+  const stored = await bondsCollection(db).findOne(
+    { _id: bond._id },
+    { projection: { sovereignMaturityClaim: 1, matured: 1 } }
+  );
   const quote = stored?.sovereignMaturityClaim;
   if (!stored || stored.matured || quote?.id !== claimId) return null;
   const alreadyPaid = new Set(quote.paidBankClaimIds ?? []);
@@ -296,7 +299,7 @@ async function fundBankMaturityClaims(
     });
     if (refunded.status === "refused") return null;
   }
-  return db.collection<FederalBudget>("federalBudget").findOne(
+  return federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: {

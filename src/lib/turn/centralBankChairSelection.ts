@@ -34,6 +34,7 @@ import { logger } from "../observability/logger";
 import { CHAIR_CHANGE_SCRUTINY_RETAINED } from "@/lib/centralBank/credibility";
 import { workerConfig } from "@/lib/config/worker";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
@@ -243,7 +244,7 @@ async function notifyPendingNominee(
 }
 
 export async function persistVacancy(db: Db, bankId: string, gameNow: Date): Promise<void> {
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bankId },
     {
       $set: {
@@ -277,7 +278,7 @@ async function persistPendingProposal(
   notifyCountryId: CountryId,
   intorgId?: string
 ): Promise<void> {
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bank._id },
     {
       $set: {
@@ -327,7 +328,7 @@ export async function processCentralBankChairSelection(
     vacanciesRemaining: 0,
   };
 
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.length === 0) return result;
 
   const rng = makeSeededRng(`cbchair:${currentTurn}${CB_CHAIR_RNG_SALT}`);
@@ -473,7 +474,7 @@ export async function acceptCentralBankChairSelection(
   gameNow: Date,
   currentTurn: number
 ): Promise<ChairAppointmentResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({
+  const bank = await centralBanksCollection(db).findOne({
     _id: getBankId(countryId),
   });
   if (!bank?.chairSelectionPending) return { ok: false, error: "No pending chair appointment" };
@@ -794,7 +795,7 @@ export async function lapsePendingCentralBankChairSelection(
   gameNow: Date,
   currentTurn: number
 ): Promise<RefusalReselectionOutcome> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({
+  const bank = await centralBanksCollection(db).findOne({
     _id: getBankId(countryId),
   });
   if (!bank?.chairSelectionPending) {
@@ -818,7 +819,7 @@ export async function declineCentralBankChairSelection(
   gameNow: Date,
   currentTurn: number
 ): Promise<ChairDeclineResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({
+  const bank = await centralBanksCollection(db).findOne({
     _id: getBankId(countryId),
   });
   if (!bank?.chairSelectionPending) return { ok: false, error: "No pending chair appointment" };

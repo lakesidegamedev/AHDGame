@@ -1,5 +1,5 @@
 /** Maturity, default and principal repayment steps of the bond turn. */
-import type { Bond, Corporation, GameConfig, CentralBank, FederalBudget } from "@/lib/db/types";
+import type { Bond, Corporation, GameConfig, CentralBank } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { type CurrencyCode, COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { NotificationInput } from "@/lib/notifications";
@@ -37,6 +37,7 @@ import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
 import type { Db, WithId } from "mongodb";
 import type { BondPoolLedgerContext } from "@/lib/bonds/marketPoolLedger";
 import type { GameState } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Marks matured and defaulted bonds and queues their status writes; returns the updated counters. */
 export function resolveBondMaturitiesAndDefaults({
@@ -602,9 +603,10 @@ export async function payMaturedBonds({
       if (!settlement || settlement.amountLocal === 0) continue;
       let bankMaturityPaidLocal = 0;
       if (bankMaturityClaims.length > 0) {
-        const budgetWithClaims = await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ _id: budgetId }, { projection: { countryId: 1, bankSovereignClaims: 1 } });
+        const budgetWithClaims = await federalBudgetCollection(db).findOne(
+          { _id: budgetId },
+          { projection: { countryId: 1, bankSovereignClaims: 1 } }
+        );
         if (budgetWithClaims?.bankSovereignClaims?.length) {
           const paid = await settleBankSovereignClaims(db, budgetWithClaims, turn);
           bankMaturityPaidLocal = bankMaturityClaims

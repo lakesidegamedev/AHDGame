@@ -14,7 +14,7 @@ import {
   resolveCorporation,
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
-import type { Bond, Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -37,6 +37,7 @@ import { sumNonMaturedBondPrincipal } from "@/lib/bonds/corporateBondDefault";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -128,8 +129,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       "bondSettlementInProgressAt",
       now,
       async () => {
-        const outstandingBonds = await db
-          .collection<Bond>("bonds")
+        const outstandingBonds = await bondsCollection(db)
           .find({ corporationId: target._id, matured: false })
           .toArray();
 
@@ -479,7 +479,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           //    (the only write whose reversal would need prior-state capture).
           let matured: { modifiedCount: number };
           try {
-            matured = await db.collection<Bond>("bonds").updateMany(
+            matured = await bondsCollection(db).updateMany(
               { _id: { $in: bondIds }, corporationId: target._id, matured: false },
               {
                 $set: {

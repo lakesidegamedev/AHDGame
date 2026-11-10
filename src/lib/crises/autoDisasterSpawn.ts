@@ -29,6 +29,7 @@ import { legacyDefinitionId } from "./v2/legacyConvert";
 import { createCrisisInstance } from "./v2/instance";
 import { SPAWN_PRIORITY } from "./v2/spawnBudget";
 import { legacyDefinitionFor } from "@/lib/turn/crisisV2/legacyContent";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface ResilienceRow {
   _id: string;
@@ -39,7 +40,7 @@ interface ResilienceRow {
 async function chargeDisasterFiscalLoss(db: Db, crisis: Crisis): Promise<void> {
   const amount = crisis.autoDisasterFiscalCost;
   if (!amount || amount <= 0) return;
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     {
       countryId: crisis.countryIds[0] as FederalBudget["countryId"],
       disasterFiscalReceipts: { $ne: crisis._id.toString() },
@@ -282,9 +283,10 @@ export async function processAutoDisasterSpawn(
 
   let fiscalCost = 0;
   if (WEATHER_DISASTER_KEYS.has(key)) {
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId }, { projection: { gdp: 1, gdpSmoothed: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { gdp: 1, gdpSmoothed: 1 } }
+    );
     const gdp = budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : budget?.gdp;
     // Worlds with broader climate effects also shift uninsured loss onto the
     // budget as insurers retreat from exposed regions.

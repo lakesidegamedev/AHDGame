@@ -23,6 +23,9 @@ import {
 } from "./rules/capitalGainsTax";
 import { incomeTaxPaymentLegs, planIncomePayout } from "./rules/incomePayout";
 import { resolvePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -154,8 +157,7 @@ export async function creditIncomeAfterTax(
           (actor) => ["imperialCharacters:" + actor._id.toHexString(), actor.name] as const
         ),
       ]);
-      const earnings: EarningsEntry[] = await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+      const earnings: EarningsEntry[] = await financialTxLogCollection(db)
         .find(
           {
             subjectType: "character",
@@ -190,8 +192,7 @@ export async function creditIncomeAfterTax(
         .toArray();
       const priceIndexByCountry = new Map(
         (
-          await db
-            .collection("federalBudget")
+          await federalBudgetCollection(db)
             .find({}, { session, projection: { countryId: 1, priceIndex: 1 } })
             .toArray()
         ).map((row) => [String(row.countryId), resolvePriceIndex(row.priceIndex)])
@@ -598,7 +599,9 @@ export async function creditIncomeAfterTax(
           throw new Error("Income savings account unavailable");
       }
       if (centralBankOps.length) {
-        const saved = await db.collection("centralBanks").bulkWrite(centralBankOps, { session });
+        const saved = await centralBanksCollection<Document>(db).bulkWrite(centralBankOps, {
+          session,
+        });
         if (saved.matchedCount !== centralBankOps.length)
           throw new Error("Income central bank unavailable");
       }
@@ -625,7 +628,7 @@ export async function creditIncomeAfterTax(
           },
         }));
       if (nationalOps.length) {
-        const saved = await db.collection("federalBudget").bulkWrite(nationalOps, { session });
+        const saved = await federalBudgetCollection(db).bulkWrite(nationalOps, { session });
         if (saved.matchedCount !== nationalOps.length)
           throw new Error("Income tax national treasury unavailable");
       }
@@ -643,7 +646,7 @@ export async function creditIncomeAfterTax(
           throw new Error("Income tax regional treasury unavailable");
       }
       if (logs.length)
-        await db.collection("financialTxLog").bulkWrite(
+        await financialTxLogCollection<Document>(db).bulkWrite(
           logs.map((document) => ({ insertOne: { document } })),
           { session }
         );

@@ -31,6 +31,7 @@ import {
   boundShortageGrowthFinanceCandidates,
   type ShortageGrowthFinanceConfig,
 } from "@/lib/turn/npp/rules/shortageGrowthFinance";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
@@ -185,8 +186,7 @@ export async function loadNppConstructionFundingPool(input: {
           .project<BlacklistFund>({ slug: 1, targetConstituents: 1 })
           .toArray()
       : Promise.resolve([]),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({
         _id: { $in: currencies.map((currency) => getBankId(getCountryIdForCurrency(currency))) },
       })

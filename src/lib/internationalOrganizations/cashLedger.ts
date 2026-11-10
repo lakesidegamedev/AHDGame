@@ -18,6 +18,7 @@ import {
   settleTransition,
   type SettlementResult,
 } from "@/lib/banking/settlementJournal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface OrganizationCashContext {
   turn: number;
@@ -229,8 +230,7 @@ export async function loadOrganizationCashContext(
         .collection<{ currencyCode: string; rate: number }>("exchangeRates")
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<{ countryId: string; currencyCode?: CurrencyCode }>("federalBudget")
+      federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db)
         .find({}, { projection: { countryId: 1, currencyCode: 1 } })
         .toArray(),
       db

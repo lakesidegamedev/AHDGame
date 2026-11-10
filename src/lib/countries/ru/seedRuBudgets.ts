@@ -1,8 +1,9 @@
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "@/lib/admin/seed/upsertCountryOwnedCorps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Seeds the USSR FY1979 national budget, default enacted laws (from the su_*
@@ -20,7 +21,7 @@ export async function seedRuBudgets(
   // This legacy seeder also creates Soviet enacted laws and command SOEs.
   if (preset === "1991-default") return;
   if (reset) {
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId: "RU" });
+    await federalBudgetCollection(db).deleteMany({ countryId: "RU" });
     const suStateIds = (
       await db.collection("states").find({ countryId: "RU" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
@@ -52,9 +53,11 @@ export async function seedRuBudgets(
   }
   {
     const { _id, ...budgetData } = suNationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
     log("Seeded 1 SU national budget");
   }
 

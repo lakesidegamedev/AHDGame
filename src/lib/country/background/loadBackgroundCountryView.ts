@@ -20,6 +20,8 @@ import {
   type CommodityFlows,
   type TariffRow,
 } from "./rules/backgroundCountryView";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Trade partner the page reports against: the player country. */
 const TRADE_PARTNER = COUNTRY_CONFIGS.US.id;
@@ -115,7 +117,7 @@ export async function loadBackgroundCountryView(
           },
         }
       ),
-      db.collection<BudgetDoc>("federalBudget").findOne(
+      federalBudgetCollection<BudgetDoc>(db).findOne(
         { _id: getNationalBudgetId(countryId) },
         {
           projection: {
@@ -147,8 +149,7 @@ export async function loadBackgroundCountryView(
           { projection: { countryId: 1, scopeType: 1, targetOriginCountryId: 1, rate: 1 } }
         )
         .toArray(),
-      db
-        .collection<BondDoc & { issuerType?: string; countryId?: string }>("bonds")
+      bondsCollection<BondDoc & { issuerType?: string; countryId?: string }>(db)
         .find(
           { issuerType: "sovereign", countryId, matured: false, defaulted: false },
           {

@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions";
 import { getGdpBaseline } from "@/lib/utils/fundGeneration";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Post-run economy telemetry.
@@ -753,8 +754,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
       .collection("commodityPriceHistory")
       .find({}, { projection: { turn: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
-    db
-      .collection("bonds")
+    bondsCollection(db)
       .find(
         {},
         {

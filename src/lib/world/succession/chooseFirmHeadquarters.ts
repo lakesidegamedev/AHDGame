@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Corporation } from "@/lib/db/types/corporation";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { State } from "@/lib/db/types/state";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
@@ -26,6 +25,7 @@ import {
   FEDERATION_RELOCATIONS_COLLECTION,
   type FederationRelocationRecord,
 } from "./relocationLedger";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface ChosenFederationHeadquarters {
   countryId: CountryId;
@@ -48,8 +48,7 @@ async function lockConversion(
   if (hold.selectedDestination && !sameDestination(hold.selectedDestination, destination))
     throw new Error("Federation headquarters choice conflicts with an earlier choice");
   if (hold.lockedConversion) return hold;
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ $or: [{ _id: destination.countryId }, { countryId: destination.countryId }] })
     .toArray();
   if (budgets.length !== 1 || !budgets[0].currencyCode)

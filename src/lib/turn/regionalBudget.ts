@@ -19,7 +19,6 @@
 
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -37,6 +36,7 @@ import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSett
 import { resolveAnnualRegionalGrantPool } from "@/lib/governmentFinance/grantTransfers";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -329,7 +329,7 @@ export async function processRegionalBudgets(
   //    line — the enacted figure when there is one, else the authored era
   //    baseline. Live UK carries stateGrants = 0 with baselineStateGrants =
   //    £250M, so reading only the enacted line would unfund every region.
-  const nationalBudget = await db.collection<FederalBudget>("federalBudget").findOne(
+  const nationalBudget = await federalBudgetCollection(db).findOne(
     { _id: getNationalBudgetId(countryId) },
     {
       projection: {

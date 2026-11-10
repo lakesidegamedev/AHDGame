@@ -36,6 +36,7 @@ import {
   retireLegacyVietnamCrises,
 } from "@/lib/livingConflict/vietnamCompat";
 import { getStatesCollection } from "@/lib/db/collections/states";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Process active crises for the current turn.
@@ -647,7 +648,7 @@ async function applyInflationEffects(
   if (affectedCountries.length > 0) {
     // Bumps the real national inflation rate; the per-turn inflation recalc then
     // blends it through inertia, so a crisis shock decays over subsequent turns.
-    await db.collection("federalBudget").updateMany(
+    await federalBudgetCollection(db).updateMany(
       { countryId: { $in: affectedCountries } },
       {
         $inc: { "economicFactors.inflationRate": delta },

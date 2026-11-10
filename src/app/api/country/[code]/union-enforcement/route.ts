@@ -12,7 +12,6 @@ import { COUNTRY_CONFIGS, getOfficeTypeConfig, type CountryId } from "@/lib/cons
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { requireConfirmedSecretary } from "@/lib/api/requireConfirmedSecretary";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { Character, Union } from "@/lib/db/types";
 import type { UnionOrganizer } from "@/lib/db/types/union";
 import {
@@ -32,6 +31,7 @@ import {
   unionEnforcementDelegatePosition,
 } from "@/lib/unions/enforcementAuthority";
 import { enforcementTreasuryCostPerTurn } from "@/lib/unions/enforcementCosts";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("posture"), posture: z.enum(["tolerant", "normal", "crackdown"]) }),
@@ -93,7 +93,7 @@ export async function GET(_request: Request, { params }: Context) {
     const db = await getDb();
     const denied = await enforcementAccess(db, countryId, auth.user.character, false);
     if (denied) return denied;
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne(
+    const budget = await federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(countryId) },
       {
         projection: {
@@ -183,7 +183,7 @@ export async function POST(request: Request, { params }: Context) {
     }
 
     const budgetId = getNationalBudgetId(countryId);
-    const budgets = db.collection<FederalBudget>("federalBudget");
+    const budgets = federalBudgetCollection(db);
     const budget = await budgets.findOne({ _id: budgetId }, { projection: { unionsBanned: 1 } });
     if (!budget?.unionsBanned) {
       return errorResponse(409, "Union enforcement is available only during an active ban.");

@@ -1,11 +1,12 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget, Union } from "@/lib/db/types";
+import type { Union } from "@/lib/db/types";
 import type { UnionOrganizer } from "@/lib/db/types/union";
 import type { UnionLawProvision } from "@/lib/db/types/legislation";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { repealUndergroundConversion } from "@/lib/unions/underground";
 import { unionStrength } from "@/lib/unions/unionEconomy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Bounds enforced on the bias axis regardless of what a bill's raw input claims. */
 export const UNION_LAW_BIAS_MIN = -50;
@@ -36,9 +37,10 @@ export function isUnionLawBanAction(value: unknown): value is "ban" | "repeal_ba
  * union-busting attempt (busting is moot while unions are outlawed).
  */
 export async function isUnionsBanned(db: Db, countryId: CountryId): Promise<boolean> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { unionsBanned: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(countryId) },
+    { projection: { unionsBanned: 1 } }
+  );
   return budget?.unionsBanned === true;
 }
 
@@ -48,8 +50,7 @@ export async function isUnionsBanned(db: Db, countryId: CountryId): Promise<bool
  * a ban do not carry their own `suspended` flag.
  */
 export async function getBannedUnionCountryIds(db: Db): Promise<Set<CountryId>> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ unionsBanned: true }, { projection: { countryId: 1 } })
     .toArray();
   return new Set(budgets.map((budget) => budget.countryId as CountryId));
@@ -86,7 +87,7 @@ export async function applyUnionLawProvision(
 
   if (provision.banAction === "ban" || provision.banAction === "repeal_ban") {
     const banned = provision.banAction === "ban";
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: budgetId },
       {
         $set: {
@@ -180,7 +181,8 @@ export async function applyUnionLawProvision(
   }
 
   const bias = clampUnionLawBias(provision.bias);
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: { unionLawBias: bias, updatedAt: now } });
+  await federalBudgetCollection(db).updateOne(
+    { _id: budgetId },
+    { $set: { unionLawBias: bias, updatedAt: now } }
+  );
 }

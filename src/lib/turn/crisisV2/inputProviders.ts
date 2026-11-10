@@ -1,6 +1,5 @@
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { getSovereignConfidencePremium } from "@/lib/budget/debt";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
@@ -13,6 +12,7 @@ import {
   type CrisisInputContext,
   type CrisisInputProvider,
 } from "./registry";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 function averageByCountry(
   stateIdsByCountry: ReadonlyMap<string, readonly string[]>,
@@ -258,8 +258,7 @@ export const policyRateGapProvider: CrisisInputProvider = {
   async load(ctx) {
     const result = new Map<string, number>();
     if (ctx.countryIds.size === 0) return result;
-    const banks = await ctx.db
-      .collection<CentralBank>("centralBanks")
+    const banks = await centralBanksCollection(ctx.db)
       .find(
         { countryId: { $in: [...ctx.countryIds] as CountryId[] } },
         { projection: { countryId: 1, primeRate: 1 } }

@@ -2,7 +2,7 @@ import { fundCreationEligibility } from "./eligibility";
 import { bankMayManageFunds, fundBankCharter } from "./rules/eligibility";
 import { validatePickedStocks, type PickedStockMandate } from "../rules/mandate";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, FederalBudget } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type {
   IndexFund,
   IndexFundKind,
@@ -33,6 +33,7 @@ import {
   MAX_EXPENSE_RATIO_ANNUAL,
   MIN_EXPENSE_RATIO_ANNUAL,
 } from "./constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const FUND_TX = "indexFundTransactions";
 
@@ -250,7 +251,7 @@ async function commitCharter(
 
   if (!Number.isFinite(fxRate) || fxRate <= 0) throw new Error("Sponsor exchange rate unavailable");
   const budget = sponsor.countryId
-    ? await db.collection<FederalBudget>("federalBudget").findOne({ countryId: sponsor.countryId })
+    ? await federalBudgetCollection(db).findOne({ countryId: sponsor.countryId })
     : null;
   if (!budget || resolveCountryCurrencyCode(budget) !== currencyCode)
     return {

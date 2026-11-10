@@ -1,11 +1,5 @@
 import { ObjectId, type Db, type ClientSession } from "mongodb";
-import type {
-  Character,
-  FederalBudget,
-  StateBudget,
-  ExchangeRate,
-  GameState,
-} from "@/lib/db/types";
+import type { Character, StateBudget, ExchangeRate, GameState } from "@/lib/db/types";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import {
@@ -20,6 +14,7 @@ import {
   type CapitalGainsTaxRates,
 } from "./rules/capitalGainsTax";
 import { incomeTaxRate } from "./rules/incomeTaxTiers";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export type StockSeller = { id: ObjectId; collection: "characters" | "imperialCharacters" };
 export const stockSellerKey = (seller: StockSeller) =>
@@ -89,8 +84,7 @@ export async function loadStockWithholdingContexts(
         )
         .toArray(),
     () =>
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           {},
           { session: options?.session, projection: { countryId: 1, taxRates: 1, currencyCode: 1 } }

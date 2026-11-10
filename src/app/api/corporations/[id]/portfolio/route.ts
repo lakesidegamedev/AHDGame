@@ -9,7 +9,7 @@ import {
   loadReservedPositionsPlacedBy,
   shouldRedactCorporationForViewer,
 } from "@/lib/corporations/reservedCorporateHoldings";
-import type { Bond, Corporation, CorporationPortfolioHistory, Shareholder } from "@/lib/db/types";
+import type { Corporation, CorporationPortfolioHistory, Shareholder } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
@@ -25,6 +25,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -97,8 +98,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           countryId: 1,
         })
         .toArray(),
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({
           matured: false,
           $or: [{ "holders.corporationId": corporation._id }, { corporationId: corporation._id }],

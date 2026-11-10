@@ -21,6 +21,8 @@ import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { TransitionProjection } from "@/lib/banking/rules/boundary";
 import { treasuryAdvanceMoneyDelta } from "@/lib/moneySupply/rules/assemble";
 import { getSovereignIssuerName, applySovereignDebtAdjustment } from "./sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * What happens to the part of a quarterly auction the pool would not take.
@@ -88,8 +90,7 @@ export async function fundSovereignSeries(
   }
 ): Promise<Bond[]> {
   if (await primarySettlementExists(db, args.key)) {
-    return db
-      .collection<Bond>("bonds")
+    return bondsCollection(db)
       .find({ _id: { $in: args.bondDocs.map((_, i) => primaryDocumentId(`${args.key}:${i}`)) } })
       .toArray();
   }
@@ -235,7 +236,7 @@ export async function refreshSovereignDebtTerms(
 ): Promise<void> {
   // Only what applySovereignDebtAdjustment reads: the full budget carries an
   // ever-growing settledKeys list this refresh has no use for.
-  const refreshed = await db.collection<FederalBudget>("federalBudget").findOne(
+  const refreshed = await federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: {
@@ -253,7 +254,7 @@ export async function refreshSovereignDebtTerms(
   );
   if (refreshed) {
     const terms = applySovereignDebtAdjustment(refreshed, 0, 0);
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: budgetId },
       {
         $set: {

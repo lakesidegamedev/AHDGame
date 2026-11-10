@@ -8,7 +8,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, forbidden, badRequest, notFound } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { vacateCentralBankChairCharacter } from "@/lib/turn/centralBankChairSelection";
 import { getCentralBankScope, vacateFomcChairSeat } from "@/lib/centralBank/helpers";
@@ -17,6 +16,7 @@ import { createNotification } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { getGameState } from "@/lib/gameState";
 import { DISMISSAL_SCRUTINY, scrutinyAfterDismissal } from "@/lib/centralBank/independence";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -61,7 +61,7 @@ export async function POST(_request: Request, context: RouteContext) {
         { status: 403 }
       );
 
-    const banks = db.collection<CentralBank>("centralBanks");
+    const banks = centralBanksCollection(db);
     const bank = await banks.findOne({ _id: bankId });
     if (!bank)
       return NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 });
