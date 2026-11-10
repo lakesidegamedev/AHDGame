@@ -30,7 +30,23 @@ const LABELS: Record<SingleplayerFeatureFlagKey, string> = {
   nppPartyRenewalEnabled: "Party renewal",
 };
 
-const descriptions: Partial<Record<SingleplayerFeatureFlagKey, string>> = {
+const DESCRIPTIONS: Record<SingleplayerFeatureFlagKey, string> = {
+  forexEnabled:
+    "Currencies trade against each other, so exchange rates move with trade and policy and affect prices abroad.",
+  playerRandomEventsEnabled:
+    "Your politician can run into random events such as scandals, windfalls and personal setbacks.",
+  autoDisastersEnabled:
+    "Natural disasters and economic crises can strike on their own and force a response from governments.",
+  sectorTechTreesEnabled:
+    "Industries research new technology over time, which changes what they produce and what it costs.",
+  eraSystemEnabled:
+    "The world moves through historical eras as the years pass, changing rules and available options.",
+  coldWarEnabled:
+    "Superpower rivalry shapes alliances, arms spending and proxy conflicts in eras where it applies.",
+  nppCorpStrategyEnabled:
+    "Computer-run companies decide for themselves where to invest, expand and compete.",
+  livingConflictsEnabled:
+    "Wars and border disputes start, escalate and end on their own as the world changes.",
   nppTurnoverEnabled:
     "Computer-run politicians grow old, retire and die, and are replaced by younger members of their party.",
   nppPartyRenewalEnabled:
@@ -55,7 +71,7 @@ export const SINGLEPLAYER_FEATURE_FLAGS: readonly SingleplayerFeatureFlagOption[
   .map(([key, defaultEnabled]) => ({
     key,
     label: LABELS[key],
-    description: descriptions[key] ?? `Enable ${LABELS[key].toLowerCase()} in this local world.`,
+    description: DESCRIPTIONS[key],
     defaultEnabled,
   }));
 
