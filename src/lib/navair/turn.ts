@@ -275,7 +275,13 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
       const capacity = berthCapacity(region, status, 0);
       const crowding = overcrowdPenalty(berthDemand(mine), capacity);
       const airlift = mine.some((u) => u.domain === "air" && u.mission === "AIRLIFT");
-      for (const u of mine) u.supply = supplyCeiling(u, status, crowding, airlift);
+      for (const u of mine) {
+        const stored = u.supply ?? 100;
+        u.supply = supplyCeiling(u, status, crowding, airlift);
+        // Persist only what changed: an unchanged formation is otherwise never written,
+        // so a stale stored supply would outlive every turn.
+        if (u.supply !== stored) touchedByMission.add(u);
+      }
     }
   }
 
