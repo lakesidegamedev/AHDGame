@@ -15,8 +15,8 @@
  */
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine";
 import type { CensusGroupView, DemographicCategory } from "@/lib/db/types";
 
 // ─── FPTP vote-splitting (spoiler effect) ────────────────────────────────────

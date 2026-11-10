@@ -5781,32 +5781,32 @@
       "gameState": 1,
       "states": 1
     },
-    "src/lib/electionEngine/candidateEnrichment.ts": {
+    "src/lib/elections/engine/candidateEnrichment.ts": {
       "characters": 2,
       "npps": 2,
       "politicalParties": 1,
       "untyped": 1
     },
-    "src/lib/electionEngine/demographicsV2Preload.ts": {
+    "src/lib/elections/engine/demographicsV2Preload.ts": {
       "gameState": 1
     },
-    "src/lib/electionEngine/govCoattail.ts": {
+    "src/lib/elections/engine/govCoattail.ts": {
       "gameState": 1
     },
-    "src/lib/electionEngine/incumbentSeatShare.ts": {
+    "src/lib/elections/engine/incumbentSeatShare.ts": {
       "elections": 2
     },
-    "src/lib/electionEngine/presidentialCoattail.ts": {
+    "src/lib/elections/engine/presidentialCoattail.ts": {
       "electedOfficials": 1
     },
-    "src/lib/electionEngine/singleSeatIncumbency.ts": {
+    "src/lib/elections/engine/singleSeatIncumbency.ts": {
       "electedOfficials": 2,
       "elections": 3
     },
-    "src/lib/electionEngine/tallyCleaner.ts": {
+    "src/lib/elections/engine/tallyCleaner.ts": {
       "elections": 1
     },
-    "src/lib/electionEngine/tallyManagement.ts": {
+    "src/lib/elections/engine/tallyManagement.ts": {
       "elections": 2,
       "gameState": 1,
       "states": 1
@@ -8873,13 +8873,13 @@
       "politicalParties": 2,
       "states": 1
     },
-    "src/lib/turn/elections/electionHalfTick.ts": {
+    "src/lib/elections/campaigns/electionHalfTick.ts": {
       "gameState": 1
     },
-    "src/lib/turn/elections/supportAccrual.ts": {
+    "src/lib/elections/campaigns/supportAccrual.ts": {
       "elections": 1
     },
-    "src/lib/turn/elections/supportDecay.ts": {
+    "src/lib/elections/campaigns/supportDecay.ts": {
       "elections": 2
     },
     "src/lib/turn/endorsements/preloadEndorsementTargets.ts": {

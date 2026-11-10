@@ -4,7 +4,7 @@ import {
   RALLY_IMMEDIATE_SHARE,
   RALLY_SPREAD_TURNS,
   SUPPORT_RALLY_FULL_VALUE,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 
 describe("buildRallyAccrualEntry", () => {
   it("returns zero entry for non-positive R", () => {

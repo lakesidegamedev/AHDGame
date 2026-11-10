@@ -9,7 +9,7 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CensusGroupView } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import {
   buildGranularElectorateSubstrate,
   clearGranularElectorateCache,

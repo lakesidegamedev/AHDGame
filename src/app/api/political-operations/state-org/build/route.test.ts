@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, MongoServerError } from "mongodb";
-import { stateOrgLevelCost } from "@/lib/electionEngine/constants";
+import { stateOrgLevelCost } from "@/lib/elections/engine/constants";
 
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),

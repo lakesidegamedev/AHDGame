@@ -11,7 +11,7 @@ import type { Election, ElectionCandidate } from "@/lib/db/types";
 import {
   DEFAULT_CANDIDATE_SUPPORT,
   SUPPORT_DECAY_PER_TURN,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 
 export interface SupportDecayResult {
   candidatesUpdated: number;

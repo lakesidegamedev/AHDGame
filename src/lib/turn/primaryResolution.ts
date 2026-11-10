@@ -8,11 +8,11 @@ import { isBrazilIndirectPresidentialElection } from "@/lib/countries/br/rules/p
 import {
   bindBallotElectorate,
   nationwideBallotCountries,
-} from "@/lib/electionEngine/ballotElectoratePreload";
+} from "@/lib/elections/engine/ballotElectoratePreload";
 
 import { usesLegacyPresidentialCampaign } from "@/lib/countries/ru/rules/presidentialCampaign";
-import { preloadIncumbentSeatShares } from "@/lib/electionEngine/incumbentSeatShare";
-import { preloadLegislativeIncumbencies } from "@/lib/electionEngine/singleSeatIncumbency";
+import { preloadIncumbentSeatShares } from "@/lib/elections/engine/incumbentSeatShare";
+import { preloadLegislativeIncumbencies } from "@/lib/elections/engine/singleSeatIncumbency";
 import { applyStandingAds } from "@/lib/campaignTargeting/standingAds";
 import {
   usesCampaignRules,
@@ -24,7 +24,7 @@ import {
 import { loadRegionalCampaignCells } from "@/lib/campaignTargeting/audience";
 import { getDb } from "@/lib/mongodb";
 import { accumulateNGPresidentVoteTurn } from "@/lib/elections/resolution/ngPresidentAccumulation";
-import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type {
@@ -45,7 +45,7 @@ import {
   fetchEnrichedCandidates,
   initElectionVoteTally,
   accumulateVoteTurn,
-} from "@/lib/electionEngine";
+} from "@/lib/elections/engine";
 import {
   initPresidentVoteTally,
   accumulatePresidentVoteTurn,
@@ -62,9 +62,9 @@ import { parseSeatId } from "@/lib/seats/seatId";
 import { getAllStateApprovalsForElection } from "@/lib/utils/getStateApprovalForElection";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { getPrimaryWinnersForElection, type CountryId } from "@/lib/constants/countries";
-import { createVoteTurnMemo } from "@/lib/electionEngine/tallyManagement";
+import { createVoteTurnMemo } from "@/lib/elections/engine/tallyManagement";
 import { writeVoteTallies } from "@/lib/elections/resolution/writeVoteTallies";
-import { loadFundsByPartyForElections } from "@/lib/electionEngine/fundsByParty";
+import { loadFundsByPartyForElections } from "@/lib/elections/engine/fundsByParty";
 import { ballotSharesWithinParty, scoreByPrimaryVotes } from "@/lib/turn/primaryBallots";
 import { processPrimaryStaggerWaves } from "./primaryStaggerPhase";
 import { autoAssignTentativeRunningMates } from "./primaryRunningMates";
@@ -81,20 +81,20 @@ import {
   type NominationResolutionResult,
 } from "@/lib/elections/resolution/conventionResolution";
 import { logger } from "../observability/logger";
-import { buildNationwideElectoratePreload } from "@/lib/electionEngine/nationwideElectorate";
+import { buildNationwideElectoratePreload } from "@/lib/elections/engine/nationwideElectorate";
 import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
-import { isMidtermOppositionBoostEligible } from "@/lib/electionEngine/midtermOppositionBoost";
+import { isMidtermOppositionBoostEligible } from "@/lib/elections/engine/midtermOppositionBoost";
 import { finaliseManifestosAtElectionCall } from "@/lib/countries/uk/manifesto/manifestoLifecycle";
 import { getStandingPlatformsForCountry } from "@/lib/countries/uk/conference/conferenceCommands";
 import { hydrateVoteTurnMemo } from "@/lib/turn/voteAccumulationPreload";
 import { capturePrimaryOutcome } from "@/lib/analytics/electionAnalytics";
-import { loadCandidateEnrichmentPreload } from "@/lib/electionEngine/candidateEnrichment";
+import { loadCandidateEnrichmentPreload } from "@/lib/elections/engine/candidateEnrichment";
 import { loadEnrichmentCountryConfigsByElection } from "./electionEnrichmentPreload";
 import { forEachWithConcurrency } from "@/lib/utils/forEachWithConcurrency";
 import {
   loadDemographicsV2Preload,
   loadElectionDemographicsGameState,
-} from "@/lib/electionEngine/demographicsV2Preload";
+} from "@/lib/elections/engine/demographicsV2Preload";
 
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
 import { hasBankedGeneralTurn } from "@/lib/elections/rules/turnSlice";
@@ -803,7 +803,7 @@ export async function accumulateGeneralElectionVotes(
   const hasStateElections = stateElections.length > 0;
 
   let approvalMap: Map<string, number> | undefined;
-  let preload: import("@/lib/electionEngine").AccumulateVoteTurnPreload | undefined;
+  let preload: import("@/lib/elections/engine").AccumulateVoteTurnPreload | undefined;
 
   if (hasStateElections) {
     const uniqueStateIds = [...new Set(stateElections.map((e) => e.state as string))];

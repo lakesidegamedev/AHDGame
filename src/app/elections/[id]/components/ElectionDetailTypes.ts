@@ -6,8 +6,8 @@ import type {
   ContingentProjectionDisplay,
   PresidentialResolutionMode,
 } from "@/lib/elections/presidentialResolutionDisplay";
-import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
-import type { DemocraticHealthElectionSnapshot } from "@/lib/electionEngine/democraticHealth";
+import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
+import type { DemocraticHealthElectionSnapshot } from "@/lib/elections/engine/democraticHealth";
 
 export interface Endorsement {
   nppId?: string;

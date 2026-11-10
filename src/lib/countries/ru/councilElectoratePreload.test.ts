@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Election, State } from "@/lib/db/types";
-import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
-import { bindBallotElectorate as bind } from "@/lib/electionEngine/ballotElectoratePreload";
+import type { AccumulateVoteTurnPreload } from "@/lib/elections/engine/types";
+import { bindBallotElectorate as bind } from "@/lib/elections/engine/ballotElectoratePreload";
 
 function fixture() {
   const preload = {

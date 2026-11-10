@@ -25,7 +25,7 @@ import {
   PRIMARY_VOTE_SUPPRESSION_COST_ACTIONS,
   PRIMARY_VOTE_SUPPRESSION_COST_FUNDS,
   PRIMARY_VOTE_SUPPRESSION_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import type {
   Campaign,
   Character,

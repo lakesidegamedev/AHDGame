@@ -10,7 +10,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameTime } from "@/lib/time/gameTime";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
-import { initElectionVoteTally } from "@/lib/electionEngine";
+import { initElectionVoteTally } from "@/lib/elections/engine";
 import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";

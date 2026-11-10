@@ -18,7 +18,7 @@ import type {
   BriefingParticipationPlan,
 } from "@/lib/campaigns/dto/campaignView";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
-import type { CandidateNationalLedger } from "@/lib/electionEngine/factorLedger";
+import type { CandidateNationalLedger } from "@/lib/elections/engine/factorLedger";
 import { buildGeneralElectionViewModel } from "@/lib/elections/generalViewModel";
 import { allocateElectoralVotes } from "@/lib/turn/electionCalculations";
 import { electoralMajorityFor } from "@/lib/elections/presidentialResolutionDisplay";

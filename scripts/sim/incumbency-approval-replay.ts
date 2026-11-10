@@ -34,8 +34,8 @@ import {
   accumulatePresidentVoteTurn,
   type PresidentVoteTurnDryRun,
 } from "@/lib/elections/presidential/presidentialElectionEngine";
-import { approvalAdjustedIncumbencyBudget } from "@/lib/electionEngine/persuasionDrivers";
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
+import { approvalAdjustedIncumbencyBudget } from "@/lib/elections/engine/persuasionDrivers";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
 
 /** Pivot under test. 46 is production; ~48.5 recentres on the live state mean. */
 const VARIANT_PIVOT = Number(process.env.VARIANT_PIVOT ?? 48.5);

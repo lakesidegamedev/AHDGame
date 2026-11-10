@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
-import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/elections/engine/constants";
 import { stateCensusData } from "@/lib/seeds/stateCensusData";
 import { approvalScalar } from "@/lib/utils/demographicAppeal";
 import {

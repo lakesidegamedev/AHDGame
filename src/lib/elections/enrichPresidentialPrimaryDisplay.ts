@@ -26,7 +26,7 @@ import {
 import type { PollingData } from "./electionResponseTypes";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
 import {
   getAllStaggerStates,
   getDelegateMajority,

@@ -16,8 +16,8 @@ import {
   type CampaignCell,
   type TargetedAd,
 } from "../../src/lib/campaignTargeting/rules";
-import { distributeVotesByGroupLevelAllocation } from "../../src/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate } from "../../src/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "../../src/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate } from "../../src/lib/elections/engine/types";
 import type { DemographicCategory, CensusGroupView } from "../../src/lib/db/types";
 
 const right = { economicLean: 3, socialLean: 3 };

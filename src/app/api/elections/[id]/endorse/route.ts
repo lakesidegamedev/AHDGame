@@ -14,7 +14,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isActivePlayerEndorsementDuplicateKey } from "@/lib/elections/duplicateKey";
 import { assertSameCountry } from "@/lib/api/sameCountry";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 
 interface RouteParams {
   params: Promise<{ id: string }>;

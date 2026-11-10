@@ -19,8 +19,8 @@ import {
   buildGranularElectorateSubstrate,
   clearGranularElectorateCache,
 } from "@/lib/demographics/granularElectorate";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 
 /**
  * Minimal stateful fake `Db`: real MongoDB filter semantics are overkill here

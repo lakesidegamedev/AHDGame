@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import type { Election, NPP, ElectionCandidate, PoliticalParty, State } from "@/lib/db/types";
 import type { InfluenceType } from "@/lib/db/types";
 import type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { activeNppElectionCandidacyFilter } from "@/lib/elections/nppCandidacyQuery";
 import { describeNppRelocationCleanup, performNppRelocation } from "@/lib/npp/performNppRelocation";
 import {

@@ -20,7 +20,7 @@ import type {
   FactorLedgerSnapshot,
   CandidateNationalLedger,
   FactorContribution,
-} from "@/lib/electionEngine/factorLedger";
+} from "@/lib/elections/engine/factorLedger";
 
 export interface FactorLedgerCandidate {
   id: string;

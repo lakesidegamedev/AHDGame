@@ -7645,99 +7645,99 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine.ts": {
+    "src/lib/elections/engine/index.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/constants.ts": {
+    "src/lib/elections/engine/constants.ts": {
       "longBlocks": 9,
       "narrativeLines": 3
     },
-    "src/lib/electionEngine/economicReferendum.ts": {
+    "src/lib/elections/engine/economicReferendum.ts": {
       "longBlocks": 3,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/electionFormulaFactors.test.ts": {
+    "src/lib/elections/engine/electionFormulaFactors.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/electionEngine/electionFormulaFactors.ts": {
+    "src/lib/elections/engine/electionFormulaFactors.ts": {
       "longBlocks": 7,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/factorLedger.ts": {
+    "src/lib/elections/engine/factorLedger.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/fundsByParty.ts": {
+    "src/lib/elections/engine/fundsByParty.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/incumbentSeatShare.ts": {
+    "src/lib/elections/engine/incumbentSeatShare.ts": {
       "longBlocks": 2,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/majorParties.ts": {
+    "src/lib/elections/engine/majorParties.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/medianVoter.ts": {
+    "src/lib/elections/engine/medianVoter.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/persuasionDrivers.ts": {
+    "src/lib/elections/engine/persuasionDrivers.ts": {
       "longBlocks": 3,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/presidentialCoattail.ts": {
+    "src/lib/elections/engine/presidentialCoattail.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/singleSeatIncumbency.ts": {
+    "src/lib/elections/engine/singleSeatIncumbency.ts": {
       "longBlocks": 2,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/slateAllocation.ts": {
+    "src/lib/elections/engine/slateAllocation.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/stateAttackMultiplier.test.ts": {
+    "src/lib/elections/engine/stateAttackMultiplier.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/tallyManagement.queryShape.test.ts": {
+    "src/lib/elections/engine/tallyManagement.queryShape.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 2
     },
-    "src/lib/electionEngine/tallyManagement.test.ts": {
+    "src/lib/elections/engine/tallyManagement.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/electionEngine/types.ts": {
+    "src/lib/elections/engine/types.ts": {
       "longBlocks": 2,
       "narrativeLines": 4
     },
-    "src/lib/electionEngine/voteCalculations.ts": {
+    "src/lib/elections/engine/voteCalculations.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/voteDistribution.test.ts": {
+    "src/lib/elections/engine/voteDistribution.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/electionEngine/voteDistributionSwingFlow.test.ts": {
+    "src/lib/elections/engine/voteDistributionSwingFlow.test.ts": {
       "longBlocks": 3,
       "narrativeLines": 6
     },
-    "src/lib/electionEngine/voteDistributionSwingFlow.ts": {
+    "src/lib/elections/engine/voteDistributionSwingFlow.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/voteDistributionSwingFlowDiff.test.ts": {
+    "src/lib/elections/engine/voteDistributionSwingFlowDiff.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/electionEngine/voteDistributionSwingFlowFamilies.test.ts": {
+    "src/lib/elections/engine/voteDistributionSwingFlowFamilies.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -12477,7 +12477,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/turn/elections/supportAccrual.ts": {
+    "src/lib/elections/campaigns/supportAccrual.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },

@@ -2,10 +2,10 @@
  * Candidate approval in granular polls. Bucket approval modifies appeal through
  * the election engine's favorability calculation; see applyCandidateApprovalWeight.
  */
-import { calcEffectiveFavorability } from "@/lib/electionEngine/voteCalculations";
+import { calcEffectiveFavorability } from "@/lib/elections/engine/voteCalculations";
 import { approvalScalar, calcAppeal, MAX_APPEAL } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI } from "@/lib/utils/normalizeNPI";
-import { applyVoteReachFloor } from "@/lib/electionEngine/electionFormulaFactors";
+import { applyVoteReachFloor } from "@/lib/elections/engine/electionFormulaFactors";
 
 /** Apply the vote engine's effective-favorability and approval kernels to a cell. */
 function applyCandidateApprovalWeight(

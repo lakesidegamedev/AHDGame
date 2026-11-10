@@ -22,7 +22,7 @@ vi.mock("@/lib/achievements", () => ({
   awardAchievement: vi.fn(),
   resolveUserIdFromCharacter: vi.fn().mockResolvedValue(new ObjectId()),
 }));
-vi.mock("@/lib/electionEngine", () => ({
+vi.mock("@/lib/elections/engine", () => ({
   fetchEnrichedCandidates: vi.fn(),
   initElectionVoteTally: vi.fn(),
   accumulateVoteTurn: vi.fn(),
@@ -121,7 +121,7 @@ describe("resolvePrimariesIfNeeded query batching", () => {
       return makeCursor(allCandidates);
     });
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockImplementation(
       async (cands: unknown[]) =>
         (cands as Array<{ _id: ObjectId }>).map((c, i) => ({

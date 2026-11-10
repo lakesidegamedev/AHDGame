@@ -10,8 +10,8 @@ import assert from "node:assert/strict";
 import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { targetedAdBonuses } from "@/lib/campaignTargeting/rules";
-import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/electionEngine/types";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
+import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/elections/engine/types";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import { personalStatTenureRetentionForCandidate } from "@/lib/elections/rules/tenureRetention";
 import type { CensusGroupView } from "@/lib/db/types";
 

@@ -10,7 +10,7 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate } from "@/lib/db/types";
-import { SUPPORT_ENDORSEMENT_BUMP } from "@/lib/electionEngine/electionFormulaFactors";
+import { SUPPORT_ENDORSEMENT_BUMP } from "@/lib/elections/engine/electionFormulaFactors";
 
 /**
  * Apply a `delta` Support change to every active candidate row of the

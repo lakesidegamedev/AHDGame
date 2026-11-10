@@ -26,7 +26,7 @@ import {
   PRIMARY_HOME_SURGE_COST_ACTIONS,
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 
 interface RouteParams {
   params: Promise<{ id: string }>;

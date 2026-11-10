@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyFactorLedgerFogOfWar } from "./factorLedgerFog";
-import { FACTOR_ORDER, type FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
+import { FACTOR_ORDER, type FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
 
 function candidate(id: string): FactorLedgerSnapshot["byCandidateNational"][number] {
   return {

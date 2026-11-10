@@ -4,7 +4,7 @@ import {
   computeMedianVoter,
   computeNationalEvWeightedMedian,
   type MedianVoter,
-} from "@/lib/electionEngine/medianVoter";
+} from "@/lib/elections/engine/medianVoter";
 
 interface CensusMedianInput {
   countryId: string;

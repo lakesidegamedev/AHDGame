@@ -68,14 +68,14 @@ import {
   resolvePresidentApproval,
   buildPresidentialModifierByParty,
   presidentialModifierToPct,
-} from "@/lib/electionEngine/presidentialCoattail";
+} from "@/lib/elections/engine/presidentialCoattail";
 import {
   buildGovModifierByParty,
   govModifierToPct,
   resolveGovExecutiveApproval,
   isCoattailEligibleRace,
   isOwnRegionalExecutiveRace,
-} from "@/lib/electionEngine/govCoattail";
+} from "@/lib/elections/engine/govCoattail";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { applyFactorLedgerFogOfWar } from "@/lib/elections/factorLedgerFog";
 import { type GameTimeContext } from "@/lib/time/gameTime";
@@ -92,20 +92,20 @@ import { buildPrimaryShareMap } from "@/lib/elections/resolution/generalResoluti
 import { selectEndedDisplayCandidates } from "@/lib/elections/endedResultsCandidates";
 import { selectGeneralPhaseDisplayCandidates } from "@/lib/elections/generalPhaseCandidates";
 import { computeElectoralVotes } from "@/lib/elections/electoralVoteService";
-import { getFundsByPartyForElection } from "@/lib/electionEngine/fundsByParty";
-import { getIncumbentSeatShareByParty } from "@/lib/electionEngine/incumbentSeatShare";
+import { getFundsByPartyForElection } from "@/lib/elections/engine/fundsByParty";
+import { getIncumbentSeatShareByParty } from "@/lib/elections/engine/incumbentSeatShare";
 import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
 import {
   resolveSingleSeatLegislativeIncumbent,
   isSingleSeatLegislativeRace,
-} from "@/lib/electionEngine/singleSeatIncumbency";
-import { usesEvWeightedNationalMedian } from "@/lib/electionEngine/medianVoter";
+} from "@/lib/elections/engine/singleSeatIncumbency";
+import { usesEvWeightedNationalMedian } from "@/lib/elections/engine/medianVoter";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import {
   buildMidtermOppositionModifierByParty,
   isMidtermOppositionBoostEligible,
   midtermOppositionModifierToPct,
-} from "@/lib/electionEngine/midtermOppositionBoost";
+} from "@/lib/elections/engine/midtermOppositionBoost";
 import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
 import type {
   ElectionResponse,

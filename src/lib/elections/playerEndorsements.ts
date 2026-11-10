@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Character, Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 
 /**
  * Party-alignment lifecycle for player endorsements.

@@ -8,7 +8,7 @@ import { findSlateForElection } from "@/lib/db/recruitmentSlateLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, SlateCandidate } from "@/lib/db/types";
 import { resolveSlateAuthority } from "@/lib/slateAuthority";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 
 interface RouteParams {
   params: Promise<{

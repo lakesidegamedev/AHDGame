@@ -10,7 +10,7 @@ import type { NPP, State } from "@/lib/db/types";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/turn/partyOrg/presence", () => ({ updatePartyPresence: vi.fn() }));
-vi.mock("@/lib/electionEngine/tallyCleaner", () => ({
+vi.mock("@/lib/elections/engine/tallyCleaner", () => ({
   removeWithdrawnCandidateFromTally: vi.fn(),
 }));
 vi.mock("@/lib/governors/senateVacancy", () => ({

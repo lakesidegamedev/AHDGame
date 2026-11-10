@@ -35,7 +35,7 @@ import type {
 } from "@/lib/db/types";
 import { projectPrimaryByState, type ProjectionResult } from "@/lib/primaryProjection";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import { getTravelActionCost } from "@/lib/constants/states";
 import {
   TRAVEL_STATE_IDS,
@@ -54,7 +54,7 @@ import {
   PRIMARY_HOME_SURGE_COST_ACTIONS,
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import type { PrimaryCandidateInfo } from "@/lib/elections/primaryViewModel";
 import type {
   PrimaryPartyDetail,

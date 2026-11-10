@@ -18,7 +18,7 @@ import {
   canFieldExecutiveCandidate,
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 
 export async function withdrawOpsIneligibleCandidacies(
   db: Db,

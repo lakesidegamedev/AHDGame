@@ -10,22 +10,14 @@
  * estimated turnout (the poll's totalEstimatedVoters).
  *
  * Re-exports public symbols from focused sub-modules; see
- * src/lib/electionEngine/ for the implementation.
+ * src/lib/elections/engine/ for the implementation.
  */
 
 // Constants
-export {
-  PARTY_STRENGTH_BY_OFFICE,
-  FPTP_MAJOR_PARTIES,
-  FPTP_SPOILER_RATE,
-} from "./electionEngine/constants";
+export { PARTY_STRENGTH_BY_OFFICE, FPTP_MAJOR_PARTIES, FPTP_SPOILER_RATE } from "./constants";
 
 // Types & interfaces
-export type {
-  EnrichedCandidate,
-  DistributeVotesOptions,
-  AccumulateVoteTurnPreload,
-} from "./electionEngine/types";
+export type { EnrichedCandidate, DistributeVotesOptions, AccumulateVoteTurnPreload } from "./types";
 
 // Vote calculations
 export {
@@ -34,13 +26,13 @@ export {
   calcStateTurnout,
   turnVoteWeight,
   resolveTurnWindow,
-} from "./electionEngine/voteCalculations";
+} from "./voteCalculations";
 
 // Vote distribution
-export { distributeVotesByGroupLevelAllocation } from "./electionEngine/voteDistribution";
+export { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 
 // Candidate enrichment
-export { fetchEnrichedCandidates } from "./electionEngine/candidateEnrichment";
+export { fetchEnrichedCandidates } from "./candidateEnrichment";
 
 // Tally management
-export { accumulateVoteTurn, initElectionVoteTally } from "./electionEngine/tallyManagement";
+export { accumulateVoteTurn, initElectionVoteTally } from "./tallyManagement";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
-import { stateOrgLevelCost, STATE_ORG_COST_ACTIONS } from "@/lib/electionEngine/constants";
+import { stateOrgLevelCost, STATE_ORG_COST_ACTIONS } from "@/lib/elections/engine/constants";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));

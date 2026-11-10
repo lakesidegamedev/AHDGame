@@ -5,7 +5,7 @@ import { createMockDb } from "@/lib/test-utils/mockDb";
 import { makeElection, makeCandidate, makeCharacter, makeNPP } from "@/lib/test-utils/factories";
 import { getDb } from "@/lib/mongodb";
 import { getElectionOpponents } from "./electionOpponents";
-import * as singleSeatIncumbency from "@/lib/electionEngine/singleSeatIncumbency";
+import * as singleSeatIncumbency from "@/lib/elections/engine/singleSeatIncumbency";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/time/gameTime", () => ({
   getGameTime: async () => ({ currentTurn: 10, effectiveNow: new Date(0) }),

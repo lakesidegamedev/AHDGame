@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminNppsSchema } from "@/lib/api/schemas/admin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import type {
   NPP,
   Election,

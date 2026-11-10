@@ -38,10 +38,10 @@ import {
   type PresidentialRuleset,
 } from "@/lib/elections/presidentialRuleset";
 import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
 import { loadLiveStateActions } from "@/lib/elections/primaryStateActions";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { supportMoodMultiplier } from "@/lib/elections/engine/electionFormulaFactors";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
@@ -57,7 +57,7 @@ import {
   PRIMARY_MOMENTUM_WIN_BONUS,
   PRIMARY_MOMENTUM_UPSET_BONUS,
   NPP_STAGGER_EXTRA_MULTIPLIER,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
