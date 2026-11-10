@@ -127,6 +127,24 @@ const smallestSingleCounty = [...countyVolumes]
   )
   .sort((a, b) => a[1] - b[1])[0][0];
 const targets = { district: { districtId: marginal }, county: { countyId: largestCounty } };
+const populationPath = flag("--population-report");
+const populationBytes = populationPath ? readFileSync(resolve(populationPath)) : null;
+let coveragePopulation: number[] | undefined;
+if (populationBytes) {
+  const population = JSON.parse(populationBytes.toString()) as {
+    planId: string;
+    checks: Record<string, boolean>;
+    parts: { countyName: string; districtId: string; population: number }[];
+  };
+  if (population.planId !== "US-CA-AB604-2025" || !Object.values(population.checks).every(Boolean))
+    throw new Error("Population report is not a qualified AB604 reference");
+  const byId = new Map(
+    population.parts.map((p) => [`${p.countyName}:${p.districtId}`, p.population])
+  );
+  if (byId.size !== reference.length || reference.some((s) => !byId.has(s.id)))
+    throw new Error("Resident pricing and vote overlap rosters differ");
+  coveragePopulation = reference.map((s) => byId.get(s.id)!);
+}
 const decays = [
   ...[0, 0.05, 0.1, 0.2, 0.5].map((value) => ({ mode: "linear" as const, value })),
   ...[0.25, 0.5].map((value) => ({ mode: "fractional" as const, value })),
@@ -174,6 +192,7 @@ function profile(name: string, horizon: number) {
 }
 const baseParams = {
   spots: reference,
+  coveragePopulation,
   psCap: STATE_PS_CAP_DEFAULT,
   baseCost: 2,
   pressureIncrement: PRESSURE_LADDER_INCREMENT,
@@ -370,6 +389,10 @@ const report = {
   experiment: "US local campaign timeline v1",
   parentReportSha256: hash(parentBytes),
   sourceSha256: hash(sourceBytes),
+  coverageBasis: populationBytes
+    ? "qualified-2025-county-reference-stock-on-AB604-block-weights"
+    : "presidential-turnout-proxy",
+  populationReportSha256: populationBytes ? hash(populationBytes) : null,
   sourceFiles: [
     "scripts/sim/usCampaignTimeline.ts",
     "src/lib/redistricting/rules/campaignTimelinePrototype.ts",
@@ -382,7 +405,9 @@ const report = {
     "No database/live player measurements. Frozen California synthetic 50/50 district totals from the prior experiment.",
     "Conditional within-district distribution reuses presidential overlap proportions in both evidence arms; not an independent 2026 spot fit.",
     "Opening PS/income scenarios are synthetic, anchored to current code defaults; treasury generation, transfers, role efficiency and competing PS uses are excluded.",
-    "Coverage price uses frozen turnout as a proxy. Production must use frozen resident coverage; no live population crosswalk is qualified.",
+    populationBytes
+      ? "Coverage prices use qualified 2027 reference resident stocks, not observed local world county stocks. Vote turnout weights remain unchanged."
+      : "Coverage price uses frozen turnout as a proxy. Production must use frozen resident coverage; no live population crosswalk is qualified.",
     "PS income then decay then receipt-ordered actions then ballots. No-op-at-cap actions are free rejections; partial-effect actions pay the full quoted price.",
     "Integer county coverage quotes use ceil(coverage/median district coverage * effect factor) units. Fractional quotes use max(0.25, coverage ratio * effect factor), rounded up to 0.5 PS. Pressure rises by one per paid click, preserving the existing state ladder.",
     "Fractional decay retains floating-point tails; fixed-point representation and pruning threshold still need qualification.",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   runCampaignTimeline,
+  quoteTimelineAction,
   type CampaignTimelineInput,
   type TimelineAction,
 } from "./campaignTimelinePrototype";
@@ -43,6 +44,21 @@ const action = (id: string, turn = 0, actor: 0 | 1 = 0): TimelineAction => ({
 });
 
 describe("multi-turn geographic campaign experiment", () => {
+  it("prices frozen resident reach independently of ballot turnout and is invariant under population scaling", () => {
+    const local = {
+      ...input,
+      pricing: "fractional-coverage" as const,
+      actions: [{ ...action("county"), target: { countyId: "split" } }],
+    };
+    const a = runCampaignTimeline({ ...local, coveragePopulation: [100, 300] });
+    const b = runCampaignTimeline({ ...local, coveragePopulation: [10000, 30000] });
+    expect(a.receipts[0].cost).toBe(b.receipts[0].cost);
+    expect(a.cumulative).toEqual(b.cumulative);
+    expect(() => runCampaignTimeline({ ...local, coveragePopulation: [1] })).toThrow("coverage");
+    expect(quoteTimelineAction(2, 0, 8, 8, true)).toBe(16);
+    expect(quoteTimelineAction(2, 7, 8, 0.25, true)).toBe(2);
+    expect(() => quoteTimelineAction(2, -1, 8, 1, true)).toThrow();
+  });
   it("carries sub-vote effects forward instead of erasing small-county campaigning", () => {
     const tiny: CampaignTimelineInput = {
       ...input,

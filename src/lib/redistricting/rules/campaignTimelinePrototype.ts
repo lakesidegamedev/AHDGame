@@ -21,6 +21,8 @@ export interface TimelineAction {
 export interface CampaignTimelineInput {
   spots: readonly PrototypeSpot[];
   ballots: readonly (readonly [number, number])[];
+  /** Frozen resident stocks for pricing; omit only in turnout-proxy experiments. */
+  coveragePopulation?: readonly number[];
   turnoutWeights: readonly number[];
   actions: readonly TimelineAction[];
   openingPs: readonly [number, number];
@@ -40,6 +42,21 @@ export interface CampaignTimelineInput {
   /** Party-wide across actors in the same state, not per character. */
   actionsPerPartyPerTurn: number;
   rounding?: "per-batch" | "carry";
+}
+export function quoteTimelineAction(
+  baseCost: number,
+  pressure: number,
+  maxUnitCost: number,
+  units: number,
+  roundHalfPs: boolean
+): number {
+  if (
+    [baseCost, pressure, maxUnitCost, units].some((n) => !Number.isFinite(n) || n < 0) ||
+    units === 0
+  )
+    throw new Error("Invalid action quote");
+  const raw = units * Math.min(maxUnitCost, baseCost + pressure);
+  return roundHalfPs ? Math.ceil(raw * 2 - 1e-9) / 2 : raw;
 }
 export function runCampaignTimeline(input: CampaignTimelineInput) {
   const params = [
@@ -78,6 +95,12 @@ export function runCampaignTimeline(input: CampaignTimelineInput) {
   )
     throw new Error("Invalid timeline geography");
   if (
+    input.coveragePopulation &&
+    (input.coveragePopulation.length !== input.spots.length ||
+      input.coveragePopulation.some((v) => !Number.isSafeInteger(v) || v < 0))
+  )
+    throw new Error("Invalid resident coverage");
+  if (
     input.ballots.some(
       (r, i) =>
         r.length !== 2 ||
@@ -103,8 +126,9 @@ export function runCampaignTimeline(input: CampaignTimelineInput) {
     (a, b) => a.turn - b.turn || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
   );
   const districts = new Map<string, number>();
-  input.spots.forEach((s) =>
-    districts.set(s.districtId, (districts.get(s.districtId) ?? 0) + s.ballots)
+  const residents = input.coveragePopulation ?? input.spots.map((s) => s.ballots);
+  input.spots.forEach((s, i) =>
+    districts.set(s.districtId, (districts.get(s.districtId) ?? 0) + residents[i])
   );
   const sizes = [...districts.values()].sort((a, b) => a - b);
   const typicalDistrict = sizes[Math.floor(sizes.length / 2)];
@@ -125,7 +149,7 @@ export function runCampaignTimeline(input: CampaignTimelineInput) {
       const split =
         "countyId" in target && new Set(indices.map((i) => input.spots[i].districtId)).size > 1;
       const factor = split ? input.countyFactor : 1;
-      const coverage = indices.reduce((s, i) => s + input.spots[i].ballots, 0) / typicalDistrict;
+      const coverage = indices.reduce((s, i) => s + residents[i], 0) / typicalDistrict;
       const units =
         input.pricing !== "flat" && "countyId" in target
           ? input.pricing === "fractional-coverage"
@@ -183,9 +207,13 @@ export function runCampaignTimeline(input: CampaignTimelineInput) {
       const { indices, factor, units } = targets.get(action.id)!;
       const delta = input.effectPoints * factor * (action.kind === "boost" ? 1 : -1);
       const cap = (v: number) => Math.max(-input.effectCap, Math.min(input.effectCap, v));
-      const rawCost = units * Math.min(input.maxUnitCost, input.baseCost + pressure[actor]);
-      const cost =
-        input.pricing === "fractional-coverage" ? Math.ceil(rawCost * 2 - 1e-9) / 2 : rawCost;
+      const cost = quoteTimelineAction(
+        input.baseCost,
+        pressure[actor],
+        input.maxUnitCost,
+        units,
+        input.pricing === "fractional-coverage"
+      );
       const reason =
         used[actor] >= input.actionsPerPartyPerTurn
           ? "turn_limit"

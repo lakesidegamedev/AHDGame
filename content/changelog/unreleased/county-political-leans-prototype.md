@@ -21,3 +21,5 @@ areas: [engine]
 - Added multi-turn campaign schedules and PS accounting to compare action
   costs, decay, county coverage prices and fractional vote carry. Live rules
   remain unchanged.
+- Added aggregate-only world budget checks and exact Census block population
+  reconciliation for California's official map, plus resident-priced replays.
