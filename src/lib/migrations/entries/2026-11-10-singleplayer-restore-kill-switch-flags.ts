@@ -1,4 +1,4 @@
-import type { Collection, Db } from "mongodb";
+import type { Db } from "mongodb";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { Migration, MigrationResult } from "../types";
 
@@ -17,10 +17,9 @@ export const migration: Migration = {
   description: "Turn the era, auto disaster and living conflict switches back on in local worlds",
   idempotent: true,
   async execute(db: Db, ctx): Promise<MigrationResult> {
-    const state = await (
-      (await getGameStateCollection(db)) as unknown as Collection<Record<string, unknown>>
-    ).findOne(
-      { _id: "current" as never },
+    const coll = await getGameStateCollection(db);
+    const found = await coll.findOne(
+      { _id: "current" },
       {
         projection: Object.fromEntries(
           FLAGS.flatMap((f) => [
@@ -30,6 +29,7 @@ export const migration: Migration = {
         ),
       }
     );
+    const state: Record<string, unknown> | null = found ? { ...found } : null;
     if (!state) return { documentsScanned: 0, documentsUpdated: 0, notes: ["no world"] };
     const stored = (
       state.singleplayerConfig as { featureFlags?: Record<string, unknown> } | undefined
@@ -44,9 +44,7 @@ export const migration: Migration = {
       return { documentsScanned: 1, documentsUpdated: 0, notes: ["nothing was off"] };
     const notes = [`${ctx.dryRun ? "would turn" : "turned"} on: ${keys.join(", ")}`];
     if (ctx.dryRun) return { documentsScanned: 1, documentsUpdated: 0, notes };
-    await (
-      (await getGameStateCollection(db)) as unknown as Collection<Record<string, unknown>>
-    ).updateOne({ _id: "current" as never }, { $set: set });
+    await coll.updateOne({ _id: "current" }, { $set: set } as never);
     return { documentsScanned: 1, documentsUpdated: 1, notes };
   },
 };
