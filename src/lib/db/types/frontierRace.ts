@@ -5,6 +5,11 @@ export interface FrontierRaceState {
   _id: FrontierRaceId;
   /** Points funded so far, by entrant key (`country:US`, `corporation:<id>`). */
   contributions: Record<string, number>;
+  /**
+   * Points reserved while the payer is being charged. Winner resolution ignores
+   * them; they move into `contributions` once the charge succeeds.
+   */
+  pending?: Record<string, number>;
   /** Display names by entrant key, set when the entrant funds. */
   names: Record<string, string>;
   winner?: { key: string; points: number; turn: number };

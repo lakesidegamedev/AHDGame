@@ -4,6 +4,7 @@ import {
   techEffectCategory,
   describeTechEffect,
   TECH_PLANT_OUTPUT_CAP,
+  TECH_METHOD_OUTPUT_CAP,
   TECH_INPUT_EFFICIENCY_CAP,
   TECH_GROWTH_REDUCTION_CAP,
   TECH_LABOR_REDUCTION_CAP,
@@ -23,6 +24,24 @@ describe("aggregateTechEffects", () => {
     expect(agg.plantOutputBonus).toBe(TECH_PLANT_OUTPUT_CAP);
     expect(agg.outputRateMult.electronics).toBeCloseTo(1 + TECH_PLANT_OUTPUT_CAP);
     expect(agg.outputRateMult.steel).toBeCloseTo(1.1 * (1 + TECH_PLANT_OUTPUT_CAP));
+  });
+
+  it("applies a frontier method outside the node cap, as its own capped term", () => {
+    const nodes: TechEffect[] = Array.from({ length: 6 }, () => ({
+      kind: "plantOutput" as const,
+      pct: 0.03,
+    }));
+    const method: TechEffect = { kind: "plantOutput", pct: 0.1, method: true };
+    const base = aggregateTechEffects(nodes);
+    const withMethod = aggregateTechEffects([...nodes, method]);
+    // Already at the node cap, the method still adds its full bonus.
+    expect(withMethod.plantOutputBonus).toBe(TECH_PLANT_OUTPUT_CAP);
+    expect(withMethod.methodOutputBonus).toBeCloseTo(0.1);
+    expect(withMethod.outputRateMult.electronics).toBeCloseTo(
+      base.outputRateMult.electronics! * 1.1
+    );
+    const many = aggregateTechEffects(Array.from({ length: 5 }, () => method));
+    expect(many.methodOutputBonus).toBe(TECH_METHOD_OUTPUT_CAP);
   });
 
   it("caps input efficiency and folds it into every input rate", () => {

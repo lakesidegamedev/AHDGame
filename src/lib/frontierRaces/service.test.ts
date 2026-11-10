@@ -239,7 +239,27 @@ describe("fundFrontierRace", () => {
       turn: 5,
     });
     expect(result).toMatchObject({ ok: false, code: "cannot_pay" });
-    expect((races.get("fusion")?.contributions as Record<string, number>)["country:US"]).toBe(0);
+    expect(races.get("fusion")?.contributions).toEqual({});
+    expect((races.get("fusion")?.pending as Record<string, number>)["country:US"]).toBe(0);
+  });
+
+  it("keeps unpaid points out of the counted contributions while the charge runs", async () => {
+    let during: Record<string, unknown> | undefined;
+    const { db, races } = makeDb();
+    spendFromTreasury.mockImplementationOnce(async () => {
+      during = structuredClone(races.get("fusion")) as Record<string, unknown>;
+    });
+    await fundFrontierRace(db, {
+      raceId: "fusion",
+      kind: "country",
+      entityId: "US",
+      points: 10,
+      turn: 5,
+    });
+    expect(during?.contributions).toEqual({});
+    expect((during?.pending as Record<string, number>)["country:US"]).toBe(10);
+    expect((races.get("fusion")?.contributions as Record<string, number>)["country:US"]).toBe(10);
+    expect((races.get("fusion")?.pending as Record<string, number>)["country:US"]).toBe(0);
   });
 
   it("refuses a race that already has a winner", async () => {
