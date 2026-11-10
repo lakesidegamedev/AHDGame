@@ -11,8 +11,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       buildTurns: 240,
-      downside:
-        "Heaviest capital and licensing bill of any power method; plants take five years to commission.",
+      downside: "Heaviest capital and licensing bill; plants take five years to commission.",
       researchThreshold: 6000,
       name: "Commercial Fusion",
       description:
@@ -31,8 +30,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 96,
-      downside:
-        "Storage media wear out and need steady chemical and rare earth resupply; output is balancing power, not base load.",
+      downside: "Storage media wear out and need steady chemical resupply; no base load.",
       name: "Grid-Scale Storage Utility",
       description:
         "Long-duration storage plants that firm intermittent supply and sell balancing power. Heavy chemical, steel and electronics inputs for the storage medium and its housings.",
@@ -50,8 +48,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 192,
-      downside:
-        "Four-year build and a heavy licensing and safety bill; a licensing delay leaves capital idle.",
+      downside: "Four-year build and a heavy licensing and safety bill.",
       name: "Advanced Fission",
       description:
         "Factory-built small modular reactors with high firm output. Rare earths stand in for enriched fuel, and licensing and safety work add a heavy consulting and steel bill.",
@@ -177,8 +174,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 120,
-      downside:
-        "Large electronics and rare earth draw; displaced workers push local unemployment up.",
+      downside: "Heavy electronics and rare earth draw; displaced workers raise unemployment.",
       name: "Humanoid Robotics",
       description:
         "General-purpose robots built and deployed on the line. High electronics and steel output, with heavy rare earth, energy and software demand for actuators and control.",
@@ -285,7 +281,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       buildTurns: 96,
-      downside: "Heavy electronics and medical approval cost; consumer backlash risk over privacy.",
+      downside: "Heavy electronics and approval costs; privacy backlash risk.",
       researchThreshold: 7000,
       name: "Neural Interfaces",
       description:
@@ -298,8 +294,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 48,
-      downside:
-        "Compute and software spend grows with scale; automation cuts staff and raises layoff pressure.",
+      downside: "Compute spend grows with scale; automation cuts staff and raises layoffs.",
       name: "Agentic Services",
       description:
         "Software agents sold as a service that run whole business processes for clients. Top software output, with the heaviest energy draw in the sector.",
@@ -367,8 +362,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 96,
-      downside:
-        "High energy and chemical inputs; traditional farm lobbies resist and lower local farm output.",
+      downside: "High energy and chemical inputs; farm lobbies resist it.",
       name: "Cellular Agriculture",
       description:
         "Food grown from cell cultures in bioreactors. Needs almost no land or fertilizer, but runs on large amounts of energy and growth media chemicals.",
@@ -434,8 +428,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 120,
-      downside:
-        "Very high energy draw per tonne removed; earns little unless a carbon price is in force.",
+      downside: "Very high energy draw per tonne; earns little without a carbon price.",
       name: "Direct Air Capture",
       description:
         "Pulls carbon dioxide from the air and turns it into chemical feedstock. Output is modest and the plants burn a very large amount of energy.",
@@ -520,8 +513,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       buildTurns: 120,
-      downside:
-        "Long trial and approval path; per-patient cost stays high and failed trials are written off.",
+      downside: "Long trial and approval path; failed trials are written off.",
       researchThreshold: 5000,
       name: "Gene Therapy at Scale",
       description:
@@ -540,8 +532,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 72,
-      downside:
-        "Specialised chemical and electronics inputs; biosafety incidents carry heavy penalties.",
+      downside: "Specialised chemical and electronics inputs; biosafety incidents hit hard.",
       name: "Biofoundry Biologics",
       description:
         "Automated labs that design and grow engineered biologics. Strong output with a pharmaceutical co-product, paid for with heavy software, electronics and lab chemical inputs.",
@@ -736,7 +727,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 36,
-      downside: "Heavy compute and data costs; rising privacy complaints and regulatory exposure.",
+      downside: "Heavy compute and data costs; privacy complaints and regulatory exposure.",
       name: "Personalised Media",
       description:
         "Every reader and viewer gets a feed assembled for them. Strong ad output, paid for with heavy software, energy and network demand.",
@@ -791,8 +782,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 72,
-      downside:
-        "Electronics and rare earth heavy; exposed to export controls and arms treaty pressure.",
+      downside: "Electronics and rare earth heavy; exposed to export controls.",
       name: "Drone Swarms",
       description:
         "Cheap autonomous drones fielded in large numbers. High ordnance output that runs on electronics and software rather than metal, and that directed-energy defences can counter.",
@@ -936,8 +926,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       buildTurns: 144,
-      downside:
-        "Large construction and software outlay; a systems failure hits a whole district at once.",
+      downside: "Large construction and software outlay; one failure hits a whole district.",
       researchThreshold: 5000,
       requiresLaneResearch: [
         { lane: "technology", threshold: 3000 },
@@ -1015,7 +1004,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 72,
-      downside: "Needs a steady timber and chemical supply; supply shocks stall the printers.",
+      downside: "Needs a steady timber and chemical supply; shocks stall the printers.",
       name: "Printed Mass Timber",
       description:
         "Engineered timber panels cut and printed by machine and assembled fast on site. Leans on timber and software instead of steel and concrete.",
@@ -1199,7 +1188,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2039",
       buildTurns: 36,
-      downside: "Heavy compute and data costs; rising privacy complaints and regulatory exposure.",
+      downside: "Heavy compute and data costs; privacy complaints and regulatory exposure.",
       name: "Personalised Entertainment",
       description:
         "Shows and games assembled for each viewer as they watch. Strong ad output, paid for with heavy software, energy and network demand.",
@@ -1492,8 +1481,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       requiresTechUnlock: true,
       minDecade: "2049",
       buildTurns: 240,
-      downside:
-        "Longest lead time and launch dependency; returns arrive only after years of capital outlay.",
+      downside: "Longest lead time and launch dependency; returns arrive after years.",
       researchThreshold: 8000,
       requiresLaneResearch: [{ lane: "logistics", threshold: 3000 }],
       name: "Space Resources",
