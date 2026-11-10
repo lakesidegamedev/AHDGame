@@ -1,10 +1,6 @@
 /**
- * The ONE gate for the political-metrics / political-legislation pipeline.
- *
- * Currently always true: baselines and law levels resolve by in-game YEAR,
- * so the pipeline is not tied to the 1953 seed preset. Kept as a function
- * rather than inlined because the seed gates read it, and non-playable
- * conversion will need a scope check here instead of a new gate.
+ * The ONE place the old US/UK/RU/DD legislation catalogs are excluded from
+ * seeding, in favour of the political-legislation book.
  */
 import { MECHANICAL_RETAINED_IDS } from "@/lib/mechanicalLaws/legislation";
 import {
@@ -13,10 +9,6 @@ import {
   REDISTRICT_FAIRNESS_LAW,
 } from "@/lib/redistricting/caps";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "./types";
-
-export function isPoliticalPipelinePreset(_preset: string | undefined): boolean {
-  return true;
-}
 
 /**
  * The `countryScope` values whose OLD legislation catalogs are superseded by

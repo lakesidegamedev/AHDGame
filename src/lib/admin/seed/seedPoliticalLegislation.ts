@@ -50,11 +50,6 @@ import {
 /** Player books refit per category to their authored 1991 composition. */
 const OPENING_COMPOSITION_REFIT_1991: ReadonlySet<string> = new Set(["US", "UK"]);
 
-// The gate lives in ONE place (politicalMetrics/pipelinePreset) so the four
-// seed call sites cannot drift apart again. Re-exported under the historical
-// name so existing importers need no edit.
-export { isPoliticalPipelinePreset as isPoliticalLegislationPreset } from "@/lib/politicalMetrics/pipelinePreset";
-
 /**
  * The projected docs seedLegislationTypes upserts: the whole catalog. A law's
  * era `window` gates FILING at runtime (isLegislationTypeFileable), so a type

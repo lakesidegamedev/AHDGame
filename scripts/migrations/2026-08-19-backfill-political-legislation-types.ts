@@ -2,10 +2,7 @@ import type { Db } from "mongodb";
 import type { MigrationResult } from "../../src/lib/migrations/types";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { getEraContext } from "@/lib/era/context";
-import {
-  getProjectedPoliticalLegislationTypes,
-  isPoliticalLegislationPreset,
-} from "@/lib/admin/seed/seedPoliticalLegislation";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 
 /**
  * Ticket #1106 - backfill new-generation legislation types into a LIVE world.
@@ -28,11 +25,7 @@ export async function runBackfillPoliticalLegislationTypes(
   opts: { dryRun?: boolean } = {}
 ): Promise<MigrationResult> {
   const notes: string[] = [];
-  const { preset, year } = await getEraContext(db);
-
-  if (preset != null && !isPoliticalLegislationPreset(preset)) {
-    return { notes: [`Preset ${preset} is not a political-legislation preset; nothing to do.`] };
-  }
+  const { year } = await getEraContext(db);
 
   // The whole catalog, matching the seeder: era windows gate filing at runtime.
   const projected = getProjectedPoliticalLegislationTypes();

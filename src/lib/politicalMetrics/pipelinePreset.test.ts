@@ -1,20 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   isOldLegislationTypeExcluded,
-  isPoliticalPipelinePreset,
   POLITICAL_LEGISLATION_RETAINED_OLD_IDS,
 } from "./pipelinePreset";
 import { getAllNewGenerationLawIds } from "@/lib/politicalLegislation/catalog";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
-
-describe("isPoliticalPipelinePreset", () => {
-  it("is true for every preset — the pipeline is year-driven, not preset-driven", () => {
-    expect(isPoliticalPipelinePreset("1953-default")).toBe(true);
-    expect(isPoliticalPipelinePreset("2019-default")).toBe(true);
-    expect(isPoliticalPipelinePreset("1991-default")).toBe(true);
-    expect(isPoliticalPipelinePreset(undefined)).toBe(true);
-  });
-});
 
 describe("isOldLegislationTypeExcluded", () => {
   it("excludes old playable-country catalogs", () => {
