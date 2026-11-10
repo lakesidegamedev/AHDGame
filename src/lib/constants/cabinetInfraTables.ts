@@ -10,6 +10,7 @@ import { CN_CABINET_SEAT_IDS } from "@/lib/countries/cn/institutionsFacts";
 import { IE_CABINET_SEAT_IDS } from "@/lib/countries/ie/institutionsFacts";
 import { RU_CABINET_SEAT_IDS } from "@/lib/countries/ru/institutionsFacts";
 import { DD_CABINET_SEAT_IDS } from "@/lib/countries/dd/institutionsFacts";
+import { CA_CABINET_SEAT_IDS } from "@/lib/countries/ca/institutionsFacts";
 
 export interface InfraArchetype {
   id: string;
@@ -139,6 +140,7 @@ export const INFRA_POSITION_BY_COUNTRY: Partial<Record<CountryId, string>> = {
   CN: CN_CABINET_SEAT_IDS.infrastructure,
   JP: JP_CABINET_SEAT_IDS.infrastructure,
   IE: IE_CABINET_SEAT_IDS.infrastructure,
+  CA: CA_CABINET_SEAT_IDS.infrastructure,
   RU: RU_CABINET_SEAT_IDS.infrastructure,
   DD: DD_CABINET_SEAT_IDS.infrastructure,
 };

@@ -5,6 +5,7 @@ import { CN_LEGISLATIVE_PROCESS } from "@/lib/countries/cn/institutionsFacts";
 import { IE_LEGISLATIVE_PROCESS } from "@/lib/countries/ie/institutionsFacts";
 import { US_LEGISLATIVE_PROCESS } from "@/lib/countries/us/institutionsFacts";
 import { UK_LEGISLATIVE_PROCESS } from "@/lib/countries/uk/institutionsFacts";
+import { CA_LEGISLATIVE_PROCESS } from "@/lib/countries/ca/institutionsFacts";
 
 /** Chamber seating geometry used by the composition + vote-seating charts. */
 export type SeatingStyle = "hemicycle" | "benches" | "horseshoe";
@@ -51,6 +52,8 @@ const DE: LegislativeProcess = DE_LEGISLATIVE_PROCESS;
 const JP: LegislativeProcess = JP_LEGISLATIVE_PROCESS;
 
 const IE: LegislativeProcess = IE_LEGISLATIVE_PROCESS;
+
+const CA: LegislativeProcess = CA_LEGISLATIVE_PROCESS;
 
 /** Sweden 1953 bicameral Riksdag — same revise/delay shape as IE's Seanad. */
 const SE_1953: LegislativeProcess = {
@@ -104,6 +107,7 @@ export const LEGISLATIVE_PROCESS: Partial<Record<CountryId, LegislativeProcess>>
   DE,
   JP,
   IE,
+  CA,
   CN,
 };
 

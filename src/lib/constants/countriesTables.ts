@@ -94,6 +94,11 @@ import { BAL_CONFIG } from "@/lib/countries/bal/institutionsFacts";
 
 // Re-export the client-safe core so every existing import from this module works.
 export * from "./countriesCore";
+import {
+  CA_CONFIG,
+  CA_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+} from "@/lib/countries/ca/institutionsFacts";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface ChamberConfig {
   /** Internal key used in APIs, URLs, and BillChamber values */
@@ -844,6 +849,9 @@ export const COUNTRY_CONFIGS: Record<CountryId, CountryConfig> = {
   // collapseTargetSystem routes a collapse toward reunification/democracy. Status
   // coming-soon until seeded.
   DD: DD_CONFIG,
+
+  // Canada: Westminster federation, 2027 world only.
+  CA: CA_CONFIG,
 };
 
 /**
@@ -1108,6 +1116,7 @@ export const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>>
   UK: UK_REGIONAL_BILL_ASSENT_OFFICE_KEY,
   JP: JP_REGIONAL_BILL_ASSENT_OFFICE_KEY,
   IE: IE_REGIONAL_BILL_ASSENT_OFFICE_KEY,
+  CA: CA_REGIONAL_BILL_ASSENT_OFFICE_KEY,
   DE: DE_REGIONAL_BILL_ASSENT_OFFICE_KEY,
   // One-party regional executives — Republic / Land First Secretaries. Without
   // these entries the region pages fell back to the generic "Governor" label.
@@ -1162,6 +1171,7 @@ export const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
   DE: DE_IDENTITY.addressNames?.national,
   JP: JP_IDENTITY.addressNames?.national,
   IE: IE_IDENTITY.addressNames?.national,
+  CA: CA_IDENTITY.addressNames?.national,
 };
 
 /**

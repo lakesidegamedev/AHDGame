@@ -19,6 +19,7 @@ import { US_ECONOMY } from "@/lib/countries/us/economy";
 import { UK_ECONOMY } from "@/lib/countries/uk/economy";
 import { RU_ECONOMY } from "@/lib/countries/ru/economy";
 import { DD_ECONOMY } from "@/lib/countries/dd/economy";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 /** Maximum a single character may receive from party funds in one turn. */
 export const PLAYER_PAYOUT_CAP_PER_TURN: Partial<Record<CountryId, number>> = {
@@ -27,6 +28,7 @@ export const PLAYER_PAYOUT_CAP_PER_TURN: Partial<Record<CountryId, number>> = {
   RU: RU_ECONOMY.payoutCapPerTurn,
   DD: DD_ECONOMY.payoutCapPerTurn,
   JP: JP_ECONOMY.payoutCapPerTurn,
+  CA: CA_ECONOMY.payoutCapPerTurn,
 };
 
 /** Applied to any country not named above. */

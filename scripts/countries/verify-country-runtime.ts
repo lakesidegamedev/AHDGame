@@ -924,6 +924,43 @@ for (const [registry, why, countries] of ABSENT_BY_REGISTRY) {
   }
 }
 
+/*
+ * Canada is authored for the 2027 world only, in stages. Each entry is checked in
+ * both directions, so the stage that authors the value must delete its line.
+ */
+ABSENT_UPSTREAM.CA = {
+  ...(ABSENT_UPSTREAM.CA ?? {}),
+  EXECUTIVE_SEALS: "no seal; getSeal returns null and the UI omits it",
+  FULL_ERA_REGION_BUNDLES:
+    "no row in the seed-diagnostic registry; the seed runner is the authority",
+  ORDERS_BY_COUNTRY: "the cabinet stage authors Canada's ministerial orders",
+  MECHANICS_BY_COUNTRY: "the cabinet stage authors Canada's cabinet mechanics",
+  SPAWN_ELECTIONS_REGISTRY: "the elections stage registers Canada's spawners",
+  CENSUS_BUNDLES: "the elections stage authors the 2027 census bundle",
+  DOMAIN_BUCKET_AFFINITIES: "the elections stage authors the bucket affinity table",
+  COUNTRY_BUCKET_LABELS: "the elections stage authors the bucket labels",
+  METRIC_PRESET_BUNDLES: "the seed stage authors the 2027 metric preset",
+  POPULATION_ANCHOR_BUNDLES: "no population anchors are authored for any era",
+  COUNTRY_MODIFIER_PATCHES: "no per-modifier override; the global and era defs apply unpatched",
+  COUNTRY_ERA1991_PATCHES: "Canada is absent from the 1991 world",
+  HAZARD_GROUPS: "no regional hazard groups are authored",
+  TARGETS: "no calibration targets are authored",
+  REGION_DEMOGRAPHIC_CATEGORY_IDS:
+    "no country-specific demographic category ids; the shared set applies",
+  NON_PARTY_BUCKET_INDEPENDENT_BIAS_BY_COUNTRY:
+    "no country override; the reader falls back to NON_PARTY_BUCKET_INDEPENDENT_BIAS",
+  GDP_DENOMINATION_1953: "Canada is absent from the 1953 world",
+  M2_TO_GDP_1953: "Canada is absent from the 1953 world",
+  COUNTRY_SECTOR_WEIGHTS_1953: "Canada is absent from the 1953 world",
+  COUNTRY_SECTOR_WEIGHTS_1979: "Canada is absent from the 1979 world",
+  COUNTRY_SECTOR_WEIGHTS_1991: "Canada is absent from the 1991 world",
+  MONETARY_BASELINES_1953: "Canada is absent from the 1953 world",
+  MONETARY_BASELINES_1971: "Canada is absent from the 1971 era table",
+  MONETARY_BASELINES_1979: "Canada is absent from the 1979 world",
+  MONETARY_BASELINES_1991: "Canada is absent from the 1991 world",
+  POPULATION_MULTIPLIERS: "no 1991 cohort row; that era passes through at 1.0",
+};
+
 /**
  * A registry whose row for this country is SHARED machinery, not its data.
  *

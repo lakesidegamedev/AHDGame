@@ -31,6 +31,7 @@ import { WAL_CABINET_SEAT_IDS } from "@/lib/countries/wal/institutionsFacts";
 import { BLR_CABINET_SEAT_IDS } from "@/lib/countries/blr/institutionsFacts";
 import { UKR_CABINET_SEAT_IDS } from "@/lib/countries/ukr/institutionsFacts";
 import { BAL_CABINET_SEAT_IDS } from "@/lib/countries/bal/institutionsFacts";
+import { CA_CABINET_SEAT_IDS } from "@/lib/countries/ca/institutionsFacts";
 
 /**
  * The built-in organizations seeded at game start. Player-created orgs use
@@ -787,6 +788,7 @@ export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | nul
   // completeness test below carries them as named exceptions so this stays visible.
   SCO: SCO_CABINET_SEAT_IDS.foreignAffairs,
   WAL: WAL_CABINET_SEAT_IDS.foreignAffairs,
+  CA: CA_CABINET_SEAT_IDS.foreignAffairs,
 };
 
 /**
@@ -829,4 +831,5 @@ export const TRADE_MINISTER_POSITION_BY_COUNTRY: Record<CountryId, string | null
   // completeness test below carries them as named exceptions so this stays visible.
   SCO: SCO_CABINET_SEAT_IDS.tradeMinister,
   WAL: WAL_CABINET_SEAT_IDS.tradeMinister,
+  CA: CA_CABINET_SEAT_IDS.tradeMinister,
 };

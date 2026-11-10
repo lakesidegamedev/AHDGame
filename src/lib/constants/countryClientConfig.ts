@@ -3328,6 +3328,119 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     },
     usdExchangeRate: 0.45,
   },
+  CA: {
+    id: "CA",
+    name: "Canada",
+    code: "CA",
+    status: "beta",
+    flagEmoji: "🇨🇦",
+    regionLabel: "Province",
+    regionLabelPlural: "Provinces & Territories",
+    executiveTitle: "Prime Minister",
+    executiveRealmPhrase: "Canada",
+    executiveLabel: "Office of the Prime Minister",
+    executivePath: "/country/ca/executive",
+    governmentType: "parliamentaryMonarchy",
+    governmentTypeLabel: "Federal Parliamentary Monarchy",
+    descriptor:
+      "A federal parliamentary monarchy where the Prime Minister leads the government through the confidence of the 343-seat House of Commons, provinces hold wide powers, and Quebec's place in the federation is never settled.",
+    heroImage: "https://flagcdn.com/w640/ca.png",
+    overviewPath: "/country/ca",
+    mapPath: "/country/ca/map",
+    currencyCode: "CAD",
+    centralGovernmentLabel: "Federal Funding",
+    exchangeName: "TSX",
+    financeMinisterCabinetId: "minister_of_finance",
+    regionalBillAssentTitle: "Premier",
+    majorPartyIds: ["FUP", "NPA"],
+    partyCreationNPPs: {
+      statesRequired: 2,
+      lockHomeState: false,
+      nppsPerState: 1,
+    },
+    legislature: {
+      name: "Parliament",
+      path: "/country/ca/legislature",
+      bicameral: false,
+      lowerChamber: {
+        key: "caCommons",
+        name: "House of Commons",
+        shortName: "Commons",
+        seats: 343,
+        description:
+          "343 elected MPs from single-member ridings across 13 provinces and territories. The primary legislative chamber.",
+      },
+      upperChamber: {
+        key: "caSenate",
+        name: "Senate",
+        shortName: "Senate",
+        seats: 105,
+        description:
+          "105 appointed senators, apportioned by region. Revises and delays legislation but rarely defeats the elected House.",
+      },
+    },
+    subNationalChamber: {
+      key: "provincialLegislature",
+      name: "Provincial Legislature",
+      shortName: "Provincial Legislature",
+      regionalModel: true,
+    },
+    officeTypes: [
+      {
+        key: "primeMinister",
+        label: "Prime Minister",
+        isExecutive: true,
+        isSubNational: false,
+        labelPlural: "Prime Ministers",
+      },
+      {
+        key: "caCommons",
+        label: "Member of Parliament",
+        chamberKey: "caCommons",
+        isExecutive: false,
+        isSubNational: false,
+        labelPlural: "Members of Parliament",
+      },
+      {
+        key: "provincialLegislature",
+        label: "Member of the Provincial Legislature",
+        chamberKey: "provincialLegislature",
+        isExecutive: false,
+        isSubNational: true,
+        labelPlural: "Members of the Provincial Legislatures",
+      },
+      {
+        key: "governor",
+        label: "Premier",
+        isExecutive: false,
+        isSubNational: true,
+        labelPlural: "Premiers",
+      },
+      {
+        key: "centralBankChair",
+        label: "Governor of the Bank of Canada",
+        isExecutive: false,
+        isSubNational: false,
+        labelPlural: "Governors of the Bank of Canada",
+      },
+    ],
+    electionSystems: {
+      lowerChamber: "fptp",
+      subNationalChamber: "fptp",
+      subNationalExecutive: "parliamentary",
+      headOfGovernment: "parliamentary",
+      headOfState: "ceremonial",
+    },
+    lowerElectionSystem: {
+      snapElectionsAllowed: true,
+    },
+    centralBank: {
+      name: "Bank of Canada",
+      abbreviation: "BoC",
+      defaultPrimeRate: 2.25,
+    },
+    usdExchangeRate: 1,
+  },
 };
 
 /**
@@ -4963,6 +5076,7 @@ const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>> = {
   UK: "governor",
   JP: "governor",
   IE: "governor",
+  CA: "governor",
   DE: "ministerPresident",
   RU: "governor",
   DD: "governor",
@@ -5022,6 +5136,7 @@ const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
   DE: "Government Declaration",
   JP: "Policy Speech",
   IE: "Address to the Oireachtas",
+  CA: "Speech from the Throne",
 };
 
 export function getNationalAddressName(countryId: CountryId): string {

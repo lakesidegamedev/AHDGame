@@ -28,6 +28,7 @@ import { CN_ECONOMY } from "@/lib/countries/cn/economy";
 import { IE_ECONOMY } from "@/lib/countries/ie/economy";
 import { BR_ECONOMY } from "@/lib/countries/br/economy";
 import { realRevenueGrowth } from "@/lib/metricEngine/rules/revenueGrowthSignal";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 /** Default daily growth rate for unowned sectors (background economy) */
 export const DEFAULT_UNOWNED_GROWTH_RATE = 0.5;
@@ -60,6 +61,7 @@ export const NEUTRAL_FEDERAL_SALES_TAX_BY_COUNTRY: Partial<Record<CountryId, num
   UK: UK_ECONOMY.tax.neutralFederalSalesTax,
   JP: JP_ECONOMY.tax.neutralFederalSalesTax,
   DE: DE_ECONOMY.tax.neutralFederalSalesTax,
+  CA: CA_ECONOMY.tax.neutralFederalSalesTax,
 };
 
 export const NEUTRAL_STATE_SALES_TAX_BY_COUNTRY: Partial<Record<CountryId, number>> = {
@@ -70,6 +72,7 @@ export const NEUTRAL_STATE_SALES_TAX_BY_COUNTRY: Partial<Record<CountryId, numbe
   IE: IE_ECONOMY.tax.neutralStateSalesTax,
   BR: BR_ECONOMY.tax.neutralStateSalesTax,
   CN: CN_ECONOMY.tax.neutralStateSalesTax,
+  CA: CA_ECONOMY.tax.neutralStateSalesTax,
 };
 
 // ── Unemployment (simplified Okun's law) ────────────────────────────

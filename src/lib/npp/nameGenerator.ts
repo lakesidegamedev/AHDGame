@@ -13,6 +13,7 @@
  */
 
 import { namesForYear } from "./nameEra";
+import { CA_SURNAMES, CA_FIRST_NAMES_MALE, CA_FIRST_NAMES_FEMALE } from "./nameListsCa";
 import {
   FIRST_NAMES_MALE,
   FIRST_NAMES_FEMALE,
@@ -162,6 +163,18 @@ function generateUKNameAndGender(): { name: string; gender: "male" | "female" } 
   const firstNames = isFemale ? UK_FIRST_NAMES_FEMALE : UK_FIRST_NAMES_MALE;
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const surname = UK_SURNAMES[Math.floor(Math.random() * UK_SURNAMES.length)];
+  return { name: `${firstName} ${surname}`, gender };
+}
+
+// ─── CA Name Pools ──────────────────────────────────────────────────────────
+// Canadian names blend the census traditions (see nameListsCa.ts).
+
+function generateCANameAndGender(): { name: string; gender: "male" | "female" } {
+  const isFemale = Math.random() < 0.4;
+  const gender: "male" | "female" = isFemale ? "female" : "male";
+  const firstNames = isFemale ? CA_FIRST_NAMES_FEMALE : CA_FIRST_NAMES_MALE;
+  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const surname = CA_SURNAMES[Math.floor(Math.random() * CA_SURNAMES.length)];
   return { name: `${firstName} ${surname}`, gender };
 }
 
@@ -970,6 +983,7 @@ export function generateUniqueNPPNameAndGender(
     // The US-style multi-ethnic pool; also used when no country is given.
     US: generateNPPNameAndGender,
     UK: generateUKNameAndGender,
+    CA: generateCANameAndGender,
     DE: generateDENameAndGender,
     JP: generateJPNameAndGender,
     CN: generateCNNameAndGender,

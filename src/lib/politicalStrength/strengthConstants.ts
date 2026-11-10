@@ -29,6 +29,7 @@ import { WAL_ECONOMY } from "@/lib/countries/wal/economy";
 import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 /**
  * Political Strength reserve and pressure-ladder constants for Phase 3.
@@ -95,6 +96,7 @@ export const TREASURY_PS_RATE_BY_COUNTRY: Record<CountryId, { national: number; 
   DD: DD_ECONOMY.tax.treasuryPsRate,
   SCO: SCO_ECONOMY.tax.treasuryPsRate, // mirrors UK (sterling zone)
   WAL: WAL_ECONOMY.tax.treasuryPsRate, // mirrors UK (sterling zone)
+  CA: CA_ECONOMY.tax.treasuryPsRate,
 } as const;
 
 // ─── Pressure ladder ────────────────────────────────────────────────────────
@@ -232,6 +234,7 @@ export const REGION_COUNT_BY_COUNTRY: Record<CountryId, number> = {
   DD: 6, // 6 seeded regions (5 Länder + East Berlin)
   SCO: 7, // 7 authored sub-regions (seeded at secession)
   WAL: 6, // 6 authored sub-regions (seeded at secession)
+  CA: 13, // 13 provinces and territories
 } as const;
 
 /**

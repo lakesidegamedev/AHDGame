@@ -9,6 +9,7 @@ import { NG_CORE5_NORMALS } from "@/lib/countries/ng/geographyFacts";
 import { UK_CORE5_NORMALS } from "@/lib/countries/uk/geographyFacts";
 import { US_CORE5_NORMALS } from "@/lib/countries/us/geographyFacts";
 import type { BandAnchor, MetricBandCurve, NormalAnchor } from "./metricCatalogTypes";
+import { CA_CORE5_NORMALS } from "@/lib/countries/ca/geographyFacts";
 
 /**
  * Absolute {year, best, worst} band curves — no reference year; 2019 is just
@@ -54,6 +55,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
@@ -71,6 +73,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
@@ -88,6 +91,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
@@ -106,6 +110,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
@@ -123,6 +128,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["povertyRate"] as NormalAnchor[],

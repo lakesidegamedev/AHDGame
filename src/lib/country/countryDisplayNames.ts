@@ -21,6 +21,7 @@ const COUNTRY_NAMES: Record<CountryId, string> = {
   IE: "Ireland",
   SCO: "Scotland",
   WAL: "Wales",
+  CA: "Canada",
   BR: "Brazil",
   CN: "China",
   NG: "Nigeria",

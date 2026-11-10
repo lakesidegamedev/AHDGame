@@ -1087,7 +1087,8 @@ export interface LegislationType {
     | "fi"
     | "dd"
     | "sco"
-    | "wls";
+    | "wls"
+    | "ca";
 
   /**
    * Political-legislation v2 (spec §6): the typed law's metric targets,

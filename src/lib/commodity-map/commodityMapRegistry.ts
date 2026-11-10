@@ -35,6 +35,7 @@ import { WAL_MAP_REGISTRY } from "@/lib/countries/wal/geographyFacts";
 import { BLR_MAP_REGISTRY } from "@/lib/countries/blr/geographyFacts";
 import { UKR_MAP_REGISTRY } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_MAP_REGISTRY } from "@/lib/countries/bal/geographyFacts";
+import { CA_MAP_REGISTRY } from "@/lib/countries/ca/geographyFacts";
 
 export interface CountryMapConfig {
   /** Country ID */
@@ -109,6 +110,7 @@ export const COUNTRY_MAP_REGISTRY: Record<CountryId, CountryMapConfig> = {
   SCO: SCO_MAP_REGISTRY,
   // Latent — region map (public/wal-regions.json) wired in at SP3.
   WAL: WAL_MAP_REGISTRY,
+  CA: CA_MAP_REGISTRY,
 };
 
 /**

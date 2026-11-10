@@ -3,14 +3,19 @@
  *
  *   npx tsx scripts/countries/gen-country-client-config.ts
  *
- * Institutional slice of the country registry: chambers, office types,
+ * The institutional slice of the country registry: chambers, office types,
  * government type and the regional executive.
  *
- * Only the institutions these modules read: the elections list, office
- * resolution, and the state legislature and bill pages. Reading them from
- * `countryClientConfig` shipped its whole 154 KB projection to the browser.
+ * The elections list groups races into office sections and builds its race
+ * filter from these tables, `officeResolution.ts` maps an election type to the
+ * office and chamber it fills, and the state legislature and bill pages need
+ * the chamber that signs regional bills and what that office is called.
+ * Reading them from `countryClientConfig` shipped that whole 154 KB projection
+ * (names, routes, currencies, central banks, election systems, descriptors) to
+ * the browser for it; this file carries only the institutions those modules
+ * read.
  *
- * `countryOfficesClient.test.ts` pins every entry, including per-era
+ * `countryOfficesClient.test.ts` pins every entry, including the per-era
  * overlays, to `COUNTRY_CLIENT_CONFIGS`.
  */
 import type { CountryId, GovernmentType } from "./countriesCore";
@@ -2019,6 +2024,78 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
       snapElectionsAllowed: false,
     },
   },
+  CA: {
+    governmentType: "parliamentaryMonarchy",
+    regionLabel: "Province",
+    regionalBillAssentTitle: "Premier",
+    legislature: {
+      name: "Parliament",
+      lowerChamber: {
+        key: "caCommons",
+        name: "House of Commons",
+        shortName: "Commons",
+        seats: 343,
+        description:
+          "343 elected MPs from single-member ridings across 13 provinces and territories. The primary legislative chamber.",
+      },
+      upperChamber: {
+        key: "caSenate",
+        name: "Senate",
+        shortName: "Senate",
+        seats: 105,
+        description:
+          "105 appointed senators, apportioned by region. Revises and delays legislation but rarely defeats the elected House.",
+      },
+    },
+    subNationalChamber: {
+      key: "provincialLegislature",
+      name: "Provincial Legislature",
+      shortName: "Provincial Legislature",
+      regionalModel: true,
+    },
+    officeTypes: [
+      {
+        key: "primeMinister",
+        label: "Prime Minister",
+        labelPlural: "Prime Ministers",
+        isExecutive: true,
+        isSubNational: false,
+      },
+      {
+        key: "caCommons",
+        label: "Member of Parliament",
+        labelPlural: "Members of Parliament",
+        chamberKey: "caCommons",
+        isExecutive: false,
+        isSubNational: false,
+      },
+      {
+        key: "provincialLegislature",
+        label: "Member of the Provincial Legislature",
+        labelPlural: "Members of the Provincial Legislatures",
+        chamberKey: "provincialLegislature",
+        isExecutive: false,
+        isSubNational: true,
+      },
+      {
+        key: "governor",
+        label: "Premier",
+        labelPlural: "Premiers",
+        isExecutive: false,
+        isSubNational: true,
+      },
+      {
+        key: "centralBankChair",
+        label: "Governor of the Bank of Canada",
+        labelPlural: "Governors of the Bank of Canada",
+        isExecutive: false,
+        isSubNational: false,
+      },
+    ],
+    lowerElectionSystem: {
+      snapElectionsAllowed: true,
+    },
+  },
 };
 
 /** Per-era chamber and office overlays, applied by {@link getCountryOfficeConfig}. */
@@ -3239,6 +3316,7 @@ const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>> = {
   UK: "governor",
   JP: "governor",
   IE: "governor",
+  CA: "governor",
   DE: "ministerPresident",
   RU: "governor",
   DD: "governor",

@@ -45,6 +45,7 @@ import { WAL_ADJACENCY_MAP } from "@/lib/countries/wal/geographyFacts";
 import { BLR_ADJACENCY_MAP } from "@/lib/countries/blr/geographyFacts";
 import { UKR_ADJACENCY_MAP } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_ADJACENCY_MAP } from "@/lib/countries/bal/geographyFacts";
+import { CA_ADJACENCY_MAP } from "@/lib/countries/ca/geographyFacts";
 
 export type AdjacencyMap = Record<string, readonly string[]>;
 
@@ -163,6 +164,7 @@ export const STATE_ADJACENCY: Readonly<Record<CountryId, AdjacencyMap>> = {
   DD: DD_ADJACENCY_MAP,
   SCO: SCO_ADJACENCY_MAP,
   WAL: WAL_ADJACENCY_MAP,
+  CA: CA_ADJACENCY_MAP,
 };
 
 /**

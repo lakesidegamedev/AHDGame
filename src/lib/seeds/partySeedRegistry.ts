@@ -17,6 +17,7 @@ import { jpParties } from "@/lib/countries/jp/data/jpParties";
 import { cnParties } from "@/lib/seeds/cn/cnParties";
 import { ruParties } from "@/lib/seeds/ru/ruParties";
 import { ieParties } from "@/lib/seeds/ie/ieParties";
+import { caParties } from "@/lib/countries/ca/data/caParties";
 import { brParties } from "@/lib/seeds/br/brParties";
 import { ngParties } from "@/lib/seeds/ng/ngParties";
 import { frParties } from "@/lib/seeds/fr/frParties";
@@ -50,6 +51,8 @@ export const PARTY_SEED_MODULES: Partial<Record<CountryId, readonly PartySeed[]>
   CN: cnParties,
   RU: ruParties,
   IE: ieParties,
+  // Canada: seeds nothing until the era roster promotes it.
+  CA: caParties,
   BR: brParties,
   NG: ngParties,
   FR: frParties,
