@@ -72,7 +72,7 @@ describe("buildCountryMacroHistory", () => {
       expect(read.filter.worldId).toBe(worldId);
       expect(read.filter.country).toBe("US");
       expect(read.filter.region).toBeNull();
-      expect(read.filter.turn).toEqual({ $gte: 581 });
+      expect(read.filter.turn).toEqual({ $gte: 581, $lte: 700 });
       expect(read.projection).toEqual({ _id: 0, turn: 1, year: 1, value: 1 });
     }
 
@@ -86,6 +86,22 @@ describe("buildCountryMacroHistory", () => {
         population: 100_000_000,
         gdpPerCapita: 50_000,
       },
+    ]);
+  });
+
+  it("ends the window at the world clock, or at the turn the caller refetched for", async () => {
+    const { db, reads } = fakeDb({ gameState });
+
+    // A caller cannot ask for turns that have not happened; a caller that saw a
+    // turn complete asks for exactly that turn, which is the cache key it uses.
+    await buildCountryMacroHistory(db, "US", 120, 900);
+    await buildCountryMacroHistory(db, "US", 120, 690);
+
+    expect(reads.map((read) => read.filter.turn)).toEqual([
+      { $gte: 581, $lte: 700 },
+      { $gte: 581, $lte: 700 },
+      { $gte: 571, $lte: 690 },
+      { $gte: 571, $lte: 690 },
     ]);
   });
 

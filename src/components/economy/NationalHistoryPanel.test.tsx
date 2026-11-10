@@ -2,10 +2,26 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import en from "../../../messages/en/economyHistory.json";
 import { NationalHistoryPanel } from "./NationalHistoryPanel";
 
-vi.mock("@/hooks/useGameEvents", () => ({ useGameEvents: () => {} }));
+interface PanelEvent {
+  type: string;
+  payload: Record<string, unknown>;
+  timestamp: string;
+}
+
+const gameEvents = vi.hoisted(() => ({
+  handler: null as null | ((event: PanelEvent) => void),
+}));
+
+vi.mock("@/hooks/useGameEvents", () => ({
+  useGameEvents: (handler: (event: PanelEvent) => void) => {
+    gameEvents.handler = handler;
+  },
+}));
 
 const payload = {
   countryId: "US",
@@ -20,13 +36,28 @@ const payload = {
 };
 
 function mockFetch(response: unknown) {
-  const fetchMock = vi.fn(async () => new Response(JSON.stringify(response), { status: 200 }));
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL) => {
+    return new Response(JSON.stringify(response), { status: 200 });
+  });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
+function renderPanel(props: { countryId: "US" | "JP"; compact?: boolean }) {
+  return render(panel(props));
+}
+
+function panel(props: { countryId: "US" | "JP"; compact?: boolean }) {
+  return (
+    <NextIntlClientProvider locale="en" messages={en}>
+      <NationalHistoryPanel {...props} />
+    </NextIntlClientProvider>
+  );
+}
+
 describe("NationalHistoryPanel", () => {
   beforeEach(() => {
+    gameEvents.handler = null;
     mockFetch(payload);
   });
 
@@ -36,17 +67,17 @@ describe("NationalHistoryPanel", () => {
   });
 
   it("shows the newest value for the default GDP series", async () => {
-    render(<NationalHistoryPanel countryId="US" />);
+    renderPanel({ countryId: "US" });
     expect(await screen.findByText("$1.20T")).toBeTruthy();
     expect(screen.getByText(/\+20.0% over window/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /GDP per capita/ })).toBeTruthy();
   });
 
   it("switches to population and reports its own window change", async () => {
-    render(<NationalHistoryPanel countryId="US" />);
+    renderPanel({ countryId: "US" });
     await screen.findByText("$1.20T");
     fireEvent.click(screen.getByRole("button", { name: /Population/ }));
-    expect(await screen.findByText("102.00M people")).toBeTruthy();
+    expect(await screen.findByText(/102\.00M people/)).toBeTruthy();
     expect(screen.getByText(/\+2.0% over window/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /Population/ }).getAttribute("aria-pressed")).toBe(
       "true"
@@ -54,7 +85,7 @@ describe("NationalHistoryPanel", () => {
   });
 
   it("renders the compact sparkline form without axis labels", async () => {
-    render(<NationalHistoryPanel countryId="US" compact />);
+    renderPanel({ countryId: "US", compact: true });
     expect(await screen.findByText("$1.20T")).toBeTruthy();
     // The full panel labels the ends of the window; the sparkline drops them.
     expect(screen.queryByText("T1")).toBeNull();
@@ -90,8 +121,8 @@ describe("NationalHistoryPanel", () => {
       )
     );
 
-    const { rerender } = render(<NationalHistoryPanel countryId="US" />);
-    rerender(<NationalHistoryPanel countryId="JP" />);
+    const { rerender } = renderPanel({ countryId: "US" });
+    rerender(panel({ countryId: "JP" }));
     expect(await screen.findByText(/9\.99T/)).toBeTruthy();
 
     // The country the panel moved away from resolves after the switch.
@@ -104,7 +135,7 @@ describe("NationalHistoryPanel", () => {
 
   it("explains a thin series instead of drawing a flat zero line", async () => {
     mockFetch({ ...payload, points: [payload.points[0]] });
-    render(<NationalHistoryPanel countryId="US" />);
+    renderPanel({ countryId: "US" });
     expect(await screen.findByText(/Not enough recorded history yet/)).toBeTruthy();
   });
 
@@ -113,8 +144,25 @@ describe("NationalHistoryPanel", () => {
       "fetch",
       vi.fn(async () => new Response("nope", { status: 500 }))
     );
-    render(<NationalHistoryPanel countryId="US" />);
+    renderPanel({ countryId: "US" });
     expect(await screen.findByText(/Could not load national history/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  });
+
+  it("refetches for the completed turn so a pre-turn cached body cannot stick", async () => {
+    const fetchMock = mockFetch(payload);
+    renderPanel({ countryId: "US" });
+    await screen.findByText("$1.20T");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("until=");
+
+    await act(async () => {
+      gameEvents.handler?.({ type: "turn_complete", payload: { turn: 4 }, timestamp: "" });
+    });
+
+    // The turn in the URL is the cache key, so the request cannot be answered
+    // from the entry this page filled before turn 4 finished.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain("until=4");
   });
 });
