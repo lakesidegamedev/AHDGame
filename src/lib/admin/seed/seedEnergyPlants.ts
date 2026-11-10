@@ -5,7 +5,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { ENERGY_POSITION_BY_COUNTRY, ENERGY_SOURCES } from "@/lib/constants/cabinetEnergy";
 import { getEnergyPlantsCollection } from "@/lib/db/collections/energyPlants";
 import type { EnergyPlant } from "@/lib/db/types/energyPlant";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { strictEraForPreset } from "@/lib/seeds/presetSelector";
 
 /**
  * Energy sources available by era. Gates anachronistic generation from appearing
@@ -78,7 +78,7 @@ export function buildCountryFleet(
 
 /** Idempotent: seeds a fleet only for (country, energy seat) pairs with zero plants. */
 export async function seedEnergyPlants(db: Db, preset: string): Promise<void> {
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const col = getEnergyPlantsCollection(db);
   for (const countryId of Object.keys(COUNTRY_CONFIGS) as CountryId[]) {
     const positionId = ENERGY_POSITION_BY_COUNTRY[countryId];
