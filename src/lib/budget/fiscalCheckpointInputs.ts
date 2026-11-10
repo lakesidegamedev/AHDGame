@@ -44,6 +44,7 @@ export function macroAtFor(country: FiscalCheckpointCountry): (year: number) => 
     return {
       trendGrowth: base.trendGdpGrowth,
       inflation: base.targetInflation,
+      targetInflation: base.targetInflation,
       policyRate: base.neutralPrimeRate,
     };
   };
