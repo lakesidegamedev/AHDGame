@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { ObjectId, type Db } from "mongodb";
 import { SINGLEPLAYER_USER_ID, singleplayerSessionClaims } from "@/lib/singleplayer";
+import { countriesByTier, isShippingPreset } from "@/lib/world/eraRoster";
 import { CDN_GEO } from "@/lib/images/cdnUrls";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { invalidateMaintenanceCache } from "@/lib/maintenanceStatus";
@@ -109,6 +110,8 @@ export interface SingleplayerStatus {
   permanentHeadOfState: boolean;
   playerless: boolean;
   spectatorPath: "/singleplayer/worldsim";
+  /** Countries a player can take in this world, from the era roster. */
+  playerCountries: string[];
   /** Map files the globe cannot render without; the launcher pre-warms these. */
   warmAssets: string[];
 }
@@ -181,6 +184,10 @@ export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
     permanentHeadOfState: config?.permanentHeadOfState === true,
     playerless: characterCount === 0,
     spectatorPath: "/singleplayer/worldsim",
+    playerCountries:
+      typeof gameState?.preset === "string" && isShippingPreset(gameState.preset)
+        ? countriesByTier(gameState.preset, "player")
+        : [],
     warmAssets: Object.values(CDN_GEO).sort(),
   };
 }

@@ -135,3 +135,4 @@ scripts/.*-backup.json
 # Local copies of Claude Design mockups pulled down for reference while
 # implementing them. Generated artefacts, not source.
 .design-ref/
+smoke-timings.json

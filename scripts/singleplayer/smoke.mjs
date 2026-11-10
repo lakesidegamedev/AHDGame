@@ -6,10 +6,10 @@
  *
  *   1. a fresh install reaches readiness (database, server, code, account);
  *   2. first-run world setup completes and reports progress while it runs;
- *   3. a turn processes;
+ *   3. a turn processes, then a 5-turn batch, one save and one load;
  *   4. shutdown is graceful (exit code 0 on the control channel);
- *   5. a restart on a new MongoDB port (as the desktop client does) restores
- *      the save at turn 2;
+ *   5. a restart on a new MongoDB port (as the desktop client does) applies
+ *      the queued load and returns to the saved turn 2;
  *   6. MongoDB is fetched at most once and reused on restart;
  *   7. the launcher captures the game server's own output continuously.
  *
@@ -18,10 +18,11 @@
  *
  *   AHD_SMOKE_ROOT     where to create the scratch directories (default tmpdir)
  *   AHD_SMOKE_BUDGET_MS per-step deadline (default 10 minutes)
+ *   AHD_SMOKE_TIMINGS  where to write the timings JSON (default smoke-timings.json)
  */
 import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -200,10 +201,10 @@ try {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        preset: "1953-default",
-        mode: "worldsim",
+        preset: "2027-default",
+        mode: "normal",
         difficulty: "normal",
-        autonomyLevel: "v4",
+        autonomyLevel: "v6",
       }),
     })
   );
@@ -216,21 +217,77 @@ try {
   if (progress.stalled > 0)
     console.log(`[ahd-smoke] setup progress showed the stalled hint ${progress.stalled} time(s)`);
 
-  const turn = await timed("turn 1 to 2", () =>
-    json(running, "/api/singleplayer/worldsim/advance", {
+  const fresh = await json(running, "/api/singleplayer/status");
+  if (JSON.stringify(fresh.playerCountries) !== JSON.stringify(["US"]))
+    fail(`expected the US as the only player country: ${JSON.stringify(fresh)}`, running);
+
+  // A normal-mode world needs a character before any turn can run.
+  await timed("create character", () =>
+    json(running, "/api/auth/character", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ turns: 1 }),
+      body: JSON.stringify({
+        name: "Smoke Tester",
+        homeState: "CA",
+        countryId: "US",
+        policies: { economic: 0, social: 0 },
+        demographics: {
+          race: "other",
+          gender: "nonbinary",
+          education: "college",
+          wealth: "middle",
+        },
+      }),
     })
   );
-  if (turn.completed !== 1 || turn.finalTurn !== 2)
-    fail(`turn smoke failed: ${JSON.stringify(turn)}`, running);
 
-  // Prove the turn is on disk before anything stops, so a restart failure
-  // can be told apart from a turn that never persisted.
+  const turn = await timed("turn 1 to 2", () =>
+    json(running, "/api/singleplayer/turn/advance", { method: "POST" })
+  );
+  if (turn.success !== true || turn.turn !== 2)
+    fail(`turn smoke failed: ${JSON.stringify(turn)}`, running);
+  const firstTurnSeconds = timings.at(-1).seconds;
+
+  const save = await timed("manual save", () =>
+    json(running, "/api/singleplayer/saves", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "smoke" }),
+    })
+  );
+  if (!save.save?.id) fail(`save did not return an id: ${JSON.stringify(save)}`, running);
+
+  const batchStarted = Date.now();
+  await json(running, "/api/singleplayer/turn/batch", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ turns: 5 }),
+  });
+  let batch;
+  while (Date.now() - batchStarted < budgetMs) {
+    batch = (await json(running, "/api/singleplayer/turn/batch")).batch;
+    if (batch?.status === "finished") break;
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+  const batchMs = Date.now() - batchStarted;
+  if (batch?.status !== "finished") fail("5-turn batch did not finish within the budget", running);
+  record("5-turn batch", batchMs);
+  if (batch.completed < 1) fail(`batch completed no turns: ${JSON.stringify(batch)}`, running);
+  if (batch.completed < 5)
+    console.log(`[ahd-smoke] batch stopped early: ${JSON.stringify(batch.stop)}`);
+  const fiveTurnAverageSeconds = Number((batchMs / 1000 / batch.completed).toFixed(1));
+
+  // Prove the turns are on disk before anything stops, so a restart failure
+  // can be told apart from turns that never persisted.
   const afterTurn = await json(running, "/api/singleplayer/status");
-  if (afterTurn.turn !== 2 || afterTurn.turnInProgress)
-    fail(`turn did not persist before shutdown: ${JSON.stringify(afterTurn)}`, running);
+  if (afterTurn.turn !== 2 + batch.completed || afterTurn.turnInProgress)
+    fail(`turns did not persist before shutdown: ${JSON.stringify(afterTurn)}`, running);
+
+  const loadRequest = await json(running, `/api/singleplayer/saves/${save.save.id}/load`, {
+    method: "POST",
+  });
+  if (loadRequest.restartRequired !== true)
+    fail(`load did not ask for a restart: ${JSON.stringify(loadRequest)}`, running);
 
   const exitCode = await timed("graceful shutdown", () => stop(running));
   if (exitCode !== 0) fail(`shutdown exit code was ${exitCode}, expected 0`, running);
@@ -242,7 +299,7 @@ try {
   mongoPort = await freePort();
   running = await start("restart");
   const restored = await json(running, "/api/singleplayer/status");
-  if (!restored.hasWorld || restored.turn !== 2 || restored.preset !== "1953-default")
+  if (!restored.hasWorld || restored.turn !== 2 || restored.preset !== "2027-default")
     fail(`restart smoke failed: ${JSON.stringify(restored)}`, running);
 
   const everything = allOutput.join("");
@@ -251,6 +308,25 @@ try {
   if (!/using cached MongoDB|using MongoDB already installed|MONGOD_PATH/.test(running.output))
     fail("restart did not reuse the MongoDB runtime", running);
   void first;
+
+  const timingsFile = process.env.AHD_SMOKE_TIMINGS || path.join(root, "smoke-timings.json");
+  const seconds = (step) => timings.find((t) => t.step === step)?.seconds ?? null;
+  await writeFile(
+    timingsFile,
+    JSON.stringify(
+      {
+        platform: `${process.platform}/${process.arch}`,
+        readySeconds: seconds("first start: ready"),
+        setupSeconds: seconds("first-run world setup"),
+        firstTurnSeconds,
+        fiveTurnAverageSeconds,
+        turnsInBatch: batch.completed,
+        restartSeconds: seconds("restart: ready"),
+      },
+      null,
+      2
+    ) + "\n"
+  );
 
   const summary = [
     "| step | seconds |",
@@ -264,7 +340,7 @@ try {
       `### Singleplayer smoke (${process.platform}/${process.arch})\n\n${summary}\n\nMongoDB downloads: ${downloads}\n`
     );
   }
-  console.log("[ahd-smoke] packaged world, turn, shutdown and restart passed");
+  console.log("[ahd-smoke] packaged world, turns, save and load, shutdown and restart passed");
 } finally {
   if (running?.child) await stop(running).catch(() => running.child.kill());
   await rm(work, { recursive: true, force: true }).catch(() => {});
