@@ -282,6 +282,59 @@ export function fiscalConsolidationApprovalEffect(
   return -Math.round(approvalCost * (1 - turnsSince / fadeTurns) * 10) / 10;
 }
 
+export interface ConsolidationPackageInput {
+  fiscalYear: number;
+  appliedTurn: number;
+  sizeGdpShare: number;
+  taxRise: number;
+  spendingCut: number;
+  approvalCost: number;
+}
+
+/** What a country page shows of its latest consolidation package. */
+export interface FiscalConsolidationSummary {
+  fiscalYear: number;
+  /** Package size as a share of GDP. */
+  sizeGdpShare: number;
+  /** Shares of the package raised by taxes and made up of spending cuts; they sum to 1. */
+  taxShare: number;
+  cutShare: number;
+  /** Approval points the package cost on enactment, and what is still being felt. */
+  approvalCost: number;
+  approvalEffectNow: number;
+  /** Turns until the approval effect has faded away. */
+  turnsRemaining: number;
+}
+
+/**
+ * The package to show on the country page: the latest one, while its approval
+ * cost is still fading (one year). Null once it has faded or when none exists.
+ */
+export function summariseFiscalConsolidation(
+  record: ConsolidationPackageInput | null | undefined,
+  turn: number,
+  fadeTurns: number
+): FiscalConsolidationSummary | null {
+  if (!record) return null;
+  const turnsSince = turn - record.appliedTurn;
+  if (!(fadeTurns > 0) || turnsSince < 0 || turnsSince >= fadeTurns) return null;
+  const total = record.taxRise + record.spendingCut;
+  const taxShare = total > 0 ? record.taxRise / total : 0;
+  return {
+    fiscalYear: record.fiscalYear,
+    sizeGdpShare: record.sizeGdpShare,
+    taxShare,
+    cutShare: total > 0 ? 1 - taxShare : 0,
+    approvalCost: record.approvalCost,
+    approvalEffectNow: -fiscalConsolidationApprovalEffect(
+      record.approvalCost,
+      turnsSince,
+      fadeTurns
+    ),
+    turnsRemaining: fadeTurns - turnsSince,
+  };
+}
+
 /** Apply cumulative category scales to a spending breakdown (absent key = unscaled). */
 export function applyCategoryScale(
   byCategory: Record<string, number>,

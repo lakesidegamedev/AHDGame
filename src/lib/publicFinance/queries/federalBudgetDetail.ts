@@ -26,6 +26,11 @@ import { estimateCountryOwnedBudgetNetLocal } from "@/lib/budget/publicEnterpris
 import { readStateOwnershipConcentration } from "@/lib/nationalization/concentration";
 import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
 import { effectiveBorrowingLimit } from "@/lib/budget/borrowingLimit";
+import {
+  summariseFiscalConsolidation,
+  type ConsolidationPackageInput,
+  type FiscalConsolidationSummary,
+} from "@/lib/budget/rules/fiscalStabilizer";
 import { loadDefenseFunding } from "./defenseFunding";
 import { loadOrganizationContributions } from "./organizationContributions";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
@@ -106,6 +111,8 @@ export interface SovereignProjection {
   ceilingHeadroom: number | null;
   ceilingHeadroomYears: number | null;
   ceilingStatus: SovereignCeilingStatus;
+  /** Latest austerity package while its approval cost is still fading. */
+  consolidation: FiscalConsolidationSummary | null;
 }
 
 type SovereignProjectionBudget = {
@@ -116,6 +123,7 @@ type SovereignProjectionBudget = {
   debt?: Pick<FederalBudget["debt"], "principal" | "ceiling">;
   revenue?: Pick<FederalBudget["revenue"], "total">;
   spending?: Pick<FederalBudget["spending"], "total">;
+  fiscalConsolidation?: { lastPackage?: ConsolidationPackageInput | null };
 };
 
 function projectCeiling(
@@ -188,6 +196,11 @@ export function projectSovereign(
     marketAccess: locked ? "Locked" : "Open",
     marketAccessUntilTurn: locked ? lockUntil : null,
     ...projectCeiling(budget),
+    consolidation: summariseFiscalConsolidation(
+      budget.fiscalConsolidation?.lastPackage,
+      currentTurn,
+      TURNS_PER_YEAR
+    ),
   };
 }
 
