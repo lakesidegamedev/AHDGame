@@ -44,6 +44,14 @@ export interface SectorStrategy {
   minDecade?: string;
   requiresTechUnlock?: boolean;
   /**
+   * Turns to commission a site of this method (48 turns is one game year).
+   * Required on every method opened by a 2039 or later tier; see the
+   * "no method is free" test.
+   */
+  buildTurns?: number;
+  /** The cost the method carries beyond its inputs, in plain words. Required with `buildTurns`. */
+  downside?: string;
+  /**
    * Breakthrough gate: cumulative world frontier research in this method's
    * sector (rdScore spent on late-tier research by every corporation in the
    * sector, see techTree/breakthrough) must reach this before the method
