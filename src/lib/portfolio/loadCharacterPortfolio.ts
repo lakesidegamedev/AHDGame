@@ -8,7 +8,7 @@ import { loadCharacterFundPortfolio } from "@/lib/indexFunds/corporationPortfoli
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type { Corporation, PortfolioHistory, Character } from "@/lib/db/types";
+import type { PortfolioHistory, Character } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -37,6 +37,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type PortfolioHistoryReading = Pick<
   PortfolioHistory,
@@ -143,8 +144,7 @@ export async function loadPortfolioForCharacter(
   const currentTurn = gameState?.currentTurn ?? 1;
 
   // Find all corporations where this character is a shareholder
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ "shareholders.characterId": charId })
     .project({
       name: 1,
@@ -248,8 +248,7 @@ export async function loadPortfolioForCharacter(
     const bondCorpIds = [
       ...new Set(bonds.filter(isCorporateBond).map((bond) => bond.corporationId.toString())),
     ];
-    const bondCorps = await db
-      .collection<Corporation>("corporations")
+    const bondCorps = await corporationsCollection(db)
       .find({ _id: { $in: bondCorpIds.map((id) => new ObjectId(id)) } })
       .project({ name: 1, sequentialId: 1, brandColor: 1 })
       .toArray();

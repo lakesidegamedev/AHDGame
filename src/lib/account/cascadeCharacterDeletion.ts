@@ -10,7 +10,7 @@
 
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, ElectionCandidate, GameState } from "@/lib/db/types";
+import type { ElectionCandidate, GameState } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   cleanupShareMarketActivityForCharacters,
@@ -22,6 +22,7 @@ import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CascadeResult {
   sharesReleased: number;
@@ -43,7 +44,7 @@ export async function cascadeCharacterDeletion(
   characterId: ObjectId
 ): Promise<CascadeResult> {
   await closeCharacterSavings(db, characterId);
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
 

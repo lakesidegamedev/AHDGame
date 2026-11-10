@@ -26,6 +26,7 @@ import { loadLiveCorporateLoans } from "@/lib/banking/corporateLoanAssumption";
 import { acquisitionBalanceSheet } from "./rules";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReferenceValuation {
   /** Canonical whole-corp reference valuation (₳). */
@@ -85,8 +86,7 @@ export async function referenceValuation(db: Db, target: Corporation): Promise<R
         $or: [{ corporationId: target._id }, { "holders.corporationId": target._id }],
       })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "shareholders.corporationId": target._id },
         { projection: { shareholders: 1, sharePrice: 1, countryId: 1, liquidCurrencyCode: 1 } }

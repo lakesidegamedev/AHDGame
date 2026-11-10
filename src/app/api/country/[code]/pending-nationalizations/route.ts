@@ -14,6 +14,7 @@ import type { Corporation, CorporateSector, PendingNationalization } from "@/lib
 import type { NationalizationTrigger } from "@/lib/nationalization/eligibility";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -67,8 +68,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     const corpNames = new Map<string, string>();
     if (corpIds.size > 0) {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find({ _id: { $in: Array.from(corpIds).map((id) => new ObjectId(id)) } })
         .project<{ _id: Corporation["_id"]; name: string }>({ _id: 1, name: 1 })
         .toArray();

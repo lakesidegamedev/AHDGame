@@ -7,7 +7,8 @@ import {
   generateStockExchangeSnapshots,
   generateInvestorRankingSnapshot,
 } from "@/lib/turn/stockExchangeSnapshot";
-import type { StockExchangeSnapshot, InvestorRankingSnapshot, Corporation } from "@/lib/db/types";
+import type { StockExchangeSnapshot, InvestorRankingSnapshot } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface DiagnosticResult {
   timestamps: {
@@ -63,7 +64,7 @@ export async function GET() {
 
     // Count documents in relevant collections
     const [corpCount, sectorCount, snapshotCount, investorSnapshotCount] = await Promise.all([
-      db.collection("corporations").countDocuments(),
+      corporationsCollection(db).countDocuments(),
       db.collection("corporateSectors").countDocuments(),
       db.collection("stockExchangeSnapshots").countDocuments(),
       db.collection("investorRankingSnapshots").countDocuments(),
@@ -78,8 +79,7 @@ export async function GET() {
     ]);
 
     // Get sample corporations
-    const sampleCorps = await db
-      .collection<Corporation>("corporations")
+    const sampleCorps = await corporationsCollection(db)
       .find({})
       .limit(10)
       .project({
@@ -161,15 +161,14 @@ export async function POST() {
 
     // Count documents
     const [corpCount, sectorCount, snapshotCount, investorSnapshotCount] = await Promise.all([
-      db.collection("corporations").countDocuments(),
+      corporationsCollection(db).countDocuments(),
       db.collection("corporateSectors").countDocuments(),
       db.collection("stockExchangeSnapshots").countDocuments(),
       db.collection("investorRankingSnapshots").countDocuments(),
     ]);
 
     // Get sample corporations
-    const sampleCorps = await db
-      .collection<Corporation>("corporations")
+    const sampleCorps = await corporationsCollection(db)
       .find({})
       .limit(10)
       .project({

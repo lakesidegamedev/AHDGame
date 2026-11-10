@@ -6,6 +6,7 @@ import {
   subsidiaryCeoBlockReason,
   type SubsidiaryCeoBlockReason,
 } from "./helpers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const SYSTEM_USER_ID = "000000000000000000000000";
 
@@ -40,8 +41,7 @@ export async function collectSiblingSubsidiaryCeoUserIds(
   parentId: ObjectId,
   excludeSubId: ObjectId
 ): Promise<ObjectId[]> {
-  const formalized = await db
-    .collection<Corporation>("corporations")
+  const formalized = await corporationsCollection(db)
     .find(
       { subsidiaryFormalizedAtTurn: { $exists: true } },
       {
@@ -87,9 +87,7 @@ export async function subsidiaryReclaimBlocked(
   if (!isFormalizedSubsidiary(corp, controllingParent)) return null;
   if (!controllingParent) return null;
 
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId });
+  const parent = await corporationsCollection(db).findOne({ _id: controllingParent.corporationId });
   if (!parent?.userId) return null;
 
   const parentCeoUserId = await resolveParentCeoUserId(db, parent);

@@ -5,7 +5,7 @@ import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { resolveFillEligibility, FILL_REASON_TEXT } from "@/lib/military/defenceFillEligibility";
@@ -21,6 +21,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import type { GovernmentTender, ContractBid } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export class ContractError extends Error {
   constructor(
@@ -37,9 +38,7 @@ export async function validateBid(
   turn: number,
   user?: AuthUserWithCharacter
 ) {
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: new ObjectId(bid.corporationId) });
+  const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(bid.corporationId) });
   if (!corp) throw new ContractError("Corporation not found.", 404);
   if (user && requireCeo(corp, user.userId))
     throw new ContractError("Only this corporation's CEO may bid.", 403);

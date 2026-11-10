@@ -3,7 +3,7 @@
  * loadPublicSubsidiaryGroups converts public cash, revenue and equity into anchor currency.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { getControllingCorporateParent } from "../corporateOwnership";
 import { shouldRedactCorporation } from "../redaction";
 import {
@@ -23,10 +23,10 @@ import {
   publicGroupStructure,
   type PublicGroupMember,
 } from "./rules/publicListing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export async function loadPublicSubsidiaryGroups(db: Db, corporationId?: string) {
   const [corps, reserved, fx] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {

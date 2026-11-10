@@ -1,7 +1,8 @@
-import type { Db, ObjectId } from "mongodb";
+import type { Db, Document, ObjectId } from "mongodb";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import { createNotification } from "@/lib/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export function proposalSummary(vote: CorporationVote): string {
   switch (vote.type) {
@@ -23,9 +24,10 @@ export function proposalSummary(vote: CorporationVote): string {
 }
 
 async function getShareholderUserIds(db: Db, corporationId: ObjectId): Promise<ObjectId[]> {
-  const corp = await db
-    .collection("corporations")
-    .findOne({ _id: corporationId }, { projection: { shareholders: 1 } });
+  const corp = await corporationsCollection<Document>(db).findOne(
+    { _id: corporationId },
+    { projection: { shareholders: 1 } }
+  );
   if (!corp?.shareholders?.length) return [];
   const characterIds = corp.shareholders
     .filter((s: { characterId?: ObjectId }) => s.characterId)

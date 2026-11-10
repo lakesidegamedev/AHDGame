@@ -38,6 +38,7 @@ import {
   logIndexFundDividendBulk,
 } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * ₳ → fund-currency rate for a holder payout, matching what redeem applies.
@@ -136,9 +137,10 @@ export async function processIndexFundDividend(
   const turn = options?.turn ?? (await getCurrentTurn(db));
   const now = new Date();
 
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId }, { projection: { name: 1 } });
+  const corporation = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    { projection: { name: 1 } }
+  );
   const corporationName = corporation?.name;
 
   const characterIds = positions
@@ -153,8 +155,7 @@ export async function processIndexFundDividend(
     .filter((p) => p.holderKind === "corporation" && p.corporationId)
     .map((p) => p.corporationId!);
   const holderCorps = holderCorpIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find(
           { _id: { $in: holderCorpIds } },
           { projection: { name: 1, liquidCurrencyCode: 1, countryId: 1 } }
@@ -353,7 +354,7 @@ export async function processIndexFundDividend(
     }
   }
 
-  if (corpOps.length > 0) await db.collection("corporations").bulkWrite(corpOps);
+  if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps);
   await payFundHolderIncome(
     db,
     `fund:${fundId}:${corporationId}:${options?.payoutKey ?? "default"}`,
@@ -513,8 +514,7 @@ export async function processIndexFundDividendsBatch(
   }
   const [corpDocs, charDocs, impDocs, nppDocs] = await Promise.all([
     corpIds.length
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corpIds } },
             { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1 } }
@@ -796,7 +796,7 @@ export async function processIndexFundDividendsBatch(
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   await Promise.all([
-    corporateOps.length ? db.collection("corporations").bulkWrite(corporateOps) : Promise.resolve(),
+    corporateOps.length ? corporationsCollection(db).bulkWrite(corporateOps) : Promise.resolve(),
     fundOps.length ? db.collection("indexFunds").bulkWrite(fundOps as any[]) : Promise.resolve(),
     nppOps.length ? db.collection("npps").bulkWrite(nppOps as any[]) : Promise.resolve(),
   ]);

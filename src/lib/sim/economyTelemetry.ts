@@ -18,6 +18,7 @@ import {
 import { getGdpBaseline } from "@/lib/utils/fundGeneration";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Post-run economy telemetry.
@@ -508,8 +509,7 @@ function ceoClassOf(ceoType: unknown): CeoClass {
 
 async function collectCorpHealth(db: Db): Promise<CorpHealthTelemetry> {
   const [corps, sectors] = await Promise.all([
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({}, { projection: { type: 1, ceoType: 1, liquidCapital: 1, suspended: 1 } })
       .toArray(),
     db

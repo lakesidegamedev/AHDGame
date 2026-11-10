@@ -75,6 +75,7 @@ import {
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -153,7 +154,7 @@ async function runAgreedAcquisition(
   params: ExecuteAgreedAcquisitionParams
 ): Promise<ExecuteAgreedAcquisitionResult> {
   const { db, offer, currentTurn } = params;
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const [acquirer, target, stockTaxState] = await Promise.all([
     corps.findOne({ _id: offer.acquirerCorporationId }),
@@ -398,8 +399,7 @@ async function runAgreedAcquisition(
           .toArray()
       : [],
     creditorIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: creditorIds } })
           .toArray()
       : [],
@@ -855,12 +855,10 @@ async function releaseAcquisitionTarget(
   targetId: ObjectId,
   offerId: ObjectId
 ): Promise<void> {
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: targetId, acquisitionSettlementId: offerId },
-      { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: targetId, acquisitionSettlementId: offerId },
+    { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
+  );
 }
 
 /**

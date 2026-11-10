@@ -40,19 +40,14 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { isPendingShareOfferDuplicateKey } from "@/lib/elections/duplicateKey";
-import type {
-  Character,
-  Corporation,
-  Notification,
-  ShareListing,
-  ShareOffer,
-} from "@/lib/db/types";
+import type { Character, Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { checkNegotiatedSale } from "@/lib/corporations/negotiatedSaleGuards";
 import { getGameTime } from "@/lib/time/gameTime";
 import { settleListingOffer } from "./acceptShareOffer";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -117,9 +112,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
     // Fetch listing corp early so price-bound error messages use the correct currency symbol.
     // pricePerShare and marketPriceAtCreation are stored in the corp's liquidCurrencyCode (v0.2.6).
-    const listingCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: listing.corporationId });
+    const listingCorp = await corporationsCollection(db).findOne({ _id: listing.corporationId });
     const listingCorpSym =
       CURRENCY_SYMBOLS[(listingCorp?.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
 
@@ -238,9 +231,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     let placedOfferId: ObjectId | null = null;
 
     if (offerAsCorporation) {
-      const placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+      const placerCorp = await corporationsCollection(db).findOne({
+        ceoId: character._id,
+        ceoVacant: { $ne: true },
+      });
       if (!placerCorp) {
         return errorResponse(403, "You must be an active CEO to offer on behalf of a corporation");
       }

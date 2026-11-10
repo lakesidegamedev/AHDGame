@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { hasProtectedConstructionClaim } from "@/lib/banking/rules/constructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type RelocationBondLease = NonNullable<Corporation["headquartersRelocationBondFunding"]>;
 
@@ -77,7 +78,7 @@ export async function acquireRelocationBondFundingLease(
   proposed: RelocationBondLease
 ): Promise<RelocationBondLease | null> {
   if (!Number.isFinite(proposed.nativeFxRate) || proposed.nativeFxRate <= 0) return null;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const current = await corporations.findOne(
     { _id: corporation._id },
     { projection: { headquartersRelocationBondFunding: 1 } }
@@ -135,10 +136,8 @@ export async function releaseRelocationBondFundingLease(
   corporationId: Corporation["_id"],
   key: string
 ): Promise<void> {
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporationId, ...relocationBondLeaseFilter(key) },
-      { $unset: { headquartersRelocationBondFunding: "" }, $set: { updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporationId, ...relocationBondLeaseFilter(key) },
+    { $unset: { headquartersRelocationBondFunding: "" }, $set: { updatedAt: new Date() } }
+  );
 }

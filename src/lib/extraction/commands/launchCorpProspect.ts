@@ -22,6 +22,7 @@ import {
   corpCanProspect,
   PROSPECT_NOT_EXTRACTION_MESSAGE,
 } from "@/lib/constants/prospecting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CorpProspectCosts {
   costAnchor: number;
@@ -147,12 +148,10 @@ export async function launchCorpProspect(
 
   // Atomic guarded debit — the affordability guard lives in the filter so the
   // $inc can never overdraw under concurrency.
-  const debit = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporation._id, liquidCapital: { $gte: costLocal } },
-      { $inc: { liquidCapital: -costLocal }, $set: { updatedAt: now } }
-    );
+  const debit = await corporationsCollection(db).updateOne(
+    { _id: corporation._id, liquidCapital: { $gte: costLocal } },
+    { $inc: { liquidCapital: -costLocal }, $set: { updatedAt: now } }
+  );
   if (debit.modifiedCount === 0) {
     return {
       ok: false,

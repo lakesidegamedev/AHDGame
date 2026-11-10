@@ -15,6 +15,7 @@ import { isAnchorBalanced } from "@/lib/ledger/epsilon";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface NppReinvestmentCashWitness {
   corporationId: ObjectId;
@@ -69,8 +70,10 @@ export async function flushNppReinvestmentCashWitnesses(
 ): Promise<void> {
   if (pending.length === 0) return;
   try {
-    const corporations = await db
-      .collection<{ _id: ObjectId; nppReinvestmentCashWitnessKey?: string }>("corporations")
+    const corporations = await corporationsCollection<{
+      _id: ObjectId;
+      nppReinvestmentCashWitnessKey?: string;
+    }>(db)
       .find(
         {
           _id: { $in: pending.map((row) => row.corporationId) },

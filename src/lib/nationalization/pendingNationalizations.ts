@@ -14,6 +14,7 @@ import { getDesignatedSectorTypes, corpHasStrategicSector } from "./strategicSec
 import { getTopMarketSharePercent } from "./monopolyTrigger";
 import { allCitedConditionsCleared } from "./noticeWindow";
 import { MONOPOLY_SHARE_THRESHOLD } from "./constants";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function processPendingNationalizations(
   db: Db,
@@ -78,14 +79,9 @@ async function resolveOne(
     sector = await db
       .collection<CorporateSector>("corporateSectors")
       .findOne({ _id: pending.targetSectorId });
-    if (sector)
-      corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: sector.corporationId });
+    if (sector) corp = await corporationsCollection(db).findOne({ _id: sector.corporationId });
   } else if (pending.targetCorporationId) {
-    corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: pending.targetCorporationId });
+    corp = await corporationsCollection(db).findOne({ _id: pending.targetCorporationId });
   }
 
   // Target gone / already state-owned ⇒ cancel as a no-op.

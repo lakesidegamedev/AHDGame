@@ -24,6 +24,7 @@ import {
   type CanUnlockResult,
   type UnlockBlockReason,
 } from "@/lib/constants/techTree";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type UnlockTechNodeResult =
   | {
@@ -142,7 +143,7 @@ export async function unlockTechNode(
     set[`techDecadeChosenTurn.${node.decadeId}`] = turn;
   }
 
-  const updateResult = await db.collection<Corporation>("corporations").updateOne(
+  const updateResult = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
       rdScore: { $gte: node.cost },
@@ -209,12 +210,10 @@ export async function unlockTechNode(
       },
     });
     try {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          buildTechUnlockRefundUpdate(refundSpecForNode(node, cashCost, committing))
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        buildTechUnlockRefundUpdate(refundSpecForNode(node, cashCost, committing))
+      );
     } catch (refundErr) {
       Sentry.captureException(refundErr, {
         extra: {

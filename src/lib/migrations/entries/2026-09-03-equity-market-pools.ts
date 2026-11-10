@@ -4,6 +4,7 @@ import type { EquityMarketPool } from "@/lib/db/types";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { EQUITY_POOL_M2_SHARE } from "@/lib/equities/marketPool";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Seed the real cash counterpart to existing corporation public-float inventory. */
 async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
@@ -12,8 +13,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
       .collection<{ currencyCode?: string }>("exchangeRates")
       .find({}, { projection: { currencyCode: 1 } })
       .toArray(),
-    db
-      .collection<{ liquidCurrencyCode?: string }>("corporations")
+    corporationsCollection<{ liquidCurrencyCode?: string }>(db)
       .aggregate<{ _id: string | null }>([
         { $match: { isPrivate: { $ne: true }, hiddenFromExchange: { $ne: true } } },
         { $group: { _id: "$liquidCurrencyCode" } },

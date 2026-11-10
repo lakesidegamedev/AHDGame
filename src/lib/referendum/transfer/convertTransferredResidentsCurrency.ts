@@ -17,10 +17,11 @@ import { retainsCompletedSecuredCurrency } from "./rules/securedCurrency";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { Db, Filter } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, Character } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { type CurrencyCode } from "@/lib/constants/currencies";
 import { type FxScalePair, loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function convertTransferredResidentsCurrency(
   db: Db,
@@ -44,8 +45,7 @@ export async function convertTransferredResidentsCurrency(
   // Corps that followed the region into the new country re-denominate to its
   // currency (NPP-relocated corps that stayed in the source country are excluded
   // — their HQ is no longer in this region).
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ headquartersState: regionId, countryId: toCountryId })
     .toArray();
   const securedSectors = strict

@@ -1,6 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { User } from "@/lib/db/types/user";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import type { CommodityPrice, CommodityPriceHistory } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
@@ -8,6 +7,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { getGameStateCore } from "@/lib/gameState";
 import { widgetWatchlist, type WatchKind } from "../watchlist";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface WatchlistRow {
   kind: WatchKind;
@@ -50,8 +50,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
   const [state, corps, prices] = await Promise.all([
     getGameStateCore(db),
     corpIds.length
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { sequentialId: { $in: corpIds } },
             {

@@ -10,7 +10,7 @@ import {
   suggestedDefenceMaximumPricePerLot,
 } from "@/lib/governmentContracts/defenceLiveFloor";
 import { militaryPriceAnchor } from "@/lib/military/procurement";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { contractContext, contractRouteError, privateJson } from "@/lib/governmentContracts/api";
 import { managementAuthority } from "@/lib/governmentContracts/authority";
 import { getResourceContractAuthority } from "@/lib/extraction/contractAuthority";
@@ -20,6 +20,7 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { extractionCapacityQuote } from "@/lib/governmentContracts/rules/presentation";
 import { defenceContractWindow } from "@/lib/military/defenceContractLimits";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
@@ -127,8 +128,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           )
         : null;
     const corps = user
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { userId: new ObjectId(user.userId), ceoVacant: { $ne: true } },
             {

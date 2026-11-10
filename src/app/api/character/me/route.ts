@@ -10,7 +10,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character, Corporation, Election, ImperialCharacter, User } from "@/lib/db/types";
+import type { Character, Election, ImperialCharacter, User } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { foundingCooldownTurnsRemaining } from "@/lib/corporations/foundingCooldown";
@@ -28,6 +28,7 @@ import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { listCharacterPositions, listFundsByIds } from "@/lib/indexFunds/fundQueries";
 import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // The current corporation is read here, so this endpoint must never serve a
 // stale body: a positive max-age let the browser return a pre-founding
@@ -68,7 +69,7 @@ export async function GET(request?: Request) {
 
       if (imperial) {
         const [corporation, forexEnabled] = await Promise.all([
-          db.collection<Corporation>("corporations").findOne(
+          corporationsCollection(db).findOne(
             { ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } },
             {
               projection: {
@@ -150,7 +151,7 @@ export async function GET(request?: Request) {
       fundsFeatureEnabled,
       fundPositions,
     ] = await Promise.all([
-      db.collection<Corporation>("corporations").findOne(
+      corporationsCollection(db).findOne(
         { ceoId: user.character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
         {
           projection: {

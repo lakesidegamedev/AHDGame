@@ -21,6 +21,7 @@ import type { LivingConflictState } from "@/lib/livingConflict/types";
 import { collectEconomyTelemetry, type EconomyTelemetry } from "@/lib/sim/economyTelemetry";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -969,8 +970,7 @@ async function collectCorporateCashFlowMetrics(
   turn: number
 ): Promise<CorporateCashFlowMetrics> {
   const rows = await db.collection("corporationHistory").find({ turn }).toArray();
-  const corps = await db
-    .collection("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { countryOwnerId: 1, countryId: 1 } })
     .toArray();
   const countries = new Map(

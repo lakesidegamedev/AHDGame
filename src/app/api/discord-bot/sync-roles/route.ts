@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Character, User, PoliticalParty, Corporation, ElectedOfficial } from "@/lib/db/types";
+import type { Character, User, PoliticalParty, ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import {
   getHeadOfGovernmentCharacterId,
@@ -16,6 +16,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { buildSyncRoleTokens } from "./buildSyncRoles";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -75,8 +76,7 @@ export async function GET(request: Request) {
     }
 
     // Check investor status and compute portfolio value + ranking
-    const allCorps = await db
-      .collection<Corporation>("corporations")
+    const allCorps = await corporationsCollection(db)
       .find({})
       .project<{
         _id: import("mongodb").ObjectId;
@@ -237,8 +237,7 @@ export async function POST(request: Request) {
     // Fetch all corporations (for CEO and investor checks) + FX rates for
     // anchor-normalized cross-corp wealth summation (v0.2.6).
     const [corporations, bulkFxByCurrency] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({})
         .project<{
           _id: import("mongodb").ObjectId;

@@ -16,10 +16,10 @@ import type {
   State,
   ElectionCandidate,
   Election,
-  Corporation,
   InvestorRankingSnapshot,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -162,8 +162,7 @@ export async function GET(request: Request) {
     // This avoids scanning all corporations for a single profile lookup
     const corporations =
       characterIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ ceoId: { $in: characterIds }, ceoVacant: { $ne: true } })
             .project<{
               _id: import("mongodb").ObjectId;

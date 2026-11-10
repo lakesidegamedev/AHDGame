@@ -34,6 +34,7 @@ import {
   MIN_EXPENSE_RATIO_ANNUAL,
 } from "./constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const FUND_TX = "indexFundTransactions";
 
@@ -129,9 +130,7 @@ async function commitCharter(
   tickerSymbol: string,
   name: string
 ): Promise<CharterFundResult> {
-  const sponsor = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: input.sponsor._id });
+  const sponsor = await corporationsCollection(db).findOne({ _id: input.sponsor._id });
   if (!sponsor || String(sponsor.userId) !== String(input.sponsor.userId))
     return {
       ok: false,
@@ -173,8 +172,7 @@ async function commitCharter(
     };
     const invalid = validatePickedStocks(mandate);
     if (invalid) return { ok: false, status: 400, error: invalid };
-    const issuers = await db
-      .collection<Corporation>("corporations")
+    const issuers = await corporationsCollection(db)
       .find(
         {
           _id: { $in: mandate.stocks.map((s) => new ObjectId(s.corporationId)) },
@@ -238,7 +236,7 @@ async function commitCharter(
   const [tickerTaken, slugTaken, corpTickerTaken] = await Promise.all([
     db.collection<IndexFund>("indexFunds").countDocuments({ tickerSymbol }),
     db.collection<IndexFund>("indexFunds").countDocuments({ slug }),
-    db.collection<Corporation>("corporations").countDocuments({ tickerSymbol }),
+    corporationsCollection(db).countDocuments({ tickerSymbol }),
   ]);
   if (tickerTaken > 0 || slugTaken > 0 || corpTickerTaken > 0)
     return { ok: false, error: `Ticker ${tickerSymbol} is already in use.`, status: 409 };

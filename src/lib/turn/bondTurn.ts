@@ -73,6 +73,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
@@ -105,12 +106,10 @@ export async function processBondTurn(
   const corporationActionsPaused = gameState?.corporationActionsPaused === true;
   const captureSovereignCashProceeds = config?.captureSovereignCashProceeds === true;
 
-  await db
-    .collection("corporations")
-    .updateMany(
-      { bondDefaultCreditPenaltyUntilTurn: { $lte: turn } },
-      { $unset: { bondDefaultCreditPenaltyUntilTurn: "" }, $set: { updatedAt: now } }
-    );
+  await corporationsCollection(db).updateMany(
+    { bondDefaultCreditPenaltyUntilTurn: { $lte: turn } },
+    { $unset: { bondDefaultCreditPenaltyUntilTurn: "" }, $set: { updatedAt: now } }
+  );
 
   await issueScheduledSovereignBondSeries(db, turn, now, { preset: gameState?.preset });
   steps.mark("sovereignIssuance");
@@ -548,7 +547,7 @@ export async function processBondTurn(
     });
   }
   if (corpDeltaOps.length > 0) {
-    await db.collection("corporations").bulkWrite(corpDeltaOps);
+    await corporationsCollection(db).bulkWrite(corpDeltaOps);
   }
 
   // ── Phase 3: Check for defaults (negative liquidCapital) ──────────────────

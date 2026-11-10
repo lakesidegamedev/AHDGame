@@ -11,6 +11,7 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { runSavingsCommand } from "@/lib/savings/accountsShell";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type MoveCharacterSavingsResult =
   { ok: true; holder: SavingsHolder } | { ok: false; error: string };
@@ -97,7 +98,7 @@ async function moveCharacterSavingsInner(
       return { ok: false, error: "Invalid bank corporation id" };
     }
 
-    targetBank = await db.collection<Corporation>("corporations").findOne({
+    targetBank = await corporationsCollection(db).findOne({
       _id: new ObjectId(holder),
     });
     if (!targetBank) {

@@ -69,6 +69,7 @@ import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { fillBestBuyOrderForMarketSell } from "@/lib/corporations/commands/shareTrading/fillBestBuyOrder";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -232,9 +233,10 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
         ceoId = character._id;
       }
 
-      const sellerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId, ceoVacant: { $ne: true } });
+      const sellerCorp = await corporationsCollection(db).findOne({
+        ceoId,
+        ceoVacant: { $ne: true },
+      });
       if (!sellerCorp) {
         return errorResponse(403, "You must be a CEO to sell shares on behalf of a corporation");
       }
@@ -297,12 +299,10 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
       const sellerFxRate = await getCorpFxRate(db, sellerCorp);
       const proceedsInSellerCapital = anchorToCorpLiquidCapital(proceeds, sellerCorp, sellerFxRate);
 
-      const sellerCredit = await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: sellerCorp._id },
-          { $inc: { liquidCapital: proceedsInSellerCapital }, $set: { updatedAt: now } }
-        );
+      const sellerCredit = await corporationsCollection(db).updateOne(
+        { _id: sellerCorp._id },
+        { $inc: { liquidCapital: proceedsInSellerCapital }, $set: { updatedAt: now } }
+      );
       if (sellerCredit.matchedCount === 0) {
         await creditSharesToCorp(
           db,
@@ -624,9 +624,10 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
           { holdingChange: { turn: saleTurn, restore: holdingChange.taken } }
         );
         if (shouldVacateCeo) {
-          await db
-            .collection<Corporation>("corporations")
-            .updateOne({ _id: corporation._id }, buildCeoRestoreUpdate(corporation, new Date()));
+          await corporationsCollection(db).updateOne(
+            { _id: corporation._id },
+            buildCeoRestoreUpdate(corporation, new Date())
+          );
         }
         await reverseFloatSellDebit(db, corporation, issuerBuyback, { split: issuerBuybackSplit });
         throw new Error("Imperial seller not found");
@@ -962,9 +963,10 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
         { holdingChange: { turn: saleTurn, restore: holdingChange.taken } }
       );
       if (shouldVacateCeo) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne({ _id: corporation._id }, buildCeoRestoreUpdate(corporation, new Date()));
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          buildCeoRestoreUpdate(corporation, new Date())
+        );
       }
       await reverseFloatSellDebit(db, corporation, issuerBuyback, { split: issuerBuybackSplit });
       throw new Error("Seller character not found");

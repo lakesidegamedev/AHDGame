@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
-import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ConstructionAdmission {
   token: string;
@@ -108,9 +109,7 @@ export async function setConstructionFinanceEnabled(
           { constructionPropertyTransition: { $exists: true } },
         ],
       }),
-      db
-        .collection<Corporation>("corporations")
-        .countDocuments({ bankConstructionFunding: { $exists: true } }),
+      corporationsCollection(db).countDocuments({ bankConstructionFunding: { $exists: true } }),
     ]);
     if (claims || leases)
       return {
@@ -160,12 +159,10 @@ export async function recoverConstructionAdmissions(db: Db, turn: number): Promi
           { "constructionFinancing.admissionToken": admission.token },
           { projection: { constructionFinancing: 1 } }
         ),
-      db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { "bankConstructionFunding.loanId": admission.loanId },
-          { projection: { _id: 1 } }
-        ),
+      corporationsCollection(db).findOne(
+        { "bankConstructionFunding.loanId": admission.loanId },
+        { projection: { _id: 1 } }
+      ),
     ]);
     const state = claim?.constructionFinancing;
     if (

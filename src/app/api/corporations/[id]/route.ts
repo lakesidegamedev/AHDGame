@@ -16,12 +16,7 @@ import {
   redactPrivateCorporation,
   redactPrivateSectorRow,
 } from "@/lib/corporations/redaction";
-import type {
-  CorporationPrivatizationVote,
-  Corporation,
-  CorporationHistory,
-  WikiPage,
-} from "@/lib/db/types";
+import type { CorporationPrivatizationVote, CorporationHistory, WikiPage } from "@/lib/db/types";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";
 import {
   booksAreExposed,
@@ -40,6 +35,7 @@ import { FINANCIAL_DISTRESS_GRACE_TURNS } from "@/lib/nationalization/constants"
 import { isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import { buildCorpNationalizationThreat } from "@/lib/nationalization/corpNationalizationThreat";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -136,9 +132,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       );
     (detail.corporation as Record<string, unknown>).canEditEditorialStance = canEditEditorialStance;
     if (mediaEditorialEnabled && hasMediaSector) {
-      const editorial = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corporation._id }, { projection: { editorialStance: 1 } });
+      const editorial = await corporationsCollection(db).findOne(
+        { _id: corporation._id },
+        { projection: { editorialStance: 1 } }
+      );
       if (editorial?.editorialStance) corporation.editorialStance = editorial.editorialStance;
     }
 
@@ -220,12 +217,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     const parentInfo = (detail.corporation as Record<string, unknown>).parentCorporation as
       { _id: string } | null | undefined;
     if (authUser?.userId && parentInfo?._id && ObjectId.isValid(parentInfo._id)) {
-      const parentCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: new ObjectId(parentInfo._id) },
-          { projection: { userId: 1, ceoVacant: 1 } }
-        );
+      const parentCorp = await corporationsCollection(db).findOne(
+        { _id: new ObjectId(parentInfo._id) },
+        { projection: { userId: 1, ceoVacant: 1 } }
+      );
       viewerIsControllingParentCeo =
         parentCorp != null &&
         !parentCorp.ceoVacant &&

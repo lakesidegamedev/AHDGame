@@ -23,6 +23,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -280,7 +281,7 @@ function dedupeTouched(rows: TouchedDocs[]): TouchedDocs[] {
 }
 
 async function findTargetCorporation(db: Db, row: KnownCase): Promise<Corporation | null> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   return (
     (await corps.findOne({
       countryOwnerId: row.countryId,
@@ -303,8 +304,7 @@ async function survey(db: Db): Promise<Survey> {
       .collection<CorporateSector>("corporateSectors")
       .find({ _id: { $in: sectorIds } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: sourceCorpIds } })
       .toArray(),
     loadFxRatesByCurrency(db),
@@ -399,9 +399,9 @@ async function survey(db: Db): Promise<Survey> {
   }
 
   const ddSource = corpById.get(DD_SOURCE_CORPORATION_ID) ?? null;
-  const ddTarget = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: new ObjectId(DD_TARGET_CORPORATION_ID) });
+  const ddTarget = await corporationsCollection(db).findOne({
+    _id: new ObjectId(DD_TARGET_CORPORATION_ID),
+  });
   if (!ddTarget && (ddSource || openAuctions.length > 0)) {
     throw new Error("East German Financial Enterprise is missing");
   }
@@ -535,7 +535,7 @@ async function applyCompensation(db: Db, row: CompensationPlan, ctx: HealContext
     }
   );
   modified += budget.modifiedCount;
-  const donor = await db.collection<Corporation>("corporations").updateOne(
+  const donor = await corporationsCollection(db).updateOne(
     { _id: new ObjectId(row.donorCorporationId), [markerPath]: { $exists: false } },
     {
       $inc: { liquidCapital: row.donorLocalAmount },
@@ -655,7 +655,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   if (result.ddSourceExists && result.ddCashTransfer > 0) {
     const markerPath = `remediation.${DEFECT_ID}.dd-shell-cash`;
-    const transfer = await db.collection<Corporation>("corporations").updateOne(
+    const transfer = await corporationsCollection(db).updateOne(
       { _id: new ObjectId(DD_TARGET_CORPORATION_ID), [markerPath]: { $exists: false } },
       {
         $inc: { liquidCapital: result.ddCashTransfer },
@@ -688,9 +688,9 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID),
     });
     if (remaining !== 0) throw new Error(`East German shell still owns ${remaining} sector(s)`);
-    const removed = await db
-      .collection<Corporation>("corporations")
-      .deleteOne({ _id: new ObjectId(DD_SOURCE_CORPORATION_ID) });
+    const removed = await corporationsCollection(db).deleteOne({
+      _id: new ObjectId(DD_SOURCE_CORPORATION_ID),
+    });
     deleted += removed.deletedCount;
   }
 

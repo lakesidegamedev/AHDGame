@@ -8,6 +8,7 @@ import {
   FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION,
   type FederationArchivedRegionRow,
 } from "./materializeTerritory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION =
   "federationArchivedPublicCorporations";
@@ -50,8 +51,7 @@ export async function materializeFederationPublicCorporations(input: {
     custodyByAsset.size !== assignments.length
   )
     throw new Error("Federation public corporations need approved custody and territory");
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       {
         $or: [
@@ -127,9 +127,10 @@ export async function materializeFederationPublicCorporations(input: {
           },
           { session }
         );
-      const removed = await db
-        .collection<Corporation>("corporations")
-        .deleteOne({ _id: corporation._id }, { session });
+      const removed = await corporationsCollection(db).deleteOne(
+        { _id: corporation._id },
+        { session }
+      );
       if (removed.deletedCount !== 1)
         throw new Error("Federation public corporation changed during archive");
       archived++;
@@ -164,13 +165,11 @@ export async function materializeFederationPublicCorporations(input: {
         },
         { session }
       );
-    const updated = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, headquartersState: corporation.headquartersState },
-        { $set: { headquartersState } },
-        { session }
-      );
+    const updated = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, headquartersState: corporation.headquartersState },
+      { $set: { headquartersState } },
+      { session }
+    );
     if (updated.matchedCount !== 1)
       throw new Error("Federation public corporation changed during headquarters rebase");
     rebased++;

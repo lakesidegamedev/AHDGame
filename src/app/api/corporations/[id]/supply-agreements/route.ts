@@ -24,6 +24,7 @@ import {
 import { supportsCorporationWideSupplyAgreement } from "@/lib/market/commodityMarketScope";
 import { buyerCommodityUse } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import type { State } from "@/lib/db/types/state";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -83,8 +84,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     ];
     const counterparties =
       counterpartyIds.length > 0
-        ? await db
-            .collection("corporations")
+        ? await corporationsCollection(db)
             .find({
               _id: { $in: counterpartyIds.map((counterpartyId) => new ObjectId(counterpartyId)) },
             })

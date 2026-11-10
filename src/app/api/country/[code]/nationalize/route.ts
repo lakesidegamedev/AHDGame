@@ -27,6 +27,7 @@ import { nationalizeSector, nationalizeWholeCorp } from "@/lib/nationalization/o
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isWithinRenationalizeCooldown } from "@/lib/nationalization/privatizationShares";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -78,7 +79,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const corps = db.collection<Corporation>("corporations");
+    const corps = corporationsCollection(db);
 
     // Resolve the target corporation (whole-corp directly, or the sector's owner).
     let targetCorp: Corporation | null = null;

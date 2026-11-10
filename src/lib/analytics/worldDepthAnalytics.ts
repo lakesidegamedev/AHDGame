@@ -3,7 +3,6 @@ import type { AdminLog } from "@/lib/db/types/adminLog";
 import type { GameIteration, GameState } from "@/lib/db/types/gameState";
 import type { PartyHistorySnapshot } from "@/lib/db/types/partyHistory";
 import type { PartyMembershipEvent } from "@/lib/db/types/partyMembershipEvent";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import type { MarketCapHistory } from "@/lib/db/types/marketCapHistory";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
@@ -15,6 +14,7 @@ import { getOrganizationWithdrawalsCollection } from "@/lib/db/collections/organ
 import { getOrganizationProposalsCollection } from "@/lib/db/collections/organizationProposals";
 import { getOrganizationLegislationCollection } from "@/lib/db/collections/organizationLegislation";
 import { captureServerGameEvent, getServerPosthogClient } from "./serverPosthog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -255,8 +255,7 @@ export async function captureWorldDepthPosthog(input: {
       ...shareTrades.map((row) => row.corporationId),
     ];
     const corporateNations = corporateIds.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporateIds } }, { projection: { countryId: 1 } })
           .toArray()
       : [];

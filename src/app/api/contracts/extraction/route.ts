@@ -17,8 +17,8 @@ import { getAuthUser } from "@/lib/auth";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { activeExtractionContractFilter } from "@/lib/db/collections/extractionContracts";
 import { isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameState } from "@/lib/db/types/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const grantSchema = z.object({
   stateId: z.string().min(1),
@@ -75,8 +75,7 @@ export async function GET(request: Request) {
     const corpIds = [...new Set(contracts.map((c) => c.corporationId as ObjectId))];
     const corporations =
       corpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: corpIds } }, { projection: { name: 1, userId: 1 } })
             .toArray()
         : [];

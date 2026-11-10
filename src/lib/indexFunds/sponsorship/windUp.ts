@@ -12,7 +12,6 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types/indexFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -41,6 +40,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const FUND_TX = "indexFundTransactions";
 const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
@@ -373,9 +373,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   let returnedToSponsorAnchor = 0;
   let escheatedToReserveAnchor = 0;
   if (fund.sponsorCorporationId && remainingAnchor > 0) {
-    const sponsor = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: fund.sponsorCorporationId });
+    const sponsor = await corporationsCollection(db).findOne({ _id: fund.sponsorCorporationId });
     if (sponsor) {
       const fxRate = await getCorpFxRate(db, sponsor);
       if (!Number.isFinite(fxRate) || fxRate <= 0)

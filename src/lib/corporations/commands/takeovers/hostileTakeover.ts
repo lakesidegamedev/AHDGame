@@ -26,13 +26,7 @@ import {
   resolveCorporation,
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  ImperialCharacter,
-  State,
-} from "@/lib/db/types";
+import type { Character, CorporateSector, ImperialCharacter, State } from "@/lib/db/types";
 import type { ShareListing } from "@/lib/db/types/shareListings";
 import type { ShareOrder } from "@/lib/db/types/corporation";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -106,6 +100,7 @@ import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { payNppSqueezeOut } from "@/lib/corporations/commands/takeovers/payNppSqueezeOut";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -193,7 +188,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     if (!parentQuery) {
       return errorResponse(400, "Invalid parent corporation ID");
     }
-    const parent = await db.collection<Corporation>("corporations").findOne(parentQuery);
+    const parent = await corporationsCollection(db).findOne(parentQuery);
     if (!parent) {
       return errorResponse(404, "Parent corporation not found");
     }
@@ -470,7 +465,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       });
       if (!preparedTransfers.ok) return errorResponse(409, preparedTransfers.error);
       const constructionTransfers = preparedTransfers.plan;
-      const debitResult = await db.collection<Corporation>("corporations").updateOne(
+      const debitResult = await corporationsCollection(db).updateOne(
         {
           _id: parent._id,
           liquidCapital: { $gte: totalInParentCapital },
@@ -658,18 +653,14 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               )
             );
           } else if (sh.corporationId && !sh.corporationId.equals(parent._id)) {
-            const holder = await db
-              .collection<Corporation>("corporations")
-              .findOne({ _id: sh.corporationId });
+            const holder = await corporationsCollection(db).findOne({ _id: sh.corporationId });
             if (!holder) continue;
             const hFx = fxRateForCorpFromMap(holder, fxByCurrency);
             const payoutLocal = anchorToCorpLiquidCapital(payoutAnchor, holder, hFx);
-            await db
-              .collection<Corporation>("corporations")
-              .updateOne(
-                { _id: holder._id },
-                { $inc: { liquidCapital: payoutLocal }, $set: { updatedAt: now } }
-              );
+            await corporationsCollection(db).updateOne(
+              { _id: holder._id },
+              { $inc: { liquidCapital: payoutLocal }, $set: { updatedAt: now } }
+            );
             holderParty = { corporationId: sh.corporationId, name: holder.name };
             ledgerLegs.push(
               takeoverPayoutLeg(
@@ -939,7 +930,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           }
         );
 
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: parent._id },
           {
             $inc: { liquidCapital: cashToParentLocal },
@@ -952,8 +943,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         // corps' shareholders arrays removes shares that the share-invariant
         // expects to be accounted for. Fold those stripped shares into each
         // host corp's publicFloat so totalShares stays balanced.
-        const corpsHoldingTarget = await db
-          .collection<Corporation>("corporations")
+        const corpsHoldingTarget = await corporationsCollection(db)
           .find({ "shareholders.corporationId": target._id })
           .project<{ _id: ObjectId; shareholders: { corporationId?: ObjectId; shares: number }[] }>(
             {
@@ -984,7 +974,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         if (rebalanceOps.length > 0) {
           // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await db.collection<Corporation>("corporations").bulkWrite(rebalanceOps as any);
+          await corporationsCollection(db).bulkWrite(rebalanceOps as any);
         }
 
         // Return any corporate bonds the absorbed target HELD as a creditor to
@@ -1010,7 +1000,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           deletedAt: now,
         });
 
-        await db.collection<Corporation>("corporations").deleteOne({ _id: target._id });
+        await corporationsCollection(db).deleteOne({ _id: target._id });
         await recordCorporationExit(db, target, {
           reason: "hostile_takeover",
           successorId: parent._id,
@@ -1120,9 +1110,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         await settleConstructionBorrowerTransfers(db, constructionTransfers);
         if (
           assumedLoanIds.length > 0 &&
-          (await db
-            .collection<Corporation>("corporations")
-            .countDocuments({ _id: target._id }, { limit: 1 })) > 0
+          (await corporationsCollection(db).countDocuments({ _id: target._id }, { limit: 1 })) > 0
         )
           await restoreCorporateLoans(db, {
             ids: assumedLoanIds,
@@ -1132,7 +1120,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         try {
           await refundCorpLiquidCapital(db, parent._id, totalInParentCapital);
           if (cashTransferApplied && cashToParentLocal > 0) {
-            await db.collection<Corporation>("corporations").updateOne(
+            await corporationsCollection(db).updateOne(
               { _id: parent._id },
               {
                 $inc: { liquidCapital: -cashToParentLocal },

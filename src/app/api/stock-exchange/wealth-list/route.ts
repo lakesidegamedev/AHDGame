@@ -19,6 +19,7 @@ import {
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -122,8 +123,7 @@ async function computeWealthListFallback(
       .find({ _id: { $in: [...new Set(activeCharacters.map((c) => c.homeState))] } })
       .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({
         $or: [
           { "shareholders.characterId": { $in: characterIds } },

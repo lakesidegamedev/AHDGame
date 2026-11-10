@@ -9,7 +9,6 @@ import * as Sentry from "@sentry/nextjs";
 import type {
   Bill,
   Character,
-  Corporation,
   ElectedOfficial,
   Election,
   ElectionCandidate,
@@ -70,6 +69,7 @@ import { loadCharacterNetWorths, loadExternalInflows } from "./netWorth";
 import { announceContestResults, type SettledRoundResult } from "./announce";
 import { getContestRoundsCollection } from "./collection";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type PlayerCharacter = Pick<
   Character,
@@ -135,8 +135,7 @@ interface CorpRow {
 
 /** Player-run private corporations with their latest market cap snapshot. */
 async function loadCorpRows(db: Db, world: ContestWorld): Promise<Map<string, CorpRow>> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { ceoType: "character", ownershipState: { $ne: "stateOwned" } },
       { projection: { _id: 1, name: 1, ceoId: 1 } }

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/mongodb";
 import { parseNppId } from "@/lib/utils/profileUrls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
-import type { NPP, State, PoliticalParty, Corporation } from "@/lib/db/types";
+import type { NPP, State, PoliticalParty } from "@/lib/db/types";
 import { deriveCeoArchetype } from "@/lib/npp/ceoArchetype";
 import { getPartyColor, getPartyHex, ensureReadableOnDark } from "@/lib/utils/politics";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
@@ -19,6 +19,7 @@ import { NppForecastCard } from "./NppForecastCard";
 import { NppCapitalPanel } from "./NppCapitalPanel";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { NPP_MAX_DONOR_BASE_LEVEL } from "@/lib/npp/actionAi";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -133,12 +134,10 @@ async function getNPPData(id: string) {
 
   // Corporation this NPP currently runs as CEO, if any (parity with politician
   // profiles that surface office). ceoId holds the NPP _id when ceoType === "npp".
-  const ledCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoType: "npp", ceoId: npp._id, ceoVacant: { $ne: true } },
-      { projection: { name: 1, sequentialId: 1, type: 1, ceoHistory: 1 } }
-    );
+  const ledCorp = await corporationsCollection(db).findOne(
+    { ceoType: "npp", ceoId: npp._id, ceoVacant: { $ne: true } },
+    { projection: { name: 1, sequentialId: 1, type: 1, ceoHistory: 1 } }
+  );
   let ledCorporation: {
     name: string;
     sequentialId?: number;

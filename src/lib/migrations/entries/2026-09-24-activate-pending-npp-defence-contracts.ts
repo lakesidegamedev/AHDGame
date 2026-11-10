@@ -3,6 +3,7 @@ import type { Corporation } from "@/lib/db/types/corporation";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type NppOwnershipRow = Pick<Corporation, "_id" | "ceoType" | "caretakerCeo">;
 
@@ -10,8 +11,7 @@ async function activatePendingNppDefenceContracts(
   db: Db,
   ctx: MigrationContext
 ): Promise<MigrationResult> {
-  const corporations = await db
-    .collection<NppOwnershipRow>("corporations")
+  const corporations = await corporationsCollection<NppOwnershipRow>(db)
     .find({ ceoType: "npp" })
     .project<NppOwnershipRow>({ _id: 1, ceoType: 1, caretakerCeo: 1 })
     .toArray();

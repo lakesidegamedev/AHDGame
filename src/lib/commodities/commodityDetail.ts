@@ -70,6 +70,7 @@ import {
   sectorPriceLeg,
 } from "@/lib/market/inputDemandRealPhase";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Sector-type flow rows for the Production Flow panel: base tables plus strategies that add commodities not present in the base map. */
 function buildSectorFlowRows(
@@ -241,8 +242,7 @@ export async function getCommodityDetailData(
     if (includeHeavy) {
       [allSectors, allCorps, allStates] = await Promise.all([
         db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
-        db
-          .collection<Corporation>("corporations")
+        corporationsCollection(db)
           .find({})
           .project<
             Pick<

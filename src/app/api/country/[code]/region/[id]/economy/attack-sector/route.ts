@@ -26,6 +26,7 @@ import {
   type SplitResolution,
 } from "@/lib/corporations/commands/plantSectorSplitAttempt";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const attackSectorSchema = z.object({ sectorId: z.string().length(24) });
 
@@ -95,7 +96,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         userId: new ObjectId(auth.user.userId),
       });
       if (imperial) {
-        attacker = await db.collection<Corporation>("corporations").findOne({
+        attacker = await corporationsCollection(db).findOne({
           ceoId: imperial._id,
           ceoType: "imperial",
           ceoVacant: { $ne: true },
@@ -104,9 +105,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     } else {
       const character = await getCharacterByUserId(db, auth.user.userId);
       if (character) {
-        attacker = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+        attacker = await corporationsCollection(db).findOne({
+          ceoId: character._id,
+          ceoVacant: { $ne: true },
+        });
       }
     }
     if (!attacker) {
@@ -123,9 +125,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Cannot attack your own sector");
     }
 
-    const defender = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: targetSector.corporationId });
+    const defender = await corporationsCollection(db).findOne({ _id: targetSector.corporationId });
     if (!defender) {
       await db.collection<CorporateSector>("corporateSectors").deleteOne({ _id: targetSector._id });
       return errorResponse(

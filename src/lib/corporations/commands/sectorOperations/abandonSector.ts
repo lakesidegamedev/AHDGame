@@ -11,7 +11,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type { CorporateSector, GameState, SectorBuildOrder, State } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types";
 import { queueUndeliveredCost, undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 import {
@@ -31,6 +30,7 @@ import {
   unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
 import { abandonBankImpact } from "@/lib/banking/capacityAllocation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -201,12 +201,10 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
               anchorToCorpLiquidCapital(refundableAnchor, corporation, corpFxRate)
             );
             if (refundLocal > 0) {
-              await db
-                .collection<Corporation>("corporations")
-                .updateOne(
-                  { _id: corporation._id },
-                  { $inc: { liquidCapital: refundLocal }, $set: { updatedAt: now } }
-                );
+              await corporationsCollection(db).updateOne(
+                { _id: corporation._id },
+                { $inc: { liquidCapital: refundLocal }, $set: { updatedAt: now } }
+              );
             }
             // Best-effort ledger leg, same discipline as the cancel command: the
             // cash has moved, so a log failure must not 500 the caller into a retry

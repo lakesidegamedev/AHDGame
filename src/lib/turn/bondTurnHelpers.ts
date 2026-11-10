@@ -21,6 +21,7 @@ import {
   getCorporateSectorsCollection,
   CORPORATE_SECTOR_LEAN_FIELDS,
 } from "@/lib/db/collections/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Bonds-only exception to escrow ring-fencing: before declaring a corp defaulted
@@ -254,12 +255,11 @@ export async function rollbackDefaultedIssuerMaturityFlows(args: {
       pending = new Set();
 
       if (rollbackOps.length > 0) {
-        await db.collection("corporations").bulkWrite(rollbackOps);
+        await corporationsCollection(db).bulkWrite(rollbackOps);
       }
 
       if (affectedHolders.size > 0) {
-        const updated = await db
-          .collection<Corporation>("corporations")
+        const updated = await corporationsCollection(db)
           .find({ _id: { $in: [...affectedHolders].map((id) => new ObjectId(id)) } })
           .project<{ _id: ObjectId; liquidCapital: number; shareEscrowBalance?: number }>({
             _id: 1,

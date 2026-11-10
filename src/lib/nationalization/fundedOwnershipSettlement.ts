@@ -23,6 +23,7 @@ import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/bound
 import type { TreasuryCashOptions } from "./treasuryLedger";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -92,8 +93,7 @@ export async function settleFundedWholeCorpShareholderPool(
         },
       })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: corpRows.map((row) => new ObjectId(row.corporationId)) } })
       .toArray(),
     db

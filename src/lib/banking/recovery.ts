@@ -36,6 +36,7 @@ import { recoverConstructionSales } from "./constructionSale";
 import { listDefaultedConstructionCollateral } from "./constructionForeclosure";
 import { recoverConstructionCancellations } from "./constructionCancellation";
 import { resumePrimaryUnderwritingLeases } from "./underwritingSettlement";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface BankingRecoverySummary {
   turn: number;
@@ -181,8 +182,7 @@ export async function recoverBankingSettlements(
   // Estates first: their settlements are resumed inside the resolution
   // itself, under the estate's own claim, and a record the estate owns must
   // not be resumed beside it.
-  const claimed = await db
-    .collection<Corporation>("corporations")
+  const claimed = await corporationsCollection(db)
     .find({
       "bankCharter.resolutionClaimedTurn": { $lt: turn },
       "bankCharter.depositorsResolvedTurn": { $exists: false },

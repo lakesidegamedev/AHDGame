@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface CeoVote {
   corporationId: unknown;
@@ -22,8 +22,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find corporations with vacant CEO position
-    const vacantCorps = await db
-      .collection<Corporation>("corporations")
+    const vacantCorps = await corporationsCollection(db)
       .find({ ceoVacant: true })
       .project({ _id: 1, name: 1, sequentialId: 1, pendingCeoCharacterId: 1 })
       .toArray();
@@ -71,8 +70,7 @@ export async function POST() {
     const now = new Date();
 
     // Find corporations with vacant CEO position
-    const vacantCorps = await db
-      .collection<Corporation>("corporations")
+    const vacantCorps = await corporationsCollection(db)
       .find({ ceoVacant: true })
       .project({ _id: 1, name: 1, sequentialId: 1 })
       .toArray();
@@ -93,7 +91,7 @@ export async function POST() {
       .deleteMany({ corporationId: { $in: corpIds } });
 
     // Clear pendingCeoCharacterId for these corporations
-    const updateResult = await db.collection<Corporation>("corporations").updateMany(
+    const updateResult = await corporationsCollection(db).updateMany(
       { _id: { $in: corpIds }, pendingCeoCharacterId: { $exists: true } },
       {
         $unset: { pendingCeoCharacterId: "" },

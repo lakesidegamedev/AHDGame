@@ -18,6 +18,7 @@ import {
   loadFxRatesByCurrency,
   shareTradeAnchorValue,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Distribute a dissolving corp's holdings in OTHER corps IN-KIND, pro-rata to
@@ -62,8 +63,7 @@ export async function distributeCrossEquityInKind(
   const totalShares = dissolvingCorp.totalShares ?? 0;
   const publicFloatShares = dissolvingCorp.publicFloat ?? 0;
 
-  const heldEquityCorps = await db
-    .collection<Corporation>("corporations")
+  const heldEquityCorps = await corporationsCollection(db)
     .find(
       { "shareholders.corporationId": dissolvingCorp._id },
       {
@@ -94,7 +94,7 @@ export async function distributeCrossEquityInKind(
       return true;
     });
 
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: issuer._id, "shareholders.corporationId": dissolvingCorp._id },
       {
         $pull: { shareholders: { corporationId: dissolvingCorp._id } },

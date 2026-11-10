@@ -12,6 +12,7 @@ import {
   type OfferSort,
   type OfferSortDir,
 } from "./offerOrdering";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type PublisherFields = Pick<
   Corporation,
@@ -184,8 +185,7 @@ export async function loadOpenOffers(
   const hasMore = found.length > args.limit;
   const rows = hasMore ? found.slice(0, args.limit) : found;
   if (rows.length === 0) return { offers: [], hasMore: false };
-  const publishers = await db
-    .collection<Corporation>("corporations")
+  const publishers = await corporationsCollection(db)
     .find({ _id: { $in: rows.map((r) => r.corporationId) } })
     .project<PublisherFields>(PUBLISHER_PROJECTION)
     .toArray();

@@ -32,6 +32,7 @@ import type {
   VerifyResult,
 } from "./types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CompensationProblem {
   field: string;
@@ -170,8 +171,7 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
 
   async function load(db: Db) {
     const [docs, rates] = await Promise.all([
-      db
-        .collection<CorporationDoc>("corporations")
+      corporationsCollection<CorporationDoc>(db)
         .find({ _id: { $in: ids } } as never, {
           projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, remediation: 1 },
         })
@@ -265,7 +265,7 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
     for (const c of credits) {
       // Marker and increment in ONE update, under a filter demanding the
       // marker's absence, so a concurrent or repeated run pays nobody twice.
-      const res = await db.collection("corporations").updateOne(
+      const res = await corporationsCollection(db).updateOne(
         {
           _id: { $in: idCandidates(c.corporationId) },
           [markerPath]: { $exists: false },

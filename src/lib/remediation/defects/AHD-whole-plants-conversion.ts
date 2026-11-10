@@ -35,6 +35,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Whole plants conversion (one time, between turns, before
@@ -369,8 +370,7 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
     .toArray();
   const pending = sectors.filter((s) => needsConversion(s, world.turn));
   const corpIds = [...new Set(pending.map((s) => s.corporationId.toHexString()))];
-  const corps = await db
-    .collection<CorpRow>("corporations")
+  const corps = await corporationsCollection<CorpRow>(db)
     .find(
       { _id: { $in: corpIds.map((id) => new ObjectId(id)) } },
       {
@@ -507,8 +507,9 @@ async function pendingCredits(db: Db) {
   const corpIds = [...new Set(rows.map((r) => r.corporationId.toHexString()))].map(
     (id) => new ObjectId(id)
   );
-  const corps = await db
-    .collection<CorpRow & { remediation?: Record<string, Record<string, unknown>> }>("corporations")
+  const corps = await corporationsCollection<
+    CorpRow & { remediation?: Record<string, Record<string, unknown>> }
+  >(db)
     .find(
       { _id: { $in: corpIds } },
       {
@@ -661,7 +662,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     const rate = fxRateForCorpFromMap(c.corp, fx);
     const amountLocal = anchorToCorpLiquidCapital(c.creditAnchor, c.corp, rate);
     if (!c.credited) {
-      const res = await db.collection("corporations").updateOne(
+      const res = await corporationsCollection(db).updateOne(
         { _id: c.corporationId, [`${CORP_MARKER}.${c.key}`]: { $exists: false } },
         {
           $inc: { liquidCapital: amountLocal },

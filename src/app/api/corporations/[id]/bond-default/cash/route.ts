@@ -32,6 +32,7 @@ type TxLogInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -104,9 +105,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         const fxByCurrency = await loadFxRatesByCurrency(db);
         const cost = sumDefaultedBondPrincipal(defaultedBonds, fxByCurrency);
 
-        const refreshedCorporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corporation._id });
+        const refreshedCorporation = await corporationsCollection(db).findOne({
+          _id: corporation._id,
+        });
         if (!refreshedCorporation) {
           return errorResponse(404, "Corporation not found");
         }
@@ -334,8 +335,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           if (corpIncs.size > 0) {
             const ids = [...corpIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const docs = await db
-              .collection<Corporation>("corporations")
+            const docs = await corporationsCollection(db)
               .find({ _id: { $in: ids } }, so)
               .toArray();
             if (docs.length !== corpIncs.size) {
@@ -408,7 +408,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           // Atomic, race-safe debit. Each leg is guarded only when it's actually
           // drawn (a $gte:0 guard on an untouched negative escrow would wrongly block).
-          const debitResult = await db.collection<Corporation>("corporations").updateOne(
+          const debitResult = await corporationsCollection(db).updateOne(
             {
               _id: refreshedCorporation._id,
               ...(paymentSplit.fromLiquid > 0
@@ -435,7 +435,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
             );
           }
           undo.push(async () => {
-            const result = await db.collection<Corporation>("corporations").updateOne(
+            const result = await corporationsCollection(db).updateOne(
               { _id: refreshedCorporation._id },
               {
                 $inc: {

@@ -12,6 +12,7 @@ import type {
 } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const DEFECT_ID = "AHD-defence-supplier-windfall";
 
@@ -150,7 +151,7 @@ function contractEvidenceMatches(contracts: ContractEvidence[]): boolean {
 async function survey(db: Db): Promise<Survey> {
   const corporationId = new ObjectId(CORPORATION_ID);
   const [corporation, budget, contracts, gameState] = await Promise.all([
-    db.collection<CorporationEvidence>("corporations").findOne({ _id: corporationId }),
+    corporationsCollection<CorporationEvidence>(db).findOne({ _id: corporationId }),
     federalBudgetCollection<BudgetEvidence>(db).findOne({ countryId: COUNTRY_ID }),
     db
       .collection<ContractEvidence>("defenceContracts")

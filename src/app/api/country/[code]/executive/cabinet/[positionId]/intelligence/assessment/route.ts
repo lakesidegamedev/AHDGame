@@ -20,7 +20,6 @@ import { belligerentSideOf } from "@/lib/military/conflictVisibility";
 import { derivedSupplies } from "@/lib/military/occupation";
 import { assessMilitary } from "@/lib/intelligence/militaryAssessment";
 import { assessEconomic } from "@/lib/intelligence/economicAssessment";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { COVERT_CAPABLE, COVERT_STAGES } from "@/lib/military/covertNuclear";
 import { currentCoverage } from "@/lib/intelligence/coverage";
 import {
@@ -34,6 +33,7 @@ import {
   requireRegisteredTarget,
   type IntelligenceRouteParams,
 } from "../shared";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request, { params }: IntelligenceRouteParams) {
   try {
@@ -99,8 +99,7 @@ export async function GET(request: Request, { params }: IntelligenceRouteParams)
     }
 
     if (requestedDomain === "economic") {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find({ countryId: targetCountryId })
         .project({ isPrivate: 1, liquidCapital: 1 })
         .toArray();

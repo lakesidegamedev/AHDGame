@@ -10,7 +10,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { SavingsHolder } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -56,6 +56,7 @@ function finite(value: unknown): number {
 
 import { toAccountSnapshot } from "./snapshot";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * The account for an owner and currency, materialized from the legacy fields
@@ -81,9 +82,10 @@ export async function ensureSavingsAccount(
   const holder = balances.savingsHolder?.[currency] ?? null;
   let effectiveHolder: SavingsHolder = holder ?? CENTRAL_BANK_HOLDER;
   if (isBankHolder(effectiveHolder)) {
-    const bank = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(effectiveHolder) }, { projection: { bankCharter: 1 } });
+    const bank = await corporationsCollection(db).findOne(
+      { _id: new ObjectId(effectiveHolder) },
+      { projection: { bankCharter: 1 } }
+    );
     const charter = bank?.bankCharter;
     if (!charter || charter.currency !== currency || !charterMay(charter, "acceptPlayerDeposits")) {
       effectiveHolder = CENTRAL_BANK_HOLDER;
@@ -198,9 +200,7 @@ async function loadHolderSnapshot(
   }
   if (!ObjectId.isValid(holder) || holder.length !== 24)
     return { error: "Invalid bank corporation id" };
-  const bank = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: new ObjectId(holder) });
+  const bank = await corporationsCollection(db).findOne({ _id: new ObjectId(holder) });
   if (!bank) return { error: "Bank corporation not found", code: "missing_bank" };
   const charter = bank.bankCharter;
   if (!charter || !charterMay(charter, "acceptPlayerDeposits")) {

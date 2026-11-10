@@ -12,8 +12,8 @@ import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -42,7 +42,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corps = db.collection<Corporation>("corporations");
+    const corps = corporationsCollection(db);
     const target = await corps.findOne({ ...idQuery, countryOwnerId: countryId });
     if (!target || !isStateOwned(target)) {
       return errorResponse(404, "National Corporation not found for this country.");

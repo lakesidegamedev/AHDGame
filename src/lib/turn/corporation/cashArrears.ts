@@ -1,11 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { TreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface CashArrearsInput {
   db: Db;
@@ -45,7 +45,7 @@ export async function settlePriorCorporateCashArrears(input: CashArrearsInput): 
     federalTaxArrearsAnchorByCountry: 1,
     federalTaxArrearsLastTurnByCountry: 1,
   };
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   let corp = await corporations.findOne({ _id: new ObjectId(corporationId) }, { projection });
   if (!corp) return 0;
   let cash = Math.max(0, corp.liquidCapital ?? 0);

@@ -15,6 +15,7 @@ import {
   resolveCorporation,
   requireCeoOrDirectingParent,
 } from "@/lib/api/corporations/resolveQuery";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       // Legacy callers that send no target. Use userId directly — consistent
       // with requireCeo, avoids wrong-character lookup for users who have
       // multiple characters.
-      corporation = await db.collection<Corporation>("corporations").findOne({
+      corporation = await corporationsCollection(db).findOne({
         userId: new ObjectId(authUser.userId),
         ceoVacant: { $ne: true },
       });
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
     }
 
     // Update corporation record
-    const saved = await db.collection<Corporation>("corporations").updateOne(
+    const saved = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         ...(groupTarget

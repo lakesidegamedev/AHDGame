@@ -17,6 +17,7 @@ import {
   type PropForexFeeReceipt,
 } from "./rules/propForexFees";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function loadPropForexFeeQuote(
   db: Db,
@@ -75,9 +76,10 @@ export async function loadPropForexFeeQuote(
 
 /** The parent escrow survives failure/recharter; the frozen currency remains authoritative. */
 export async function settlePendingPropForexFee(db: Db, bankId: ObjectId): Promise<boolean> {
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: bankId }, { projection: { bankPropForexFee: 1 } });
+  const corporation = await corporationsCollection(db).findOne(
+    { _id: bankId },
+    { projection: { bankPropForexFee: 1 } }
+  );
   const receipt = corporation?.bankPropForexFee;
   if (!receipt) return true;
   const identity = { _id: oid(bankId.toHexString()) };
@@ -138,8 +140,7 @@ export async function settlePendingPropForexFee(db: Db, bankId: ObjectId): Promi
 }
 
 export async function recoverPropForexFees(db: Db, turn: number): Promise<string[]> {
-  const rows = await db
-    .collection<Corporation>("corporations")
+  const rows = await corporationsCollection(db)
     .find({ "bankPropForexFee.turn": { $lt: turn } }, { projection: { _id: 1 } })
     .limit(200)
     .toArray();

@@ -53,6 +53,7 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -356,9 +357,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       // Only refetch when conversion actually mutated the corp — skipping the
       // round trip on no-op conversions keeps same-currency moves cheap.
       if (convResult.converted) {
-        const refreshed = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corporation._id });
+        const refreshed = await corporationsCollection(db).findOne({ _id: corporation._id });
         if (!refreshed) {
           return errorResponse(500, "Corporation not found after currency conversion");
         }
@@ -423,7 +422,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
           workingFxRate
         );
 
-        const updateResult = await db.collection<Corporation>("corporations").updateOne(
+        const updateResult = await corporationsCollection(db).updateOne(
           {
             _id: workingCorp._id,
             primaryUnderwritingIncomingFunding: { $exists: false },
@@ -552,9 +551,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
           primaryUnderwritingIncomingFunding: { $exists: false },
           bankUnderwritingFunding: { $exists: false },
         };
-        const leaseFree = await db
-          .collection<Corporation>("corporations")
-          .findOne(leaseFreeFilter, { projection: { _id: 1 }, session });
+        const leaseFree = await corporationsCollection(db).findOne(leaseFreeFilter, {
+          projection: { _id: 1 },
+          session,
+        });
         if (!leaseFree) return { status: "underwriting_busy" as const };
 
         const frozenFxByCurrency = new Map(fxByCurrency);
@@ -576,7 +576,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
           workingCorp,
           frozenBondLease!.nativeFxRate
         );
-        const updateResult = await db.collection<Corporation>("corporations").updateOne(
+        const updateResult = await corporationsCollection(db).updateOne(
           leaseFreeFilter,
           {
             $set: baseCorpSet,

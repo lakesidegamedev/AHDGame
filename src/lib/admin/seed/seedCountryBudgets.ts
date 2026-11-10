@@ -4,11 +4,12 @@
  * Country-specific reset filters and seed steps retain their original ordering.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { CorporateSector, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import type { generateStateBudgets } from "@/lib/seeds/reference/budgets";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -137,9 +138,11 @@ export async function seedCountryBudgets(
   );
   for (const entry of corpData) {
     const { _id: corpId, ...corporation } = entry.corporation;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corpId }, { $set: corporation }, { upsert: true });
+    await corporationsCollection(db).updateOne(
+      { _id: corpId },
+      { $set: corporation },
+      { upsert: true }
+    );
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
       await db

@@ -10,11 +10,12 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { Corporation, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { NppCeoTrackRecord } from "@/lib/db/types/npp";
 import { buildCeoAffiliations, type NppCorpCeoAffiliation } from "@/lib/admin/nppCorpCeoSelection";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface GatherNppCeoAffiliationsOptions {
   /** Load each free NPP's CEO track record (v6 selection only). */
@@ -43,8 +44,7 @@ export async function gatherNppCeoAffiliations(
     .toArray();
   const nonDefunctPartyIds = partyDocs.map((p) => String(p.sequentialId));
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ ceoType: "npp", countryId })
     .project<{ ceoId: ObjectId }>({ ceoId: 1 })
     .toArray();

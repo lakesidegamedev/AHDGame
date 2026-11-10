@@ -35,7 +35,7 @@ import {
   corpPurchaseWouldCycle,
   OWNERSHIP_CYCLE_ERROR,
 } from "@/lib/corporations/subsidiaries/cycleGuard";
-import type { Character, Corporation, ShareOrder } from "@/lib/db/types";
+import type { Character, ShareOrder } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import {
   creditShares,
@@ -89,6 +89,7 @@ import {
 import { equityPoolDepthMessage, loadEquityQuote } from "@/lib/equities/marketPool";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -255,9 +256,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     }
 
     if (placeAsCorporation) {
-      const placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+      const placerCorp = await corporationsCollection(db).findOne({
+        ceoId: character._id,
+        ceoVacant: { $ne: true },
+      });
       if (!placerCorp) {
         return errorResponse(
           403,
@@ -619,12 +621,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           }
           let sellerCredited = false;
           try {
-            const sellerCredit = await db
-              .collection<Corporation>("corporations")
-              .updateOne(
-                { _id: placerCorp._id },
-                { $inc: { liquidCapital: proceedsInPlacerCapital }, $set: { updatedAt: now } }
-              );
+            const sellerCredit = await corporationsCollection(db).updateOne(
+              { _id: placerCorp._id },
+              { $inc: { liquidCapital: proceedsInPlacerCapital }, $set: { updatedAt: now } }
+            );
             if (sellerCredit.matchedCount === 0) {
               throw new Error("Seller corporation not found");
             }
@@ -660,7 +660,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
             });
           } catch (err) {
             if (sellerCredited) {
-              await db.collection<Corporation>("corporations").updateOne(
+              await corporationsCollection(db).updateOne(
                 { _id: placerCorp._id },
                 {
                   $inc: { liquidCapital: -proceedsInPlacerCapital },

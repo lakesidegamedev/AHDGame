@@ -71,6 +71,7 @@ import {
 } from "@/lib/constants/techTree";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -100,12 +101,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const controllingParent =
       authUser?.userId && !isCeo ? getControllingCorporateParent(corporation) : null;
     if (authUser?.userId && controllingParent) {
-      const parentCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: controllingParent.corporationId },
-          { projection: { userId: 1, ceoVacant: 1 } }
-        );
+      const parentCorp = await corporationsCollection(db).findOne(
+        { _id: controllingParent.corporationId },
+        { projection: { userId: 1, ceoVacant: 1 } }
+      );
       viewerIsControllingParentCeo =
         !!parentCorp &&
         parentCorp.ceoVacant !== true &&

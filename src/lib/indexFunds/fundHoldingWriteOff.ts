@@ -8,6 +8,7 @@ import {
   insertFundTransactionsBulk,
   updateFundHoldings,
 } from "@/lib/indexFunds/fundQueries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface DeadHoldingWriteOffResult {
   /** Holdings removed at zero because the corporation no longer exists. */
@@ -56,8 +57,7 @@ export async function writeOffDeadConstituentHoldings(
 
   const liveIds = new Set(
     (
-      await db
-        .collection("corporations")
+      await corporationsCollection(db)
         .find({ _id: { $in: stillHeld.map((h) => h.corporationId) } }, { projection: { _id: 1 } })
         .toArray()
     ).map((c) => String(c._id))

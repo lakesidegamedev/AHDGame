@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
@@ -10,6 +10,7 @@ import { getResourceContractAuthority } from "@/lib/extraction/contractAuthority
 import { isNationalIssuer, isStateIssuer } from "@/lib/extraction/contractIssuerAuth";
 import { createNotifications } from "@/lib/notifications";
 import { CONTRACT_OFFER_EXPIRY_TURNS } from "@/lib/constants/prospecting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface IssueContractOfferInput {
   countryId: CountryId;
@@ -106,9 +107,10 @@ export async function issueContractOffer(
     return { ok: false, status: 400, error: "Invalid corporation id." };
   }
   const corpId = new ObjectId(corporationId);
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corpId }, { projection: { type: 1, userId: 1, name: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corpId },
+    { projection: { type: 1, userId: 1, name: 1 } }
+  );
   if (!corp) {
     return { ok: false, status: 404, error: "Corporation not found." };
   }

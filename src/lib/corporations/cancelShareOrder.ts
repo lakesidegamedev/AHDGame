@@ -17,6 +17,7 @@ import { creditShares, creditSharesToCorp } from "@/lib/corporations/shareholder
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type CancelResult = { ok: true } | { ok: false; error: string };
 
@@ -70,9 +71,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
   };
 
   if (order.type === "buy") {
-    const targetCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: order.corporationId });
+    const targetCorp = await corporationsCollection(db).findOne({ _id: order.corporationId });
     if (!targetCorp) {
       return { ok: false, error: "Target corporation not found" };
     }
@@ -82,9 +81,9 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
     const currentTurn = await getCurrentTurn(db);
 
     if (order.placerCorporationId) {
-      const placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: order.placerCorporationId });
+      const placerCorp = await corporationsCollection(db).findOne({
+        _id: order.placerCorporationId,
+      });
       if (!placerCorp) {
         // Mirror the orphan-buyer fallback below: if the placer corp has been
         // dissolved/deleted, the escrow can't be refunded — but leaving the
@@ -110,12 +109,10 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
       if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
 
       try {
-        const refundResult = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: order.placerCorporationId },
-            { $inc: { liquidCapital: refundInPlacerCapital }, $set: { updatedAt: now } }
-          );
+        const refundResult = await corporationsCollection(db).updateOne(
+          { _id: order.placerCorporationId },
+          { $inc: { liquidCapital: refundInPlacerCapital }, $set: { updatedAt: now } }
+        );
         if (refundResult.matchedCount === 0) {
           throw new Error("Buyer corporation not found");
         }

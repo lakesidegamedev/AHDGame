@@ -45,6 +45,7 @@ import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildStateLookups, stateGdpAnchorBlend } from "@/lib/turn/commodity/sectorLedger";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -215,8 +216,7 @@ export async function previewQuickDissolve(
           .toArray()
       : [],
     corpShareholderIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: corpShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
@@ -271,8 +271,7 @@ export async function previewQuickDissolve(
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {

@@ -2,7 +2,7 @@ import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { State } from "@/lib/db/types";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import {
@@ -10,6 +10,7 @@ import {
   resolveCorporation,
 } from "@/lib/api/corporations/resolveQuery";
 import { PageCountryOverrideBridge } from "@/components/navbar/PageCountryOverrideBridge";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,9 +28,9 @@ export async function generateMetadata({
 
   const db = await getDb();
   const [corp, sector] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
-      .findOne(corpQuery, { projection: { name: 1, logoUrl: 1, countryId: 1 } }),
+    corporationsCollection(db).findOne(corpQuery, {
+      projection: { name: 1, logoUrl: 1, countryId: 1 },
+    }),
     db
       .collection<CorporateSector>("corporateSectors")
       .findOne(

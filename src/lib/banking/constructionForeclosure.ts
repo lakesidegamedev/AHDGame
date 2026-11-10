@@ -1,12 +1,13 @@
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { computeSectorListingValuation } from "@/lib/corporations/sectorValuation";
 import {
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Expose defaulted security to funded buyers. A book mark never pays a creditor. */
 export async function listDefaultedConstructionCollateral(db: Db, turn: number): Promise<number> {
@@ -33,8 +34,7 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
       .collection<BankLoan>("bankLoans")
       .find({ _id: { $in: loanIds }, status: "defaulted", outstanding: { $gt: 0 } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: sectors.map((sector) => sector.corporationId) } })
       .toArray(),
     loadFxRatesByCurrency(db),

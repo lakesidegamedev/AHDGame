@@ -52,7 +52,6 @@ import { getAllCountryAccess } from "@/lib/countryAccess";
 import { careerArchetypeModifiersContinuous } from "@/lib/nppAutonomy/v3/careerArchetype";
 import { nppBuyBond } from "@/lib/nppAutonomy/v3/finance/nppBonds";
 import { nppBuyShares } from "@/lib/nppAutonomy/v3/finance/nppShares";
-import type { Corporation } from "@/lib/db/types/corporation";
 import {
   NPP_ACTION_RNG_SALT,
   countryScopeFilter,
@@ -83,6 +82,7 @@ import {
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export {
   NPP_FOUNDING_FEE_ANCHOR,
   sellNppStockSurplus,
@@ -774,8 +774,7 @@ export async function investNppStockSurplus(
     if (rng() >= NPP_STOCK_INVEST_BASE_PROBABILITY * riskToleranceMult) continue;
 
     if (!corpsByCountry.has(countryId)) {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find(
           {
             countryId,

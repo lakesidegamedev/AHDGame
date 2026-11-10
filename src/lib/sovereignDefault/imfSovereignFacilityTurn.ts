@@ -16,7 +16,6 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import { computeImfFacilityPaymentTurn } from "@/lib/imf/imfFacilityMath";
@@ -34,6 +33,7 @@ import {
   IMF_SOVEREIGN_INCOME_CAPTURE_DEFAULT,
 } from "./constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const PRINCIPAL_EPS = 1e-6;
 
@@ -109,7 +109,7 @@ export async function processSovereignImfFacilityPayments(
     await federalBudgetCollection(db).updateOne({ _id: budget._id }, update);
 
     if (paymentInImfCurrency > 0) {
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: imfCorp._id as ObjectId },
         {
           $inc: { liquidCapital: paymentInImfCurrency },

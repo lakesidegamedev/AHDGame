@@ -9,7 +9,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { refundOrCapture } from "@/lib/observability/context";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { Character, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -46,6 +46,7 @@ import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote } from "@/lib/bonds/marketPool";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -128,9 +129,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (buyAsCorp) {
       // Buying as corporation
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: new ObjectId(buyAsCorp) });
+      const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(buyAsCorp) });
       if (!corp) {
         return errorResponse(404, "Corporation not found");
       }
@@ -297,12 +296,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         // Block imperial CEO / pending-CEO / recent-former-CEO from buying their
         // own corp's bonds (CEO ⊥ bondholder invariant).
-        const issuingCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { _id: bond.corporationId },
-            { projection: { ceoId: 1, ceoType: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
-          );
+        const issuingCorp = await corporationsCollection(db).findOne(
+          { _id: bond.corporationId },
+          { projection: { ceoId: 1, ceoType: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
+        );
         if (
           (issuingCorp?.ceoType === "imperial" &&
             issuingCorp?.ceoId?.toString() === imperial._id.toString()) ||
@@ -467,12 +464,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // Block CEO / pending-CEO / recent-former-CEO from buying their own corp's
       // bonds (CEO ⊥ bondholder invariant). The former-CEO window closes the
       // "vacate CEO → buy own bonds → re-take CEO" loophole.
-      const issuingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: bond.corporationId },
-          { projection: { ceoId: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
-        );
+      const issuingCorp = await corporationsCollection(db).findOne(
+        { _id: bond.corporationId },
+        { projection: { ceoId: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
+      );
       if (
         issuingCorp?.ceoId?.toString() === character._id.toString() ||
         issuingCorp?.pendingCeoCharacterId?.toString() === character._id.toString()

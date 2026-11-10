@@ -1,11 +1,11 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Auto-resolve lingering corporate defaults.
@@ -47,8 +47,7 @@ export async function autoResolveLingeringDefaults(args: {
       import("@/lib/bonds/executeCorporationBondRefinance"),
       import("@/lib/corporations/settlementLock"),
     ]);
-    const candidateCorps = await db
-      .collection<Corporation>("corporations")
+    const candidateCorps = await corporationsCollection(db)
       .find({ _id: { $in: lingeringDefaultCorpIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const auditRows: Record<string, unknown>[] = [];

@@ -91,6 +91,7 @@ import { BANK_FAILURE_EVENTS } from "./failurePolitics";
 import type { BankFailurePoliticalEvent } from "./rules/failurePolitics";
 import { CENTRAL_BANK_HOLDER } from "@/lib/savings/rules/accounts";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -246,7 +247,7 @@ export async function returnDepositBook(
   corporationId: ObjectId,
   options: DepositReturnOptions
 ): Promise<DepositBookReturnResult> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   let corp = await corporations.findOne(
     { _id: corporationId },
     {
@@ -378,9 +379,10 @@ async function returnDepositBookInner(
       };
     }
     if (liquidation.soldUnits > 0) {
-      const refreshed = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corporationId }, { projection: { bankCharter: 1 } });
+      const refreshed = await corporationsCollection(db).findOne(
+        { _id: corporationId },
+        { projection: { bankCharter: 1 } }
+      );
       if (!refreshed?.bankCharter)
         return { ...EMPTY, error: "Failed-bank charter disappeared after bill liquidation" };
       charter = refreshed.bankCharter;
@@ -492,8 +494,7 @@ async function returnDepositBookInner(
   // shareholder who has already collected.
   const lenderIds = [...new Set(interbankLoans.map((loan) => loan.lenderCorporationId.toString()))];
   const lenders = lenderIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find({ _id: { $in: lenderIds.map((id) => new ObjectId(id)) } })
         .project<Pick<Corporation, "_id" | "name" | "bankCharter">>({ name: 1, bankCharter: 1 })
         .toArray()

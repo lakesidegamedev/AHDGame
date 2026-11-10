@@ -36,6 +36,7 @@ import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -165,8 +166,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             .toArray()
         : [],
       corpShareholderIds.length > 0
-        ? db
-            .collection("corporations")
+        ? corporationsCollection(db)
             .find({ _id: { $in: corpShareholderIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [],

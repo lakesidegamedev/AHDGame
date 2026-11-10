@@ -23,6 +23,7 @@ import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -318,9 +319,7 @@ async function executeSingleTransfer(
   const corpKey = plan.corporationId.toString();
   let corp = corpState.get(corpKey);
   if (!corp) {
-    const loaded = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: plan.corporationId });
+    const loaded = await corporationsCollection(db).findOne({ _id: plan.corporationId });
     if (!loaded) return false;
     corp = loaded;
     corpState.set(corpKey, corp);
@@ -665,7 +664,7 @@ async function restoreFundShareholder(
   expectedCurrentShares: number,
   expectedCurrentAverage: number | undefined
 ): Promise<boolean> {
-  const collection = db.collection<Corporation>("corporations");
+  const collection = corporationsCollection(db);
   const expectedEntry = {
     fundId,
     shares: expectedCurrentShares,

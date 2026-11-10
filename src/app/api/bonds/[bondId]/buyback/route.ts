@@ -8,7 +8,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Corporation, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
@@ -27,6 +27,7 @@ import { creditBondPool, loadBondQuote } from "@/lib/bonds/marketPool";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -154,12 +155,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         ? corpPurchaseEstimate.spendAmount
         : anchorToCorpLiquidCapital(costAnchor, issuingCorp, corpFxRate);
 
-    const debitResult = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: issuingCorp._id, liquidCapital: { $gte: costInCorpCapital } },
-        { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
-      );
+    const debitResult = await corporationsCollection(db).updateOne(
+      { _id: issuingCorp._id, liquidCapital: { $gte: costInCorpCapital } },
+      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
+    );
     if (debitResult.modifiedCount === 0) {
       return errorResponse(400, "Insufficient corporate funds (race with another transaction).");
     }
@@ -186,12 +185,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     if (floatClaim.modifiedCount === 0) {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: issuingCorp._id },
-          { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: new Date() } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: issuingCorp._id },
+        { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: new Date() } }
+      );
       const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
       return errorResponse(
         400,

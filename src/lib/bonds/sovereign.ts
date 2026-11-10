@@ -78,6 +78,7 @@ import { fundSovereignSeries } from "./sovereignFunding";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export { refreshSovereignDebtTerms } from "./sovereignFunding";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
@@ -174,7 +175,7 @@ async function findPrimaryNationalCorporation(
   db: Db,
   countryId: CountryId
 ): Promise<Pick<Corporation, "_id" | "name"> | null> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   return (
     (await corps
       .find({ countryOwnerId: countryId, isPrimaryNationalCorporation: true })

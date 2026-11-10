@@ -8,6 +8,7 @@ import type { Bond, Corporation, FinancialTxLogEntry } from "@/lib/db/types";
 import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -156,8 +157,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .map((b) => b.corporationId!);
     const corpNameById = new Map<string, string>();
     if (corpIssuerIds.length > 0) {
-      const corpDocs = await db
-        .collection<Corporation>("corporations")
+      const corpDocs = await corporationsCollection(db)
         .find({ _id: { $in: corpIssuerIds } })
         .project<Pick<Corporation, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray();

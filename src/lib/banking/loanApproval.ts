@@ -6,7 +6,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { Character } from "@/lib/db/types/character";
 import { loadBorrowerSnapshot } from "@/lib/banking/lending";
 import { loadBankingSnapshot } from "@/lib/banking/snapshot";
@@ -20,6 +19,7 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { approveConstructionFinance, rejectConstructionFinance } from "./constructionFinance";
 import { loadBankingPolicy } from "./policy";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type LoanDecisionResult = { ok: true; loan: BankLoan } | { ok: false; error: string };
 
@@ -33,12 +33,10 @@ export async function setLoanApprovalRequired(
   bankCorporationId: ObjectId,
   requireApproval: boolean
 ): Promise<{ ok: true; requireApproval: boolean } | { ok: false; error: string }> {
-  const res = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: bankCorporationId, "bankCharter.status": "active" },
-      { $set: { "bankCharter.requireApproval": requireApproval, updatedAt: new Date() } }
-    );
+  const res = await corporationsCollection(db).updateOne(
+    { _id: bankCorporationId, "bankCharter.status": "active" },
+    { $set: { "bankCharter.requireApproval": requireApproval, updatedAt: new Date() } }
+  );
   if (res.matchedCount !== 1) return { ok: false, error: "No active bank charter" };
   return { ok: true, requireApproval };
 }
@@ -69,9 +67,10 @@ async function resolveBorrowerMailTarget(
       toUserId: c.userId,
     };
   }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { userId: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: loan.borrowerId },
+    { projection: { userId: 1 } }
+  );
   if (!corp?.userId) return null;
   const owner = await db.collection<Character>("characters").findOne({ userId: corp.userId }, proj);
   if (!owner?.userId) return null;
@@ -225,9 +224,10 @@ async function acceptLoanInner(
             .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } })
         )?.name ?? "Borrower")
       : ((
-          await db
-            .collection<Corporation>("corporations")
-            .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } })
+          await corporationsCollection(db).findOne(
+            { _id: loan.borrowerId },
+            { projection: { name: 1 } }
+          )
         )?.name ?? "Borrower");
 
   await emitTx(db, {

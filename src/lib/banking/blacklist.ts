@@ -1,8 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
 import type { BankCharter } from "@/lib/db/types/bank";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { getAllFundDefinitions } from "@/lib/indexFunds/fundDefinitions";
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type BankBlacklist = NonNullable<BankCharter["blacklist"]>;
 
@@ -42,7 +43,7 @@ export async function setBlacklist(
     return { ok: false, error: "Private banking is not enabled" };
   }
 
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {
@@ -87,9 +88,7 @@ export async function setBlacklist(
 
   if (corporationIds.length > 0) {
     const objectIds = corporationIds.map((id) => new ObjectId(id));
-    const count = await db
-      .collection<Corporation>("corporations")
-      .countDocuments({ _id: { $in: objectIds } });
+    const count = await corporationsCollection(db).countDocuments({ _id: { $in: objectIds } });
     if (count !== corporationIds.length) {
       return { ok: false, error: "One or more corporation ids do not exist" };
     }
@@ -111,7 +110,7 @@ export async function setBlacklist(
     indexFundIds,
   };
 
-  const result = await db.collection<Corporation>("corporations").updateOne(
+  const result = await corporationsCollection(db).updateOne(
     { _id: corporationId, "bankCharter.status": "active" },
     {
       $set: {

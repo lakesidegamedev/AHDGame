@@ -7,7 +7,7 @@
  * with the unrelated `concentrationMultiplier` in `@/lib/economicModels`.)
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -18,6 +18,7 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { clampConcentration, sociMultiplier } from "./concentrationClamp";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { clampConcentration, sociMultiplier };
 
@@ -87,8 +88,7 @@ export async function computeCountryStateOwnershipConcentration(
     new Map(sectors.map((s) => [s.corporationId.toString(), s.corporationId])).values()
   );
   const [corps, fx] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: uniqueCorpIds } },
         {

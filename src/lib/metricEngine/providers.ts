@@ -22,6 +22,7 @@ import type { GameConfig } from "@/lib/db/types";
 import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -138,8 +139,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         mediaDiscriminator: 1,
       })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({})
       .project<Pick<Corporation, "_id" | "countryId">>({
         _id: 1,

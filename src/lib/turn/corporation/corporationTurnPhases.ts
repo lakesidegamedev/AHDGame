@@ -30,6 +30,7 @@ import { distributeConversionSpreadsBatch } from "@/lib/currency/marketMaker";
 import { buildEscrowFundingTxEntry } from "@/lib/corporations/escrowTxLog";
 import type { CorporationLookups, CorpSnapshot } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * v2: persist the per-state labour wage index (+ v2-3b: automation index) to
@@ -318,7 +319,7 @@ export async function creditCorpDividends(args: {
     }
     if (withholding) await settleCorporateTaxPriority(db, dividendCash, turn ?? 0, now, "dividend");
     if (corpDivOps.length > 0) {
-      await db.collection<Corporation>("corporations").bulkWrite(corpDivOps);
+      await corporationsCollection(db).bulkWrite(corpDivOps);
     }
     // Route the skimmed cross-currency dividend spreads into the CB system after
     // the credits land (reserve slice → recipient corp's CB; revenue → payer CB).

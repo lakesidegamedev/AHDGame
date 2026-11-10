@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isStateOwned } from "./nationalCorporation";
 import { privatizeAsset } from "./privatizeAsset";
@@ -13,6 +13,7 @@ import {
   recordCompensationRecovery,
   rehomeSpinOutRecovery,
 } from "./clawbackCompensation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReverseNationalizationParams {
   countryId: string;
@@ -99,7 +100,7 @@ async function reverseNextTaking(
   progress: { reversedAny: boolean }
 ): Promise<boolean> {
   const sectorsCol = db.collection<CorporateSector>("corporateSectors");
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   {
     const sector = await sectorsCol.findOne({ _id: sectorId });
     if (!sector) return false;

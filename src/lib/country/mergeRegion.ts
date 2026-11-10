@@ -21,6 +21,7 @@ import { REGION_SCOPED_COLLECTIONS } from "@/lib/referendum/transfer/regionScope
 import { REGION_PARTY_COLLECTIONS } from "@/lib/referendum/transfer/evacuateRegionPolitics";
 import { rescaleRegionDelegations } from "./apportionChamber";
 import { statePartyOrgIdFor } from "@/lib/db/partyLookup";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** A unique index that constrains `field`, as the fuse needs to see it. */
 interface UniqueIndexOverField {
@@ -327,12 +328,10 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
 
   // A corporation headquartered in the absorbed region moves with it, the same
   // way one follows a region across a border.
-  const corpsMoved = await db
-    .collection("corporations")
-    .updateMany(
-      { headquartersState: fromRegionId },
-      { $set: { headquartersState: toRegionId, updatedAt: now } }
-    );
+  const corpsMoved = await corporationsCollection(db).updateMany(
+    { headquartersState: fromRegionId },
+    { $set: { headquartersState: toRegionId, updatedAt: now } }
+  );
   documentsMoved += corpsMoved?.modifiedCount ?? 0;
 
   // Officeholders are NOT in the table above, deliberately: moving them needs the

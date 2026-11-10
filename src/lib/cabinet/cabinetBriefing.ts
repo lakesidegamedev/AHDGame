@@ -146,6 +146,7 @@ import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanics"
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Assembles the cabinet position briefing payload for the viewing user. */
 export async function buildCabinetBriefing(
@@ -443,8 +444,7 @@ export async function buildCabinetBriefing(
     const supplierIds = [...new Set(activeContracts.map((c) => c.corporationId.toString()))];
     const supplierNames = new Map<string, string>();
     if (supplierIds.length > 0) {
-      const corps = await db
-        .collection<{ _id: ObjectId; name?: string }>("corporations")
+      const corps = await corporationsCollection<{ _id: ObjectId; name?: string }>(db)
         .find({ _id: { $in: supplierIds.map((id) => new ObjectId(id)) } })
         .project({ _id: 1, name: 1 })
         .toArray();

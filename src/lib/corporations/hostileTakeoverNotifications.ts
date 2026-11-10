@@ -1,12 +1,12 @@
 import type { Db, ObjectId } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
-import type { Corporation } from "@/lib/db/types";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import {
   acquirerOwnershipPercent,
   HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT,
 } from "@/lib/corporations/corporateOwnership";
 import { createNotification } from "@/lib/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * When corporate ownership is above 75%, notify that corp’s CEO they may merge.
@@ -21,7 +21,7 @@ export async function notifyHostileTakeoverThresholdIfEligible(
   // unhandled rejection AND affected players silently never get the
   // takeover-available notification (a gameplay-critical signal).
   try {
-    const corp = await db.collection<Corporation>("corporations").findOne({ _id: issuerCorpId });
+    const corp = await corporationsCollection(db).findOne({ _id: issuerCorpId });
     if (!corp?.shareholders?.length || corp.countryOwnerId) return;
 
     const totalShares = corp.totalShares ?? 0;
@@ -32,9 +32,10 @@ export async function notifyHostileTakeoverThresholdIfEligible(
       const pct = acquirerOwnershipPercent(sh.corporationId, corp);
       if (pct <= HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT) continue;
 
-      const parent = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: sh.corporationId }, { projection: { userId: 1, name: 1 } });
+      const parent = await corporationsCollection(db).findOne(
+        { _id: sh.corporationId },
+        { projection: { userId: 1, name: 1 } }
+      );
       if (!parent?.userId) continue;
 
       const dup = await db.collection("notifications").findOne({

@@ -16,6 +16,7 @@ import {
   isValidSuperShareMultiplier,
   totalVotingPower,
 } from "@/lib/corporations/superShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type VoteOutcome = "passed" | "failed" | "open" | "cancelled";
 
@@ -277,9 +278,7 @@ export async function resolveCorporationVoteIfReady(opts: {
   // holder; passive ones mirror the majority actually cast; a fund with neither
   // abstains AND drops out of the denominator, because measuring a threshold
   // against shares nobody can cast is what caused the deadlock.
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: vote.corporationId });
+  const corporation = await corporationsCollection(db).findOne({ _id: vote.corporationId });
   const stewardship = corporation
     ? await resolveFundStewardship(db, {
         corporation,

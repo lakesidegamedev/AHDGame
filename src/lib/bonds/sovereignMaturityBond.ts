@@ -32,6 +32,7 @@ import type { SovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturity
 import type { SovereignMaturityPlan } from "@/lib/bonds/sovereignMaturityWave";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SovereignBondMaturitySettlementInput {
   db: Db;
@@ -228,11 +229,10 @@ async function fundBankMaturityClaims(
       ObjectId.isValid(claim.bankId)
   );
   if (candidates.length === 0) return null;
-  const banks = await db
-    .collection<{
-      _id: ObjectId;
-      bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
-    }>("corporations")
+  const banks = await corporationsCollection<{
+    _id: ObjectId;
+    bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
+  }>(db)
     .find(
       { _id: { $in: [...new Set(candidates.map((c) => c.bankId))].map((h) => new ObjectId(h)) } },
       {

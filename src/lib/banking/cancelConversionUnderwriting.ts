@@ -7,6 +7,7 @@ import { projectionStamp, resumeSettlement } from "./settlementJournal";
 import { reviveObjectIds } from "./settlementEncoding";
 import { quoteUnpublishedUnderwritingRefund } from "./rules/conversionRefund";
 import type { TransitionProjection } from "./rules/boundary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 type TargetCollection = "corporations" | "bonds" | "equityMarketPools" | "bondMarketPools";
 interface Target {
   _id: ObjectId | string;
@@ -130,18 +131,14 @@ async function cancelLease(db: Db, bank: Corporation, turn: number): Promise<voi
       conversionRefundTurn: turn,
     });
   }
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: bank._id, "bankUnderwritingFunding.key": lease.key },
-      { $unset: { bankUnderwritingFunding: "" } }
-    );
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: lease.issuerCorporationId, "primaryUnderwritingIncomingFunding.key": lease.key },
-      { $unset: { primaryUnderwritingIncomingFunding: "" } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: bank._id, "bankUnderwritingFunding.key": lease.key },
+    { $unset: { bankUnderwritingFunding: "" } }
+  );
+  await corporationsCollection(db).updateOne(
+    { _id: lease.issuerCorporationId, "primaryUnderwritingIncomingFunding.key": lease.key },
+    { $unset: { primaryUnderwritingIncomingFunding: "" } }
+  );
 }
 export async function cancelConversionUnderwriting(
   db: Db,
@@ -150,8 +147,7 @@ export async function cancelConversionUnderwriting(
 ): Promise<void> {
   if (!boundSession(db)) throw new Error("Conversion refunds require a transaction");
   if (!ids.length) return;
-  const banks = await db
-    .collection<Corporation>("corporations")
+  const banks = await corporationsCollection(db)
     .find({
       "bankUnderwritingFunding.key": { $exists: true },
       $or: [{ _id: { $in: ids } }, { "bankUnderwritingFunding.issuerCorporationId": { $in: ids } }],

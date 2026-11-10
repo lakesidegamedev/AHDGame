@@ -18,6 +18,7 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { groupRegionFootprint } from "./rules/overview";
 import { resolveFormalizedGroups } from "./groupMembership";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface GroupMemberSummary {
   corporationId: string;
@@ -63,8 +64,7 @@ export async function loadGroupBalanceSheet(
   const memberIds = membership.membersByRootId.get(rootId);
   if (!memberIds || memberIds.length < 2) return null;
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: memberIds.map((id) => new ObjectId(id)) } })
     .project<
       Pick<

@@ -28,6 +28,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CorporationRefinanceResult {
   ok: true;
@@ -224,7 +225,7 @@ export async function executeCorporationBondRefinance(
   // face value — there are no new investors purchasing the issuance, so treating
   // it as a cash raise would print phantom money and enable a default → refi
   // cash-extraction loop.
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporation._id },
     {
       $inc: { bondDefaultRefinanceCount: 1 },

@@ -13,7 +13,6 @@ import {
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
-import type { Corporation } from "@/lib/db/types";
 import type { AcquisitionOffer } from "@/lib/db/types/acquisitionOffer";
 import {
   proposeAcquisitionOffer,
@@ -21,6 +20,7 @@ import {
   resolveAcquisitionOfferStatus,
   listDealsForCorp,
 } from "@/lib/corporations/commands/acquisitions/acquisitionOffers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -86,7 +86,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (body.action === "propose") {
       const targetQuery = corporationQueryFromParamId(body.targetCorporationId ?? "");
       if (!targetQuery) return errorResponse(400, "Invalid target corporation");
-      const target = await db.collection<Corporation>("corporations").findOne(targetQuery);
+      const target = await corporationsCollection(db).findOne(targetQuery);
       if (!target) return errorResponse(404, "Target corporation not found");
 
       const result = await proposeAcquisitionOffer(db, {

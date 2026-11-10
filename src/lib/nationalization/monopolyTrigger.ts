@@ -18,6 +18,7 @@ import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
 } from "@/lib/corporations/groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** gameConfig.groupSizeCostsStage at which the monopoly trigger reads the control group. */
 const GROUP_MONOPOLY_TRIGGER_STAGE = 4;
@@ -70,8 +71,7 @@ export async function loadGroupTopMarketShares(
     .collection<{ groupSizeCostsStage?: number }>("gameConfig")
     .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MONOPOLY_TRIGGER_STAGE) return null;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   const rootByCorpId = controlGroupRootByCorpId(corps);

@@ -12,7 +12,8 @@ import {
 } from "@/lib/military/defenceLotEconomics";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { DEFENCE_CARRY_REASON_TEXT, type DefenceCarryReason } from "@/lib/db/types/defenceContract";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** One procurement contract as the supplying CEO sees it. */
 export interface CorporationContractView {
@@ -114,7 +115,7 @@ export async function loadCorporationDefenceContracts(
 ): Promise<CorporationDefenceView> {
   const [contracts, corp] = await Promise.all([
     listContractsForCorp(db, corporationId),
-    db.collection<Corporation>("corporations").findOne({ _id: corporationId }),
+    corporationsCollection(db).findOne({ _id: corporationId }),
   ]);
 
   if (contracts.length === 0) {

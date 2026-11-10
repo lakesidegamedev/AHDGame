@@ -12,6 +12,7 @@ import type {
 } from "../types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Restitution for a bank charter destroyed by a hostile-takeover merge. The
@@ -122,8 +123,7 @@ async function loadDocs(db: Db): Promise<{
   usCb: CentralBankDoc | undefined;
 }> {
   const [huntDocs, cbDocs] = await Promise.all([
-    db
-      .collection<CorporationDoc>("corporations")
+    corporationsCollection<CorporationDoc>(db)
       .find({ _id: new ObjectId(HUNT_OIL_ID) })
       .toArray(),
     centralBanksCollection<CentralBankDoc>(db).find({ _id: US_CB_ID }).toArray(),
@@ -236,9 +236,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     };
     const res =
       row.collection === "corporations"
-        ? await db
-            .collection<CorporationDoc>("corporations")
-            .updateOne({ _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } }, update)
+        ? await corporationsCollection<CorporationDoc>(db).updateOne(
+            { _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } },
+            update
+          )
         : await centralBanksCollection<CentralBankDoc>(db).updateOne(
             { _id: row.docId, [MARKER_PATH]: { $exists: false } },
             update

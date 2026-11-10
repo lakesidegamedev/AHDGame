@@ -23,6 +23,7 @@ import {
   type CaretakerAppointmentError,
 } from "@/lib/corporations/caretakerCeo";
 import { z } from "zod";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -163,12 +164,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return errorResponse(400, "This corporation does not have a caretaker CEO.");
     }
 
-    const update = await db
-      .collection("corporations")
-      .updateOne(
-        { _id: corporation._id, "caretakerCeo.underlyingUserId": corporation.userId },
-        { $set: { "caretakerCeo.mandate": parsed.data.mandate, updatedAt: new Date() } }
-      );
+    const update = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, "caretakerCeo.underlyingUserId": corporation.userId },
+      { $set: { "caretakerCeo.mandate": parsed.data.mandate, updatedAt: new Date() } }
+    );
     if (update.modifiedCount !== 1) {
       return errorResponse(409, "Caretaker changed. Refresh and try again.");
     }

@@ -1,7 +1,7 @@
 /** Viewer-scoped, read-only discovery. Batch inputs before evaluating every candidate. */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector, DefenceContract } from "@/lib/db/types";
+import type { CorporateSector, DefenceContract } from "@/lib/db/types";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { getGameState } from "@/lib/gameState";
@@ -21,6 +21,7 @@ import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import { hasCurrentTenderCapacity } from "./rules/viewerCapacity";
 import type { GovernmentTender } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export async function viewerTenderIds(
   db: Db,
   countryId: CountryId,
@@ -31,8 +32,7 @@ export async function viewerTenderIds(
 ): Promise<string[]> {
   if (!ObjectId.isValid(userId) || !rows.length) return [];
   const corps = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find(
         {
           userId: new ObjectId(userId),

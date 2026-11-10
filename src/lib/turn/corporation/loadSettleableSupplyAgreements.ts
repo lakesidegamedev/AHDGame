@@ -20,6 +20,7 @@ import {
 } from "@/lib/market/commodityMarketScope";
 import { migrateStateScopedSupplyAgreements } from "./migrateStateScopedSupplyAgreements";
 import type { SettleableSupplyAgreement } from "./settleSupplyAgreements";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Keys a located sector's output is credited under for contract settlement:
@@ -61,8 +62,7 @@ async function notifyExpiredAgreements(
 ): Promise<void> {
   try {
     const corpIds = [...new Set(expired.flatMap((a) => [a.supplierCorpId, a.buyerCorpId]))];
-    const corps = await db
-      .collection<Pick<Corporation, "_id" | "userId">>("corporations")
+    const corps = await corporationsCollection<Pick<Corporation, "_id" | "userId">>(db)
       .find({ _id: { $in: corpIds } }, { projection: { userId: 1 } })
       .toArray();
     const byId = new Map(corps.map((c) => [c._id.toString(), c]));
@@ -186,8 +186,7 @@ export async function loadSettleableSupplyAgreements(args: {
       : [];
   const restored =
     exits.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: exits.map((exit) => exit._id) } }, { projection: { _id: 1 } })
           .toArray()
       : [];

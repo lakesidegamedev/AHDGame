@@ -17,6 +17,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { revenuePerCapacityUnitForStrategy } from "@/lib/constants/capacityEconomy";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { reserveSectorsForRestore } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const RESTORE_IDEMPOTENCY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -94,8 +95,7 @@ export async function restoreSectorsToUnowned(
   // a stale value would return capacity to a market the country cannot see.
   // Batched alongside the corporation read.
   const [corporations, fxByCurrency, sectorStates] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: corporationIds } })
       .project<Pick<Corporation, "_id" | "countryId" | "liquidCurrencyCode">>({
         _id: 1,

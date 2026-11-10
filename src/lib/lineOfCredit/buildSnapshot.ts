@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { LoanFundingSource, LocPaymentMode } from "@/lib/db/types/character";
 import type { LocLedgerEntry } from "@/lib/db/types/locLedger";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -39,6 +39,7 @@ import {
   controlledEquityCollateralNote,
 } from "@/lib/lineOfCredit/controlledEquity";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -225,12 +226,10 @@ export async function buildLocSnapshot(
   // spread matches the one charged.
   const nwScore = netWorthScoreFromInternal(netOfLocInternal);
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoId: character._id, countryId: character.countryId },
-      { projection: { creditCompositeSnapshot: 1 } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    { ceoId: character._id, countryId: character.countryId },
+    { projection: { creditCompositeSnapshot: 1 } }
+  );
 
   const composite = computeLocBorrowerComposite({
     corpComposite: corp?.creditCompositeSnapshot ?? null,

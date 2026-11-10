@@ -3,7 +3,7 @@
  * Their initial quote uses the existing suggested lot price, with no direct-award shortcut.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { resolveFillEligibility } from "@/lib/military/defenceFillEligibility";
@@ -18,6 +18,7 @@ import { maxTechTierForPreset } from "@/lib/admin/seed/seedMilitaryUnits";
 import { resolveGameYear } from "@/lib/era/era";
 import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { GovernmentTender, ContractBid } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export async function automatedDefenceBids(
   db: Db,
   t: GovernmentTender
@@ -25,8 +26,7 @@ export async function automatedDefenceBids(
   if (t.terms.type !== "defence") return {};
   const terms = t.terms;
   const [corps, sectors, state, ratios] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { countryId: t.countryId },
         {

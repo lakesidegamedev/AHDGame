@@ -13,6 +13,7 @@ import {
 } from "@/lib/banking/rules/insurance";
 import { MONEY_MOVE_COLLECTION, turnMoveKey } from "@/lib/banking/moneyMove";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Banking-turn inputs and compare filters for the insurance premium stage.
@@ -273,7 +274,7 @@ async function readOriginalCharterCash(
   ) {
     throw new Error("Insurance premium receipt's source-charter guard is malformed");
   }
-  const bank = await db.collection("corporations").findOne(
+  const bank = await corporationsCollection(db).findOne(
     frozenFilter ?? {
       _id: input.bankId,
       ...countryFilter,

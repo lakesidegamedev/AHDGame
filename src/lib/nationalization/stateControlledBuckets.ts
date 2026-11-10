@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { CorporateSector, UnownedSector } from "@/lib/db/types";
 import { absorbOwnedSectorIntoNatCorp, absorbUnownedDocIntoNatCorp } from "./seedToNatCorp";
 import {
   enactedLawAllowsCorpMerge,
@@ -7,6 +7,7 @@ import {
   sectorTakingKey,
   type EnactedSectorTaking,
 } from "./enactedSectorTaking";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * `(stateId:sectorType)` key for a market bucket. Shared format across the
@@ -26,8 +27,7 @@ export function bucketKey(
 
 /** The `_id` strings of every National Corporation (countryOwnerId set). Few rows. */
 export async function loadNationalCorpIds(db: Db): Promise<Set<string>> {
-  const natCorps = await db
-    .collection<Corporation>("corporations")
+  const natCorps = await corporationsCollection(db)
     .find({ countryOwnerId: { $exists: true } }, { projection: { _id: 1, countryOwnerId: 1 } })
     .toArray();
   return new Set(natCorps.filter((c) => c.countryOwnerId != null).map((c) => c._id.toString()));

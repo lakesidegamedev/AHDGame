@@ -64,6 +64,7 @@ import type {
 } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-unfunded-rollover";
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
@@ -206,11 +207,10 @@ export async function surveyOverdueSovereignBonds(db: Db): Promise<Payload> {
   const claims = budgets.flatMap((row) => row.bankSovereignClaims ?? []);
   const bankIds = [...new Set(claims.map((c) => c.bankId))].filter((id) => ObjectId.isValid(id));
   const banks = bankIds.length
-    ? await db
-        .collection<{
-          _id: ObjectId;
-          bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
-        }>("corporations")
+    ? await corporationsCollection<{
+        _id: ObjectId;
+        bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
+      }>(db)
         .find(
           { _id: { $in: bankIds.map((id) => new ObjectId(id)) } },
           { projection: { bankSovereignEscrows: 1 } }

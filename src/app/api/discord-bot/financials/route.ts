@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
-import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
+import type { CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import {
@@ -47,6 +47,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -76,9 +77,9 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const corporation = await db
-      .collection<Corporation>("corporations")
-      .findOne({ name: { $regex: new RegExp(`^${escapedName}$`, "i") } });
+    const corporation = await corporationsCollection(db).findOne({
+      name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+    });
 
     if (!corporation) {
       return NextResponse.json({ found: false });

@@ -5,14 +5,7 @@ import { generateRecommendations, type ActionRecommendation } from "@/lib/action
 import { hasVotedOnAnyBill } from "@/lib/onboarding/checklist";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type {
-  Character,
-  State,
-  PartyBudget,
-  PoliticalParty,
-  StatePartyOrg,
-  Corporation,
-} from "@/lib/db/types";
+import type { Character, State, PartyBudget, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import type { ElectionCandidate } from "@/lib/db/types/election";
 import { type CountryId } from "@/lib/constants/countries";
 import { findPartyBudgetForScope } from "@/lib/partyBudgetGuards";
@@ -25,6 +18,7 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface StateEconomySector {
   type: string;
@@ -91,8 +85,7 @@ async function fetchStateEconomy(
   const corpIds = corpIdsInState.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
   const [corpsForFx, fxByCurrency] = await Promise.all([
     corpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: corpIds } })
           .project<{ _id: ObjectId } & CorpCapitalCurrencyInfo>({
             _id: 1,
@@ -180,8 +173,7 @@ async function fetchMarketPositions(
   db: Awaited<ReturnType<typeof getDb>>,
   character: Character
 ): Promise<CorpMarketPosition[]> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ ceoId: new ObjectId(character._id) })
     .project<{ _id: ObjectId; type: string; name: string } & CorpCapitalCurrencyInfo>({
       _id: 1,
@@ -235,8 +227,7 @@ async function fetchMarketPositions(
   ).filter((id) => ObjectId.isValid(id));
   const [siblingCorpsForFx, fxByCurrency] = await Promise.all([
     siblingCorpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: siblingCorpIds.map((id) => new ObjectId(id)) } })
           .project<{ _id: ObjectId } & CorpCapitalCurrencyInfo>({
             _id: 1,
@@ -428,15 +419,14 @@ export async function loadRecommendationsForUser(
 
   // Fetch user's corporations (for sector types + image checks)
   const userCorpSectorTypes: string[] = [];
-  const corporations = await db
-    .collection<{
-      _id: ObjectId;
-      type: string;
-      secondaryType?: string | null;
-      name: string;
-      logoUrl?: string;
-      headerImageUrl?: string;
-    }>("corporations")
+  const corporations = await corporationsCollection<{
+    _id: ObjectId;
+    type: string;
+    secondaryType?: string | null;
+    name: string;
+    logoUrl?: string;
+    headerImageUrl?: string;
+  }>(db)
     .find({ ceoId: new ObjectId(character._id) })
     .toArray();
   for (const corp of corporations) {

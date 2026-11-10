@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireSingleplayer } from "@/lib/api/requireSingleplayer";
 import { getDb } from "@/lib/mongodb";
 import type { GameState } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request) {
   const denied = requireSingleplayer(request);
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
         { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerTurnMetrics: 1 } }
       ),
     db.collection("characters").countDocuments({ retiredAt: { $exists: false } }),
-    db.collection("corporations").countDocuments(),
+    corporationsCollection(db).countDocuments(),
     db.collection("politicalParties").countDocuments(),
   ]);
   if (!state) return errorResponse(409, "No local world");

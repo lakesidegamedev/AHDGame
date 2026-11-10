@@ -13,6 +13,7 @@ import { totalVotingPower } from "@/lib/corporations/superShares";
 import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { resolvePrivatizationVote } from "@/lib/corporations/commands/privatization/resolvePrivatizationVote";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type ReminderVote = CorporationVote | CorporationPrivatizationVote;
 
@@ -51,8 +52,9 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
       reminderVotes.map((vote) => [vote.corporationId.toString(), vote.corporationId])
     ).values(),
   ];
-  const corporations = await db
-    .collection<Pick<Corporation, "_id" | "name" | "shareholders">>("corporations")
+  const corporations = await corporationsCollection<
+    Pick<Corporation, "_id" | "name" | "shareholders">
+  >(db)
     .find({ _id: { $in: corporationIds } }, { projection: { name: 1, shareholders: 1 } })
     .toArray();
   const corporationById = new Map(corporations.map((corp) => [corp._id.toString(), corp]));
@@ -155,8 +157,7 @@ export async function processVoteAutoResolve(
   );
   const genericCorps =
     genericCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: genericCorpIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
           .toArray()
       : [];

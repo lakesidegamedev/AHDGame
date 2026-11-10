@@ -9,7 +9,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Character, CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -24,10 +25,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corps = await db
-      .collection<Corporation>("corporations")
-      .find({ countryOwnerId: countryId })
-      .toArray();
+    const corps = await corporationsCollection(db).find({ countryOwnerId: countryId }).toArray();
 
     const corpIds = corps.map((c) => c._id);
     const sectors =

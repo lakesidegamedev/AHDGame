@@ -1,11 +1,11 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import {
   fxRateForCorpFromMap,
   loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const HISTORY_CAP = 96;
 
@@ -33,8 +33,7 @@ interface CorporationCountrySnapshot {
  * fixed once for NPP wealth (src/lib/sim/metrics.ts).
  */
 export async function snapshotCorporationsByCountry(db: Db, turn: number): Promise<number> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       {},
       {

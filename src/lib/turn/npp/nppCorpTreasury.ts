@@ -34,6 +34,7 @@ import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Keep this many days of revenue as operating cash. Revenue is already daily. */
 export const NPP_TREASURY_REVENUE_DAYS = 1;
@@ -144,8 +145,7 @@ export async function processNppCorpTreasury(db: Db, turn: number, now: Date): P
 }
 
 async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<number> {
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {

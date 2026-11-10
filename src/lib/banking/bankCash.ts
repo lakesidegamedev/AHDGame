@@ -17,7 +17,6 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { loadBankingSnapshot } from "@/lib/banking/snapshot";
 import { decideBankCommand } from "@/lib/banking/rules/decide";
 import type { BankCommand } from "@/lib/banking/rules/boundary";
@@ -30,6 +29,7 @@ import {
   type BalanceSheetCharter,
   type BalanceSheetOptions,
 } from "@/lib/banking/balanceSheet";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type BankCashResult =
   | { ok: true; cashReserves: number; liquidCapital: number; amount: number }
@@ -69,9 +69,10 @@ async function readBankCash(
   db: Db,
   corporationId: ObjectId
 ): Promise<{ cashReserves: number; liquidCapital: number }> {
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId }, { projection: { liquidCapital: 1, bankCharter: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    { projection: { liquidCapital: 1, bankCharter: 1 } }
+  );
   return {
     cashReserves: readCashReserves(corp?.bankCharter),
     liquidCapital: corp?.liquidCapital ?? 0,

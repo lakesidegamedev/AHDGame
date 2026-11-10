@@ -9,6 +9,7 @@ import { rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { createNotification } from "@/lib/notifications";
 import type { Character } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
   body: z.string().min(1).max(1000),
@@ -53,9 +54,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { body } = parsed.data;
 
     // Update cooldown
-    await db
-      .collection("corporations")
-      .updateOne({ _id: corporation._id }, { $set: { lastShareholderAddressAt: new Date() } });
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $set: { lastShareholderAddressAt: new Date() } }
+    );
 
     // Batch-look up shareholders with shares > 0
     const shareholderCharIds = corporation.shareholders

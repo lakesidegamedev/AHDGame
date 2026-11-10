@@ -6,6 +6,7 @@ import {
   tariffRulesNeedSectorPresenceKeys,
 } from "@/lib/tariffs/tariffEffects";
 import { buildFtaCoverageLookup, type FtaCoverage } from "@/lib/tariffs/ftaOverrides";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type SectorMirrorRow = Pick<
   CorporateSector,
@@ -48,8 +49,7 @@ async function loadSectorMirror(db: Db): Promise<SectorMirror> {
   const sectorLookupCorpIds = [...new Set(allSectorsRaw.map((s) => s.corporationId.toString()))];
   const sectorLookupCorps =
     sectorLookupCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: sectorLookupCorpIds.map((cid) => new ObjectId(cid)) } },
             { projection: { _id: 1, countryId: 1 } }

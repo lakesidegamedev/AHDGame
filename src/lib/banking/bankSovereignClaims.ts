@@ -19,6 +19,7 @@ import { bankSovereignMaturityCostBasis } from "@/lib/banking/rules/sovereignCla
 import { remarkBankTreasuryAfterMaturity } from "@/lib/banking/bankTreasury";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type ClaimReceiptRow = { _id: string; kind?: string; turn?: number; status?: string };
 
@@ -661,7 +662,7 @@ function bankPayoutTransition(claim: BankSovereignClaim, attemptTurn: number): B
 
 /** Write the zero escrow slot a claim's funding credit lands in, once. */
 export async function ensureClaimEscrowSlot(db: Db, claim: BankSovereignClaim): Promise<void> {
-  await db.collection<CorporationCharterState>("corporations").updateOne(
+  await corporationsCollection<CorporationCharterState>(db).updateOne(
     {
       _id: new ObjectId(claim.bankId),
       [`bankSovereignEscrows.${claim.id}`]: { $exists: false },
@@ -710,7 +711,7 @@ async function fundClaimEscrow(
   attemptTurn: number,
   escrowExists: boolean
 ): Promise<{ charter: CorporationCharterState["bankCharter"] } | null> {
-  const corps = db.collection<CorporationCharterState>("corporations");
+  const corps = corporationsCollection<CorporationCharterState>(db);
   // The caller already read this claim's escrow slot off the bank book, so the
   // placeholder only needs writing when the slot is missing.
   if (!escrowExists) await ensureClaimEscrowSlot(db, claim);
@@ -804,9 +805,10 @@ async function payFromEscrow(
       return settled;
     }
     if (settled.status !== "rejected") return settled;
-    const current = await db
-      .collection<CorporationCharterState>("corporations")
-      .findOne({ _id: new ObjectId(claim.bankId) }, { projection: { bankCharter: 1 } });
+    const current = await corporationsCollection<CorporationCharterState>(db).findOne(
+      { _id: new ObjectId(claim.bankId) },
+      { projection: { bankCharter: 1 } }
+    );
     const stillExactPayable =
       current?.bankCharter?.currency === claim.currencyCode &&
       current.bankCharter.charteredTurn === claim.charteredTurn &&
@@ -885,8 +887,7 @@ export async function settleBankSovereignClaims(
   const bankRows: CorporationCharterState[] =
     bankIds.length === 0
       ? []
-      : await db
-          .collection<CorporationCharterState>("corporations")
+      : await corporationsCollection<CorporationCharterState>(db)
           .find(
             { _id: { $in: bankIds } },
             { projection: { _id: 1, bankCharter: 1, bankSovereignEscrows: 1 } }

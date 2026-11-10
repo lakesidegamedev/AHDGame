@@ -38,6 +38,7 @@ import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!parentQuery) {
       return errorResponse(400, "Invalid parent corporation ID");
     }
-    const parent = await db.collection<Corporation>("corporations").findOne(parentQuery);
+    const parent = await corporationsCollection(db).findOne(parentQuery);
     if (!parent) {
       return errorResponse(404, "Parent corporation not found");
     }
@@ -146,7 +147,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         const fxByCurrency = await loadFxRatesByCurrency(db);
         const totalCostAnchor = sumNonMaturedBondPrincipal(outstandingBonds, fxByCurrency);
 
-        const refreshedParent = await db.collection<Corporation>("corporations").findOne({
+        const refreshedParent = await corporationsCollection(db).findOne({
           _id: parent._id,
         });
         if (!refreshedParent) {
@@ -344,8 +345,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           let corpReverseOps: AnyBulkWriteOperation<Corporation>[] = [];
           if (corpIncs.size > 0) {
             const creditorIds = [...corpIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const creditorDocs = await db
-              .collection<Corporation>("corporations")
+            const creditorDocs = await corporationsCollection(db)
               .find({ _id: { $in: creditorIds } }, sessionOpt)
               .toArray();
             if (creditorDocs.length !== corpIncs.size) {
@@ -415,7 +415,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
           // 1. Debit the parent (conditional). Nothing else is written yet, so a
           //    failure here needs no compensation.
-          const debitResult = await db.collection<Corporation>("corporations").updateOne(
+          const debitResult = await corporationsCollection(db).updateOne(
             {
               _id: refreshedParent._id,
               liquidCapital: { $gte: costInParentCapital },
@@ -428,13 +428,11 @@ export async function POST(request: Request, { params }: RouteParams) {
             throw badRequest("Insufficient liquid capital (race with another transaction).");
           }
           undo.push(async () => {
-            await db
-              .collection<Corporation>("corporations")
-              .updateOne(
-                { _id: refreshedParent._id },
-                { $inc: { liquidCapital: costInParentCapital }, $set: { updatedAt: now } },
-                sessionOpt
-              );
+            await corporationsCollection(db).updateOne(
+              { _id: refreshedParent._id },
+              { $inc: { liquidCapital: costInParentCapital }, $set: { updatedAt: now } },
+              sessionOpt
+            );
           });
 
           // 2–4. Credit holders. Register each reversal only after the write lands.
@@ -464,14 +462,12 @@ export async function POST(request: Request, { params }: RouteParams) {
           }
           if (corpOps.length > 0) {
             try {
-              await db.collection<Corporation>("corporations").bulkWrite(corpOps, sessionOpt);
+              await corporationsCollection(db).bulkWrite(corpOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await db
-                .collection<Corporation>("corporations")
-                .bulkWrite(corpReverseOps, sessionOpt);
+              await corporationsCollection(db).bulkWrite(corpReverseOps, sessionOpt);
             });
           }
 

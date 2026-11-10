@@ -29,6 +29,7 @@ import { charterTypeMay } from "@/lib/banking/rules/capabilities";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { depositBookReturnKey } from "@/lib/banking/depositBookReturn";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
@@ -278,11 +279,11 @@ async function issueCharterInner(
   currency: CurrencyCode,
   options?: { skipFlagCheck?: boolean }
 ): Promise<IssueCharterResult & { settlementId?: string }> {
-  const corporation = await db
-    .collection<Corporation & { settledKeys?: string[] }>("corporations")
-    .findOne({
-      _id: corporationId,
-    });
+  const corporation = await corporationsCollection<Corporation & { settledKeys?: string[] }>(
+    db
+  ).findOne({
+    _id: corporationId,
+  });
   if (!corporation) {
     return { ok: false, reasons: ["Corporation not found"] };
   }
@@ -480,7 +481,7 @@ async function revokeCharterInner(
   corporationId: ObjectId,
   reason: string
 ): Promise<RevokeCharterResult> {
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {
@@ -506,7 +507,7 @@ async function revokeCharterInner(
   // revocation that crashed after claiming is finished here as well, under
   // the turn it was claimed on, so the waterfall's idempotency key is the
   // same and the money moves once.
-  const claim = await db.collection<Corporation>("corporations").updateOne(
+  const claim = await corporationsCollection(db).updateOne(
     {
       _id: corporationId,
       bankUnderwritingFunding: { $exists: false },
@@ -573,9 +574,10 @@ async function revokeCharterInner(
   // was going to move, with a netting check on the legs. A second refund here
   // would pay the shareholder twice.
 
-  const result = await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corporationId, "bankCharter.status": "active" }, update);
+  const result = await corporationsCollection(db).updateOne(
+    { _id: corporationId, "bankCharter.status": "active" },
+    update
+  );
 
   if (result.modifiedCount !== 1) {
     return { ok: false, error: "Failed to revoke charter (no longer active)" };
@@ -781,7 +783,7 @@ async function switchCharterTypeInner(
   corporationId: ObjectId,
   targetType: BankCharterType
 ): Promise<SwitchCharterResult> {
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {
@@ -837,7 +839,7 @@ async function switchCharterTypeInner(
   // land. Clearing them here as well would be harmless today and wrong the day
   // the waterfall stops half way, because it would hide the hole.
 
-  const updated = await db.collection<Corporation>("corporations").findOneAndUpdate(
+  const updated = await corporationsCollection(db).findOneAndUpdate(
     {
       _id: corporationId,
       "bankCharter.status": "active",

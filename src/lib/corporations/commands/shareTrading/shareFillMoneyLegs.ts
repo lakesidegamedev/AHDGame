@@ -20,6 +20,7 @@ import {
   type MoneyFlowStep,
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Cap-table entry discriminator inside `corporations.shareholders`. */
 export type ShareFillCapEntryField =
@@ -233,7 +234,7 @@ export function makeCapDebitStep(
   shares: number,
   now: Date
 ): MoneyFlowStep {
-  const corps = db.collection<CapAccount>("corporations");
+  const corps = corporationsCollection<CapAccount>(db);
   return {
     name: "seller-debit",
     apply: async () => {
@@ -332,7 +333,7 @@ export async function applyCapCreditKeyed(
     });
     return change.outcome ?? "guard-rejected";
   }
-  const corps = db.collection<CapAccount>("corporations");
+  const corps = corporationsCollection<CapAccount>(db);
   const entryId = new ObjectId(leg.idHex);
   const attemptInc = async (): Promise<MoneyFlowLegOutcome> => {
     const live = await corps.findOne<CapShareholdersRead>({ _id: corpId } as Filter<CapAccount>, {
@@ -434,7 +435,7 @@ async function revertCapCreditKeyed(
     });
     return change.outcome ?? "guard-rejected";
   }
-  const corps = db.collection<CapAccount>("corporations");
+  const corps = corporationsCollection<CapAccount>(db);
   const entryId = new ObjectId(leg.idHex);
   const live = await corps.findOne<CapShareholdersRead>({ _id: corpId } as Filter<CapAccount>, {
     projection: { shareholders: 1 },

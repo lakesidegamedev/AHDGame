@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { getDb } from "@/lib/mongodb";
 import type {
-  Corporation,
   Election,
   GameConfig,
   PoliticalParty,
@@ -16,6 +15,7 @@ import { getGameState } from "@/lib/gameState";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { regionNoun } from "@/lib/onboarding/checklist";
 import type { TutorialFacts } from "@/lib/tutorial/facts";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -78,8 +78,8 @@ async function handleGET() {
           status: { $in: ["upcoming", "active"] },
         }),
         Promise.all([
-          db.collection<Corporation>("corporations").countDocuments({ countryId }),
-          db.collection<Corporation>("corporations").countDocuments({ countryId, ceoVacant: true }),
+          corporationsCollection(db).countDocuments({ countryId }),
+          corporationsCollection(db).countDocuments({ countryId, ceoVacant: true }),
         ]),
         Promise.all([
           db.collection<Union>("unions").countDocuments({ countryId }),

@@ -26,6 +26,7 @@ import type { MechanicalLawLevel } from "@/lib/mechanicalLaws/rules";
 import { MERGER_REMEDY_TURNS, thresholdForLevel } from "@/lib/corporations/mergerReview/constants";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import type { NotificationInput } from "@/lib/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface BreakupResult {
   opened: number;
@@ -154,6 +155,6 @@ export async function processBreakupCases(
     }
   }
 
-  if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
+  if (ops.length > 0) await corporationsCollection(db).bulkWrite(ops);
   return result;
 }

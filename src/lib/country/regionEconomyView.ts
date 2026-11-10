@@ -66,6 +66,7 @@ import { aggregateCountrySectorMix } from "@/lib/economy/sectorMix";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -122,21 +123,20 @@ export async function buildRegionEconomyResponse({
         .collection<ImperialCharacter>("imperialCharacters")
         .findOne({ _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) });
       if (imperial) {
-        corp = await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } },
-            corpProjection
-          );
+        corp = await corporationsCollection(db).findOne(
+          { ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } },
+          corpProjection
+        );
       }
     } else {
       const character = await db.collection<Character>("characters").findOne({
         userId: new ObjectId(user.userId),
       });
       if (character) {
-        corp = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: character._id, ceoVacant: { $ne: true } }, corpProjection);
+        corp = await corporationsCollection(db).findOne(
+          { ceoId: character._id, ceoVacant: { $ne: true } },
+          corpProjection
+        );
       }
     }
 
@@ -237,8 +237,7 @@ export async function buildRegionEconomyResponse({
   const corpIds = [...new Set(sectors.map((s) => s.corporationId))];
   const corporations =
     corpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corpIds } })
           .project({
             _id: 1,

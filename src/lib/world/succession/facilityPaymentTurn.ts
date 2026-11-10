@@ -23,6 +23,7 @@ import {
   type RuntimeWorldEntityState,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION = "federationFacilityPaymentTurns";
 interface PaymentFirm {
@@ -141,8 +142,7 @@ export async function materializeFacilityPaymentTurn(input: {
   const firmIds = [...new Set(claims.map((claim) => claim.corporationId))];
   if (firmIds.some((id) => !ObjectId.isValid(id)))
     throw new Error("Facility claim has an invalid firm identity");
-  const firms = await db
-    .collection<PaymentFirm>("corporations")
+  const firms = await corporationsCollection<PaymentFirm>(db)
     .find(
       { _id: { $in: firmIds.map((id) => new ObjectId(id)) } },
       {
@@ -292,7 +292,7 @@ export async function materializeFacilityPaymentTurn(input: {
     throw new Error("Successor cash changed during compensation");
   if (
     firmWrites.length &&
-    (await db.collection<PaymentFirm>("corporations").bulkWrite(firmWrites, { session }))
+    (await corporationsCollection<PaymentFirm>(db).bulkWrite(firmWrites, { session }))
       .matchedCount !== firmWrites.length
   )
     throw new Error("Creditor cash changed during compensation");

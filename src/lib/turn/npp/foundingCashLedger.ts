@@ -23,6 +23,7 @@ import {
   flushNppReinvestmentCashWitnesses,
   type NppReinvestmentCashWitness,
 } from "./reinvestmentCashLedger";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface NppFoundingCashWitness {
   corporationId: ObjectId;
@@ -143,8 +144,10 @@ export async function flushNppFoundingCashWitnesses(
 ): Promise<void> {
   if (pending.length === 0) return;
   try {
-    const committed = await db
-      .collection<{ _id: ObjectId; nppFoundingCashWitnessKey?: string }>("corporations")
+    const committed = await corporationsCollection<{
+      _id: ObjectId;
+      nppFoundingCashWitnessKey?: string;
+    }>(db)
       .find(
         {
           _id: { $in: pending.map((row) => row.corporationId) },
@@ -193,7 +196,9 @@ export async function applyCorporationCashWrites(
   try {
     // Every op rewrites a 20 KB corporation document, so collapse the unguarded
     // writes per document into one update before the bulk call.
-    return await db.collection("corporations").bulkWrite(mergeCorporationCashOps(operations));
+    return await corporationsCollection<Document>(db).bulkWrite(
+      mergeCorporationCashOps(operations)
+    );
   } finally {
     // Ordered failures may have landed earlier debits. Atomic stamps prove them.
     await flushNppFoundingCashWitnesses(db, pending);

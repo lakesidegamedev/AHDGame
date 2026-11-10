@@ -26,6 +26,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function checkNationalBudgets(
   db: Db,
@@ -470,7 +471,7 @@ export async function checkForex(db: Db, expect: SeedExpectations): Promise<Seed
     if (expectedCurrency === "EUR") {
       const [budget, legacyCorps, legacyBonds] = await Promise.all([
         federalBudgetCollection(db).findOne({ countryId }, { projection: { currencyCode: 1 } }),
-        db.collection("corporations").countDocuments({
+        corporationsCollection(db).countDocuments({
           countryId,
           liquidCurrencyCode: { $ne: "EUR" },
         }),

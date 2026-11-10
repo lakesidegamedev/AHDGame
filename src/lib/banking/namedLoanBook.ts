@@ -31,6 +31,7 @@ import {
   recordLoanServiceBatch,
   type LoanServiceBatchRow,
 } from "@/lib/banking/loanServiceBatch";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type LoanServiceResult = {
   interestCollected: number;
@@ -231,9 +232,10 @@ async function readBorrowerAvailable(
       name: ch?.name ?? "Borrower",
     };
   }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { name: 1, liquidCapital: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: loan.borrowerId },
+    { projection: { name: 1, liquidCapital: 1 } }
+  );
   return {
     available: Math.max(0, corp?.liquidCapital ?? 0),
     name: corp?.name ?? "Borrower",
@@ -302,8 +304,7 @@ export async function serviceNamedLoanBook(
           .toArray()
       : Promise.resolve([]),
     corporationIds.size
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: [...corporationIds.values()] } },
             { projection: { name: 1, liquidCapital: 1 } }

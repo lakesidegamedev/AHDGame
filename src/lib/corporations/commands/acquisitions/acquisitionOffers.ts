@@ -29,6 +29,7 @@ import {
   nppAcquisitionMinimumPrice,
 } from "./rules";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
 const OFFERS = "acquisitionOffers";
@@ -121,7 +122,7 @@ export async function proposeAcquisitionOffer(
   // (player caretaker appointed, CEO flipped, nationalization, deletion).
   // Auto-accept must never absorb a corp that is no longer genuinely AI-run,
   // and the valuation must reflect current economics, not a stale read.
-  const freshTarget = await db.collection<Corporation>("corporations").findOne({ _id: target._id });
+  const freshTarget = await corporationsCollection(db).findOne({ _id: target._id });
   if (!freshTarget) return { ok: false, error: "Target corporation no longer exists", status: 404 };
   if (freshTarget.countryOwnerId || freshTarget.ownershipState === "stateOwned")
     return { ok: false, error: "State-owned corporations cannot be acquired", status: 400 };
@@ -322,9 +323,7 @@ export async function acceptAcquisitionOffer(
 
   // The target's cash can grow while the offer waits (a float, an injection),
   // so the price floor is checked again against the company as it is now.
-  const target = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: offer.targetCorporationId });
+  const target = await corporationsCollection(db).findOne({ _id: offer.targetCorporationId });
   if (target && !isNppAutoResolvableTarget(target)) {
     const dealError = playerTargetDealError(
       target,
@@ -410,12 +409,10 @@ export async function resolveAcquisitionOfferStatus(
       now: new Date(),
       reason: `offer ${status} while a settlement held funds`,
     });
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: offer.targetCorporationId, acquisitionSettlementId: offer._id },
-        { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: offer.targetCorporationId, acquisitionSettlementId: offer._id },
+      { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
+    );
   }
   const claim = await db
     .collection<AcquisitionOffer>(OFFERS)
@@ -488,8 +485,7 @@ async function listDealsFromOffers(
     corpIds.add(o.acquirerCorporationId.toString());
     corpIds.add(o.targetCorporationId.toString());
   }
-  const corps = (await db
-    .collection<Corporation>("corporations")
+  const corps = (await corporationsCollection(db)
     .find({ _id: { $in: [...corpIds].map((id) => new ObjectId(id)) } })
     .project({ name: 1 })
     .toArray()) as Array<{ _id: ObjectId; name: string }>;

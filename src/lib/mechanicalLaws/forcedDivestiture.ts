@@ -25,6 +25,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { sharesToDropControl } from "./enforcementRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type ForcedSaleOutcome =
   | { status: "sold"; shares: number; proceedsAnchor: number }
@@ -92,9 +93,10 @@ export async function executeForcedDivestiture(
     exchangeRatesByCurrency as Map<CurrencyCode, number>
   );
   const credit = anchorToCorpLiquidCapital(proceedsAnchor, parent, parentFx);
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: parent._id }, { $inc: { liquidCapital: credit }, $set: { updatedAt: now } });
+  await corporationsCollection(db).updateOne(
+    { _id: parent._id },
+    { $inc: { liquidCapital: credit }, $set: { updatedAt: now } }
+  );
 
   void emitTx(db, {
     type: "stock_trade_sell",

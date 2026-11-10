@@ -1,6 +1,6 @@
 /** Cancel and refund boundary-related construction before changing ownership or currency. */
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
-import type { Corporation, CorporateSector, GameState } from "@/lib/db/types";
+import type { CorporateSector, GameState } from "@/lib/db/types";
 import { boundSession } from "@/lib/db/sessionDb";
 import { cancelFinancedConstruction } from "@/lib/banking/constructionCancellation";
 import {
@@ -23,6 +23,7 @@ import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
 import { quoteConversionConstructionRefund } from "./rules/constructionRefund";
 import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnderwriting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number) {
   let claim = sector.constructionFinancing!;
@@ -84,8 +85,7 @@ export async function refundConversionConstruction(
   turn: number
 ): Promise<void> {
   if (!boundSession(db)) throw new Error("Conversion refunds require a transaction");
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ headquartersState: regionId })
     .toArray();
   const ids = corporations.map((corp) => corp._id);
@@ -111,8 +111,7 @@ export async function refundConversionConstruction(
       }
     )
     .toArray();
-  const owners = await db
-    .collection<Corporation>("corporations")
+  const owners = await corporationsCollection(db)
     .find({ _id: { $in: sectors.map((sector) => sector.corporationId) } })
     .toArray();
   const byId = new Map(owners.map((corp) => [String(corp._id), corp]));
@@ -258,7 +257,7 @@ export async function refundConversionConstruction(
       throw new Error("Construction queues changed during conversion");
   }
   if (refunds.size)
-    await db.collection<Corporation>("corporations").bulkWrite(
+    await corporationsCollection(db).bulkWrite(
       [...refunds].map(([id, amount]) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },

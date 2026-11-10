@@ -74,6 +74,7 @@ import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquis
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -208,9 +209,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
 
     // Self-dealing guard: CEO cannot fill their own corporation's buy order
     if (order.type === "buy" && order.placerCorporationId) {
-      const buyingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: order.placerCorporationId }, { projection: { ceoId: 1 } });
+      const buyingCorp = await corporationsCollection(db).findOne(
+        { _id: order.placerCorporationId },
+        { projection: { ceoId: 1 } }
+      );
       if (buyingCorp?.ceoId?.toString() === fillerId.toString()) {
         return errorResponse(
           400,
@@ -339,9 +341,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       null;
 
     if (order.type === "sell" && fillAsCorporation) {
-      const buyingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: fillerId, ceoVacant: { $ne: true } });
+      const buyingCorp = await corporationsCollection(db).findOne({
+        ceoId: fillerId,
+        ceoVacant: { $ne: true },
+      });
       if (!buyingCorp) {
         return errorResponse(
           403,
@@ -370,9 +373,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       buyingCorpForSellFill = buyingCorp;
     } else if (order.type === "buy") {
       if (order.placerCorporationId) {
-        buyOrderBuyerCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: order.placerCorporationId }, { projection: { _id: 1, name: 1 } });
+        buyOrderBuyerCorp = await corporationsCollection(db).findOne(
+          { _id: order.placerCorporationId },
+          { projection: { _id: 1, name: 1 } }
+        );
         if (!buyOrderBuyerCorp) {
           return errorResponse(404, "Buying corporation not found");
         }
@@ -425,9 +429,9 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       if (order.placerFundId) {
         pinnedSellerName = sellerFund?.name ?? "Index fund";
       } else if (order.placerCorporationId) {
-        const sellerCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: order.placerCorporationId });
+        const sellerCorp = await corporationsCollection(db).findOne({
+          _id: order.placerCorporationId,
+        });
         const sellerFxRate = await getCorpFxRate(db, sellerCorp ?? {});
         pinnedSellerName = sellerCorp?.name ?? "Unknown corporation";
         pinnedSellerAmount = anchorToCorpLiquidCapital(total, sellerCorp ?? {}, sellerFxRate);

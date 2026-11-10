@@ -2,12 +2,7 @@ import type { Db } from "mongodb";
 import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  Corporation,
-  GameConfig,
-  MoneySupplySnapshot,
-  OrganizationFund,
-} from "@/lib/db/types";
+import type { GameConfig, MoneySupplySnapshot, OrganizationFund } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { annualizedMoneyGrowthPct, MONEY_ACCOUNTING_VERSION } from "./calculate";
 import { seedMoneySupplyBaselines } from "./seed";
@@ -31,6 +26,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -111,8 +107,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       .toArray(),
     // Corp-level liquidCapital is the SSOT insolvency keys on and sectorTurn
     // $inc's every turn. CorporateSector has no liquidCapital field.
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {

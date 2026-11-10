@@ -3,12 +3,7 @@
  * Holder currencies are read together and payouts and witnesses are batched.
  */
 import { ObjectId, type Db } from "mongodb";
-import type {
-  Corporation,
-  IndexFund,
-  IndexFundPosition,
-  IndexFundTransaction,
-} from "@/lib/db/types";
+import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types";
 import {
   anchorToCorpLiquidCapital,
   loadFxRatesRecord,
@@ -16,6 +11,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { escheatUnclaimedFundCash } from "./unclaimedResidual";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function payCorporateWindUpHolders(
   db: Db,
@@ -29,8 +25,7 @@ export async function payCorporateWindUpHolders(
     (p) => p.holderKind === "corporation" && p.corporationId && p.units > 0
   );
   if (!corporatePositions.length) return { holdersPaid: 0, distributedAnchor: 0 };
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       { _id: { $in: corporatePositions.map((p) => p.corporationId!) } },
       { projection: { liquidCurrencyCode: 1, countryId: 1 } }
@@ -98,7 +93,7 @@ export async function payCorporateWindUpHolders(
     distributedAnchor += amountAnchor;
   }
   if (operations.length) {
-    const credited = await db.collection("corporations").bulkWrite(operations);
+    const credited = await corporationsCollection(db).bulkWrite(operations);
     if (credited.matchedCount !== operations.length)
       throw new Error("Corporate fund payout failed");
     await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);

@@ -23,6 +23,7 @@ import type { SovereignDemandSnapshot } from "./types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function loadCountrySovereignSnapshot(
   db: Db,
@@ -169,9 +170,10 @@ export async function loadCountrySovereignSnapshots(
       .collection<ExchangeRate>("exchangeRates")
       .find({ _id: { $in: known } } as never, { projection: { rate: 1, rateHistory: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: ObjectId }>("corporations")
-      .findOne({ imfInstitution: true }, { projection: { _id: 1 } }),
+    corporationsCollection<{ _id: ObjectId }>(db).findOne(
+      { imfInstitution: true },
+      { projection: { _id: 1 } }
+    ),
     bondsCollection(db)
       .find(
         { issuerType: "sovereign", countryId: { $in: known }, matured: false, defaulted: false },

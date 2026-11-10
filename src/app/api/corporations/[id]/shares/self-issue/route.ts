@@ -46,6 +46,7 @@ import {
   atomicallyDebitImperialCash,
   refundImperialCash,
 } from "@/lib/financialTxLog/atomicCashGuard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -58,7 +59,7 @@ async function restoreIssuanceCooldown(
   const updatedAt = new Date();
 
   if (corporation.lastShareIssuance) {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $set: {
@@ -70,7 +71,7 @@ async function restoreIssuanceCooldown(
     return;
   }
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporation._id },
     {
       $unset: { lastShareIssuance: "" },
@@ -239,13 +240,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const totalCostInCorpCapital = anchorToCorpLiquidCapital(totalCost, corporation, corpFxRate);
 
-    const cooldownResult = await db
-      .collection<Corporation>("corporations")
-      .findOneAndUpdate(
-        cooldownQuery as never,
-        { $set: { lastShareIssuance: now, updatedAt: now } },
-        { returnDocument: "after" }
-      );
+    const cooldownResult = await corporationsCollection(db).findOneAndUpdate(
+      cooldownQuery as never,
+      { $set: { lastShareIssuance: now, updatedAt: now } },
+      { returnDocument: "after" }
+    );
 
     if (!cooldownResult) {
       const elapsed = corporation.lastShareIssuance
@@ -328,9 +327,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // shareholders + publicFloat + open listings + open debited sell orders.
     // If it drifts, shares have silently been added or lost — report to
     // Sentry so we can trace the next "shares disappeared" claim.
-    const freshCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: corporation._id });
+    const freshCorp = await corporationsCollection(db).findOne({ _id: corporation._id });
     const newTotalShares =
       freshCorp?.totalShares ?? (corporation.totalShares ?? 10_000_000) + shares;
 

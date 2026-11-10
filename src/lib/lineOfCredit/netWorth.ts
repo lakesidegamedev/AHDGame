@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
-import type { Corporation, BondHolder } from "@/lib/db/types";
+import type { BondHolder } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { Shareholder } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
@@ -15,6 +15,7 @@ import { getBondCountryId, isCorporateBond } from "@/lib/bonds/sovereign";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { sumObligationInternal, toInternalUnits } from "./locMath";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Total player net worth in internal units: liquid + savings + stocks + bonds.
@@ -32,8 +33,7 @@ export async function computePlayerNetWorthInternal(
   }
 
   const charId = character._id;
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ "shareholders.characterId": charId })
     .project({ sharePrice: 1, shareholders: 1, countryId: 1, liquidCurrencyCode: 1 })
     .toArray();
@@ -61,8 +61,7 @@ export async function computePlayerNetWorthInternal(
     const corpIds = [
       ...new Set(bonds.filter(isCorporateBond).map((b) => b.corporationId.toString())),
     ];
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
       .project({ countryId: 1 })
       .toArray();

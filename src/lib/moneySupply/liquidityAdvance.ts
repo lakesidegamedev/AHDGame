@@ -3,7 +3,7 @@
  * resumeLiquidityAdvances completes admitted commands after interrupted delivery.
  */
 import { type Db, type Document } from "mongodb";
-import type { CentralBank, Corporation, GameConfig, MonetaryOperationRecord } from "@/lib/db/types";
+import type { CentralBank, GameConfig, MonetaryOperationRecord } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -23,6 +23,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { allocateLiquidityAdvance } from "./rules/liquidityAdvance";
 import { releaseMonetaryCommandReservation } from "./commandReservation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const COLLECTION = "bankLiquidityOperations";
 export class LiquidityAdvanceRejected extends Error {}
@@ -97,8 +98,7 @@ export async function executeLiquidityAdvance(
       .findOne({ _id: input.countryId }, { projection: { currencyCode: 1 } });
     const currency = currencyQuote?.currencyCode ?? COUNTRY_CURRENCY_MAP[input.countryId];
     const banks = (await isPrivateBankingEnabled(config))
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { "bankCharter.status": "active", "bankCharter.currency": currency },
             { projection: { _id: 1, name: 1, "bankCharter.totalDeposits": 1 } }

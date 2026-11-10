@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, CorporateSector, Character, GameState } from "@/lib/db/types";
+import type { CorporateSector, Character, GameState } from "@/lib/db/types";
 import {
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
@@ -16,6 +16,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET() {
   try {
@@ -24,7 +25,7 @@ export async function GET() {
 
     const db = await getDb();
     const [corps, sectors, characters, gameState, fxByCurrency] = await Promise.all([
-      db.collection<Corporation>("corporations").find({}).toArray(),
+      corporationsCollection(db).find({}).toArray(),
       db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
       db
         .collection<Character>("characters")

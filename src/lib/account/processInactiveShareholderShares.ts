@@ -1,8 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { Character, User } from "@/lib/db/types";
 import { cleanupShareMarketActivityForCharacters } from "@/lib/corporations/cleanupShareMarketActivity";
 import { releaseCharacterHeldSharesToFloat } from "@/lib/corporations/releaseCharacterHeldSharesToFloat";
 import { isUserActive, INACTIVE_SHAREHOLDER_TURN_THRESHOLD } from "@/lib/players/playerActivity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ProcessInactiveShareholderSharesOptions {
   now: Date;
@@ -51,8 +52,7 @@ export async function processInactiveShareholderShares(
   const { now, forexEnabled } = options;
 
   // 1. Scan corps that have at least one character shareholder.
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { "shareholders.characterId": { $exists: true } },
       { projection: { _id: 1, ceoId: 1, userId: 1, shareholders: 1 } }

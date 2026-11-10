@@ -22,7 +22,7 @@ import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import { checkWikiCreateCooldown, formatCooldownMessage } from "@/lib/wiki/createCooldown";
 import { notifyModeratorsOfWikiSubmission } from "@/lib/wiki/reviewNotifications";
 import { getGameStamp } from "@/lib/wiki/gameConfig";
-import type { WikiPage, Corporation, PoliticalParty } from "@/lib/db/types";
+import type { WikiPage, PoliticalParty } from "@/lib/db/types";
 import {
   corporationWikiSlug,
   corporationWikiStarter,
@@ -31,6 +31,7 @@ import {
   playerWikiSlug,
   playerWikiStarter,
 } from "@/lib/wiki/playerPages";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const claimSchema = z.object({
   target: z.enum(["player", "corporation", "party"]),
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
       // Corporation: caller must be the active CEO of the requested corp.
       // The optional public ID keeps older callers working while allowing a
       // CEO of several corporations to claim the page they are viewing.
-      const corp = await db.collection<Corporation>("corporations").findOne({
+      const corp = await corporationsCollection(db).findOne({
         ceoId: user.character._id,
         userId: userObjectId,
         ...(parsed.data.corporationSequentialId != null

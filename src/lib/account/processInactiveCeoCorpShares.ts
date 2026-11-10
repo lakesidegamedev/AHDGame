@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { Character, User } from "@/lib/db/types";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { isInactiveCeoPenaltyCandidate } from "@/lib/turn/corporation/inactiveCeoSectorShed";
@@ -9,6 +9,7 @@ import {
   INACTIVE_SHAREHOLDER_WARN_TURN_THRESHOLD,
 } from "@/lib/players/playerActivity";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const TURN_MS = 60 * 60 * 1000;
 
@@ -64,8 +65,7 @@ export async function processInactiveCeoCorpShares(
 
   // 1. Scan issuers that have at least one corporation shareholder; collect
   //    distinct holder corporationIds (positions with shares > 0).
-  const issuers = await db
-    .collection<Corporation>("corporations")
+  const issuers = await corporationsCollection(db)
     .find(
       { "shareholders.corporationId": { $exists: true } },
       { projection: { _id: 1, shareholders: 1 } }
@@ -86,8 +86,7 @@ export async function processInactiveCeoCorpShares(
 
   // 2. Load holder corps' eligibility fields (+ name + shareholders for the
   //    warning recipients); keep only penalty candidates.
-  const holderCorps = await db
-    .collection<Corporation>("corporations")
+  const holderCorps = await corporationsCollection(db)
     .find(
       { _id: { $in: holderCorpIds } },
       {
@@ -164,8 +163,7 @@ export async function processInactiveCeoCorpShares(
 
     const corpUserMap = new Map<string, string>();
     if (corpHolderIdSet.size > 0) {
-      const holderOwnerCorps = await db
-        .collection<Corporation>("corporations")
+      const holderOwnerCorps = await corporationsCollection(db)
         .find(
           { _id: { $in: [...corpHolderIdSet].map((id) => new ObjectId(id)) } },
           { projection: { _id: 1, userId: 1 } }

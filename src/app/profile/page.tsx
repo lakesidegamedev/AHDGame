@@ -30,7 +30,6 @@ import type {
   User,
   ImperialCharacter,
   GameState,
-  Corporation,
   ExchangeRate,
   CongressLeader,
   SupremeCourtSeat,
@@ -118,6 +117,7 @@ import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstant
 import { isPatreonActive } from "@/lib/db/types";
 import { resolveMemberSince } from "@/lib/character/memberSince";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -184,7 +184,7 @@ async function getCharacterData() {
     hasParty
       ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
       : Promise.resolve(null),
-    db.collection<Corporation>("corporations").findOne(
+    corporationsCollection(db).findOne(
       {
         ceoId: character._id,
         ceoVacant: { $ne: true },

@@ -36,6 +36,7 @@ import { GR_IDENTITY } from "@/lib/countries/gr/identity";
 import { AT_IDENTITY } from "@/lib/countries/at/identity";
 import { FI_IDENTITY } from "@/lib/countries/fi/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Provisional: how many NPP retail banks each eligible country seeds. */
 export const NPC_BANKS_PER_COUNTRY = 2;
@@ -224,8 +225,7 @@ export async function seedNpcBanks(
           .collection<State>("states")
           .find({ _id: { $in: capitals } }, { projection: { countryId: 1 } })
           .toArray(),
-        db
-          .collection<NpcBankCorporation>("corporations")
+        corporationsCollection<NpcBankCorporation>(db)
           .find(
             { npcBankSeedKey: { $exists: true } },
             {
@@ -303,9 +303,10 @@ export async function seedNpcBanks(
       const key = npcBankSeedKey(countryId, index);
       const existing = batch
         ? existingKeys.has(key)
-        : await db
-            .collection<NpcBankCorporation>("corporations")
-            .findOne({ npcBankSeedKey: key }, { projection: { _id: 1 } });
+        : await corporationsCollection<NpcBankCorporation>(db).findOne(
+            { npcBankSeedKey: key },
+            { projection: { _id: 1 } }
+          );
       if (existing) {
         result.skippedExisting += 1;
         continue;
@@ -321,16 +322,15 @@ export async function seedNpcBanks(
       const name = generateNpcBankName(countryId, index, historicalEra);
 
       // Name+country fallback if a prior run wrote the corp without the key.
-      const byName = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { name, countryId, ceoType: "npp", type: "financial" },
-          { projection: { _id: 1, bankCharter: 1 } }
-        );
+      const byName = await corporationsCollection(db).findOne(
+        { name, countryId, ceoType: "npp", type: "financial" },
+        { projection: { _id: 1, bankCharter: 1 } }
+      );
       if (byName) {
-        await db
-          .collection("corporations")
-          .updateOne({ _id: byName._id }, { $set: { npcBankSeedKey: key, updatedAt: new Date() } });
+        await corporationsCollection(db).updateOne(
+          { _id: byName._id },
+          { $set: { npcBankSeedKey: key, updatedAt: new Date() } }
+        );
         if (byName.bankCharter?.status !== "active") {
           const issued = await issueCharterWithFlag(db, byName._id, currency);
           if (!issued) result.charterFailures += 1;
@@ -348,9 +348,10 @@ export async function seedNpcBanks(
           startingCapital,
         });
         const corpId = new ObjectId(spawned.corporationId);
-        await db
-          .collection("corporations")
-          .updateOne({ _id: corpId }, { $set: { npcBankSeedKey: key, updatedAt: new Date() } });
+        await corporationsCollection(db).updateOne(
+          { _id: corpId },
+          { $set: { npcBankSeedKey: key, updatedAt: new Date() } }
+        );
 
         const issued = await issueCharterWithFlag(db, corpId, currency);
         if (!issued) {
@@ -408,8 +409,7 @@ async function issueCharterWithFlag(
  * Hold-reserve / lend-the-book behavior comes from bankingTurn's NPC flows.
  */
 export async function runNpcBankPolicy(db: Db, _turn: number): Promise<NpcBankPolicySummary> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       {
         ceoType: "npp",

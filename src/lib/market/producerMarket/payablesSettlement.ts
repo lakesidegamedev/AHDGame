@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { ProducerPayablesState } from "@/lib/db/types/producerEconomy";
 import type { ProducerCashBinding } from "./cashSettlementRules";
 import type { ProducerPayable } from "./payablesRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function snapshot(claims: readonly ProducerPayable[]): string {
   return JSON.stringify(
@@ -32,8 +33,7 @@ export async function verifyOpeningProducerPayables(
   const wallets = input.bindings.filter((binding) => binding.kind === "economyAccount");
   const [corpRows, walletRows] = await Promise.all([
     corporations.length
-      ? db
-          .collection<{ _id: ObjectId; producerPayables?: ProducerPayablesState }>("corporations")
+      ? corporationsCollection<{ _id: ObjectId; producerPayables?: ProducerPayablesState }>(db)
           .find(
             { _id: { $in: corporations.map((binding) => new ObjectId(binding.corporationId)) } },
             { projection: { producerPayables: 1 } }

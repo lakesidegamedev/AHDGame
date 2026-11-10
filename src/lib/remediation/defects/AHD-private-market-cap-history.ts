@@ -1,15 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
-import type {
-  Corporation,
-  CorporationHistory,
-  ExchangeRate,
-  MarketCapHistory,
-} from "@/lib/db/types";
+import type { CorporationHistory, ExchangeRate, MarketCapHistory } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { isStockMarketCorporation } from "@/lib/turn/corporation/marketCapSnapshot";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type HistoryRow = MarketCapHistory & { _id: ObjectId };
 
@@ -105,7 +101,7 @@ async function survey(db: Db): Promise<Survey> {
       .find({ listingUniverse: { $ne: "public-only" } })
       .sort({ turn: 1 })
       .toArray(),
-    db.collection<Corporation>("corporations").find({}).toArray(),
+    corporationsCollection(db).find({}).toArray(),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
   ]);
   const unlisted = corporations.filter((corp) => !isStockMarketCorporation(corp));

@@ -37,6 +37,7 @@ import {
   type PrimaryPlacementLimits,
 } from "./rules/cashoutLimits";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
   const config = await db
@@ -103,8 +104,7 @@ export async function loadCorpBookBasisById(
   if (corporationIds.length === 0) return result;
   const ids = [...new Map(corporationIds.map((id) => [id.toHexString(), id])).values()];
   const [corps, sectors, bonds, loans, rateDocs, gameState, eraUnitScale] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: ids } }, { projection: BASIS_CORP_PROJECTION })
       .toArray() as Promise<BasisCorp[]>,
     db
@@ -276,7 +276,7 @@ export async function recordPrimaryPoolPlacement(
   paidLocal: number
 ): Promise<void> {
   if (!(paidLocal > 0)) return;
-  await db.collection<Corporation>("corporations").updateOne({ _id: corporationId }, [
+  await corporationsCollection(db).updateOne({ _id: corporationId }, [
     {
       $set: {
         primaryPoolPlacements: {

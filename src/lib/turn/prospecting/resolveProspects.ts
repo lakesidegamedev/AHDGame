@@ -25,6 +25,7 @@ import {
   PROSPECT_FINDER_RIGHTS_TERM_TURNS,
   PROSPECT_FINDER_RIGHTS_GRANTOR,
 } from "@/lib/constants/prospecting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ResolveProspectsResult {
   surveysResolved: number;
@@ -97,8 +98,7 @@ export async function resolveProspects(
     .map((s) => s.corporationId as ObjectId);
   const corpById = new Map<string, Corporation>();
   if (corpIds.length > 0) {
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds } }, { projection: { userId: 1, name: 1 } })
       .toArray();
     for (const c of corps) corpById.set(c._id.toString(), c);

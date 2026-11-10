@@ -4,6 +4,7 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { CEO_INITIAL_SHARES, DEFAULT_SHARE_PRICE } from "@/lib/constants/corporations";
 import { getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export class SeedImfInstitutionError extends Error {
   constructor(message: string) {
@@ -84,9 +85,7 @@ export async function seedImfInstitution(
     { characterId: second, shares: halfShares },
   ];
 
-  const existing = await db
-    .collection<Corporation>("corporations")
-    .findOne({ imfInstitution: true });
+  const existing = await corporationsCollection(db).findOne({ imfInstitution: true });
 
   const now = new Date();
   const baseOwnership = {
@@ -122,9 +121,7 @@ export async function seedImfInstitution(
       createdAt: now,
     };
 
-    const { insertedId } = await db
-      .collection<Corporation>("corporations")
-      .insertOne(doc as Corporation);
+    const { insertedId } = await corporationsCollection(db).insertOne(doc as Corporation);
     return {
       corporationId: insertedId.toString(),
       created: true,
@@ -142,9 +139,10 @@ export async function seedImfInstitution(
     };
   }
 
-  const res = await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: existing._id }, { $set: baseOwnership });
+  const res = await corporationsCollection(db).updateOne(
+    { _id: existing._id },
+    { $set: baseOwnership }
+  );
 
   return {
     corporationId: existing._id.toString(),

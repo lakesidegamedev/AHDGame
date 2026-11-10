@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, Tariff } from "@/lib/db/types";
+import type { Tariff } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // GET /api/world/trade/tariffs - List every active tariff (rate > 0) across all
 // nations, shaped for the World Trade "Trade Restrictions" view. Read-only: the
@@ -31,8 +32,7 @@ export async function GET() {
     ];
     const corpNameById = new Map<string, string>();
     if (corpIds.length > 0) {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } }, { projection: { name: 1 } })
         .toArray();
       for (const c of corps) corpNameById.set(c._id.toString(), c.name);

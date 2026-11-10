@@ -29,6 +29,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -68,7 +69,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const [gameState, corporation, user] = await Promise.all([
       getGameState(),
       isCorporateBond(bond)
-        ? db.collection<Corporation>("corporations").findOne({
+        ? corporationsCollection(db).findOne({
             _id: bond.corporationId,
           })
         : Promise.resolve(null),
@@ -137,7 +138,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
           myBondUnits = myHolding?.units ?? 0;
 
           // Find corporation where imperial character is CEO
-          const myCorp = await db.collection<Corporation>("corporations").findOne({
+          const myCorp = await corporationsCollection(db).findOne({
             ceoId: imperial._id,
             ceoType: "imperial",
             ceoVacant: { $ne: true },
@@ -198,7 +199,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
           myBondUnits = myHolding?.units ?? 0;
 
           // Find corporation where user is CEO (for corporate bond purchases)
-          const myCorp = await db.collection<Corporation>("corporations").findOne({
+          const myCorp = await corporationsCollection(db).findOne({
             ceoId: character._id,
             ceoVacant: { $ne: true },
           });
@@ -265,8 +266,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
             .toArray()
         : [],
       corporationIds.length > 0
-        ? db
-            .collection<Corporation>("corporations")
+        ? corporationsCollection(db)
             .find({ _id: { $in: corporationIds } })
             .project<
               Pick<Corporation, "_id" | "name"> & { logoUrl?: string; sequentialId?: number }

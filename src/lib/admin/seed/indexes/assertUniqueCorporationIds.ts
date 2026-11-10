@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SeededCorporationIdentity {
   _id: unknown;
@@ -64,8 +65,7 @@ export function formatSequentialIdCollisions(collisions: SequentialIdCollision[]
  * Throws on any duplicate. Resolves silently when the collection is clean.
  */
 export async function assertUniqueCorporationSequentialIds(db: Db): Promise<void> {
-  const corporations = (await db
-    .collection("corporations")
+  const corporations = (await corporationsCollection(db)
     .find({}, { projection: { sequentialId: 1, name: 1, countryId: 1 } })
     .toArray()) as SeededCorporationIdentity[];
   const collisions = findDuplicateCorporationSequentialIds(corporations);

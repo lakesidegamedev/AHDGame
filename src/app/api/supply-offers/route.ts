@@ -10,6 +10,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { Corporation, GameConfig } from "@/lib/db/types";
 import { loadOpenOffers, openOffersFilter } from "@/lib/corporations/supplyExchange/listingView";
 import { OFFER_SORT_DIRS, OFFER_SORTS } from "@/lib/corporations/supplyExchange/offerOrdering";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const MAX_OFFERS = 60;
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -76,8 +77,7 @@ export async function GET(request: Request) {
     const [turn, mine] = await Promise.all([
       getCurrentTurn(db),
       ObjectId.isValid(auth.user.userId)
-        ? db
-            .collection<Corporation>("corporations")
+        ? corporationsCollection(db)
             .find({ userId: new ObjectId(auth.user.userId), ceoVacant: { $ne: true } })
             .project<Pick<Corporation, "_id" | "name" | "countryId">>({
               name: 1,

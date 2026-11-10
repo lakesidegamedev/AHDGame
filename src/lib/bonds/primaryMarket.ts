@@ -13,7 +13,7 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { BondMarketPool, CentralBank, Corporation } from "@/lib/db/types";
+import type { BondMarketPool, CentralBank } from "@/lib/db/types";
 import type { CreditRating } from "@/lib/db/types/centralBank";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -47,6 +47,7 @@ import { ObjectId as MongoObjectId } from "mongodb";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Share of the pool's cash one corporate issue may take at issuance. */
 const CORPORATE_PRIMARY_COMMIT_SHARE = 0.2;
@@ -290,8 +291,7 @@ export async function placeUnsoldBondUnits(
   ];
   const [banks, issuers] = await Promise.all([
     bankIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: bankIds } },
             {
@@ -307,8 +307,7 @@ export async function placeUnsoldBondUnits(
           .toArray()
       : Promise.resolve([]),
     issuerIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: issuerIds } },
             { projection: { _id: 1, name: 1, countryId: 1, liquidCurrencyCode: 1 } }
@@ -614,14 +613,14 @@ export async function settlePlacementProceeds(
 ): Promise<void> {
   for (const [corpIdStr, row] of placement.corporateProceedsByCorp) {
     if (!(row.local > 0)) continue;
-    const corp = await db
-      .collection<{ _id: ObjectId; liquidCurrencyCode?: string; countryId?: string }>(
-        "corporations"
-      )
-      .findOne(
-        { _id: new MongoObjectId(corpIdStr) },
-        { projection: { liquidCurrencyCode: 1, countryId: 1 } }
-      );
+    const corp = await corporationsCollection<{
+      _id: ObjectId;
+      liquidCurrencyCode?: string;
+      countryId?: string;
+    }>(db).findOne(
+      { _id: new MongoObjectId(corpIdStr) },
+      { projection: { liquidCurrencyCode: 1, countryId: 1 } }
+    );
     if (!corp) continue;
     const bondRate = fxByCurrency.get(row.currency) ?? 1;
     const anchor = corpCapitalToAnchor(row.local, row.currency, bondRate);
@@ -629,9 +628,10 @@ export async function settlePlacementProceeds(
     const corpRate = corpCurrency ? (fxByCurrency.get(corpCurrency) ?? 1) : 1;
     const local = anchorToCorpCapital(anchor, corpCurrency, corpRate);
     if (!(local > 0)) continue;
-    await db
-      .collection("corporations")
-      .updateOne({ _id: corp._id }, { $inc: { liquidCapital: local }, $set: { updatedAt: now } });
+    await corporationsCollection(db).updateOne(
+      { _id: corp._id },
+      { $inc: { liquidCapital: local }, $set: { updatedAt: now } }
+    );
   }
   // Sovereign proceeds and obligations already settled atomically with units.
 }

@@ -16,6 +16,7 @@ import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
@@ -51,8 +52,7 @@ async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
     .find({ countryId })
     .project({ revenue: 1 })
     .toArray();
-  const corps = await db
-    .collection<{ revenue?: number }>("corporations")
+  const corps = await corporationsCollection<{ revenue?: number }>(db)
     .find({ countryId })
     .project({ revenue: 1 })
     .toArray();

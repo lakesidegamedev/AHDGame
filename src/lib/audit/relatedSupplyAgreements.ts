@@ -1,7 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { resolveRelatedParty } from "@/lib/corporations/supplyExchange/relatedParty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Live supply agreements whose two corporations are related parties (same
@@ -23,8 +23,7 @@ export async function loadRelatedSupplyAgreementIds(db: Db): Promise<Set<string>
       .toArray();
     if (agreements.length === 0) return new Set();
     const corpIds = [...new Set(agreements.flatMap((a) => [a.supplierCorpId, a.buyerCorpId]))];
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         { _id: { $in: corpIds } },
         { projection: { userId: 1, ceoId: 1, ceoType: 1, shareholders: 1, totalShares: 1 } }

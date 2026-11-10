@@ -20,9 +20,9 @@
  */
 
 import type { ClientSession, Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { getCorpFxRate } from "@/lib/currency/corporationCapital";
 import { getCurrentTurn } from "@/lib/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Share of a company's market value the pool will buy from sellers in one turn. */
 const EQUITY_POOL_SELL_SHARE_PER_TURN = 0.05;
@@ -91,7 +91,7 @@ export async function loadPoolSellPacing(
   options?: { session?: ClientSession }
 ): Promise<PoolSellPacing> {
   const [corporation, turn] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne(
+    corporationsCollection(db).findOne(
       { _id: corporationId },
       {
         projection: {
@@ -149,7 +149,7 @@ export async function reservePoolSellAllowance(
   options?: { session?: ClientSession }
 ): Promise<boolean> {
   if (!(amountLocal > 0)) return true;
-  const result = await db.collection<Corporation>("corporations").updateOne(
+  const result = await corporationsCollection(db).updateOne(
     {
       _id: corporationId,
       $expr: { $lte: [{ $add: [usedThisTurnExpr(turn), amountLocal] }, capLocal + 0.01] },
@@ -189,7 +189,7 @@ export async function recordPoolSellAbsorbed(
         ],
       },
     }));
-  if (ops.length > 0) await db.collection("corporations").bulkWrite(ops);
+  if (ops.length > 0) await corporationsCollection(db).bulkWrite(ops);
 }
 
 /** Give back a reservation when the sale it covered was rolled back. */
@@ -201,7 +201,7 @@ export async function releasePoolSellAllowance(
   options?: { session?: ClientSession }
 ): Promise<void> {
   if (!(amountLocal > 0)) return;
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporationId, poolSellAbsorbedTurn: turn },
     [
       {

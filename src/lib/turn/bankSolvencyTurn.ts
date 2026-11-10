@@ -40,6 +40,7 @@ import {
   propBankFails,
 } from "@/lib/banking/rules/solvency";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // Defined in the rules zone; re-exported for the turn's tests and dashboards.
 export { CONTAGION_PANIC_TURNS, FLIGHT_RATE_BY_BAND, RUN_FAILURE_COVER_FRACTION };
@@ -205,7 +206,7 @@ export async function processBankSolvencyTurn(
         panicTurns = Math.max(0, row.panicTurnsBefore - 1);
       }
 
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         {
           _id: row.corpId,
           "bankCharter.status": "active",
@@ -230,7 +231,7 @@ export async function processBankSolvencyTurn(
 
     for (const [hex, panicTurns] of newlyPanicked) {
       summary.contagionTriggered += 1;
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: new ObjectId(hex), "bankCharter.status": "active" },
         {
           $set: {

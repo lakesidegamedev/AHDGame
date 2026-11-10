@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -7,6 +6,7 @@ import { accountId } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { splitProducerWallets, remapProducerPayables } from "./rules/producerWallets";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Called inside the enclosing independence transaction, before the old region is removed. */
 export async function migrateProducerWallets(
@@ -35,7 +35,7 @@ export async function migrateProducerWallets(
     pendingSettlementProjection: 1,
   };
   const [corporations, otherWallets] = await Promise.all([
-    db.collection<Corporation>("corporations").find(affected, { projection }).toArray(),
+    corporationsCollection(db).find(affected, { projection }).toArray(),
     accounts.find(affected).toArray(),
   ]);
   const originals = new Map([...source, ...otherWallets].map((row) => [row._id, row]));
@@ -122,7 +122,7 @@ export async function migrateProducerWallets(
     }))
   );
   if (corporations.length)
-    await db.collection<Corporation>("corporations").bulkWrite(
+    await corporationsCollection(db).bulkWrite(
       corporations.map((row) => ({
         updateOne: {
           filter: { _id: row._id },

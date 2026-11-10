@@ -2,6 +2,7 @@ import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CountryOwnedSeedData } from "@/lib/seeds/reference/budgets";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CountryOwnedCorpUpsertResult {
   /** Corporations upserted by canonical `_id`. */
@@ -47,7 +48,7 @@ export async function upsertCountryOwnedCorpEntries(
     });
   }
   // Corporations before sectors: a sector's owning corporation always exists first.
-  await db.collection<Corporation>("corporations").bulkWrite(corpOps, { ordered: true });
+  await corporationsCollection(db).bulkWrite(corpOps, { ordered: true });
   result.corporations = corpOps.length;
 
   // Only corporations that get producing sectors this run are legitimate
@@ -62,8 +63,7 @@ export async function upsertCountryOwnedCorpEntries(
   // anything else still flagged as country-owned is, by definition, from an
   // older id layout.
   const countryOwnedIds = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find({ countryOwnerId: countryId }, { projection: { _id: 1 } })
       .toArray()
   ).map((corp) => corp._id as ObjectId);

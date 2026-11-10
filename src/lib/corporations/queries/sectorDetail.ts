@@ -18,7 +18,7 @@ import {
 } from "@/lib/labour/laborCost";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
 import { buildStateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   getTariffBlendWeights,
   buildSectorPresenceKeys,
@@ -73,6 +73,7 @@ import { computeTechGrowthCostReductionPct, loadSectorTechContext } from "./sect
 import { loadSectorDetailContext } from "./sectorDetailContext";
 import { buildSectorDetailPlantsTier } from "./sectorDetailPlantsTier";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -139,9 +140,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const editorialStance =
       governorConfig?.mediaEditorialEnabled === true && sector.sectorType === "media"
         ? ((
-            await db
-              .collection<Corporation>("corporations")
-              .findOne({ _id: corporation._id }, { projection: { editorialStance: 1 } })
+            await corporationsCollection(db).findOne(
+              { _id: corporation._id },
+              { projection: { editorialStance: 1 } }
+            )
           )?.editorialStance ?? { economic: 0, social: 0 })
         : undefined;
 

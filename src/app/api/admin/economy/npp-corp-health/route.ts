@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation } from "@/lib/db/types";
 import {
   corpLiquidCapitalToAnchor,
   fxRateForCorpFromMap,
@@ -15,6 +14,7 @@ import {
   computeNppCorporationHealth,
   type NppCorporationHealthCorporation,
 } from "@/lib/economy/nppCorporationHealth";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const querySchema = z.object({
   turn: z.coerce.number().int().nonnegative().optional(),
@@ -63,8 +63,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   }
   // NPP-led corps are exactly the ones the NPP brain operates: `ceoType` is
   // "npp". The query filters on that rather than loading the whole NPP id set.
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {

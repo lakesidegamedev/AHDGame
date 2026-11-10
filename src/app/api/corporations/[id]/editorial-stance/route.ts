@@ -8,7 +8,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Corporation, GameConfig } from "@/lib/db/types";
+import type { GameConfig } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -58,12 +59,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     const stance = { economic: parsed.data.economic, social: parsed.data.social };
-    const updated = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, userId: new ObjectId(auth.user.userId), ceoVacant: { $ne: true } },
-        { $set: { editorialStance: stance } }
-      );
+    const updated = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, userId: new ObjectId(auth.user.userId), ceoVacant: { $ne: true } },
+      { $set: { editorialStance: stance } }
+    );
     if (updated.modifiedCount !== 1 && updated.matchedCount !== 1) {
       return errorResponse(409, "Corporation ownership changed");
     }

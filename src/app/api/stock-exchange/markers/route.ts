@@ -6,10 +6,10 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
 import type { MarketCapHistory } from "@/lib/db/types";
 import type { ShareTradeHistory, ShareTradeKind } from "@/lib/db/types/shareTradeHistory";
-import type { Corporation } from "@/lib/db/types";
 import type { WireEvent } from "@/lib/wireEvent";
 import { EXCHANGE_API_KEYS, getCountryForExchange } from "@/lib/constants/exchangeRegistry";
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const SPLIT_KINDS: ShareTradeKind[] = ["stock_split", "reverse_split"];
 const WIRE_TYPES: WireEvent["type"][] = [
@@ -70,8 +70,7 @@ export async function GET(request: Request) {
     let venueCorpIds: Set<string> | null = null;
     let corpNames = new Map<string, string>();
     if (venueCountry) {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find({})
         .project({ name: 1, countryId: 1 })
         .toArray();
@@ -80,11 +79,7 @@ export async function GET(request: Request) {
         corps.filter((c) => c.countryId === venueCountry).map((c) => c._id.toString())
       );
     } else {
-      const corps = await db
-        .collection<Corporation>("corporations")
-        .find({})
-        .project({ name: 1 })
-        .toArray();
+      const corps = await corporationsCollection(db).find({}).project({ name: 1 }).toArray();
       corpNames = new Map(corps.map((c) => [c._id.toString(), c.name]));
     }
 

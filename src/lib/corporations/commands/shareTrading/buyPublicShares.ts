@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/subsidiaries/cycleGuard";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatization/openVoteGuard";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { Character, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import {
   creditShares,
@@ -74,6 +74,7 @@ import {
 import { applyFloatBuyCredit } from "@/lib/corporations/shareEscrowSettlement";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -157,9 +158,10 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       }
 
       // Look up the buying corporation (caller must be CEO)
-      const buyingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId, ceoVacant: { $ne: true } });
+      const buyingCorp = await corporationsCollection(db).findOne({
+        ceoId,
+        ceoVacant: { $ne: true },
+      });
       if (!buyingCorp) {
         return errorResponse(403, "You must be a CEO to buy shares on behalf of a corporation");
       }

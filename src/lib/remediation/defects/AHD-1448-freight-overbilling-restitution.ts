@@ -16,6 +16,7 @@ import {
   FREIGHT_OVERBILLING_BY_CORPORATION,
 } from "./AHD-1448-freight-overbilling-restitution.data";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Restitution for freight overbilling: the sourcing pass settles the commodity
@@ -72,8 +73,7 @@ function hasMarker(doc: CorporationDoc | undefined): boolean {
 
 async function loadCorporations(db: Db): Promise<Map<string, CorporationDoc>> {
   const ids = FREIGHT_OVERBILLING_BY_CORPORATION.map((row) => new ObjectId(row.corporationId));
-  const docs = await db
-    .collection<CorporationDoc>("corporations")
+  const docs = await corporationsCollection<CorporationDoc>(db)
     .find(
       { _id: { $in: ids } },
       { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, remediation: 1 } }
@@ -177,7 +177,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   for (const credit of credits) {
     // Marker and increment in ONE update, under a filter that demands the
     // marker's absence, so a concurrent or repeated run credits nobody twice.
-    const res = await db.collection("corporations").updateOne(
+    const res = await corporationsCollection(db).updateOne(
       { _id: new ObjectId(credit.corporationId), [MARKER_PATH]: { $exists: false } },
       {
         $inc: { liquidCapital: credit.creditLocal },

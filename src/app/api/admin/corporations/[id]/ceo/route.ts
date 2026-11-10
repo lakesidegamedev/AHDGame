@@ -10,9 +10,10 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Character, Corporation, GameState } from "@/lib/db/types";
+import type { Character, GameState } from "@/lib/db/types";
 import { openCeoTenure, closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const appointSchema = z.object({ characterId: z.string().length(24) });
 
@@ -28,9 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { characterId } = parsed.data;
     const db = await getDb();
 
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     // Resolve the appointed character's owning user. The corp's `userId` is the
@@ -48,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Vacant" while a live character sits in `ceoId`. Any caretaker record dies
     // with the handover; leaving it would let a later dismissal restore the old
     // caretaker over the one just appointed.
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: new ObjectId(id) },
       {
         $set: {
@@ -90,11 +89,12 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const currentTurn = gameState?.currentTurn ?? 0;
 
     // Capture the outgoing CEO before vacating so we can close their tenure.
-    const outgoing = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) }, { projection: { ceoId: 1 } });
+    const outgoing = await corporationsCollection(db).findOne(
+      { _id: new ObjectId(id) },
+      { projection: { ceoId: 1 } }
+    );
 
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       { _id: new ObjectId(id) },
       {
         $set: {

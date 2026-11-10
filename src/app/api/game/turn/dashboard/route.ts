@@ -29,7 +29,6 @@ import {
 } from "@/lib/utils/decayProjections";
 import type {
   Character,
-  Corporation,
   Election,
   ExchangeRate,
   GameConfig,
@@ -39,6 +38,7 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -133,12 +133,10 @@ async function handleGET() {
       // Find the nearest election the player is a candidate in, or the nearest active election
       findNearestElection(db, character, await getGameTime()),
       // hasCorp: is this character the CEO of an active corporation?
-      db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { ceoId: character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
-          { projection: { _id: 1 } }
-        ),
+      corporationsCollection(db).findOne(
+        { ceoId: character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
+        { projection: { _id: 1 } }
+      ),
       // Two most recent snapshots — used to compute portfolioChangePercent
       db
         .collection<PortfolioHistory>("portfolioHistory")

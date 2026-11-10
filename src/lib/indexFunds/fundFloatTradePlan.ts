@@ -27,6 +27,7 @@ import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { loadQueuedPayoutAuditContext } from "./queuedPayoutSettlement";
 import { type FundFloatPlan, type SettlementFund } from "./fundFloatSettlement";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type FloatAuditContext = Awaited<ReturnType<typeof loadQueuedPayoutAuditContext>>;
 export async function loadFloatAuditContext(
@@ -541,7 +542,7 @@ export async function prepareFundFloatTrade(db: Db, input: Input) {
       },
     }
   );
-  const snapshot = await db.collection<CorpSnapshot>("corporations").findOne(
+  const snapshot = await corporationsCollection<CorpSnapshot>(db).findOne(
     { _id: input.corp._id },
     {
       projection: {
@@ -568,12 +569,10 @@ export async function prepareFundFloatTrade(db: Db, input: Input) {
   if (input.direction === "buy" && fund.cashAnchor < input.amountAnchor) return undefined;
   if (input.direction === "buy" && fund.mandate?.mode === "picked_stocks") {
     const manager = fund.sponsorCorporationId
-      ? await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { _id: fund.sponsorCorporationId },
-            { projection: { bankCharter: 1, userId: 1 } }
-          )
+      ? await corporationsCollection(db).findOne(
+          { _id: fund.sponsorCorporationId },
+          { projection: { bankCharter: 1, userId: 1 } }
+        )
       : null;
     if (
       !bankMayManageFunds(manager?.bankCharter) ||
@@ -715,8 +714,7 @@ export async function openFundFloatBatch(
         },
       }
     ),
-    db
-      .collection<CorpSnapshot>("corporations")
+    corporationsCollection<CorpSnapshot>(db)
       .find({ _id: { $in: ctx.corps.map((corp) => corp._id) } }, { projection: snapshotProjection })
       .toArray(),
   ]);

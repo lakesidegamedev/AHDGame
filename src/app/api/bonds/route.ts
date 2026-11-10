@@ -23,6 +23,7 @@ import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corpo
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * GET /api/bonds
@@ -100,8 +101,7 @@ export async function GET(request: Request) {
       countryId: CountryId;
       type: string;
     }
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
       .project<CorpProjection>({
         _id: 1,

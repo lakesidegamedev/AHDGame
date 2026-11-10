@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, IndexFund } from "@/lib/db/types";
+import type { Character, IndexFund } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { withSessionDb } from "@/lib/db/sessionDb";
 import { errorResponse, statusResponse, badRequest } from "@/lib/api/errors";
@@ -18,6 +18,7 @@ import {
 import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/autoConvert";
 import { quoteIndexFundSubscription } from "./unitAccounting";
 import { witnessSubscription, type BankSubscription } from "./subscriptions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function queueBankFundSubscription(
   db: Db,
@@ -71,7 +72,7 @@ export async function queueBankFundSubscription(
         return errorResponse(403, "An active character is required.");
       const corporationId = input.corporationId ? new ObjectId(input.corporationId) : undefined;
       const corporation = corporationId
-        ? await tx.collection<Corporation>("corporations").findOne({ _id: corporationId })
+        ? await corporationsCollection(tx).findOne({ _id: corporationId })
         : null;
       if (corporationId && (!corporation || String(corporation.userId) !== input.userId))
         return errorResponse(403, "Only the CEO can invest for a corporation.");

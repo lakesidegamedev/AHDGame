@@ -34,6 +34,7 @@ import {
 } from "@/lib/corporations/strengthUpkeep";
 import { spinOffCooldownTurnsRemaining } from "@/lib/corporations/subsidiaries/constants";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 async function buildHostileTakeoverEligibility(
   db: Db,
@@ -42,8 +43,7 @@ async function buildHostileTakeoverEligibility(
 ) {
   if (!viewerUserId || corporation.countryOwnerId) return null;
 
-  const myCorps = await db
-    .collection<Corporation>("corporations")
+  const myCorps = await corporationsCollection(db)
     .find({
       userId: new ObjectId(viewerUserId),
       ceoVacant: { $ne: true },
@@ -62,7 +62,7 @@ async function buildHostileTakeoverEligibility(
     if (acqPct > HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT) {
       const [outstandingBonds, parentCorp] = await Promise.all([
         bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
-        db.collection<Corporation>("corporations").findOne({ _id: mc._id }),
+        corporationsCollection(db).findOne({ _id: mc._id }),
       ]);
       const outstandingBondDebt = outstandingBonds.reduce((sum, b) => sum + b.totalIssued, 0);
       const parentFx = parentCorp ? fxRateForCorpFromMap(parentCorp, fxByCurrency) : 1;
@@ -146,15 +146,12 @@ export async function loadSubsidiaryContext(
   const [pDoc, subsidiaryCandidates, hostileTakeoverEligibility, reservedPlacedByThisCorp] =
     await Promise.all([
       controllingParent
-        ? db
-            .collection<Corporation>("corporations")
-            .findOne(
-              { _id: controllingParent.corporationId },
-              { projection: { _id: 1, name: 1, sequentialId: 1 } }
-            )
+        ? corporationsCollection(db).findOne(
+            { _id: controllingParent.corporationId },
+            { projection: { _id: 1, name: 1, sequentialId: 1 } }
+          )
         : Promise.resolve(null),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({
           shareholders: {
             $elemMatch: {
@@ -212,8 +209,7 @@ export async function loadSubsidiaryContext(
     .map((r) => r.targetCorpId)
     .filter((id) => !candidateIds.has(id.toString()));
   if (missingReservedIds.length > 0) {
-    const extraSubs = await db
-      .collection<Corporation>("corporations")
+    const extraSubs = await corporationsCollection(db)
       .find({ _id: { $in: missingReservedIds } })
       .project<
         Pick<
@@ -317,7 +313,7 @@ export async function loadSubsidiaryContext(
       isEligibleAsSubsidiary(corporation) &&
       corporation.subsidiaryFormalizedAtTurn == null
     ) {
-      const parentDoc = await db.collection<Corporation>("corporations").findOne(
+      const parentDoc = await corporationsCollection(db).findOne(
         { _id: controllingParent.corporationId },
         {
           projection: {

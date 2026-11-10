@@ -22,6 +22,7 @@ import {
   legStamp,
 } from "./moneyMove";
 import type { SettlementResult } from "./settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface Credit {
   characterId: ObjectId;
@@ -217,7 +218,7 @@ async function deliverLegacyDepositInterest(
   if (before.size !== plan.credits.length)
     throw new Error("Legacy interest recipient missing; original allocation retained for recovery");
   const bankStamp = legStamp(record._id, 0);
-  const bank = db.collection<InterestBalanceDocument>("corporations");
+  const bank = corporationsCollection<InterestBalanceDocument>(db);
   const debited = await bank.updateOne(
     {
       ...plan.bankGuard,

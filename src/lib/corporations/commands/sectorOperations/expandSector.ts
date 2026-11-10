@@ -16,7 +16,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type {
   Character,
-  Corporation,
   CorporateSector,
   GameState,
   GameConfig,
@@ -72,6 +71,7 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -453,7 +453,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       corporation,
       corpFxRate
     );
-    const debit = await db.collection<Corporation>("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: costInCorpCapital },

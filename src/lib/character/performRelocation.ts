@@ -1,14 +1,7 @@
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import type { Db, ObjectId } from "mongodb";
-import type {
-  Character,
-  State,
-  Corporation,
-  PoliticalParty,
-  StatePartyOrg,
-  CareerEvent,
-} from "@/lib/db/types";
+import type { Character, State, PoliticalParty, StatePartyOrg, CareerEvent } from "@/lib/db/types";
 import {
   withdrawAllActiveCandidacies,
   cleanupPartyPositionsOnSwitch,
@@ -20,6 +13,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { officeResignsOnRelocation } from "@/lib/character/officeResignsOnRelocation";
 import { severFromChainOfCommand } from "@/lib/military/severFromChainOfCommand";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -106,7 +100,7 @@ export async function performRelocation(
   // 3. Auto-resign CEO of any corporation, unless the caller has asked us to
   //    keep them in place for the matching corp (combined char+corp move).
   let ceoResignedFrom: string | null = null;
-  const ceoCorp = await db.collection<Corporation>("corporations").findOne({
+  const ceoCorp = await corporationsCollection(db).findOne({
     ceoId: characterId,
     ceoVacant: { $ne: true },
   });
@@ -120,7 +114,7 @@ export async function performRelocation(
       (isStateOwned(ceoCorp) && ceoCorp.countryId === newCountryId))
   );
   if (ceoCorp && !keepCeo) {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: ceoCorp._id },
       {
         $set: { ceoVacant: true, updatedAt: now },

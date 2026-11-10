@@ -12,6 +12,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Brazil's bondholders were force-converted out of BRL at a rate the engine
@@ -374,8 +375,7 @@ async function loadRecipients(
           .toArray()
       : Promise.resolve([]),
     corporationIds.length > 0
-      ? db
-          .collection<CorporationDoc>("corporations")
+      ? corporationsCollection<CorporationDoc>(db)
           .find({ _id: { $in: corporationIds } })
           .toArray()
       : Promise.resolve([]),

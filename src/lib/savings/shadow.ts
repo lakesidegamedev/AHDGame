@@ -40,6 +40,7 @@ import {
 import { countBankingEvent, timedBankingStage } from "@/lib/banking/telemetry";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const SAVINGS_ACCOUNTS_COLLECTION = "savingsAccounts";
 
@@ -291,8 +292,7 @@ export async function buildSavingsComparison(
       .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
       .find({ ownerType: "character" })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "bankCharter.status": "active" })
       .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
       .toArray(),

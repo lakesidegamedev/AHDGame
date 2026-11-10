@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface CeoVote {
   corporationId: unknown;
@@ -24,8 +24,7 @@ export async function GET() {
     const db = await getDb();
 
     // Corps with a ceoId but no ceoVacant field at all
-    const missingField = await db
-      .collection<Corporation>("corporations")
+    const missingField = await corporationsCollection(db)
       .find({
         ceoId: { $ne: null as unknown as undefined },
         ceoVacant: { $exists: false },
@@ -34,8 +33,7 @@ export async function GET() {
       .toArray();
 
     // Corps where ceoVacant is explicitly undefined/null (not boolean)
-    const nullField = await db
-      .collection<Corporation>("corporations")
+    const nullField = await corporationsCollection(db)
       .find({
         ceoId: { $ne: null as unknown as undefined },
         ceoVacant: { $type: "null" },
@@ -83,8 +81,7 @@ export async function POST() {
     const now = new Date();
 
     // Find corps missing the ceoVacant field that have a CEO
-    const affected = await db
-      .collection<Corporation>("corporations")
+    const affected = await corporationsCollection(db)
       .find({
         ceoId: { $ne: null as unknown as undefined },
         $or: [{ ceoVacant: { $exists: false } }, { ceoVacant: { $type: "null" } }],
@@ -103,9 +100,10 @@ export async function POST() {
 
     for (const corp of affected) {
       // Set ceoVacant: false explicitly
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne({ _id: corp._id }, { $set: { ceoVacant: false, updatedAt: now } });
+      await corporationsCollection(db).updateOne(
+        { _id: corp._id },
+        { $set: { ceoVacant: false, updatedAt: now } }
+      );
 
       // Upsert a CEO self-vote so they're the elected leader
       if (corp.ceoId) {

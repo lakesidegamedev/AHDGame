@@ -14,7 +14,6 @@ import type {
   CabinetMember,
 } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import type { RetiredCharacter, RetiredCharacterSnapshot } from "@/lib/db/types/retiredCharacter";
@@ -44,6 +43,7 @@ import type { CharacterRecap } from "@/lib/recap/types";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Core retirement function: snapshots a character, cleans up all gameplay
@@ -112,8 +112,7 @@ export async function retireCharacter(
   // further down zero them out — this is the only chance to record what they
   // were worth, so the Hall of Fame's net-worth ranking doesn't lose them.
   const [heldCorps, heldBonds, heldFundPositions] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "shareholders.characterId": characterId },
         { projection: { _id: 1, shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }
@@ -323,8 +322,7 @@ export async function retireCharacter(
   await releaseVacatedBlocSeats(db, blocRowIds, now);
 
   const forexEnabled = await isForexEnabled();
-  const ceoCorps = await db
-    .collection<Corporation>("corporations")
+  const ceoCorps = await corporationsCollection(db)
     .find({ ceoId: characterId }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const ceoCorpIds = ceoCorps.map((corp) => corp._id);
@@ -344,12 +342,10 @@ export async function retireCharacter(
     await releaseCorporationHeldSharesToFloat(db, ceoCorpId, now);
   }
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateMany(
-      { ceoId: characterId },
-      { $set: { ceoId: null as unknown as ObjectId, ceoVacant: true, updatedAt: now } }
-    );
+  await corporationsCollection(db).updateMany(
+    { ceoId: characterId },
+    { $set: { ceoId: null as unknown as ObjectId, ceoVacant: true, updatedAt: now } }
+  );
 
   if (ceoCorpIds.length > 0) {
     const retireTurn = await getCurrentTurn(db);

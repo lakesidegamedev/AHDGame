@@ -5,7 +5,7 @@ import { fundTradeCapabilities } from "./tradeCapabilities";
  * anchor values. Orders retain receipts and audit witnesses for safe retries.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, IndexFund } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import { badRequest, errorResponse, handleRouteError } from "@/lib/api/errors";
 import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
 import {
@@ -42,6 +42,7 @@ import { claimFundRedemptionLock } from "./redemptionLock";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { canRedeemSponsorUnits } from "./sponsorship/sponsorUnits";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function tradeCorporationFund(
   db: Db,
@@ -56,9 +57,7 @@ export async function tradeCorporationFund(
     return queueBankFundSubscription(db, { fund, characterId, userId, ...order });
   }
   const corporationId = new ObjectId(order.corporationId);
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId });
+  const corporation = await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corporation) return errorResponse(404, "Corporation not found");
   if (corporation.userId?.toString() !== userId)
     return errorResponse(403, "Only the CEO can invest for a corporation");
@@ -153,9 +152,10 @@ export async function tradeCorporationFund(
         const undo: Array<() => Promise<unknown>> = [];
         let completionStarted = false;
         try {
-          const currentCorp = await db
-            .collection<Corporation>("corporations")
-            .findOne({ _id: corporationId, userId: new ObjectId(userId) }, options);
+          const currentCorp = await corporationsCollection(db).findOne(
+            { _id: corporationId, userId: new ObjectId(userId) },
+            options
+          );
           if (!currentCorp)
             throw badRequest("Corporation ownership changed; reload before trading");
           let balanceAfter = 0;
@@ -293,19 +293,18 @@ export async function tradeCorporationFund(
                 prior.avgNavAnchor ?? fund.quotedNav
               )
             );
-            const paid = await db
-              .collection<Corporation>("corporations")
-              .findOneAndUpdate(
-                { _id: corporationId },
-                { $inc: { liquidCapital: amountNative } },
-                { ...options, returnDocument: "after", projection: { liquidCapital: 1 } }
-              );
+            const paid = await corporationsCollection(db).findOneAndUpdate(
+              { _id: corporationId },
+              { $inc: { liquidCapital: amountNative } },
+              { ...options, returnDocument: "after", projection: { liquidCapital: 1 } }
+            );
             if (!paid) throw badRequest("Corporation no longer exists");
             balanceAfter = paid.liquidCapital;
             undo.push(() =>
-              db
-                .collection("corporations")
-                .updateOne({ _id: corporationId }, { $inc: { liquidCapital: -amountNative } })
+              corporationsCollection(db).updateOne(
+                { _id: corporationId },
+                { $inc: { liquidCapital: -amountNative } }
+              )
             );
             response = {
               success: true,

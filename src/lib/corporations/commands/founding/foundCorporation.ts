@@ -64,6 +64,7 @@ import {
   refundPreparedEquityPlacement,
   type PreparedEquityPlacement,
 } from "@/lib/equities/primaryMarket";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type FoundCorporationRequest = z.infer<typeof foundCorporationSchema>;
 
@@ -159,9 +160,10 @@ export async function foundCorporation({
 
   // Keep the one-active-corporation limit account-wide, even when a player
   // switches characters. The cooldown begins only once that corporation ends.
-  const existing = await db
-    .collection<Corporation>("corporations")
-    .findOne({ userId: new ObjectId(userId), ceoVacant: { $ne: true } });
+  const existing = await corporationsCollection(db).findOne({
+    userId: new ObjectId(userId),
+    ceoVacant: { $ne: true },
+  });
   if (existing) {
     return fail(400, "You already own a corporation. Each player can own one corporation.");
   }
@@ -212,7 +214,7 @@ export async function foundCorporation({
         const policy = await loadBankingPolicy(db);
         if (!policy.primaryUnderwriting) return null;
         const bankId = new ObjectId(ipo.underwriterCorporationId);
-        const bank = await db.collection<Corporation>("corporations").findOne(
+        const bank = await corporationsCollection(db).findOne(
           {
             _id: bankId,
             "bankCharter.status": "active",
@@ -288,7 +290,7 @@ export async function foundCorporation({
   }
 
   // Check name uniqueness (case-insensitive)
-  const nameTaken = await db.collection<Corporation>("corporations").findOne({
+  const nameTaken = await corporationsCollection(db).findOne({
     name: { $regex: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
   });
   if (nameTaken) {
@@ -298,7 +300,7 @@ export async function foundCorporation({
   // Check ticker uniqueness: schema already uppercased `tickerSymbol`, so an
   // exact match is sufficient (no collation / regex). The unique partial
   // index closes the residual race between this read and the insert below.
-  const tickerTaken = await db.collection<Corporation>("corporations").findOne({ tickerSymbol });
+  const tickerTaken = await corporationsCollection(db).findOne({ tickerSymbol });
   if (tickerTaken) {
     return fail(400, "That ticker symbol is already taken");
   }
@@ -641,9 +643,10 @@ export async function foundCorporation({
   let foundingSettlementPending = false;
   let foundingSettlementAborted = false;
   try {
-    const result = await db
-      .collection<Corporation>("corporations")
-      .insertOne({ _id: corporationId, ...corporation } as Corporation);
+    const result = await corporationsCollection(db).insertOne({
+      _id: corporationId,
+      ...corporation,
+    } as Corporation);
     createdCorporationId = result.insertedId;
 
     if (foundingOffer && foundingUnderwriterBank && foundingUnderwritingProjection) {
@@ -687,7 +690,7 @@ export async function foundCorporation({
           },
         });
       } else if (settlement.status === "rejected" && settlement.appliedLegs.length === 0) {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           {
             _id: result.insertedId,
             "foundingIpoUnderwritingPending.offer.instrumentId": foundingOffer.instrumentId,
@@ -888,7 +891,7 @@ export async function foundCorporation({
       await db
         .collection("corporationCeoVotes")
         .deleteMany({ corporationId: createdCorporationId });
-      await db.collection<Corporation>("corporations").deleteOne({ _id: createdCorporationId });
+      await corporationsCollection(db).deleteOne({ _id: createdCorporationId });
     }
     await refundCharacterCash(db, character._id, homeCurrency, totalPlayerCost, forexEnabled);
     if (foundingPlacement && !foundingOffer) {

@@ -6,7 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
+import type { CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
@@ -50,6 +50,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const LIST_CACHE_HEADERS = {
@@ -64,8 +65,7 @@ async function buildCorpList(): Promise<{
   corporations: { id: string; name: string }[];
 }> {
   const db = await getDb();
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({})
     .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
     .sort({ name: 1 })
@@ -102,9 +102,9 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   // Find corporation by exact name (case-insensitive). The cache key is the
   // lowercased name, so two callers asking for the same corp share output.
   const escapedName = nameLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ name: { $regex: new RegExp(`^${escapedName}$`, "i") } });
+  const corporation = await corporationsCollection(db).findOne({
+    name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+  });
 
   if (!corporation) {
     return { found: false };

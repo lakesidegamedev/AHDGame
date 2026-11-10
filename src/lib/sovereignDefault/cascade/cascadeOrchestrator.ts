@@ -18,13 +18,13 @@
 
 import { type AnyBulkWriteOperation, type Db, type ObjectId } from "mongodb";
 import type { Bond } from "@/lib/db/types/bond";
-import type { Corporation } from "@/lib/db/types";
 import { CASCADE_MAX_LEVELS } from "../constants";
 import { applyBondHolderWriteDowns, type WriteDownReport } from "./bondHolderWriteDown";
 import { isCorporationInsolvent } from "./insolvency";
 import { computeBondWriteDownSeverity, type CascadeReason } from "./writeDownSeverity";
 import { emitPerCorpCascadeNews } from "./perCorpCascadeNews";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CascadeInput {
   initialBonds: Bond[];
@@ -69,8 +69,7 @@ export async function runCascade(db: Db, input: CascadeInput): Promise<CascadeRe
       break;
     }
 
-    const corpRows = await db
-      .collection<Corporation>("corporations")
+    const corpRows = await corporationsCollection(db)
       .find({ _id: { $in: report.affectedCorpIds } })
       .project<{
         _id: ObjectId;

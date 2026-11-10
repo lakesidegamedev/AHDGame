@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporateSector, State, UnownedSector } from "@/lib/db/types";
+import type { CorporateSector, State, UnownedSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   SECTOR_MARKET_GDP_FRACTION,
@@ -28,6 +28,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const PAGE_SIZE = 10;
 
@@ -112,8 +113,7 @@ export async function GET(request: Request) {
         .map((id) => new ObjectId(id));
       const ownerCorps =
         ownerObjectIds.length > 0
-          ? await db
-              .collection<Corporation>("corporations")
+          ? await corporationsCollection(db)
               .find({ _id: { $in: ownerObjectIds } })
               .project<{ _id: ObjectId } & CorpCapitalCurrencyInfo>({
                 _id: 1,
@@ -226,8 +226,7 @@ export async function GET(request: Request) {
     const stateIds = [...new Set(allSectors.map((s) => s.stateId))];
 
     const [corporations, states, workforceSkillMap, fxByCurrency] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ _id: { $in: corpIds } })
         .project<
           {

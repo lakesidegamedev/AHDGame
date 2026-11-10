@@ -70,6 +70,7 @@ import {
   unownedPoolTrailingSet,
 } from "@/lib/market/unownedHeadroom";
 import { attackCostAnchorUnderPlants, resolveWorldYear } from "@/lib/corporations/capacityCapture";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -169,16 +170,19 @@ export async function POST(request: Request, { params }: RouteParams) {
         userId: new ObjectId(auth.user.userId),
       });
       if (imperial) {
-        corporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } });
+        corporation = await corporationsCollection(db).findOne({
+          ceoId: imperial._id,
+          ceoType: "imperial",
+          ceoVacant: { $ne: true },
+        });
       }
     } else {
       const character = await getCharacterByUserId(db, auth.user.userId);
       if (character) {
-        corporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+        corporation = await corporationsCollection(db).findOne({
+          ceoId: character._id,
+          ceoVacant: { $ne: true },
+        });
       }
     }
 
@@ -214,8 +218,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const owningCorpIds = [...new Set(existingSectors.map((s) => s.corporationId))];
     const owningCorps =
       owningCorpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: owningCorpIds } })
             .project<Pick<Corporation, "_id" | "liquidCurrencyCode" | "countryId">>({
               _id: 1,
@@ -540,7 +543,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       corporation,
       corpFxRate
     );
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $inc: {

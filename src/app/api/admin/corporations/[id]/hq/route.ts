@@ -16,7 +16,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -36,6 +36,7 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
   countryId: z.enum(["US", "UK", "JP", "DE"]),
@@ -52,9 +53,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (corp.primaryUnderwritingIncomingFunding || corp.bankUnderwritingFunding) {
@@ -116,7 +115,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
     try {
-      const updateResult = await db.collection<Corporation>("corporations").updateOne(
+      const updateResult = await corporationsCollection(db).updateOne(
         {
           _id: new ObjectId(id),
           primaryUnderwritingIncomingFunding: { $exists: false },

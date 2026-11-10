@@ -8,6 +8,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { buildMarketShareBySectorId } from "@/lib/corporations/marketShare";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface MarketViewContext {
   marketShareBySectorId: Map<string, number>;
@@ -117,8 +118,7 @@ export async function loadMarketViewContext(
   const siblingCorpIds = [...new Set(siblingSectors.map((s) => s.corporationId.toString()))];
   const siblingCorps =
     siblingCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: siblingSectors.map((s) => s.corporationId) } })
           .project<Pick<Corporation, "_id" | "liquidCurrencyCode" | "countryId">>({
             _id: 1,

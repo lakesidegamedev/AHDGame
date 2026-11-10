@@ -2,6 +2,7 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Per-turn financial-distress clock for player corporations. Run AFTER this
@@ -14,8 +15,7 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
  * this only maintains the "since" timestamp the window is measured against.
  */
 export async function trackFinancialDistress(db: Db, turn: number): Promise<void> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       // Non-state-owned corps; player ownership (userId present) is checked per row
       // below — NPC/unowned corps have no nationalization grace and are skipped.
@@ -82,7 +82,7 @@ export async function trackFinancialDistress(db: Db, turn: number): Promise<void
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(db).bulkWrite(ops);
   }
   await createNotifications(notifications);
 }

@@ -18,6 +18,7 @@ import {
   type SnapshotCandidateRow,
 } from "./storyData";
 import type { CharacterRecap, RecapCorporation, RecapRaces, RecapWorld } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -446,8 +447,7 @@ export async function loadStoryData(
 
   // ── Corporation ──────────────────────────────────────────────────────────
   await section("corporation", warn, undefined, async () => {
-    const corps = await db
-      .collection<Document>("corporations")
+    const corps = await corporationsCollection<Document>(db)
       .find(
         { $or: [{ ceoId: { $in: ids } }, { "ceoHistory.holderId": { $in: ids } }] },
         {

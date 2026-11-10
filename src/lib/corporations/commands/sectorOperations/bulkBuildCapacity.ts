@@ -40,6 +40,7 @@ import {
   runAfterBuild,
 } from "@/lib/corporations/rules/operatingReserve";
 import { placeCapacityBuild } from "./buildCapacity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -302,7 +303,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     let spentLocal = 0;
     let stopped = false;
     let builtCount = 0;
-    const corpsCol = db.collection<Corporation>("corporations");
+    const corpsCol = corporationsCollection(db);
     for (const [i, { sector }] of ordered.entries()) {
       const row = rows[i];
       if (stopped) {

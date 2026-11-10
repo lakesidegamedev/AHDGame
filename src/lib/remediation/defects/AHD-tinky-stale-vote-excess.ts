@@ -14,6 +14,7 @@ import type {
 } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const DEFECT_ID = "AHD-tinky-stale-vote-excess";
 
@@ -176,7 +177,7 @@ async function survey(db: Db): Promise<Survey> {
   ];
 
   const [corporation, characters, budgets, sourceTradeCount, fxByCurrency] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne({ _id: new ObjectId(CORPORATION_ID) }),
+    corporationsCollection(db).findOne({ _id: new ObjectId(CORPORATION_ID) }),
     db
       .collection<Character>("characters")
       .find({ _id: { $in: characterClaims.map((claim) => new ObjectId(claim.destinationId)) } })
@@ -410,7 +411,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     updated += 1;
   }
 
-  const corporation = await db.collection<Corporation>("corporations").updateOne(
+  const corporation = await corporationsCollection(db).updateOne(
     {
       _id: new ObjectId(payload.corporationId),
       [MARKER_PATH]: { $exists: false },

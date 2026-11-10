@@ -5,7 +5,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -73,8 +73,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // 2. Corporation identities — corps where this user is CEO and that hold shares
-    const managedCorps = await db
-      .collection<Corporation>("corporations")
+    const managedCorps = await corporationsCollection(db)
       .find(
         { ceoId: voterCharacter._id, ceoType: { $ne: "npp" } },
         { projection: { _id: 1, name: 1, sequentialId: 1 } }

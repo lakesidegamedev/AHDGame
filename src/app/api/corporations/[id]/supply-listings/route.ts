@@ -13,7 +13,7 @@ import {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { COMMODITY_LABELS, COMMODITY_TYPES } from "@/lib/constants/commodities";
-import type { CorporateSector, Corporation, GameConfig, State } from "@/lib/db/types";
+import type { CorporateSector, GameConfig, State } from "@/lib/db/types";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
   PUBLISHER_PROJECTION,
@@ -26,6 +26,7 @@ import {
   supplyAgreementReachProblem,
   supplyReachMessage,
 } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -80,8 +81,7 @@ export async function GET(request: Request, context: Context) {
         .find({ corporationId: a.corp._id }, { projection: REACH_SECTOR_PROJECTION })
         .toArray(),
     ]);
-    const corps = await a.db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(a.db)
       .find({ _id: { $in: [...rows, ...own].map((row) => row.corporationId) } })
       .project<PublisherFields>(PUBLISHER_PROJECTION)
       .toArray();

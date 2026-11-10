@@ -44,6 +44,7 @@ import {
   PETITION_DECISION_TURNS,
   WAIVER_TURNS,
 } from "./rules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const INDEX_LISTING_PETITIONS = "indexListingPetitions";
 
@@ -380,8 +381,7 @@ export async function measurePetitioner(
   worstShortfallRatio: number | null;
   hasUnwaivableFailure: boolean;
 } | null> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find<IndexFundCandidate>(
       { countryId: petition.countryId, isPrivate: { $ne: true } },
       {

@@ -52,6 +52,7 @@ import { loadEquityPoolsByCurrency } from "@/lib/equities/marketPool";
 import type { EquityMarketPool } from "@/lib/db/types";
 import { emitTx, emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type FundCronResult = {
   fundsProcessed: number;
@@ -184,8 +185,7 @@ export async function loadOpenBuyBidsByFundId(
 
 /** All exchange-listed corporations eligible for index composition (market-cap ranked). */
 export async function loadIndexFundCandidateCorporations(db: Db): Promise<EligibleCorpRow[]> {
-  const corps = await db
-    .collection<CorpRow>("corporations")
+  const corps = await corporationsCollection<CorpRow>(db)
     .find(INDEX_FUND_CORP_QUERY)
     .project(INDEX_FUND_CORP_PROJECTION)
     .toArray();

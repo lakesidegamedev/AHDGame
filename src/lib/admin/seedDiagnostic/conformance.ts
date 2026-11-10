@@ -56,6 +56,7 @@ import { getScotusPresetSeed } from "@/lib/scotus/presetData";
 import type { ScotusPresetSeed } from "@/lib/scotus/presetData/types";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isBackgroundInPreset } from "@/lib/world/eraRoster";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -375,8 +376,7 @@ export async function checkSectors(
     ).map(toLaneRow);
     let productiveRows = rows;
     if (commandSoeSeed) {
-      const owners = await db
-        .collection<{ _id: ObjectId }>("corporations")
+      const owners = await corporationsCollection<{ _id: ObjectId }>(db)
         .find({ countryOwnerId: countryId }, { projection: { _id: 1 } })
         .toArray();
       const owned = owners.length

@@ -27,7 +27,7 @@ import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporatio
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { ensurePrimaryNationalCorporation } from "@/lib/nationalization/nationalCorporation";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
@@ -37,6 +37,7 @@ import {
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface MergeNationalCorporationsArgs {
   fromCountryId: CountryId;
@@ -58,7 +59,7 @@ export async function mergeNationalCorporations(
 ): Promise<MergeNationalCorporationsResult> {
   const { fromCountryId, toCountryId } = args;
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const bonds = bondsCollection(db);
 

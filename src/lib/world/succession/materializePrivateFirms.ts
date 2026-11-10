@@ -18,6 +18,7 @@ import {
   FEDERATION_FACILITY_CLAIMS_COLLECTION,
   type FederationFacilityClaimRecord,
 } from "./facilityClaimLedger";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION = "federationPrivateFirmHolds";
 
@@ -76,7 +77,7 @@ export async function materializeFederationPrivateFirms(input: {
   if (firms.some((firm) => !/^[a-f\d]{24}$/i.test(firm.corporationId)))
     throw new Error("Federation private firm plan has an invalid corporation identity");
   if (firms.length === 0) return origins;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const live = await corporations
     .find(
       { _id: { $in: firms.map((firm) => new ObjectId(firm.corporationId)) } },

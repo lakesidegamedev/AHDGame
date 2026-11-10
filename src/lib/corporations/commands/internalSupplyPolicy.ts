@@ -23,7 +23,8 @@ import {
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { ownSiteSupplySummary } from "@/lib/corporations/rules/ownSiteSupplySummary";
-import type { Corporation, CorporateSector, GameConfig, GameState } from "@/lib/db/types";
+import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -69,8 +70,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     const liveFrom = config?.producerMarketLiveFromTurn;
     const fundedMarket = typeof liveFrom === "number" && (world?.currentTurn ?? 0) >= liveFrom;
     const available = marketAtLeast(mode, "plants") && !groupCoordinationActive;
-    const owners = await db
-      .collection<Corporation>("corporations")
+    const owners = await corporationsCollection(db)
       .find(
         {},
         { projection: { _id: 1, totalShares: 1, shareholders: 1, internalSupplyPolicy: 1 } }
@@ -191,12 +191,10 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
       return errorResponse(409, "The wholly owning parent sets this group's supply policy");
     const parsed = await parseJsonBody(request, internalSupplyPolicySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
-    const write = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, userId: corporation.userId, ceoVacant: { $ne: true } },
-        { $set: { internalSupplyPolicy: parsed.data, updatedAt: new Date() } }
-      );
+    const write = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, userId: corporation.userId, ceoVacant: { $ne: true } },
+      { $set: { internalSupplyPolicy: parsed.data, updatedAt: new Date() } }
+    );
     if (write.matchedCount !== 1)
       return errorResponse(409, "CEO authority changed; reload before saving");
     return NextResponse.json(

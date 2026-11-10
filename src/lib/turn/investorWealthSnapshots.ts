@@ -37,6 +37,7 @@ import {
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -53,8 +54,7 @@ export async function generateInvestorRankingSnapshot(currentTurn: number, db?: 
   // would have their holdings summed as if the numeric values were identical
   // units, and JP-corp-heavy portfolios would rank dramatically ahead of
   // comparable USD-equivalent wealth.
-  const corporations = await database
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(database)
     .find({})
     .project<{
       _id: ObjectId;
@@ -250,8 +250,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
       .find({ _id: { $in: [...new Set(activeCharacters.map((c) => c.homeState))] } })
       .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
       .toArray(),
-    database
-      .collection<Corporation>("corporations")
+    corporationsCollection(database)
       .find({
         $or: [
           { "shareholders.characterId": { $in: characterIds } },

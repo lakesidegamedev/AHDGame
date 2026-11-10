@@ -44,6 +44,7 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Witness escrow cash that landed on a bidder: a bid moves it into escrow, and a
@@ -122,9 +123,7 @@ export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<v
   const isCorp = params.asCorporationId != null;
 
   if (isCorp) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: params.asCorporationId });
+    const corp = await corporationsCollection(db).findOne({ _id: params.asCorporationId });
     if (!corp) throw new Error("Bidding corporation not found");
     if (corp.ceoVacant || corp.ceoId?.toString() !== params.characterId.toString()) {
       throw new Error("Only the CEO may bid on behalf of a corporation");
@@ -359,13 +358,11 @@ export async function reabsorbSpunOutCorp(
 
   // Residual cash → the primary NatCorp (money conservation).
   if ((shell.liquidCapital ?? 0) > 0) {
-    const primary = await db
-      .collection<Corporation>("corporations")
-      .findOneAndUpdate(
-        { _id: primaryNationalCorporationId },
-        { $inc: { liquidCapital: shell.liquidCapital }, $set: { updatedAt: now } },
-        { projection: { liquidCurrencyCode: 1 } }
-      );
+    const primary = await corporationsCollection(db).findOneAndUpdate(
+      { _id: primaryNationalCorporationId },
+      { $inc: { liquidCapital: shell.liquidCapital }, $set: { updatedAt: now } },
+      { projection: { liquidCurrencyCode: 1 } }
+    );
     if (primary) {
       await witnessTreasuryCash(db, ledger, {
         flow: "corporation_liquidation",
@@ -421,7 +418,7 @@ export async function resolveNationalizationAuction(
   turn: number
 ): Promise<"sold" | "passedIn"> {
   const auctions = db.collection<NationalizationAuction>("nationalizationAuctions");
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
 

@@ -13,6 +13,7 @@ import {
   FEDERATION_ARCHIVED_PUBLIC_CORPORATIONS_COLLECTION,
   type FederationArchivedPublicCorporation,
 } from "./materializePublicCorporations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const FEDERATION_CUSTODY_RECORDS_COLLECTION = "federationCustodyRecords";
 
@@ -100,7 +101,7 @@ export async function materializeFederationCustody(input: {
       if (assignment.kind !== "public-enterprise")
         throw new Error("Federation custody enterprise shell has an invalid kind");
       const corporationId = objectIdFromAsset(assignment.assetId, "enterprise-shell:");
-      const corporations = db.collection<Corporation>("corporations");
+      const corporations = corporationsCollection(db);
       const corporation = await corporations.findOne({ _id: corporationId }, { session });
       const archived = await db
         .collection<FederationArchivedPublicCorporation>(

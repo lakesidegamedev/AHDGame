@@ -7,6 +7,7 @@ import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/curre
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getNationalIdentity } from "@/lib/constants/nationalIdentity";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Canonical "is this a state-owned National Corporation" reader. */
 export function isStateOwned(
@@ -80,7 +81,7 @@ export async function ensurePrimaryNationalCorporation(
   db: Db,
   countryId: CountryId
 ): Promise<Corporation> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const primary = await corps
     .find({ countryOwnerId: countryId, isPrimaryNationalCorporation: true })
@@ -130,9 +131,10 @@ export async function resolveNationalCorporationForSector(
   mediaDiscriminator?: Corporation["mediaDiscriminator"]
 ): Promise<Corporation> {
   const operatingSectorType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  const secondary = await db
-    .collection<Corporation>("corporations")
-    .findOne({ countryOwnerId: countryId, assignedSectorTypes: operatingSectorType });
+  const secondary = await corporationsCollection(db).findOne({
+    countryOwnerId: countryId,
+    assignedSectorTypes: operatingSectorType,
+  });
   if (secondary) return secondary;
   return ensurePrimaryNationalCorporation(db, countryId);
 }

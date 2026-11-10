@@ -19,6 +19,7 @@ import {
   type HoldingTerm,
   type ShareHoldingTerms,
 } from "./rules/holdingTerms";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface PersonalHoldingChange {
   /** Turn shells supply their already-loaded activation flag. */
@@ -55,7 +56,7 @@ export async function updatePersonalHolding(input: {
   const { db, corporationId, ownerId, ownerKey, shares, credit, change, extra } = input;
   if (!Number.isSafeInteger(shares) || shares <= 0)
     throw new Error("Invalid personal share change");
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const options = input.session ? { session: input.session } : {};
   const state =
     change.trackingEnabled === undefined

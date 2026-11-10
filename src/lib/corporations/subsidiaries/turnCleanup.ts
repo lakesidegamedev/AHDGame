@@ -5,6 +5,7 @@ import {
   corporationWithReservedHoldings,
   loadReservedCorporatePositionsByTarget,
 } from "@/lib/corporations/reservedCorporateHoldings";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * For any corp formalized as a subsidiary, if no corporation controls >50% voting
@@ -68,6 +69,6 @@ export async function cleanupZombieSubsidiaries(
   }
 
   if (ops.length === 0) return 0;
-  await db.collection<Corporation>("corporations").bulkWrite(ops);
+  await corporationsCollection(db).bulkWrite(ops);
   return ops.length;
 }

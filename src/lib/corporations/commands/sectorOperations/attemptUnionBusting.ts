@@ -25,6 +25,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { notifyUnionOfBustingAttempt } from "@/lib/unions/unionBustingNotice";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type AttemptUnionBustingResult =
   | {
@@ -175,7 +176,7 @@ export async function attemptUnionBusting(
           .updateOne(sectorFilter, sectorSet, { session });
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
-        const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+        const corpUpdate = await corporationsCollection(db).updateOne(
           {
             _id: corporation._id,
             liquidCapital: { $gte: cashCost },
@@ -193,7 +194,7 @@ export async function attemptUnionBusting(
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
         try {
-          const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+          const corpUpdate = await corporationsCollection(db).updateOne(
             {
               _id: corporation._id,
               liquidCapital: { $gte: cashCost },

@@ -1,6 +1,7 @@
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type DebitResult = { ok: true; newBalance: number } | { ok: false; error: string };
 
@@ -110,7 +111,7 @@ export async function atomicallyDebitCorpLiquidCapital(
   if (!Number.isFinite(amountInCorpCapitalUnits) || amountInCorpCapitalUnits <= 0) {
     return { ok: false, error: "Invalid amount" };
   }
-  const result = await db.collection("corporations").findOneAndUpdate(
+  const result = await corporationsCollection(db).findOneAndUpdate(
     {
       _id: corporationId,
       liquidCapital: { $gte: amountInCorpCapitalUnits },
@@ -141,13 +142,11 @@ export async function refundCorpLiquidCapital(
   options?: CashGuardOptions
 ): Promise<boolean> {
   if (!Number.isFinite(amount) || amount <= 0) return false;
-  const result = await db
-    .collection("corporations")
-    .updateOne(
-      { _id: corporationId },
-      { $inc: { liquidCapital: amount }, $set: { updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  const result = await corporationsCollection(db).updateOne(
+    { _id: corporationId },
+    { $inc: { liquidCapital: amount }, $set: { updatedAt: new Date() } },
+    mongoOptions(options)
+  );
   return (result?.matchedCount ?? 0) > 0;
 }
 
@@ -169,7 +168,7 @@ export async function creditCorpLiquidCapital(
   options?: CashGuardOptions
 ): Promise<number | null> {
   if (!Number.isFinite(amount) || amount <= 0) return null;
-  const result = await db.collection("corporations").findOneAndUpdate(
+  const result = await corporationsCollection(db).findOneAndUpdate(
     { _id: corporationId },
     {
       $inc: {
@@ -206,13 +205,11 @@ export async function decrementCorpIssuanceProceeds(
   options?: CashGuardOptions
 ): Promise<void> {
   if (!Number.isFinite(amount) || amount <= 0) return;
-  await db
-    .collection("corporations")
-    .updateOne(
-      { _id: corporationId },
-      { $inc: { shareIssuanceProceeds: -amount }, $set: { updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporationId },
+    { $inc: { shareIssuanceProceeds: -amount }, $set: { updatedAt: new Date() } },
+    mongoOptions(options)
+  );
 }
 
 /**
@@ -226,13 +223,11 @@ export async function creditCorpShareEscrow(
   options?: CashGuardOptions
 ): Promise<void> {
   if (!Number.isFinite(amount) || amount <= 0) return;
-  await db
-    .collection("corporations")
-    .updateOne(
-      { _id: corporationId },
-      { $inc: { shareEscrowBalance: amount }, $set: { updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporationId },
+    { $inc: { shareEscrowBalance: amount }, $set: { updatedAt: new Date() } },
+    mongoOptions(options)
+  );
 }
 
 /**
@@ -253,13 +248,11 @@ export async function debitCorpShareEscrow(
   options?: CashGuardOptions
 ): Promise<void> {
   if (!Number.isFinite(amount) || amount <= 0) return;
-  await db
-    .collection("corporations")
-    .updateOne(
-      { _id: corporationId },
-      { $inc: { shareEscrowBalance: -amount }, $set: { updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporationId },
+    { $inc: { shareEscrowBalance: -amount }, $set: { updatedAt: new Date() } },
+    mongoOptions(options)
+  );
 }
 
 /** How a floored escrow debit split across the escrow pot and the treasury. */
@@ -292,7 +285,7 @@ export async function debitCorpShareEscrowFloored(
   }
   const now = new Date();
   // returnDocument:"before" gives the pre-state so we can report the exact split.
-  const before = await db.collection("corporations").findOneAndUpdate(
+  const before = await corporationsCollection(db).findOneAndUpdate(
     { _id: corporationId, ...corporateDiscretionaryCashGuard() },
     [
       {
@@ -350,7 +343,7 @@ export async function debitCorpShareEscrowCapped(
   const escrowCover = {
     $min: [amount, { $max: [0, { $ifNull: ["$shareEscrowBalance", 0] }] }],
   };
-  const before = await db.collection("corporations").findOneAndUpdate(
+  const before = await corporationsCollection(db).findOneAndUpdate(
     {
       _id: corporationId,
       $and: [corporateDiscretionaryCashGuard()],

@@ -34,6 +34,7 @@ import { getGameState } from "@/lib/gameState";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -215,12 +216,10 @@ export async function processLineOfCreditTurn(
 
     const corp = composites.has(char._id.toHexString())
       ? composites.get(char._id.toHexString())
-      : await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { ceoId: char._id, countryId: char.countryId },
-            { projection: { creditCompositeSnapshot: 1 } }
-          );
+      : await corporationsCollection(db).findOne(
+          { ceoId: char._id, countryId: char.countryId },
+          { projection: { creditCompositeSnapshot: 1 } }
+        );
 
     const primeHome = resolvePrime(home);
 

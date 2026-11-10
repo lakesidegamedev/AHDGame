@@ -5,7 +5,7 @@
  * `gameConfig.groupSizeCostsStage` reaches the group toll stage.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   GROUP_DOMINANCE_TOLL_STAGE,
   FIRM_SECTOR_PROJECTION,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/corporations/commodityDominanceContext";
 import type { CommodityDominanceSector } from "@/lib/corporations/rules/commodityDominance";
 import { controlGroupRootByCorpId } from "@/lib/corporations/groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function loadGroupDominanceSectorResolver(
   db: Db,
@@ -24,8 +25,7 @@ export async function loadGroupDominanceSectorResolver(
     .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_DOMINANCE_TOLL_STAGE) return null;
   const [corps, sectors] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
       .toArray(),
     db

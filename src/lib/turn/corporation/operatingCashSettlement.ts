@@ -7,7 +7,6 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { snapshotTreasuryCurrency } from "@/lib/ledger/balanceSnapshot";
 import type { CorpSnapshot } from "./types";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
 import { withBankingTelemetryBatch } from "@/lib/banking/telemetry";
@@ -15,6 +14,7 @@ import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { settlePriorCorporateCashArrears } from "./cashArrears";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { interleaveByKey };
 
@@ -266,8 +266,7 @@ export async function settleCorporateOperatingCashLegacy(
     }
   });
 
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       { _id: { $in: ids } },
       {

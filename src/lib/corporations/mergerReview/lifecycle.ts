@@ -9,7 +9,6 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { MergerReview, PendingDivestiture } from "@/lib/db/types/mergerReview";
 import type { CountryId } from "@/lib/constants/countries";
 import { createNotification } from "@/lib/notifications";
@@ -38,6 +37,7 @@ import {
   type MergerReviewDecision,
 } from "./constants";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type LifecycleResult<T = object> =
   { ok: false; error: string; status: number } | ({ ok: true } & T);
@@ -48,8 +48,7 @@ async function notifyParties(
   title: string,
   message: string
 ): Promise<void> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [review.acquirerCorporationId, review.targetCorporationId] } })
     .project<{ _id: ObjectId; userId?: ObjectId }>({ userId: 1 })
     .toArray();
@@ -188,12 +187,10 @@ export async function attachMergerRemedy(
     thresholdPercent: review.thresholdPercent,
     countryId: review.countryId,
   };
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: acquirerId },
-      { $set: { pendingDivestiture: obligation, updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: acquirerId },
+    { $set: { pendingDivestiture: obligation, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -209,8 +206,7 @@ export async function fineOverdueDivestitures(
   db: Db,
   currentTurn: number
 ): Promise<{ fined: number; totalAnchor: number }> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { "pendingDivestiture.dueTurn": { $lt: currentTurn } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }

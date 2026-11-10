@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { getImperialTitle } from "@/lib/imperial";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * GET /api/imperial-characters/[id] — Fetch imperial character by sequential ID.
@@ -31,8 +31,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const title = getImperialTitle(imperial.countryId, imperial.gender);
 
     // Fetch corporations owned by this imperial character
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find({ ceoId: imperial._id, ceoType: "imperial" })
       .project({ name: 1, type: 1, sequentialId: 1, sharePrice: 1 })
       .toArray();

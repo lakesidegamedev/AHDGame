@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, NewsPost, State } from "@/lib/db/types";
+import type { NewsPost, State } from "@/lib/db/types";
 import { formatSectorTypeSlugsInText } from "@/lib/utils/formatSectorTypeSlugsInText";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { BOND_MATURITY_LABELS, type BondMaturityTurns } from "@/lib/db/types/bond";
@@ -19,6 +19,7 @@ import type { WireEvent } from "@/lib/wireEvent";
 import type { WireItem } from "@/lib/news/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/news/types".
@@ -86,8 +87,7 @@ export async function GET() {
         .toArray();
       const stateNameById = new Map(stateRows.map((s) => [s._id, s.name]));
       const [recentCorps, recentBonds, recentDividendCorps] = await Promise.all([
-        db
-          .collection<Corporation>("corporations")
+        corporationsCollection(db)
           .find({ createdAt: { $gte: since } })
           .sort({ createdAt: -1 })
           .limit(20)
@@ -107,8 +107,7 @@ export async function GET() {
           })
           .toArray(),
 
-        db
-          .collection<Corporation>("corporations")
+        corporationsCollection(db)
           .find({ lastDividendChange: { $gte: since } })
           .sort({ lastDividendChange: -1 })
           .limit(20)
@@ -119,8 +118,7 @@ export async function GET() {
       // Resolve corporation names for bonds
       const bondCorpIds = recentBonds.map((b) => b.corporationId);
       const bondCorps = bondCorpIds.length
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: bondCorpIds } })
             .project({ name: 1, sequentialId: 1 })
             .toArray()

@@ -20,6 +20,7 @@ import { SECEDE_FANOUT, type FanoutPolicy } from "./fanoutPolicy";
 import { applyFanout, buildFanoutContext } from "./fanoutDriver";
 import { planSectorFanout } from "./planSectorFanout";
 import { migrateProducerWallets } from "./migrateProducerWallets";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ExpandToSubRegionsResult {
   inserted: number;
@@ -86,12 +87,10 @@ export async function expandToSubRegions(
   await db
     .collection("npps")
     .updateMany({ homeState: countryId }, { $set: { homeState: capital, countryId } });
-  await db
-    .collection("corporations")
-    .updateMany(
-      { headquartersState: countryId },
-      { $set: { headquartersState: capital, countryId } }
-    );
+  await corporationsCollection(db).updateMany(
+    { headquartersState: countryId },
+    { $set: { headquartersState: capital, countryId } }
+  );
 
   // The UK's Westminster constituency layer ends with the aggregate geography.
   // Its residents are conserved by the cohort fan-out above; independent regions

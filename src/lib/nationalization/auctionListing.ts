@@ -8,6 +8,7 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Enriched, display-ready view of one open privatization auction (spec §13.3).
@@ -98,8 +99,7 @@ export async function buildAuctionListings(
   const corpIds = auctions.map((a) => a.corporationId);
 
   const [shells, sectors] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: corpIds } })
       .project<ShellProjection>({
         _id: 1,
@@ -170,8 +170,7 @@ export async function buildAuctionListings(
           .toArray()
       : Promise.resolve([]),
     bidderCorpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: bidderCorpIds } })
           .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
           .toArray()

@@ -6,8 +6,9 @@ import { getDb } from "@/lib/mongodb";
 import { wikiPublicPageMetadata } from "@/lib/siteMetadata";
 import { corporationWikiSlug, partyWikiSlug, playerWikiSlug } from "@/lib/wiki/playerPages";
 import { WIKI_CREATE_COOLDOWN_HOURS } from "@/lib/wiki/createCooldown";
-import type { Corporation, PoliticalParty, WikiPage } from "@/lib/db/types";
+import type { PoliticalParty, WikiPage } from "@/lib/db/types";
 import { ClaimButton } from "./ClaimButton";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const metadata: Metadata = wikiPublicPageMetadata({
   title: "My wiki pages | A House Divided",
@@ -38,7 +39,7 @@ export default async function MyWikiPage() {
   const db = await getDb();
 
   const [corp, party] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne({
+    corporationsCollection(db).findOne({
       ceoId: character._id,
       userId: character.userId,
     }),

@@ -16,6 +16,7 @@ import {
   type TutorialChapterId,
   type TutorialPlan,
 } from "@/lib/onboarding/tutorialPlan";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Canonical new-player onboarding checklist.
@@ -339,8 +340,7 @@ export async function loadOnboardingSignals(
       .collection("electionCandidates")
       .countDocuments({ characterId }, { limit: 1 })
       .then((n) => n > 0),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .countDocuments(
         { shareholders: { $elemMatch: { characterId, shares: { $gt: 0 } } } },
         { limit: 1 }
@@ -358,8 +358,7 @@ export async function loadOnboardingSignals(
     // (see Corporation type); founding historically omitted the field, so
     // treat missing the same as "character". Exclude imperial / NPP seats.
     // Same $or shape as allocate-stats' corpsOwned query.
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .countDocuments(
         {
           ceoId: characterId,

@@ -52,6 +52,7 @@ import {
 } from "@/lib/corporations/shareEscrowSettlement";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type NppShareBuyResult =
   | {
@@ -105,7 +106,7 @@ export async function nppBuyShares(
   const corp =
     corpSnapshot?._id.equals(corporationId) === true
       ? corpSnapshot
-      : await db.collection<Corporation>("corporations").findOne({ _id: corporationId });
+      : await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corp) return { ok: false, reason: "Corporation not found." };
   if (corp.isPrivate) return { ok: false, reason: "Corporation is private." };
   if (corp.isNationalized) return { ok: false, reason: "Corporation is nationalized." };
@@ -273,7 +274,7 @@ export async function nppSellShares(
   const corp =
     corpSnapshot?._id.equals(corporationId) === true
       ? corpSnapshot
-      : await db.collection<Corporation>("corporations").findOne({ _id: corporationId });
+      : await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corp) return { ok: false, reason: "Corporation not found." };
   if (corp.isPrivate) return { ok: false, reason: "Corporation is private." };
   if (corp.isNationalized) return { ok: false, reason: "Corporation is nationalized." };

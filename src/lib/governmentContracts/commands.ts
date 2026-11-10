@@ -10,7 +10,7 @@ import { requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { z } from "zod";
-import type { Corporation, ExtractionContract } from "@/lib/db/types";
+import type { ExtractionContract } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
@@ -52,6 +52,7 @@ import { validateBid, ContractError } from "./eligibility";
 import { activateDefenceBid } from "./defence";
 import type { publishTenderSchema, bidSchema } from "./schemas";
 import type { GovernmentTender, ContractBid } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * When live plant floors rise past a frozen open-tender maximum (yen-scale GDP drift or
@@ -296,9 +297,7 @@ export async function submitBid(
     userId: user.userId,
   };
   const withdrawingCorp = input.withdraw
-    ? await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: new ObjectId(input.corporationId) })
+    ? await corporationsCollection(db).findOne({ _id: new ObjectId(input.corporationId) })
     : null;
   if (input.withdraw && (!withdrawingCorp || requireCeo(withdrawingCorp, user.userId)))
     throw new ContractError("Only the CEO may withdraw this bid.", 403);
@@ -537,9 +536,7 @@ async function awardLocked(
         );
     };
     if (!contract.signingFeeSettled || contract.status !== "active") {
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: contract.corporationId });
+      const corp = await corporationsCollection(db).findOne({ _id: contract.corporationId });
       if (!corp) {
         await reopenFailedAward();
         throw new ContractError("The selected corporation no longer exists.");

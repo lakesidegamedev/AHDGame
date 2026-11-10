@@ -22,6 +22,7 @@ import { resolveCorpEligibility } from "./targetEligibility";
 import type { SectorScope } from "./nationalizeSectorWide";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -97,8 +98,7 @@ export async function computeSectorNationalizationPreview(
     }
     // One fetch for every corp holding a sector in this pool; this was a
     // findOne per corp inside the loop below.
-    const corpDocs = await db
-      .collection<Corporation>("corporations")
+    const corpDocs = await corporationsCollection(db)
       .find({ _id: { $in: [...byCorp.values()].map((s) => s[0].corporationId) } })
       .toArray();
     const corpById = new Map(corpDocs.map((c) => [String(c._id), c]));
@@ -335,9 +335,7 @@ export async function computeNationalizationProvisionDetail(
     return { kind: "sector", sector };
   }
   if (provision.targetCorporationId) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: provision.targetCorporationId });
+    const corp = await corporationsCollection(db).findOne({ _id: provision.targetCorporationId });
     if (corp && corp.countryId === countryId && !isStateOwned(corp)) {
       const corpDetail = await computeNationalizationTargetDetail(db, countryId, corp, currentTurn);
       return { kind: "corp", corp: corpDetail };

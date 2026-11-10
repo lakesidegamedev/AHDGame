@@ -48,6 +48,7 @@ import type {
 } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -391,20 +392,18 @@ export async function GET() {
             { projection: { countryId: 1, seatNumber: 1 } }
           ),
         !isImperialMode
-          ? db
-              .collection<{
-                sequentialId?: number;
-                type?: string;
-                countryId?: string;
-              }>("corporations")
-              .findOne(
-                {
-                  ceoId: character._id,
-                  ceoVacant: { $ne: true },
-                  imfInstitution: { $ne: true },
-                },
-                { projection: { sequentialId: 1, type: 1, countryId: 1 } }
-              )
+          ? corporationsCollection<{
+              sequentialId?: number;
+              type?: string;
+              countryId?: string;
+            }>(db).findOne(
+              {
+                ceoId: character._id,
+                ceoVacant: { $ne: true },
+                imfInstitution: { $ne: true },
+              },
+              { projection: { sequentialId: 1, type: 1, countryId: 1 } }
+            )
           : Promise.resolve(null),
       ]);
 
@@ -546,7 +545,7 @@ export async function GET() {
             },
           }
         ),
-        db.collection<{ sequentialId?: number }>("corporations").findOne(
+        corporationsCollection<{ sequentialId?: number }>(db).findOne(
           {
             ceoId: user.activeImperialCharacterId,
             ceoType: "imperial",

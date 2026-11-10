@@ -38,6 +38,7 @@ import {
 import { subsidiaryReclaimBlocked } from "@/lib/corporations/subsidiaries/parentContext";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Reason a caretaker appointment was rejected (pure, before any I/O). */
 export type CaretakerAppointmentError =
@@ -163,7 +164,7 @@ export async function appointCaretakerCeo(
     .findOne({ _id: nppOid }, { projection: { name: 1 } });
   if (!npp) return { ok: false, error: "npp-not-eligible" };
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: {
@@ -239,7 +240,7 @@ export async function dismissCaretakerCeo(
   if (!eligibleUnderlyingCharacter) {
     // No human remains eligible at this headquarters, so release the NPP but
     // leave a plain vacant seat rather than restoring an out-of-location CEO.
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: {
@@ -262,7 +263,7 @@ export async function dismissCaretakerCeo(
     return { ok: true };
   }
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: {
@@ -342,9 +343,7 @@ export async function installCaretakerForVacantCorp(
   const { corp, nppId, turn, now } = args;
   const nppOid = new ObjectId(nppId);
   const { set, unset } = buildVacantCaretakerCeoUpdate(corp, nppOid, turn, now);
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corp._id }, { $set: set, $unset: unset });
+  await corporationsCollection(db).updateOne({ _id: corp._id }, { $set: set, $unset: unset });
   if (corp.ceoId != null) await closeCeoTenure(db, corp._id, { holderId: corp.ceoId, turn });
   await openCeoTenure(db, corp._id, { holderId: nppOid, ceoType: "npp", turn });
 }
@@ -360,7 +359,7 @@ export async function reseatStrandedCaretaker(
 ): Promise<void> {
   const { corp, nppId, turn, now } = args;
   const nppOid = new ObjectId(nppId);
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: { ceoId: nppOid, ceoType: "npp", ceoVacant: false, ceoSalary: 0, updatedAt: now },

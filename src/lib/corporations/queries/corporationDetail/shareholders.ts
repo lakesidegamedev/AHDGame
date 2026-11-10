@@ -7,6 +7,7 @@ import type { Character, Corporation, ShareListing, ShareOrder } from "@/lib/db/
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { computeAccountedShares } from "@/lib/corporations/shareInvariant";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Shareholder display context: CEO + every named holder class.
@@ -123,8 +124,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([]),
     corporationShareholderIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corporationShareholderIds } },
             { projection: { _id: 1, name: 1, sequentialId: 1, logoUrl: 1 } }

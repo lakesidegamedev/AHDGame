@@ -29,6 +29,7 @@ import { snapshotCorporationCurrency } from "@/lib/ledger/balanceSnapshot";
 import { loadSoeGovernanceInputs } from "./soeGovernanceInputs";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** One corp's profit-remittance leg this turn, in the corp's own currency. */
 export interface SoeRemittedCorp {
@@ -42,8 +43,7 @@ export async function processSoeRemittance(
   now: Date,
   ledger?: TreasuryCashOptions
 ): Promise<{ remitted: number; perCorp: SoeRemittedCorp[] }> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { $or: [{ countryOwnerId: { $exists: true } }, { ownershipState: "stateOwned" }] },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }

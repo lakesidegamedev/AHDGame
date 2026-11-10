@@ -11,6 +11,7 @@ import { computeSentimentMultiplier, getHqConfidenceSentiment } from "./sentimen
 import { computeOrderFlowMultiplier } from "./orderFlowEngine";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ApplyPriceMultipliersResult {
   updated: number;
@@ -58,8 +59,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
   }
 
   const [corps, sectors, activeFtaPairs] = await Promise.all([
-    database
-      .collection<Corporation>("corporations")
+    corporationsCollection(database)
       .find(
         { fundamentalSharePrice: { $exists: true } },
         {
@@ -191,7 +191,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
   }
 
   if (ops.length > 0) {
-    await database.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(database).bulkWrite(ops);
   }
 
   return { updated: ops.length, pulseCount: pulses.length };

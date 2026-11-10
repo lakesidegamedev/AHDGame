@@ -1,9 +1,9 @@
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,9 +20,9 @@ export async function generateMetadata({
   if (!query) return {};
 
   const db = await getDb();
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(query, { projection: { name: 1, logoUrl: 1 } });
+  const corp = await corporationsCollection(db).findOne(query, {
+    projection: { name: 1, logoUrl: 1 },
+  });
   if (!corp) return {};
 
   const title = `${corp.name} Portfolio | A House Divided`;

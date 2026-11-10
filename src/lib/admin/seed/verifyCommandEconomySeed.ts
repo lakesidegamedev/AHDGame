@@ -4,6 +4,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CountryId } from "@/lib/constants/countries";
 import { commandEconomySoeSectors, isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CommandEconomyCountryReport {
   countryId: CountryId;
@@ -101,17 +102,17 @@ export async function verifyCommandEconomySeed(
     if (!isCommandEconomy(countryId, startingYear, true)) continue;
 
     const [soes, sectors, primaryCorp] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ countryId, soe: { $exists: true } }, { projection: { soe: 1 } })
         .toArray(),
       db
         .collection<CorporateSector>("corporateSectors")
         .find({ countryId }, { projection: { corporationId: 1 } })
         .toArray(),
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ countryId, isPrimaryNationalCorporation: true }, { projection: { _id: 1 } }),
+      corporationsCollection(db).findOne(
+        { countryId, isPrimaryNationalCorporation: true },
+        { projection: { _id: 1 } }
+      ),
     ]);
 
     const haveSectors = new Set(

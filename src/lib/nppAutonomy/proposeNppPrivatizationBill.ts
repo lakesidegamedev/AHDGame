@@ -15,7 +15,6 @@ import type {
   Bill,
   BillChamber,
   BillStatus,
-  Corporation,
   CorporateSector,
   ElectedOfficial,
   NPP,
@@ -49,6 +48,7 @@ import {
   type PrivatizationCandidateSector,
 } from "@/lib/turn/npp/rules/privatizationSponsorship";
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const PRIVATIZATION_BILL_CATEGORY = "state ownership";
 
@@ -161,8 +161,7 @@ export async function proposeNppPrivatizationBill(
   });
   if (!gate.ok) return { ok: false, reason: gate.reason };
 
-  const natCorps = await db
-    .collection<Corporation>("corporations")
+  const natCorps = await corporationsCollection(db)
     .find(
       { countryOwnerId: countryId },
       { projection: { _id: 1, name: 1, countryOwnerId: 1, ownershipState: 1, countryId: 1 } }
@@ -269,8 +268,7 @@ export async function proposeNppPrivatizationBill(
     (p) =>
       `${corpById.get(p.sourceCorporationId)?.name ?? countryId} ${CORPORATION_TYPE_LABELS[p.sectorType] ?? p.sectorType} Company`
   );
-  const takenDocs = await db
-    .collection<Corporation>("corporations")
+  const takenDocs = await corporationsCollection(db)
     .find(
       {
         name: {

@@ -14,6 +14,7 @@ import {
   privateHolderSavingsApyPercent,
 } from "@/lib/banking/rules/rates";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -89,8 +90,7 @@ export async function loadSavingsApyForCharacter(
 
   const [policy, holderBanks] = await Promise.all([
     loadBankingPolicy(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({
         _id: { $in: [...new Set(bankHeld.map(([, id]) => id))].map((id) => new ObjectId(id)) },
       })

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
+import type { ShareListing, ShareOrder } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * POST /api/admin/heal/corporation-shares
@@ -16,7 +17,7 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const corporations = await db.collection<Corporation>("corporations").find({}).toArray();
+    const corporations = await corporationsCollection(db).find({}).toArray();
 
     // Aggregate reserved shares per corporation.
     // Corporate sell orders and flagged character sell orders debit at creation.
@@ -55,9 +56,10 @@ export async function POST() {
       const correctTotal = shareholderTotal + (corp.publicFloat ?? 0) + reservedInOrders;
 
       if (correctTotal !== (corp.totalShares ?? 0)) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne({ _id: corp._id }, { $set: { totalShares: correctTotal } });
+        await corporationsCollection(db).updateOne(
+          { _id: corp._id },
+          { $set: { totalShares: correctTotal } }
+        );
 
         fixes.push({
           name: corp.name,

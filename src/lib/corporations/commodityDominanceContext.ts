@@ -31,6 +31,7 @@ import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
 } from "@/lib/corporations/groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** gameConfig.groupSizeCostsStage at which the commodity toll reads the whole control group. */
 export const GROUP_DOMINANCE_TOLL_STAGE = 2;
@@ -61,8 +62,7 @@ async function dominanceCorporationIds(
   groupSizeCostsStage: number
 ): Promise<Corporation["_id"][]> {
   if (groupSizeCostsStage < GROUP_DOMINANCE_TOLL_STAGE) return [corporationId];
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   const roots = controlGroupRootByCorpId(corps);

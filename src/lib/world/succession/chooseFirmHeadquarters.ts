@@ -26,6 +26,7 @@ import {
   type FederationRelocationRecord,
 } from "./relocationLedger";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ChosenFederationHeadquarters {
   countryId: CountryId;
@@ -148,7 +149,7 @@ export async function chooseFederationFirmHeadquarters(input: {
     FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION
   );
   let hold = await holdCollection.findOne({ _id: `${applicationId}:${corporationId}` });
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   let corporation = await corporations.findOne({ _id: new ObjectId(corporationId) });
   if (
     !hold ||

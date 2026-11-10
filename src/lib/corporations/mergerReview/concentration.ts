@@ -14,6 +14,7 @@ import type { MergerOverlapFinding } from "@/lib/db/types/mergerReview";
 import { computeMarketSharePercent } from "../marketShare";
 import { loadIndustryBasis } from "../corpMarketShare";
 import { controlGroupMemberIds, controlGroupRootByCorpId } from "../groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** gameConfig.groupSizeCostsStage at which merger concentration reads both sides' control groups. */
 export const GROUP_MERGER_CONCENTRATION_STAGE = 5;
@@ -34,8 +35,7 @@ async function dealSides(
     .collection<{ groupSizeCostsStage?: number }>("gameConfig")
     .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MERGER_CONCENTRATION_STAGE) return alone;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   const roots = controlGroupRootByCorpId(corps);

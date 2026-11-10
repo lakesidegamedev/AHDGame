@@ -10,6 +10,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { Character, User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
 import { suggestStatBuild, type SuggestBuildInput } from "@/lib/stats/suggestedBuild";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const allocateStatsSchema = z.object({
   stats: z.record(z.string(), z.number()),
@@ -33,7 +34,7 @@ async function buildSuggestion(
   db: Awaited<ReturnType<typeof getDb>>,
   character: Character
 ): Promise<ReturnType<typeof suggestStatBuild>> {
-  const corpsOwned = await db.collection("corporations").countDocuments({
+  const corpsOwned = await corporationsCollection(db).countDocuments({
     ceoId: character._id,
     $or: [{ ceoType: "character" }, { ceoType: { $exists: false } }],
   });

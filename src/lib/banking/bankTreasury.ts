@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Bond } from "@/lib/db/types/bond";
 import type { BankCharter, BankTreasuryTradeReceipt } from "@/lib/db/types/bank";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { BankingPolicySnapshot } from "@/lib/banking/rules/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import {
@@ -47,6 +46,7 @@ export {
 import { markBankTreasury, runReceipt } from "./bankTreasuryReceipt";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Load only same-currency sovereign bills and pool cash while the feature is enabled. */
 export async function getBankTreasuryOverview(
@@ -56,12 +56,10 @@ export async function getBankTreasuryOverview(
   turn: number
 ): Promise<BankTreasuryOverview | null> {
   if (!policy.bankTreasury) return null;
-  const bank = await db
-    .collection<BankState>("corporations")
-    .findOne(
-      { _id: bankId, "bankCharter.status": "active" },
-      { projection: { bankCharter: 1, name: 1 } }
-    );
+  const bank = await corporationsCollection<BankState>(db).findOne(
+    { _id: bankId, "bankCharter.status": "active" },
+    { projection: { bankCharter: 1, name: 1 } }
+  );
   const charter = bank?.bankCharter;
   if (!charter) return null;
   const currency = charter.currency;
@@ -262,9 +260,10 @@ export async function tradeBankTreasuryBill(
     return runReceipt(db, prior, input.policy);
   }
   const [bank, bond] = await Promise.all([
-    db
-      .collection<BankState>("corporations")
-      .findOne({ _id: input.bankId }, { projection: { bankCharter: 1 } }),
+    corporationsCollection<BankState>(db).findOne(
+      { _id: input.bankId },
+      { projection: { bankCharter: 1 } }
+    ),
     bondsCollection(db).findOne({ _id: input.bondId }),
   ]);
   const charter = bank?.bankCharter;
@@ -579,7 +578,7 @@ export async function liquidateFailedBankTreasury(
       error: "A prior treasury trade is still settling",
     };
   }
-  const bank = await db.collection<BankState>("corporations").findOne(
+  const bank = await corporationsCollection<BankState>(db).findOne(
     {
       _id: bankId,
       "bankCharter.status": "failed",
@@ -669,12 +668,10 @@ export async function refreshBankTreasuryMark(
   turn: number
 ): Promise<number> {
   if (!policy.bankTreasury) return 0;
-  const bank = await db
-    .collection<BankState>("corporations")
-    .findOne(
-      { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
-      { projection: { bankCharter: 1 } }
-    );
+  const bank = await corporationsCollection<BankState>(db).findOne(
+    { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
+    { projection: { bankCharter: 1 } }
+  );
   if (!bank?.bankCharter) return 0;
   return markBankTreasury(db, bankId, bank.bankCharter, turn);
 }
@@ -694,12 +691,10 @@ export async function remarkBankTreasuryAfterMaturity(
   bankId: ObjectId,
   turn: number
 ): Promise<number | null> {
-  const bank = await db
-    .collection<BankState>("corporations")
-    .findOne(
-      { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
-      { projection: { bankCharter: 1 } }
-    );
+  const bank = await corporationsCollection<BankState>(db).findOne(
+    { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
+    { projection: { bankCharter: 1 } }
+  );
   if (!bank?.bankCharter) return null;
   return markBankTreasury(db, bankId, bank.bankCharter, turn);
 }
@@ -715,9 +710,10 @@ export async function sweepBankTreasury(
   const overview = await getBankTreasuryOverview(db, bankId, policy, turn);
   if (!overview?.autoSweep || overview.spendableCash <= 0)
     return { trades: 0, completed: 0, pending: 0 };
-  const bank = await db
-    .collection<BankState>("corporations")
-    .findOne({ _id: bankId, "bankCharter.status": "active" }, { projection: { bankCharter: 1 } });
+  const bank = await corporationsCollection<BankState>(db).findOne(
+    { _id: bankId, "bankCharter.status": "active" },
+    { projection: { bankCharter: 1 } }
+  );
   if (!bank?.bankCharter || bank.bankCharter.lastTreasurySweepTurn === turn)
     return { trades: 0, completed: 0, pending: 0 };
   const plannedTrades = planBankTreasurySweep(
@@ -738,9 +734,10 @@ export async function sweepBankTreasury(
   let completed = 0;
   let pending = 0;
   for (const planned of plannedTrades) {
-    const current = await db
-      .collection<BankState>("corporations")
-      .findOne({ _id: bankId }, { projection: { bankCharter: 1 } });
+    const current = await corporationsCollection<BankState>(db).findOne(
+      { _id: bankId },
+      { projection: { bankCharter: 1 } }
+    );
     const charter = current?.bankCharter;
     if (!charter || charter.status !== "active") break;
     const freshFloor = await bankCashFloor(
@@ -766,7 +763,7 @@ export async function sweepBankTreasury(
     if (result.status === "pending") pending += 1;
     if (result.status === "rejected") break;
   }
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     {
       _id: bankId,
       "bankCharter.status": "active",
@@ -794,8 +791,7 @@ export async function processBankTreasuryTurn(
   const recovered = await recoverBankTreasuryTrades(db, policy);
   if (recovered.pending > 0)
     throw new Error("Bank treasury has a trade receipt that remains partial after recovery");
-  const banks = await db
-    .collection<BankState>("corporations")
+  const banks = await corporationsCollection<BankState>(db)
     .find({ "bankCharter.status": "active" })
     .project({ _id: 1, bankCharter: 1 })
     .toArray();

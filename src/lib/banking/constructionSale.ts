@@ -1,7 +1,7 @@
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { getCorpFxRate, resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import {
   CURRENCY_ANCHOR_COUNTRY,
@@ -24,6 +24,7 @@ import { ensureFund } from "./insurance";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
 import type { TransitionLeg } from "./rules/boundary";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type Result = { ok: true; quote: ConstructionSaleQuote } | { ok: false; error: string };
 
@@ -126,11 +127,12 @@ export async function buySecuredConstructionProperty(input: {
     const owned = await acquireConstructionLoanLock(db, loan, key);
     if (!owned) return { ok: false, error: "Another receipt owns the pledged loan" };
     const [buyer, seller, bank] = await Promise.all([
-      db.collection<Corporation>("corporations").findOne({ _id: buyerId }),
-      db.collection<Corporation>("corporations").findOne({ _id: borrowerId }),
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: loan.bankCorporationId }, { projection: { bankCharter: 1 } }),
+      corporationsCollection(db).findOne({ _id: buyerId }),
+      corporationsCollection(db).findOne({ _id: borrowerId }),
+      corporationsCollection(db).findOne(
+        { _id: loan.bankCorporationId },
+        { projection: { bankCharter: 1 } }
+      ),
     ]);
     const refuse = async (error: string): Promise<Result> => {
       await releaseConstructionLoanLock(db, loan, key);

@@ -10,6 +10,7 @@ import { getGameState } from "@/lib/gameState";
 import { LEGAL_STRUCTURES } from "@/lib/constants/legalStructures";
 import type { LegalStructureId } from "@/lib/constants/legalStructures";
 import { isListedOnlyStructure } from "@/lib/corporations/legalStructure";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const Schema = z.object({ legalStructure: z.string() });
 
@@ -81,7 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    await db.collection("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $set: {

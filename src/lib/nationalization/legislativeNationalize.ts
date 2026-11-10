@@ -23,6 +23,7 @@ import { MONOPOLY_SHARE_THRESHOLD } from "./constants";
 import { computeNoticeTurns } from "./noticeWindow";
 import { isWithinRenationalizeCooldown } from "./privatizationShares";
 import { nationalizeSectorWide } from "./nationalizeSectorWide";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function applyNationalizeProvision(
   db: Db,
@@ -46,7 +47,7 @@ export async function applyNationalizeProvision(
     return;
   }
 
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   // Resolve the target corp (directly, or via the sector's owner).
   let targetCorp: Corporation | null = null;

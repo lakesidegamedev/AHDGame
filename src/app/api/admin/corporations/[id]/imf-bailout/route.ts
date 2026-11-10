@@ -11,7 +11,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { adminImfBailoutSchema } from "@/lib/api/schemas/adminImfBailout";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import { roundFaceToBondUnits } from "@/lib/bonds/corporateBondDefault";
@@ -27,6 +27,7 @@ import {
   simulateImfFacilityPayoffTurns,
 } from "@/lib/imf/imfFacilityMath";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -60,9 +61,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     const { searchParams } = new URL(request.url);
@@ -222,9 +221,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (!corp.imfBailoutActive) {
@@ -236,12 +233,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const fraction = incomeCapturePercentToFraction(parsed.data.incomeCapturePercent);
     const now = new Date();
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corp._id },
-        { $set: { imfFacilityIncomeCaptureFraction: fraction, updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corp._id },
+      { $set: { imfFacilityIncomeCaptureFraction: fraction, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,
@@ -269,9 +264,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const body = parsed.data;
     const db = await getDb();
 
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (corp.imfInstitution) {
@@ -293,7 +286,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
 
     if (!body.active) {
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: corp._id },
         {
           $set: { imfBailoutActive: false, updatedAt: now },
@@ -407,7 +400,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const newTotal = O + newShares;
 
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: {

@@ -26,7 +26,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { schemas } from "@/lib/api/validate";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { CorporateSector, State } from "@/lib/db/types";
 import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType } from "@/lib/constants/corporations";
 import {
   anchorToCorpLiquidCapital,
@@ -63,6 +63,7 @@ import {
   hasProtectedConstructionProperty,
   unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const buySectorSchema = z.object({
   buyerCorporationId: schemas.objectId,
@@ -99,9 +100,9 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     if (!sellerResolved.ok) return sellerResolved.response;
     const seller = sellerResolved.corporation;
 
-    const buyer = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(buyerCorporationId) });
+    const buyer = await corporationsCollection(db).findOne({
+      _id: new ObjectId(buyerCorporationId),
+    });
     if (!buyer) {
       return errorResponse(404, "Buyer corporation not found");
     }
@@ -376,12 +377,10 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         }
         mergeApplied = true;
 
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: seller._id },
-            { $inc: { liquidCapital: priceInSellerCapital }, $set: { updatedAt: now } }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: seller._id },
+          { $inc: { liquidCapital: priceInSellerCapital }, $set: { updatedAt: now } }
+        );
         sellerCredited = true;
 
         await Promise.all([
@@ -583,7 +582,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       sectorTransferred = true;
 
       // Credit the seller corp's liquidCapital in seller currency.
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: seller._id },
         {
           $inc: { liquidCapital: priceInSellerCapital },

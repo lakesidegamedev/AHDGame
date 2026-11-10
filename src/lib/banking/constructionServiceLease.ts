@@ -1,10 +1,11 @@
 /** Hold the lender's epoch while a construction instalment is in flight. */
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { completeRefusedDebitBatch } from "./constructionBatchCompletion";
 import { resumeSettlement } from "./settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function acquireConstructionServiceLease(
   db: Db,
@@ -16,7 +17,7 @@ export async function acquireConstructionServiceLease(
   batchLoanIds?: string[]
 ): Promise<boolean> {
   if (!loan.constructionCollateral || loan.charteredTurn === undefined) return false;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const identity = {
     _id: loan.bankCorporationId,
     "bankCharter.charteredTurn": loan.charteredTurn,
@@ -89,14 +90,10 @@ export async function releaseConstructionServiceLease(
         { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
         { $unset: { constructionSettlementOwner: "" } }
       );
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(lease, { $unset: { bankConstructionFunding: "" } });
+    await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
     return;
   }
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(lease, { $unset: { bankConstructionFunding: "" } });
+  await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
   await db
     .collection<BankLoan>("bankLoans")
     .updateOne(
@@ -110,8 +107,7 @@ export async function recoverConstructionServiceLeases(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const banks = await db
-    .collection<Corporation>("corporations")
+  const banks = await corporationsCollection(db)
     .find(
       {
         "bankConstructionFunding.kind": { $in: ["servicing", "recovery"] },

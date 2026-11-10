@@ -23,6 +23,7 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Split-off & merge-back of National Corporation sector types (spec §24.2).
@@ -45,8 +46,7 @@ export interface SplitOffResult {
 
 /** All National Corporation ids for a country (primary + any split-offs). */
 async function nationalCorporationIds(db: Db, countryId: CountryId): Promise<ObjectId[]> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ countryOwnerId: countryId })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();
@@ -62,7 +62,7 @@ async function nationalCorporationIds(db: Db, countryId: CountryId): Promise<Obj
  */
 export async function splitOffSectorType(db: Db, params: SplitOffParams): Promise<SplitOffResult> {
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const name = params.newCorpName.trim();
   if (name.length < 2) throw new Error("New National Corporation name is too short");
 
@@ -198,9 +198,10 @@ async function attachSoeOverlayIfPlanned(
     );
   if (!config?.commandEconomyEnabled) return false;
 
-  const existing = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corpId, soe: { $exists: true } }, { projection: { _id: 1 } });
+  const existing = await corporationsCollection(db).findOne(
+    { _id: corpId, soe: { $exists: true } },
+    { projection: { _id: 1 } }
+  );
   if (existing) return false;
 
   const sectors = await db
@@ -211,12 +212,10 @@ async function attachSoeOverlayIfPlanned(
     )
     .toArray();
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corpId },
-      { $set: { soe: makeAdoptedSoeState(sectorType, sectors), updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corpId },
+    { $set: { soe: makeAdoptedSoeState(sectorType, sectors), updatedAt: new Date() } }
+  );
   return true;
 }
 
@@ -244,7 +243,7 @@ export async function mergeBackSectorType(
   params: MergeBackParams
 ): Promise<MergeBackResult> {
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   // The split-off owning this type (never the primary — primary has empty
   // assignedSectorTypes, so this query can only match a secondary).

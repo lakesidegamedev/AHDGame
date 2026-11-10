@@ -9,8 +9,8 @@ import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Corporation } from "@/lib/db/types";
 import { formalizeSubsidiary } from "@/lib/corporations/subsidiaries/commands/formalizeSubsidiary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const bodySchema = z.object({ parentCorporationId: schemas.objectId });
 
@@ -42,9 +42,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     const targetResolved = await resolveCorporation(db, id);
     if (!targetResolved.ok) return targetResolved.response;
 
-    const parent = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(parsed.data.parentCorporationId) });
+    const parent = await corporationsCollection(db).findOne({
+      _id: new ObjectId(parsed.data.parentCorporationId),
+    });
     if (!parent) return errorResponse(404, "Parent corporation not found.");
 
     const turn = await getCurrentTurn(db).catch(() => 0);

@@ -10,6 +10,7 @@ import { quotePrimaryUnderwritingFee } from "./rules/underwriting";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition, type SettlementResult } from "./settlementJournal";
 import { oid, type BankingTransition, type TransitionProjection } from "./rules/boundary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function recipientCurrencySnapshotFilter(
   snapshot: PrimaryUnderwritingCurrencySnapshot
@@ -44,7 +45,7 @@ async function acquireIssuerUnderwritingReceiptLease(
   turn: number,
   now: Date
 ): Promise<boolean> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const acquired = await corporations.updateOne(
     {
       _id: issuerId,
@@ -103,7 +104,7 @@ export async function resumeFoundingUnderwritingPlans(
   db: Db,
   now = new Date()
 ): Promise<{ completed: number; pending: number; aborted: number }> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const issuers = await corporations
     .find({ "foundingIpoUnderwritingPending.offer.instrumentId": { $exists: true } })
     .sort({ foundedAtTurn: 1 })
@@ -221,7 +222,7 @@ export async function resumePrimaryUnderwritingLeases(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error?: string }>> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const banks = await corporations
     .find({ "bankUnderwritingFunding.turn": { $lt: turn } })
     .sort({ "bankUnderwritingFunding.turn": 1 })
@@ -372,7 +373,7 @@ export async function settlePrimaryUnderwritingFill(
     poolCollection: input.poolCollection,
     instrumentProjection: input.instrumentProjection,
   } as const;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const acquired = await corporations.updateOne(
     {
       _id: bank._id,
