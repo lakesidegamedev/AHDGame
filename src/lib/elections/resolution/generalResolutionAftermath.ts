@@ -30,6 +30,7 @@ import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecyc
 import type { WithId } from "mongodb";
 import type { PrStvResult } from "@/lib/elections/rules/prStv";
 import type { BlocListQuota } from "@/lib/constants/blocList";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function recordJapanShugiinRegionalCapacity(
   db: Db,
@@ -38,7 +39,7 @@ export async function recordJapanShugiinRegionalCapacity(
   now: Date
 ): Promise<void> {
   if (
-    election.countryId !== "JP" ||
+    !countryHasFeature("jpElections", election.countryId) ||
     (election.electionType !== "shugiin" && election.electionType !== "snap_shugiin") ||
     !election.japanShugiinRules ||
     !election.state
@@ -208,7 +209,7 @@ export async function applyGeneralElectionAftermath({
               ? "districted_house"
               : runtimeBlocQuota
                 ? "bloc_list"
-                : election.countryId === "DE" &&
+                : countryHasFeature("deElections", election.countryId) &&
                     (election.electionType === "bundestag" ||
                       election.electionType === "snap_bundestag")
                   ? "ams_direct"
@@ -337,7 +338,7 @@ export async function applyGeneralElectionAftermath({
       .filter(
         () =>
           !(
-            election.countryId === "DE" &&
+            countryHasFeature("deElections", election.countryId) &&
             getElectionMethod(election.countryId, election.electionType) === "ams" &&
             (election.electionType === "bundestag" || election.electionType === "snap_bundestag")
           )
@@ -383,7 +384,10 @@ export async function applyGeneralElectionAftermath({
   // the final one of this cycle resolves, open a Chairman election for the
   // newly-seated chamber — parity with the US Speaker / DE Bundestagspräsident
   // auto-open. The opener is idempotent, so an early trigger is harmless.
-  if (election.countryId === "CN" && election.electionType === "npcDelegate") {
+  if (
+    countryHasFeature("cnElections", election.countryId) &&
+    election.electionType === "npcDelegate"
+  ) {
     try {
       const remaining = await db.collection<Election>("elections").countDocuments({
         countryId: "CN",
@@ -414,7 +418,7 @@ export async function applyGeneralElectionAftermath({
     ? election.electionType.slice(5)
     : election.electionType;
   if (
-    election.countryId === "RU" &&
+    countryHasFeature("ruElections", election.countryId) &&
     [
       "supremeSovietDeputy",
       "unionCongressDeputy",

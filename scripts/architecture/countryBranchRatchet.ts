@@ -7,7 +7,6 @@ export type BranchCounts = Record<string, number>;
 
 export interface BranchBaseline {
   note: string;
-  total: number;
   files: BranchCounts;
 }
 
@@ -92,7 +91,6 @@ export function readBaseline(root = process.cwd()): BranchBaseline {
 
 export function writeBaseline(files: BranchCounts, root = process.cwd()): void {
   const sorted = Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
-  const total = Object.values(sorted).reduce((a, b) => a + b, 0);
-  const body: BranchBaseline = { note: BASELINE_NOTE, total, files: sorted };
+  const body: BranchBaseline = { note: BASELINE_NOTE, files: sorted };
   writeFileSync(join(root, BASELINE_PATH), JSON.stringify(body, null, 2) + "\n");
 }

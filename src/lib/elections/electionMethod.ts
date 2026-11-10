@@ -4,6 +4,7 @@ import {
   type ElectionPosition,
 } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Canonical electionType → position map. Snap variants share their base type's
@@ -127,11 +128,14 @@ export function getElectionMethod(
   // Both post-communist Romanian eras use regional proportional elections for
   // these chamber keys. The Cold War chamber has a different key, so this
   // country/type route is safe for callers that lack a preset argument.
-  if (countryId === "RO" && (electionType === "chamberOfDeputies" || electionType === "senat")) {
+  if (
+    countryHasFeature("roElections", countryId) &&
+    (electionType === "chamberOfDeputies" || electionType === "senat")
+  ) {
     return "pr_hareQuota";
   }
   if (
-    countryId === "BG" &&
+    countryHasFeature("bgElections", countryId) &&
     preset === "1991-default" &&
     electionType === "nationalAssembly" &&
     cycle != null &&

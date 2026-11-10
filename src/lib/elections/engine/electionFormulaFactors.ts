@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Default Support value seeded on candidate entry (per design doc §3.1
  * "written on candidate entry — defaulted to a calibration constant per
@@ -283,7 +284,10 @@ export function buildCurrentRegistrationBaseline(
   rows: ReadonlyArray<CurrentRegistrationBaselineRow>,
   countryId: string
 ): Map<string, number> | undefined {
-  if (countryId !== "UK" || !rows.some((row) => Number.isFinite(row.registration))) {
+  if (
+    !countryHasFeature("ukElections", countryId) ||
+    !rows.some((row) => Number.isFinite(row.registration))
+  ) {
     return undefined;
   }
 

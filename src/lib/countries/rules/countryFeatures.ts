@@ -4,6 +4,13 @@
  * enabling a feature elsewhere is a one-line data change.
  */
 import type { CountryId } from "@/lib/constants/countriesCore";
+import { ADMIN_FEATURES } from "./features/admin";
+import { API_FEATURES } from "./features/api";
+import { ELECTIONS_FEATURES } from "./features/elections";
+import { LIB_FEATURES } from "./features/lib";
+import { SEEDS_FEATURES } from "./features/seeds";
+import { TURN_FEATURES } from "./features/turn";
+import { UI_FEATURES } from "./features/ui";
 
 export const COUNTRY_FEATURES = {
   /** Referendums, devolution policy, party conference and manifestos. */
@@ -18,10 +25,21 @@ export const COUNTRY_FEATURES = {
   stateOrganisations: ["US"],
   /** Constitution reform proposals by a head of state. */
   constitutionProposal: ["RU"],
+  ...ADMIN_FEATURES,
+  ...API_FEATURES,
+  ...ELECTIONS_FEATURES,
+  ...LIB_FEATURES,
+  ...SEEDS_FEATURES,
+  ...TURN_FEATURES,
+  ...UI_FEATURES,
 } as const satisfies Record<string, readonly CountryId[]>;
 
 export type CountryFeature = keyof typeof COUNTRY_FEATURES;
 
-export function countryHasFeature(feature: CountryFeature, countryId: string | undefined): boolean {
+/** Type predicate: a true result narrows `countryId` to the feature's listed countries. */
+export function countryHasFeature<F extends CountryFeature>(
+  feature: F,
+  countryId: string | undefined
+): countryId is (typeof COUNTRY_FEATURES)[F][number] {
   return (COUNTRY_FEATURES[feature] as readonly string[]).includes(countryId ?? "");
 }

@@ -6,6 +6,7 @@ import {
   approveJapanShugiinReform,
   isJapanShugiinReformEligible,
 } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Enacted electoral law: the franchise, and how easily voters reach the rolls.
@@ -107,7 +108,11 @@ export async function applyElectoralLawProvision(
   const cc = countryId.toUpperCase();
 
   if (provision.japanShugiinReform) {
-    if (countryId !== "JP" || !enactment || !Number.isSafeInteger(enactment.turn)) {
+    if (
+      !countryHasFeature("jpElections", countryId) ||
+      !enactment ||
+      !Number.isSafeInteger(enactment.turn)
+    ) {
       throw new Error("Japan Shugiin reform requires a passed bill in a Japan election year");
     }
     const game = await db

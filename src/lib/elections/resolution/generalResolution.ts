@@ -57,6 +57,7 @@ import {
 } from "./generalResolutionAftermath";
 import { loadGeneralElectionCandidates } from "./generalResolutionCandidates";
 import { selectGeneralElectionWinners } from "./generalResolutionWinners";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
 
@@ -102,10 +103,14 @@ export async function resolveOneGeneralElection(
   try {
     if (
       tally?.countingMethod === "pr_stv" &&
-      (election.countryId !== "IE" || !["dail", "localCouncil"].includes(election.electionType))
+      (!countryHasFeature("ieElections", election.countryId) ||
+        !["dail", "localCouncil"].includes(election.electionType))
     )
       throw new Error("Ranked PR-STV is supported only for Irish Dail and local council races");
-    if (election.countryId === "BR" && election.electionType === "president") {
+    if (
+      countryHasFeature("brElections", election.countryId) &&
+      election.electionType === "president"
+    ) {
       const { resolveBrazilPresidentialElection } =
         await import("@/lib/countries/br/resolvePresidentialElection");
       const resolved = await resolveBrazilPresidentialElection(
@@ -130,16 +135,15 @@ export async function resolveOneGeneralElection(
     // BG changes from the 1991 transitional assembly to modern party-list PR.
     // The base config is the 1979 single-party FPTP chamber, so read the live
     // preset before method dispatch instead of silently using that default.
-    const bgPreset =
-      election.countryId === "BG"
-        ? (await (await getGameStateCollection(db)).findOne({ _id: "current" }))?.preset
-        : undefined;
-    if (election.countryId === "BG" && !bgPreset) {
+    const bgPreset = countryHasFeature("bgElections", election.countryId)
+      ? (await (await getGameStateCollection(db)).findOne({ _id: "current" }))?.preset
+      : undefined;
+    if (countryHasFeature("bgElections", election.countryId) && !bgPreset) {
       throw new Error("Bulgaria election resolution requires the active preset");
     }
     const electionMethod = getElectionMethod(election.countryId, election.electionType, bgPreset);
     if (
-      election.countryId === "BG" &&
+      countryHasFeature("bgElections", election.countryId) &&
       election.electionType === "nationalAssembly" &&
       bgPreset === "2027-default" &&
       electionMethod !== "pr_hareQuota"
@@ -147,7 +151,7 @@ export async function resolveOneGeneralElection(
       throw new Error("Bulgaria 2027 Assembly requires parliamentary proportional representation");
     }
     if (
-      election.countryId === "BG" &&
+      countryHasFeature("bgElections", election.countryId) &&
       election.electionType === "nationalAssembly" &&
       election.cycle >= 1 &&
       bgPreset === "1991-default" &&
@@ -185,7 +189,7 @@ export async function resolveOneGeneralElection(
     }
 
     if (
-      election.countryId === "RU" &&
+      countryHasFeature("ruElections", election.countryId) &&
       election.electionType === "president" &&
       election.russianPresidentialRound
     ) {
@@ -285,11 +289,14 @@ export async function resolveOneGeneralElection(
     // that clears totalVotes between the final accumulation and resolution.
     const isPrStv = tally.countingMethod === "pr_stv";
     const isJapanMixedShugiin =
-      election.countryId === "JP" &&
+      countryHasFeature("jpElections", election.countryId) &&
       (election.electionType === "shugiin" || election.electionType === "snap_shugiin") &&
       election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
     if (isPrStv) {
-      if (election.countryId !== "IE" || !["dail", "localCouncil"].includes(election.electionType))
+      if (
+        !countryHasFeature("ieElections", election.countryId) ||
+        !["dail", "localCouncil"].includes(election.electionType)
+      )
         throw new Error("Ranked PR-STV is supported only for Irish Dail and local council races");
       validateRankedBallots(tally.rankedBallots, tally.totalVotes);
     }

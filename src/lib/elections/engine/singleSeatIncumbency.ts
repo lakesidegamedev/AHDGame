@@ -14,6 +14,7 @@ import type {
 } from "@/lib/db/types";
 import { getElectionSeatKey } from "@/lib/turn/autoReelectionEntry";
 import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * True for single-winner legislative races that use the officeholder-based flat
@@ -26,7 +27,10 @@ export function isSingleSeatLegislativeRace(election: Election): boolean {
   // 3-seats-per-state regional Senate races, which are multi-seat PR and must
   // NOT take the US flat-shield / single-winner branches (they would skip the
   // seat-share incumbency path and mis-route resolution sweeps).
-  return election.electionType === "senate" && (election.countryId ?? "US") === "US";
+  return (
+    election.electionType === "senate" &&
+    countryHasFeature("usElections", election.countryId ?? "US")
+  );
 }
 
 /**

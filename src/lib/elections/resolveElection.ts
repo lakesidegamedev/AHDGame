@@ -54,6 +54,7 @@ import {
   ELECTION_SUMMARY_GAME_STATE_PROJECTION,
   ELECTION_SUMMARY_NPP_PROJECTION,
 } from "./electionSummaryProjections";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type {
   PollingData,
@@ -540,10 +541,12 @@ export async function resolveElections(
     _id: { $in: [...ids] },
   }));
   const shouldBatchHouseDistricts =
-    elections.some((e) => (e.countryId ?? "US") === "US" && e.electionType === "house") &&
+    elections.some(
+      (e) => countryHasFeature("usElections", e.countryId ?? "US") && e.electionType === "house"
+    ) &&
     elections.some(
       (e) =>
-        (e.countryId ?? "US") === "US" &&
+        countryHasFeature("usElections", e.countryId ?? "US") &&
         e.electionType === "house" &&
         tallyByElection.get(e._id.toString()) &&
         !resolvedSeatsEstimate(tallyByElection.get(e._id.toString())!, null)
@@ -553,7 +556,7 @@ export async function resolveElections(
       elections
         .filter(
           (e) =>
-            (e.countryId ?? "US") === "US" &&
+            countryHasFeature("usElections", e.countryId ?? "US") &&
             e.electionType === "house" &&
             tallyByElection.get(e._id.toString()) &&
             !resolvedSeatsEstimate(tallyByElection.get(e._id.toString())!, null)

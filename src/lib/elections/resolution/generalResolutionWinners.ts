@@ -31,6 +31,7 @@ import { applyLegacySeatFloor } from "./conversionTerms";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import type { WithId } from "mongodb";
 import type { SurvivingPartyResolver } from "@/lib/parties/survivingParty";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Allocates seats and splits the candidates into winners and losers. */
 export async function selectGeneralElectionWinners({
@@ -92,7 +93,7 @@ export async function selectGeneralElectionWinners({
   // their world's era rules; newly spawned races keep their frozen method.
   if (
     !allocationMethod &&
-    election.countryId === "JP" &&
+    countryHasFeature("jpElections", election.countryId) &&
     election.japanShugiinRules?.ruleVersion !== "mixed-1994-v1" &&
     (election.electionType === "shugiin" || election.electionType === "snap_shugiin")
   ) {
@@ -112,7 +113,10 @@ export async function selectGeneralElectionWinners({
   // Districted per-district resolution (US House). Returns null when the
   // state has no congressionalDistricts docs → fall back to legacy allocateSeats.
   let districted: Awaited<ReturnType<typeof districtedHouseResolution>> = null;
-  if (election.electionType === "house" && (election.countryId ?? "US") === "US") {
+  if (
+    election.electionType === "house" &&
+    countryHasFeature("usElections", election.countryId ?? "US")
+  ) {
     const candidateParty: Record<string, string> = {};
     const candidateCharacterId: Record<string, string | null> = {};
     const candidateNppId: Record<string, string | null> = {};
@@ -203,7 +207,7 @@ export async function selectGeneralElectionWinners({
     : null;
   const bgAllocation =
     bgEligibleParties &&
-    election.countryId === "BG" &&
+    countryHasFeature("bgElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     election.cycle === 1
       ? (() => {

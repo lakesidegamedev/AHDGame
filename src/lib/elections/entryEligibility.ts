@@ -15,6 +15,7 @@ import {
   isElectionTypeEntryBlocked,
   isNationwideDirectExecutiveElection,
 } from "@/lib/elections/nationwideExecutive";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type EntryAction =
   /** Viewer stands in this race and may pull out. */
@@ -70,7 +71,7 @@ export function resolveEntryAction({
     isNationwideDirectExecutiveElection(election.electionType, election.state, character.countryId);
 
   const isEligibleDumaList =
-    character.countryId === "RU" &&
+    countryHasFeature("ruElections", character.countryId) &&
     Object.prototype.hasOwnProperty.call(RU_1991_ECONOMIC_REGION_POPULATION, character.homeState) &&
     character.party !== "independent" &&
     !!character.party &&

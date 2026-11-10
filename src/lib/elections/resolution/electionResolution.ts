@@ -85,6 +85,7 @@ import { isNativeRussianAssemblyElection } from "@/lib/countries/ru/rules/assemb
 import { workerConfig } from "@/lib/config/worker";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -126,7 +127,7 @@ export async function resolveGeneralElections(
 
   const electionIds = completedElections.map((e) => e._id);
   const ukDevolutionRegions = completedElections
-    .filter((e) => e.countryId === "UK" && e.state)
+    .filter((e) => countryHasFeature("ukElections", e.countryId) && e.state)
     .map((e) => e.state.toUpperCase());
   const genericElectionIds = completedElections
     .filter((e) => !isNativeRussianAssemblyElection(e))
@@ -155,7 +156,7 @@ export async function resolveGeneralElections(
     gameStateDoc?.preset === "1991-default"
       ? completedElections.filter(
           (row) =>
-            row.countryId === "BG" &&
+            countryHasFeature("bgElections", row.countryId) &&
             row.electionType === "nationalAssembly" &&
             !row.bulgarianFoundingRound?.byElection &&
             (row.bulgarianFoundingRound != null || !isBgOrdinaryCapacity(row.state, row.totalSeats))
@@ -184,7 +185,7 @@ export async function resolveGeneralElections(
     gameStateDoc?.preset === "1991-default"
       ? completedElections.filter(
           (e) =>
-            e.countryId === "BG" &&
+            countryHasFeature("bgElections", e.countryId) &&
             e.electionType === "nationalAssembly" &&
             e.cycle >= 1 &&
             isBgOrdinaryCapacity(e.state, e.totalSeats)
@@ -198,7 +199,7 @@ export async function resolveGeneralElections(
     gameStateDoc?.preset === "1991-default"
       ? completedElections.filter(
           (row) =>
-            row.countryId === "HU" &&
+            countryHasFeature("huElections", row.countryId) &&
             row.electionType === "nationalAssembly" &&
             row.hungarianModernByElection != null
         )
@@ -207,7 +208,7 @@ export async function resolveGeneralElections(
     gameStateDoc?.preset === "1991-default"
       ? completedElections.filter(
           (row) =>
-            row.countryId === "HU" &&
+            countryHasFeature("huElections", row.countryId) &&
             row.electionType === "nationalAssembly" &&
             row.hungarianAssemblyRound?.byElection
         )
@@ -216,7 +217,7 @@ export async function resolveGeneralElections(
     gameStateDoc?.preset === "1991-default"
       ? completedElections.filter(
           (row) =>
-            row.countryId === "HU" &&
+            countryHasFeature("huElections", row.countryId) &&
             row.electionType === "nationalAssembly" &&
             !row.hungarianAssemblyRound?.byElection &&
             row.cycle >= 1 &&
@@ -247,7 +248,7 @@ export async function resolveGeneralElections(
     gameStateDoc?.preset === "1991-default"
       ? completedElections.filter(
           (row) =>
-            row.countryId === "HU" &&
+            countryHasFeature("huElections", row.countryId) &&
             row.electionType === "nationalAssembly" &&
             row.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1"
         )
@@ -271,7 +272,7 @@ export async function resolveGeneralElections(
       ? completedElections
           .filter(
             (e) =>
-              e.countryId === "HU" &&
+              countryHasFeature("huElections", e.countryId) &&
               e.electionType === "nationalAssembly" &&
               e.hungarianModernAssembly == null &&
               e.hungarianModernByElection == null &&
@@ -562,7 +563,7 @@ export async function resolveGeneralElections(
     }
     const repeatRows = completedElections.filter(
       (row) =>
-        row.countryId === "RU" &&
+        countryHasFeature("ruElections", row.countryId) &&
         row.electionType === "dumaDeputy" &&
         row.russianDumaRound?.rootCohortId &&
         Number.isSafeInteger(row.russianDumaRound.generation) &&
@@ -655,7 +656,7 @@ export async function resolveGeneralElections(
   const orderGroups: Election[][] = [];
   for (const election of completedElections) {
     if (
-      election.countryId === "RU" &&
+      countryHasFeature("ruElections", election.countryId) &&
       ((election.electionType === "dumaDeputy" && election.russianDumaRound) ||
         (election.electionType === "federationCouncilMember" && election.russianCouncilRound))
     )
@@ -688,7 +689,7 @@ export async function resolveGeneralElections(
             const huPlan = huMixedPlans.get(election.cycle);
             const isHuMixed =
               huMixedCycles.has(election.cycle) &&
-              election.countryId === "HU" &&
+              countryHasFeature("huElections", election.countryId) &&
               election.electionType === "nationalAssembly";
             if (isHuMixed && !huPlan) return { election, result: null };
             if (isHuMixed && huPlan) {

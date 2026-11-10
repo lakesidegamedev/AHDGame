@@ -25,6 +25,7 @@ import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
 import { TERRITORY_ADMISSIONS } from "@/lib/elections/statehoodAdmission";
 import { buildMajorPartyOrgsForState } from "@/lib/seeds/reference/statePartyOrg";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const ELECTION_DURATION_TURNS = 72; // 72 turns = 72 hours
 
@@ -83,7 +84,9 @@ async function ensureResidentTerritorialPartyOrgs(
 
   const usMajorParties = new Set(
     parties
-      .filter((party) => (party.countryId ?? DEFAULT_LEGACY_COUNTRY_ID) === "US")
+      .filter((party) =>
+        countryHasFeature("usElections", party.countryId ?? DEFAULT_LEGACY_COUNTRY_ID)
+      )
       .map((party) => String(party.sequentialId))
   );
   if (!usMajorParties.has("1") || !usMajorParties.has("2")) return statePartyOrgs;

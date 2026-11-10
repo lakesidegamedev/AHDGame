@@ -36,6 +36,7 @@ import {
   toNppObjectId,
 } from "@/lib/elections/resolution/contingentPersonIds";
 import { logger } from "@/lib/observability/logger";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type TallyWithVote = ElectionVoteTally & {
   contingentHouseVote: NonNullable<ElectionVoteTally["contingentHouseVote"]>;
@@ -196,7 +197,7 @@ export async function closeDueContingentHouseVotes(
   })) as TallyWithVote | null;
   if (pending) {
     const election = await elections.findOne({ _id: pending.electionId });
-    if (election && (election.countryId ?? "US") === "US") {
+    if (election && countryHasFeature("usElections", election.countryId ?? "US")) {
       if (await seatHouseElectedPresident(db, election, pending, now, currentTurn)) handled += 1;
     }
   }
@@ -217,7 +218,7 @@ export async function closeDueContingentHouseVotes(
   const electionById = new Map(dueElections.map((e) => [e._id.toString(), e]));
   for (const tally of due) {
     const election = electionById.get(tally.electionId.toString());
-    if (!election || (election.countryId ?? "US") !== "US") continue;
+    if (!election || !countryHasFeature("usElections", election.countryId ?? "US")) continue;
     try {
       if (await takeBallot(db, election, tally, now, currentTurn)) handled += 1;
     } catch (err) {

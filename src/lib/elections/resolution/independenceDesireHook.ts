@@ -19,6 +19,7 @@ import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { applyFirstMinisterHighDesireBonus } from "@/lib/elections/rules/highDesireElectionBonus";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Election types where the hook is applied. */
 const HOOKED_ELECTION_TYPES = new Set(["commons", "snap_commons", "regionalCouncil", "governor"]);
@@ -277,7 +278,7 @@ export async function maybeApplyIndependenceDesireHook(
   };
   const { countryId, electionType, state, effectiveVotes, candidates, totalVotes, bonusContext } =
     args;
-  if (countryId !== "UK") return noop;
+  if (!countryHasFeature("ukElections", countryId)) return noop;
   if (!state || !isUKDevolutionRegion(state)) return noop;
   if (!HOOKED_ELECTION_TYPES.has(electionType)) return noop;
 

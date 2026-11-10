@@ -21,6 +21,7 @@ import {
   fmtShort,
   type RegionElectorate,
 } from "@/lib/elections/blendRegionViewModel";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface BlendDetailFact {
   key: string;
@@ -421,7 +422,7 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
     });
   }
 
-  const isBench = input.countryId === "UK";
+  const isBench = countryHasFeature("ukElections", input.countryId);
 
   // ── per-candidate tally rows, with the arithmetic behind each seat count
   const tallyRows: BlendDetailTallyRow[] = rows.map((r) => {

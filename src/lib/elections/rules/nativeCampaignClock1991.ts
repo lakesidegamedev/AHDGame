@@ -5,6 +5,7 @@
  */
 import type { Election } from "@/lib/db/types";
 import { frozenBgAssemblyTurns } from "@/lib/countries/bg/rules/assemblyClock1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type NativeClockElection = Pick<
   Election,
@@ -30,13 +31,13 @@ export function frozenNativeCampaignTurns1991(
   const bulgarian = frozenBgAssemblyTurns(election);
   if (bulgarian !== undefined) return bulgarian;
   const hungarian =
-    election.countryId === "HU" &&
+    countryHasFeature("huElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     (election.hungarianAssemblyRound != null ||
       election.hungarianModernAssembly != null ||
       election.hungarianModernByElection != null);
   const russian =
-    election.countryId === "RU" &&
+    countryHasFeature("ruElections", election.countryId) &&
     ((election.electionType === "president" && election.russianPresidentialRound != null) ||
       (election.electionType === "dumaDeputy" && election.russianDumaRound != null) ||
       (election.electionType === "federationCouncilMember" &&
