@@ -33,11 +33,7 @@ import {
 } from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { withEnergyTransition } from "@/lib/energyTransition/policies";
-import {
-  lawAdjustedLabourFactor,
-  lawWageCostMultiplier,
-  withAutomationLevy,
-} from "@/lib/automationPolicy/policies";
+import { lawAdjustedLabourFactor, lawWageCostMultiplier } from "@/lib/automationPolicy/policies";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import {
   LOW_USE_COLD_UPKEEP_FRACTION,
@@ -342,11 +338,8 @@ export function prepareProducerPhysicalSector(input: {
     operatingType,
     currentYear
   );
-  // 2027 world: automation levies make automation methods' inputs dearer.
-  const tech = withAutomationLevy(transitionTech, lookups.automationPolicyByCountry, {
-    countryId,
-    strategyId: sector.strategyId,
-  });
+  // Automation levies are paid to the treasury at settlement, not folded into input rates.
+  const tech = transitionTech;
   const recipe = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
     sector.strategyId ?? "standard",
