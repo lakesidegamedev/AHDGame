@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { getDdRegionOrg, getDdPartyTreasury } from "@/lib/seeds/dd/ddStatePartyOrgCalculations";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
@@ -51,7 +52,8 @@ export async function seedDdStatePartyOrg(
   log: (msg: string) => void,
   preset?: string
 ): Promise<void> {
-  const activePreset = preset ?? (await getGameStatePreset(db)) ?? "1953-default";
+  const activePreset = preset ?? (await getGameStatePreset(db));
+  if (activePreset == null) throw missingPresetEntry("(none)", "dd-state-party-org");
 
   // The GDR only exists in the divided-Germany (1953/1979) eras — its Länder
   // belong to DE in unified eras, so seeding here would attach National Front

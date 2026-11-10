@@ -1,4 +1,6 @@
 import type { Db } from "mongodb";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
+import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { StatePartyOrg } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -26,8 +28,8 @@ export async function seedEasternBlocStatePartyOrg(
   log: (msg: string) => void,
   preset?: string
 ): Promise<void> {
-  const activePreset =
-    preset ?? (await db.collection("gameState").findOne({}))?.preset ?? "1953-default";
+  const activePreset = preset ?? (await getGameStatePreset(db));
+  if (activePreset == null) throw missingPresetEntry("(none)", "eastern-bloc-state-party-org");
 
   const { isEasternBlocEra } = await import("@/lib/seeds/presetSelector");
   if (!isEasternBlocEra(activePreset)) {
