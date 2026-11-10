@@ -110,6 +110,8 @@ export interface BankCharter {
   panicTurns?: number;
   /** Crisis bank stress not yet worth a whole panic turn; see crises/v2/bankStress. */
   stressCarry?: number;
+  /** Last turn a push reached the carry; the carry halves for each turn skipped. */
+  stressCarryTurn?: number;
   /** Published warning band one turn ahead of NPC flight bite (players see this). */
   warningBand?: "green" | "amber" | "red";
   /**

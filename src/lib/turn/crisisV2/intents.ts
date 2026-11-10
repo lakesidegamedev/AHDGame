@@ -241,17 +241,62 @@ async function applyMigration(
  * fractional push builds up instead of starting a full panic. The update is one
  * pipeline per call that mirrors that rule on each bank's own carry.
  */
-export async function applyBankStress(db: Db, delta: number, countryIds: string[]): Promise<void> {
+export async function applyBankStress(
+  db: Db,
+  delta: number,
+  countryIds: string[],
+  turn?: number
+): Promise<void> {
   if (!(delta > 0) || countryIds.length === 0) return;
   const corporations = await getCorporationsCollection(db);
   const carry = "$bankCharter.stressCarry";
   const due = { $gte: [carry, STRESS_PER_PANIC_TURN] };
+  // Carry left from an earlier crisis fades: it halves for every turn since the
+  // last push, so a stale leftover cannot tip a bank into panic years later.
+  const decay: Record<string, unknown>[] =
+    turn === undefined
+      ? []
+      : [
+          {
+            $set: {
+              "bankCharter.stressCarry": {
+                $round: [
+                  {
+                    $multiply: [
+                      { $ifNull: [carry, 0] },
+                      {
+                        $pow: [
+                          0.5,
+                          {
+                            $max: [
+                              0,
+                              {
+                                $subtract: [
+                                  turn,
+                                  { $ifNull: ["$bankCharter.stressCarryTurn", turn] },
+                                  1,
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  6,
+                ],
+              },
+            },
+          },
+        ];
   await corporations.updateMany(
     { "bankCharter.status": "active", countryId: { $in: countryIds as CountryId[] } },
     [
+      ...decay,
       {
         $set: {
           "bankCharter.stressCarry": { $round: [{ $add: [{ $ifNull: [carry, 0] }, delta] }, 6] },
+          ...(turn === undefined ? {} : { "bankCharter.stressCarryTurn": turn }),
         },
       },
       {
@@ -274,6 +319,21 @@ export async function applyBankStress(db: Db, delta: number, countryIds: string[
         },
       },
     ] as never
+  );
+}
+
+/**
+ * Starts a panic of at least the given length in every active bank, without
+ * touching the carry. Used for module-driven crisis stress, which keeps a bank
+ * panicked for as long as the crisis pushes.
+ */
+async function applySustainedBankPanic(db: Db, delta: number, countryIds: string[]): Promise<void> {
+  const panicTurns = Math.min(MAX_PANIC_TURNS, Math.ceil(delta));
+  if (panicTurns <= 0 || countryIds.length === 0) return;
+  const corporations = await getCorporationsCollection(db);
+  await corporations.updateMany(
+    { "bankCharter.status": "active", countryId: { $in: countryIds as CountryId[] } },
+    { $max: { "bankCharter.panicTurns": panicTurns } }
   );
 }
 
@@ -337,6 +397,7 @@ export async function routeEffectIntents(
     reception: [],
   };
   let bankDelta = 0;
+  let sustainedBankDelta = 0;
   let bondBps = 0;
   let approvalDelta = 0;
   const unsupported: Record<string, number> = {};
@@ -380,7 +441,8 @@ export async function routeEffectIntents(
         world.tradeRestriction.push(intent);
         break;
       case "bankStress":
-        bankDelta += intent.delta;
+        if (intent.sustained) sustainedBankDelta += intent.delta;
+        else bankDelta += intent.delta;
         break;
       case "bondYield":
         bondBps += intent.deltaBps;
@@ -417,7 +479,10 @@ export async function routeEffectIntents(
   if (demandPct.size > 0) await writeDemandShifts(db, demandPct, targets);
   if (migration.length > 0) await applyMigration(db, migration, targets);
   const worldHandled = await routeWorldIntents(db, world, targets);
-  if (bankDelta > 0) await applyBankStress(db, bankDelta, targets.countryIds);
+  if (bankDelta > 0) await applyBankStress(db, bankDelta, targets.countryIds, targets.turn);
+  if (sustainedBankDelta > 0) {
+    await applySustainedBankPanic(db, sustainedBankDelta, targets.countryIds);
+  }
   if (bondBps !== 0) await applyBondPressure(db, bondBps, targets.countryIds, targets.turn);
 
   const handled =
@@ -428,6 +493,7 @@ export async function routeEffectIntents(
     migration.length +
     worldHandled +
     (bankDelta > 0 ? 1 : 0) +
+    (sustainedBankDelta > 0 ? 1 : 0) +
     (bondBps !== 0 ? 1 : 0);
   return { applied: handled, unsupported, v2Output };
 }
