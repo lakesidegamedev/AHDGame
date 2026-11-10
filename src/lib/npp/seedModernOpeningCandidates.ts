@@ -16,7 +16,7 @@ import type {
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideExecutive";
 import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { generateNPP, type NPPGenerationContext } from "./generator";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */

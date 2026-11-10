@@ -1,3 +1,4 @@
+import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
@@ -75,5 +76,12 @@ describe("2027 preflight shell", () => {
       ])
     );
     expect(JSON.stringify(await db.collection("states").find({}).toArray())).toBe(before);
+  });
+
+  it.each(["", "1850-default"])("refuses preset %j before reading anything", async (preset) => {
+    const db = createInMemoryDb();
+    await expect(
+      runPreflight2027(db as unknown as Db, { mode: "fresh", preset })
+    ).rejects.toBeInstanceOf(SeedContractError);
   });
 });

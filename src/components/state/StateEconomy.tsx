@@ -17,7 +17,7 @@ import { useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { Tooltip } from "@/components/Tooltip";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   COMMODITY_ICONS,

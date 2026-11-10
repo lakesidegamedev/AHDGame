@@ -11,7 +11,7 @@ import {
   calcStateTurnout,
   turnVoteWeight,
   type EnrichedCandidate,
-} from "@/lib/electionEngine";
+} from "@/lib/elections/engine";
 import {
   calcPresidentPrimaryScore,
   PRESIDENT_PRIMARY_PARTY_INFLUENCE_WEIGHT,

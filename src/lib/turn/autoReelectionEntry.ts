@@ -1,7 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { ElectedOfficial, Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import { electionStatusBlocksFurtherEntry } from "@/lib/elections/activeCandidacy";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { activeUserIds } from "@/lib/players/playerActivity";
 import type { CountryId } from "@/lib/constants/countries";

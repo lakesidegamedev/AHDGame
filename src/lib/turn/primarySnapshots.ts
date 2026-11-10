@@ -21,7 +21,7 @@ import {
   loadRegionalCampaignCells,
 } from "@/lib/campaignTargeting/audience";
 import { getDb } from "@/lib/mongodb";
-import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type {
   Election,
@@ -46,7 +46,7 @@ import {
 } from "@/lib/primaryScore";
 import { parseSeatId } from "@/lib/seats/seatId";
 import { type CountryId } from "@/lib/constants/countries";
-import { resolveTurnWindow } from "@/lib/electionEngine/voteCalculations";
+import { resolveTurnWindow } from "@/lib/elections/engine/voteCalculations";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
   accruePrimaryBallotTurn,
@@ -62,7 +62,7 @@ import { resolvePartyFamily, getTotalDelegatesForFamily } from "@/lib/constants/
 import {
   loadCandidateEnrichmentPreload,
   type CandidateEnrichmentPreload,
-} from "@/lib/electionEngine/candidateEnrichment";
+} from "@/lib/elections/engine/candidateEnrichment";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
 import { planTurnSlice, type TurnSlicePart } from "@/lib/elections/rules/turnSlice";
@@ -729,7 +729,7 @@ async function recordPresidentialStatePollingSnapshots(
   if (presElections.length === 0) return projectionsByElection;
 
   const { projectPrimaryByState } = await import("@/lib/primaryProjection");
-  const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+  const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
   const { loadRegionalBonusMaps } = await import("@/lib/primaryRegionalBonusLoader");
   const { ELECTORAL_VOTE_UNITS } = await import("@/lib/constants/states");
   const stateIds = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];

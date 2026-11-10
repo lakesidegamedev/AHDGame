@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation, Db, Document } from "mongodb";
+import type { Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
@@ -126,79 +126,6 @@ export async function seedUkBudgets(
   }
   if (ukCorpData.length > 0) {
     log(`Seeded ${ukCorpData.length} UK country-owned public corporation setup(s)`);
-  }
-
-  // Seed UK regional state policies with policyOptionId so the regional
-  // budget processor can look up annualCostPerCapita.
-  //
-  // Gate on the preset: on a v2 preset seedLegislationTypes unseeds and prunes
-  // every countryScope "uk" type, so seeding anyway leaves dangling policies
-  // that silently resolve regional revenue to £0 while costs still price via
-  // the v2 catalog.
-  const { legislationTypes } = await import("@/lib/seeds/reference/legislationTypes");
-  const { isPoliticalLegislationPreset } =
-    await import("@/lib/admin/seed/seedPoliticalLegislation");
-  const ukRegionalTypes = isPoliticalLegislationPreset(preset)
-    ? []
-    : legislationTypes.filter(
-        (lt: { countryScope?: string; allowedScope?: string }) =>
-          lt.countryScope === "uk" && lt.allowedScope === "state"
-      );
-  let regionalPoliciesSeeded = 0;
-  const policyOps: AnyBulkWriteOperation<Document>[] = [];
-  for (const state of states) {
-    for (const lt of ukRegionalTypes) {
-      const centerIndex = Math.floor((lt.policyOptions?.length ?? 0) / 2);
-      const centerOption = lt.policyOptions?.[centerIndex];
-      if (!centerOption) continue;
-      // Only set policyOptionId if not already present (don't overwrite in-game changes)
-      policyOps.push({
-        updateOne: {
-          filter: {
-            scope: "state",
-            stateId: state._id,
-            legislationTypeId: lt._id,
-            policyOptionId: { $exists: false },
-          },
-          update: {
-            $set: {
-              policyOptionId: centerOption.id,
-              policyOptionIndex: centerIndex,
-            },
-          },
-        },
-      });
-      // Ensure the policy exists (upsert for fresh DBs)
-      policyOps.push({
-        updateOne: {
-          filter: { scope: "state", stateId: state._id, legislationTypeId: lt._id },
-          update: {
-            $setOnInsert: {
-              scope: "state",
-              stateId: state._id,
-              legislationTypeId: lt._id,
-              economic: 0,
-              social: 0,
-              policyOptionId: centerOption.id,
-              policyOptionIndex: centerIndex,
-              updatedAt: new Date(),
-            },
-          },
-          upsert: true,
-        },
-      });
-      regionalPoliciesSeeded++;
-    }
-  }
-  // The two ops above touch the SAME document and their order matters — the
-  // backfill must see the doc before the upsert can create it. They are pushed
-  // interleaved and written `ordered`, so the sequence is byte-for-byte what
-  // the sequential awaits produced.
-  if (policyOps.length > 0) {
-    await db.collection("statePolicies").bulkWrite(policyOps, { ordered: true });
-  }
-  if (regionalPoliciesSeeded > 0) {
-    log(`Seeded ${regionalPoliciesSeeded} UK regional policies with policyOptionId`);
   }
 
   // Budget indexes (idempotent, safe to run for both US and UK)

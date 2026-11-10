@@ -665,11 +665,6 @@
     "e54ae551357044f5172f6a77175c60da39fee5fb35c187f6542f8fb0a66513d7": 1,
     "6aa7a2e554e6ec3355cd6e06d23221d40c755e8a942b7eebc0f29a2128be3aa2": 1,
     "f344ff85453c7854d8884ffa63392efd42c566946d99286423fd9d8974358964": 1,
-    "c35c008c58393588ca2619350a80522eda70b8ee27716c96b8651b1b20fbc51b": 1,
-    "64031b8d834ffca33ff823e699c79621ba423ce50214daaa53d21167d34bba81": 1,
-    "2bc163f6515e1b81d42761f1c5160033fd090c6a358432a77c3758dd2669b07c": 1,
-    "a26a64044e6f76ecdbe9a04330288efdc6429fb1493ce1415fcaa458d56d9df5": 1,
-    "a1122fd23863488386dcd9c1c24b06265436056852ccf72ef85f07ee9bb003c1": 1,
     "94f1b2d981615fc3db41dc40a58a04631465db2eae47dc1b1db3655cb0fa9577": 1,
     "4b032f506d43563de28532b93be7d9978727393b7a4f0f201f0989e1955d688b": 1,
     "e54ef0dc8a1525b6ea8904bb3e860c6282b9e49f23a9f687633ba83328afd1ad": 1,
@@ -682,7 +677,12 @@
     "bef3f93a7e046f4954b7e7d8c7d982b3b1c1423075f3e497f39530b8ac34df04": 1,
     "e0c9a8bfc4dab35b49f0b2b2b80f82588247ba532ce072014f2f4285855e9c5d": 1,
     "5b1f748b7c0a0c9ac8e787beeb6713fcfa041e9f6c4417a92471eb130b49bf7f": 1,
-    "b7f6372047e8b50351299fa9d3634942d1e00ff3f9fb0c1a595631e695aa2e24": 1
+    "b7f6372047e8b50351299fa9d3634942d1e00ff3f9fb0c1a595631e695aa2e24": 1,
+    "d219667c6920b67dc0adf3b324874b78fc795408b5b440adce0b1311259b235f": 1,
+    "653767b5f14c58a02ec496fe4f2a1a7bb6b0f8b48fbd609c07652531535e06b7": 1,
+    "8f1e376b9296c818a208a72ad301167bd1f432fcc8151e8595106c2a24deb693": 1,
+    "c2a0ad1dae2c29765a8b7cd97a136b6724014c11caef33e4a8e879d591dd96a6": 1,
+    "b65a1c51ee3ad2ebd350f8fd7de062e8d1b517caa88a980dbe97c81f3a915ffa": 1
   },
   "locations": [
     {
@@ -4522,14 +4522,14 @@
       "fingerprint": "e59f9e225e87332a00e249df5bff630605d2fb81767feb668556feb6b8fbe5ab"
     },
     {
-      "file": "src/lib/electionEngine/singleSeatIncumbency.ts",
+      "file": "src/lib/elections/engine/singleSeatIncumbency.ts",
       "operation": "findOne",
       "owner": "resolveHouseIncumbentTenures",
       "expression": "db .collection<ElectionVoteTally>(\"electionVoteTallies\") .findOne({ electionId: prior._id })",
       "fingerprint": "885532c6ad244690638e2840ea95c79dc7ef31e5bc087362d92986045a8fbcad"
     },
     {
-      "file": "src/lib/electionEngine/singleSeatIncumbency.ts",
+      "file": "src/lib/elections/engine/singleSeatIncumbency.ts",
       "operation": "find",
       "owner": "resolveHouseIncumbentTenures",
       "expression": "db .collection<ElectionCandidate>(\"electionCandidates\") .find({ electionId: prior._id })",
@@ -5509,35 +5509,35 @@
       "fingerprint": "f344ff85453c7854d8884ffa63392efd42c566946d99286423fd9d8974358964"
     },
     {
-      "file": "src/lib/caucusChairElections.ts",
+      "file": "src/lib/elections/party/caucusChairElections.ts",
       "operation": "findOne",
       "owner": "notifyElectionLosses",
       "expression": "db .collection<Character>(\"characters\") .findOne({ _id: loser.characterId })",
       "fingerprint": "c35c008c58393588ca2619350a80522eda70b8ee27716c96b8651b1b20fbc51b"
     },
     {
-      "file": "src/lib/caucusChairElections.ts",
+      "file": "src/lib/elections/party/caucusChairElections.ts",
       "operation": "updateOne",
       "owner": "createMissingCaucusChairElections",
       "expression": "db.collection<Caucus>(\"caucuses\").updateOne({ _id: caucus._id }, { $set: { nextElectionTurn: payloads[index].endTurn, updatedAt: now, }, })",
       "fingerprint": "64031b8d834ffca33ff823e699c79621ba423ce50214daaa53d21167d34bba81"
     },
     {
-      "file": "src/lib/caucusChairElections.ts",
+      "file": "src/lib/elections/party/caucusChairElections.ts",
       "operation": "updateOne",
       "owner": "processCompletedCaucusChairElections",
       "expression": "db.collection<Caucus>(\"caucuses\").updateOne({ _id: caucus._id }, { $set: { chairId: winnerId, lastElectedTurn: currentTurn, nextElectionTurn: currentTurn + NATIONAL_ELECTION_DURATION_TURNS, updatedAt: now, }, $inc: { termsServed: 1 }, })",
       "fingerprint": "2bc163f6515e1b81d42761f1c5160033fd090c6a358432a77c3758dd2669b07c"
     },
     {
-      "file": "src/lib/caucusChairElections.ts",
+      "file": "src/lib/elections/party/caucusChairElections.ts",
       "operation": "updateMany",
       "owner": "processCompletedCaucusChairElections",
       "expression": "db .collection<CaucusMembership>(\"caucusMemberships\") .updateMany({ caucusId: caucus._id, memberType: \"character\", role: \"chair\", status: \"active\" }, { $set: { role: \"member\", updatedAt: now } })",
       "fingerprint": "a26a64044e6f76ecdbe9a04330288efdc6429fb1493ce1415fcaa458d56d9df5"
     },
     {
-      "file": "src/lib/caucusChairElections.ts",
+      "file": "src/lib/elections/party/caucusChairElections.ts",
       "operation": "updateOne",
       "owner": "processCompletedCaucusChairElections",
       "expression": "db .collection<CaucusMembership>(\"caucusMemberships\") .updateOne({ caucusId: caucus._id, memberType: \"character\", memberId: winnerId, status: \"active\" }, { $set: { role: \"chair\", updatedAt: now } })",

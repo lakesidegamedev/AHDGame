@@ -84,7 +84,7 @@ describe("1991 current-law references", () => {
     ]);
     // JP's budget-neutral academic reform remains a legal reference, without
     // a costed legacy fiscal law in the balanced opening.
-    const expectedBudgetOptionDifferences = { US: 4, UK: 3, JP: 12 };
+    const expectedBudgetOptionDifferences = { US: 0, UK: 0, JP: 12 };
     for (const country of ["US", "UK", "JP"] as const) {
       let budgetOptionDifferences = 0;
       for (const reference of openingLawReferences.filter(

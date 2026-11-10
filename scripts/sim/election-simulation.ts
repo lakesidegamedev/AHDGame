@@ -28,10 +28,10 @@
  */
 
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
-import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
+import { supportMoodMultiplier } from "@/lib/elections/engine/electionFormulaFactors";
 import {
   getDelegatesForState,
   getDefaultPrimaryAllocation,
@@ -41,7 +41,7 @@ import {
 } from "@/lib/constants/primaryCalendar";
 import { allocateDelegates, type AllocationMethod } from "@/lib/primaryDelegateAllocation";
 import type { DemographicCategory, CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine/types";
 
 // ─── Fixture: demographic categories (shared across states) ──────────────
 

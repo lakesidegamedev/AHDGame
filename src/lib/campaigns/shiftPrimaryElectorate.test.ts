@@ -15,8 +15,8 @@ import {
   primaryTurnoutRetention,
   shiftElectorateForPrimary,
 } from "./shiftPrimaryElectorate";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 
 const GOP = { economicPosition: 3, socialPosition: 3 };

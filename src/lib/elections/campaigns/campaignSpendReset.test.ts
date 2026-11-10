@@ -4,7 +4,7 @@ import {
   SPEND_STOCK_DUST_CUTOFF,
   SPEND_STOCK_RETENTION,
   rollSpendStock,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 import { processCampaignSpendReset } from "./campaignSpendReset";
 
 describe("rollSpendStock", () => {

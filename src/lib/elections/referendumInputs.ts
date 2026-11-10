@@ -23,7 +23,7 @@ import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { FederalBudget } from "@/lib/db/types";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { MiseryInputs } from "@/lib/electionEngine/economicReferendum";
+import type { MiseryInputs } from "@/lib/elections/engine/economicReferendum";
 
 /** Fallbacks when a country has no national metrics doc yet (neutral-ish). */
 const FALLBACK_UNEMPLOYMENT = 6;

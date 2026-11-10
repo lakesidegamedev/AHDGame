@@ -77,6 +77,12 @@ export interface FederalRevenue {
    */
   lawRevenue?: number;
   /**
+   * Automation levies paid by companies straight into Treasury cash, annualised from the latest
+   * turn. Shown for visibility only: the cash is already credited at collection, so it is not
+   * part of `total`.
+   */
+  automationLevy?: number;
+  /**
    * Gross receipts subject to the era Laffer cap: ordinary taxes plus
    * tax-like enacted-law revenue, before compression. Exposed so fiscal UI can
    * explain a cap without implying public-enterprise income was lost.
@@ -663,6 +669,8 @@ export interface FederalBudget {
   treasuryBalance: number;
   /** Feature-gated spendable native cash. Missing legacy value means zero when enabled. */
   treasuryCashLocal?: number;
+  /** Automation levies swept into Treasury cash on the latest funded turn (local currency). */
+  automationLevyReceiptsLocal?: number;
   /**
    * Real money per unit of book money for this country, measured each turn
    * while `gameConfig.fiscalScaleStage` is 1 or more. See

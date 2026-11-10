@@ -8,7 +8,7 @@
  */
 import type { ElectorateUnit } from "./electorateUnit";
 import type { CensusGroupView, StateDemographics } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import {
   GRANULAR_CATEGORY_ID,
   LEAN_QUANT,

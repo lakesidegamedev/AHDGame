@@ -6,7 +6,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Db } from "@/lib/mongodb";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getEraContext } from "@/lib/era/context";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 
 type PartyData = { countryId: string; partyId: string };
 

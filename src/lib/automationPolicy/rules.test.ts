@@ -5,7 +5,6 @@ import {
   MAX_CREW_RETENTION,
   MAX_LEVY_INPUT_PENALTY,
   NO_AUTOMATION_POLICY,
-  applyAutomationLevy,
   automationBucketImpacts,
   automationCrewRetention,
   automationLawSlug,
@@ -19,7 +18,6 @@ import {
   type AutomationPolicy,
 } from "./rules";
 import { AUTOMATION_LABOUR_FACTORS } from "@/lib/societyPressures/rules/automation";
-import { NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree/effects";
 
 const policy = (over: Partial<AutomationPolicy>): AutomationPolicy => ({
   ...NO_AUTOMATION_POLICY,
@@ -112,16 +110,6 @@ describe("corporate costs", () => {
       automationLevyInputPenalty(policy({ automationTax: 4 }), "autonomous_factory")
     );
     expect(both).toBeLessThanOrEqual(MAX_LEVY_INPUT_PENALTY);
-  });
-
-  it("folds the penalty into every input rate and returns the same object when neutral", () => {
-    expect(applyAutomationLevy(NEUTRAL_TECH_EFFECTS, 0, ["oil", "steel"])).toBe(
-      NEUTRAL_TECH_EFFECTS
-    );
-    const out = applyAutomationLevy(NEUTRAL_TECH_EFFECTS, 0.05, ["oil", "steel"]);
-    expect(out.inputRateMult.oil).toBeCloseTo(1.05);
-    expect(out.inputRateMult.steel).toBeCloseTo(1.05);
-    expect(NEUTRAL_TECH_EFFECTS.inputRateMult.oil).toBeUndefined();
   });
 
   it("cuts the wage bill by at most five percent", () => {

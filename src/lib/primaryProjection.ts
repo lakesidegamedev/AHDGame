@@ -31,15 +31,15 @@ import type { PrimaryStateAction, StateDemographics, State } from "@/lib/db/type
 import {
   distributeVotesByGroupLevelAllocation,
   type EnrichedCandidate,
-} from "@/lib/electionEngine";
+} from "@/lib/elections/engine";
 import {
   PRIMARY_CAMPAIGN_STAGGER_TICK_RATE,
   homeStateSurgeMultiplier,
   stateAttackMultiplier,
   stateFavorabilityDeltas,
   NPP_STAGGER_EXTRA_MULTIPLIER,
-} from "@/lib/electionEngine/constants";
-import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/constants";
+import { supportMoodMultiplier } from "@/lib/elections/engine/electionFormulaFactors";
 import {
   shiftElectorateForPrimary,
   applyPrimaryTurnoutRetention,

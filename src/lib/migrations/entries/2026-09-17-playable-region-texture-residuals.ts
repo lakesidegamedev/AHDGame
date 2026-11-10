@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
-import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
 
 const PRESET = "1953-default";
@@ -60,7 +60,9 @@ async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promis
     const regionId = String(doc._id);
     const countryId = String(doc.countryId);
     const texture =
-      REGIONAL_TEXTURE_1953[countryId as keyof typeof REGIONAL_TEXTURE_1953]?.[regionId];
+      getRegionalTexture1953()[countryId as keyof ReturnType<typeof getRegionalTexture1953>]?.[
+        regionId
+      ];
     if (!texture || Object.keys(texture).length === 0) {
       noTexture++;
       continue;

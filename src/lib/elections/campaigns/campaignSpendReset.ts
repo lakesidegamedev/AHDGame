@@ -11,7 +11,7 @@ import type { Campaign } from "@/lib/db/types";
 import {
   SPEND_STOCK_DUST_CUTOFF,
   SPEND_STOCK_RETENTION,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 
 export interface CampaignSpendResetResult {
   campaignsReset: number;

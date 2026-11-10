@@ -1,6 +1,10 @@
 import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
-import { selectPresetBundle, eraForPreset } from "@/lib/seeds/presetSelector";
+import {
+  assertKnownSeedPreset,
+  selectPresetBundle,
+  strictEraForPreset,
+} from "@/lib/seeds/presetSelector";
 import { selectStatesBundleForPreset } from "./seedStates";
 import { policies } from "@/lib/seeds/reference/policies";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
@@ -233,6 +237,8 @@ export async function runSeed(
     log = console.log,
   } = options;
 
+  assertKnownSeedPreset(preset);
+
   // Build US state-party-org rows scaled to the preset's presidential-margin
   // baseline (2019 → 2020 results, 1991 → 1988 results). `seedRegistrationLanes`
   // later overwrites `.organization` per the preset's lane templates; the
@@ -403,7 +409,7 @@ export async function runSeed(
   // 1991 worlds now seed from independent 1991 Layer-1 census data.
   const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const censusBundle = selectPresetBundle(
     preset,
     {
@@ -498,7 +504,7 @@ export async function runSeed(
   log(`Seeded ${usStateIds.length} US stateDemographicTurnout docs`);
 
   // Game config — persist seedYear so landing/login can read the active era
-  // without a separate admin step. era is already in scope from eraForPreset(preset).
+  // without a separate admin step. era is already in scope from strictEraForPreset(preset).
   //
   // D14 PROTECTION — on a NON-reset seed, `marketSystemMode` is deliberately
   // excluded from the `$set` and moved to `$setOnInsert`.
@@ -649,24 +655,17 @@ export async function runSeed(
     log(`Deleted ${deleteResult.deletedCount} deprecated legislation types`);
   }
 
-  // Old-seed exclusion sweep (political-legislation spec §6): on the 1953
-  // deploy preset the OLD US/UK/RU/DD catalogs stop seeding; the projected
-  // new-generation catalogs seed instead (a missing countryScope = legacy US).
-  const { getProjectedPoliticalLegislationTypes, isPoliticalLegislationPreset } =
-    await import("./seedPoliticalLegislation");
-  const politicalLegislation = isPoliticalLegislationPreset(preset);
+  // The old US/UK/RU/DD catalogs never seed; the projected political-legislation
+  // book seeds instead (a missing countryScope = legacy US).
+  const { getProjectedPoliticalLegislationTypes } = await import("./seedPoliticalLegislation");
   const { isOldLegislationTypeExcluded } = await import("@/lib/politicalMetrics/pipelinePreset");
-  const baseSeedTypes = politicalLegislation
-    ? legislationTypes.filter((lt) => !isOldLegislationTypeExcluded(lt))
-    : legislationTypes;
+  const baseSeedTypes = legislationTypes.filter((lt) => !isOldLegislationTypeExcluded(lt));
   const allLegislationTypes = [
     ...baseSeedTypes.map((lt) => ({ ...lt, source: "seed" as const })),
-    ...(politicalLegislation
-      ? getProjectedPoliticalLegislationTypes(politicalSeedYear).map((lt) => ({
-          ...lt,
-          source: "seed" as const,
-        }))
-      : []),
+    ...getProjectedPoliticalLegislationTypes(politicalSeedYear).map((lt) => ({
+      ...lt,
+      source: "seed" as const,
+    })),
     ...adminLegislationTypes.map((lt) => ({
       ...lt,
       source: "admin" as const,
@@ -683,9 +682,7 @@ export async function runSeed(
   }
   log(
     `Seeded ${baseSeedTypes.length} seed + ${adminLegislationTypes.length} admin legislation types` +
-      (politicalLegislation
-        ? ` + ${allLegislationTypes.length - baseSeedTypes.length - adminLegislationTypes.length} projected political laws`
-        : "")
+      ` + ${allLegislationTypes.length - baseSeedTypes.length - adminLegislationTypes.length} projected political laws`
   );
 
   // Budgets — preset-aware. `seedBudgets` filters its FY1991 vs FY2020 config

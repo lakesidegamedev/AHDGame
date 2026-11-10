@@ -9,8 +9,8 @@
 
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
-import { distributeVotesByGroupLevelAllocation, calcStateTurnout } from "@/lib/electionEngine";
-import type { EnrichedCandidate } from "@/lib/electionEngine";
+import { distributeVotesByGroupLevelAllocation, calcStateTurnout } from "@/lib/elections/engine";
+import type { EnrichedCandidate } from "@/lib/elections/engine";
 import type { CensusGroupView, DemographicCategory } from "@/lib/db/types";
 
 // Test data: Simplified demographics

@@ -165,7 +165,7 @@ export interface DistributeVotesOptions {
    * Whether at least one human player is among the candidates in this race.
    * When true, a weight penalty is applied to every NPP candidate to reflect
    * the structural advantage active players have in general elections.
-   * See NPP_GENERAL_WEIGHT_MULTIPLIER in electionEngine/constants.ts.
+   * See NPP_GENERAL_WEIGHT_MULTIPLIER in elections/engine/constants.ts.
    */
   hasPlayerInRace?: boolean;
   /**
@@ -337,7 +337,7 @@ export interface DistributeVotesOptions {
    * across every demographic group. Primary-only — `primaryStaggerPhase`
    * sets this to `true`; general elections (`accumulatePresidentVoteTurn`
    * and others) leave it unset so general behavior is unchanged.
-   * Calibrated via `PRIMARY_PARTY_FIT_WEIGHT` in `electionEngine/constants.ts`.
+   * Calibrated via `PRIMARY_PARTY_FIT_WEIGHT` in `elections/engine/constants.ts`.
    */
   applyPartyFit?: boolean;
   /**

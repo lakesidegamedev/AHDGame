@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/components/ui";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 
 export interface EstimateBoxProps {
   /** "projection" = pre/next-click estimate; "last" = the result of the last spend. */

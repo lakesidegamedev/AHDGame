@@ -7,6 +7,14 @@
 export const POLITICAL_METRIC_COUNTRY_IDS = ["US", "UK", "RU", "DD"] as const;
 export type PoliticalMetricsCountryId = (typeof POLITICAL_METRIC_COUNTRY_IDS)[number];
 
+/** Accepts a country id ("US") or a legislation `countryScope` ("us"). */
+export function isPoliticalMetricsCountry(countryIdOrScope: string | undefined): boolean {
+  return (
+    countryIdOrScope !== undefined &&
+    (POLITICAL_METRIC_COUNTRY_IDS as readonly string[]).includes(countryIdOrScope.toUpperCase())
+  );
+}
+
 export const REQUIRED_CATEGORY_LEANS = [-5, -3, -1, 0, 1, 3, 5] as const;
 export type PoliticalLean = (typeof REQUIRED_CATEGORY_LEANS)[number];
 

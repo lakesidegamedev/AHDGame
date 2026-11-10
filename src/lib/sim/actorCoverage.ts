@@ -178,7 +178,9 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     id: "state-party-leadership",
     label: "State-party leadership elections",
     requires: "player characters declaring candidacy for chair, vice chair, treasurer",
-    seams: [seam("src/lib/statePartyElections.ts", "no candidates — position unchanged")],
+    seams: [
+      seam("src/lib/elections/party/statePartyElections.ts", "no candidates — position unchanged"),
+    ],
     pureNpp: {
       status: "unreachable",
       reason:

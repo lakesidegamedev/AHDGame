@@ -24,7 +24,7 @@ import {
   COUNTRY_CURRENCY_MAP,
   CURRENCY_SYMBOLS,
   FOREX_ACTIVE_CURRENCIES,
-} from "@/lib/constants/currencies";
+} from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondDetail, BondUserContext } from "./bondTypes";
 

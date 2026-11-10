@@ -3,8 +3,8 @@ import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
   DemographicCategory,

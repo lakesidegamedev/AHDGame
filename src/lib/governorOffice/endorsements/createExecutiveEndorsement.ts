@@ -11,7 +11,7 @@ import { getExecutiveEndorseableElectionTypes, type CountryId } from "@/lib/cons
 import { GOVERNOR_ENDORSEMENT_ACTION_COST } from "@/lib/constants/governorOffice";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
 
 export interface CreateExecutiveEndorsementInput {

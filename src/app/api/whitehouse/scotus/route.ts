@@ -8,6 +8,7 @@
  * raw-seat lookup only to resolve `isJustice`/`mySeatNumber` for the viewer,
  * since that summary intentionally omits `justiceCharacterId`.
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
     if (!countryId) {
       return errorResponse(400, "Unknown country");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("supremeCourtDocket", countryId)) {
       return NextResponse.json({
         seats: [],
         nominations: [],

@@ -25,7 +25,7 @@ import { selectMergeNppCull } from "@/lib/npp/mergeNppCap";
 import { selectNationalMergeNppCull } from "@/lib/npp/rules/mergeNationalCap";
 import { getPartyNppCapacity } from "@/lib/npp/partyCapacity";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
-import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
+import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import {
   deriveOrganizationShares,
   resolveOrganizationUnits,

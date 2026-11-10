@@ -66,7 +66,7 @@ export async function setRulingPartyVoteMultiplierTier(
 /**
  * Write the one-shot honest-by-election flag. The election engine
  * reads and clears it on the next election fired in this country —
- * see `electionEngine/candidateEnrichment.ts` for the consumer.
+ * see `elections/engine/candidateEnrichment.ts` for the consumer.
  */
 export async function scheduleHonestByElection(
   db: Db,

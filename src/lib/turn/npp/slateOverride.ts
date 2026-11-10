@@ -9,7 +9,7 @@ import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import type { RecruitmentSlate, SlateCandidate } from "@/lib/db/types";
 import type { NPPContext } from "./context";
 import { isNppSlateCompliant } from "@/lib/slateAssignments";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 
 export interface SlateOverrideMaps {
   /** `${partyId}:${electionId}` for every race a chair is actively slating. */

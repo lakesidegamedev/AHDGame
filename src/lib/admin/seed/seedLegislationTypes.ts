@@ -2,17 +2,14 @@ import type { Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
-import {
-  getProjectedPoliticalLegislationTypes,
-  isPoliticalLegislationPreset,
-} from "./seedPoliticalLegislation";
+import { getProjectedPoliticalLegislationTypes } from "./seedPoliticalLegislation";
 import { isOldLegislationTypeExcluded } from "@/lib/politicalMetrics/pipelinePreset";
 
 export async function seedLegislationTypes(
   db: Db,
   reset: boolean,
   log: (msg: string) => void,
-  preset: string
+  _preset: string
 ) {
   if (reset) {
     await db
@@ -30,13 +27,10 @@ export async function seedLegislationTypes(
 
   const collection = db.collection<LegislationType>("legislationTypes");
 
-  const politicalLegislation = isPoliticalLegislationPreset(preset);
-  const baseTypes = politicalLegislation
-    ? legislationTypes.filter((t) => !isOldLegislationTypeExcluded(t))
-    : legislationTypes;
+  const baseTypes = legislationTypes.filter((t) => !isOldLegislationTypeExcluded(t));
   // Every law is projected, windowed or not: a window gates filing at runtime,
   // so a later-era type must already exist when the world reaches its year.
-  const projectedTypes = politicalLegislation ? getProjectedPoliticalLegislationTypes() : [];
+  const projectedTypes = getProjectedPoliticalLegislationTypes();
   const seedSet = [...baseTypes, ...projectedTypes];
 
   // Upsert-by-_id instead of drop+insertMany so this is idempotent and
@@ -53,9 +47,8 @@ export async function seedLegislationTypes(
   // Never touch admin-authored custom types (source: "admin", created via
   // /api/admin/law-types) — the old drop()+insertMany already silently wiped
   // these on every reseed, which this fix should not carry forward.
-  // The prune set is the CURRENT seed set, so on the political-legislation
-  // preset the excluded old US/UK/RU/DD docs are removed and the projected
-  // new-generation docs survive (generation-aware deleter, spec §6).
+  // The prune set is the CURRENT seed set, so the excluded old US/UK/RU/DD docs
+  // are removed and the projected political-legislation docs survive.
   await collection.deleteMany({
     _id: { $nin: seedSet.map((t) => t._id) },
     source: { $ne: "admin" },
@@ -63,6 +56,6 @@ export async function seedLegislationTypes(
 
   log(
     `Seeded ${seedSet.length} legislation types (synced, non-destructive` +
-      `${politicalLegislation ? `, political-legislation preset: ${projectedTypes.length} projected` : ""})`
+      `, ${projectedTypes.length} projected political laws)`
   );
 }

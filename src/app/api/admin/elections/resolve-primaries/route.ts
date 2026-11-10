@@ -15,7 +15,7 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { fetchEnrichedCandidates, initElectionVoteTally } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates, initElectionVoteTally } from "@/lib/elections/engine";
 import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   calcPrimaryScore,

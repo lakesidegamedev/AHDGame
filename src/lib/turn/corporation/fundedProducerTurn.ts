@@ -90,6 +90,8 @@ import {
   tariffCollectorScopes,
   collectionsAtClose,
   plantLevies,
+  recordLevyReceipts,
+  sweepBatches,
   tariffSweepMoves,
   type TariffClose,
 } from "./fundedTariffs";
@@ -1483,15 +1485,10 @@ export async function runFundedProducerTurn(
     heldLocal,
     budgetIdOf: (c) => budgetIdByCountry.get(c) ?? null,
     rateOf,
+    levyAnchorByCountry: tariffMeta?.automationLevy?.collectedByCountry,
   });
-  for (const kind of ["producer_tariff_treasury", "producer_tariff_return"])
-    await apply(
-      batchProducerMoves(
-        worldEpoch,
-        turn,
-        tariffSweep.filter((m) => m.kind === kind)
-      )
-    );
+  for (const batch of sweepBatches(worldEpoch, turn, tariffSweep)) await apply(batch);
+  await recordLevyReceipts(db, tariffSweep);
 
   // A background wallet ends the turn empty: its unspent budget and its export
   // receipts leave the world economy, as its budget came in.

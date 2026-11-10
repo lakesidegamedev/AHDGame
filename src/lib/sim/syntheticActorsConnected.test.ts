@@ -21,7 +21,7 @@ import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { materializeSyntheticActors } from "./materializeSyntheticActors";
 import { buildSyntheticActorPlan } from "./syntheticActors";
-import { processCompletedElections } from "@/lib/statePartyElections";
+import { processCompletedElections } from "@/lib/elections/party/statePartyElections";
 import { isNationalIssuer } from "@/lib/extraction/contractIssuerAuth";
 import { resolveCharacterRoles, submitCrisisDecision } from "@/lib/crises/interactionEngine";
 import { launchGovernmentProspect } from "@/lib/extraction/commands/launchGovernmentProspect";

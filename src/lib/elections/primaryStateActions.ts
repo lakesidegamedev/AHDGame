@@ -6,7 +6,7 @@
  * them at resolution, which is how `statePartyOrg.primarySurge` came to be read
  * by four call sites and written by none.
  *
- * What each kind DOES with a row lives in `electionEngine/constants`
+ * What each kind DOES with a row lives in `elections/engine/constants`
  * (`stateAttackMultiplier`, `stateFavorabilityDeltas`), read by the stagger and
  * the projection alike. Nothing here interprets a row's effect.
  */

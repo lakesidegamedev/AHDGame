@@ -13,7 +13,7 @@ import type {
   ElectionVoteTally,
 } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import {
   passesRoElectoralAmendment,

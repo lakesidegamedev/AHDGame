@@ -1,6 +1,7 @@
 // POST /api/country/[code]/scotus/justice/action
 // Auth: requireAuth: must be the seated (character-backed) Justice for the target seat
 // Errors: 400, 401, 403, 404, 409
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId] || countryId !== "US") {
+    if (!COUNTRY_CONFIGS[countryId] || !countryHasFeature("supremeCourtDocket", countryId)) {
       return errorResponse(400, "Invalid country");
     }
 

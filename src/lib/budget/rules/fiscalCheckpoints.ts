@@ -10,6 +10,7 @@
  * forecast. Revenue and primary spending hold their opening share of GDP; the
  * stabilizer moves them when the primary deficit is out of hand.
  */
+import { NPP_CHAIR_INFLATION_COEF, NPP_CHAIR_RATE_FLOOR } from "@/lib/db/types/centralBank";
 import {
   nextInterestSpiralYears,
   planFiscalConsolidation,
@@ -23,8 +24,24 @@ export interface MacroPoint {
   trendGrowth: number;
   /** Annual inflation, percent. */
   inflation: number;
-  /** Policy (prime) rate, percent. */
+  /** Central bank inflation target, percent. Absent reads as `inflation`. */
+  targetInflation?: number;
+  /** Neutral policy (prime) rate, percent; the rate when inflation is on target. */
   policyRate: number;
+}
+
+/**
+ * The rate the central bank sets: the neutral rate plus the inflation gap at
+ * the same coefficient the autonomous chairs use. On target it is the neutral
+ * rate; it is floored at the chair floor once a gap is in play.
+ */
+export function centralBankPolicyRate(macro: MacroPoint): number {
+  const gap = macro.inflation - (macro.targetInflation ?? macro.inflation);
+  if (gap === 0) return macro.policyRate;
+  return Math.max(
+    macro.policyRate + NPP_CHAIR_INFLATION_COEF * gap,
+    Math.min(macro.policyRate, NPP_CHAIR_RATE_FLOOR)
+  );
 }
 
 export interface FiscalOpening {
@@ -138,6 +155,7 @@ export function projectFiscalCheckpoints(input: {
 
   for (let year = start; year <= end; year++) {
     const macro = input.macroAt(year);
+    const policyRate = centralBankPolicyRate(macro);
     const revenue = revenueShare * gdp * (taxRate / TAX_REFERENCE_RATE);
     const primarySpending = primarySpendingShare * gdp * spendingScale;
     // Net assets (negative debt) earn nothing in this fixture and pay no interest.
@@ -150,7 +168,7 @@ export function projectFiscalCheckpoints(input: {
       gdp,
       growth: macro.trendGrowth,
       inflation: macro.inflation,
-      policyRate: macro.policyRate,
+      policyRate,
       debtRatio: debtRatio * 100,
       interestShareOfRevenue: ratio(interest, revenue) * 100,
       primaryBalance: ratio(revenue - primarySpending, gdp) * 100,
@@ -163,7 +181,7 @@ export function projectFiscalCheckpoints(input: {
       TERM_PREMIUM_MAX,
       TERM_PREMIUM_BASE + Math.max(0, debtRatio - 0.6) * TERM_PREMIUM_PER_DEBT_RATIO
     );
-    const marketRate = (macro.policyRate + premium) / 100;
+    const marketRate = (policyRate + premium) / 100;
     effectiveRate =
       debt > 0 ? (effectiveRate * (debt - maturing) + marketRate * maturing) / debt : marketRate;
     let closing = debt + deficit;

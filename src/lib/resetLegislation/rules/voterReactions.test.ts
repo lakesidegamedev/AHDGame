@@ -1,5 +1,5 @@
 import { bucketValuesToUnits } from "@/lib/demographics/granularElectorate";
-import { calcEffectiveFavorability } from "@/lib/electionEngine/voteCalculations";
+import { calcEffectiveFavorability } from "@/lib/elections/engine/voteCalculations";
 import { describe, expect, it } from "vitest";
 import catalog from "../familyCatalog.json";
 import {

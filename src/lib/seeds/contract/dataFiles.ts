@@ -7,6 +7,9 @@
 import type { z } from "zod";
 import { nonPlayableBoardsSchema } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { regionalTextureSchema } from "@/lib/politicalMetrics/seeds/regionalTextureSchema";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
 import type { SeedContractGap } from "./seedContractError";
 
 const MAX_ISSUES_PER_FILE = 5;
@@ -22,6 +25,16 @@ export const SEED_DATA_FILES: readonly SeedDataFile[] = [
     id: "data:non-playable-boards",
     schema: nonPlayableBoardsSchema,
     load: getNonPlayableBoards,
+  },
+  {
+    id: "data:regional-texture-1953",
+    schema: regionalTextureSchema,
+    load: getRegionalTexture1953,
+  },
+  {
+    id: "data:regional-texture-1991",
+    schema: regionalTextureSchema,
+    load: getRegionalTexture1991,
   },
 ];
 

@@ -14,7 +14,7 @@ import {
 } from "@/lib/constants/countries";
 import { GOVERNOR_ENDORSEMENT_ACTION_COST } from "@/lib/constants/governorOffice";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
 
 export interface CreateEndorsementInput {

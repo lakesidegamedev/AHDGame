@@ -10,7 +10,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Campaign, Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { initElectionVoteTally } from "@/lib/electionEngine/tallyManagement";
+import { initElectionVoteTally } from "@/lib/elections/engine/tallyManagement";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 import type { CountryId } from "@/lib/constants/countries";
 import { postSuccessionNews } from "@/lib/elections/resolution/successionNews";

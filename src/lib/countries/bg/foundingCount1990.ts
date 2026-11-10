@@ -6,7 +6,7 @@
 import { type ClientSession, type Db } from "mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { buildBgFoundingSlates } from "./rules/foundingSlates1990";
 import type { BgFoundingNominations } from "./rules/foundingMandates1990";
 import { projectBgFoundingBallots } from "./rules/foundingBallots1990";

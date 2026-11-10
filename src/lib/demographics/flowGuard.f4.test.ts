@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 /**

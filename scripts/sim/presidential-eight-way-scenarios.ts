@@ -14,9 +14,9 @@
  */
 
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
 import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
-import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/electionEngine/constants";
+import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/elections/engine/constants";
 import { INDEPENDENT_VOTE_PENALTY } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   getDelegatesForState,
@@ -25,7 +25,7 @@ import {
 } from "@/lib/constants/primaryCalendar";
 import { allocateDelegates, type AllocationMethod } from "@/lib/primaryDelegateAllocation";
 import type { DemographicCategory, CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine/types";
 
 // ─── Fixtures: demographics + states (matches election-simulation.ts shape) ─
 

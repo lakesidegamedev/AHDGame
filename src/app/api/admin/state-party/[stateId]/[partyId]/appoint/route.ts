@@ -21,7 +21,7 @@ import {
   POSITION_LABELS,
   notifyLeadershipAppointed,
   notifyLeadershipRemovedByAdmin,
-} from "@/lib/statePartyElections";
+} from "@/lib/elections/party/statePartyElections";
 import type {
   StatePartyElectionPosition,
   StatePartyOrg,

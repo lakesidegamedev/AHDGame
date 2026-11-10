@@ -22,7 +22,7 @@ import type {
 } from "@/lib/db/types";
 import type { NPPContext } from "./context";
 import { decideNPPSlateResponse } from "./slateResponse";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import {
   materializeSlateAssignmentsFromTemplate,
   prefetchSlateTemplates,
@@ -30,7 +30,7 @@ import {
 import { isElectionTypeEntryBlocked } from "@/lib/elections/nationwideExecutive";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
 import { isSpecialCommonsElection } from "@/lib/utils/electionLabels";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { SLATE_ASSIGNMENT_CAP, isLiveSlateStatus } from "@/lib/slateAssignmentCap";
 import {

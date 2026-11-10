@@ -8,8 +8,8 @@
  */
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect } from "vitest";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine/types";
 import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 
 describe("primaryStaggerPhase L1 — party-fit", () => {

@@ -104,9 +104,9 @@ export async function seedBRDemographics(
   let brRegionDemographics: typeof brRegionDemographicsStatic = brRegionDemographicsStatic;
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
-  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
   const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const model = getCountryLayer1Model("BR", era);
   if (model) {
     const full = await loadFullOverride("BR", era);

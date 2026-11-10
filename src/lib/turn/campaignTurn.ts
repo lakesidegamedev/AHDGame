@@ -19,8 +19,8 @@ import { getMediaFavPerTurn, getOppoDrainPerTurn } from "@/lib/campaigns/opsEffe
 import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
-} from "@/lib/electionEngine/electionFormulaFactors";
-import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/engine/electionFormulaFactors";
+import { buildRallyAccrualEntry } from "@/lib/elections/campaigns/supportAccrual";
 import { computeAutoDowngrade } from "@/lib/campaigns/autoDowngrade";
 import { calculateCampaignStrengthLeaderPullbacks } from "@/lib/campaigns/campaignStrength";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
@@ -34,7 +34,7 @@ import {
 import {
   PRIMARY_CAMPAIGN_TICK_CAP,
   PRIMARY_CAMPAIGN_NATIONAL_FAV_BONUS,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";

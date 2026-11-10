@@ -2,8 +2,8 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import type { ElectionCandidate, ExecutiveEndorsement } from "@/lib/db/types";
-import type { VoteTurnMemo } from "@/lib/electionEngine/tallyManagement";
-import { loadCandidateEnrichmentPreload } from "@/lib/electionEngine/candidateEnrichment";
+import type { VoteTurnMemo } from "@/lib/elections/engine/tallyManagement";
+import { loadCandidateEnrichmentPreload } from "@/lib/elections/engine/candidateEnrichment";
 
 export async function hydrateVoteTurnMemo(
   db: Db,

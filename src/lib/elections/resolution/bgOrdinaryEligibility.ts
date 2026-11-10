@@ -4,7 +4,7 @@ import {
   type BgOrdinaryElectionPlan,
   type BgOrdinaryRace,
 } from "@/lib/countries/bg/rules/ordinaryElectionPlan";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import type {
   Character,
   Election,

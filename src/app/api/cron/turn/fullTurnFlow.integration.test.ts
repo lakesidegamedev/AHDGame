@@ -68,13 +68,13 @@ vi.mock("@/lib/turn/billLifecycle/regionalEngine", () => ({ processStateBillTime
 vi.mock("@/lib/cabinetNominationLifecycle", () => ({
   processCabinetNominationLifecycle: vi.fn(),
 }));
-vi.mock("@/lib/statePartyElections", () => ({
+vi.mock("@/lib/elections/party/statePartyElections", () => ({
   processStatePartyElections: vi.fn(),
 }));
-vi.mock("@/lib/nationalPartyElections", () => ({
+vi.mock("@/lib/elections/party/nationalPartyElections", () => ({
   processNationalPartyElections: vi.fn(),
 }));
-vi.mock("@/lib/nationalCommitteeElections", () => ({
+vi.mock("@/lib/elections/party/nationalCommitteeElections", () => ({
   processNationalCommitteeElections: vi.fn(),
 }));
 vi.mock("@/lib/turn/nppBehavior", () => ({
@@ -224,17 +224,18 @@ describe("processTurn() — full turn flow", () => {
     vi.mocked(demographicTurnout.processPartyGOTV).mockResolvedValue({ budgets: [] } as never);
     vi.mocked(demographicTurnout.processPlayerCanvassing).mockResolvedValue(undefined as never);
 
-    const statePartyElections = await import("@/lib/statePartyElections");
+    const statePartyElections = await import("@/lib/elections/party/statePartyElections");
     vi.mocked(statePartyElections.processStatePartyElections).mockResolvedValue({
       electionsCompleted: 0,
     } as never);
 
-    const nationalPartyElections = await import("@/lib/nationalPartyElections");
+    const nationalPartyElections = await import("@/lib/elections/party/nationalPartyElections");
     vi.mocked(nationalPartyElections.processNationalPartyElections).mockResolvedValue(
       undefined as never
     );
 
-    const nationalCommitteeElections = await import("@/lib/nationalCommitteeElections");
+    const nationalCommitteeElections =
+      await import("@/lib/elections/party/nationalCommitteeElections");
     vi.mocked(nationalCommitteeElections.processNationalCommitteeElections).mockResolvedValue(
       undefined as never
     );

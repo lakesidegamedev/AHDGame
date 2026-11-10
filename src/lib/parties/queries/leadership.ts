@@ -7,8 +7,8 @@ import { getEligibleVoterSet } from "@/lib/parties/proposals";
 import {
   COMMITTEE_ELECTION_DURATION_TURNS,
   COMMITTEE_SIZE,
-} from "@/lib/nationalCommitteeElections";
-import { NATIONAL_ALL_POSITIONS } from "@/lib/nationalPartyElections";
+} from "@/lib/elections/party/nationalCommitteeElections";
+import { NATIONAL_ALL_POSITIONS } from "@/lib/elections/party/nationalPartyElections";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import {
   CANONICAL_VOTING_ELECTION_SORT,

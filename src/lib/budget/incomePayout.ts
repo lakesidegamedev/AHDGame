@@ -22,6 +22,7 @@ import {
   capitalGainsTaxRate,
 } from "./rules/capitalGainsTax";
 import { incomeTaxPaymentLegs, planIncomePayout } from "./rules/incomePayout";
+import { resolvePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -187,6 +188,14 @@ export async function creditIncomeAfterTax(
           }
         )
         .toArray();
+      const priceIndexByCountry = new Map(
+        (
+          await db
+            .collection("federalBudget")
+            .find({}, { session, projection: { countryId: 1, priceIndex: 1 } })
+            .toArray()
+        ).map((row) => [String(row.countryId), resolvePriceIndex(row.priceIndex)])
+      );
       const medianByState = new Map(
         medians.map((row) => [
           String(row._id),
@@ -253,7 +262,8 @@ export async function creditIncomeAfterTax(
             Math.min(12, turn - (context.taxStartTurn ?? turn) + 1),
             TURNS_PER_YEAR
           ),
-          median
+          median,
+          priceIndexByCountry.get(context.countryId)
         );
       }
       const debts = await db

@@ -7,7 +7,7 @@
  */
 
 import { SEED_PRESET_IDS, type SeedPresetId } from "@/lib/constants/turnTime";
-import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
+import { missingPresetEntry, SeedContractError } from "@/lib/seeds/contract/seedContractError";
 
 type EraOfPreset<P> = P extends `${infer Year}-default` ? Year : never;
 
@@ -97,6 +97,36 @@ const ERA_MAP: Record<string, EraId> = {
  */
 export function eraForPreset(preset: string): EraId {
   return ERA_MAP[preset] ?? "2019";
+}
+
+/**
+ * Strict variant of {@link eraForPreset} for seeding, world reset and preflight.
+ * A missing, blank or unknown preset stops the run with a `SeedContractError`
+ * before anything is written. Turn and runtime code keep the fail-safe
+ * `eraForPreset`, so a live world can never crash on its stored preset.
+ */
+export function strictEraForPreset(preset: string | null | undefined): EraId {
+  const era = typeof preset === "string" ? ERA_MAP[preset] : undefined;
+  if (era === undefined) throw unknownSeedPreset(preset);
+  return era;
+}
+
+/** Throws unless `preset` is a known preset id. Call before the first write. */
+export function assertKnownSeedPreset(preset: string | null | undefined): asserts preset is string {
+  strictEraForPreset(preset);
+}
+
+function unknownSeedPreset(preset: string | null | undefined): SeedContractError {
+  const shown = preset == null || preset === "" ? "(missing)" : preset;
+  return new SeedContractError(shown, [
+    {
+      dataset: "preset",
+      detail:
+        preset == null || preset === ""
+          ? "no preset given; seeding never assumes one"
+          : `"${preset}" is not a known preset`,
+    },
+  ]);
 }
 
 /**

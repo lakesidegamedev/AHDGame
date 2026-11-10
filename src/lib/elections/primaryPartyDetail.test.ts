@@ -6,9 +6,9 @@ import {
   PRIMARY_HOME_SURGE_COST_ACTIONS,
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 
-vi.mock("@/lib/electionEngine", () => ({ fetchEnrichedCandidates: vi.fn() }));
+vi.mock("@/lib/elections/engine", () => ({ fetchEnrichedCandidates: vi.fn() }));
 vi.mock("@/lib/primaryRegionalBonusLoader", () => ({ loadRegionalBonusMaps: vi.fn() }));
 vi.mock("@/lib/primaryProjection", () => ({ projectPrimaryByState: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn() }));
@@ -109,7 +109,7 @@ function candidateRow(over: Record<string, unknown> = {}) {
 beforeEach(async () => {
   vi.clearAllMocks();
 
-  const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+  const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
   vi.mocked(fetchEnrichedCandidates).mockResolvedValue([] as never);
 
   const { loadRegionalBonusMaps } = await import("@/lib/primaryRegionalBonusLoader");

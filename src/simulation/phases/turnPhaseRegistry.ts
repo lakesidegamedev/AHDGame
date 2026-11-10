@@ -4,9 +4,9 @@ import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import { expireGovernmentTenders } from "@/lib/governmentContracts/reservations";
 import { refreshOpenDefenceTenderMaxima } from "@/lib/governmentContracts/commands";
 import { getEraContext } from "@/lib/era/context";
-import { processStatePartyElections } from "@/lib/statePartyElections";
-import { processNationalPartyElections } from "@/lib/nationalPartyElections";
-import { processNationalCommitteeElections } from "@/lib/nationalCommitteeElections";
+import { processStatePartyElections } from "@/lib/elections/party/statePartyElections";
+import { processNationalPartyElections } from "@/lib/elections/party/nationalPartyElections";
+import { processNationalCommitteeElections } from "@/lib/elections/party/nationalCommitteeElections";
 import { processNPPTurn } from "@/lib/turn/nppBehavior";
 import { processPartyRenewal } from "@/lib/parties/partyRenewal";
 import { processChallengerGeneration } from "@/lib/turn/npp/challengerSupply";
@@ -36,7 +36,7 @@ import { processCampaignTurn } from "@/lib/turn/campaignTurn";
 import { processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
 import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModifiers";
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
-import { processCampaignSpendReset } from "@/lib/turn/elections/campaignSpendReset";
+import { processCampaignSpendReset } from "@/lib/elections/campaigns/campaignSpendReset";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
 import { closeDueContingentHouseVotes } from "@/lib/elections/resolution/contingentHouseVoteClose";
 import { processPostConversionElections } from "@/lib/turn/postConversionElections";
@@ -73,8 +73,8 @@ import { processPriorityRegionDecay } from "@/lib/turn/politicalStrength/priorit
 import {
   processSupportDecay,
   processClearResolvedSupport,
-} from "@/lib/turn/elections/supportDecay";
-import { processSupportAccrualTick } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/campaigns/supportDecay";
+import { processSupportAccrualTick } from "@/lib/elections/campaigns/supportAccrual";
 import { resolveExpiredDisbandVotes } from "@/lib/turn/coalitionDisbandCheck";
 import {
   COUNTRY_BILL_PHASES,
@@ -84,6 +84,10 @@ import {
   runParliamentaryVacancyWatcher,
 } from "@/lib/turn/countryPhases";
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
+import {
+  runCountryElectionEntries,
+  selectCountryElectionEntries,
+} from "@/lib/turn/countryElectionPhase";
 import type { CountryId } from "@/lib/constants/countries";
 import { runNppGovernmentPhases } from "@/lib/nppAutonomy/processNppGovernment";
 import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -158,12 +162,9 @@ import { processBankingTurnV2 } from "@/simulation/engine/v2/bankingTurn";
 import { runIndexFundCronV2 } from "@/simulation/engine/v2/indexFunds";
 import type { TurnPhaseAdapter } from "@/simulation/engine/types";
 
-/** Registered election spawners have no dependency on corporate settlement. */
-export function independentCountryElectionPhases(): ReadonlySet<string> {
-  return new Set(
-    Object.values(COUNTRY_ELECTION_PHASES).flatMap((entries) => (entries ?? []).map((e) => e.name))
-  );
-}
+/** The country election spawners have no dependency on corporate settlement. */
+export const independentCountryElectionPhases = (): ReadonlySet<string> =>
+  new Set(["countryElections"]);
 
 export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
   return [
@@ -1518,16 +1519,15 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         const foundingActive = context.gameState.preIteration?.active === true;
 
         // Registered countries only: a dissolved country's spawners still run queries every turn, and a config-driven fallback could resurrect ghost races.
-        let countryElectionPhasePromises: Promise<unknown>[] = [];
+        const countryElections: Promise<unknown>[] = [];
         if (!foundingActive) {
-          // Full-simulation only: a background country (#5702) runs none of its
-          // country-prefixed election phases.
-          const registeredForElections = new Set(await getFullSimulationCountryIds(db));
-          countryElectionPhasePromises = Object.entries(COUNTRY_ELECTION_PHASES)
-            .filter(([id]) => registeredForElections.has(id as CountryId))
-            .flatMap(([, entries]) =>
-              entries.map(({ name, fn }) => runtime.runPhase(name, () => fn(gameNow, newTurn)))
-            );
+          const inPlay = new Set(await getFullSimulationCountryIds(db));
+          const entries = selectCountryElectionEntries(COUNTRY_ELECTION_PHASES, inPlay);
+          countryElections.push(
+            runtime.runPhase("countryElections", () =>
+              runCountryElectionEntries(entries, gameNow, newTurn)
+            )
+          );
         }
 
         // Vacate any majority-gated leadership office whose holder has left the
@@ -1546,7 +1546,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
                   ensurePerpetualElections(gameNow, newTurn)
                 ),
               ]),
-          ...countryElectionPhasePromises,
+          ...countryElections,
           runtime.runPhase("leadershipElections", () => resolveExpiredLeadershipElections(db)),
           runtime.runPhase("staleCandidateCleanup", () => cleanupStaleElectionCandidates(gameNow)),
           runtime.runPhase("internationalOrganizations", () =>

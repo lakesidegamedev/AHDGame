@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { getEconomyIdentity } from "@/lib/constants/economyIdentity";
 import { deriveEconomicOutlook } from "@/lib/economy/outlook";
 import type { CountryEconomyOutlook } from "@/lib/economy/queries/countryEconomyOutlook";

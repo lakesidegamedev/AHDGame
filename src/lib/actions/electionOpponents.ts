@@ -18,7 +18,7 @@ import { isPrimaryEnded } from "@/lib/elections/phases";
 import {
   resolveHouseIncumbentTenures,
   resolveSingleSeatLegislativeIncumbent,
-} from "@/lib/electionEngine/singleSeatIncumbency";
+} from "@/lib/elections/engine/singleSeatIncumbency";
 
 /** A rival candidate as the poll and the opponent summary see them. */
 export interface OpponentForShare {

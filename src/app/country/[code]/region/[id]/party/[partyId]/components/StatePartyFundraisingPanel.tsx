@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui";
 import { TreasuryPlanningCard } from "@/components/party/TreasuryPlanningCard";
 import { TreasuryOverrideHistoryCard } from "@/components/party/TreasuryOverrideHistoryCard";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { formatTreasuryReserveInputValue } from "@/lib/currency/treasuryReserveDisplay";
 import {
   PS_INVESTMENT_MAX_TIERS,

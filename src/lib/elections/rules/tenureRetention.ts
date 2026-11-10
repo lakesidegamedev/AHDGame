@@ -4,7 +4,7 @@
 import {
   legislativeTenureTermsHeld,
   personalStatTenureRetention,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 
 export interface PersonalStatTenureContext {
   executivePartyId?: string;
