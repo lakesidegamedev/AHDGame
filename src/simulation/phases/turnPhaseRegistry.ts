@@ -84,6 +84,7 @@ import {
   runParliamentaryVacancyWatcher,
 } from "@/lib/turn/countryPhases";
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
+import { runCountryBillEntries, selectCountryBillEntries } from "@/lib/turn/countryBillPhase";
 import {
   runCountryElectionEntries,
   selectCountryElectionEntries,
@@ -985,10 +986,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // its bill lifecycle (and, for one-party entries, its legitimacy and
         // escalation drift) for ever. Background countries are skipped too:
         // their bill-lifecycle phases never start.
-        const registeredForBills = new Set(await getFullSimulationCountryIds(db));
-        const countryBillPhaseEntries = Object.entries(COUNTRY_BILL_PHASES).filter(([id]) =>
-          registeredForBills.has(id as CountryId)
-        );
+        const billCountries = new Set(await getFullSimulationCountryIds(db));
+        const billEntries = selectCountryBillEntries(COUNTRY_BILL_PHASES, billCountries);
+        const countryBillResults = new Map<string, unknown>();
         const billLifecycleContext = {
           db,
           currentTurn: newTurn,
@@ -998,8 +998,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           runtime.runPhase("billLifecycle", () =>
             processBillLifecycle(realNow, billLifecycleContext)
           ),
-          ...countryBillPhaseEntries.map(([, entry]) =>
-            runtime.runPhase(entry.phaseName, () => entry.fn(realNow, billLifecycleContext))
+          runtime.runPhase("countryBillLifecycle", () =>
+            runCountryBillEntries(billEntries, realNow, billLifecycleContext, countryBillResults)
           ),
           runtime.runPhase("stateBillTimers", () =>
             processStateBillTimers(realNow, undefined, billLifecycleContext)
@@ -1031,18 +1031,13 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             processUkPartyConferenceTurn(db, gameState.currentTurn, realNow)
           ),
         ]);
-        const countryBillResultsStart = 1;
-        const stateBillResultIndex = countryBillResultsStart + countryBillPhaseEntries.length;
+        const stateBillResultIndex = 2;
         const cabinetNominationResultIndex = stateBillResultIndex + 1;
         const scotusTurnResultIndex = cabinetNominationResultIndex + 1;
         const ukJrSurpriseResultIndex = scotusTurnResultIndex + 1;
         const billLifecycleResult = billPhaseResults[0] as Awaited<
           ReturnType<typeof processBillLifecycle>
         > | null;
-        const countryBillResults = billPhaseResults.slice(
-          countryBillResultsStart,
-          stateBillResultIndex
-        );
         const stateBillTimersResult = billPhaseResults[stateBillResultIndex] as Awaited<
           ReturnType<typeof processStateBillTimers>
         > | null;
@@ -1098,10 +1093,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         phaseResults.ukJrSurpriseTurn = ukJrSurpriseResult ?? { spawned: false };
 
         const phaseResultsRecord = phaseResults as Record<string, unknown>;
-        countryBillPhaseEntries.forEach(([, entry], index) => {
-          const result = countryBillResults[index] ?? null;
-          phaseResultsRecord[entry.phaseName] = result ?? entry.emptyResult;
-        });
+        for (const entry of billEntries)
+          phaseResultsRecord[entry.phaseName] =
+            countryBillResults.get(entry.phaseName) ?? entry.emptyResult;
 
         const resetLawReconciliation = await runtime.runPhase(
           "resetLawEnactmentReconciliation",

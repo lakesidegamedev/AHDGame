@@ -49,6 +49,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "nppPartyRenewal",
   "playerEndorsementPartySweep",
   "billLifecycle",
+  "countryBillLifecycle",
   "stateBillTimers",
   "resetLawEnactmentReconciliation",
   "cabinetNominations",
