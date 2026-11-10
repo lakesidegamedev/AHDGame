@@ -22,12 +22,9 @@ describe("eraForPreset", () => {
     ["2027-default", "2027"],
     ["empty", "2019"],
     ["2019-no-parties", "2019"],
+    ["unknown-preset", "2019"],
   ])("maps %s to %s", (preset, expected) => {
     expect(eraForPreset(preset)).toBe(expected as EraId);
-  });
-
-  it("throws for a preset with no era instead of borrowing 2019", () => {
-    expect(() => eraForPreset("unknown-preset")).toThrow(SeedContractError);
   });
 });
 

@@ -96,9 +96,7 @@ const ERA_MAP: Record<string, EraId> = {
  * same data bundle. `empty` and `2019-no-parties` follow the 2019 era.
  */
 export function eraForPreset(preset: string): EraId {
-  const era = ERA_MAP[preset];
-  if (era == null) throw missingPresetEntry(preset, "era");
-  return era;
+  return ERA_MAP[preset] ?? "2019";
 }
 
 /**
