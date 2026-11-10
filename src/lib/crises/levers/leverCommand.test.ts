@@ -269,6 +269,32 @@ describe("pullLever", () => {
     expect(store.uses).toHaveLength(0);
   });
 
+  it("refunds the treasury and actions when the approval charge throws", async () => {
+    const store = freshStore();
+    const db = makeDb(store) as unknown as { collection: (n: string) => Record<string, unknown> };
+    const base = db.collection.bind(db);
+    db.collection = (name: string) => {
+      const c = base(name);
+      if (name === "governmentApprovals") {
+        return {
+          ...c,
+          updateOne: async () => {
+            throw new Error("approval write failed");
+          },
+        };
+      }
+      return c;
+    };
+    const actionsBefore = store.actions;
+    const result = await pullLever(db as never, { crisisId, leverId: "stimulus", characterId });
+    expect(result).toMatchObject({ ok: false, code: "charge_failed" });
+    expect(spendFromTreasury).toHaveBeenCalledTimes(1);
+    expect(creditTreasury).toHaveBeenCalledTimes(1);
+    expect(creditTreasury.mock.calls[0][2]).toBe(spendFromTreasury.mock.calls[0][2]);
+    expect(store.actions).toBe(actionsBefore);
+    expect(store.uses).toHaveLength(0);
+  });
+
   it("enforces the cooldown from the instance and from pulls not yet counted", async () => {
     const counted = freshStore();
     counted.instance.leverLastUsed = { [`stimulus:${characterId.toString()}`]: 9 };

@@ -197,6 +197,15 @@ describe("routeEffectIntents", () => {
     ]);
   });
 
+  it("reverses the unemployment push when a population scar heals", async () => {
+    const { db } = makeDb();
+    await routeEffectIntents(db, [{ kind: "migration", fraction: -0.003 }], targets());
+    const calls = applyCrisisEffects.mock.calls.map(
+      ([, effects]) => [effects[0].metricField, effects[0].value] as const
+    );
+    expect(calls).toEqual([["unemploymentRate", expect.closeTo(-0.3)]]);
+  });
+
   it("folds approval and election swing into one approval write", async () => {
     const { db } = makeDb();
     await routeEffectIntents(

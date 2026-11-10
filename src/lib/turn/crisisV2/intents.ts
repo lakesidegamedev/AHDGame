@@ -202,7 +202,8 @@ async function applyMigration(
   // Internal migration follows regional unemployment and growth, so the push
   // and pull are applied to those metrics and the demographic flows move people.
   const writes: Promise<void>[] = [];
-  if (wide > 0) {
+  // Healing scars send negative fractions, which must bring unemployment back down.
+  if (wide !== 0) {
     writes.push(
       applyCrisisEffects(
         db,

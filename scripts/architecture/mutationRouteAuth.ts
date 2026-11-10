@@ -185,7 +185,7 @@ export class GuardResolver {
       ts.forEachChild(child, visit);
     };
     visit(node);
-    const where = relative(this.root, info.file);
+    const where = repoPath(this.root, info.file);
     const direct = callees.find(
       (callee) => GUARD_CALLEES.has(callee) || SOFT_GUARD_CALLEES.has(callee)
     );
@@ -374,6 +374,9 @@ export function listRouteFiles(root: string): string[] {
   return out.sort();
 }
 
+/** Repo-relative path with forward slashes, so Windows checkouts match the allowlist. */
+const repoPath = (root: string, file: string) => relative(root, file).replace(/\\/g, "/");
+
 /** Route key used by the allowlist: repo-relative file and method. */
 export const routeKey = (route: string, method: string) => `${route} ${method}`;
 
@@ -385,7 +388,7 @@ export function findMutationHandlers(
   const handlers: MutationHandler[] = [];
   for (const file of listRouteFiles(root)) {
     const info = resolver.module(file)!;
-    const route = relative(root, file);
+    const route = repoPath(root, file);
     const exported = new Set([...info.exports.keys()]);
     for (const method of MUTATION_METHODS) {
       if (!exported.has(method) && !info.starExports.length) continue;
