@@ -98,7 +98,13 @@ export async function recordLeaderDeparture(
     db
       .collection<CrisisSliceForLegacy>("crises")
       .find(
-        { countryIds: countryId, "v2.ledger": { $exists: true }, startTurn: { $lte: turn } },
+        {
+          // A global crisis is resolved to every country when it runs, so its
+          // stored countryIds may be empty.
+          $or: [{ countryIds: countryId }, { scope: "global" }],
+          "v2.ledger": { $exists: true },
+          startTurn: { $lte: turn },
+        },
         { projection: { startTurn: 1, "v2.ledger": 1, "v2.scars": 1 } }
       )
       .toArray(),

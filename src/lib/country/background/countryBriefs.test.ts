@@ -10,7 +10,10 @@ import { COUNTRY_BRIEF_INTERVAL_TURNS, processCountryBriefs } from "./countryBri
 
 type Row = Record<string, unknown>;
 
-function world(macro: Row) {
+function world(macro: Row, bondGroups: Row[] = []) {
+  const bondAggregate = vi.fn((_pipeline: unknown[]) => ({
+    toArray: vi.fn(async () => bondGroups),
+  }));
   const briefs: Row[] = [];
   let memory: unknown = macro.briefMemory;
   const cursor = (rows: Row[]) => ({ toArray: vi.fn(async () => rows) });
@@ -31,7 +34,7 @@ function world(macro: Row) {
         case "exchangeRates":
           return { find: vi.fn(() => cursor([{ _id: "FR", currencyCode: "EUR", rate: 1 }])) };
         case "bonds":
-          return { find: vi.fn(() => cursor([])) };
+          return { aggregate: bondAggregate };
         case "indexFunds":
           return { find: vi.fn(() => cursor([])) };
         case "countryBriefs":
@@ -53,7 +56,7 @@ function world(macro: Row) {
       }
     }),
   } as unknown as Db;
-  return { db, briefs, memory: () => memory };
+  return { db, briefs, bondAggregate, memory: () => memory };
 }
 
 const FRANCE: Row = {
@@ -116,5 +119,15 @@ describe("processCountryBriefs", () => {
     const retry = await processCountryBriefs(w2.db, 306);
     expect(retry.briefs).toBe(0);
     expect(logWireEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the nearest bond per country with one grouped query", async () => {
+    const w = world(FRANCE, [{ _id: "FR", couponRate: 3, marketPrice: 98 }]);
+    await processCountryBriefs(w.db, 300);
+    expect(w.bondAggregate).toHaveBeenCalledTimes(1);
+    const pipeline = w.bondAggregate.mock.calls[0]![0] as Record<string, any>[];
+    expect(pipeline.map((stage) => Object.keys(stage)[0])).toEqual(["$match", "$sort", "$group"]);
+    expect(pipeline[2]!.$group._id).toBe("$countryId");
+    expect(pipeline[2]!.$group.couponRate).toEqual({ $first: "$couponRate" });
   });
 });

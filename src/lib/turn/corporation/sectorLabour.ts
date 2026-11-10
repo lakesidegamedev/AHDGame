@@ -358,9 +358,11 @@ export function resolveSectorLabourEconomics({
     sectorLaborCost: split.laborCost,
     // Per-worker daily pay, the basis union dues and services are priced
     // against. See the field docs on SectorLabourEconomicsResult.
+    // Taken before the hiring-subsidy multiplier: the subsidy lowers what the
+    // employer pays, not what the worker earns.
     wagePerWorker:
-      computedWorkers > 0 && Number.isFinite(split.laborCost)
-        ? (split.laborCost / computedWorkers) * TURNS_PER_DAY
+      computedWorkers > 0 && Number.isFinite(split.laborCost) && employerWageCostMultiplier > 0
+        ? (split.laborCost / employerWageCostMultiplier / computedWorkers) * TURNS_PER_DAY
         : undefined,
   };
 

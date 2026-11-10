@@ -119,16 +119,28 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
       .collection<FxDoc>("exchangeRates")
       .find({ _id: { $in: ids } }, { projection: { currencyCode: 1, rate: 1, rateHistory: 1 } })
       .toArray(),
+    // One nearest-maturity bond per country. A global limit would let a country
+    // whose bonds all mature late be crowded out by the others.
     db
-      .collection<BondDoc & { issuerType?: string }>("bonds")
-      .find(
-        { issuerType: "sovereign", countryId: { $in: ids }, matured: false, defaulted: false },
+      .collection("bonds")
+      .aggregate<{ _id: string; couponRate: number; marketPrice: number }>([
         {
-          projection: { countryId: 1, couponRate: 1, marketPrice: 1 },
-          sort: { maturityTurn: 1 },
-          limit: ids.length * 5,
-        }
-      )
+          $match: {
+            issuerType: "sovereign",
+            countryId: { $in: ids },
+            matured: false,
+            defaulted: false,
+          },
+        },
+        { $sort: { maturityTurn: 1 } },
+        {
+          $group: {
+            _id: "$countryId",
+            couponRate: { $first: "$couponRate" },
+            marketPrice: { $first: "$marketPrice" },
+          },
+        },
+      ])
       .toArray(),
     db
       .collection<FundDoc>("indexFunds")
@@ -140,9 +152,9 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
   ]);
   const budgetById = new Map(budgets.map((b) => [String(b._id), b]));
   const rateById = new Map(rates.map((r) => [r._id, r]));
-  const bondByCountry = new Map<string, BondDoc>();
-  for (const bond of bonds)
-    if (!bondByCountry.has(bond.countryId)) bondByCountry.set(bond.countryId, bond);
+  const bondByCountry = new Map<string, BondDoc>(
+    bonds.map((bond) => [bond._id, { ...bond, countryId: bond._id }])
+  );
   const fundByCountry = new Map(
     funds.flatMap((f) => (f.nationalIndex ? [[f.nationalIndex.entityId, f] as const] : []))
   );

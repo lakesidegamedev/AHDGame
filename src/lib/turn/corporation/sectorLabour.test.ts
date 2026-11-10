@@ -179,7 +179,8 @@ describe("resolveSectorLabourEconomics", () => {
       ...subsidised,
       employerWageCostMultiplier: 0.95,
     });
-    expect(cheaper.wagePerWorker).toBeCloseTo(base.wagePerWorker! * 0.95, 10);
+    // The subsidy cuts the employer's bill, not the worker's pay.
+    expect(cheaper.wagePerWorker).toBeCloseTo(base.wagePerWorker!, 10);
     expect(cheaper.sectorLaborCost).toBeLessThan(base.sectorLaborCost);
     expect(subsidised.automationIndexByState).toEqual(plain.automationIndexByState);
     expect(
