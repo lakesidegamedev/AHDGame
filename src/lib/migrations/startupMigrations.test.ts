@@ -83,6 +83,22 @@ describe("runRequiredStartupMigrations", () => {
     expect(runMigrationsMock).toHaveBeenCalledTimes(2);
   });
 
+  it("recreates the ledger turn-order index on every boot, past its marker", async () => {
+    await runRequiredStartupMigrations(db);
+
+    expect(REQUIRED_STARTUP_INDEX_MIGRATIONS.map((migration) => migration.id)).toContain(
+      "2026-11-10-financial-tx-log-turn-order-index"
+    );
+    expect(runMigrationsMock).toHaveBeenNthCalledWith(
+      2,
+      db,
+      expect.objectContaining({
+        only: expect.arrayContaining(["2026-11-10-financial-tx-log-turn-order-index"]),
+        force: true,
+      })
+    );
+  });
+
   it("restores insert-only bond pools on a fresh 1991 world despite surviving markers", async () => {
     findOne.mockResolvedValue({ preset: "1991-default", currentTurn: 1 });
     await runRequiredStartupMigrations(db);
