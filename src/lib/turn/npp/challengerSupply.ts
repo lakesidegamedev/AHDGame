@@ -20,7 +20,7 @@ import {
   type NPPGenerationContext,
 } from "@/lib/npp/generator";
 import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { isActiveElectionCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideExecutive";

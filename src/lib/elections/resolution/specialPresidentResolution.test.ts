@@ -17,7 +17,7 @@ const m = vi.hoisted(() => ({
 vi.mock("@/lib/elections/resolution/presidentExecutiveSeating", () => ({
   seatPresidentialExecutive: m.seat,
 }));
-vi.mock("@/lib/electionEngine/tallyManagement", () => ({ initElectionVoteTally: m.initTally }));
+vi.mock("@/lib/elections/engine/tallyManagement", () => ({ initElectionVoteTally: m.initTally }));
 vi.mock("@/lib/elections/liveResults/captureResultSnapshot", () => ({
   captureElectionResultSnapshot: m.snapshot,
 }));

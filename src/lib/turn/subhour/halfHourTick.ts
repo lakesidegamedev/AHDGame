@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
 import { runInAuditContext } from "@/lib/observability/context";
-import { runElectionHalfTick } from "@/lib/turn/elections/electionHalfTick";
+import { runElectionHalfTick } from "@/lib/elections/campaigns/electionHalfTick";
 import { runGrowthHalfStep } from "./growthHalfStep";
 import { runInflationHalfStep } from "./inflationHalfStep";
 import { runForexHalfStep } from "./forexHalfStep";

@@ -10,7 +10,7 @@ import {
   MAX_STATE_ORG_BONUS_PRIMARY,
   STATE_ORG_COST_ACTIONS,
   STATE_ORG_MAX_LEVEL,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { formatStatePresenceCost } from "@/lib/campaigns/statePresenceCost";
 
 interface CandidateRow {

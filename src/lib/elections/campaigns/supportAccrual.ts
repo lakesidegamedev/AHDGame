@@ -18,7 +18,7 @@ import type { Election, ElectionCandidate } from "@/lib/db/types";
 import {
   RALLY_IMMEDIATE_SHARE,
   RALLY_SPREAD_TURNS,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 
 export interface SupportAccrualTickResult {
   candidatesUpdated: number;

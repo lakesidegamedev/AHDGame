@@ -36,7 +36,7 @@ import { processCampaignTurn } from "@/lib/turn/campaignTurn";
 import { processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
 import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModifiers";
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
-import { processCampaignSpendReset } from "@/lib/turn/elections/campaignSpendReset";
+import { processCampaignSpendReset } from "@/lib/elections/campaigns/campaignSpendReset";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
 import { closeDueContingentHouseVotes } from "@/lib/elections/resolution/contingentHouseVoteClose";
 import { processPostConversionElections } from "@/lib/turn/postConversionElections";
@@ -73,8 +73,8 @@ import { processPriorityRegionDecay } from "@/lib/turn/politicalStrength/priorit
 import {
   processSupportDecay,
   processClearResolvedSupport,
-} from "@/lib/turn/elections/supportDecay";
-import { processSupportAccrualTick } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/campaigns/supportDecay";
+import { processSupportAccrualTick } from "@/lib/elections/campaigns/supportAccrual";
 import { resolveExpiredDisbandVotes } from "@/lib/turn/coalitionDisbandCheck";
 import {
   COUNTRY_BILL_PHASES,

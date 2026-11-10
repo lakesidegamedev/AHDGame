@@ -1,15 +1,15 @@
 /** Reproducible standing-ad balance fixture; synthetic candidates, no database. */
 import assert from "node:assert/strict";
 import { buildGranularElectorateSubstrate } from "../../src/lib/demographics/granularElectorate";
-import { distributeVotesByGroupLevelAllocation } from "../../src/lib/electionEngine/voteDistribution";
-import { distributeVotesBySwingFlow } from "../../src/lib/electionEngine/voteDistributionSwingFlow";
+import { distributeVotesByGroupLevelAllocation } from "../../src/lib/elections/engine/voteDistribution";
+import { distributeVotesBySwingFlow } from "../../src/lib/elections/engine/voteDistributionSwingFlow";
 import {
   planAdPurchase,
   adExposure,
   targetedAdBonuses,
   adPurchaseCost,
 } from "../../src/lib/campaignTargeting/rules";
-import type { EnrichedCandidate } from "../../src/lib/electionEngine/types";
+import type { EnrichedCandidate } from "../../src/lib/elections/engine/types";
 
 const ads = planAdPurchase([], { stateId: "PA", dimension: "race", bucket: "white" }, 10, 3)!;
 const candidate = (id: string): EnrichedCandidate => ({

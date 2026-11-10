@@ -39,7 +39,7 @@ import {
   CREDIT_REVOCATION_TURNS,
   CREDIT_WINDOW_TURNS,
   type ResponseCreditCandidate,
-} from "@/lib/electionEngine/economicReferendum";
+} from "@/lib/elections/engine/economicReferendum";
 
 /**
  * Which referendum component a metric feeds, and which sign of `ratePerTurn`

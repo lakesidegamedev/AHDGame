@@ -29,7 +29,7 @@ import {
   isPresidentialElectionType,
 } from "@/lib/elections/nationwideExecutive";
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { getCountryConfigForRuntime, type CountryId } from "@/lib/constants/countries";
 import {
   canFieldExecutiveCandidate,

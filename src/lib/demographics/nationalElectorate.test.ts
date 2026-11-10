@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { State, CensusGroupView } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
-import { buildNationalSubstrate } from "@/lib/electionEngine/nationwideElectorate";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
+import { buildNationalSubstrate } from "@/lib/elections/engine/nationwideElectorate";
 import type { GranularElectorateUnit, GranularSubstrate } from "./granularElectorate";
 import { mergeRegionalSubstrates } from "./nationalElectorate";
 

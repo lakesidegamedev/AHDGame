@@ -1,4 +1,4 @@
-import type { CrisisBlameShift } from "@/lib/electionEngine/crisisBlame";
+import type { CrisisBlameShift } from "@/lib/elections/engine/crisisBlame";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { getCountryModifiersCollection } from "@/lib/db/collections/countryModifiers";

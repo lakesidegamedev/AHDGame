@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { projectPrimaryByState } from "./primaryProjection";
-import type { EnrichedCandidate } from "@/lib/electionEngine";
+import type { EnrichedCandidate } from "@/lib/elections/engine";
 import type { State, CensusGroupView, StateDemographicTurnout } from "@/lib/db/types";
 import type { CampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";

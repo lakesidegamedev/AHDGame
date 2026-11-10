@@ -16,7 +16,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { recordPrimarySnapshots } from "@/lib/turnSystem";
-import { initElectionVoteTally, fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { initElectionVoteTally, fetchEnrichedCandidates } from "@/lib/elections/engine";
 import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   calcPrimaryScore,

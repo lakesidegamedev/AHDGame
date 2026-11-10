@@ -46,7 +46,7 @@ async function main() {
   const { resolveOneGeneralElection } =
     await import("@/lib/elections/resolution/generalResolution");
   const { initElectionVoteTally, accumulateVoteTurn } =
-    await import("../../src/lib/electionEngine/tallyManagement");
+    await import("../../src/lib/elections/engine/tallyManagement");
   const { computeSeatEstimates } = await import("../../src/lib/elections/buildPollingData");
   const results: Document[] = [];
 

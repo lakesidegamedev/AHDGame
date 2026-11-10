@@ -5,7 +5,7 @@
 import {
   LEGISLATIVE_APPROVAL_VOTE_SLOPE,
   approvalVoteMultiplier,
-} from "@/lib/electionEngine/approvalVoteMultiplier";
+} from "@/lib/elections/engine/approvalVoteMultiplier";
 import { isHu1991AssemblyCampaign } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianDumaVoteTotals } from "@/lib/countries/ru/rules/assemblyVoteIncrement";
 import { russianCouncilVoteTotals } from "@/lib/countries/ru/rules/councilVoteTotals";

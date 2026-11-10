@@ -17,7 +17,7 @@ import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOffic
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getUkCommonsVacanciesCollection } from "@/lib/db/collections/ukByElection";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { isActiveElectionCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
 import {
   BY_ELECTION_FILL_LEAD_TURNS,

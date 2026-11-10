@@ -2,7 +2,7 @@
  * End-to-end coverage of vote suppression in the wave that decides real
  * results.
  *
- * The helper itself is unit-tested in `electionEngine/stateAttackMultiplier`;
+ * The helper itself is unit-tested in `elections/engine/stateAttackMultiplier`;
  * what this file covers is the wiring, which is where the equivalent phase-1
  * defect lived: the favourability drain was correct in isolation and applied in
  * the wrong scope, so it was multiplied by the size of the field. Nothing but a

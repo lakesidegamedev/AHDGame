@@ -6,7 +6,7 @@ import { checkRateLimit, ELECTION_LIMITS, rateLimitResponse } from "@/lib/api/ra
 import { logRequest } from "@/lib/api/requestLog";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import type { ElectionCandidate } from "@/lib/db/types";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
 
 interface RouteParams {

@@ -24,7 +24,7 @@ import {
   HU_2011_BY_ELECTIONS_COLLECTION,
 } from "./constituencyByElections2011";
 import { registerHu1991PlayerFiling } from "./playerFiling1991";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { huRegions1991 } from "./data/huRegions1991";
 import {
   loadHu1991ListVacancies,

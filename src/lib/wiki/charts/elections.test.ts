@@ -6,13 +6,13 @@ import {
   FINAL_POOL_SHARE,
   ELECTION_DAY_TURNS,
   turnVoteWeight,
-} from "@/lib/electionEngine/voteCalculations";
+} from "@/lib/elections/engine/voteCalculations";
 import {
   MAX_STATE_ORG_BONUS_PRIMARY,
   STATE_ORG_MAX_LEVEL,
   stateOrgBonusFraction,
   stateOrgLevelCost,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { approvalScalar } from "@/lib/utils/demographicAppeal";
 import { advertiseFavorabilityGain } from "@/lib/actions/advertiseGain";
 import { AD_BONUS_CAP, TURNOUT_CAP } from "@/lib/campaignTargeting/rules";

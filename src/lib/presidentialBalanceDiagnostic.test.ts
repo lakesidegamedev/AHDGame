@@ -12,11 +12,11 @@
 import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
-import { calcStateTurnout, turnVoteWeight, type EnrichedCandidate } from "@/lib/electionEngine";
+import { calcStateTurnout, turnVoteWeight, type EnrichedCandidate } from "@/lib/elections/engine";
 // Presidential now runs on the §7.3.2 swing-flow engine (D2, 2026-06-18), so the
 // direct-call diagnostics below exercise the same function the production
 // presidential path uses.
-import { distributeVotesBySwingFlow as distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistributionSwingFlow";
+import { distributeVotesBySwingFlow as distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";

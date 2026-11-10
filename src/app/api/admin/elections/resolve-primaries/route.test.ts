@@ -5,7 +5,7 @@ import type { Db } from "mongodb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
-vi.mock("@/lib/electionEngine", () => ({
+vi.mock("@/lib/elections/engine", () => ({
   fetchEnrichedCandidates: vi.fn(),
   initElectionVoteTally: vi.fn(),
 }));
@@ -89,7 +89,7 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
     db.collectionMocks["electionVoteTallies"].find.mockReturnValue(makeCursor([]));
     db.collectionMocks["electionVoteTallies"].findOne.mockResolvedValue(null);
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -173,7 +173,7 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
     db.collectionMocks["electionVoteTallies"].find.mockReturnValue(makeCursor([]));
     db.collectionMocks["electionVoteTallies"].findOne.mockResolvedValue(null);
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -243,7 +243,7 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
     db.collectionMocks["electionVoteTallies"].find.mockReturnValue(makeCursor([]));
     db.collectionMocks["electionVoteTallies"].findOne.mockResolvedValue(null);
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -312,7 +312,7 @@ describe("POST /api/admin/elections/resolve-primaries", () => {
     expect(data.eliminated).toBe(0);
     expect(data.talliesCreated).toBe(0);
     expect(db.collectionMocks["electionCandidates"].updateMany).not.toHaveBeenCalled();
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate, GovernorEndorsement } from "@/lib/db/types";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 
 export type WithdrawReason = NonNullable<GovernorEndorsement["withdrawnReason"]>;
 

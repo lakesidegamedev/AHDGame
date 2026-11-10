@@ -13,7 +13,7 @@ import {
 } from "@/lib/seeds/eraSubstrateForYear";
 import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
 import { calcAppeal } from "@/lib/utils/demographicAppeal";
-import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/elections/engine/constants";
 import {
   personalStatTenureRetentionForCandidate,
   type PersonalStatTenureContext,

@@ -4522,14 +4522,14 @@
       "fingerprint": "e59f9e225e87332a00e249df5bff630605d2fb81767feb668556feb6b8fbe5ab"
     },
     {
-      "file": "src/lib/electionEngine/singleSeatIncumbency.ts",
+      "file": "src/lib/elections/engine/singleSeatIncumbency.ts",
       "operation": "findOne",
       "owner": "resolveHouseIncumbentTenures",
       "expression": "db .collection<ElectionVoteTally>(\"electionVoteTallies\") .findOne({ electionId: prior._id })",
       "fingerprint": "885532c6ad244690638e2840ea95c79dc7ef31e5bc087362d92986045a8fbcad"
     },
     {
-      "file": "src/lib/electionEngine/singleSeatIncumbency.ts",
+      "file": "src/lib/elections/engine/singleSeatIncumbency.ts",
       "operation": "find",
       "owner": "resolveHouseIncumbentTenures",
       "expression": "db .collection<ElectionCandidate>(\"electionCandidates\") .find({ electionId: prior._id })",

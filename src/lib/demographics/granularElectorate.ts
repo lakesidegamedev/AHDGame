@@ -124,7 +124,7 @@ import type {
   StateDemographics,
 } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { eraForPreset } from "@/lib/seeds/presetSelector";

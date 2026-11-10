@@ -20,7 +20,7 @@ vi.mock("@/lib/achievements", () => ({
   awardAchievement: vi.fn(),
   resolveUserIdFromCharacter: vi.fn().mockResolvedValue(new ObjectId()),
 }));
-vi.mock("@/lib/electionEngine", () => ({
+vi.mock("@/lib/elections/engine", () => ({
   fetchEnrichedCandidates: vi.fn(),
   initElectionVoteTally: vi.fn(),
   accumulateVoteTurn: vi.fn(),
@@ -213,7 +213,7 @@ describe("resolvePrimariesIfNeeded", () => {
         makeCursor([candidate1, candidate2])
       );
 
-      const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+      const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
       vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
         [candidate1, candidate2].map((c) => ({
           candidateId: c._id.toString(),
@@ -241,7 +241,7 @@ describe("resolvePrimariesIfNeeded", () => {
       expect(db.collectionMocks["electionCandidates"].updateMany).not.toHaveBeenCalled();
       // But still stamp primaryResults so districted house (and similar) can split
       // seats by primary share rather than falling back to general-vote share.
-      const { initElectionVoteTally } = await import("@/lib/electionEngine");
+      const { initElectionVoteTally } = await import("@/lib/elections/engine");
       expect(initElectionVoteTally).toHaveBeenCalled();
       const { initPresidentVoteTally } =
         await import("@/lib/elections/presidential/presidentialElectionEngine");
@@ -313,7 +313,7 @@ describe("resolvePrimariesIfNeeded", () => {
     });
 
     // fetchEnrichedCandidates returns enriched data
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -367,7 +367,7 @@ describe("resolvePrimariesIfNeeded", () => {
     expect(archivedCandidateIds).toContain(candidates[1].characterId.toString());
 
     // Should initialize vote tally for general election
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).toHaveBeenCalled();
 
     // Ticket #826 item 11: eliminating a primary loser must void any debate
@@ -437,7 +437,7 @@ describe("resolvePrimariesIfNeeded", () => {
       return makeCursor([candidates[1]]);
     });
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -483,7 +483,7 @@ describe("resolvePrimariesIfNeeded", () => {
 
     // primaryResults record the ballot counts with PROPORTIONAL shares — the
     // score softmax would collapse counts in the tens of thousands to 100/0.
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     const initCall = vi.mocked(initElectionVoteTally).mock.calls.at(-1);
     expect(initCall).toBeDefined();
     const primaryResults = initCall![3] as {
@@ -550,7 +550,7 @@ describe("resolvePrimariesIfNeeded", () => {
       return makeCursor([playerCandidate]);
     });
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       [playerCandidate, nppCandidate].map((c) => ({
         candidateId: c._id.toString(),
@@ -633,7 +633,7 @@ describe("resolvePrimariesIfNeeded", () => {
 
     await resolvePrimariesIfNeeded(NOW, 100);
 
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).not.toHaveBeenCalled();
     expect(db.collectionMocks["electionCandidates"].updateMany).not.toHaveBeenCalled();
   });
@@ -683,7 +683,7 @@ describe("resolvePrimariesIfNeeded", () => {
 
     await resolvePrimariesIfNeeded(NOW, 100);
 
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).not.toHaveBeenCalled();
     expect(db.collectionMocks["electionCandidates"].updateMany).not.toHaveBeenCalled();
   });
@@ -758,7 +758,7 @@ describe("resolvePrimariesIfNeeded", () => {
       makeCursor([{ _id: candidates[0].characterId, userId: new ObjectId() }])
     );
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -782,7 +782,7 @@ describe("resolvePrimariesIfNeeded", () => {
     expect(withdrawnFilter._id.$in.map(String)).toContain(nppId.toString());
     expect(withdrawnFilter._id.$in.map(String)).not.toContain(playerId.toString());
 
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).toHaveBeenCalled();
     const primaryResults = vi.mocked(initElectionVoteTally).mock.calls[0][3];
     const dem = primaryResults?.byParty?.["1"] ?? [];
@@ -835,7 +835,7 @@ describe("resolvePrimariesIfNeeded", () => {
     db.collectionMocks["characters"].find.mockReturnValue(
       makeCursor(candidates.map((c) => ({ _id: c.characterId, userId: new ObjectId() })))
     );
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -850,7 +850,7 @@ describe("resolvePrimariesIfNeeded", () => {
 
     await resolvePrimariesIfNeeded(NOW, 100);
 
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).toHaveBeenCalledTimes(1);
     const primaryResults = vi.mocked(initElectionVoteTally).mock.calls[0][3];
     const labour = primaryResults?.byParty?.["uk_labour"] ?? [];
@@ -895,7 +895,7 @@ describe("resolvePrimariesIfNeeded", () => {
       return makeCursor(candidates.slice(0, 3));
     });
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue(
       candidates.map((c) => ({
         candidateId: c._id.toString(),
@@ -1349,7 +1349,7 @@ describe("accumulateGeneralElectionVotes", () => {
   it("does nothing when no general-phase elections exist", async () => {
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { accumulateVoteTurn } = await import("@/lib/electionEngine");
+    const { accumulateVoteTurn } = await import("@/lib/elections/engine");
     expect(accumulateVoteTurn).not.toHaveBeenCalled();
   });
 
@@ -1398,7 +1398,7 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { accumulateVoteTurn } = await import("@/lib/electionEngine");
+    const { accumulateVoteTurn } = await import("@/lib/elections/engine");
     expect(accumulateVoteTurn).toHaveBeenCalledWith(electionId, 10, NOW, expect.anything());
   });
 
@@ -1514,7 +1514,7 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { accumulateVoteTurn } = await import("@/lib/electionEngine");
+    const { accumulateVoteTurn } = await import("@/lib/elections/engine");
     const options = vi.mocked(accumulateVoteTurn).mock.calls[0]?.[3];
     expect(options?.preload?.stateMap.get("IE")).toMatchObject({
       _id: "IE",
@@ -1650,7 +1650,7 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { accumulateVoteTurn } = await import("@/lib/electionEngine");
+    const { accumulateVoteTurn } = await import("@/lib/elections/engine");
     const options = vi.mocked(accumulateVoteTurn).mock.calls[0]?.[3];
     expect(options?.preload?.stateMap.get("RU")).toMatchObject({
       _id: "RU",
@@ -1830,7 +1830,7 @@ describe("accumulateGeneralElectionVotes", () => {
     db.collectionMocks["stateDemographicTurnout"] = db.collection("stateDemographicTurnout");
     db.collectionMocks["stateDemographicTurnout"].find.mockReturnValue(makeCursor([]));
 
-    const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+    const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
     vi.mocked(fetchEnrichedCandidates).mockResolvedValue([
       {
         candidateId: candidateId.toString(),
@@ -1899,7 +1899,7 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { initElectionVoteTally } = await import("@/lib/electionEngine");
+    const { initElectionVoteTally } = await import("@/lib/elections/engine");
     expect(initElectionVoteTally).toHaveBeenCalledWith(electionId, [candidate], "CA");
   });
 
@@ -1935,7 +1935,7 @@ describe("accumulateGeneralElectionVotes", () => {
       db.collectionMocks["electionCandidates"] = db.collection("electionCandidates");
       db.collectionMocks["electionCandidates"].find.mockReturnValue(makeCursor([candidate]));
       await accumulateGeneralElectionVotes(NOW, 10, undefined, { slice: "early" });
-      const { accumulateVoteTurn, initElectionVoteTally } = await import("@/lib/electionEngine");
+      const { accumulateVoteTurn, initElectionVoteTally } = await import("@/lib/elections/engine");
       return { electionId, accumulateVoteTurn, initElectionVoteTally };
     }
 

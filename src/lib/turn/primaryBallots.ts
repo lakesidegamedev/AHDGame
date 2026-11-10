@@ -14,7 +14,7 @@
  * Pure so the arithmetic is unit-testable without a database.
  */
 
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 
 /**

@@ -13,7 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { statePresenceNextCost } from "./statePresenceCost";
-import { stateOrgLevelCost } from "@/lib/electionEngine/constants";
+import { stateOrgLevelCost } from "@/lib/elections/engine/constants";
 
 const CHARACTER_ID = new ObjectId();
 const RATE = 2;
@@ -73,7 +73,7 @@ describe("every presence screen quotes one price", () => {
   it("is not the flat base constant once a state has been built in", async () => {
     // The regression the per-state page shipped: a level-4 state quoted at the
     // level-0 price is short by more than two thirds.
-    const { STATE_ORG_COST_FUNDS } = await import("@/lib/electionEngine/constants");
+    const { STATE_ORG_COST_FUNDS } = await import("@/lib/elections/engine/constants");
     expect(statePresenceNextCost(LEVEL, 1)).not.toBe(STATE_ORG_COST_FUNDS);
   });
 });

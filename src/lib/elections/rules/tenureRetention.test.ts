@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { personalStatTenureRetention } from "@/lib/electionEngine/electionFormulaFactors";
+import { personalStatTenureRetention } from "@/lib/elections/engine/electionFormulaFactors";
 import { personalStatTenureRetentionForCandidate } from "./tenureRetention";
 
 describe("personalStatTenureRetentionForCandidate", () => {

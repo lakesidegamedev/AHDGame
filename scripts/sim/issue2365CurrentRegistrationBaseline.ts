@@ -1,4 +1,4 @@
-import { regBaselineMultiplier } from "../../src/lib/electionEngine/electionFormulaFactors";
+import { regBaselineMultiplier } from "../../src/lib/elections/engine/electionFormulaFactors";
 import {
   getMultiSeatMinShare,
   largestRemainderSeats,

@@ -10,7 +10,7 @@ import { getElectionOpponents } from "@/lib/actions/electionOpponents";
 import { projectCampaignPoll } from "@/lib/campaignTargeting/poll";
 import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
 import { getGameState } from "@/lib/gameState";
-import { resolvePresidentApproval } from "@/lib/electionEngine/presidentialCoattail";
+import { resolvePresidentApproval } from "@/lib/elections/engine/presidentialCoattail";
 import { POST } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -24,7 +24,7 @@ vi.mock("@/lib/api/rateLimit", () => ({
 }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: async () => false }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn(async () => ({ currentTurn: 10 })) }));
-vi.mock("@/lib/electionEngine/presidentialCoattail", () => ({
+vi.mock("@/lib/elections/engine/presidentialCoattail", () => ({
   isHeadOfGovernmentRace: (type: string, countryId: string) =>
     type === "president" && countryId === "US",
   resolvePresidentApproval: vi.fn(async () => null),

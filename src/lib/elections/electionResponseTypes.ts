@@ -24,8 +24,8 @@ import type {
   PartyGroup,
   PrimaryCalendarWave,
 } from "@/lib/elections/candidateEnrichment";
-import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
-import type { DemocraticHealthElectionSnapshot } from "@/lib/electionEngine/democraticHealth";
+import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
+import type { DemocraticHealthElectionSnapshot } from "@/lib/elections/engine/democraticHealth";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
 
 export interface PollingData {

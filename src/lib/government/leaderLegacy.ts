@@ -30,7 +30,7 @@ import {
   type LegacyExitReason,
 } from "@/lib/government/rules/leaderLegacy";
 import { createSystemNewsPost } from "@/lib/news";
-import type { CrisisBlameShift } from "@/lib/electionEngine/crisisBlame";
+import type { CrisisBlameShift } from "@/lib/elections/engine/crisisBlame";
 
 /** Turns of history read when the term start is unknown. */
 const UNKNOWN_START_LOOKBACK_TURNS = 192;
