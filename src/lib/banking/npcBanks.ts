@@ -35,6 +35,7 @@ import { TR_IDENTITY } from "@/lib/countries/tr/identity";
 import { GR_IDENTITY } from "@/lib/countries/gr/identity";
 import { AT_IDENTITY } from "@/lib/countries/at/identity";
 import { FI_IDENTITY } from "@/lib/countries/fi/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 /** Provisional: how many NPP retail banks each eligible country seeds. */
 export const NPC_BANKS_PER_COUNTRY = 2;
@@ -122,6 +123,7 @@ export const COUNTRY_HISTORICAL_NAMES: Partial<Record<CountryId, readonly string
   IT: IT_IDENTITY.historicalNames,
   ES: ES_IDENTITY.historicalNames,
   IE: IE_IDENTITY.historicalNames,
+  CA: CA_IDENTITY.historicalNames,
   BR: BR_IDENTITY.historicalNames,
   NG: NG_IDENTITY.historicalNames,
   SE: SE_IDENTITY.historicalNames,
@@ -140,6 +142,7 @@ export const COUNTRY_MODERN_NAMES: Partial<Record<CountryId, readonly string[]>>
   IT: IT_IDENTITY.modernNames,
   ES: ES_IDENTITY.modernNames,
   IE: IE_IDENTITY.modernNames,
+  CA: CA_IDENTITY.modernNames,
   BR: BR_IDENTITY.modernNames,
   NG: NG_IDENTITY.modernNames,
   SE: SE_IDENTITY.modernNames,

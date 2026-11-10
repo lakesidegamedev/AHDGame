@@ -23,6 +23,7 @@ const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
   DE: "276",
   JP: "392",
   IE: "372",
+  CA: "124",
   BR: "076",
   CN: "156",
   NG: "566",

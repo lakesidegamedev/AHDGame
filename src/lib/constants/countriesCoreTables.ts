@@ -40,7 +40,8 @@ export type CountryId =
   | "FI"
   | "DD"
   | "SCO"
-  | "WAL";
+  | "WAL"
+  | "CA";
 
 /**
  * Discrete government system enum driving executive and election mechanics.

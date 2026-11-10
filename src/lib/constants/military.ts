@@ -49,6 +49,7 @@ import {
   type PostureDef,
   type UnitArchetype,
 } from "./militaryCore";
+import { CA_CABINET_SEAT_IDS, CA_MILITARY_BRANCHES } from "@/lib/countries/ca/institutionsFacts";
 
 export {
   MILITARY_COUNTRY_SCALE,
@@ -140,6 +141,7 @@ export const MILITARY_BRANCHES_BY_COUNTRY: Record<CountryId, Branch[]> = {
   DD: DD_MILITARY_BRANCHES,
   SCO: SCO_MILITARY_BRANCHES,
   WAL: WAL_MILITARY_BRANCHES,
+  CA: CA_MILITARY_BRANCHES,
 };
 
 /**
@@ -180,6 +182,7 @@ export const DEFENSE_POSITION_BY_COUNTRY: Record<CountryId, string | null> = {
   DD: DD_CABINET_SEAT_IDS.defense,
   SCO: SCO_CABINET_SEAT_IDS.defense,
   WAL: WAL_CABINET_SEAT_IDS.defense,
+  CA: CA_CABINET_SEAT_IDS.defense,
 };
 
 /** National readiness tier → global force modifier. */

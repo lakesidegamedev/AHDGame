@@ -46,6 +46,7 @@ import { CS_ORDERS_OF_BATTLE } from "@/lib/countries/cs/institutionsFacts";
 import { BLR_ORDERS_OF_BATTLE } from "@/lib/countries/blr/institutionsFacts";
 import { UKR_ORDERS_OF_BATTLE } from "@/lib/countries/ukr/institutionsFacts";
 import { BAL_ORDERS_OF_BATTLE } from "@/lib/countries/bal/institutionsFacts";
+import { CA_ORDERS_OF_BATTLE } from "@/lib/countries/ca/institutionsFacts";
 
 export interface OrderOfBattleEntry {
   /** Must match a Branch id for this country (`MILITARY_BRANCHES_BY_COUNTRY`). */
@@ -115,6 +116,7 @@ export const ORDERS_OF_BATTLE: Partial<Record<CountryId, OrderOfBattleEntry[]>> 
    * United States.
    */
   IE: IE_ORDERS_OF_BATTLE,
+  CA: CA_ORDERS_OF_BATTLE,
   /**
    * Straight out of Korea: infantry mass, almost no armour, a coastal navy that
    * barely existed, and a MiG-15 air force that had just fought the USAF. The

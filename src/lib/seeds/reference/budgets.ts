@@ -144,6 +144,7 @@ import {
 import { getCountryConfig } from "@/lib/constants/countries";
 import { computeUnownedSeedRevenue } from "@/lib/admin/seed/seedUnownedSectors";
 import { getStateResourceCapacity, lookupStateResourceCapacity } from "./stateResourceCapacity";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 /**
  * Default legal structure stamped on each country's sovereign issuer corporation.
@@ -158,6 +159,7 @@ export const SOVEREIGN_CORP_LEGAL_STRUCTURE: Partial<Record<CountryId, LegalStru
   JP: JP_ECONOMY.sovereignCorpLegalStructure,
   DE: DE_ECONOMY.sovereignCorpLegalStructure,
   IE: IE_ECONOMY.sovereignCorpLegalStructure,
+  CA: CA_ECONOMY.sovereignCorpLegalStructure,
   BR: BR_ECONOMY.sovereignCorpLegalStructure,
   CN: CN_ECONOMY.sovereignCorpLegalStructure,
   NG: NG_ECONOMY.sovereignCorpLegalStructure,

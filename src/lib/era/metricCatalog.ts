@@ -28,6 +28,7 @@ import type {
   MetricBandCurve,
   NormalAnchor,
 } from "./metricCatalogTypes";
+import { CA_INCOME_ANCHORS } from "@/lib/countries/ca/geographyFacts";
 
 export { METRIC_BAND_CURVES, CORE5_NORMALS };
 export type { BandAnchor, IncomeStartVintage, IncomeVintageStamps, MetricBandCurve, NormalAnchor };
@@ -548,6 +549,7 @@ export const INCOME_ANCHORS: Partial<Record<CountryId, Array<{ year: number; val
   DE: DE_INCOME_ANCHORS,
   JP: JP_INCOME_ANCHORS,
   IE: IE_INCOME_ANCHORS,
+  CA: CA_INCOME_ANCHORS,
   BR: BR_INCOME_ANCHORS,
   CN: CN_INCOME_ANCHORS,
   NG: NG_INCOME_ANCHORS,

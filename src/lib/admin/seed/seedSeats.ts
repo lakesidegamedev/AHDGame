@@ -26,6 +26,7 @@ import { NG_GEOGRAPHY } from "@/lib/countries/ng/geography";
 import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSeats";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
+import { CA_REGION_NAMES } from "@/lib/countries/ca/geographyFacts";
 
 // State name lookup for display names
 const STATE_NAMES = US_STATE_NAMES;
@@ -43,6 +44,7 @@ export const REGION_NAME_MAPS: Partial<Record<CountryId, Record<string, string>>
   NG: NG_GEOGRAPHY.regionNames,
   CN: CN_GEOGRAPHY.regionNames,
   IE: IE_GEOGRAPHY.regionNames,
+  CA: CA_REGION_NAMES,
 };
 
 function getStateName(state: string, ctryId: CountryId): string {

@@ -8,6 +8,7 @@ import { CN_ESTATE_PORTFOLIO } from "@/lib/countries/cn/institutionsFacts";
 import { IE_ESTATE_PORTFOLIO } from "@/lib/countries/ie/institutionsFacts";
 import { RU_ESTATE_PORTFOLIO } from "@/lib/countries/ru/institutionsFacts";
 import { DD_ESTATE_PORTFOLIO } from "@/lib/countries/dd/institutionsFacts";
+import { CA_ESTATE_PORTFOLIO } from "@/lib/countries/ca/institutionsFacts";
 
 // ── Archetype catalog ────────────────────────────────────────────────────────
 export interface EstateArchetype {
@@ -670,6 +671,7 @@ export const ESTATE_PORTFOLIO_BY_COUNTRY: Partial<Record<CountryId, Record<strin
   CN: CN_ESTATE_PORTFOLIO,
   JP: JP_ESTATE_PORTFOLIO,
   IE: IE_ESTATE_PORTFOLIO,
+  CA: CA_ESTATE_PORTFOLIO,
   // Command-economy Council of Ministers. Defence → Military flagship and
   // Finance → Monetary flagship are resolved elsewhere, so both are absent here;
   // `premier`/`generalSecretary` and `first_deputy_premier` are leadership seats

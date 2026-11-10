@@ -5,6 +5,7 @@
  * `getStateSectorWeights1991` selects this bundle for the `1991-default` preset.
  */
 
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
@@ -78,6 +79,7 @@ export const COUNTRY_SECTOR_WEIGHTS_1991: Record<CountryId, SectorWeightMap> = {
   FI: FI_ECONOMY.sectorWeights.byEra["1991"],
   TR: TR_ECONOMY.sectorWeights.byEra["1991"],
   DD: DD_ECONOMY.sectorWeights.byEra["1991"],
+  CA: CA_ECONOMY.sectorWeights.byEra["1991"],
 };
 
 /**

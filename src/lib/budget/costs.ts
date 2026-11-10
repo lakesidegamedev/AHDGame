@@ -14,6 +14,7 @@ import { CN_ECONOMY } from "@/lib/countries/cn/economy";
 import { IE_ECONOMY } from "@/lib/countries/ie/economy";
 import { NG_ECONOMY } from "@/lib/countries/ng/economy";
 import { BR_ECONOMY } from "@/lib/countries/br/economy";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 export interface BudgetCostContext {
   budgetCapacity: number;
@@ -122,6 +123,7 @@ export const COST_SCALE_ANCHORS: Partial<Record<CountryId, CostScaleAnchor>> = {
   JP: JP_ECONOMY.costScaleAnchors,
   DE: DE_ECONOMY.costScaleAnchors,
   IE: IE_ECONOMY.costScaleAnchors,
+  CA: CA_ECONOMY.costScaleAnchors,
   CN: CN_ECONOMY.costScaleAnchors,
   // BR has no legacy scale entries; scaleLow ~0.12 rebases absolute costs to
   // their authored share of the 1991 economy. scaleHigh 1.0 matches other

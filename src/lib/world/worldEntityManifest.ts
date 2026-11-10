@@ -53,6 +53,7 @@ import { WAL_WORLD_REGION } from "@/lib/countries/wal/geographyFacts";
 import { BLR_WORLD_REGION, BLR_UN_MEMBER_SINCE } from "@/lib/countries/blr/geographyFacts";
 import { UKR_WORLD_REGION, UKR_UN_MEMBER_SINCE } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_WORLD_REGION } from "@/lib/countries/bal/geographyFacts";
+import { CA_WORLD_REGION, CA_UN_MEMBER_SINCE } from "@/lib/countries/ca/geographyFacts";
 
 export type WorldEntityId = string;
 export type WorldEntityStatus = "sovereign" | "dependent" | "emergent" | "dissolved";
@@ -261,6 +262,7 @@ export const COUNTRY_REGIONS: Record<CountryId, WorldEntityRegion> = {
   BAL: BAL_WORLD_REGION,
   SCO: SCO_WORLD_REGION,
   WAL: WAL_WORLD_REGION,
+  CA: CA_WORLD_REGION,
 };
 
 /** UN admission year priors for CountryConfig sovereigns (strong defaults). */
@@ -296,6 +298,7 @@ export const COUNTRY_UN_MEMBER_SINCE: Partial<Record<CountryId, number>> = {
   GR: GR_UN_MEMBER_SINCE,
   AT: AT_UN_MEMBER_SINCE,
   FI: FI_UN_MEMBER_SINCE,
+  CA: CA_UN_MEMBER_SINCE,
 };
 
 /**
@@ -353,9 +356,7 @@ function buildCountryEntry(
       canSponsor: isManifestSphereSponsor(presetId, countryId),
       relationships: [],
     },
-    lifecycle: {
-      transitionRuleIds: [],
-    },
+    lifecycle: { transitionRuleIds: [] },
     recognition: nigeria1953
       ? {
           status: "widely-recognized",
@@ -391,9 +392,7 @@ function entriesFromAccess(
 }
 
 function configFallbackEntries(presetId: string): WorldEntityManifestEntry[] {
-  return COUNTRY_ORDER.map((countryId) =>
-    buildCountryEntry(presetId, countryId, "config-fallback")
-  );
+  return COUNTRY_ORDER.map((id) => buildCountryEntry(presetId, id, "config-fallback"));
 }
 
 /**

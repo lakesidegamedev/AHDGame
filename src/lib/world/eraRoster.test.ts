@@ -59,7 +59,7 @@ describe("S1 — era roster totality", () => {
   });
 
   it("covers every CountryId across every shipping preset", () => {
-    expect(ALL).toHaveLength(29);
+    expect(ALL).toHaveLength(30);
     // Deliberate tripwires, not incidental. Adding a preset or a country should
     // fail here first, so whoever adds one is made to check that the roster
     // covers it rather than letting `tierFor` quietly answer "absent" forever.

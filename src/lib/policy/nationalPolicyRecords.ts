@@ -56,6 +56,7 @@ import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 /**
  * Shared national policy-record assembly — extracted verbatim from
@@ -110,6 +111,7 @@ export const LEGISLATION_COUNTRY_SCOPES: Record<
   DD: DD_ECONOMY.legislationScope,
   SCO: SCO_ECONOMY.legislationScope,
   WAL: WAL_ECONOMY.legislationScope,
+  CA: CA_ECONOMY.legislationScope,
 };
 
 /**

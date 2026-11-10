@@ -9,6 +9,7 @@ import { IE_IDENTITY } from "@/lib/countries/ie/identity";
 import { RU_IDENTITY } from "@/lib/countries/ru/identity";
 import { DD_IDENTITY } from "@/lib/countries/dd/identity";
 import { NG_IDENTITY } from "@/lib/countries/ng/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface CabinetIdentity {
   /** Large faded background glyph + chop fallback. */
@@ -29,6 +30,7 @@ export const CABINET_IDENTITY: Partial<Record<CountryId, CabinetIdentity>> = {
   DE: DE_IDENTITY.cabinet,
   JP: JP_IDENTITY.cabinet,
   IE: IE_IDENTITY.cabinet,
+  CA: CA_IDENTITY.cabinet,
   NG: NG_IDENTITY.cabinet,
   // Soviet Union — Council of Ministers (СМ = Совет Министров): deep Soviet
   // red gradient with the gold of the state emblem.

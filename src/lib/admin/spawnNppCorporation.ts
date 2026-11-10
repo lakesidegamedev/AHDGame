@@ -91,6 +91,7 @@ import { WAL_NPP_CAPITAL_STATE } from "@/lib/countries/wal/geographyFacts";
 import { BLR_NPP_CAPITAL_STATE } from "@/lib/countries/blr/geographyFacts";
 import { UKR_NPP_CAPITAL_STATE } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
+import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -141,6 +142,7 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   DD: DD_NPP_CAPITAL_STATE, // regions not yet seeded
   SCO: SCO_NPP_CAPITAL_STATE, // Latent — sub-regions seeded at secession (cannot spawn pre-activation)
   WAL: WAL_NPP_CAPITAL_STATE, // Latent — sub-regions seeded at secession (cannot spawn pre-activation)
+  CA: CA_NPP_CAPITAL_STATE,
 };
 
 export interface SpawnNppCorporationInput {

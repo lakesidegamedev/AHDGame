@@ -44,6 +44,7 @@ export const CONVERTED: readonly CountryId[] = [
   "BLR",
   "UKR",
   "BAL",
+  "CA",
 ];
 
 /**

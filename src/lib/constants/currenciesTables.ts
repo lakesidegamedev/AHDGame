@@ -53,6 +53,7 @@ export {
   FOREX_ACTIVE_CURRENCIES,
   getEraAwareCurrencySymbol,
 } from "./currencyCodes";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
 /** Zod-compatible tuple for CurrencyCode validation */
 export const ZOD_CURRENCY_ENUM: [CurrencyCode, CurrencyCode, ...CurrencyCode[]] = [
@@ -598,6 +599,7 @@ export const ECONOMIC_BASELINES: Partial<Record<CountryId, EconomicBaseline>> = 
   JP: JP_ECONOMY.economicBaseline,
   DE: DE_ECONOMY.economicBaseline,
   IE: IE_ECONOMY.economicBaseline,
+  CA: CA_ECONOMY.economicBaseline,
   BR: BR_ECONOMY.economicBaseline,
   CN: CN_ECONOMY.economicBaseline,
   NG: NG_ECONOMY.economicBaseline,
@@ -646,6 +648,7 @@ export const MONETARY_BASELINES: Record<CountryId, MonetaryBaseline> = {
   DD: DD_ECONOMY.monetary.baseline, // administered GDR planned-economy prices
   SCO: SCO_ECONOMY.monetary.baseline, // mirrors UK (sterling zone)
   WAL: WAL_ECONOMY.monetary.baseline, // mirrors UK (sterling zone)
+  CA: CA_ECONOMY.monetary.baseline,
 };
 
 // ── FX Intervention (chair standing policy) ─────────────────────────────────
