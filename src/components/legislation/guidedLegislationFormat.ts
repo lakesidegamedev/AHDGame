@@ -1,6 +1,4 @@
 /** Display helpers for the guided legislation modal. */
-import type { CountryId } from "@/lib/constants/countriesCore";
-import type { ResetMetricScoreCountry } from "@/lib/resetMetrics/conditionScore";
 
 export function money(value: number): string {
   const sign = value < 0 ? "-" : value > 0 ? "+" : "";
@@ -13,11 +11,6 @@ export function changeClass(value: number, lowerIsGood: boolean): string {
   if (Math.abs(value) < 0.0001) return "text-muted";
   const good = lowerIsGood ? value < 0 : value > 0;
   return good ? "text-success" : "text-error";
-}
-
-export function resetMetricCountry(countryId: CountryId): ResetMetricScoreCountry | null {
-  const normalized = countryId.toUpperCase();
-  return normalized === "US" || normalized === "UK" || normalized === "JP" ? normalized : null;
 }
 
 export function observedDirection(delta: number): string {

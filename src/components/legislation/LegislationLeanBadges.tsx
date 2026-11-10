@@ -25,7 +25,7 @@ export function OptionLeanBadges(props: {
 
 /** Economic lean of moving a tax from its current rate to the proposed one. */
 export function TaxLeanBadges(props: {
-  estimate: Parameters<typeof taxSliderNpcEconomic>[0];
+  estimate: Parameters<typeof taxSliderNpcEconomic>[0] & { currentRate: number };
   rate: number;
   countryId: CountryId;
   className?: string;

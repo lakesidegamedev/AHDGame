@@ -133,6 +133,8 @@ const nationalTaxes: ResetTaxDefinition[] = federal.flatMap(([id, title, taxType
     overseeingSeatId: treasurySeat.IE,
   },
 ]);
+const DEVOLVED_LAW_PREFIX = { SCO: "sco.", WAL: "wls." } as const;
+
 nationalTaxes.push(
   ...federal.flatMap(([id, title, taxType, , uk]) =>
     (["SCO", "WAL"] as const).map((country) => ({
@@ -141,7 +143,7 @@ nationalTaxes.push(
       taxType,
       country,
       scope: "national" as const,
-      existingLegislationTypeId: uk.replace("uk.", country === "SCO" ? "sco." : "wls."),
+      existingLegislationTypeId: uk.replace("uk.", DEVOLVED_LAW_PREFIX[country]),
       overseeingSeatId: treasurySeat[country],
     }))
   )

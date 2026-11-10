@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
-import type { User, Character, ImperialCharacter } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import type { User, ImperialCharacter } from "@/lib/db/types";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import { handleRouteError } from "@/lib/api/errors";
 
@@ -39,13 +40,15 @@ export async function GET(request: Request) {
             .collection<ImperialCharacter>("imperialCharacters")
             .findOne({ _id: user.activeImperialCharacterId, userId }, { projection: { _id: 1 } })
         : null
-      : await db
-          .collection<Character>("characters")
-          .findOne(user.activeCharacterId ? { _id: user.activeCharacterId, userId } : { userId }, {
-            projection: { _id: 1 },
-          });
+      : await (
+          await getCharactersCollection(db)
+        ).findOne(user.activeCharacterId ? { _id: user.activeCharacterId, userId } : { userId }, {
+          projection: { _id: 1 },
+        });
     if (!character) return redirect("/market");
-    const corporation = await db.collection<Corporation>("corporations").findOne(
+    const corporation = await (
+      await getCorporationsCollection(db)
+    ).findOne(
       {
         ceoId: character._id,
         ceoVacant: { $ne: true },

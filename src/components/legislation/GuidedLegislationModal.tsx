@@ -6,7 +6,6 @@ import {
   metricDirectionClass,
   money,
   observedDirection,
-  resetMetricCountry,
 } from "./guidedLegislationFormat";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -24,6 +23,7 @@ import type { BillCategory } from "@shared/constants/legislation";
 import { primaryMetricById, primaryMetrics } from "@/lib/resetMetrics/catalog";
 import { playerMetricDescription } from "@/lib/resetMetrics/presentation";
 import { estimateObservedMetricChange } from "@/lib/resetMetrics/rules/effectForecast";
+import type { ResetMetricScoreCountry } from "@/lib/resetMetrics/conditionScore";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
@@ -156,6 +156,11 @@ function subsidyTargetKey(provision: {
 }
 
 type Step = "starting" | "family" | "level" | "review" | "overview";
+
+function resetMetricCountry(countryId: CountryId): ResetMetricScoreCountry | null {
+  const normalized = countryId.toUpperCase();
+  return normalized === "US" || normalized === "UK" || normalized === "JP" ? normalized : null;
+}
 
 function categoryForDomain(domain: string, scope: "national" | "regional"): BillCategory {
   const normalized = domain.toLowerCase();

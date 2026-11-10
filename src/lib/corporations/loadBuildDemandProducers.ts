@@ -1,12 +1,15 @@
 /** Batched, projected capacity observations for funded build advice. */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, GameState, State } from "@/lib/db/types";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
 import { buildDemandProducer } from "./rules/buildDemandProducers";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export async function loadBuildDemandProducers(db: Db) {
   const [state, sectors, regions] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    (await getGameStateCollection(db)).findOne(
       { _id: "current" },
       {
         projection: {
@@ -17,8 +20,7 @@ export async function loadBuildDemandProducers(db: Db) {
         },
       }
     ),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    (await getCorporateSectorsCollection(db))
       .find(
         {},
         {
@@ -40,14 +42,12 @@ export async function loadBuildDemandProducers(db: Db) {
         }
       )
       .toArray(),
-    db
-      .collection<State>("states")
-      .find({}, { projection: { _id: 1, countryId: 1 } })
-      .toArray(),
+    (await getStatesCollection(db)).find({}, { projection: { _id: 1, countryId: 1 } }).toArray(),
   ]);
   const owners = state?.sectorTechTreesEnabled
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await (
+        await getCorporationsCollection(db)
+      )
         .find(
           { _id: { $in: sectors.map((s) => s.corporationId) } },
           {
