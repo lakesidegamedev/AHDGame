@@ -84,6 +84,10 @@ import {
   runParliamentaryVacancyWatcher,
 } from "@/lib/turn/countryPhases";
 import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
+import {
+  runCountryElectionEntries,
+  selectCountryElectionEntries,
+} from "@/lib/turn/countryElectionPhase";
 import type { CountryId } from "@/lib/constants/countries";
 import { runNppGovernmentPhases } from "@/lib/nppAutonomy/processNppGovernment";
 import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -158,12 +162,9 @@ import { processBankingTurnV2 } from "@/simulation/engine/v2/bankingTurn";
 import { runIndexFundCronV2 } from "@/simulation/engine/v2/indexFunds";
 import type { TurnPhaseAdapter } from "@/simulation/engine/types";
 
-/** Registered election spawners have no dependency on corporate settlement. */
-export function independentCountryElectionPhases(): ReadonlySet<string> {
-  return new Set(
-    Object.values(COUNTRY_ELECTION_PHASES).flatMap((entries) => (entries ?? []).map((e) => e.name))
-  );
-}
+/** The country election spawners have no dependency on corporate settlement. */
+export const independentCountryElectionPhases = (): ReadonlySet<string> =>
+  new Set(["countryElections"]);
 
 export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
   return [
@@ -1518,16 +1519,15 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         const foundingActive = context.gameState.preIteration?.active === true;
 
         // Registered countries only: a dissolved country's spawners still run queries every turn, and a config-driven fallback could resurrect ghost races.
-        let countryElectionPhasePromises: Promise<unknown>[] = [];
+        const countryElections: Promise<unknown>[] = [];
         if (!foundingActive) {
-          // Full-simulation only: a background country (#5702) runs none of its
-          // country-prefixed election phases.
-          const registeredForElections = new Set(await getFullSimulationCountryIds(db));
-          countryElectionPhasePromises = Object.entries(COUNTRY_ELECTION_PHASES)
-            .filter(([id]) => registeredForElections.has(id as CountryId))
-            .flatMap(([, entries]) =>
-              entries.map(({ name, fn }) => runtime.runPhase(name, () => fn(gameNow, newTurn)))
-            );
+          const inPlay = new Set(await getFullSimulationCountryIds(db));
+          const entries = selectCountryElectionEntries(COUNTRY_ELECTION_PHASES, inPlay);
+          countryElections.push(
+            runtime.runPhase("countryElections", () =>
+              runCountryElectionEntries(entries, gameNow, newTurn)
+            )
+          );
         }
 
         // Vacate any majority-gated leadership office whose holder has left the
@@ -1546,7 +1546,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
                   ensurePerpetualElections(gameNow, newTurn)
                 ),
               ]),
-          ...countryElectionPhasePromises,
+          ...countryElections,
           runtime.runPhase("leadershipElections", () => resolveExpiredLeadershipElections(db)),
           runtime.runPhase("staleCandidateCleanup", () => cleanupStaleElectionCandidates(gameNow)),
           runtime.runPhase("internationalOrganizations", () =>
