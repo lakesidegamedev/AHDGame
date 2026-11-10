@@ -16,7 +16,14 @@ import type {
 import { fundedTariffs, type ImportTariffTable } from "@/lib/market/producerMarket/tariffRules";
 import { tariffRevenueMoves } from "@/lib/market/producerMarket/liveFundingRules";
 import type { MoneyMove } from "@/lib/banking/moneyMove";
+import {
+  automationLevyTransfers,
+  type PlantLevy,
+} from "@/lib/market/producerMarket/levyCloseRules";
+import { automationLevyInputPenalty } from "@/lib/automationPolicy/rules";
+import { automationPolicyFor } from "@/lib/automationPolicy/policies";
 import type { ProducerWalletScope } from "./producerWallets";
+import type { CorporationLookups } from "./types";
 
 /** Countries that can collect a tariff this turn: every importer in the table. */
 export function tariffImporters(table: ImportTariffTable | undefined): string[] {
@@ -32,9 +39,15 @@ export function tariffImporters(table: ImportTariffTable | undefined): string[] 
 /** One tariff account per importer with a known currency. */
 export function tariffCollectorScopes(
   table: ImportTariffTable | undefined,
-  currencyOf: (countryId: string) => ProducerWalletScope["currency"] | undefined
+  currencyOf: (countryId: string) => ProducerWalletScope["currency"] | undefined,
+  /** Plants whose countries also collect automation levies through the same account. */
+  levies: ReadonlyMap<string, PlantLevy> = new Map()
 ): ProducerWalletScope[] {
-  return tariffImporters(table).flatMap((countryId) => {
+  const countries = new Set([
+    ...tariffImporters(table),
+    ...[...levies.values()].map((l) => l.countryId),
+  ]);
+  return [...countries].sort().flatMap((countryId) => {
     const currency = currencyOf(countryId);
     return currency ? [{ kind: "tariffCollector" as const, countryId, currency }] : [];
   });
@@ -47,6 +60,12 @@ export interface TariffClose {
     collectedByImporter: Record<string, number>;
     paid: number;
     shortfall: number;
+    /** Automation levy collected through the same account, when any plant owes one. */
+    automationLevy?: {
+      collectedByCountry: Record<string, number>;
+      paid: number;
+      shortfall: number;
+    };
   };
 }
 
@@ -91,6 +110,90 @@ export function tariffsAtClose(input: {
       shortfall: result.shortfall,
     },
   };
+}
+
+/** The levy each plant owes on its input purchases, by plan id. */
+export function plantLevies(
+  planSector: ReadonlyMap<string, string>,
+  lookups: Pick<CorporationLookups, "sectorsByCorp" | "automationPolicyByCountry">
+): Map<string, PlantLevy> {
+  const { sectorsByCorp, automationPolicyByCountry: policyByCountry } = lookups;
+  const sectorById = new Map(
+    [...sectorsByCorp.values()].flat().map((sector) => [sector._id.toHexString(), sector])
+  );
+  const out = new Map<string, PlantLevy>();
+  if (!policyByCountry) return out;
+  for (const [planId, sectorId] of planSector) {
+    const sector = sectorById.get(sectorId);
+    if (!sector?.countryId) continue;
+    const penalty = automationLevyInputPenalty(
+      automationPolicyFor(policyByCountry, sector.countryId),
+      sector.strategyId
+    );
+    if (penalty > 0) out.set(planId, { countryId: sector.countryId, penalty });
+  }
+  return out;
+}
+
+/**
+ * Import tariffs and automation levies, both paid by companies into the country's collection
+ * account as closing transfers. Tariffs come off first, then levies plan from what is left.
+ */
+export function collectionsAtClose(input: {
+  market: EconomyResult;
+  table: ImportTariffTable | undefined;
+  levyByPlant: ReadonlyMap<string, PlantLevy>;
+  collectors: ReadonlyMap<string, string>;
+  closingCash: Map<string, number>;
+}): TariffClose | null {
+  if (!input.table && !input.levyByPlant.size) return null;
+  const collectorOf = (c: string) => input.collectors.get(c) ?? null;
+  const tariffs = input.table
+    ? tariffsAtClose({ ...input, collectorOf, table: input.table })
+    : { transfers: [], paidByAccount: new Map<string, number>(), meta: emptyTariffMeta() };
+  if (!input.levyByPlant.size) return tariffs;
+  const close = automationLevyTransfers({
+    trades: producerTrades(input.market.tradeReceipt),
+    levyByPlant: input.levyByPlant,
+    collectorOf,
+    cashOf: (id) => input.closingCash.get(id) ?? 0,
+  });
+  let paid = 0;
+  for (const t of close.transfers) {
+    paid += t.amount;
+    input.closingCash.set(
+      t.fromAccountId,
+      (input.closingCash.get(t.fromAccountId) ?? 0) - t.amount
+    );
+    input.closingCash.set(t.toAccountId, (input.closingCash.get(t.toAccountId) ?? 0) + t.amount);
+  }
+  const paidByAccount = new Map(tariffs.paidByAccount);
+  for (const [id, amount] of close.paidByAccount)
+    paidByAccount.set(id, (paidByAccount.get(id) ?? 0) + amount);
+  return {
+    transfers: [
+      ...tariffs.transfers,
+      ...close.transfers.map((t) => ({
+        reason: "automation_levy",
+        fromAccountId: t.fromAccountId,
+        toAccountId: t.toAccountId,
+        amountAnchor: t.amount,
+      })),
+    ],
+    paidByAccount,
+    meta: {
+      ...tariffs.meta,
+      automationLevy: {
+        collectedByCountry: Object.fromEntries(close.collectedByCountry),
+        paid,
+        shortfall: close.shortfall,
+      },
+    },
+  };
+}
+
+function emptyTariffMeta(): TariffClose["meta"] {
+  return { collectedByImporter: {}, paid: 0, shortfall: 0 };
 }
 
 /** Empties each tariff account: into Treasury cash where the country has a budget. */

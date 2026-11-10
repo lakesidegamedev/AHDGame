@@ -4,6 +4,7 @@ import { applySettlementClose, type EconomyResult } from "@/lib/market/producerM
 import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
 import { importTariffKey } from "@/lib/market/producerMarket/tariffRules";
 import {
+  collectionsAtClose,
   tariffCollectorScopes,
   tariffImporters,
   tariffsAtClose,
@@ -132,5 +133,74 @@ describe("funded tariffs on the turn", () => {
       expect(legs).not.toBeNull();
       expect(legs.reduce((n, leg) => n + leg.anchorAmount, 0)).toBeCloseTo(0, 12);
     }
+  });
+
+  it("opens a collection account for a country that only levies", () => {
+    expect(
+      tariffCollectorScopes(
+        undefined,
+        () => "USD",
+        new Map([["p", { countryId: "US", penalty: 0.1 }]])
+      )
+    ).toEqual([{ kind: "tariffCollector", countryId: "US", currency: "USD" }]);
+  });
+
+  it("collects the automation levy from the company into the treasury with the books balanced", () => {
+    // The buyer's input purchase of 30 settled above; its plant owes a 10% levy on it.
+    const inputMarket = {
+      accounts: market.accounts,
+      tradeReceipt: {
+        ...receipt,
+        orders: [{ ...receipt.orders[0], id: JSON.stringify(["plant-1", "input", "iron"]) }],
+        fills: [
+          {
+            orderId: JSON.stringify(["plant-1", "input", "iron"]),
+            kind: "sale",
+            unitPrice: 2,
+            units: 15,
+            buyerCountry: "US",
+          },
+        ],
+      },
+    } as unknown as EconomyResult;
+    const closingCash = new Map(inputMarket.accounts.map((a) => [a.id, a.cash]));
+    const close = collectionsAtClose({
+      market: inputMarket,
+      table: undefined,
+      levyByPlant: new Map([["plant-1", { countryId: "US", penalty: 0.1 }]]),
+      collectors: new Map([["US", "tariff-US"]]),
+      closingCash,
+    });
+    expect(close!.transfers).toEqual([
+      {
+        reason: "automation_levy",
+        fromAccountId: "buyer",
+        toAccountId: "tariff-US",
+        amountAnchor: 3,
+      },
+    ]);
+    expect(close!.meta.automationLevy).toEqual({
+      collectedByCountry: { US: 3 },
+      paid: 3,
+      shortfall: 0,
+    });
+    const settled = applySettlementClose(
+      inputMarket,
+      { transfers: close!.transfers },
+      new Set(inputMarket.accounts.map((a) => a.id))
+    );
+    const sum = (rows: readonly { cash: number }[]) => rows.reduce((n, r) => n + r.cash, 0);
+    expect(sum(settled.accounts)).toBe(sum(inputMarket.accounts));
+    const moves = tariffSweepMoves({
+      worldEpoch: "w",
+      turn: 9,
+      collectors: [{ countryId: "US", walletId: "tariff-US", currency: "USD" }],
+      heldLocal: new Map([["tariff-US", 3]]),
+      budgetIdOf: () => "federal",
+      rateOf: () => 1,
+    });
+    expect(moves.map((m) => m.key)).toEqual(["producer-tariff-treasury:w:9:US"]);
+    const legs = producerMoveLedgerLegs(moves[0])!;
+    expect(legs.reduce((n, leg) => n + leg.anchorAmount, 0)).toBeCloseTo(0, 12);
   });
 });

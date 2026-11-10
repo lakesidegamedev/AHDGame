@@ -88,7 +88,8 @@ import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
 import {
   tariffCollectorScopes,
-  tariffsAtClose,
+  collectionsAtClose,
+  plantLevies,
   tariffSweepMoves,
   type TariffClose,
 } from "./fundedTariffs";
@@ -412,10 +413,12 @@ export async function runFundedProducerTurn(
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
-  // One tariff account per importing country (producerTariffStage); none when off.
+  // One collection account per importing or levying country; none when both are off.
+  const levyByPlant = plantLevies(demand.planSector, lookups);
   const tariffScopes = tariffCollectorScopes(
     demand.importTariffs,
-    (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency
+    (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency,
+    levyByPlant
   );
   const tariffCollector = new Map(
     tariffScopes.map((s) => [s.countryId, producerWalletId(worldEpoch, s)])
@@ -653,22 +656,19 @@ export async function runFundedProducerTurn(
   for (const corp of lookups.corporations)
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
       sectorOwner.set(sector._id.toHexString(), corp._id.toHexString());
-  // Closing transfers computed from the settled market and frozen with it: AI
-  // profit to households, operating income to households, and the transition
-  // floor from unspent public funding. One settlement write instead of
-  // thousands of money moves (each costs several prod round trips).
+  // Closing transfers computed from the settled market and frozen with it: AI profit
+  // and operating income to households, and the transition floor from unspent public
+  // funding. One settlement write instead of thousands of money moves.
   const closeAtSettlement = (market: EconomyResult): SettlementClose => {
     const closingCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
-    // Import tariffs come off the buyers' cash first, so every later closing
-    // transfer plans from what is left (producerTariffStage).
-    const tariffs = demand.importTariffs
-      ? tariffsAtClose({
-          market,
-          table: demand.importTariffs,
-          collectorOf: (c) => tariffCollector.get(c) ?? null,
-          closingCash,
-        })
-      : null;
+    // Tariffs and levies come off the buyers' cash first (producerTariffStage).
+    const tariffs = collectionsAtClose({
+      market,
+      table: demand.importTariffs,
+      levyByPlant,
+      collectors: tariffCollector,
+      closingCash,
+    });
     const settledProfitByCorp = new Map<string, number>();
     const revenueBySector = new Map<string, number>();
     for (const r of market.producers) {
