@@ -264,6 +264,18 @@ export function allocatePrototypeBallots(input: {
 
 /** Simultaneous signed effects with bounded donors/recipients among supplied eligible parties. */
 export function transferPrototype(base: number[], effects: number[], capPoints = 3): number[] {
+  return apportionPrototype(
+    base.reduce((a, b) => a + b, 0),
+    prototypeTransferTargets(base, effects, capPoints)
+  );
+}
+
+/** Fractional targets for hosts that carry sub-vote remainders between future batches. */
+export function prototypeTransferTargets(
+  base: number[],
+  effects: number[],
+  capPoints = 3
+): number[] {
   base.forEach(integer);
   if (
     base.length !== effects.length ||
@@ -303,10 +315,7 @@ export function transferPrototype(base: number[], effects: number[], capPoints =
       for (let i = 0; i < deltas.length; i++) deltas[i] -= (amount * room[i]) / sum;
     }
   }
-  return apportionPrototype(
-    total,
-    base.map((v, i) => Math.max(0, v + deltas[i]))
-  );
+  return base.map((v, i) => Math.max(0, v + deltas[i]));
 }
 
 export function countPrototypeDistricts(

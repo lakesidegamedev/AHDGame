@@ -63,8 +63,9 @@ County and district actions share a signed spot/party ledger; opposite actions
 cancel, and a split-county action has a provisional 0.6 factor. Actions cannot
 attack the actor's own party. The actor/target eligibility list belongs to a
 future shell, not this experiment. Test parameters are 0.4 points/action and
-a 3-point cap. Costs, duration, decay, receipt persistence and concurrent API
-updates are not qualified here.
+a 3-point cap. Costs and decay are studied in the companion
+[multi-turn experiment](./usCampaignTimeline.md); this single-batch harness
+does not qualify receipt persistence or concurrent API updates.
 
 Sweep fields include 40/30/30 parties, positions inside the grey band, and vote
 fields transcribed from the existing #926 regressions. Those historic vote
@@ -95,8 +96,8 @@ about either real election's seat totals. The mean absolute margin changes are
 - Retain 0.4 points, 3-point cap and 0.6 split-county factor as provisional
   guardrails. With the closest baseline district, CA-50, a full-batch 3-point
   push flips a 3.63-point margin; affecting only the last half of ballots does
-  not. One 0.4-point action does not flip it. Test a multi-turn action schedule
-  before recommending decay or costs; this harness supplies no economic data.
+  not. One 0.4-point action does not flip it. The companion multi-turn experiment
+  now recommends cost/decay defaults using existing PS rules as economy anchors.
 - Keep ties unresolved and expose the reason. Scheduling a vacancy election
   still needs the existing lifecycle integration and acceptance tests.
 

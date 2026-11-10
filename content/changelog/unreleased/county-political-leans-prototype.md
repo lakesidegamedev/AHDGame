@@ -18,3 +18,6 @@ areas: [engine]
 - Added portable integer ballot allocation, bounded local campaign effects,
   country-isolation tests and a reproducible California comparison harness.
 - Reports retain source hashes, coverage exclusions and provisional-data limits.
+- Added multi-turn campaign schedules and PS accounting to compare action
+  costs, decay, county coverage prices and fractional vote carry. Live rules
+  remain unchanged.
