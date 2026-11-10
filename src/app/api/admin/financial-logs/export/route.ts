@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { buildTxLogFilter } from "@/lib/financialTxLog/queryLogs";
+import { buildTxLogFilter, TX_LOG_SORT } from "@/lib/financialTxLog/queryLogs";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 
 const MAX_EXPORT_ROWS = 50_000;
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     const cursor = db
       .collection<FinancialTxLogEntry>("financialTxLog")
       .find(built.filter)
-      .sort({ _id: -1 })
+      .sort(TX_LOG_SORT)
       .limit(MAX_EXPORT_ROWS);
 
     const lines: string[] = [CSV_COLUMNS.join(",")];
