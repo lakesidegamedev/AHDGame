@@ -862,6 +862,12 @@ export const RUNTIME: CollectionEntry[] = [
       "Log of surface actions: which side held the water in a region on a turn, by what margin, and what was wrecked. Shown to players so the naval war is legible; nothing reads it back into the engine. Per-world history, wiped on reset.",
   },
   {
+    name: "navairBasing",
+    category: "runtime",
+    notes:
+      "Bilateral naval/air basing offers and accepted access. Wiped on world reset. Deterministic _id host:guest:domain is the concurrency and uniqueness key; the built-in _id index suffices for point writes. One bounded active-agreement scan per naval/air turn.",
+  },
+  {
     name: "navairChannels",
     category: "runtime",
     notes:

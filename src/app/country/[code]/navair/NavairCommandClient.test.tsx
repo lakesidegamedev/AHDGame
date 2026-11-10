@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { render, screen, cleanup } from "@testing-library/react";
 import { NavairCommandClient, type CommandFormation } from "./NavairCommandClient";
 
