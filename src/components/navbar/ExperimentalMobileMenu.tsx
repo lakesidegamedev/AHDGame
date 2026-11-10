@@ -10,7 +10,7 @@
 import { buildCampaignNavItems, isCampaignNavActive } from "./campaignNav";
 import React from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
 import { UniversalSearch } from "@/components/UniversalSearch";
 import { Avatar } from "@/components/Avatar";

@@ -18,6 +18,8 @@ export interface BuildDemandRow {
   funded: number | null;
   delivered: number | null;
   unmet: number | null;
+  /** New capacity after known idle output and queues, in this candidate's output mix. */
+  capacityUnits?: number | null;
 }
 
 /** Actual cash-backed orders, not modelled trade or unclaimed market share.

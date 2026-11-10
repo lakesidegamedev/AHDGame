@@ -29,6 +29,8 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
 
 export function householdPurchaseOrders(input: {
   accountId: string;
+  /** Historical replay override only; ordinary household orders always share fairly. */
+  fairShare?: boolean;
   /** Country the spending wallet belongs to; the funded book places demand here. */
   countryId?: string;
   /** State the spending wallet belongs to; a freight order takes local sellers first. */
@@ -94,6 +96,9 @@ export function householdPurchaseOrders(input: {
       const maximumSpend = input.cash * input.spendFraction * (p.weight / totalWeight);
       return {
         id: JSON.stringify([input.accountId, "consumption", p.commodity, p.book]),
+        // Household demand must not inherit country/account id priority.
+        // The matcher still applies each order's route, price and cash limits.
+        fairShare: input.fairShare === false ? undefined : true,
         accountId: input.accountId,
         commodity: p.commodity,
         book: p.book,
@@ -145,6 +150,7 @@ function demandCurveOrders(
       priceElasticity: demandElasticity(p.commodity).price,
     })) {
       orders.push({
+        fairShare: input.fairShare === false ? undefined : true,
         id: JSON.stringify(
           step.step === 0
             ? [input.accountId, "consumption", p.commodity, p.book]

@@ -2,6 +2,8 @@
  * Reset-era program laws as statute-book rows. Plain data in, plain data out:
  * the loader in `resetLawPolicyRecords.ts` owns the database reads.
  */
+import { v2VotePosition } from "@/lib/resetLegislation/rules/politicalPositions";
+import { resetLawFamilyById } from "@/lib/resetLegislation/catalog";
 import type { PolicyProvenance } from "../policyRecordPayload";
 import type { PolicyRecordResponse } from "../types";
 
@@ -82,34 +84,28 @@ export interface ResetLawProgramRow {
   enactedYear: number | null;
 }
 
-const CHOICE_LABELS: Record<string, string> = {
-  far_left: "Far left",
-  center_left: "Center left",
-  center: "Center",
-  center_right: "Center right",
-  far_right: "Far right",
-};
-
 export function recordIdForResetLaw(familyId: string): string {
   return `${RESET_LAW_RECORD_PREFIX}${familyId}`;
 }
 
 export function buildResetLawRecord(row: ResetLawProgramRow): PolicyRecordResponse {
-  const choice = CHOICE_LABELS[row.choice] ?? row.choice.replace(/_/g, " ");
+  const choice = resetLawFamilyById(row.familyId)?.levels.find(
+    (level) => level.position === row.choice
+  )?.position;
+  const position = choice ? v2VotePosition({ familyId: row.familyId, choice }) : null;
   return {
     recordType: "policy",
     legislationTypeId: recordIdForResetLaw(row.familyId),
     name: row.familyTitle,
     policyDomain: resetLawPolicyDomain(row.familyId),
-    economic: 0,
-    social: 0,
+    economic: position?.economic ?? 0,
+    social: position?.social ?? 0,
     nationalOnly: false,
     policyOptionName: row.titleSnapshot,
-    // Program laws carry no left-right lean of their own, so they stay out of the axis averages.
-    hasEconomic: false,
-    hasSocial: false,
+    hasEconomic: position?.economic !== undefined,
+    hasSocial: position?.social !== undefined,
     metricEffects: [],
-    detailText: `${choice} choice, in force from turn ${row.effectiveTurn}`,
+    detailText: `In force from turn ${row.effectiveTurn}`,
     enactedByKind: "bill",
     enactedByBillId: row.enactedByBillId,
   };

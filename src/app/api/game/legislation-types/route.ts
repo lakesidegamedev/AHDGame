@@ -40,7 +40,7 @@ async function fetchLegislationTypes(
   // Non-US countries scope to their own countryScope; US (and blank/unknown)
   // also catches legacy types with no countryScope.
   if (country && country !== "us") {
-    query.countryScope = country;
+    query.countryScope = country === "wal" ? "wls" : country;
   } else {
     // US, or no country specified: US-scoped + legacy no-scope types.
     query.$or = [{ countryScope: "us" }, { countryScope: { $exists: false } }];

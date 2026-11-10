@@ -38,7 +38,7 @@ describe("buildWorldNavItems", () => {
 
     const withCorp = visibleWorldNavItems({ myCorporationId: 42 });
     const corp = withCorp.find((i) => i.id === "myCorporation");
-    expect(corp?.href).toBe("/corporation/42");
+    expect(corp?.href).toBe("/api/corporations/mine");
     expect(corp?.primary).toBe(true);
   });
 
@@ -131,7 +131,7 @@ describe("buildWorldNavSections / looseWorldNavItems", () => {
         id: "myCorporation",
         label: "My Corporation",
         labelKey: "menus.world.myCorporation",
-        href: "/corporation/1",
+        href: "/api/corporations/mine",
         section: "corporate",
         show: true,
       },

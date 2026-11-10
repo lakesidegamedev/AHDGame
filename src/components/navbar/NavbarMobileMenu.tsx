@@ -3,7 +3,7 @@
 import { buildCampaignNavItems } from "./campaignNav";
 import type { Dispatch } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import { useTranslations } from "next-intl";
 import { CountryFlag } from "@/components/CountryFlag";
 import type { ActiveCharter } from "@/hooks/useActiveCharters";

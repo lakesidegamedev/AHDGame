@@ -107,6 +107,34 @@ it("shows fluctuation and idle-capacity warnings even when an order fits today's
   expect(screen.getByText(/not demand reserved for your company/)).toBeTruthy();
 });
 
+it("does not cap funded building counts by the retired unclaimed-share pool", () => {
+  const size = plantSizeUnits("telecommunications");
+  renderDialog(
+    vi.fn(),
+    {
+      ...plants,
+      headroomUnits: 0,
+      measuredDemandGapUnits: size * 4,
+      buildDemand: [
+        {
+          commodity: "network_services",
+          scope: "national",
+          funded: 100,
+          delivered: 0,
+          unmet: 100,
+          capacityUnits: size * 4,
+        },
+      ],
+    },
+    "telecommunications"
+  );
+  expect(screen.getByText("Room with buyers for every output: 4 buildings")).toBeTruthy();
+  expect(screen.queryByText(/share is fully claimed/i)).toBeNull();
+  const pane = screen.getByRole("region", { name: "Funded buyer demand" }).parentElement;
+  expect(pane?.className).toContain("overscroll-contain");
+  expect(document.body.style.overflow).toBe("hidden");
+});
+
 describe("BuildCapacityDialog plant size", () => {
   it("orders vehicle plants for a manufacturing sector on a vehicle strategy", () => {
     const { onSubmit } = renderDialog(vi.fn(), {

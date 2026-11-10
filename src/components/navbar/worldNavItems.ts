@@ -64,7 +64,7 @@ export function buildWorldNavItems({
       id: "myCorporation",
       label: "My Corporation",
       labelKey: "menus.world.myCorporation",
-      href: `/corporation/${myCorporationId}`,
+      href: "/api/corporations/mine",
       section: "corporate",
       show: myCorporationId != null,
       primary: true,

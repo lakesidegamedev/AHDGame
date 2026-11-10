@@ -10,6 +10,7 @@
  * it fails CI.
  */
 
+import { successorTaxInstrumentIds } from "@/lib/resetLegislation/successorTaxTypes";
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/lib/politicalLegislation/catalog";
 
 export const LEGISLATION_ERA: Record<string, number | "always"> = {
+  ...Object.fromEntries(successorTaxInstrumentIds.map((id) => [id, "always" as const])),
   // ── Windowed (74) — numbers are the first fileable calendar year ──────────
   // US (8)
   us_broadband_energy: 1998,

@@ -243,13 +243,54 @@ describe("buildSectorPlantsSection", () => {
           } as unknown as CorporateSector["producerSettlement"],
         }),
       }).idleCauses;
-    expect(settled({}).map((c) => c.cause)).toEqual(["ramping", "inputs"]);
+    // No recorded cut and no arrears: the stop is unexplained, so it is not blamed on inputs.
+    expect(settled({}).map((c) => c.cause)).toEqual(["ramping", "other"]);
     const byInput = settled({ runCutBy: ["inputs"], bindingInput: "iron" });
     expect(byInput.map((c) => c.cause)).toEqual(["held", "inputs"]);
     expect(byInput[0]?.heldInput).toBe("Iron Ore");
     const byCash = settled({ runCutBy: ["cash"] });
     expect(byCash.map((c) => c.cause)).toEqual(["held", "cash"]);
     expect(byCash[0]?.heldInput).toBeUndefined();
+  });
+
+  it("charges an input cut only for the units it removed from the plant's own target", () => {
+    // Capacity 100 with a target of 28.2 (staffing and productivity hold the
+    // rest down), planned share 1, and an input limit of 0.9: made 25.4.
+    const causes = (over: Record<string, unknown>) =>
+      buildSectorPlantsSection({
+        eraUnitScale: 1,
+        ...BASE_ARGS,
+        sector: sectorFixture({
+          capitalStock: 1_000,
+          producedUnits: 254,
+          soldUnits: 254,
+          labourStaffingFactor: 0.34,
+          producerSettlement: {
+            turn: 100,
+            activeUnits: 100,
+            plannedUnits: 28.2,
+            plannedRunShare: 1,
+            offeredUnits: 25.4,
+            producedUnits: 25.4,
+            soldUnits: 25.4,
+            runCutBy: ["inputs"],
+            bindingInput: "coal",
+            billedRunShare: 0.9,
+            ...over,
+          } as unknown as CorporateSector["producerSettlement"],
+        }),
+      }).idleCauses;
+    const inputs = causes({}).find((c) => c.cause === "inputs");
+    // 25.4 / 0.9 - 25.4 = 2.82 of 100 capacity, not the 74.6 gap to capacity.
+    const capacity = 1_000;
+    expect((inputs?.units ?? 0) / capacity).toBeCloseTo(0.0282, 3);
+    expect((causes({}).find((c) => c.cause === "staffing")?.units ?? 0) / capacity).toBeGreaterThan(
+      0.5
+    );
+    // A cut run that also ran short of cash keeps the remainder under cash.
+    const both = causes({ runCutBy: ["cash", "inputs"] }).map((c) => c.cause);
+    expect(both).toContain("inputs");
+    expect(both).toContain("cash");
   });
 
   it("falls back to the pre-migration visible facility count", () => {

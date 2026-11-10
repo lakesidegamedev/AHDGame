@@ -1,3 +1,4 @@
+import { v2VotePosition } from "@/lib/resetLegislation/rules/politicalPositions";
 import { v2EnactmentApproval } from "@/lib/resetLegislation/rules/voterReactions";
 /** Reset-law bill displays use the frozen proposal price, including retained claims. */
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -31,6 +32,8 @@ export function resolveResetLawProvision(provision: ResetLawProvision): Provisio
       explanation: provision.currentLawDescriptionSnapshot,
     },
     proposed: { name: provision.titleSnapshot, explanation: provision.descriptionSnapshot },
+    economic: v2VotePosition(provision)?.economic,
+    social: v2VotePosition(provision)?.social,
     effectDirection: 0,
     directionLabel: "Center",
     fiscal: {
