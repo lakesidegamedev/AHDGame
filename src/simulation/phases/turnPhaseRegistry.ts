@@ -1351,83 +1351,14 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           );
         }
         const govResult = await runtime.runPhase("parliamentaryGovernmentFormation", async () => {
-          const { processBg1991ConstitutionalMandate } =
-            await import("@/lib/countries/bg/constitutionalProposals1991");
-          const { processBg1991ConstitutionalNpcProposal } =
-            await import("@/lib/countries/bg/constitutionalNpcProposals1991");
-          const { processBg1991AssemblyDissolution } =
-            await import("@/lib/countries/bg/assemblyDissolution1991");
-          await processBg1991ConstitutionalMandate(db, context.gameState, newTurn, gameNow);
-          await processBg1991AssemblyDissolution(db, context.gameState, newTurn, gameNow);
-          await processBg1991ConstitutionalNpcProposal(db, context.gameState, newTurn, gameNow);
-          const { processBgAssemblyTransition } = await import("@/lib/turn/bgAssemblyTransition");
-          await processBgAssemblyTransition(db, context.gameState, newTurn, gameNow);
-          const { advanceBg1991ListVacancies } =
-            await import("@/lib/countries/bg/listVacancies1991");
-          await advanceBg1991ListVacancies(db, context.gameState, newTurn, gameNow);
-          const { openBgGrandConstituencyByElections } =
-            await import("@/lib/countries/bg/constituencyByElections1991");
-          await openBgGrandConstituencyByElections(db, context.gameState, newTurn, gameNow);
-          const { processRoParliamentTransition } =
-            await import("@/lib/turn/roParliamentTransition");
-          const { processRo1992ElectoralMandate } =
-            await import("@/lib/countries/ro/electoralProposals1992");
-          await processRo1992ElectoralMandate(db, context.gameState, newTurn, gameNow);
-          const { processRo1992ElectoralNpcProposal } =
-            await import("@/lib/countries/ro/electoralNpcProposals1992");
-          await processRo1992ElectoralNpcProposal(db, context.gameState, newTurn, gameNow);
-          await processRoParliamentTransition(db, context.gameState, newTurn, gameNow);
-          const { processFederationRatifications } =
-            await import("@/lib/turn/federationRatifications");
-          const { processRatifiedFederationSettlements } =
-            await import("@/lib/turn/federationSettlements");
-          const { processFederationNpcMandates } = await import("@/lib/turn/federationNpcMandates");
-          await processFederationNpcMandates(db, context.gameState.preset, currentYear, gameNow);
-          await processFederationRatifications(db, context.gameState.preset, newTurn);
-          await processRatifiedFederationSettlements(
-            db,
-            context.gameState.preset,
-            newTurn,
-            currentYear,
-            gameNow
-          );
-          const { processYuDissolution } = await import("@/lib/turn/yuDissolution");
-          await processYuDissolution(db, context.gameState, newTurn, gameNow);
-          const { processRussianConstitutionalNpcProposals } =
-            await import("@/lib/countries/ru/constitutionalNpcProposals");
-          await processRussianConstitutionalNpcProposals(db, context.gameState, newTurn, gameNow);
-          const { processRussianConstitutionalMandates } =
-            await import("@/lib/countries/ru/constitutionalProposals");
-          await processRussianConstitutionalMandates(db, context.gameState, newTurn, gameNow);
-          const { processRussianDuma1995Mandate } =
-            await import("@/lib/countries/ru/dumaElectoralProposals1995");
-          await processRussianDuma1995Mandate(db, context.gameState, newTurn, gameNow);
-          const { processHu1994ElectoralMandate } =
-            await import("@/lib/countries/hu/electoralProposals1994");
-          await processHu1994ElectoralMandate(db, context.gameState, newTurn, gameNow);
-          const { processHu1994ElectoralNpcProposal } =
-            await import("@/lib/countries/hu/electoralNpcProposals1994");
-          await processHu1994ElectoralNpcProposal(db, context.gameState, newTurn, gameNow);
-          const { processHu2011ElectoralMandate } =
-            await import("@/lib/countries/hu/electoralProposals2011");
-          await processHu2011ElectoralMandate(db, context.gameState, newTurn, gameNow);
-          const { processHu2011ElectoralNpcProposal } =
-            await import("@/lib/countries/hu/electoralNpcProposals2011");
-          await processHu2011ElectoralNpcProposal(db, context.gameState, newTurn, gameNow);
-          const { openRussianPresidentialElection } =
-            await import("@/lib/countries/ru/presidentialElectionOpening");
-          await openRussianPresidentialElection({
+          const { runCountryTurnHooks } = await import("@/lib/turn/countryTurnHooks");
+          await runCountryTurnHooks({
             db,
             game: context.gameState,
             turn: newTurn,
+            year: currentYear,
             now: gameNow,
           });
-          const { processRuPresidencyTransition } =
-            await import("@/lib/countries/ru/ruPresidencyTransition");
-          await processRuPresidencyTransition(db, context.gameState, newTurn, gameNow);
-          const { processRuLegislatureTransition } =
-            await import("@/lib/countries/ru/ruLegislatureTransition");
-          await processRuLegislatureTransition(db, context.gameState, newTurn, gameNow);
           return runPostElectionGovernmentPhases(db, gameNow, generalResolved ?? 0, newTurn);
         });
         const govFormedMap = govResult?.governmentFormed ?? {};
