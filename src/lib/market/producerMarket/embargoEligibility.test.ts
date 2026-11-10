@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import { tradeEligibilityScope } from "@/lib/turn/corporation/rules/tradeEligibilityScope";
-import { routeEligibility } from "./routeRules";
+import { createRouteEligibility, routeEligibility } from "./routeRules";
 
 /**
  * Proves the two halves meet: the affinity graph the trade system builds from a
@@ -92,5 +92,34 @@ describe("a modern world keeps one book but an embargo still binds", () => {
   it("honours an all-commodity block", () => {
     const sanctioned = [embargo({ commodity: "all" })];
     expect(eligibleFor(sanctioned, "JP")).toEqual(["fr-iron", "jp-iron"]);
+  });
+});
+
+describe("a company's own sites are exempt from an embargo", () => {
+  const owned = [
+    { id: "a-us-iron", commodity: "iron", sellerCountry: "US", accountId: "A" },
+    { id: "b-us-iron", commodity: "iron", sellerCountry: "US", accountId: "B" },
+    { id: "a-us-wheat", commodity: "wheat", sellerCountry: "US", accountId: "A" },
+    { id: "jp-iron", commodity: "iron", sellerCountry: "JP", accountId: "C" },
+  ];
+  const usToJpClosed = (_c: string, from: string, to: string) => !(from === "US" && to === "JP");
+  const listFor = createRouteEligibility(owned, usToJpClosed);
+
+  it("keeps the buyer's own offer eligible and still blocks other accounts", () => {
+    expect([...(listFor("iron", "JP", "A") ?? [])].sort()).toEqual(["a-us-iron", "jp-iron"]);
+  });
+
+  it("leaves an account with no own offers unchanged", () => {
+    expect(listFor("iron", "JP", "D")).toEqual(["jp-iron"]);
+    expect(listFor("iron", "JP")).toEqual(["jp-iron"]);
+  });
+
+  it("stays unrestricted when no route is closed", () => {
+    expect(createRouteEligibility(owned, () => true)("iron", "JP", "A")).toBeUndefined();
+  });
+
+  it("does not add own offers of a different commodity", () => {
+    expect(listFor("iron", "JP", "A")).not.toContain("a-us-wheat");
+    expect(listFor("wheat", "JP", "B")).toEqual([]);
   });
 });
