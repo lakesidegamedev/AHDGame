@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isOldLegislationTypeExcluded,
-  isPoliticalPipelinePreset,
-} from "@/lib/politicalMetrics/pipelinePreset";
+import { isOldLegislationTypeExcluded } from "@/lib/politicalMetrics/pipelinePreset";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import {
   MECHANICAL_LEGISLATION_ERA_ENTRIES,
@@ -89,7 +86,6 @@ describe("reference legislation catalog", () => {
   });
 
   it("lets the political-legislation preset keep every generated type", () => {
-    expect(isPoliticalPipelinePreset("1953-default")).toBe(true);
     for (const type of mechanicalLegislationTypes) {
       expect(
         isOldLegislationTypeExcluded({ _id: type._id, countryScope: type.countryScope }),

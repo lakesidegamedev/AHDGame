@@ -28,20 +28,13 @@ export async function seedBudgets(
         .collection<StateBudget>("stateBudgets")
         .deleteMany({ stateId: { $in: usStateIds }, countryId: "US" });
     }
-    // ⚠️ Only when this function actually rebuilds the US law book.
-    //
-    // On a political-legislation preset the US baseline comes from
-    // `seedPoliticalLegislationBaseline`, which strips the legacy US catalog
-    // via `POLITICAL_LEGISLATION_EXCLUDED_SCOPES`. That seeder lives in the
-    // orchestrators, NOT in `runSeed`, so deleting here would remove the US
-    // law book with nothing to restore it. Calling it from here would be
-    // worse: it prices every LAW_COUNTRY_ID against `countryFiscalBase`, and
-    // on the standalone path only US budgets exist, mispricing UK/RU/DD.
-    // Deleting only what we rebuild is the fix.
-    const { isPoliticalLegislationPreset } = await import("./seedPoliticalLegislation");
-    if (!isPoliticalLegislationPreset(preset)) {
-      await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "US" });
-    }
+    // The US enacted-law book comes from `seedPoliticalLegislationBaseline`,
+    // which strips the legacy US catalog via `POLITICAL_LEGISLATION_EXCLUDED_SCOPES`.
+    // That seeder lives in the orchestrators, NOT in `runSeed`, so deleting here
+    // would remove the US law book with nothing to restore it. Calling it from
+    // here would be worse: it prices every LAW_COUNTRY_ID against
+    // `countryFiscalBase`, and on the standalone path only US budgets exist,
+    // mispricing UK/RU/DD.
     // Formula grants are US-only, safe to drop
     await db
       .collection("formulaGrants")
