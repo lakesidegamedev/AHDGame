@@ -1,5 +1,9 @@
 import type { Db } from "mongodb";
 import { describe, expect, it, vi } from "vitest";
+vi.mock("@/lib/db/collections/gameState", () => ({
+  getGameStateCollection: async (db: { collection: (n: string) => unknown }) =>
+    db.collection("gameState"),
+}));
 import { migration } from "./2026-11-10-singleplayer-restore-kill-switch-flags";
 
 function fakeDb(doc: Record<string, unknown> | null) {
