@@ -583,7 +583,6 @@ export async function buildProducerTurnDemand(
           id: JSON.stringify([p.plan.id, "output", o.commodity]),
           commodity: o.commodity,
           sellerCountry: planCountry.get(p.plan.id) ?? "",
-          accountId: p.plan.accountId,
         }))
     );
     const orders: RouteOrder[] = [
@@ -594,7 +593,6 @@ export async function buildProducerTurnDemand(
             id: JSON.stringify([p.plan.id, "input", r.commodity]),
             commodity: r.commodity,
             buyerCountry: planCountry.get(p.plan.id) ?? "",
-            accountId: p.plan.accountId,
           }))
       ),
     ];
@@ -603,7 +601,7 @@ export async function buildProducerTurnDemand(
     const listFor = createRouteEligibility(offers, open);
     eligibleOffersByOrder = {};
     for (const order of orders) {
-      const list = listFor(order.commodity, order.buyerCountry, order.accountId);
+      const list = listFor(order.commodity, order.buyerCountry);
       if (list) eligibleOffersByOrder[order.id] = list;
     }
     const restrict = (row: { eligibleOfferIds?: readonly string[] }, list?: readonly string[]) => {
