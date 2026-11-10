@@ -8,7 +8,7 @@
  * Run: npx tsx scripts/sim/playable-region-texture-1953.ts
  */
 import assert from "node:assert/strict";
-import { REGIONAL_TEXTURE_1953 } from "../../src/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1953 } from "../../src/lib/politicalMetrics/seeds/regionalTexture1953";
 import { REGIONAL_MODIFIERS_1953 } from "../../src/lib/politicalMetrics/seeds/regionalModifiers1953";
 import { NATIONAL_BASELINES_1953 } from "../../src/lib/politicalMetrics/seeds/nationalBaselines1953";
 import type {
@@ -55,7 +55,7 @@ log("");
 // 1. Coverage: every playable region textured, defense honestly absent.
 log("## Coverage");
 for (const cc of COUNTRIES) {
-  const texture = REGIONAL_TEXTURE_1953[cc];
+  const texture = getRegionalTexture1953()[cc];
   const regions = Object.keys(texture);
   const entries = regions.reduce((n, r) => n + Object.keys(texture[r]).length, 0);
   const families = new Set<string>();
@@ -75,7 +75,9 @@ log("## Attorney General portfolio spread (US, texture deviations)");
 log("| family | distinct values | min | max |");
 log("| --- | ---: | ---: | ---: |");
 for (const f of AG_FAMILIES) {
-  const vals = Object.values(REGIONAL_TEXTURE_1953.US).map((t) => t[f as PoliticalMetricId] ?? 0);
+  const vals = Object.values(getRegionalTexture1953().US).map(
+    (t) => t[f as PoliticalMetricId] ?? 0
+  );
   const distinct = new Set(vals).size;
   log(`| ${f} | ${distinct} | ${Math.min(...vals)} | ${Math.max(...vals)} |`);
   assert.ok(distinct > 1, `US ${f} is still flat`);
@@ -89,7 +91,7 @@ log("");
 log("## Country mean preservation (population-weighted mean per family)");
 let worst = 0;
 for (const cc of COUNTRIES) {
-  const texture = REGIONAL_TEXTURE_1953[cc];
+  const texture = getRegionalTexture1953()[cc];
   const regions = Object.keys(texture);
   const families = new Set<PoliticalMetricId>();
   for (const t of Object.values(texture)) {
@@ -121,7 +123,7 @@ for (const cc of COUNTRIES) {
   for (const [region, mods] of Object.entries(REGIONAL_MODIFIERS_1953[cc])) {
     for (const f of Object.keys(mods)) {
       modifierCells++;
-      if (REGIONAL_TEXTURE_1953[cc]?.[region]?.[f as PoliticalMetricId] !== undefined) {
+      if (getRegionalTexture1953()[cc]?.[region]?.[f as PoliticalMetricId] !== undefined) {
         violations++;
         log(`- VIOLATION: ${cc}/${region}/${f} has both modifier and texture`);
       }
@@ -142,7 +144,7 @@ let slip = 0;
 let cells = 0;
 for (const cc of COUNTRIES) {
   const bases = NATIONAL_BASELINES_1953[cc] as Record<string, { value: number }>;
-  for (const [region, texture] of Object.entries(REGIONAL_TEXTURE_1953[cc])) {
+  for (const [region, texture] of Object.entries(getRegionalTexture1953()[cc])) {
     const mods = REGIONAL_MODIFIERS_1953[cc][region] ?? {};
     const fams = new Set([...Object.keys(texture), ...Object.keys(mods)]);
     for (const f of fams) {
@@ -166,7 +168,7 @@ log("");
 log("## Southern US bound saturation");
 let usBound = 0;
 let usTotal = 0;
-for (const texture of Object.values(REGIONAL_TEXTURE_1953.US)) {
+for (const texture of Object.values(getRegionalTexture1953().US)) {
   for (const v of Object.values(texture)) {
     usTotal++;
     if (Math.abs(v!) === 12) usBound++;
@@ -175,7 +177,7 @@ for (const texture of Object.values(REGIONAL_TEXTURE_1953.US)) {
 let southBound = 0;
 let southTotal = 0;
 for (const r of SOUTH) {
-  for (const v of Object.values(REGIONAL_TEXTURE_1953.US[r] ?? {})) {
+  for (const v of Object.values(getRegionalTexture1953().US[r] ?? {})) {
     southTotal++;
     if (Math.abs(v!) === 12) southBound++;
   }
@@ -187,7 +189,7 @@ log(
   `- South (${SOUTH.join(",")}): ${southBound}/${southTotal} (${((100 * southBound) / southTotal).toFixed(1)}%)`
 );
 const trustVals = new Set(
-  Object.values(REGIONAL_TEXTURE_1953.US).map((t) => t["order.communityTrust"] ?? 0)
+  Object.values(getRegionalTexture1953().US).map((t) => t["order.communityTrust"] ?? 0)
 );
 log(`- US order.communityTrust: ${trustVals.size} distinct values (coarsest family)`);
 log("");

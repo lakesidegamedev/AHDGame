@@ -16,8 +16,8 @@ import {
   baselineFor,
 } from "@/lib/politicalMetrics/seeds/baselineAnchors";
 import { REGIONAL_MODIFIERS_1953 } from "@/lib/politicalMetrics/seeds/regionalModifiers1953";
-import { REGIONAL_TEXTURE_1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
-import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
 import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 
@@ -107,9 +107,9 @@ export async function seedPoliticalMetrics(
         preset === TEXTURE_PRESET ? (REGIONAL_MODIFIERS_1953[countryId][state._id] ?? {}) : {};
       const texture =
         preset === "1991-default"
-          ? (REGIONAL_TEXTURE_1991[countryId]?.[state._id] ?? {})
+          ? (getRegionalTexture1991()[countryId]?.[state._id] ?? {})
           : preset === TEXTURE_PRESET
-            ? (REGIONAL_TEXTURE_1953[countryId]?.[state._id] ?? {})
+            ? (getRegionalTexture1953()[countryId]?.[state._id] ?? {})
             : {};
       for (const metricId of Object.keys(
         POLITICAL_BASELINE_ANCHORS[countryId]
