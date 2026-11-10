@@ -21,6 +21,7 @@ import {
 import type { NationDetailSection } from "./nationDetailsSections";
 import { visibleWorldNavItems } from "./worldNavItems";
 import type { StaffNavItem } from "./staffNavItems";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type DesktopMenuKey = "nation" | "world" | "state" | "help" | "staff";
 
@@ -51,7 +52,7 @@ export function stateLegislatureLabelFor(
   t: NavTranslator,
   homeState?: { id: string; countryId: string }
 ): string {
-  if (!homeState || homeState.countryId !== "UK") return t("state.legislature");
+  if (!homeState || !countryHasFeature("ukUi", homeState.countryId)) return t("state.legislature");
   const nation = UK_NATIONS.find((n) => n.id === homeState.id);
   if (nation?.devolvedBody) return nation.devolvedBody;
   const region = UK_REGIONS.find((r) => r.id === homeState.id);
@@ -169,7 +170,7 @@ export function buildDesktopMenus({
               ),
             ]
           : []),
-        ...(userCountry === "US"
+        ...(countryHasFeature("usUi", userCountry)
           ? [
               desktopLink(
                 "politicalOperations",

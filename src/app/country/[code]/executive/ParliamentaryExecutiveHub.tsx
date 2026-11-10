@@ -54,6 +54,7 @@ import {
 import { ConfidenceGaugeReadout } from "@/components/uk/government/ConfidenceGaugeReadout";
 import { getNhsState } from "@/lib/countries/uk/nhs/nhsStore";
 import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -96,7 +97,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     getConfidenceGaugeHistory(db, countryId),
   ]);
   // eslint-disable-next-line local/no-country-literals -- the NHS quality tile remains UK-specific.
-  const isUK = countryId === "UK";
+  const isUK = countryHasFeature("ukUi", countryId);
   const nhsState = isUK ? await getNhsState(db) : null;
 
   const [parlGov, govFormation, imperialPossessive, chamberSeats] = await Promise.all([
@@ -679,7 +680,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
         chrome={{
           governmentType: config.governmentType,
           executiveTermLimit: getExecutiveTermLimit(countryId),
-          hasDevolution: config.id === "UK",
+          hasDevolution: countryHasFeature("ukUi", config.id),
           ordersLabel: getExecutiveOrderNamePlural(countryId),
           legislatureName: config.legislature.name,
           legislaturePath: config.legislature.path,

@@ -8,8 +8,7 @@
  * Visuals use themed Tailwind tokens so it inherits all 11 themes. Desktop bar:
  * logo left; text tabs + icon cluster right; underline on active tab; inline
  * expanding search, with tabs in production order (Actions · State · Nation ·
- * World · Help · Staff). Includes the avatar/profile dropdown and improved
- * mobile collapsed bar + slide-down menu.
+ * World · Help · Staff). Includes the avatar/profile dropdown and a mobile menu.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -110,6 +109,7 @@ import type {
   OpenKey,
 } from "@/components/navbar/experimentalNavTypes";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const NavCustomizeDialog = dynamic(
   () =>
@@ -608,7 +608,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
             {t("menus.nation.myParty")} · {currentParty.name}
           </MenuRow>
         )}
-        {userCountry === "US" && (
+        {countryHasFeature("usUi", userCountry) && (
           <MenuRow href="/political-operations" onNavigate={closeAll}>
             {t("menus.nation.myPoliticalOperations")}
           </MenuRow>

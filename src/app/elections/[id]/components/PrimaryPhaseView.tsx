@@ -7,6 +7,7 @@ import { Card } from "@/components/ui";
 import { PartySection } from "./ElectionDetailComponents";
 import { YourStandingCard } from "./YourStandingCard";
 import type { ElectionDetail, PartyGroup } from "./ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface PrimaryPhaseViewProps {
   election: ElectionDetail;
@@ -132,7 +133,7 @@ export function PrimaryPhaseView({
         </div>
       )}
 
-      {election.countryId === "RU" &&
+      {countryHasFeature("ruUi", election.countryId) &&
         election.electionType === "president" &&
         localInPrimary &&
         !localIsEnded &&
@@ -158,7 +159,9 @@ export function PrimaryPhaseView({
           electionId={electionId}
           isEnded={localIsEnded}
           onRemoveSuccess={onRemoveSuccess}
-          isPresident={election.countryId !== "RU" && election.electionType === "president"}
+          isPresident={
+            !countryHasFeature("ruUi", election.countryId) && election.electionType === "president"
+          }
           advancingCount={advancingCount}
         />
       )}

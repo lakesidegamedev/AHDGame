@@ -50,6 +50,7 @@ import {
   getConfidenceConsequenceLevel,
   CONFIDENCE_CONSEQUENCE_DESCRIPTIONS,
 } from "@/lib/onePartyState/rulingPartyPriorities";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -904,7 +905,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
         chrome={{
           governmentType: config.governmentType,
           executiveTermLimit: getExecutiveTermLimit(countryId),
-          hasDevolution: config.id === "UK",
+          hasDevolution: countryHasFeature("ukUi", config.id),
           ordersLabel: getExecutiveOrderNamePlural(countryId),
           legislatureName: config.legislature.name,
           legislaturePath: config.legislature.path,

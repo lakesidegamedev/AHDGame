@@ -23,6 +23,7 @@ import {
   unionsUrl,
 } from "@/lib/urls";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type NationDetailItemId =
   | "executive"
@@ -212,7 +213,7 @@ export function buildNationalDetailsSections(
         },
         // SCOTUS is a US-only mechanic (#3581) — same country-literal
         // convention as the executive surface / CountryOverviewClient.
-        ...(config.id === "US"
+        ...(countryHasFeature("usUi", config.id)
           ? [
               {
                 id: "scotus" as const,

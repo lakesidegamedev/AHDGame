@@ -52,6 +52,7 @@ import { ElectionsControls } from "./components/ElectionsControls";
 import { ElectionsSkeleton } from "./components/ElectionsSkeleton";
 import { OfficeSection } from "./components/OfficeSection";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // The map pulls in react-simple-maps and only renders behind a toggle, so keep
 // it out of this page's initial bundle.
@@ -245,7 +246,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
   // the viewer has filtered to, so keying off `filtered` would refetch the whole
   // batch on every filter click.
   const manifestoElectionIds = useMemo(() => {
-    if (countryId !== "UK") return [];
+    if (!countryHasFeature("ukUi", countryId)) return [];
     return elections
       .filter((e) => isCommonsGeneralElection(e.electionType) && e.candidates.length > 0)
       .map((e) => e.id);
@@ -286,7 +287,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
    */
   const sectionFooter = useCallback(
     (sectionKey: string) => {
-      if (countryId !== "UK" || sectionKey !== "commons") return null;
+      if (!countryHasFeature("ukUi", countryId) || sectionKey !== "commons") return null;
       const contested = filtered.filter(
         (e) => isCommonsGeneralElection(e.electionType) && e.candidates.length > 0
       );

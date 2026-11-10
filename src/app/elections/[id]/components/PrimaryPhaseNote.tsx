@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { ElectionDetail } from "./ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface PrimaryPhaseNoteProps {
   election: ElectionDetail;
@@ -22,7 +23,8 @@ export function PrimaryPhaseNote({
   // US presidential is the only race using the staggered state-by-state
   // primary map; everyone else (parliamentary lower chambers, state-level
   // single-winner races) shares the standard primary-share formula.
-  const isUSPresidential = election.countryId === "US" && election.electionType === "president";
+  const isUSPresidential =
+    countryHasFeature("usUi", election.countryId) && election.electionType === "president";
   const plural = advancingCount === 1 ? "" : "s";
 
   return (

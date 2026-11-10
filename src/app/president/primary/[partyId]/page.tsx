@@ -31,6 +31,7 @@ import {
 } from "@/lib/elections/primaryViewModel";
 import { loadPrimaryPartyData, type PrimaryDetailViewer } from "@/lib/elections/primaryPartyDetail";
 import { NppAbbr } from "@/components/elections/NppAbbr";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Presidential primary standings can change every turn and after live player
 // actions (endorsements, surge, in-state campaigning), so cached route output
@@ -481,7 +482,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
         </div>
       )}
 
-      {viewerChar?.countryId === "US" && (
+      {countryHasFeature("usUi", viewerChar?.countryId) && (
         <div className="mb-4 rounded-xl border border-card-border bg-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">

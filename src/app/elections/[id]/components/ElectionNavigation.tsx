@@ -5,6 +5,7 @@ import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import { US_STATE_NAMES } from "./ElectionDetailHelpers";
 import type { ElectionDetail } from "./ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Builds an election URL from an ID that may be:
@@ -33,8 +34,9 @@ export function ElectionNavigation({ election, showLiveLink }: ElectionNavigatio
   const fallbackElectionsHref = `/country/${(election.countryId ?? "US").toLowerCase()}/elections`;
   // Breadcrumb shows the scope only. The full title lives in the <h1> below —
   // rendering it twice, ~40px apart, was pure noise.
-  const scopeText =
-    election.state === "US" ? "National" : (US_STATE_NAMES[election.state] ?? election.state);
+  const scopeText = countryHasFeature("usUi", election.state)
+    ? "National"
+    : (US_STATE_NAMES[election.state] ?? election.state);
   const showLiveResults = election.status !== "upcoming" && showLiveLink !== false;
 
   return (

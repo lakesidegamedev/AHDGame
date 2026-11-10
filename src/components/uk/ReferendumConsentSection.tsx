@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { ReferendumConsentCard, type ConsentReferendum } from "./ReferendumConsentCard";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface ConsentResponse {
   referendums: ConsentReferendum[];
@@ -34,7 +35,7 @@ export function ReferendumConsentSection({ countryId }: { countryId: CountryId }
     void load(); // eslint-disable-line react-hooks/set-state-in-effect -- initial data fetch
   }, [load]);
 
-  if (countryId !== "UK" || !data || data.referendums.length === 0) return null;
+  if (!countryHasFeature("ukUi", countryId) || !data || data.referendums.length === 0) return null;
 
   return (
     <div className="mb-6">

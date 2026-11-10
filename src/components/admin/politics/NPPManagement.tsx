@@ -13,6 +13,7 @@ import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { NppEconomyPanel } from "@/components/admin/politics/NppEconomyPanel";
 import { partiesApiUrl } from "@/lib/urls";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const UK_REGION_IDS = UK_REGIONS.map((r) => r.id);
 const JP_REGION_IDS = JP_REGIONS.map((r) => r.id);
@@ -425,7 +426,7 @@ export function NPPManagement() {
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <label className="text-sm font-medium">
-              {countryScope === "US"
+              {countryHasFeature("usUi", countryScope)
                 ? "States"
                 : countryScope === "all"
                   ? "States / Regions"
@@ -473,7 +474,7 @@ export function NPPManagement() {
           ) : (
             <p className="text-sm text-muted">
               All{" "}
-              {countryScope === "US"
+              {countryHasFeature("usUi", countryScope)
                 ? "states"
                 : countryScope === "all"
                   ? "states/regions"

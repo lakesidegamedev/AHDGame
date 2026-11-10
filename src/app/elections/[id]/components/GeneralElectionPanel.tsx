@@ -41,6 +41,7 @@ import { campaignLocalRate, getCampaignCurrency } from "@/lib/campaigns/campaign
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** ×1, one of the batch steps, or "as many as I can pay for right now". */
 type SupportClicks = number | "max";
@@ -485,7 +486,7 @@ export function GeneralElectionPanel({
       </div>
     </Modal>
   );
-  if (countryId === "RU" && electionType === "president")
+  if (countryHasFeature("ruUi", countryId) && electionType === "president")
     return (
       <>
         <RussianPresidentialResultPanel

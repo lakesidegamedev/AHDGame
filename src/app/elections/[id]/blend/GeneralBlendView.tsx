@@ -41,6 +41,7 @@ import {
   WhyItMovedBlock,
   type GeneralBlendViewProps,
 } from "./GeneralBlendParts";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 export type { GeneralBlendViewProps } from "./GeneralBlendParts";
 
 /** The Blend general-election screen (Proposal D). */
@@ -71,7 +72,7 @@ export function GeneralBlendView({
    * and so do funds and levels.
    */
   const { campaigns, loading: campaignsLoading } = useElectionCampaigns(electionId, {
-    enabled: election.countryId === "US",
+    enabled: countryHasFeature("usUi", election.countryId),
     refreshKey: election.gameState?.currentTurn ?? undefined,
   });
 
@@ -95,7 +96,7 @@ export function GeneralBlendView({
       gv?.electoralVotesByCandidate,
       college > 0 ? electoralMajorityFor(college) : PRESIDENTIAL_EV_NEEDED
     );
-    if (!risk?.atRisk || election.countryId !== "US") return null;
+    if (!risk?.atRisk || !countryHasFeature("usUi", election.countryId)) return null;
     return (
       <ContingentRiskBanner
         risk={risk}

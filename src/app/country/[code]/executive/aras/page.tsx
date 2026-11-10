@@ -10,6 +10,7 @@ import { getCountryFlagUrl } from "@/lib/constants";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
   const id = code.toUpperCase() as CountryId;
-  if (id !== "IE") return { title: "Áras Not Found | A House Divided" };
+  if (!countryHasFeature("ieUi", id)) return { title: "Áras Not Found | A House Divided" };
   return {
     title: "Áras an Uachtaráin | A House Divided",
     description:
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ArasPage({ params }: PageProps) {
   const { code } = await params;
   const id = code.toUpperCase() as CountryId;
-  if (id !== "IE") notFound();
+  if (!countryHasFeature("ieUi", id)) notFound();
 
   const db = await getDb();
 
