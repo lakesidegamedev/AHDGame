@@ -16,6 +16,10 @@ import type {
 import { fundedTariffs, type ImportTariffTable } from "@/lib/market/producerMarket/tariffRules";
 import { tariffRevenueMoves } from "@/lib/market/producerMarket/liveFundingRules";
 import type { MoneyMove } from "@/lib/banking/moneyMove";
+import {
+  automationLevyTransfers,
+  type PlantLevy,
+} from "@/lib/market/producerMarket/levyCloseRules";
 import type { ProducerWalletScope } from "./producerWallets";
 
 /** Countries that can collect a tariff this turn: every importer in the table. */
@@ -32,9 +36,12 @@ export function tariffImporters(table: ImportTariffTable | undefined): string[] 
 /** One tariff account per importer with a known currency. */
 export function tariffCollectorScopes(
   table: ImportTariffTable | undefined,
-  currencyOf: (countryId: string) => ProducerWalletScope["currency"] | undefined
+  currencyOf: (countryId: string) => ProducerWalletScope["currency"] | undefined,
+  /** Countries that also collect automation levies through the same account. */
+  levyCountries: Iterable<string> = []
 ): ProducerWalletScope[] {
-  return tariffImporters(table).flatMap((countryId) => {
+  const countries = new Set([...tariffImporters(table), ...levyCountries]);
+  return [...countries].sort().flatMap((countryId) => {
     const currency = currencyOf(countryId);
     return currency ? [{ kind: "tariffCollector" as const, countryId, currency }] : [];
   });
@@ -89,6 +96,54 @@ export function tariffsAtClose(input: {
       collectedByImporter: Object.fromEntries(result.collectedByImporter),
       paid,
       shortfall: result.shortfall,
+    },
+  };
+}
+
+export interface LevyCloseResult {
+  transfers: SettlementCloseTransfer[];
+  paidByAccount: Map<string, number>;
+  meta: { collectedByCountry: Record<string, number>; paid: number; shortfall: number };
+}
+
+/**
+ * Automation levies owed on this turn's settled input purchases, as closing transfers from
+ * the paying company to its country's collection account. `closingCash` is reduced in place
+ * so later closing transfers plan from what is really left.
+ */
+export function automationLevyAtClose(input: {
+  market: EconomyResult;
+  levyByPlant: ReadonlyMap<string, PlantLevy>;
+  collectorOf: (countryId: string) => string | null;
+  closingCash: Map<string, number>;
+}): LevyCloseResult {
+  const close = automationLevyTransfers({
+    trades: producerTrades(input.market.tradeReceipt),
+    levyByPlant: input.levyByPlant,
+    collectorOf: input.collectorOf,
+    cashOf: (id) => input.closingCash.get(id) ?? 0,
+  });
+  let paid = 0;
+  for (const t of close.transfers) {
+    paid += t.amount;
+    input.closingCash.set(
+      t.fromAccountId,
+      (input.closingCash.get(t.fromAccountId) ?? 0) - t.amount
+    );
+    input.closingCash.set(t.toAccountId, (input.closingCash.get(t.toAccountId) ?? 0) + t.amount);
+  }
+  return {
+    transfers: close.transfers.map((t) => ({
+      reason: "automation_levy",
+      fromAccountId: t.fromAccountId,
+      toAccountId: t.toAccountId,
+      amountAnchor: t.amount,
+    })),
+    paidByAccount: close.paidByAccount,
+    meta: {
+      collectedByCountry: Object.fromEntries(close.collectedByCountry),
+      paid,
+      shortfall: close.shortfall,
     },
   };
 }
