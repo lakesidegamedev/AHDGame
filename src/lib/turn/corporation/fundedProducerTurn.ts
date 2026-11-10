@@ -17,9 +17,6 @@
 import { HOUSEHOLD_SAVINGS_DRAW_SHARE } from "@/lib/market/producerMarket/householdSpendRules";
 import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
-import { automationLevyInputPenalty } from "@/lib/automationPolicy/rules";
-import { automationPolicyFor } from "@/lib/automationPolicy/policies";
-import type { PlantLevy } from "@/lib/market/producerMarket/levyCloseRules";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { FederalBudget } from "@/lib/db/types/budget";
@@ -91,8 +88,8 @@ import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
 import {
   tariffCollectorScopes,
-  tariffsAtClose,
-  automationLevyAtClose,
+  collectionsAtClose,
+  plantLevies,
   tariffSweepMoves,
   type TariffClose,
 } from "./fundedTariffs";
@@ -417,25 +414,11 @@ export async function runFundedProducerTurn(
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
   // One tariff account per importing country (producerTariffStage); none when off.
-  // The automation levy rides the same account: each plant that owes one, by plan id.
-  const sectorById = new Map(
-    [...lookups.sectorsByCorp.values()].flat().map((sector) => [sector._id.toHexString(), sector])
-  );
-  const levyByPlant = new Map<string, PlantLevy>();
-  for (const [planId, sectorId] of demand.planSector) {
-    const sector = sectorById.get(sectorId);
-    const countryId = sector?.countryId;
-    if (!sector || !countryId) continue;
-    const penalty = automationLevyInputPenalty(
-      automationPolicyFor(lookups.automationPolicyByCountry ?? new Map(), countryId),
-      sector.strategyId
-    );
-    if (penalty > 0) levyByPlant.set(planId, { countryId, penalty });
-  }
+  const levyByPlant = plantLevies(demand.planSector, lookups); // levies ride the same account
   const tariffScopes = tariffCollectorScopes(
     demand.importTariffs,
     (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency,
-    [...levyByPlant.values()].map((l) => l.countryId)
+    levyByPlant
   );
   const tariffCollector = new Map(
     tariffScopes.map((s) => [s.countryId, producerWalletId(worldEpoch, s)])
@@ -679,24 +662,14 @@ export async function runFundedProducerTurn(
   // thousands of money moves (each costs several prod round trips).
   const closeAtSettlement = (market: EconomyResult): SettlementClose => {
     const closingCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
-    // Import tariffs come off the buyers' cash first, so every later closing
-    // transfer plans from what is left (producerTariffStage).
-    const tariffs = demand.importTariffs
-      ? tariffsAtClose({
-          market,
-          table: demand.importTariffs,
-          collectorOf: (c) => tariffCollector.get(c) ?? null,
-          closingCash,
-        })
-      : null;
-    const levy = levyByPlant.size
-      ? automationLevyAtClose({
-          market,
-          levyByPlant,
-          collectorOf: (c) => tariffCollector.get(c) ?? null,
-          closingCash,
-        })
-      : null;
+    // Tariffs and levies come off the buyers' cash first (producerTariffStage).
+    const tariffs = collectionsAtClose({
+      market,
+      table: demand.importTariffs,
+      levyByPlant,
+      collectors: tariffCollector,
+      closingCash,
+    });
     const settledProfitByCorp = new Map<string, number>();
     const revenueBySector = new Map<string, number>();
     for (const r of market.producers) {
@@ -707,9 +680,6 @@ export async function runFundedProducerTurn(
     }
     // A company's tariff on its imported inputs is a cost of the turn.
     for (const [id, paid] of tariffs?.paidByAccount ?? [])
-      if (settledProfitByCorp.has(id))
-        settledProfitByCorp.set(id, settledProfitByCorp.get(id)! - paid);
-    for (const [id, paid] of levy?.paidByAccount ?? [])
       if (settledProfitByCorp.has(id))
         settledProfitByCorp.set(id, settledProfitByCorp.get(id)! - paid);
     const transfers: SettlementClose["transfers"] = planFundedClose({
@@ -726,7 +696,6 @@ export async function runFundedProducerTurn(
       toAccountId: t.to.id,
       amountAnchor: t.amountAnchor,
     }));
-    if (levy) transfers.unshift(...levy.transfers);
     if (tariffs) transfers.unshift(...tariffs.transfers);
     // Public funding kept for next turn on lines that stayed short. Set aside
     // before transition support and grants so the pool they draw on excludes it.
@@ -899,14 +868,6 @@ export async function runFundedProducerTurn(
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
         publicCarryTarget: carryTargetByCountry,
         ...(spillShare > 0 ? { procurementSpillByCountry: spillByCountry } : {}),
-        ...(levy
-          ? {
-              automationLevy: {
-                ...levy.meta,
-                paidByAccount: Object.fromEntries(levy.paidByAccount),
-              },
-            }
-          : {}),
         ...(tariffs
           ? {
               importTariffs: {

@@ -4,7 +4,7 @@ import { applySettlementClose, type EconomyResult } from "@/lib/market/producerM
 import type { ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
 import { importTariffKey } from "@/lib/market/producerMarket/tariffRules";
 import {
-  automationLevyAtClose,
+  collectionsAtClose,
   tariffCollectorScopes,
   tariffImporters,
   tariffsAtClose,
@@ -136,9 +136,13 @@ describe("funded tariffs on the turn", () => {
   });
 
   it("opens a collection account for a country that only levies", () => {
-    expect(tariffCollectorScopes(undefined, () => "USD", ["US"])).toEqual([
-      { kind: "tariffCollector", countryId: "US", currency: "USD" },
-    ]);
+    expect(
+      tariffCollectorScopes(
+        undefined,
+        () => "USD",
+        new Map([["p", { countryId: "US", penalty: 0.1 }]])
+      )
+    ).toEqual([{ kind: "tariffCollector", countryId: "US", currency: "USD" }]);
   });
 
   it("collects the automation levy from the company into the treasury with the books balanced", () => {
@@ -160,13 +164,14 @@ describe("funded tariffs on the turn", () => {
       },
     } as unknown as EconomyResult;
     const closingCash = new Map(inputMarket.accounts.map((a) => [a.id, a.cash]));
-    const close = automationLevyAtClose({
+    const close = collectionsAtClose({
       market: inputMarket,
+      table: undefined,
       levyByPlant: new Map([["plant-1", { countryId: "US", penalty: 0.1 }]]),
-      collectorOf: (c) => (c === "US" ? "tariff-US" : null),
+      collectors: new Map([["US", "tariff-US"]]),
       closingCash,
     });
-    expect(close.transfers).toEqual([
+    expect(close!.transfers).toEqual([
       {
         reason: "automation_levy",
         fromAccountId: "buyer",
@@ -174,10 +179,14 @@ describe("funded tariffs on the turn", () => {
         amountAnchor: 3,
       },
     ]);
-    expect(close.meta).toEqual({ collectedByCountry: { US: 3 }, paid: 3, shortfall: 0 });
+    expect(close!.meta.automationLevy).toEqual({
+      collectedByCountry: { US: 3 },
+      paid: 3,
+      shortfall: 0,
+    });
     const settled = applySettlementClose(
       inputMarket,
-      { transfers: close.transfers },
+      { transfers: close!.transfers },
       new Set(inputMarket.accounts.map((a) => a.id))
     );
     const sum = (rows: readonly { cash: number }[]) => rows.reduce((n, r) => n + r.cash, 0);
