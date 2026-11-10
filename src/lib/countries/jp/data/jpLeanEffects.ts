@@ -79,9 +79,16 @@ const SOCIAL_BY_DOMAIN: Record<string, Audience> = {
 
 /** National laws spread over 8 regions (1/8); regional laws apply at full scope. */
 const NATIONAL_MAGNITUDE = 2;
-const REGIONAL_MAGNITUDE = 1;
+export const REGIONAL_MAGNITUDE = 1;
 /** A social score this large is a real social-axis law, not an incidental stance tag. */
 const REAL_SOCIAL_SCORE = 5;
+
+/** Audience for a lean axis and a JP policy-domain key (unknown domain: the axis default). */
+export function leanAudience(axis: "economic" | "social", domain: string): Audience {
+  return axis === "economic"
+    ? (ECONOMIC_BY_DOMAIN[domain] ?? DEFAULT_ECONOMIC)
+    : (SOCIAL_BY_DOMAIN[domain] ?? DEFAULT_SOCIAL);
+}
 
 function effectsFor(type: LegislationType): DemographicEffect[] {
   const options = type.policyOptions ?? [];

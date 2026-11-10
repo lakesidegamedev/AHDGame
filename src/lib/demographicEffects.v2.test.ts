@@ -649,6 +649,56 @@ describe("processAllStateDemographics (turn phase, flag gating)", () => {
     expect(db.collectionMocks.states!.bulkWrite).toHaveBeenCalledTimes(1);
   });
 
+  describe("regional reset-law programs", () => {
+    const chuState = { _id: "CHU", countryId: "JP" };
+    const chuDemographics = () => makeDemographics({ _id: "CHU", countryId: "JP" });
+    const program = {
+      worldId: "w1",
+      scope: "regional",
+      regionId: "CHU",
+      familyId: "L06",
+      choice: "far_left",
+    };
+
+    async function run(programs: unknown[], withWorld = true) {
+      seedCollections({ flagOn: true, legTypes: [], policies: [] });
+      db.collectionMocks.states!.find.mockReturnValue(cursorOf([chuState]));
+      db.collectionMocks.stateDemographics!.find.mockReturnValue(cursorOf([chuDemographics()]));
+      db.collectionMocks.gameState!.findOne.mockResolvedValue({
+        _id: "current",
+        legislationDemographicEffectsV2Enabled: true,
+        ...(withWorld ? { resetWorldId: "w1" } : {}),
+      });
+      db.collection("resetLawPrograms");
+      db.collectionMocks.resetLawPrograms!.find.mockReturnValue(cursorOf(programs));
+      await processAllStateDemographics(db as unknown as Db);
+      const bulk = db.collectionMocks.stateDemographics!.bulkWrite;
+      if (bulk.mock.calls.length === 0) return {} as Record<string, unknown>;
+      const ops = bulk.mock.calls[0][0] as Array<{
+        updateOne: { update: { $set: Record<string, unknown> } };
+      }>;
+      return ops[0].updateOne.update.$set;
+    }
+
+    it("a far-left CHU jobs program pulls its income and education buckets left", async () => {
+      const set = await run([program]);
+      expect(set["layer1PositionOverrides.income.middle.economicLean"]).toBeCloseTo(
+        -0.4 * LEAN_SHIFT_RATE_PER_TURN,
+        9
+      );
+      expect(set["layer1PositionOverrides.income.low.economicLean"]).toBeLessThan(0);
+      expect(set["layer1PositionOverrides.education.vocational.economicLean"]).toBeLessThan(0);
+      expect(db.collectionMocks.resetLawPrograms!.find).toHaveBeenCalledTimes(1);
+    });
+
+    it("with no programs the update is identical to a world without the collection read", async () => {
+      const none = await run([]);
+      const noWorld = await run([program], false);
+      expect(Object.keys(none).filter((k) => k.startsWith("layer1PositionOverrides"))).toEqual([]);
+      expect(noWorld).toEqual(none);
+    });
+  });
+
   it("flag OFF: lean/turnout targets do nothing (no writes at all for a lean-only law)", async () => {
     seedCollections({ flagOn: false, legTypes: [leanLaw], policies: [paPolicy] });
 
