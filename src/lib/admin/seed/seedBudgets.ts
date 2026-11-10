@@ -56,7 +56,6 @@ export async function seedBudgets(
     getNationalBudgetSeedConfigsForPreset,
     generateCountryOwnedSeedData,
     generateStateBudgets,
-    generateDefaultEnactedLaws,
   } = await import("@/lib/seeds/reference/budgets");
   const { formulaGrants } = await import("@/lib/seeds/reference/formulaGrants");
 
@@ -74,44 +73,6 @@ export async function seedBudgets(
       .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
   }
   log(`Seeded ${usNationalBudgets.length} US national budget(s)`);
-
-  // Seed US default enacted laws so runtime spending calculation has data.
-  // $unset stale cost fields to prevent priority conflicts in calculateEnactedLawAnnualCost
-  // (which checks gdpPerCapitaMultiplier before annualCostPerCapita — a stale gdpPerCapitaMultiplier: 0
-  // from a previous seed would shadow a correct annualCostPerCapita from the current seed).
-  const allDefaultEnactedLaws = generateDefaultEnactedLaws(preset);
-  const defaultEnactedLaws = allDefaultEnactedLaws.filter((law) => law.countryId === "US");
-  for (const law of defaultEnactedLaws) {
-    const { _id, ...lawWithoutId } = law;
-
-    // Determine which cost fields to unset (those NOT in the current law)
-    const unsetFields: Record<string, ""> = {};
-    if (law.gdpPerCapitaMultiplier === undefined) unsetFields.gdpPerCapitaMultiplier = "";
-    if (law.annualCostPerCapita === undefined) unsetFields.annualCostPerCapita = "";
-    if (law.annualCostUsd === undefined) unsetFields.annualCostUsd = "";
-    if (law.gdpCostFraction === undefined) unsetFields.gdpCostFraction = "";
-    if (law.incomeCostFraction === undefined) unsetFields.incomeCostFraction = "";
-
-    const update: Record<string, unknown> = {
-      $set: lawWithoutId,
-      $setOnInsert: { _id },
-    };
-    if (Object.keys(unsetFields).length > 0) {
-      update.$unset = unsetFields;
-    }
-
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
-      {
-        legislationTypeId: law.legislationTypeId,
-        scope: law.scope,
-        countryId: law.countryId,
-        repealedAt: { $exists: false },
-      },
-      update,
-      { upsert: true }
-    );
-  }
-  log(`Seeded ${defaultEnactedLaws.length} US default enacted laws`);
 
   // Get US states for generating state budgets (UK handled by seedUkBudgets, JP by seedJpBudgets)
   const states = await db.collection<State>("states").find({ countryId: "US" }).toArray();
