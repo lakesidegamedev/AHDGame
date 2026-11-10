@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/Tooltip";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import MarketPie from "../components/MarketPie";

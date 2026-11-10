@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { DisplayCurrencyPreference } from "@/lib/utils/formatters";
-import { CURRENCY_SYMBOLS, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /** Client-only: first visit to this control should nudge review; cleared with "Got it". */

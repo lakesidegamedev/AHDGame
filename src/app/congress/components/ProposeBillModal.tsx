@@ -23,7 +23,7 @@ import {
 } from "@shared/constants/legislation";
 import type { BillCategory } from "@shared/constants/legislation";
 import { getEconomicPositionName, getSocialPositionName } from "@/lib/utils/politics";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { formatLocalAmount } from "@/lib/utils/formatters";
 import { PolicyEffectIndicators } from "@/components/legislation/PolicyEffectIndicators";
 import { LawProvisionComparison } from "@/components/bills/LawProvisionComparison";

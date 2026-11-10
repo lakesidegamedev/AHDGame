@@ -8,7 +8,7 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
 } from "@/lib/constants/corporationsClient";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { MAX_UNION_NAME_LENGTH, MIN_UNION_NAME_LENGTH } from "@/lib/unions/unionFounding";
 
 interface FoundUnionModalProps {

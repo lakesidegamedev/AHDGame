@@ -60,7 +60,7 @@ import {
 } from "@/components/bills/LawProvisionComparison";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";

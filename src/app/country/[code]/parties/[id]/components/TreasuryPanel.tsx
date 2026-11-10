@@ -4,7 +4,7 @@ import { useReducer, useCallback, useEffect, useMemo, useState } from "react";
 import { Input, Slider } from "@/components/ui";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import { useToast } from "@/contexts/ToastContext";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { partyApiUrl } from "@/lib/urls";
 import type { PartyData, PartyMember, UserData } from "./types";
 import { treasuryReducer, type TreasuryAction } from "./treasuryReducer";

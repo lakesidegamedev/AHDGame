@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input, Slider } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 

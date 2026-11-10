@@ -19,7 +19,7 @@ import type {
   OrderDisplay,
 } from "@/app/country/[code]/forex/types";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { CountryFlag } from "@/components/CountryFlag";
 import { CURRENCY_FLAG_CODE } from "@/components/forex/currencyDisplay";
 import type { CurrencyCode } from "@/lib/constants/currencies";

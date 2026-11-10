@@ -4,7 +4,7 @@ import Link from "next/link";
 import { regionPartyUrl, regionPartyApiUrl } from "@/lib/urls";
 import { useActionPreview } from "./orgActions/useActionPreview";
 import { EstimateLine } from "./orgActions/EstimateLine";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 
 /**
  * Quick Actions hub for the State Politics tab.
