@@ -25,8 +25,10 @@ import type { PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import type { PersistedSphereMembership } from "@/lib/world/spheres/membershipStore";
 import { isNppAutonomyActive } from "./featureFlag";
 import { executeForeignPolicyChoice } from "./foreignPolicyActions";
+import { processAutonomousCyber } from "./autonomousCyber";
 import {
   foreignPolicyActionAllowed,
+  foreignPolicyCyberAllowed,
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
@@ -611,6 +613,10 @@ export async function processAutonomousForeignPolicy(
         },
       }
     );
+  }
+  // Cyber operations ride the same once-per-plan claim, so a replayed turn cannot repeat them.
+  if (context.mode === "active" && decisionRecorded && foreignPolicyCyberAllowed(context.stage)) {
+    await processAutonomousCyber(db, countryId, context.head, currentTurn);
   }
   if (ballotsCast > 0) {
     await decisions.updateOne(

@@ -50,6 +50,40 @@
       "ratify": "Ratify Maastricht",
       "reject": "Reject Maastricht",
       "commonMarket": "Current members share tariff-free market access. This continues if Maastricht is rejected and ends when membership ends."
+    },
+    "cyber": {
+      "title": "Cyber operations",
+      "intro": "Attack another country's networks. Success depends on your cyber strength and your service's tradecraft against the target's resilience. A target may be able to name your government whether the attempt works or not, which raises world tension and costs your government approval.",
+      "loading": "Loading cyber operations...",
+      "unavailable": "Cyber operations are unavailable right now.",
+      "target": "Target",
+      "chooseTarget": "Choose a country",
+      "successChance": "Chance it gets through: {percent}%",
+      "attributionSuccess": "Chance you are named if it works: {percent}%",
+      "attributionFailed": "Chance you are named if it is repelled: {percent}%",
+      "cost": "Cost: {amount} from the intelligence appropriation. On hand: {balance}.",
+      "cannotAfford": "The appropriation cannot cover this operation.",
+      "noDirector": "The service has no director, so no operation can be launched.",
+      "launch": "Launch operation",
+      "standDown": "Stand down",
+      "standDownHelp": "Standing down opens a truce that blocks operations between the two countries in both directions and eases world tension.",
+      "working": "Working...",
+      "problem": "That order did not go through.",
+      "outcome": "Result: {message}",
+      "standDownDone": "A truce is in force until turn {turn}.",
+      "refusal": {
+        "truce": "A truce is in force with this country.",
+        "cooldown": "An operation against this country was run recently. Teams need time to rebuild access.",
+        "no_resilience_data": "This country has no network data to attack.",
+        "self": "You cannot target your own country."
+      },
+      "trucesTitle": "Active truces",
+      "noTruces": "No truces in force.",
+      "truce": "{country}: until turn {turn} ({who, select, you {declared by you} other {declared by them}})",
+      "operationsTitle": "Recent operations",
+      "noOperations": "No operations yet.",
+      "byYou": "Turn {turn}: your operation against {country} {result, select, success {got through} other {was repelled}}{attributed, select, yes {, and they named your government} other {}}.",
+      "againstYou": "Turn {turn}: an operation against your country {result, select, success {got through} other {was repelled}}. {country, select, unknown {Nobody could say who ran it.} other {It was traced to {name}.}}"
     }
   }
 }
