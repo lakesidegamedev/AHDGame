@@ -2,8 +2,6 @@ import type { OperatingSectorType } from "./corporations";
 import type { SectorStrategy } from "./sectorStrategyTypes";
 import { TIER_2039_STRATEGIES } from "./sectorStrategyDefinitions2039";
 
-// ─── Strategy definitions ───────────────────────────────────────────────────
-
 const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
   // ── Energy ──────────────────────────────────────────────────────────────
   energy: [
@@ -106,8 +104,7 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       name: "Renewables Focus",
       description:
         "Solar, wind, and battery storage. Lower output but demands electronics for panels and inverters.",
-      // Buffed energy output 0.50→0.55; reduced electronics 0.25→0.17 and rare_earth 0.10→0.07
-      // to make renewables more competitive. Building materials raised 0.10→0.12 for civil works.
+      // Tuned so renewables compete with fossil power; civil works need building materials.
       supply: { energy: 0.55 },
       demand: {
         electronics: 0.17,
@@ -1488,7 +1485,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       name: "Space Resources",
       description:
         "Lunar and asteroid pilot mining that lands rare earths and metals. Launch energy, electronics and freight make it the most input-hungry way to mine.",
-      // Still filtered by the state's deposit table like every extraction recipe.
       supply: { rare_earth: 0.62, iron: 0.18 },
       demand: { energy: 0.26, electronics: 0.14, freight: 0.12, vehicles: 0.08, software: 0.06 },
     },
