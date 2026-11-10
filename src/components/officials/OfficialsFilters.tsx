@@ -1,6 +1,6 @@
 "use client";
 
-import { US_STATES } from "@/lib/constants/usStateCodes";
+import { US_STATES } from "@/lib/countries/us/usStateCodes";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 
 interface OfficialsFiltersProps {

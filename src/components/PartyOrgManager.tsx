@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Skeleton, Slider } from "@/components/ui";
 import { getMessageStyle } from "@/lib/utils/formatters";
-import { US_STATES } from "@/lib/constants/usStateCodes";
+import { US_STATES } from "@/lib/countries/us/usStateCodes";
 import { getOrgLabel, getOrgBarColor } from "@/lib/utils/partyOrg";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { sortByRegionLabel } from "@/lib/regionOptions";

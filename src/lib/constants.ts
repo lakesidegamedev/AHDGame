@@ -9,7 +9,7 @@
  * The `constants/` directory contains modular constant files (countries, states, cabinet, etc.).
  */
 
-import { US_STATES } from "./constants/usStateCodes";
+import { US_STATES } from "@/lib/countries/us/usStateCodes";
 
 export { US_STATES };
 
