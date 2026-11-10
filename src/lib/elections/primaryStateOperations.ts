@@ -49,6 +49,7 @@ import type {
   StatePresenceRow,
 } from "@/lib/elections/dto/stateOperations";
 import type { Campaign } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type { StateOperationsView };
 
@@ -61,7 +62,11 @@ export async function buildStateOperations(
   args: { election: Election; character: Character }
 ): Promise<StateOperationsView | null> {
   const { election, character } = args;
-  if (election.electionType !== "president" || election.countryId !== "US") return null;
+  if (
+    election.electionType !== "president" ||
+    !countryHasFeature("usElections", election.countryId)
+  )
+    return null;
   if (election.status !== "active") return null;
 
   const gameTime = await getGameTime();

@@ -49,6 +49,7 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 const INDEPENDENT_COLOR = "#9CA3AF";
@@ -185,7 +186,7 @@ export async function buildResultsPayload(
 
     let unitIds: string[];
     const evByUnit = new Map<string, number>();
-    if (election.countryId === "US") {
+    if (countryHasFeature("usElections", election.countryId)) {
       const apportionment = await loadApportionment(
         db,
         gameState?.preset,
@@ -224,7 +225,13 @@ export async function buildResultsPayload(
       weight: evByUnit.get(unitId) ?? 0,
       votes: unitVotes[unitId] ?? {},
     }));
-    if (election.countryId === "US" && finalHour && totalEv && evNeeded && !tally.finalized) {
+    if (
+      countryHasFeature("usElections", election.countryId) &&
+      finalHour &&
+      totalEv &&
+      evNeeded &&
+      !tally.finalized
+    ) {
       // US presidential final hour: the election-night broadcast replaces the
       // generic drip. The tally here is the penultimate-turn tally; the final
       // turn is not counted until the race resolves.
@@ -378,7 +385,9 @@ export async function buildResultsPayload(
   }
   // Ended winner-take-one races (incl. popular-vote presidents): top of the poll.
   const isRussianDirectBallot =
-    election.countryId === "RU" && isPresident && !!election.russianPresidentialRound;
+    countryHasFeature("ruElections", election.countryId) &&
+    isPresident &&
+    !!election.russianPresidentialRound;
   if (isRussianDirectBallot)
     projectedWinner =
       tally?.russianPresidentialResult?.outcome === "won"
@@ -386,9 +395,9 @@ export async function buildResultsPayload(
         : null;
   const singleWinnerRace =
     !isRussianDirectBallot &&
-    !(election.countryId === "BR" && isPresident) &&
+    !(countryHasFeature("brElections", election.countryId) && isPresident) &&
     (isPresident || (election.totalSeats ?? 1) <= 1);
-  if (election.countryId === "BR" && isPresident)
+  if (countryHasFeature("brElections", election.countryId) && isPresident)
     projectedWinner =
       tally?.brazilPresidentialResult?.outcome === "won"
         ? tally.brazilPresidentialResult.winnerId
@@ -397,7 +406,10 @@ export async function buildResultsPayload(
   // no EV majority that is the House contingent winner, never the popular-vote
   // leader the fallback below would pick.
   const usCollegeResolution =
-    isPresident && isEnded && election.countryId === "US" && tally?.resolutionMode
+    isPresident &&
+    isEnded &&
+    countryHasFeature("usElections", election.countryId) &&
+    tally?.resolutionMode
       ? tally.resolutionMode
       : undefined;
   if (usCollegeResolution) {
@@ -416,7 +428,7 @@ export async function buildResultsPayload(
   const usCollegeAwaitingResolution =
     isPresident &&
     election.status === "completed" &&
-    election.countryId === "US" &&
+    countryHasFeature("usElections", election.countryId) &&
     !usCollegeResolution;
   if (
     !projectedWinner &&

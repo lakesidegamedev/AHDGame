@@ -4,6 +4,7 @@ import { allocateSeats, isMultiSeatElection } from "@/lib/elections/resolution/s
 import type { PartyGroup } from "./candidateEnrichment";
 import type { PollingData } from "./electionResponseTypes";
 import type { ElectionMethod } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // ---------------------------------------------------------------------------
 // Shared seat estimate helper
@@ -33,7 +34,10 @@ export function computeSeatEstimates(
   }
 
   if (tally.countingMethod === "pr_stv") {
-    if (countryId !== "IE" || !["dail", "localCouncil"].includes(electionType))
+    if (
+      !countryHasFeature("ieElections", countryId) ||
+      !["dail", "localCouncil"].includes(electionType)
+    )
       throw new Error("Ranked PR-STV is supported only for Irish Dail and local council races");
     validateRankedBallots(tally.rankedBallots, tally.totalVotes);
     if (tally.rankedBallots.length === 0) return null;

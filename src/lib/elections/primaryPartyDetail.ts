@@ -60,6 +60,7 @@ import type {
   PrimaryPartyDetail,
   PrimaryViewerCampaign,
 } from "@/lib/elections/dto/primaryPartyDetail";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -104,7 +105,9 @@ interface BuildArgs {
  * its caller renders nothing rather than a board of meaningless states.
  */
 function isSupportedRace(election: Election): boolean {
-  return election.electionType === "president" && election.countryId === "US";
+  return (
+    election.electionType === "president" && countryHasFeature("usElections", election.countryId)
+  );
 }
 
 export async function buildPrimaryPartyDetail(

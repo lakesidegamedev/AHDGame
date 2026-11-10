@@ -121,6 +121,7 @@ import {
   countPrStv,
   validateRankedBallots,
 } from "@/lib/elections/rules/prStv";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -224,7 +225,10 @@ export async function accumulateVoteTurn(
   // increments, and identical rankings merge by adding weights.
   const isPrStv = tally.countingMethod === "pr_stv";
   if (isPrStv) {
-    if (election.countryId !== "IE" || !["dail", "localCouncil"].includes(election.electionType))
+    if (
+      !countryHasFeature("ieElections", election.countryId) ||
+      !["dail", "localCouncil"].includes(election.electionType)
+    )
       throw new Error("Ranked PR-STV is supported only for Irish Dail and local council races");
     validateRankedBallots(tally.rankedBallots, tally.totalVotes);
   }
@@ -526,21 +530,21 @@ export async function accumulateVoteTurn(
   // before a nominee withdrew.
   const isBgOrdinary =
     preset === "1991-default" &&
-    election.countryId === "BG" &&
+    countryHasFeature("bgElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     election.cycle >= 1;
   const isHuBound =
     isHu1991AssemblyCampaign(election) ||
     (preset === "1991-default" &&
-      election.countryId === "HU" &&
+      countryHasFeature("huElections", election.countryId) &&
       (election.hungarianModernByElection != null || election.hungarianModernAssembly != null));
   const isJapanMixed =
     preset === "1991-default" &&
-    election.countryId === "JP" &&
+    countryHasFeature("jpElections", election.countryId) &&
     (election.electionType === "shugiin" || election.electionType === "snap_shugiin") &&
     election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
   const isBgFounding =
-    election.countryId === "BG" &&
+    countryHasFeature("bgElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     election.bulgarianFoundingRound?.ruleVersion === "parallel-1990-v1";
   const huRegisteredVoters =
@@ -553,11 +557,11 @@ export async function accumulateVoteTurn(
       Object.values(tally.totalVotes).reduce((sum, votes) => sum + votes, 0)
     );
   const isBoundDuma =
-    election.countryId === "RU" &&
+    countryHasFeature("ruElections", election.countryId) &&
     election.electionType === "dumaDeputy" &&
     election.russianDumaRound != null;
   const isBoundCouncil =
-    election.countryId === "RU" &&
+    countryHasFeature("ruElections", election.countryId) &&
     election.electionType === "federationCouncilMember" &&
     election.russianCouncilRound != null;
   // Bespoke national ballot systems split like the rest: every per-slice
@@ -922,7 +926,7 @@ export async function accumulateVoteTurn(
     : undefined;
   if (isPrStv) validateRankedBallots(rankedBallots, newTotals);
 
-  if (election.countryId === "RU" && election.russianPresidentialRound) {
+  if (countryHasFeature("ruElections", election.countryId) && election.russianPresidentialRound) {
     const campaigns = await db
       .collection<Campaign>("campaigns")
       .find({ electionId }, { projection: { candidateId: 1, campaignStrength: 1 } })
@@ -990,7 +994,7 @@ export async function accumulateVoteTurn(
   );
   const statePartyOrgByParty = new Map(statePartyOrgs.map((row) => [row.partyId, row]));
   const huBallots =
-    electionCountryId === "HU" &&
+    countryHasFeature("huElections", electionCountryId) &&
     election.electionType === "nationalAssembly" &&
     election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1" &&
     preset === "1991-default"
@@ -1027,7 +1031,7 @@ export async function accumulateVoteTurn(
         )
       : null;
   const japanMixedBallots =
-    electionCountryId === "JP" &&
+    countryHasFeature("jpElections", electionCountryId) &&
     (election.electionType === "shugiin" || election.electionType === "snap_shugiin") &&
     election.japanShugiinRules?.ruleVersion === "mixed-1994-v1" &&
     preset === "1991-default"
@@ -1154,7 +1158,8 @@ export async function accumulateVoteTurn(
 
   const nativeRussianTotal = councilTotals
     ? councilTotals.ledger.validBallots
-    : (election.countryId === "RU" && election.russianPresidentialRound) || isBoundDuma
+    : (countryHasFeature("ruElections", election.countryId) && election.russianPresidentialRound) ||
+        isBoundDuma
       ? Object.values(newTotals).reduce((sum, count) => sum + count, 0) +
         (isBoundDuma ? (tally.russianDumaBallot?.againstAllVotes ?? 0) : 0)
       : null;
@@ -1341,7 +1346,10 @@ export async function initElectionVoteTally(
     )
       throw new Error("Cannot reinitialize a PR-STV tally after ballots were cast");
     const election = await db.collection<Election>("elections").findOne({ _id: electionId });
-    if (election?.countryId !== "IE" || !["dail", "localCouncil"].includes(election.electionType))
+    if (
+      !countryHasFeature("ieElections", election?.countryId) ||
+      !["dail", "localCouncil"].includes(election.electionType)
+    )
       throw new Error("Ranked PR-STV is supported only for Irish Dail and local council races");
   }
 

@@ -54,6 +54,7 @@ import {
   loadContingentElectionData,
   type ContingentChamberOfficials,
 } from "@/lib/elections/resolution/loadContingentElectionData";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -411,7 +412,11 @@ export async function projectContingentElection(
   evNeeded: number,
   gameState: GameState | null
 ): Promise<ContingentProjectionDisplay | null> {
-  if ((president.countryId ?? "US") !== "US" || president.electionType !== "president") return null;
+  if (
+    !countryHasFeature("usElections", president.countryId ?? "US") ||
+    president.electionType !== "president"
+  )
+    return null;
   const risk = assessContingentEvRisk(electoralVotesByCandidate, evNeeded);
   if (!risk?.atRisk || !electoralVotesByCandidate) return null;
 

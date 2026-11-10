@@ -29,6 +29,7 @@ import {
   getCycleAnchors,
   type CycleAnchorContext,
 } from "./cycleAnchorContext";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const DE_BUNDESTAG_CYCLE_PERIOD_HOURS = 192; // 4 game-years
 const LANDTAG_CYCLE_PERIOD_HOURS = 240; // 5 game-years (48 turns/year × 5)
@@ -330,7 +331,7 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // modern presets. Earlier BR worlds did not run this regional election.
       if (
         electionType === "governor" &&
-        countryId === "BR" &&
+        countryHasFeature("brElections", countryId) &&
         (ctx.preset === "1953-default" || ctx.preset === "1979-default")
       ) {
         return null;
@@ -348,14 +349,14 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       const govAnchor =
         electionType === "governor" && customCycle1EndTurn !== undefined
           ? customCycle1EndTurn
-          : electionType === "governor" && countryId === "BR"
+          : electionType === "governor" && countryHasFeature("brElections", countryId)
             ? anchors.brChamber
-            : countryId === "RU" ||
-                countryId === "UKR" ||
-                countryId === "BLR" ||
-                countryId === "BAL"
+            : countryHasFeature("ruElections", countryId) ||
+                countryHasFeature("ukrElections", countryId) ||
+                countryHasFeature("blrElections", countryId) ||
+                countryHasFeature("balElections", countryId)
               ? anchors.ruRepublicSoviet
-              : countryId === "DD"
+              : countryHasFeature("ddElections", countryId)
                 ? anchors.ddVolkskammer
                 : anchors.governorStateSenate;
       if (govAnchor == null) return null;
@@ -373,7 +374,7 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // completely different anchor/period, so it gets its own countryId-aware
       // branch instead of the `senateClass`-keyed US math. See
       // BR_SENATE_CYCLE_PERIOD_HOURS for the staggering simplification note.
-      if (countryId === "BR") {
+      if (countryHasFeature("brElections", countryId)) {
         const endTurn =
           cycle === 1
             ? anchors.brSenate
@@ -402,7 +403,9 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // Presidential cycle = 192 turns (4 game-years), not dur.durationHours
       // (which is also 192 but this keeps the semantic explicit if anyone
       // retunes president durations).
-      const brRules = countryId === "BR" ? brazilPresidentialRules(ctx.preset) : null;
+      const brRules = countryHasFeature("brElections", countryId)
+        ? brazilPresidentialRules(ctx.preset)
+        : null;
       const PRESIDENT_CYCLE_TURNS = brRules?.termTurns ?? 192;
       const anchor = brRules
         ? (brRules.firstYear - ctx.startingYear + 1) * 48 + (ctx.preIterationTurns ?? 0)
@@ -603,7 +606,7 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // need different anchors/periods, so this case branches on `countryId`
       // instead of going through the single-anchor BETA_PARLIAMENT_CYCLES
       // table used by every other type here.
-      if (countryId === "TR") {
+      if (countryHasFeature("trElections", countryId)) {
         // Cumhuriyet Senatosu (1961-1980): see TR_SENATE_CYCLE_PERIOD_HOURS
         // and `trSenato` in cycleAnchorContext.ts for the simplification
         // note (full-chamber renewal, no partial/class renewal modeled).

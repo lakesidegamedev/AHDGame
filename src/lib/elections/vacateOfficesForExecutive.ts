@@ -4,6 +4,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ExecutiveHolderRef {
   characterId?: ObjectId | null;
@@ -112,7 +113,10 @@ export async function vacateNonExecutiveOfficesForExecutive(
       await notifyGovernorOfSenateVacancy(db, row.state, row.senateClass);
     }
     const rowCountry = row.countryId ?? "US";
-    if ((row.officeType === "senate" || row.officeType === "house") && rowCountry === "US") {
+    if (
+      (row.officeType === "senate" || row.officeType === "house") &&
+      countryHasFeature("usElections", rowCountry)
+    ) {
       chambers.add(row.officeType);
     }
   }

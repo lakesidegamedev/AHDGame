@@ -9,6 +9,7 @@ import { ObjectId } from "mongodb";
 import type { Election, ElectionVoteTally } from "@/lib/db/types";
 import { RU_1991_ECONOMIC_REGION_POPULATION } from "@/lib/countries/ru/data/ruPopulation1991";
 import { invalidateSuspendEndorsementsForWithdrawnCandidate } from "@/lib/campaigns/suspendEndorseLifecycle";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function removeWithdrawnCandidateFromTally(
   db: Db,
@@ -38,7 +39,7 @@ export async function removeWithdrawnCandidateFromTally(
     (tally.totalVotes[candidateId] ?? 0) > 0 &&
     (tally.state.startsWith("HU_") ||
       tally.state.startsWith("BG_") ||
-      tally.state === "RU" ||
+      countryHasFeature("ruElections", tally.state) ||
       Object.prototype.hasOwnProperty.call(RU_1991_ECONOMIC_REGION_POPULATION, tally.state))
   ) {
     const election = await db.collection<Election>("elections").findOne(
@@ -57,15 +58,15 @@ export async function removeWithdrawnCandidateFromTally(
       }
     );
     preserveCastVotes =
-      (election?.countryId === "BG" &&
+      (countryHasFeature("bgElections", election?.countryId) &&
         election.electionType === "nationalAssembly" &&
         election.bulgarianFoundingRound?.ruleVersion === "parallel-1990-v1") ||
-      (election?.countryId === "HU" &&
+      (countryHasFeature("huElections", election?.countryId) &&
         election.electionType === "nationalAssembly" &&
         (election.hungarianAssemblyRound?.ruleVersion === "mixed-1989-v1" ||
           election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1" ||
           election.hungarianModernByElection != null)) ||
-      (election?.countryId === "RU" &&
+      (countryHasFeature("ruElections", election?.countryId) &&
         ((election.electionType === "dumaDeputy" && election.russianDumaRound !== undefined) ||
           (election.electionType === "federationCouncilMember" &&
             election.russianCouncilRound !== undefined)));

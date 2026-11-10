@@ -138,6 +138,7 @@ import {
   collegeSizeFromEvByState,
   electoralMajorityFor,
 } from "./presidentialResolutionDisplay";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function _enrichElection(
   election: Election,
@@ -471,11 +472,11 @@ export async function _enrichElection(
 
   const isBgOrdinary =
     gameState?.preset === "1991-default" &&
-    election.countryId === "BG" &&
+    countryHasFeature("bgElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     (election.cycle >= 1 || election.bulgarianFoundingRound != null);
   const isHu1991Pending =
-    election.countryId === "HU" &&
+    countryHasFeature("huElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     (election.hungarianAssemblyRound?.ruleVersion === "mixed-1989-v1" ||
       election.hungarianModernByElection != null ||
@@ -494,12 +495,11 @@ export async function _enrichElection(
           election.state
         ));
 
-  // US House: project seats district-by-district using the
-  // SAME engine that decides the final result, instead of the statewide
-  // proportional estimate above — so the live "Projected Seats" panel matches
-  // how the race will actually resolve. Falls back to the proportional estimate
-  // for states with no districts drawn.
-  const redistrictedHouseRace = election.electionType === "house" && (countryId ?? "US") === "US";
+  // US House: project seats district by district with the engine that decides the
+  // final result, so the live panel matches the race. Falls back to the
+  // proportional estimate above when no districts are drawn.
+  const redistrictedHouseRace =
+    election.electionType === "house" && countryHasFeature("usElections", countryId ?? "US");
   let districtsForState: CongressionalDistrict[] | null = null;
   let districtedMarginProjection: SeatProjection | null = null;
   if (redistrictedHouseRace && !seatedAllocation && tally) {

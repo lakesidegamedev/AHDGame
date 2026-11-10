@@ -37,6 +37,7 @@ import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getSeatIdFromElection } from "@/lib/seats";
 import type { GameTimeContext } from "@/lib/time/gameTime";
 import { hasElectionStarted, isElectionEnded } from "@/lib/elections/phases";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -536,7 +537,8 @@ export function buildHouseSeatHealOps(
   return liveElections.flatMap((e) => {
     // NG zone races share electionType "house" with their own seat counts, so
     // the country gate is load-bearing, not defensive.
-    if (e.electionType !== "house" || e.countryId !== "US" || !e.state) return [];
+    if (e.electionType !== "house" || !countryHasFeature("usElections", e.countryId) || !e.state)
+      return [];
     const expected = houseSeats[e.state];
     // A state absent from the apportionment map (an unadmitted territory) or
     // reading non-positive must be left alone rather than zeroed.
@@ -669,7 +671,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
   // `president` election. Without the country guard, NG's live president would
   // trip this gate and suppress the US presidential cycle indefinitely.
   const livePresident = liveElections.some(
-    (e) => e.electionType === "president" && (e.countryId ?? "US") === "US"
+    (e) => e.electionType === "president" && countryHasFeature("usElections", e.countryId ?? "US")
   );
 
   const completedElections = await db
@@ -857,7 +859,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
   // valid windows — no separate year-guard needed.
   if (!livePresident) {
     const prev = lastCompleted(
-      (e) => e.electionType === "president" && (e.countryId ?? "US") === "US"
+      (e) => e.electionType === "president" && countryHasFeature("usElections", e.countryId ?? "US")
     );
     const doc = buildCanonicalSpawn({
       electionType: "president",
