@@ -158,7 +158,7 @@ export interface NppStanceInput {
   /** True when this country already took a stance on this crisis (player or NPP). */
   alreadyTookStance: boolean;
   budget: NppResponseBudget;
-  /** 0..1 appetite for acting early and spending; from the government's archetype. */
+  /** 0..1 appetite for acting early and spending; from the head's personality. */
   interventionism: number;
   severity: number;
 }
