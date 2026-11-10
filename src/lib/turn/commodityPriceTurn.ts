@@ -165,6 +165,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { TREATY_TRADE_DIRECTIVE_KEYS } from "@/lib/trade/rules/treatyTrade";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -923,7 +924,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   // before reading them (mirrors tariff-bill reconcile). Minister embargoes are
   // untouched.
   await reconcileSignedEmbargoBills(db, turn);
-  const [ftaPairs, orgMembershipDocs, tariffDocs, embargoDocs] = await Promise.all([
+  const [ftaPairs, orgMembershipDocs, tariffDocs, embargoDocs, treatyTermDocs] = await Promise.all([
     loadActiveFtaPairs(db),
     db
       .collection<OrganizationMembership>("organizationMemberships")
@@ -934,7 +935,24 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       .collection<TradeEmbargo>("tradeEmbargoes")
       .find({ $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: turn } }] })
       .toArray(),
+    db
+      .collection<{ directiveKey?: string }>("organizationLegislation")
+      .find(
+        {
+          type: "directive",
+          status: "active",
+          directiveKey: { $in: Object.keys(TREATY_TRADE_DIRECTIVE_KEYS) },
+        } as never,
+        { projection: { directiveKey: 1 } }
+      )
+      .toArray(),
   ]);
+  const activeTreaties = new Set(
+    treatyTermDocs.flatMap((d) => {
+      const org = d.directiveKey ? TREATY_TRADE_DIRECTIVE_KEYS[d.directiveKey] : undefined;
+      return org ? [org] : [];
+    })
+  );
   const blocsByCountry = buildBlocsByCountry(orgMembershipDocs);
   const curtainedCountries = buildCurtainedCountries(
     ledgerCurrentYear,
@@ -956,6 +974,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     embargoes: embargoDocs,
     curtainedCountries,
     blockadeClosure,
+    activeTreaties,
   });
 
   // Build existing price map early: the sourcing pass uses LAST turn's stored
