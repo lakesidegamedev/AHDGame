@@ -73,11 +73,12 @@ import { COUNTRY_POLICY_CONFIGS_1999 } from "./basePolicies1999";
 import { COUNTRY_POLICY_CONFIGS_2007 } from "./basePolicies2007";
 import { COUNTRY_POLICY_CONFIGS_2023 } from "./basePolicies2023";
 import { legislationTypes } from "./legislationTypes";
+import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
+import { OPENING_PROGRAM_SPENDING } from "./openingProgramSpending";
 import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 import { deLegislationTypes } from "@/lib/seeds/de/deLegislationTypes";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
 import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
-import { ruLegislationTypes } from "@/lib/seeds/ru/ruLegislationTypes";
 import { brLegislationTypes } from "@/lib/seeds/br/brLegislationTypes";
 import { frLegislationTypes } from "@/lib/seeds/fr/frLegislationTypes";
 import { itLegislationTypes } from "@/lib/seeds/it/itLegislationTypes";
@@ -87,7 +88,6 @@ import { trLegislationTypes } from "@/lib/seeds/tr/trLegislationTypes";
 import { grLegislationTypes } from "../gr/grLegislationTypes";
 import { atLegislationTypes } from "../at/atLegislationTypes";
 import { fiLegislationTypes } from "../fi/fiLegislationTypes";
-import { ddLegislationTypes } from "@/lib/seeds/dd/ddLegislationTypes";
 import { huLegislationTypes } from "@/lib/seeds/hu/huLegislation";
 import { plLegislationTypes } from "@/lib/seeds/pl/plLegislation";
 import { roLegislationTypes } from "@/lib/seeds/ro/roLegislation";
@@ -201,7 +201,6 @@ const budgetLegislationTypes = [
   ...deLegislationTypes,
   ...ieLegislationTypes,
   ...cnLegislationTypes,
-  ...ruLegislationTypes,
   ...brLegislationTypes,
   ...frLegislationTypes,
   ...itLegislationTypes,
@@ -211,7 +210,6 @@ const budgetLegislationTypes = [
   ...grLegislationTypes,
   ...atLegislationTypes,
   ...fiLegislationTypes,
-  ...ddLegislationTypes,
   ...huLegislationTypes,
   ...plLegislationTypes,
   ...roLegislationTypes,
@@ -393,17 +391,17 @@ export interface NationalBudgetSeedConfig {
   taxRateOverrides?: Partial<SupportedNationalBudget["taxRates"]>;
 }
 
-function findMatchedOption(
-  options: LegislationPolicyOption[] | undefined,
+function findMatchedOption<T extends Pick<LegislationPolicyOption, "economic" | "social">>(
+  options: readonly T[] | undefined,
   economic: number,
   social: number
-): LegislationPolicyOption | undefined {
+): T | undefined {
   if (!options?.length) return undefined;
 
   const exact = options.find((option) => option.economic === economic && option.social === social);
   if (exact) return exact;
 
-  let best: LegislationPolicyOption | undefined;
+  let best: T | undefined;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const option of options) {
@@ -437,10 +435,15 @@ function getPolicyDefaults(config: NationalBudgetSeedConfig, legislationTypeId: 
   return config.policyDefaults[legislationTypeId] ?? { economic: 0, social: 0 };
 }
 
-function getDefaultPolicyOption(
+function getDefaultPolicyOption<
+  T extends {
+    _id: string;
+    policyOptions?: readonly Pick<LegislationPolicyOption, "economic" | "social">[];
+  },
+>(
   config: NationalBudgetSeedConfig,
-  legislationType: LegislationType
-): LegislationPolicyOption | undefined {
+  legislationType: T
+): NonNullable<T["policyOptions"]>[number] | undefined {
   const overrideIndex = config.policyOptionOverrides[legislationType._id];
   if (overrideIndex !== undefined) {
     return legislationType.policyOptions?.[overrideIndex];
@@ -471,7 +474,8 @@ function deriveTaxRates(
 
   for (const [taxType, legislationTypeId] of Object.entries(config.taxPolicyIds)) {
     if (!legislationTypeId) continue;
-    const legislationType = typesById.get(legislationTypeId);
+    const legislationType =
+      SEED_FISCAL_LEVERS.get(legislationTypeId) ?? typesById.get(legislationTypeId);
     const defaultOption = legislationType
       ? getDefaultPolicyOption(config, legislationType)
       : undefined;
@@ -508,7 +512,9 @@ function derivePolicyRevenueLines(
   const revenueLines: Partial<SupportedNationalBudget["revenue"]> = {};
 
   for (const revenueConfig of config.policyRevenueConfigs ?? []) {
-    const legislationType = typesById.get(revenueConfig.legislationTypeId);
+    const legislationType =
+      SEED_FISCAL_LEVERS.get(revenueConfig.legislationTypeId) ??
+      typesById.get(revenueConfig.legislationTypeId);
     if (!legislationType?.policyOptions?.length) continue;
 
     const defaultOption = getDefaultPolicyOption(config, legislationType);
@@ -537,12 +543,7 @@ function derivePolicyRevenueLines(
   return revenueLines;
 }
 
-/**
- * Old-catalog country scopes owned by political-legislation v2. Shared with the
- * seeders so the list cannot drift — it applies at every preset now that the
- * pipeline is year-driven rather than 1953-gated.
- */
-import { POLITICAL_LEGISLATION_EXCLUDED_SCOPES as POLITICAL_LEGISLATION_OLD_SCOPES } from "@/lib/politicalMetrics/pipelinePreset";
+import { isPoliticalMetricsCountry } from "@/lib/politicalMetrics/types";
 import { JP_ECONOMY } from "@/lib/countries/jp/economy";
 import {
   JP_DEFAULT_REGIONAL_TAX_RATES,
@@ -685,7 +686,7 @@ function overrideCategoriesFor(countryId: string): Set<string> {
 }
 
 function isPoliticalLegislationCountry(countryId: string): boolean {
-  return POLITICAL_LEGISLATION_OLD_SCOPES.has(countryId.toLowerCase());
+  return isPoliticalMetricsCountry(countryId);
 }
 
 function preferFullAuthoredBaseline(config: NationalBudgetSeedConfig): boolean {
@@ -702,6 +703,10 @@ function preferFullAuthoredBaseline(config: NationalBudgetSeedConfig): boolean {
 
 function preferCategoryBaselineOverrides(config: NationalBudgetSeedConfig): boolean {
   return config.fiscalYear === 1953 && !isPoliticalLegislationCountry(config.countryId);
+}
+
+function openingProgramSpendingKey(config: NationalBudgetSeedConfig): string {
+  return `${config.countryId}|${config.fiscalYear}|${config.gdp}|${config.population}`;
 }
 
 function deriveSpending(
@@ -755,6 +760,16 @@ function deriveSpending(
       policyByCategory[legislationType.budgetCategory] =
         (policyByCategory[legislationType.budgetCategory] ?? 0) + annualCost;
     }
+  }
+
+  // US and UK carry no old law types; their opening program spending is data.
+  const frozen = hasPolicySpending
+    ? undefined
+    : OPENING_PROGRAM_SPENDING[openingProgramSpendingKey(config)]?.[activeOnly ? "active" : "all"];
+  if (frozen) {
+    hasPolicySpending = true;
+    Object.assign(policyByCategory, frozen.byCategory);
+    policyStateGrants = frozen.stateGrants;
   }
 
   const byCategory = hasPolicySpending
@@ -1047,12 +1062,9 @@ function deriveEnactedLaws(
   vacuumYear: number = config.fiscalYear
 ): SeedEnactedLaw[] {
   if (config.skipLegacyLegislation) return [];
-  // Political-legislation v2 owns US/UK/RU/DD on the 1953 preset — seeding the
-  // old modern-template catalogs here would leave orphan annualCostPerCapita
-  // laws that calculateFederalSpending still prices alongside the v2 book.
-  if (vacuumYear === 1953 && POLITICAL_LEGISLATION_OLD_SCOPES.has(config.countryId.toLowerCase())) {
-    return [];
-  }
+  // The political-legislation book owns the law book of US, UK, RU and DD at
+  // every preset; its baseline seeder writes their enacted laws.
+  if (isPoliticalLegislationCountry(config.countryId)) return [];
 
   const typesById = new Map(budgetLegislationTypes.map((lt) => [lt._id, lt] as const));
   const laws: SeedEnactedLaw[] = [];
