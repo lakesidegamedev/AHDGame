@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { seedCountryBudgets } from "./seedCountryBudgets";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Seeds East Germany's FY1979 national budget, default enacted laws (from the dd_*
@@ -33,8 +34,8 @@ export async function seedDdBudgets(
         ddGameConfig?.commandEconomyEnabled === true,
         log
       );
-      const ddCorpData = countryOwnedSeedData.filter(
-        (entry) => entry.corporation.countryOwnerId === "DD"
+      const ddCorpData = countryOwnedSeedData.filter((entry) =>
+        countryHasFeature("ddAdmin", entry.corporation.countryOwnerId)
       );
       const ddUpsert = await upsertCountryOwnedCorpEntries(db, "DD", ddCorpData);
       if (ddCorpData.length > 0) {

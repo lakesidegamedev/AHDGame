@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { seedCountryBudgets } from "./seedCountryBudgets";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function seedCnBudgets(
   db: Db,
@@ -37,8 +38,8 @@ export async function seedCnBudgets(
         commandEconomyEnabled,
         log
       );
-      const cnCorpData = countryOwnedSeedData.filter(
-        (entry) => entry.corporation.countryOwnerId === "CN"
+      const cnCorpData = countryOwnedSeedData.filter((entry) =>
+        countryHasFeature("cnAdmin", entry.corporation.countryOwnerId)
       );
       await upsertCountryOwnedCorpEntries(db, "CN", cnCorpData);
       if (cnCorpData.length > 0) {

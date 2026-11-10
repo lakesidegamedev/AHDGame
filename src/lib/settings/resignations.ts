@@ -33,6 +33,7 @@ import type {
   StatePartyOrg,
 } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -407,7 +408,10 @@ async function resignOfficial(
   // anchors the durable vacancy the by-election watcher fills. `vacate` is
   // idempotent (one live vacancy per row), so retries converge. Every other
   // country and office keeps the delete/tombstone path below.
-  if (official.officeType === "commons" && (official.countryId ?? character.countryId) === "UK") {
+  if (
+    official.officeType === "commons" &&
+    countryHasFeature("ukAdmin", official.countryId ?? character.countryId)
+  ) {
     const currentTurn = await getCurrentTurn(db);
     const vacancy = await vacateCommonsSeat(db, official, "resignation", currentTurn, now);
     if (!vacancy) return false;
@@ -633,11 +637,11 @@ async function applyPosition(
       !["president", "vicePresident"].includes(position.official.officeType)
         ? position.official.officeType
         : position.kind === "cabinet"
-          ? position.member.countryId === "US"
+          ? countryHasFeature("usAdmin", position.member.countryId)
             ? "usCabinet"
-            : position.member.countryId === "UK"
+            : countryHasFeature("ukAdmin", position.member.countryId)
               ? "ukCabinet"
-              : position.member.countryId === "DE"
+              : countryHasFeature("deAdmin", position.member.countryId)
                 ? "deCabinet"
                 : "parliamentaryCabinet"
           : position.kind === "central-bank"

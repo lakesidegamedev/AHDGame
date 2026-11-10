@@ -26,6 +26,7 @@ import { NG_GEOGRAPHY } from "@/lib/countries/ng/geography";
 import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSeats";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // State name lookup for display names
 const STATE_NAMES = US_STATE_NAMES;
@@ -120,7 +121,7 @@ function buildDisplayName(
   if (electionType === "president") {
     return "U.S. President";
   }
-  if (countryId === "IE" && electionType === "governor") {
+  if (countryHasFeature("ieAdmin", countryId) && electionType === "governor") {
     const stateName = getStateName(state, countryId);
     return `${stateName} — ${ieGovernorLabelForRegion(state)}`;
   }
@@ -143,7 +144,7 @@ function buildShortName(
   }
   // For IE Cathaoirleach (recycled `governor`), use a 3-letter "Cth" tag
   // so the seat-listing short form reads "DUB Cth" rather than "DUB Gov".
-  if (countryId === "IE" && electionType === "governor") {
+  if (countryHasFeature("ieAdmin", countryId) && electionType === "governor") {
     const localRegion = getLocalRegionId(state, countryId);
     return `${localRegion} Cth`;
   }

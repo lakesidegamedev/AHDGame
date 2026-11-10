@@ -15,6 +15,7 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 
@@ -36,15 +37,15 @@ function isModernTransitionPreset(preset: string): boolean {
 }
 
 async function loadRegionBundle(countryId: ModernTransitionCountryId): Promise<State[]> {
-  if (countryId === "PL") {
+  if (countryHasFeature("plAdmin", countryId)) {
     const { plRegions2027 } = await import("@/lib/countries/pl/data/plRegions2027");
     return [...plRegions2027];
   }
-  if (countryId === "RU") {
+  if (countryHasFeature("ruAdmin", countryId)) {
     const { ruRegions2027 } = await import("@/lib/countries/ru/data/ruRegions2027");
     return [...ruRegions2027];
   }
-  if (countryId === "BG") {
+  if (countryHasFeature("bgAdmin", countryId)) {
     const { bgRegions2027 } = await import("@/lib/countries/bg/data/bgRegions2027");
     return [...bgRegions2027];
   }
@@ -53,15 +54,15 @@ async function loadRegionBundle(countryId: ModernTransitionCountryId): Promise<S
 }
 
 async function loadPartySeeds(countryId: ModernTransitionCountryId): Promise<PartySeed[]> {
-  if (countryId === "PL") {
+  if (countryHasFeature("plAdmin", countryId)) {
     const { plParties } = await import("@/lib/countries/pl/data/plParties");
     return [...plParties];
   }
-  if (countryId === "RU") {
+  if (countryHasFeature("ruAdmin", countryId)) {
     const { ruParties } = await import("@/lib/countries/ru/data/ruParties");
     return [...ruParties];
   }
-  if (countryId === "BG") {
+  if (countryHasFeature("bgAdmin", countryId)) {
     const { bgParties } = await import("@/lib/countries/bg/data/bgParties");
     return [...bgParties];
   }
@@ -292,21 +293,21 @@ async function loadMetricsBundle(
 ): Promise<StateMetrics[]> {
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
     await import("@/lib/seeds/metricPresets");
-  if (countryId === "RO") {
+  if (countryHasFeature("roAdmin", countryId)) {
     const { roStateMetrics2027 } = await import("@/lib/countries/ro/data/roStateMetrics2027");
     return roStateMetrics2027.map((metric) => {
       const overlay = getRegionMetricPresets("RO", String(metric._id), preset);
       return overlay ? applyMetricPresetToMetrics(metric, overlay) : metric;
     });
   }
-  if (countryId === "RU") {
+  if (countryHasFeature("ruAdmin", countryId)) {
     const { ruStateMetrics2027 } = await import("@/lib/countries/ru/data/ruStateMetrics2027");
     return ruStateMetrics2027.map((metric) => {
       const overlay = getRegionMetricPresets("RU", String(metric._id), preset);
       return overlay ? applyMetricPresetToMetrics(metric, overlay) : metric;
     });
   }
-  if (countryId === "BG") {
+  if (countryHasFeature("bgAdmin", countryId)) {
     const { bgStateMetrics2027 } = await import("@/lib/countries/bg/data/bgStateMetrics2027");
     return bgStateMetrics2027.map((metric) => {
       const overlay = getRegionMetricPresets("BG", String(metric._id), preset);
@@ -484,10 +485,10 @@ export async function seedModernTransitionGovernmentFormation(
   countryId: ModernTransitionCountryId
 ) {
   if (!isModernTransitionPreset(preset)) return;
-  if (countryId === "RU") return; // Presidential formation is seeded by seedRUGovernmentFormation.
-  if (countryId === "BG") return; // The 240-seat formation is seeded by seedBG2027.
+  if (countryHasFeature("ruAdmin", countryId)) return; // Presidential formation is seeded by seedRUGovernmentFormation.
+  if (countryHasFeature("bgAdmin", countryId)) return; // The 240-seat formation is seeded by seedBG2027.
   const now = new Date();
-  const totalSeats = countryId === "PL" ? 460 : 331;
+  const totalSeats = countryHasFeature("plAdmin", countryId) ? 460 : 331;
   const majorityThreshold = Math.floor(totalSeats / 2) + 1;
   const formation: Omit<GovernmentFormation, "createdAt" | "updatedAt"> = {
     _id: countryId,
