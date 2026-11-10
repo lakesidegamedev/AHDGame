@@ -52,7 +52,13 @@ describe("client barrel guard", () => {
         if (match[1]) continue;
         const names = match[2]!
           .split(",")
-          .map((part) => part.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]!.trim())
+          .map((part) =>
+            part
+              .trim()
+              .replace(/^type\s+/, "")
+              .split(/\s+as\s+/)[0]!
+              .trim()
+          )
           .filter(Boolean);
         if (names.length > 0 && names.every((name) => SLIM_NAMES.has(name))) {
           offenders.push(`${file} (${names.join(", ")})`);
