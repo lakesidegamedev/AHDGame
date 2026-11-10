@@ -1,7 +1,7 @@
 import type { OperatingSectorType } from "./corporations";
 import type { SectorStrategy } from "./sectorStrategyTypes";
 import { TIER_2039_STRATEGIES } from "./sectorStrategyDefinitions2039";
-import { withMethodBuildProfile } from "./methodBuildProfiles";
+import { withMethodBuildProfile } from "@/lib/corporations/rules/methodAdoption";
 
 // ─── Strategy definitions ───────────────────────────────────────────────────
 

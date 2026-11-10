@@ -1,5 +1,3 @@
-import type { SectorStrategy } from "./sectorStrategyTypes";
-
 /**
  * Build time and downside of the late-tier methods, kept beside the definitions
  * so the definition files stay data about inputs and outputs.
@@ -122,11 +120,3 @@ export const METHOD_BUILD_PROFILES: Readonly<Record<string, MethodBuildProfile>>
     adoptionSurchargeFraction: 0.4,
   },
 };
-
-/** Copies a strategy with its build time and downside filled in when it has a profile. */
-export function withMethodBuildProfile(strategy: SectorStrategy): SectorStrategy {
-  const profile = METHOD_BUILD_PROFILES[strategy.id];
-  return profile
-    ? { ...strategy, buildTurns: profile.buildTurns, downside: profile.downside }
-    : strategy;
-}

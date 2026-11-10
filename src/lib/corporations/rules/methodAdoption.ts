@@ -2,6 +2,14 @@ import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { METHOD_BUILD_PROFILES } from "@/lib/constants/methodBuildProfiles";
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 
+/** Copies a strategy with its build time and downside filled in when it has a profile. */
+export function withMethodBuildProfile(strategy: SectorStrategy): SectorStrategy {
+  const profile = METHOD_BUILD_PROFILES[strategy.id];
+  return profile
+    ? { ...strategy, buildTurns: profile.buildTurns, downside: profile.downside }
+    : strategy;
+}
+
 /** Extra retool fee fraction for adopting `strategy`; zero for methods without a downside. */
 export function methodAdoptionSurchargeFraction(strategy: Pick<SectorStrategy, "id">): number {
   return METHOD_BUILD_PROFILES[strategy.id]?.adoptionSurchargeFraction ?? 0;
