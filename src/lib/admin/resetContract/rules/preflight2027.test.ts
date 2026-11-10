@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluatePreflight,
+  KILL_SWITCH_FLAGS,
   REMOVED_ALWAYS_ON_FLAGS,
   type PreflightInput,
   type StateEvidence,
@@ -18,6 +19,7 @@ const goodState = (id: string, countryId: string, extra: Partial<StateEvidence> 
 
 const allTrue: Record<string, unknown> = {
   ...Object.fromEntries(REMOVED_ALWAYS_ON_FLAGS.map((flag) => [flag, true])),
+  ...Object.fromEntries(KILL_SWITCH_FLAGS.map((flag) => [flag, true])),
   nppAutonomyLevel: "v6",
 };
 
@@ -53,6 +55,18 @@ describe("evaluatePreflight", () => {
     const found = failures(input({ gameState: { ...allTrue, coldWarEnabled: false } }));
     expect(found).toHaveLength(1);
     expect(found[0].detail).toContain("coldWarEnabled");
+  });
+
+  it("warns, not fails, when a kill switch is off", () => {
+    const i = input({ gameState: { ...allTrue, eraSystemEnabled: false } });
+    expect(failures(i)).toEqual([]);
+    const found = evaluatePreflight(i);
+    expect(found.map((f) => [f.severity, f.check])).toEqual([["warn", "kill-switches"]]);
+    expect(found[0].detail).toContain("eraSystemEnabled");
+  });
+
+  it("does not list the kill switches as removed flags", () => {
+    for (const flag of KILL_SWITCH_FLAGS) expect(REMOVED_ALWAYS_ON_FLAGS).not.toContain(flag);
   });
 
   it("warns, not fails, on absent flags in the running world and stays quiet in a fresh one", () => {
