@@ -40,6 +40,7 @@ import type {
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const bundestagspraesidentActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -52,7 +53,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "DE" || !COUNTRY_CONFIGS.DE) {
+    if (!countryHasFeature("deApi", countryId) || !COUNTRY_CONFIGS.DE) {
       return errorResponse(400, "Bundestagspräsident endpoint is DE-only");
     }
     const db = await getDb();
@@ -170,7 +171,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "DE" || !COUNTRY_CONFIGS.DE) {
+    if (!countryHasFeature("deApi", countryId) || !COUNTRY_CONFIGS.DE) {
       return errorResponse(400, "Bundestagspräsident endpoint is DE-only");
     }
 

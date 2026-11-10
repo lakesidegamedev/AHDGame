@@ -12,6 +12,7 @@ import { createNotification } from "@/lib/notifications";
 import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     if (!nominee.userId) {
       return errorResponse(400, "Only player characters can be nominated");
     }
-    if (nominee.countryId !== "US") {
+    if (!countryHasFeature("usApi", nominee.countryId)) {
       return errorResponse(400, "Only US politicians can be nominated as Vice President");
     }
     if (nomineeOid.equals(presidentOfficial.characterId)) {

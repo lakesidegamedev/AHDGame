@@ -44,6 +44,7 @@ import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -133,21 +134,23 @@ export const POST = withAdminRoute(async (_auth) => {
     .find({}, { projection: { _id: 1, countryId: 1, houseDistricts: 1, stateSenateSeats: 1 } })
     .toArray();
   const stateIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "US")
+    .filter((s) => countryHasFeature("usApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const ukRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "UK")
+    .filter((s) => countryHasFeature("ukApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const jpRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "JP")
+    .filter((s) => countryHasFeature("jpApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const deRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "DE")
+    .filter((s) => countryHasFeature("deApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const cnRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "CN")
+    .filter((s) => countryHasFeature("cnApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
-  const ruRegions = states.filter((s) => (s as { countryId?: string }).countryId === "RU") as {
+  const ruRegions = states.filter((s) =>
+    countryHasFeature("ruApi", (s as { countryId?: string }).countryId)
+  ) as {
     _id: string;
     houseDistricts?: number;
     stateSenateSeats?: number;
@@ -167,7 +170,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // world reapportions. Prefer the live value; fall back to the preset map.
   const liveHouseDistricts = new Map(
     states
-      .filter((s) => (s as { countryId?: string }).countryId === "US")
+      .filter((s) => countryHasFeature("usApi", (s as { countryId?: string }).countryId))
       .map((s) => [s._id as string, (s as { houseDistricts?: number }).houseDistricts])
   );
   const presetHouseSeats = getHouseSeats(ctx.preset);
@@ -808,16 +811,18 @@ export const POST = withAdminRoute(async (_auth) => {
     sangiin: toInsert.filter((e) => e.electionType === "sangiin").length,
     bundestag: toInsert.filter((e) => e.electionType === "bundestag").length,
     landtag: toInsert.filter((e) => e.electionType === "landtag").length,
-    jpGovernor: toInsert.filter((e) => e.electionType === "governor" && e.countryId === "JP")
-      .length,
+    jpGovernor: toInsert.filter(
+      (e) => e.electionType === "governor" && countryHasFeature("jpApi", e.countryId)
+    ).length,
     npcDelegate: toInsert.filter((e) => e.electionType === "npcDelegate").length,
     peoplesCongress: toInsert.filter((e) => e.electionType === "peoplesCongress").length,
     supremeSovietDeputy: toInsert.filter((e) => e.electionType === "supremeSovietDeputy").length,
     nationalitiesDeputy: toInsert.filter((e) => e.electionType === "nationalitiesDeputy").length,
     republicSupremeSoviet: toInsert.filter((e) => e.electionType === "republicSupremeSoviet")
       .length,
-    ruGovernor: toInsert.filter((e) => e.electionType === "governor" && e.countryId === "RU")
-      .length,
+    ruGovernor: toInsert.filter(
+      (e) => e.electionType === "governor" && countryHasFeature("ruApi", e.countryId)
+    ).length,
   };
 
   return NextResponse.json({

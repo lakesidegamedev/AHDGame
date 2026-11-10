@@ -4,7 +4,7 @@
  * Clears currentOffice on characters holding president/vicePresident who are
  * not the actual holder in electedOfficials.
  *
- * NOTE: Scoped to countryId === "US". CN also seats a ceremonial President
+ * NOTE: Scoped to countryHasFeature("usApi", countryId). CN also seats a ceremonial President
  * (auto-populated from CCP.chairId by partyChairHeadOfState) and must not be
  * touched here.
  */
@@ -13,6 +13,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ElectedOfficial, Character } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function POST() {
   try {

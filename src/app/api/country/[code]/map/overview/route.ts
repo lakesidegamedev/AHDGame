@@ -26,6 +26,7 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface MapRegionLean {
   regionId: string;
@@ -64,7 +65,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     // Currently only UK, CN, DE, and NG have map overview support
-    if (countryId !== "UK" && countryId !== "CN" && countryId !== "DE" && countryId !== "NG") {
+    if (
+      !countryHasFeature("ukApi", countryId) &&
+      !countryHasFeature("cnApi", countryId) &&
+      !countryHasFeature("deApi", countryId) &&
+      !countryHasFeature("ngApi", countryId)
+    ) {
       return errorResponse(404, `Map overview not yet supported for ${config.name}`);
     }
 

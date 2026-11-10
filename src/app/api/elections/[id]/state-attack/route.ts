@@ -35,6 +35,7 @@ import type {
   PrimaryStateActionKind,
   State,
 } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * What each kind costs and does, so the gate, the debit and the stored row all
@@ -115,7 +116,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const election = resolved.election;
 
-    if (election.electionType !== "president" || election.countryId !== "US") {
+    if (election.electionType !== "president" || !countryHasFeature("usApi", election.countryId)) {
       return errorResponse(400, "State attacks are only available in US presidential primaries");
     }
     if (election.status !== "active") {

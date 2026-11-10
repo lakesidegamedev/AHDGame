@@ -7,6 +7,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import type { State } from "@/lib/db/types";
 import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** JP playable region `_id`s — must match `jpRegions` / `JP_REGIONS`. */
 const JP_PLAYABLE_REGION_IDS = JP_REGIONS.map((r) => r.id);
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     if (playableHome) {
       const { residentPoliticalIds } = await loadUsPoliticalStateIds(db);
       states = states.filter(
-        (s) => (s.countryId ?? "US") !== "US" || residentPoliticalIds.has(s._id)
+        (s) => !countryHasFeature("usApi", s.countryId ?? "US") || residentPoliticalIds.has(s._id)
       );
     }
 

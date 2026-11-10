@@ -17,6 +17,7 @@ import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constan
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -95,7 +96,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "You are not a candidate in this election");
     }
 
-    if (election.countryId === "RU" && election.russianPresidentialRound) {
+    if (countryHasFeature("ruApi", election.countryId) && election.russianPresidentialRound) {
       const game = await db
         .collection<{ _id: string; currentTurn: number }>("gameState")
         .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });

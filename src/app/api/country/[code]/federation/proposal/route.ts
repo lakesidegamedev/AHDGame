@@ -22,6 +22,7 @@ import {
   type FederationPoliticalProposalRecord,
 } from "@/lib/world/succession/politicalProposal";
 import type { Bill } from "@/lib/db/types/legislation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const bodySchema = z.object({
   negotiatedCustodians: z.record(z.string(), z.string()).default({}),
@@ -32,7 +33,11 @@ const bodySchema = z.object({
 
 function sourceForCode(code: string): DefaultFederationSource | null {
   const upper = code.toUpperCase();
-  return upper === "CS" || upper === "YU" || upper === "RU" ? upper : null;
+  return countryHasFeature("csApi", upper) ||
+    countryHasFeature("yuApi", upper) ||
+    countryHasFeature("ruApi", upper)
+    ? upper
+    : null;
 }
 
 // GET shows the dated choice, existing bill and assets requiring negotiation.

@@ -22,6 +22,7 @@ import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -84,7 +85,7 @@ export async function GET() {
         .collection<EnactedLaw>("enactedLaws")
         .find({
           scope: "national",
-          ...(budgetCountryId === "US"
+          ...(countryHasFeature("usApi", budgetCountryId)
             ? { $or: [{ countryId: "US" }, { countryId: { $exists: false } }] }
             : { countryId: budgetCountryId }),
           repealedAt: { $exists: false },

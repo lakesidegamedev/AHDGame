@@ -13,13 +13,14 @@ import {
   openRo1992ElectoralProposal,
   Ro1992ElectoralConflict,
 } from "@/lib/countries/ro/electoralProposals1992";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const bodySchema = z.object({ kind: z.literal("parliament1992") }).strict();
 type Context = { params: Promise<{ code: string }> };
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "RO")
+    if (!countryHasFeature("roApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Romanian electoral decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -38,7 +39,7 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function POST(request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "RO")
+    if (!countryHasFeature("roApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Romanian electoral decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
