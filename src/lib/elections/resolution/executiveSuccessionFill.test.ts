@@ -179,6 +179,25 @@ describe("legislature and party votes", () => {
     expect(m.vacate).toHaveBeenCalledWith(db, { nppId: seated.update.$set.nppId }, now);
   });
 
+  it("guards the write on the office still being vacant and skips follow-ups when it lost", async () => {
+    world({
+      govs: [{ _id: "CN", succession: partyVote }],
+      officials: [premierRow, legislator("1")],
+    });
+    m.officialBulk.mockResolvedValueOnce({ matchedCount: 0 });
+    const result = await processSuccessionFills(db, 130, now);
+    expect(m.officialBulk.mock.calls[0]![0][0].updateOne.filter).toEqual({
+      _id: premierRow._id,
+      characterId: null,
+      nppId: null,
+    });
+    expect(result.voted).toBe(0);
+    expect(m.nppBulk).not.toHaveBeenCalled();
+    expect(m.govBulk).not.toHaveBeenCalled();
+    expect(m.vacate).not.toHaveBeenCalled();
+    expect(m.news).not.toHaveBeenCalled();
+  });
+
   it("does nothing while the acting period runs or the office is already held", async () => {
     world({
       govs: [{ _id: "CN", succession: partyVote }],
@@ -308,7 +327,7 @@ describe("succession fallbacks", () => {
     const result = await processSuccessionFills(db, 173, now);
     expect(result.voted).toBe(1);
     expect(m.nppCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ party: "7", countryId: "CN" })
+      expect.objectContaining({ party: "7", countryId: "CN", state: "" })
     );
     const seated = m.officialBulk.mock.calls[0]![0][0].updateOne.update.$set;
     expect(seated.isNPP).toBe(true);

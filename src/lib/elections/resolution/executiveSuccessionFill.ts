@@ -256,6 +256,8 @@ async function holdSuccessionVotesWith(
   const nppOps: AnyBulkWriteOperation<NPP>[] = [];
   const govOps: AnyBulkWriteOperation<GovernmentFormation>[] = [];
   const leaderOps: AnyBulkWriteOperation<CountryLeaderState>[] = [];
+  const leaderOpByNpp = new Map<string, AnyBulkWriteOperation<CountryLeaderState>>();
+  const rowIds: ObjectId[] = [];
   const winners: ObjectId[] = [];
   const seated: Array<{ countryId: CountryId; office: string; name: string }> = [];
   for (const { countryId, succession } of due) {
@@ -294,7 +296,10 @@ async function holdSuccessionVotesWith(
       );
       if (party) {
         const generated = await nppBatch.create({
-          state: countryId,
+          // No region: the batch homes the NPP in a region the party holds.
+          // A country code here is never in the party's frontier and would
+          // turn the successor independent.
+          state: "",
           party,
           countryId,
           quality: 0,
@@ -311,7 +316,7 @@ async function holdSuccessionVotesWith(
     const nppId = new ObjectId(winner.id);
     officialOps.push({
       updateOne: {
-        filter: { _id: row._id },
+        filter: { _id: row._id, characterId: null, nppId: null },
         update: {
           $set: {
             nppId,
@@ -353,36 +358,61 @@ async function holdSuccessionVotesWith(
         currentTurn,
         now
       );
-      leaderOps.push({
+      leaderOpByNpp.set(String(nppId), {
         replaceOne: { filter: { _id: state._id }, replacement: state, upsert: true },
       });
     }
+    rowIds.push(row._id);
     winners.push(nppId);
     seated.push({ countryId, office: succession.office, name: names.get(winner.id) ?? "" });
     logger.info("Turn", `${succession.fill} seated a new ${succession.office} in ${countryId}`);
   }
   if (winners.length === 0) return 0;
-  await officials.bulkWrite(officialOps, { ordered: false });
-  await (await getNppsCollection(db)).bulkWrite(nppOps, { ordered: false });
-  await getGovernmentFormationsCollection(db).bulkWrite(govOps, { ordered: false });
+  const written = await officials.bulkWrite(officialOps, { ordered: false });
+  // The write is guarded on the row still being vacant. If a concurrent
+  // seating beat us to a row, drop that seat's follow-up writes and news.
+  let landed = winners.map(String);
+  if (typeof written?.matchedCount === "number" && written.matchedCount < officialOps.length) {
+    const held = await officials
+      .find({ _id: { $in: rowIds }, nppId: { $in: winners } }, { projection: { nppId: 1 } })
+      .toArray();
+    landed = held.map((r) => String(r.nppId));
+  }
+  const keep = (i: number) => landed.includes(String(winners[i]));
+  const keptWinners = winners.filter((_, i) => keep(i));
+  if (keptWinners.length === 0) return 0;
+  await (
+    await getNppsCollection(db)
+  ).bulkWrite(
+    nppOps.filter((_, i) => keep(i)),
+    { ordered: false }
+  );
+  await getGovernmentFormationsCollection(db).bulkWrite(
+    govOps.filter((_, i) => keep(i)),
+    { ordered: false }
+  );
+  for (const id of keptWinners) {
+    const op = leaderOpByNpp.get(String(id));
+    if (op) leaderOps.push(op);
+  }
   if (leaderOps.length > 0) {
     await getCountryLeaderStatesCollection(db).bulkWrite(leaderOps, { ordered: false });
   }
-  for (const nppId of winners) {
+  for (const nppId of keptWinners) {
     try {
       await vacateNonExecutiveOfficesForExecutive(db, { nppId }, now);
     } catch (err) {
       logger.error("Turn", "Succession vote could not vacate the winner's legislative seat", err);
     }
   }
-  for (const s of seated) {
+  for (const s of seated.filter((_, i) => keep(i))) {
     await postSuccessionNews(s.countryId, {
       event: "seated",
       office: s.office,
       ...(s.name ? { holderName: s.name } : {}),
     });
   }
-  return winners.length;
+  return keptWinners.length;
 }
 
 export async function processSuccessionFills(

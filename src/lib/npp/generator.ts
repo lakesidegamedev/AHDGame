@@ -691,6 +691,13 @@ export function openNppCreationBatch(
         );
         if (isInFrontier(presence, frontier, config.state)) {
           if (config.state && regions.includes(config.state)) heldPresence = presence;
+          else if (!config.state) {
+            // No region requested (an office filled outside any one region):
+            // home the NPP in a region the party already holds, so the NPP
+            // keeps the party and has a real home region.
+            const home = [...presence].filter((id) => regions.includes(id)).sort()[0] ?? regions[0];
+            if (home) effectiveConfig = { ...effectiveConfig, state: home };
+          }
         } else {
           // Same rule as createNPP: no distant partisan foothold as a side effect.
           effectiveConfig = { ...config, party: "independent" };

@@ -80,6 +80,27 @@ describe("openNppCreationBatch", () => {
     expect(batched).toEqual(oneByOne);
   });
 
+  it("keeps the party and homes the NPP in a held region when no region is requested", async () => {
+    // A succession fill has no region. Passing a country code made the party
+    // fall outside its frontier and the NPP turned independent.
+    const batch = openNppCreationBatch(mock as unknown as Db, new Map([["US", ["7"]]]));
+    try {
+      const npp = await batch.create(
+        { state: "", countryId: "US", party: "7", quality: 0 },
+        { existingNames: new Set() }
+      );
+      expect(npp.party).toBe("7");
+      expect(npp.homeState).toBe("VT");
+      const wrong = await batch.create(
+        { state: "US", countryId: "US", party: "7", quality: 0 },
+        { existingNames: new Set() }
+      );
+      expect(wrong.party).toBe("independent");
+    } finally {
+      await batch.close();
+    }
+  });
+
   it("claims, reads territory and releases once for the whole pass", async () => {
     const batch = openNppCreationBatch(mock as unknown as Db, new Map([["US", ["7", "8"]]]));
     try {
