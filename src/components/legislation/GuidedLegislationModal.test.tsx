@@ -192,8 +192,12 @@ afterEach(() => {
 
 describe("GuidedLegislationModal", () => {
   it("shows both leans for privacy options and preserves them through review", async () => {
-    const fixture = structuredClone(catalog);
-    fixture.families[0]!.familyId = "L46";
+    const fixture = {
+      ...catalog,
+      families: catalog.families.map((family, index) =>
+        index === 0 ? { ...family, familyId: "L46" } : family
+      ),
+    };
     stubCatalog(fixture);
     renderModal();
     fireEvent.change(await screen.findByLabelText("Policy domain"), {
