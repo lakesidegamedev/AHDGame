@@ -21,7 +21,7 @@
  *   AHD_SMOKE_TIMINGS  where to write the timings JSON (default smoke-timings.json)
  */
 import { spawn } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -194,6 +194,32 @@ try {
     fail("launcher did not report phase timings", running);
   if (!/Next\.js|Ready in/.test(running.output))
     fail("launcher did not forward the game server's own output", running);
+
+  const capabilitiesFile = path.join(
+    root,
+    "dist",
+    "singleplayer",
+    "singleplayer-capabilities.json"
+  );
+  let capabilities;
+  try {
+    capabilities = JSON.parse(readFileSync(capabilitiesFile, "utf8"));
+  } catch (error) {
+    fail(`capabilities file missing or unreadable: ${error.message}`, running);
+  }
+  const ready2027 = capabilities.presets?.find((entry) => entry.preset === "2027-default");
+  if (
+    capabilities.schemaVersion !== 1 ||
+    !ready2027?.seedable ||
+    JSON.stringify(ready2027.playerCountries.map((entry) => entry.id)) !== JSON.stringify(["US"])
+  )
+    fail(
+      `capabilities file does not describe the 2027 world: ${JSON.stringify(capabilities)}`,
+      running
+    );
+  const served = await json(running, "/api/singleplayer/capabilities");
+  if (JSON.stringify(served) !== JSON.stringify(capabilities))
+    fail("capabilities route and packaged file disagree", running);
 
   const watcher = watchSetup(running);
   const setup = await timed("first-run world setup", () =>
