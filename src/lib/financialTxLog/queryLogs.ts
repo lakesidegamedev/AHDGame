@@ -11,6 +11,40 @@ import { ALL_TX_TYPES } from "@/lib/financialTxLog/types-extended";
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 50;
 
+/**
+ * Ledger order: newest turn first, then newest write time within the turn,
+ * with `_id` as the final tiebreak so the order is total. Sorting on `_id`
+ * alone listed rows by when each log entry was written, which is not turn
+ * order (rows are emitted with their own turn stamp, not always in sequence).
+ * Backed by `FINANCIAL_TX_LOG_TURN_ORDER_INDEX`.
+ */
+export const TX_LOG_SORT = { turn: -1, createdAt: -1, _id: -1 } as const;
+
+const CURSOR_RE = /^(-?\d+)\.(\d+)\.([0-9a-f]{24})$/i;
+
+/** Opaque page cursor: the sort key of the last row on the page. */
+export function encodeTxLogCursor(
+  entry: Pick<FinancialTxLogEntry, "_id" | "turn" | "createdAt">
+): string {
+  return `${entry.turn}.${new Date(entry.createdAt).getTime()}.${entry._id.toHexString()}`;
+}
+
+function cursorClause(cursor: string): Record<string, unknown> | null {
+  const m = CURSOR_RE.exec(cursor);
+  if (!m) return null;
+  const turn = parseInt(m[1], 10);
+  const createdAt = new Date(parseInt(m[2], 10));
+  if (!Number.isSafeInteger(turn) || Number.isNaN(createdAt.getTime())) return null;
+  const id = new ObjectId(m[3]);
+  return {
+    $or: [
+      { turn: { $lt: turn } },
+      { turn, createdAt: { $lt: createdAt } },
+      { turn, createdAt, _id: { $lt: id } },
+    ],
+  };
+}
+
 const VALID_SUBJECT_TYPES = new Set<string>(["character", "corporation", "party", "government"]);
 
 // VALID_TX_TYPES used to be a hardcoded copy of the union members. Source of
@@ -110,10 +144,10 @@ export function buildTxLogFilter(searchParams: URLSearchParams): BuildFilterResu
   else if (flaggedParam === "false") filter.flagged = false;
 
   if (cursorParam) {
-    if (!/^[0-9a-f]{24}$/i.test(cursorParam)) {
-      return { ok: false, error: "Invalid cursor" };
-    }
-    filter._id = { $lt: new ObjectId(cursorParam) };
+    const clause = cursorClause(cursorParam);
+    if (!clause) return { ok: false, error: "Invalid cursor" };
+    // $and so the cursor never collides with the turn range filters above.
+    filter.$and = [clause];
   }
 
   return { ok: true, filter, limit };
@@ -127,14 +161,14 @@ export async function queryTxLog(
   const entries = await db
     .collection<FinancialTxLogEntry>("financialTxLog")
     .find(filter)
-    .sort({ _id: -1 })
+    .sort(TX_LOG_SORT)
     .limit(limit + 1)
     .toArray();
 
   const hasMore = entries.length > limit;
   if (hasMore) entries.pop();
 
-  const nextCursor = hasMore ? entries[entries.length - 1]._id.toHexString() : null;
+  const nextCursor = hasMore ? encodeTxLogCursor(entries[entries.length - 1]) : null;
 
   return { entries, nextCursor, hasMore };
 }
