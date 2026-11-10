@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Avatar } from "@/components/Avatar";
 import { getMessageStyle } from "@/lib/utils/formatters";
-import { US_STATES } from "@/lib/constants";
+import { US_STATES } from "@/lib/constants/usStateCodes";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { deRegions } from "@/lib/seeds/de/deRegions";

@@ -1,6 +1,6 @@
 "use client";
 
-import { US_STATES } from "@/lib/constants";
+import { US_STATES } from "@/lib/constants/usStateCodes";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { deRegions } from "@/lib/seeds/de/deRegions";
