@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { advancePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
 import {
   incomeBaseShares,
   incomeTaxRevenue,
@@ -61,6 +63,28 @@ describe("income-tax tiers", () => {
     expect(earnedIncomeTier(1999, 1000)).toBe("middle");
     expect(earnedIncomeTier(2000, 1000)).toBe("high");
     expect(() => earnedIncomeTier(100, 0)).toThrow();
+  });
+  it("indexes the tier cut-offs to prices from 2027 to 2050", () => {
+    let priceIndex = 1;
+    let median = 50_000;
+    const realIncome = 1.5 * median;
+    let creepTier = earnedIncomeTier(realIncome, median);
+    for (let turn = 0; turn < 23 * TURNS_PER_YEAR; turn++) {
+      priceIndex = advancePriceIndex(priceIndex, 3, TURNS_PER_YEAR);
+      // The median stock grows in real terms only.
+      median *= 1 + 0.012 / TURNS_PER_YEAR;
+      const nominal = realIncome * priceIndex;
+      expect(earnedIncomeTier(nominal, median, priceIndex)).toBe("middle");
+      creepTier = earnedIncomeTier(nominal, median);
+    }
+    expect(priceIndex).toBeGreaterThan(1.9);
+    // Without the index the same real income would be pushed into the top bracket.
+    expect(creepTier).toBe("high");
+  });
+  it("treats a missing or invalid price index as no indexation", () => {
+    expect(earnedIncomeTier(2000, 1000)).toBe("high");
+    expect(earnedIncomeTier(2000, 1000, 2)).toBe("middle");
+    expect(() => earnedIncomeTier(2000, 1000, 0)).toThrow();
   });
   it("caps combined taxes at income and conserves gross, tax and net", () => {
     expect(playerIncomeTax(101, 90, 30)).toEqual({ gross: 101, federal: 90, regional: 11, net: 0 });
