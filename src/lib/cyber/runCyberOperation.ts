@@ -38,10 +38,36 @@ export const CYBER_STAND_DOWN_TYPE = "cyber_stand_down";
 /** The agency tradecraft a scripted attacker brings (the intelligence default). */
 const SCRIPTED_TRADECRAFT = 3;
 
-type CyberLogRow = Pick<
+export type CyberLogRow = Pick<
   IntelligenceOpLog,
   "ownerCountryId" | "targetCountryId" | "opType" | "turn" | "truceUntilTurn"
 >;
+
+/** Pair history from the cyber log rows between two countries. */
+export function foldCyberPairHistory(
+  rows: readonly CyberLogRow[],
+  attackerId: string
+): CyberPairHistory {
+  let lastOperationTurn: number | null = null;
+  let truceUntilTurn: number | null = null;
+  for (const row of rows) {
+    if (
+      row.opType === CYBER_OPERATION_TYPE &&
+      row.ownerCountryId === attackerId &&
+      (lastOperationTurn === null || row.turn > lastOperationTurn)
+    ) {
+      lastOperationTurn = row.turn;
+    }
+    if (
+      row.opType === CYBER_STAND_DOWN_TYPE &&
+      row.truceUntilTurn != null &&
+      (truceUntilTurn === null || row.truceUntilTurn > truceUntilTurn)
+    ) {
+      truceUntilTurn = row.truceUntilTurn;
+    }
+  }
+  return { lastOperationTurn, truceUntilTurn };
+}
 
 /** Latest operation by `attackerId` against `targetId`, and the latest truce in either direction. */
 export async function loadCyberPairHistory(
@@ -70,25 +96,28 @@ export async function loadCyberPairHistory(
       }
     )
     .toArray()) as CyberLogRow[];
-  let lastOperationTurn: number | null = null;
-  let truceUntilTurn: number | null = null;
-  for (const row of rows) {
-    if (
-      row.opType === CYBER_OPERATION_TYPE &&
-      row.ownerCountryId === attackerId &&
-      (lastOperationTurn === null || row.turn > lastOperationTurn)
-    ) {
-      lastOperationTurn = row.turn;
-    }
-    if (
-      row.opType === CYBER_STAND_DOWN_TYPE &&
-      row.truceUntilTurn != null &&
-      (truceUntilTurn === null || row.truceUntilTurn > truceUntilTurn)
-    ) {
-      truceUntilTurn = row.truceUntilTurn;
-    }
-  }
-  return { lastOperationTurn, truceUntilTurn };
+  return foldCyberPairHistory(rows, attackerId);
+}
+
+/** Turns of every cyber launch by `attackerId` at or after `sinceTurn`, against any target. */
+export async function loadCyberLaunchTurns(
+  db: Db,
+  attackerId: string,
+  sinceTurn: number
+): Promise<number[]> {
+  const log = await getIntelligenceOpLogCollection(db);
+  const rows = await log
+    .find(
+      {
+        domain: "cyber",
+        opType: CYBER_OPERATION_TYPE,
+        ownerCountryId: attackerId as CountryId,
+        turn: { $gte: sinceTurn },
+      },
+      { projection: { turn: 1 } }
+    )
+    .toArray();
+  return rows.map((row) => row.turn);
 }
 
 /** Effects of a successful operation, scaled by severity 0..1. */

@@ -6,6 +6,11 @@ import {
   cyberAttributionChance,
   cyberOperationRefusal,
   cyberSuccessChance,
+  CYBER_AI_MAX_LAUNCHES,
+  CYBER_AI_MIN_GAP_TURNS,
+  cyberAiCapReached,
+  hawkishnessOfHead,
+  planAutonomousCyberOperation,
   planScriptedCyberOperation,
   resolveCyberOperation,
   truceUntil,
@@ -127,5 +132,76 @@ describe("planScriptedCyberOperation", () => {
     expect(planScriptedCyberOperation({ ...hawk, rivalLeaderId: null, decisionRoll: 0 }).kind).toBe(
       "none"
     );
+  });
+});
+
+describe("NPP-run government cyber decisions", () => {
+  const base = {
+    attackerId: "UK",
+    hawkishness: 0.9,
+    rivalLeaderId: "CN",
+    tension: 60,
+    history: none,
+    targetResilience: 0.2,
+    turn: 100,
+    decisionRoll: 0,
+    capability: 0.7,
+    recentLaunchTurns: [] as number[],
+  };
+
+  it("a hawkish head launches against a weak rival", () => {
+    expect(planAutonomousCyberOperation(base)).toEqual({ kind: "launch", targetId: "CN" });
+  });
+
+  it("a real capability changes whether the odds favour a launch", () => {
+    expect(
+      planAutonomousCyberOperation({ ...base, targetResilience: 0.85, capability: 0.2 }).kind
+    ).toBe("none");
+  });
+
+  it("a dovish head stands down from an active pair and never launches", () => {
+    const dove = {
+      ...base,
+      hawkishness: 0.2,
+      history: { lastOperationTurn: 90, truceUntilTurn: null },
+    };
+    expect(planAutonomousCyberOperation(dove)).toEqual({ kind: "stand_down", targetId: "CN" });
+    expect(planAutonomousCyberOperation({ ...dove, history: none }).kind).toBe("none");
+  });
+
+  it("stands down in detente even when the head is hawkish", () => {
+    expect(
+      planAutonomousCyberOperation({
+        ...base,
+        tension: 10,
+        history: { lastOperationTurn: 90, truceUntilTurn: null },
+      }).kind
+    ).toBe("stand_down");
+  });
+
+  it("caps launches per window and spaces them out", () => {
+    expect(cyberAiCapReached([], 100)).toBe(false);
+    expect(cyberAiCapReached([100 - CYBER_AI_MIN_GAP_TURNS + 1], 100)).toBe(true);
+    const spaced = Array.from({ length: CYBER_AI_MAX_LAUNCHES }, (_, i) => 40 + i * 20);
+    expect(cyberAiCapReached(spaced, 100)).toBe(true);
+    expect(cyberAiCapReached([20, 60], 100)).toBe(false);
+    expect(cyberAiCapReached([20, 40], 100)).toBe(false);
+    expect(planAutonomousCyberOperation({ ...base, recentLaunchTurns: spaced }).kind).toBe("none");
+  });
+
+  it("never caps a stand down", () => {
+    const decision = planAutonomousCyberOperation({
+      ...base,
+      hawkishness: 0.1,
+      history: { lastOperationTurn: 95, truceUntilTurn: null },
+      recentLaunchTurns: [95, 90],
+    });
+    expect(decision.kind).toBe("stand_down");
+  });
+
+  it("derives hawkishness from defence stance and ambition", () => {
+    expect(hawkishnessOfHead(100, 100)).toBe(1);
+    expect(hawkishnessOfHead(-100, 0)).toBe(0);
+    expect(hawkishnessOfHead(null, 50)).toBeCloseTo(0.5);
   });
 });

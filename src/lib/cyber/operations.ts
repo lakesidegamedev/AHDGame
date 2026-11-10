@@ -103,6 +103,28 @@ export function resolveCyberOperation(input: CyberOperationInput): CyberOperatio
   };
 }
 
+export interface CyberOdds {
+  successChance: number;
+  /** Chance the target can name the sponsor if the operation gets through. */
+  attributionIfSuccess: number;
+  /** Chance the target can name the sponsor if the operation is repelled. */
+  attributionIfFailed: number;
+}
+
+/** The odds an attacker sees before launching, from the same rules the resolver uses. */
+export function cyberOdds(
+  attackerScore: number,
+  tradecraft: number,
+  targetResilience: number
+): CyberOdds {
+  const capability = attackerCapability(attackerScore, tradecraft);
+  return {
+    successChance: cyberSuccessChance(capability, targetResilience),
+    attributionIfSuccess: cyberAttributionChance(capability, targetResilience, "success"),
+    attributionIfFailed: cyberAttributionChance(capability, targetResilience, "failed"),
+  };
+}
+
 export interface CyberPairHistory {
   /** Turn of the latest operation by this attacker against this target, if any. */
   lastOperationTurn: number | null;
@@ -156,6 +178,8 @@ export interface ScriptedCyberInput {
   turn: number;
   /** [0, 1) deterministic per country and turn. */
   decisionRoll: number;
+  /** Capability the attacker brings; the scripted default when absent. */
+  capability?: number;
 }
 
 export type ScriptedCyberDecision =
@@ -194,10 +218,54 @@ export function planScriptedCyberOperation(input: ScriptedCyberInput): ScriptedC
     )
   )
     return { kind: "none" };
-  const odds = cyberSuccessChance(SCRIPTED_CAPABILITY, input.targetResilience ?? 0);
+  const odds = cyberSuccessChance(
+    input.capability ?? SCRIPTED_CAPABILITY,
+    input.targetResilience ?? 0
+  );
   // Scripted governments probe only when the odds favour them, and then not every tick.
   if (odds < 0.4) return { kind: "none" };
   const appetite =
     0.02 + 0.06 * (input.hawkishness - CYBER_SCRIPTED_HAWKISHNESS) + 0.001 * input.tension;
   return input.decisionRoll < appetite ? { kind: "launch", targetId: target } : { kind: "none" };
+}
+
+/** Operations one NPP-run government may launch inside the cap window, across all targets. */
+export const CYBER_AI_MAX_LAUNCHES = 2;
+/** Window, in turns, the launch cap is counted over. */
+export const CYBER_AI_CAP_WINDOW_TURNS = 72;
+/** Turns an NPP-run government waits after any launch before considering another. */
+export const CYBER_AI_MIN_GAP_TURNS = 12;
+
+/**
+ * How hawkish an NPP head of government is, 0..1, from the defence stance on the policy
+ * compass (-100..100) and personality ambition (0..100).
+ */
+export function hawkishnessOfHead(defensePosition: number | null | undefined, ambition: number) {
+  const lean = clamp01(((defensePosition ?? 0) + 100) / 200);
+  return clamp01(0.6 * lean + 0.4 * clamp01(ambition / 100));
+}
+
+/** True when an NPP-run government has used up its launch allowance for now. */
+export function cyberAiCapReached(recentLaunchTurns: readonly number[], turn: number): boolean {
+  const inWindow = recentLaunchTurns.filter((t) => turn - t < CYBER_AI_CAP_WINDOW_TURNS);
+  if (inWindow.length >= CYBER_AI_MAX_LAUNCHES) return true;
+  return inWindow.some((t) => turn - t < CYBER_AI_MIN_GAP_TURNS);
+}
+
+export interface AutonomousCyberInput extends ScriptedCyberInput {
+  /** Turns of this attacker's cyber launches against any target, newest or oldest first. */
+  recentLaunchTurns: readonly number[];
+}
+
+/**
+ * An NPP-run government's cyber decision: the scripted rules with the country's real
+ * capability, plus a cap on how often one government may launch. Standing down is never
+ * capped, so an off-ramp is always available.
+ */
+export function planAutonomousCyberOperation(input: AutonomousCyberInput): ScriptedCyberDecision {
+  const decision = planScriptedCyberOperation(input);
+  if (decision.kind === "launch" && cyberAiCapReached(input.recentLaunchTurns, input.turn)) {
+    return { kind: "none" };
+  }
+  return decision;
 }
