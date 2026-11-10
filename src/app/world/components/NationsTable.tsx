@@ -6,7 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { CountryFlag } from "@/components/CountryFlag";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { getCountryFlagUrlForEra } from "@/lib/constants";
+import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { useActivePreset, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import type { CountryAvailability, CountryAvailabilityState } from "@/lib/countryAvailability";
