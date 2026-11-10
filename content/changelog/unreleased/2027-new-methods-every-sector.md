@@ -5,7 +5,7 @@ summary: >-
   Finance, retail, vehicles, real estate and mining each gain a new production
   method that opens with the 2039 research tier.
 tags: [corporations, research]
-badges: [new]
+badges: [minor]
 areas: [backend]
 ---
 
