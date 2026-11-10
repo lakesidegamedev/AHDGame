@@ -67,6 +67,19 @@ export interface StationOption {
   name: string;
   /** False for regions this formation cannot operate from, e.g. dry land for a fleet. */
   allowed: boolean;
+  /**
+   * Why a fleet cannot be stationed here. "land" is a region typed as dry land, which can
+   * still have a port rating; "no-port" is a region with no port at all.
+   */
+  blockedReason?: "land" | "no-port";
+}
+
+/** The suffix shown on a Station option a fleet cannot be ordered to. */
+export function stationBlockedLabel(s: StationOption): string {
+  if (s.allowed) return "";
+  return s.blockedReason === "no-port"
+    ? " (landlocked, no port)"
+    : " (land region, fleets cannot be stationed here)";
 }
 
 /**
@@ -385,7 +398,7 @@ export function NavairCommandClient({
                             disabled={f.domain === "naval" && !s.allowed}
                           >
                             {s.name}
-                            {f.domain === "naval" && !s.allowed ? " (no port)" : ""}
+                            {f.domain === "naval" ? stationBlockedLabel(s) : ""}
                           </option>
                         ))}
                       </select>
