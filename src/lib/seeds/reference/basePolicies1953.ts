@@ -1056,13 +1056,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: { economic: 0, social: 0 }, // 1953: major revenue source; high turnover tax on enterprise output; center
       su_social_insurance: { economic: 0, social: 0 }, // 1953: state provides all; danwei equivalent; center
       su_customs_tariff: { economic: -3, social: 0 }, // 1953: foreign trade state monopoly; autarky; very left
-      su_economic_system: { economic: -4, social: 0 }, // 1953: maximum Gosplan central planning; most planned system
-      su_political_system: { economic: 0, social: 3 }, // 1953: SU one-party maximum (Stalin just died; still Stalinist)
-      su_price_controls: { economic: -3, social: 0 }, // 1953: all prices state-set; maximum control
-      su_agriculture: { economic: -3, social: 0 }, // 1953: collective farms at maximum; peasants have no private plots; maximum state
-      su_civil_liberties: { economic: 0, social: 3 }, // 1953: MGB/KGB; Gulag; maximum repression (Stalinist peak)
-      su_defense_spending: { economic: -3, social: 1 }, // 1953: Korean War + nuclear arms race; highest defense share of any era; very left
-      su_housing: { economic: -3, social: 0 }, // 1953: state housing allocation; communal apartments; very left
     },
     optionIndexes: {
       su_enterprise_levy: 5, // 1953: maximum enterprise levy (Stalinist extraction)
@@ -1070,13 +1063,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: 3, // 1953: high turnover tax; above 1979 levels
       su_social_insurance: 1, // 1953: unified; state-provided
       su_customs_tariff: 2, // 1953: foreign trade monopoly at maximum
-      su_economic_system: 5, // 1953: pure Gosplan; maximum centralization
-      su_political_system: 3, // 1953: maximum SED/CPSU leading role (Stalinist)
-      su_price_controls: 3, // 1953: maximum state price setting
-      su_agriculture: 3, // 1953: maximum collectivization; no private plots
-      su_civil_liberties: 1, // 1953: minimum civil liberties (Gulag at peak; inverted: 1=least free)
-      su_defense_spending: 3, // 1953: maximum defense share (Korean War + nuclear)
-      su_housing: 3, // 1953: state housing allocation maximum
     },
     regions: ruRegions1953,
   },
@@ -1094,11 +1080,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       dd_product_tax: { economic: 0, social: 0 }, // 1953: commodity tax on output; center
       dd_social_insurance: { economic: 0, social: 0 }, // 1953: state social insurance comprehensive; center
       dd_foreign_trade: { economic: -3, social: 0 }, // 1953: foreign trade state monopoly; very left
-      dd_economic_system: { economic: -4, social: 0 }, // 1953: maximum central planning (Gosplan-style); very left
-      dd_political_system: { economic: 0, social: 3 }, // 1953: SED leading role at maximum (Stalinist; Ulbricht consolidating after June 17)
-      dd_price_controls: { economic: -3, social: 0 }, // 1953: all prices state-set; maximum
-      dd_civil_liberties: { economic: 0, social: 3 }, // 1953: Stasi nascent (founded 1950); harsh repression; maximum
-      dd_housing: { economic: -2, social: 0 }, // 1953: state housing allocation; acute shortage; left
     },
     optionIndexes: {
       dd_enterprise_levy: 4, // 1953: maximum VEB surplus remittance
@@ -1106,11 +1087,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       dd_product_tax: 2, // 1953: commodity tax; above 1979
       dd_social_insurance: 1, // 1953: unified state social insurance
       dd_foreign_trade: 2, // 1953: foreign trade monopoly at maximum
-      dd_economic_system: 4, // 1953: maximum centralization (stricter than 1979)
-      dd_political_system: 4, // 1953: maximum SED/Stalinist control (stricter than 1979)
-      dd_price_controls: 3, // 1953: maximum price regulation
-      dd_civil_liberties: 1, // 1953: minimum civil liberties (Stasi; inverted: 1=least free)
-      dd_housing: 2, // 1953: state allocation; acute shortage
     },
     regions: ddRegions1953,
   },

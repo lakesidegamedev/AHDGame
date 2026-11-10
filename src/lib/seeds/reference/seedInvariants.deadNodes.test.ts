@@ -1019,31 +1019,6 @@ const DEAD_NODE_ALLOWLIST: DeadNodeAllowlistEntry[] = [
     metricId: "gdpGrowth",
     location: "effectTargetsWeighted",
   },
-  // ru
-  {
-    countryScope: "ru",
-    lawId: "su_enterprise_levy",
-    metricId: "gdpGrowth",
-    location: "effectTargetsWeighted",
-  },
-  {
-    countryScope: "ru",
-    lawId: "su_economic_system",
-    metricId: "gdpGrowth",
-    location: "effectTargetsWeighted",
-  },
-  {
-    countryScope: "ru",
-    lawId: "su_agriculture",
-    metricId: "gdpGrowth",
-    location: "effectTargetsWeighted",
-  },
-  {
-    countryScope: "ru",
-    lawId: "su_defense_spending",
-    metricId: "gdpGrowth",
-    location: "effectTargetsWeighted",
-  },
 ];
 
 interface FoundReference {
