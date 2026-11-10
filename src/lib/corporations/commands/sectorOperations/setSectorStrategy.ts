@@ -63,6 +63,11 @@ import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
+import {
+  methodAdoptionSurchargeFraction,
+  methodBuildDelayTurns,
+  methodTransitionStartTurn,
+} from "@/lib/corporations/rules/methodAdoption";
 
 const STRATEGY_LOCK_MESSAGE: Record<
   "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
@@ -303,16 +308,19 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const corpFxRate = await getCorpFxRate(db, corporation);
     const liquidCode = resolveCorpLiquidCurrencyCode(corporation);
     const sectorHostRate = await getSectorHostFxRate(db, sector, corporation);
+    const sectorRevenueAnchor = readCorpEconomicAnchor(
+      sector.revenue,
+      resolveSectorHostCurrencyCode(sector, corporation),
+      sectorHostRate
+    );
+    // The method's downside is a one-off bill that waivers on the retool fee do not cover.
+    const adoptionSurchargeAnchor =
+      sectorRevenueAnchor * methodAdoptionSurchargeFraction(targetStrategy);
     const retoolCostAnchor =
-      shortageDiscount.qualifies || freeConversion
+      (shortageDiscount.qualifies || freeConversion
         ? 0
-        : readCorpEconomicAnchor(
-            sector.revenue,
-            resolveSectorHostCurrencyCode(sector, corporation),
-            sectorHostRate
-          ) *
-          STRATEGY_RETOOL_COST_FRACTION *
-          sunsetCostMultiplier;
+        : sectorRevenueAnchor * STRATEGY_RETOOL_COST_FRACTION * sunsetCostMultiplier) +
+      adoptionSurchargeAnchor;
     // Foreign-sector FX friction (symmetry with the foreign operating-income
     // spread): retooling a sector in a different-currency country incurs the
     // reduced sector spread on top of the base cost, routed to the CB system.
@@ -410,9 +418,12 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
             // Shortage destinations get a half-window transition: backdating
             // the start turn makes every consumer of the standard progress
             // formula see the shorter ramp without schema changes.
-            transitionStartTurn: shortageDiscount.qualifies
-              ? currentTurn - SHORTAGE_RETOOL_TRANSITION_HEADSTART
-              : currentTurn,
+            // A method with a build time keeps the old one running until built.
+            transitionStartTurn: methodTransitionStartTurn({
+              currentTurn,
+              strategy: targetStrategy,
+              headstart: shortageDiscount.qualifies ? SHORTAGE_RETOOL_TRANSITION_HEADSTART : 0,
+            }),
             transitionCooldownUntilTurn: currentTurn + STRATEGY_COOLDOWN_TURNS,
             // Persist whether the forward rescale actually ran, so a cancel can
             // decide whether to invert it. The helper records the GATE, not
@@ -457,6 +468,8 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
         ? STRATEGY_TRANSITION_TURNS - SHORTAGE_RETOOL_TRANSITION_HEADSTART
         : STRATEGY_TRANSITION_TURNS,
       cooldownTurns: STRATEGY_COOLDOWN_TURNS,
+      buildDelayTurns: methodBuildDelayTurns(targetStrategy),
+      adoptionSurcharge: Math.round(adoptionSurchargeAnchor),
       freeConversion,
       // Shortage-destination discount metadata (client toast/messaging).
       shortageDiscount: shortageDiscount.qualifies
