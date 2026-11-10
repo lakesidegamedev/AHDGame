@@ -46,7 +46,7 @@ import {
 export const PROBE_1953_NOW_ISO = "1953-01-01T00:00:00.000Z";
 
 /** State-party offices the probe seats. Must match ALL_POSITIONS in
- * `src/lib/statePartyElections.ts` — the probe test asserts equality, so a
+ * `src/lib/elections/party/statePartyElections.ts` — the probe test asserts equality, so a
  * new office fails the build until the probe covers it. */
 export const STATE_PARTY_PROBE_POSITIONS = ["chair", "viceChair", "treasurer"] as const;
 

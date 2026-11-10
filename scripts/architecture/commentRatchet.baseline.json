@@ -4413,11 +4413,11 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/caucusChairElections.test.ts": {
+    "src/lib/elections/party/caucusChairElections.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/caucusChairElections.ts": {
+    "src/lib/elections/party/caucusChairElections.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
@@ -9789,15 +9789,15 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/nationalPartyElectionNotifications.ts": {
+    "src/lib/elections/party/nationalPartyElectionNotifications.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/nationalPartyElections.test.ts": {
+    "src/lib/elections/party/nationalPartyElections.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/nationalPartyQuorum.ts": {
+    "src/lib/elections/party/nationalPartyQuorum.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -11717,7 +11717,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/statePartyElections.ts": {
+    "src/lib/elections/party/statePartyElections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },

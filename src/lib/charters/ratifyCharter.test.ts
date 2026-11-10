@@ -47,8 +47,8 @@ vi.mock("@/lib/utils/electionCandidacy", () => ({
 
 // ratifyCharter opens the party's first national leadership elections via the
 // shared create-missing path; stub it so these unit tests stay db-stub only.
-vi.mock("@/lib/nationalPartyElections", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/nationalPartyElections")>()),
+vi.mock("@/lib/elections/party/nationalPartyElections", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/elections/party/nationalPartyElections")>()),
   createMissingNationalElections: vi.fn().mockResolvedValue(3),
 }));
 
@@ -439,7 +439,8 @@ describe("ratifyCharter", () => {
   });
 
   it("opens cycle-aligned national elections immediately after ratification", async () => {
-    const { createMissingNationalElections } = await import("@/lib/nationalPartyElections");
+    const { createMissingNationalElections } =
+      await import("@/lib/elections/party/nationalPartyElections");
     const charter = makeCharter();
     const founderChars = charter.foundersCharacterIds.map((cid) => ({
       _id: cid,

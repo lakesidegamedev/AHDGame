@@ -348,7 +348,8 @@ export async function ratifyCharter(
   // this first cycle and opens the vice-chair and treasurer seats now. The
   // hourly leadership-voting phase remains the safety net if this fails.
   try {
-    const { createMissingNationalElections } = await import("@/lib/nationalPartyElections");
+    const { createMissingNationalElections } =
+      await import("@/lib/elections/party/nationalPartyElections");
     await createMissingNationalElections(charterCurrentTurn, undefined, now, charter.countryId);
   } catch {
     /* non-fatal — the hourly phase will create them */

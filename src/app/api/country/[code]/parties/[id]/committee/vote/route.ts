@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { z } from "zod";
-import { MAX_VOTES_PER_VOTER } from "@/lib/nationalCommitteeElections";
+import { MAX_VOTES_PER_VOTER } from "@/lib/elections/party/nationalCommitteeElections";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { isNationalCommitteeVoteDuplicateKey } from "@/lib/elections/duplicateKey";
 import type {

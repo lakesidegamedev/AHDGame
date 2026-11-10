@@ -11,7 +11,7 @@ import { nationalPartyEnterSchema } from "@/lib/api/schemas/elections";
 import {
   NATIONAL_ALL_POSITIONS,
   notifyNationalCandidacyDeclared,
-} from "@/lib/nationalPartyElections";
+} from "@/lib/elections/party/nationalPartyElections";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type {

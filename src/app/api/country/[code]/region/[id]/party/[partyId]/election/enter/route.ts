@@ -6,7 +6,11 @@ import { logRequest } from "@/lib/api/requestLog";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { statePartyEnterSchema } from "@/lib/api/schemas/elections";
 import { validateStatePartyElectionAccess } from "@/lib/utils/statePartyElectionValidation";
-import { notifyCandidacyDeclared, POSITION_LABELS, ALL_POSITIONS } from "@/lib/statePartyElections";
+import {
+  notifyCandidacyDeclared,
+  POSITION_LABELS,
+  ALL_POSITIONS,
+} from "@/lib/elections/party/statePartyElections";
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import type { StatePartyCandidate, StatePartyElection } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
