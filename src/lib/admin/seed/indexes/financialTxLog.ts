@@ -15,6 +15,15 @@ export const FINANCIAL_TX_LOG_COUNTERPARTY_INDEX = {
   options: { name: "financialTxLog_counterpartyId_id", sparse: true, background: true },
 } as const;
 
+/**
+ * Backs the ledger listing order (turn, then write time, newest first) and its
+ * cursor. Shared with the live-world migration so the definitions cannot drift.
+ */
+export const FINANCIAL_TX_LOG_TURN_ORDER_INDEX = {
+  keys: { turn: -1, createdAt: -1, _id: -1 },
+  options: { name: "financialTxLog_turn_createdAt_id", background: true },
+} as const;
+
 export async function seedFinancialTxLogIndexes(db: Db, log: (msg: string) => void) {
   log("Financial transaction log indexes:");
 
@@ -76,6 +85,14 @@ export async function seedFinancialTxLogIndexes(db: Db, log: (msg: string) => vo
     "financialTxLog",
     { type: 1, _id: -1 },
     { name: "financialTxLog_type_id", background: true },
+    log
+  );
+
+  await ensureIndex(
+    db,
+    "financialTxLog",
+    FINANCIAL_TX_LOG_TURN_ORDER_INDEX.keys,
+    FINANCIAL_TX_LOG_TURN_ORDER_INDEX.options,
     log
   );
 

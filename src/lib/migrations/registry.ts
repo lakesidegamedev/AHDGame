@@ -1,3 +1,4 @@
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
@@ -401,6 +402,7 @@ export const MIGRATIONS: Migration[] = [
   crisisV2LeverIndexes,
   crisisV2ConsequenceIndexes,
   crisisV2PopulationOrderIndexes,
+  financialTxLogTurnOrderIndex,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.
