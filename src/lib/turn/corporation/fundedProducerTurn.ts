@@ -413,8 +413,8 @@ export async function runFundedProducerTurn(
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
-  // One tariff account per importing country (producerTariffStage); none when off.
-  const levyByPlant = plantLevies(demand.planSector, lookups); // levies ride the same account
+  // One collection account per importing or levying country; none when both are off.
+  const levyByPlant = plantLevies(demand.planSector, lookups);
   const tariffScopes = tariffCollectorScopes(
     demand.importTariffs,
     (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency,
@@ -656,10 +656,9 @@ export async function runFundedProducerTurn(
   for (const corp of lookups.corporations)
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
       sectorOwner.set(sector._id.toHexString(), corp._id.toHexString());
-  // Closing transfers computed from the settled market and frozen with it: AI
-  // profit to households, operating income to households, and the transition
-  // floor from unspent public funding. One settlement write instead of
-  // thousands of money moves (each costs several prod round trips).
+  // Closing transfers computed from the settled market and frozen with it: AI profit
+  // and operating income to households, and the transition floor from unspent public
+  // funding. One settlement write instead of thousands of money moves.
   const closeAtSettlement = (market: EconomyResult): SettlementClose => {
     const closingCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
     // Tariffs and levies come off the buyers' cash first (producerTariffStage).

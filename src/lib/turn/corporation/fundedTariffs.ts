@@ -20,7 +20,10 @@ import {
   automationLevyTransfers,
   type PlantLevy,
 } from "@/lib/market/producerMarket/levyCloseRules";
+import { automationLevyInputPenalty } from "@/lib/automationPolicy/rules";
+import { automationPolicyFor } from "@/lib/automationPolicy/policies";
 import type { ProducerWalletScope } from "./producerWallets";
+import type { CorporationLookups } from "./types";
 
 /** Countries that can collect a tariff this turn: every importer in the table. */
 export function tariffImporters(table: ImportTariffTable | undefined): string[] {
