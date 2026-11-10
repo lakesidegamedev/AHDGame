@@ -1,7 +1,7 @@
 import type { ElectionCandidate } from "@/lib/db/types/election";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { EventOfferContext } from "@/lib/events/substrate/types";
 import { seededRoll } from "@/lib/events/substrate/rng";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const STAFFER_NAMES = [
   "Jordan Reeves",
@@ -49,7 +49,7 @@ export function pickDonorAmountAnchor(characterId: string, turn: number): number
 }
 
 export async function buildCeoCorpPayload(ctx: EventOfferContext) {
-  const corp = await ctx.db.collection<Corporation>("corporations").findOne({
+  const corp = await corporationsCollection(ctx.db).findOne({
     ceoId: ctx.character._id,
   });
   if (!corp) {

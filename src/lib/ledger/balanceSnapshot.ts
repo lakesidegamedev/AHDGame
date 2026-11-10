@@ -14,6 +14,7 @@ import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import { accountId } from "@/lib/ledger/accounts";
 import type { BalanceSnapshot } from "@/lib/ledger/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -161,12 +162,12 @@ async function collectBalanceState(
   }
 
   // --- Corporations: liquidCapital -------------------------------------------
-  const corps = db.collection<{
+  const corps = corporationsCollection<{
     _id: ObjectId;
     liquidCapital?: number;
     pendingOperatingCash?: number;
     liquidCurrencyCode?: CurrencyCode;
-  }>("corporations");
+  }>(db);
   const corpCursor = corps.find(
     {},
     { projection: { liquidCapital: 1, pendingOperatingCash: 1, liquidCurrencyCode: 1 } }

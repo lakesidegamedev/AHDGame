@@ -7,8 +7,9 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request) {
   try {
@@ -31,8 +32,7 @@ export async function GET(request: Request) {
     );
     if (corpIds.length === 0) return NextResponse.json({ corporations: [] });
 
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds }, type: "extraction" }, { projection: { name: 1, ceoId: 1 } })
       .toArray();
 

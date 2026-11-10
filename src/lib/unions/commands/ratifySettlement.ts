@@ -9,7 +9,6 @@ import type {
   BargainingRatification,
   BargainingRatificationBallot,
   Character,
-  Corporation,
   Union,
 } from "@/lib/db/types";
 import { createNotification, createNotifications } from "@/lib/notifications";
@@ -32,6 +31,7 @@ import {
 } from "@/lib/unions/ratification";
 import { persistBargainingSettlement, restoreEscalationExpectations } from "./bargaining";
 import { rejectIfTurnProcessing, type UnionActionResult } from "./unionActions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const RATIFICATION_BALLOTS = "bargainingRatificationBallots";
 
@@ -319,9 +319,10 @@ export async function closeRatificationVote(
   // A settlement needs a counterparty. A dissolved employer cannot be bound by
   // an agreement, and leaving the campaign open would hold the union in a
   // campaign no answer can ever end.
-  const employer = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: campaign.employerCorporationId }, { projection: { _id: 1 } });
+  const employer = await corporationsCollection(db).findOne(
+    { _id: campaign.employerCorporationId },
+    { projection: { _id: 1 } }
+  );
   if (!employer) {
     await voidVote(campaign.status);
     await campaigns.updateOne(

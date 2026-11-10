@@ -73,7 +73,8 @@ import {
 } from "@/lib/nppAutonomy/v6/rules/businessInterest";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -267,8 +268,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     const voterIds = ctx.nppOfficials
       .map((o) => o.nppId)
       .filter((id): id is NonNullable<typeof id> => !!id);
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find(
         { $or: [{ ceoId: { $in: voterIds } }, { "shareholders.nppId": { $in: voterIds } }] },
         { projection: { ceoId: 1, totalShares: 1, shareholders: 1 } }

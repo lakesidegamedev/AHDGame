@@ -12,7 +12,7 @@ import { BOND_UNIT_FACE_VALUE, perTurnCouponPayment } from "@/lib/constants/bond
 import { getSecurityTelemetryCollection } from "@/lib/db/collections/researchTelemetry";
 import type { Bond } from "@/lib/db/types/bond";
 import { BOND_MARKET_POOLS_COLLECTION, type BondMarketPool } from "@/lib/db/types/bondMarketPool";
-import type { Corporation, ShareOrder } from "@/lib/db/types/corporation";
+import type { ShareOrder } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
@@ -29,6 +29,7 @@ import {
   type SecurityTurnRow,
 } from "./rules";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -40,8 +41,7 @@ export async function buildSecurityTelemetryRowForTurn(
   observedAt: Date
 ): Promise<SecurityTelemetryRow> {
   const [corporations, history, trades, orders, bonds, pools, rates] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { hiddenFromExchange: { $ne: true }, isPrivate: { $ne: true } },
         {

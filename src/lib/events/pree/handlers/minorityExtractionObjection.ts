@@ -4,8 +4,9 @@ import { applyDeclarativeEffects } from "@/lib/events/substrate/applyEffects";
 import { threeTierTable } from "./tiers";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { seededRoll } from "@/lib/events/substrate/rng";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const KIND = "pree.minorityExtractionObjection";
 
@@ -66,9 +67,10 @@ const handler: EventHandler = {
     },
   ],
   async buildPayload(ctx) {
-    const corp = await ctx.db
-      .collection<Corporation>("corporations")
-      .findOne({ ceoId: ctx.character._id }, { projection: { _id: 1, name: 1 } });
+    const corp = await corporationsCollection(ctx.db).findOne(
+      { ceoId: ctx.character._id },
+      { projection: { _id: 1, name: 1 } }
+    );
     if (!corp) return null;
 
     const extractionStrats = SECTOR_STRATEGIES["extraction"]!;

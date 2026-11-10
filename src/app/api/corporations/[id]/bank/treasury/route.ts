@@ -11,7 +11,7 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { tradeBankTreasuryBill } from "@/lib/banking/bankTreasury";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (parsed.data.action === "toggleAutoSweep") {
-      const updated = await db.collection<Corporation>("corporations").updateOne(
+      const updated = await corporationsCollection(db).updateOne(
         {
           _id: corporation._id,
           "bankCharter.status": "active",

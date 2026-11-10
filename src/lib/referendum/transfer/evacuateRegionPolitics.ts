@@ -37,6 +37,7 @@ import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { NPP } from "@/lib/db/types/npp";
 import { officeRemapFor, remapOffice } from "@/lib/country/dissolvingOfficeRemap";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Region-scoped party collections.
@@ -142,7 +143,7 @@ export async function evacuateRegionPolitics(
   //     to another of its regions if so, into the target with the region if not.
   let corpsFollowedCeo = 0;
   if (nppIds.length) {
-    const res = await db.collection("corporations").updateMany(
+    const res = await corporationsCollection(db).updateMany(
       { ceoType: "npp", ceoId: { $in: nppIds } },
       {
         $set: {
@@ -295,12 +296,10 @@ export async function evacuateRegionPolitics(
 
   // 5. Any corporations still HQ'd in the region (player- or vacant-CEO'd) follow
   //    it into the target country, as their region becomes the target's.
-  const corpsToTarget = await db
-    .collection("corporations")
-    .updateMany(
-      { headquartersState: regionId },
-      { $set: { countryId: toCountryId, updatedAt: now } }
-    );
+  const corpsToTarget = await corporationsCollection(db).updateMany(
+    { headquartersState: regionId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
 
   return {
     nppsRelocated: nppIds.length,

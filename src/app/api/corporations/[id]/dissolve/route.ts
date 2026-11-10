@@ -6,7 +6,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Character, CorporateSector } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { logWireEvent, wireHeadlineCorpDissolved } from "@/lib/wireEvent";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -53,6 +53,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -255,17 +256,15 @@ export async function POST(_request: Request, { params }: RouteParams) {
             : 0;
         const capitalInc = assetLiquidationInc + sectorSalvageInc;
         if (capitalInc > 0) {
-          await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corporation._id },
-              { $inc: { liquidCapital: capitalInc }, $set: { updatedAt: now } }
-            );
+          await corporationsCollection(db).updateOne(
+            { _id: corporation._id },
+            { $inc: { liquidCapital: capitalInc }, $set: { updatedAt: now } }
+          );
         }
 
-        const refreshedCorporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corporation._id });
+        const refreshedCorporation = await corporationsCollection(db).findOne({
+          _id: corporation._id,
+        });
         if (!refreshedCorporation) {
           return errorResponse(404, "Corporation not found");
         }
@@ -333,8 +332,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                     .toArray()
                 : [],
               corpShareholderIds.length > 0
-                ? db
-                    .collection<Corporation>("corporations")
+                ? corporationsCollection(db)
                     .find(
                       { _id: { $in: corpShareholderIds } },
                       {
@@ -489,7 +487,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                 };
               });
             if (equityOps.length > 0) {
-              await db.collection<Corporation>("corporations").bulkWrite(equityOps);
+              await corporationsCollection(db).bulkWrite(equityOps);
             }
           }
 
@@ -573,9 +571,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           deletedAt: now,
         });
 
-        await db
-          .collection<Corporation>("corporations")
-          .deleteOne({ _id: refreshedCorporation._id });
+        await corporationsCollection(db).deleteOne({ _id: refreshedCorporation._id });
         await recordCorporationExit(db, refreshedCorporation, {
           reason: "voluntary_closure",
           successorIds: disposal.recipientIds,

@@ -12,7 +12,6 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { DepositInsuranceFund } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
@@ -39,6 +38,7 @@ export {
   computeReserveRatioActual,
 } from "@/lib/banking/rules/insurance";
 import { INSURED_CAP_REFERENCE_USD } from "@/lib/banking/rules/insurance";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Federal budget spending.byCategory key for Treasury insurance backstop. */
 export { DEPOSIT_INSURANCE_SPENDING_KEY } from "@/lib/banking/depositBookReturn";
@@ -167,7 +167,7 @@ export async function resolveFailedBankDepositors(
   // (the claim turn), which is what makes the retry a completion rather than
   // a second payout.
   const now = new Date();
-  const claimed = await db.collection<Corporation>("corporations").findOneAndUpdate(
+  const claimed = await corporationsCollection(db).findOneAndUpdate(
     {
       _id: corporationId,
       "bankCharter.status": "failed",
@@ -188,9 +188,10 @@ export async function resolveFailedBankDepositors(
     // Not ours to claim. Either another attempt holds it, or it is already
     // settled, or it was claimed earlier and never settled. Only the last is
     // ours: read it back and decide by stage.
-    const current = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: corporationId }, { projection: { bankCharter: 1 } });
+    const current = await corporationsCollection(db).findOne(
+      { _id: corporationId },
+      { projection: { bankCharter: 1 } }
+    );
     const stage = lifecycleStage(current?.bankCharter);
     const claimedOn = current?.bankCharter?.resolutionClaimedTurn;
     // Recovery is for an estate claimed on an EARLIER turn. One claimed this

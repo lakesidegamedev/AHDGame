@@ -32,6 +32,7 @@ import {
   type ShortageGrowthFinanceConfig,
 } from "@/lib/turn/npp/rules/shortageGrowthFinance";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
@@ -126,8 +127,7 @@ export async function loadNppConstructionFundingPool(input: {
   const historyStart = Math.max(1, turn - CORP_INCOME_AVERAGING_TURNS + 1);
 
   const [bankCorporations, histories, loans] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {
           "bankCharter.status": "active",

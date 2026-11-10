@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { LendingProfileId } from "@/lib/banking/creditBands";
@@ -46,6 +45,7 @@ import { PROP_LEVERAGE_MULTIPLE, computePropEquityBase } from "@/lib/banking/rul
 import { requiredReserves as computeRequiredReserves } from "@/lib/banking/rules/balanceSheet";
 import type { BankBalanceSheet } from "@/lib/banking/rules/balanceSheet";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Next-turn outlook for the bank CEO console.
@@ -172,8 +172,7 @@ export async function buildBankOutlook(db: Db, ctx: OutlookContext): Promise<Ban
   let direction: BankOutlook["depositDirection"] = null;
   let targetNpc: number | null = null;
   if (depositTaking) {
-    const peers = await db
-      .collection<Corporation>("corporations")
+    const peers = await corporationsCollection(db)
       .find(
         { "bankCharter.status": "active", "bankCharter.currency": currency },
         { projection: { "bankCharter.depositOffset": 1, "bankCharter.type": 1 } }

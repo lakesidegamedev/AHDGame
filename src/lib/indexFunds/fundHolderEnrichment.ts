@@ -1,5 +1,6 @@
 import type { ObjectId, Db } from "mongodb";
 import type { IndexFundPosition } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type EnrichedFundHolder = {
   holderKind: IndexFundPosition["holderKind"];
@@ -25,8 +26,7 @@ export async function enrichFundPositions(
     .filter((p) => p.holderKind === "corporation" && p.corporationId)
     .map((p) => p.corporationId!);
   const corporations = corporationIds.length
-    ? await db
-        .collection<{ _id: ObjectId; name: string }>("corporations")
+    ? await corporationsCollection<{ _id: ObjectId; name: string }>(db)
         .find({ _id: { $in: corporationIds } }, { projection: { name: 1 } })
         .toArray()
     : [];

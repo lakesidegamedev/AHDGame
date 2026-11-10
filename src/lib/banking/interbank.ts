@@ -1,6 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { InterbankLoan } from "@/lib/db/types/bank";
-import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getCashReserves } from "@/lib/banking/bankCash";
@@ -10,6 +9,7 @@ import { charterSnapshotFrom, loadBankingSnapshot } from "@/lib/banking/snapshot
 import { cbMarginRatePercent, decideBankCommand } from "@/lib/banking/rules/decide";
 import { reviveObjectIds, settleTransition } from "@/lib/banking/settlementJournal";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { INTERBANK_MAX_SHARE_OF_LENDABLE } from "@/lib/banking/rules/decide";
 
@@ -68,9 +68,7 @@ export async function lendInterbank(
   if (!snapshot.policy.privateBanking || !snapshot.policy.propTrading) {
     return { ok: false, error: "Interbank lending is not enabled" };
   }
-  const borrower = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: borrowerCorpId });
+  const borrower = await corporationsCollection(db).findOne({ _id: borrowerCorpId });
   if (!borrower) return { ok: false, error: "Borrower corporation not found" };
 
   const loanId = new ObjectId();
@@ -213,9 +211,10 @@ export async function repayInterbank(
     };
   }
 
-  const lenderCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.lenderCorporationId }, { projection: { name: 1 } });
+  const lenderCorp = await corporationsCollection(db).findOne(
+    { _id: loan.lenderCorporationId },
+    { projection: { name: 1 } }
+  );
   await emitTx(db, {
     type: "bank_interbank_repay",
     turn: snapshot.turn,

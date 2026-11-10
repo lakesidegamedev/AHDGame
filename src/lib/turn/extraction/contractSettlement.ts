@@ -34,6 +34,7 @@ import {
   type SettlementResult,
 } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ContractSettlementResult {
   contractsSettled: number;
@@ -316,8 +317,7 @@ export async function settleExtractionContracts(
   );
   const corpById = new Map<string, Corporation>();
   if (corpIds.length > 0) {
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         { _id: { $in: corpIds } },
         {
@@ -636,12 +636,10 @@ export async function settleExtractionContracts(
     }
 
     // Atomic guarded debit: only succeeds if the corp can cover the payment.
-    const debit = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corp._id, liquidCapital: { $gte: amountCorp } },
-        { $inc: { liquidCapital: -amountCorp }, $set: { updatedAt: now } }
-      );
+    const debit = await corporationsCollection(db).updateOne(
+      { _id: corp._id, liquidCapital: { $gte: amountCorp } },
+      { $inc: { liquidCapital: -amountCorp }, $set: { updatedAt: now } }
+    );
 
     if (debit.modifiedCount === 0) {
       // Insufficient funds → missed payment; default at the threshold.
@@ -769,12 +767,10 @@ export async function settleExtractionContracts(
       // lastRoyaltyTurn (or $unset when it was absent) and prior missedPayments
       // when the stamp reset it. Then keep the phase alive for the remaining
       // contracts — one issuer failure must not kill the whole settlement run.
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corp._id },
-          { $inc: { liquidCapital: amountCorp }, $set: { updatedAt: now } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corp._id },
+        { $inc: { liquidCapital: amountCorp }, $set: { updatedAt: now } }
+      );
       await contractsCol.updateOne(
         { _id: contract._id },
         {

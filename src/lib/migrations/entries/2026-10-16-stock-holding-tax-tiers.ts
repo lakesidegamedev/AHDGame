@@ -34,6 +34,7 @@ import {
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -91,8 +92,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
   const [state, corps, orders, listings, history, exchange, national, regional, types, policies] =
     await Promise.all([
       db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find(
           {},
           {
@@ -353,7 +353,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           " capital-gains provisions. Activation occurs only after all writes succeed.",
       ],
     };
-  if (quoteOps.length) await db.collection<Corporation>("corporations").bulkWrite(quoteOps);
+  if (quoteOps.length) await corporationsCollection(db).bulkWrite(quoteOps);
   for (const [collection, ops] of [
     ["corporations", corpOps],
     ["shareOrders", orderOps],

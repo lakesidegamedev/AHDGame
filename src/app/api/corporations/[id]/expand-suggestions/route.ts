@@ -28,7 +28,6 @@ import type {
   StateMetrics,
   UnownedSector,
   State,
-  Corporation,
   GameConfig,
 } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
@@ -65,6 +64,7 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -304,8 +304,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .map((cid) => new ObjectId(cid));
     const competitorCorpsById =
       validCompetitorIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: validCompetitorIds } })
             .project<{
               _id: { toString(): string };

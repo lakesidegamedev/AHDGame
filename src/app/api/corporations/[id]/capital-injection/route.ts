@@ -21,10 +21,11 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
   /** Amount in the character's home currency. */
@@ -139,12 +140,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
     try {
       // Credit the corp's liquid capital
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: amountInCorpCapital }, $set: { updatedAt: now } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $inc: { liquidCapital: amountInCorpCapital }, $set: { updatedAt: now } }
+      );
     } catch (err) {
       // Refund the CEO if the corp credit fails
       await refundCharacterCash(

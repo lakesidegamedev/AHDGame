@@ -11,6 +11,7 @@ import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { planCorporateTaxPriority } from "./rules/corporateTaxPriority";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 const idFor = (value: string) =>
   new ObjectId(createHash("sha256").update(value).digest("hex").slice(0, 24));
 
@@ -60,8 +61,7 @@ async function settleCorporateTaxPriorityBatch(
         .find({ _id: { $in: keys } }, { session, projection: { _id: 1 } })
         .toArray();
       const done = new Set(prior.map((row) => row._id));
-      const corporations = await db
-        .collection<Corporation>("corporations")
+      const corporations = await corporationsCollection(db)
         .find(
           { _id: { $in: rows.map((row) => row.corpId) } },
           {
@@ -247,9 +247,7 @@ async function settleCorporateTaxPriorityBatch(
         });
       }
       if (corpOps.length) {
-        const updated = await db
-          .collection<Corporation>("corporations")
-          .bulkWrite(corpOps, { session });
+        const updated = await corporationsCollection(db).bulkWrite(corpOps, { session });
         if (updated.matchedCount !== corpOps.length)
           throw new Error("Corporate tax payer disappeared");
       }

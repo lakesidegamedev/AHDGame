@@ -1,7 +1,7 @@
 /** A contractual cancellation refund pays secured principal before owner cash. */
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { ensureFund } from "./insurance";
 import { acquireConstructionLoanLock, releaseConstructionLoanLock } from "./constructionLoanLock";
 import {
@@ -18,6 +18,7 @@ import {
   cancellationPayoutTransition,
   type ConstructionCancellationQuote,
 } from "./rules/constructionRecovery";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const complete = (result: SettlementResult) =>
   !result.error && ["applied", "replayed"].includes(result.status);
@@ -128,9 +129,10 @@ export async function cancelFinancedConstruction(input: {
   if (!owned) return { ok: false, error: "Another receipt owns the construction loan" };
   let quote = claim.cancellation;
   if (!quote) {
-    const bank = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: loan.bankCorporationId }, { projection: { bankCharter: 1 } });
+    const bank = await corporationsCollection(db).findOne(
+      { _id: loan.bankCorporationId },
+      { projection: { bankCharter: 1 } }
+    );
     const charter = bank?.bankCharter;
     const liveEpoch =
       charter?.charteredTurn === claim.charteredTurn &&

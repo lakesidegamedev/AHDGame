@@ -16,8 +16,8 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { revokeCharter } from "@/lib/banking/charter";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type UnwindBankResult =
   | {
@@ -47,7 +47,7 @@ export async function unwindBank(
     return { ok: false, error: "Reason is required" };
   }
 
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {

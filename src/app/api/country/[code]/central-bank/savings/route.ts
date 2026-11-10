@@ -8,7 +8,7 @@ import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Corporation, PortfolioHistory } from "@/lib/db/types";
+import type { PortfolioHistory } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { FOREX_ACTIVE_COUNTRIES, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -35,6 +35,7 @@ import {
   privateHolderSavingsApyPercent,
 } from "@/lib/banking/rules/rates";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -110,7 +111,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       loadBankingPolicy(db),
       holderIsCentralBank || !holderId
         ? Promise.resolve(null)
-        : db.collection<Corporation>("corporations").findOne({ _id: holderId }),
+        : corporationsCollection(db).findOne({ _id: holderId }),
     ]);
     const validPrivateHolder = holdsPlayerSavings(holderBank?.bankCharter, nationalCurrency);
     let apyPercent = centralBankApyPercent;

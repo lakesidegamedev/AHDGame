@@ -14,6 +14,7 @@ import {
   fxRateForCorpFromMap,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type FundOnlyBuyoutResult = { ok: true } | { ok: false; error: string; status: number };
 
@@ -235,7 +236,7 @@ export async function executeFundOnlyBuyout(
       fxRate = 1;
     }
     const topUpLocalTotal = anchorToCorpCapital(topUpAnchorTotal, currency, fxRate);
-    const debit = await db.collection<Corporation>("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: topUpLocalTotal },
@@ -274,7 +275,7 @@ export async function executeFundOnlyBuyout(
   // Re-read and verify the CEO is the only remaining holder before consolidating,
   // so any registry/fund-holding drift can never let us silently drop unpaid
   // shares when we rebuild the cap table.
-  const after = await db.collection<Corporation>("corporations").findOne({ _id: corporation._id });
+  const after = await corporationsCollection(db).findOne({ _id: corporation._id });
   if (!after) {
     return { ok: false, error: "Corporation vanished mid-buyout", status: 409 };
   }
@@ -306,7 +307,7 @@ export async function executeFundOnlyBuyout(
         : {}),
     },
   ];
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporation._id },
     {
       $set: {

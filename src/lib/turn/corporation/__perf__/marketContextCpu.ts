@@ -25,6 +25,7 @@ import {
   buildProductionTurnWorld,
   type ProductionTurnWorld,
 } from "../__fixtures__/productionTurnWorld";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface ProfileNode {
   id: number;
@@ -286,7 +287,7 @@ async function main() {
     await client.connect();
     db = client.db(process.env.MONGODB_DB ?? "a-house-divided");
     console.log(
-      `lookup database: ${await db.collection("corporations").countDocuments({})} corporations, ` +
+      `lookup database: ${await corporationsCollection(db).countDocuments({})} corporations, ` +
         `${await db.collection("corporateSectors").countDocuments({})} sectors`
     );
     const config = (await db

@@ -13,6 +13,7 @@ import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { StateRegistrationPool } from "@/lib/db/types/stateRegistrationPool";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -181,8 +182,7 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   const keep = (id: unknown) => {
     if (id instanceof ObjectId) owners.set(id.toHexString(), id);
   };
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({})
     .project<Pick<Corporation, "ceoId" | "ceoType" | "shareholders">>({
       ceoId: 1,

@@ -46,6 +46,7 @@ import {
   supportsCorporationWideSupplyAgreement,
 } from "@/lib/market/commodityMarketScope";
 import { supplyAgreementSectorsInScope } from "@/lib/corporations/supplyAgreementCapacity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -1074,8 +1075,7 @@ export async function processNppSupplyAgreements(
   }
   const step = substepMarker();
 
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {
@@ -1155,8 +1155,7 @@ export async function processNppSupplyAgreements(
   const externalBuyers = new Map<string, ExternalBuyer>();
   const externalBuyerUsers = new Map<string, Corporation["userId"]>();
   if (externalBuyerIds.length > 0) {
-    const docs = await db
-      .collection<Corporation>("corporations")
+    const docs = await corporationsCollection(db)
       .find(
         { _id: { $in: externalBuyerIds.map((id) => new ObjectId(id)) } },
         { projection: { countryId: 1, userId: 1 } }

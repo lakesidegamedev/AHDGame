@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   calculateDailyGrowthCost,
   GROWTH_ADJUST_COST_PER_PERCENT,
@@ -23,6 +23,7 @@ import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const adjustGrowthSchema = z.object({
   sectorId: z.string().min(1, "Sector ID is required"),
@@ -75,9 +76,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Character not found");
     }
 
-    const corporation = await db
-      .collection<Corporation>("corporations")
-      .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+    const corporation = await corporationsCollection(db).findOne({
+      ceoId: character._id,
+      ceoVacant: { $ne: true },
+    });
     if (!corporation) {
       return errorResponse(400, "You don't own a corporation");
     }
@@ -174,7 +176,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "Growth rate changed. Refresh and try again.");
     }
 
-    const corporations = db.collection<Corporation>("corporations");
+    const corporations = corporationsCollection(db);
     if (direction === "expand") {
       const debited = await corporations.updateOne(
         { _id: corporation._id, liquidCapital: { $gte: adjustCost } },

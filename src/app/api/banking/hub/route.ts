@@ -43,6 +43,7 @@ import { savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import type { ObjectId } from "mongodb";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // GET /api/banking/hub - World banking hub payload (CBs, private banks, savings, loans).
 // Auth: requireAuth
@@ -260,8 +261,7 @@ async function handleGET() {
         | "logoUrl"
         | "bankCharter"
       >;
-      const chartered = (await db
-        .collection<Corporation>("corporations")
+      const chartered = (await corporationsCollection(db)
         .find({ "bankCharter.status": "active" })
         .project({
           _id: 1,
@@ -418,8 +418,7 @@ async function handleGET() {
         });
       }
 
-      const owned = await db
-        .collection<Corporation>("corporations")
+      const owned = await corporationsCollection(db)
         .find({ userId: character.userId })
         .project({
           _id: 1,

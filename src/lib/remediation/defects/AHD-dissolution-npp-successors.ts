@@ -27,7 +27,6 @@
 
 import { ObjectId, type Db } from "mongodb";
 import type {
-  Corporation,
   CorporateSector,
   CorporationExit,
   CorporationExitReason,
@@ -64,6 +63,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const DEFECT_ID = "AHD-dissolution-npp-successors";
 
@@ -441,7 +441,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const { events } = healPlan.payload as Payload;
   const now = ctx.now;
   const eraUnitScale = await loadWorldEraUnitScale(db);
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const nppFilter = {
     ceoType: "npp" as const,

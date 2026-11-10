@@ -1,11 +1,12 @@
 import { ObjectId, type Db, type Filter } from "mongodb";
-import type { Bill, Corporation, Tariff } from "@/lib/db/types";
+import type { Bill, Tariff } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import type { TariffScopeType } from "@/lib/db/types/tariff";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { resolveLegislatedEmbargoes } from "@/lib/trade/reconcileEmbargoes";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const PUBLIC_TARIFF_SCOPES = [
   "economy_wide",
@@ -43,8 +44,7 @@ export async function queryTariffs(
     ),
   ];
   const corporations = corporationIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find(
           { _id: { $in: corporationIds.map((id) => new ObjectId(id)) } },
           { projection: { name: 1, sequentialId: 1 } }

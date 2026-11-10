@@ -8,7 +8,8 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, notFound } from "@/lib/api/errors";
-import type { Corporation, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,12 +24,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
     const currentTurn = gameState?.currentTurn ?? 0;
 
-    const result = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { suspended: true, suspendedUntilTurn: currentTurn, updatedAt: new Date() } }
-      );
+    const result = await corporationsCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { suspended: true, suspendedUntilTurn: currentTurn, updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) throw notFound("Corporation not found");
 
     return NextResponse.json({ success: true });

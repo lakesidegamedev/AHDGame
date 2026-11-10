@@ -13,7 +13,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
-import type { Corporation } from "@/lib/db/types/corporation";
 import {
   terminationBasis,
   terminationFee,
@@ -35,6 +34,7 @@ import { getGameState } from "@/lib/gameState";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string; positionId: string }>;
@@ -133,9 +133,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       }
     }
 
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: contract.corporationId });
+    const corp = await corporationsCollection(db).findOne({ _id: contract.corporationId });
 
     // Only a convenience termination is a conflict question. Withdrawing an unanswered offer
     // and dropping a plant that has not built anything for three turns are things a minister

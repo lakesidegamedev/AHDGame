@@ -9,10 +9,10 @@
  */
 import type { Db } from "mongodb";
 import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
-import type { Corporation } from "@/lib/db/types";
 import { countsAsFrontierResearch } from "@/lib/constants/techTree/breakthrough";
 import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Mongo filter for the corporations whose tech tree is this lane's. */
 export function laneCorporationFilter(lane: OperatingSectorType): Record<string, unknown> {
@@ -29,8 +29,7 @@ export async function loadSectorFrontierResearch(
   db: Db,
   lane: OperatingSectorType
 ): Promise<number> {
-  const rows = await db
-    .collection<Corporation>("corporations")
+  const rows = await corporationsCollection(db)
     .aggregate<{ total: number }>([
       { $match: { ...laneCorporationFilter(lane), frontierResearchSpent: { $gt: 0 } } },
       { $group: { _id: null, total: { $sum: "$frontierResearchSpent" } } },
@@ -128,8 +127,7 @@ export async function loadFrontierResearchByLane(
   techTreesEnabled: boolean
 ): Promise<ReadonlyMap<OperatingSectorType, number> | undefined> {
   if (!techTreesEnabled) return undefined;
-  const rows = await db
-    .collection<Corporation>("corporations")
+  const rows = await corporationsCollection(db)
     .aggregate<FrontierResearchIdentityRow>([
       { $match: { frontierResearchSpent: { $gt: 0 } } },
       {

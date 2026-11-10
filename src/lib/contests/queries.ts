@@ -5,7 +5,7 @@
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, Corporation, PoliticalParty } from "@/lib/db/types";
+import type { Character, PoliticalParty } from "@/lib/db/types";
 import type {
   ContestKind,
   ContestRecordKind,
@@ -15,6 +15,7 @@ import type {
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getContestRoundsCollection } from "./collection";
 import { CONTEST_KINDS, CORP_CONTEST_KINDS, contestPrizeAnchor } from "./rules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const LEADERS_SHOWN = 10;
 const PAST_ROUNDS_SHOWN = 12;
@@ -229,8 +230,7 @@ async function loadEntryImages(
   const [corpDocs, partyDocs, characterDocs] = await Promise.all([
     corpIds.size === 0
       ? []
-      : db
-          .collection<Corporation>("corporations")
+      : corporationsCollection(db)
           .find({ _id: { $in: toIds(corpIds) } }, { projection: { logoUrl: 1, sequentialId: 1 } })
           .toArray(),
     partyIds.size === 0

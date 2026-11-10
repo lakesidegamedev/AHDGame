@@ -19,6 +19,7 @@ import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { User } from "@/lib/db/types/user";
 import type { CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const IMPERIAL_STARTING_CAPITAL = 50_000_000;
 const IMPERIAL_INITIAL_SHARES = 10_000_000;
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    await db.collection<Corporation>("corporations").insertOne(corporation as Corporation);
+    await corporationsCollection(db).insertOne(corporation as Corporation);
 
     // Update user document: set active imperial character
     await db.collection<User>("users").updateOne(

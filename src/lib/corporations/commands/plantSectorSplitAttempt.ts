@@ -33,6 +33,7 @@ import {
   didPlantSectorSplitSucceed,
   type PlantSectorSplitQuote,
 } from "@/lib/corporations/plantSectorSplit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SplitResolution {
   quote: PlantSectorSplitQuote;
@@ -102,15 +103,17 @@ export async function attemptPlantSectorSplit(
       // operations. Promise.all would race all four reads to open the transaction
       // at the same txnNumber; the losers fail with code 117. The race is in our
       // call pattern, so retrying on a fresh session cannot clear it.
-      const freshAttacker = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: attacker._id }, { session });
+      const freshAttacker = await corporationsCollection(db).findOne(
+        { _id: attacker._id },
+        { session }
+      );
       const freshTarget = await db
         .collection<CorporateSector>("corporateSectors")
         .findOne({ _id: targetSectorId, stateId, corporationId: defender._id }, { session });
-      const freshDefender = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: defender._id }, { session });
+      const freshDefender = await corporationsCollection(db).findOne(
+        { _id: defender._id },
+        { session }
+      );
       const existingOwnSector = await db.collection<CorporateSector>("corporateSectors").findOne(
         {
           stateId,
@@ -198,7 +201,7 @@ export async function attemptPlantSectorSplit(
         freshAttacker,
         attackerFxRate
       );
-      const debit = await db.collection<Corporation>("corporations").updateOne(
+      const debit = await corporationsCollection(db).updateOne(
         {
           _id: freshAttacker._id,
           liquidCapital: { $gte: attackCostLocal },
@@ -349,8 +352,7 @@ export async function attemptPlantSectorSplit(
     } | null;
     if (pendingRefund) {
       uncommittedDebit = null;
-      await db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(db)
         .updateOne(
           { _id: attacker._id },
           {

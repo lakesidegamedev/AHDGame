@@ -17,7 +17,6 @@ import {
   scheduledMarketizationLevel,
   NPP_DEFAULT_INTERNAL_REPRESSION,
 } from "@/lib/constants/commandEconomy";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameConfig, GameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { resolveCommandEconomyRoles, canSetRepression } from "@/lib/economy/commandEconomyAuth";
@@ -33,6 +32,7 @@ import {
   type RawSoe,
 } from "@/lib/economy/commandEconomyDashboard";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function loadCommandEconomyDashboard(
   db: Db,
@@ -63,8 +63,7 @@ export async function loadCommandEconomyDashboard(
     federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
       _id: "federal";
     }),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ countryId, soe: { $exists: true } }, { projection: { _id: 1, name: 1, soe: 1 } })
       .toArray(),
     db

@@ -1,6 +1,5 @@
 /** A bank cannot replace or resolve the epoch behind an unfinished construction debit. */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { ConstructionBuildClaim } from "./rules/constructionBuild";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CorporateSector } from "@/lib/db/types/corporation";
@@ -8,12 +7,13 @@ import { oid } from "./rules/boundary";
 import { releaseConstructionAdmission } from "./constructionAdmission";
 import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function acquireConstructionFundingLease(
   db: Db,
   claim: ConstructionBuildClaim
 ): Promise<boolean> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const bankId = new ObjectId(claim.bankId);
   const acquired = await corporations.updateOne(
     {
@@ -57,7 +57,7 @@ export async function abortUnfundedConstruction(
   sectorId: ObjectId,
   turn: number
 ): Promise<boolean> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const identity = {
     _id: new ObjectId(claim.bankId),
     "bankConstructionFunding.loanId": claim.loanId,
@@ -173,7 +173,7 @@ export async function releaseConstructionFundingLease(
   db: Db,
   claim: ConstructionBuildClaim
 ): Promise<void> {
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     {
       _id: new ObjectId(claim.bankId),
       "bankConstructionFunding.loanId": claim.loanId,

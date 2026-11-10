@@ -34,6 +34,7 @@ import {
 } from "@/lib/bonds/payInstitutionalBondHolders";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -75,9 +76,7 @@ export async function executeCorporationBondRestructure(
   }
   const { now, cureTurn } = options;
 
-  const refreshed = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporation._id });
+  const refreshed = await corporationsCollection(db).findOne({ _id: corporation._id });
   if (!refreshed) {
     throw badRequest("Corporation not found");
   }
@@ -249,12 +248,10 @@ export async function executeCorporationBondRestructure(
     refreshed,
     corpFxRate
   );
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: refreshed._id },
-      { $inc: { liquidCapital: proceedsLocal - costLocal }, $set: { updatedAt: now } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: refreshed._id },
+    { $inc: { liquidCapital: proceedsLocal - costLocal }, $set: { updatedAt: now } }
+  );
 
   // 2. Liquidate the selected sectors (idempotent, not transaction-safe, must
   //    run outside any transaction). NPP operators take over most of each
@@ -339,8 +336,7 @@ export async function executeCorporationBondRestructure(
 
   if (corpIncs.size > 0) {
     const creditorIds = [...corpIncs.keys()].map((idStr) => new ObjectId(idStr));
-    const creditorDocs = await db
-      .collection<Corporation>("corporations")
+    const creditorDocs = await corporationsCollection(db)
       .find({ _id: { $in: creditorIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const resolvedCreditors = creditorDocs.map((creditor) => {
@@ -365,7 +361,7 @@ export async function executeCorporationBondRestructure(
         },
       ];
     });
-    if (corpOps.length > 0) await db.collection<Corporation>("corporations").bulkWrite(corpOps);
+    if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps);
   }
 
   // 4b. Pool, fund and NPP holders are paid in full like everyone else.

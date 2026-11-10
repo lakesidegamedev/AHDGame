@@ -28,6 +28,7 @@ import { legislatureUrl } from "@/lib/urls";
 import type { SearchResult } from "@/lib/search/types";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -301,11 +302,7 @@ export async function runUniversalSearch({
     $or: [{ name: searchRegex }, { description: searchRegex }],
     ...corpQuery,
   };
-  const corporations = await db
-    .collection<Corporation>("corporations")
-    .find(corporationQuery)
-    .limit(5)
-    .toArray();
+  const corporations = await corporationsCollection(db).find(corporationQuery).limit(5).toArray();
 
   // Batched CEO name lookup — avoids one findOne per corp.
   const ceoIds = corporations.map((c) => c.ceoId).filter((id): id is typeof id & {} => !!id);
@@ -679,8 +676,7 @@ export async function runUniversalSearch({
   if (enabledCountries) {
     bondCorpMatchQuery.countryId = { $in: enabledCountries };
   }
-  const bondCorpMatches = await db
-    .collection<Corporation>("corporations")
+  const bondCorpMatches = await corporationsCollection(db)
     .find(bondCorpMatchQuery)
     .project<{ _id: Corporation["_id"]; name: string; ticker?: string }>({ name: 1, ticker: 1 })
     .limit(10)

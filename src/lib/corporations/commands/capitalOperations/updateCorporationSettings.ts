@@ -23,7 +23,8 @@ import {
 import { migrateUnlockedTechOnPrimaryTypeSwitch } from "@/lib/corporations/techTree/migrateUnlocksOnTypeSwitch";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -325,7 +326,7 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
     if (techUnset && Object.keys(techUnset).length > 0) updateDoc.$unset = techUnset;
     if (techInc && Object.keys(techInc).length > 0) updateDoc.$inc = techInc;
 
-    await db.collection<Corporation>("corporations").updateOne({ _id: corporation._id }, updateDoc);
+    await corporationsCollection(db).updateOne({ _id: corporation._id }, updateDoc);
 
     return NextResponse.json({
       success: true,

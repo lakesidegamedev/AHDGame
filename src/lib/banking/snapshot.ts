@@ -20,6 +20,7 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { getCurrentTurn } from "@/lib/currentTurn";
 import type { BankCharterSnapshot, BankingSnapshot } from "@/lib/banking/rules/boundary";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type { BankingSnapshot } from "@/lib/banking/rules/boundary";
 
@@ -73,9 +74,7 @@ export async function loadBankingSnapshot(
   corporationId: ObjectId,
   options: { withCapacityCeiling?: boolean; turn?: number } = {}
 ): Promise<LoadedBankingSnapshot | null> {
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId });
+  const corporation = await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corporation) return null;
 
   const charter = corporation.bankCharter;

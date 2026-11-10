@@ -26,6 +26,7 @@ import { getControllingCorporateParent } from "@/lib/corporations/corporateOwner
 
 export type { GroupMembership } from "./rules/membership";
 import type { GroupMembership } from "./rules/membership";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type GroupCorpRow = Pick<
   Corporation,
@@ -41,8 +42,7 @@ export async function resolveFormalizedGroups(
     parentControlByCorpId: Map<string, { corporationId: string; votingPercent: number }>;
   }
 > {
-  const corps = (await db
-    .collection<Corporation>("corporations")
+  const corps = (await corporationsCollection(db)
     .find(
       {},
       {

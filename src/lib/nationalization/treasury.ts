@@ -21,6 +21,7 @@ import type { BankingTransition, TransitionProjection } from "@/lib/banking/rule
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Opt-in government-side witness for an event-driven caller whose own rows do
@@ -928,12 +929,10 @@ export async function drawFromTreasury(
   if (amount <= 0) return { ok: true, amount: 0 };
 
   const debited = await incTreasuryBalance(db, input.countryId, -amount, now);
-  const credited = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: input.corpId },
-      { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
-    );
+  const credited = await corporationsCollection(db).updateOne(
+    { _id: input.corpId },
+    { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
+  );
   await witnessTreasuryTransfer(db, ledger, "soe_treasury_draw", input, now, {
     treasury: debited ? -amount : 0,
     corporation: (credited?.matchedCount ?? 0) > 0 ? amount : 0,
@@ -1039,12 +1038,10 @@ export async function remitToTreasury(
   }
 
   if (amount <= 0) return 0;
-  const debited = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: input.corpId },
-      { $inc: { liquidCapital: -amount }, $set: { updatedAt: now } }
-    );
+  const debited = await corporationsCollection(db).updateOne(
+    { _id: input.corpId },
+    { $inc: { liquidCapital: -amount }, $set: { updatedAt: now } }
+  );
   const credited = await incTreasuryBalance(db, input.countryId, amount, now);
   await witnessTreasuryTransfer(db, options, "soe_remittance", input, now, {
     corporation: (debited?.matchedCount ?? 0) > 0 ? -amount : 0,

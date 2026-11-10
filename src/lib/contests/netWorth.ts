@@ -8,7 +8,6 @@
  */
 import type { Db, Document, ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -22,6 +21,7 @@ import {
 import { fetchExchangeRateMap, getRateDoc, toInternalAmount } from "@/lib/world/forex";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const add = (m: Map<string, number>, key: string, value: number) =>
   m.set(key, (m.get(key) ?? 0) + value);
@@ -43,8 +43,7 @@ export async function loadCharacterNetWorths(
       .toArray(),
     fetchExchangeRateMap(db),
     loadValuationFxRates(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "shareholders.characterId": { $in: characterIds } },
         { projection: { shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }

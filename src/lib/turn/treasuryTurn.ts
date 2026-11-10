@@ -16,7 +16,6 @@ import { getDb } from "@/lib/mongodb";
 import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -68,6 +67,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -236,8 +236,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   ];
   const corporationQuotes = new Map<string, SovereignCouponCorporationQuote>();
   if (treasuryCashLedgerEnabled && corporationIds.length > 0) {
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find(
         { _id: { $in: corporationIds } },
         { projection: { _id: 1, countryId: 1, liquidCurrencyCode: 1 } }

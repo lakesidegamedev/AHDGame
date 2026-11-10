@@ -39,6 +39,7 @@ import {
   marketRecoveryStageActive,
   normalizeMarketRecoveryStage,
 } from "@/lib/market/marketRecoveryStages";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -119,7 +120,7 @@ export async function runOffTypeHandover(
   const out = { moved: 0, deferred: 0 };
   if (!marketRecoveryStageActive(args.stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER))
     return out;
-  const corpsCol = db.collection<Corporation>("corporations");
+  const corpsCol = corporationsCollection(db);
   const sectorsCol = db.collection<CorporateSector>("corporateSectors");
   const receipts = db.collection<HandoverReceipt>("offTypeHandovers");
 

@@ -24,6 +24,7 @@ import {
   getBranchCapacityShare,
   computeDepositCeiling,
 } from "@/lib/banking/rules/capacity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type SetBranchCapacityShareResult =
   { ok: true; branchCapacityShare: number } | { ok: false; error: string };
@@ -188,13 +189,13 @@ export async function setBranchCapacityShare(
     };
   }
 
-  const corp = await db.collection<Corporation>("corporations").findOne({ _id: corporationId });
+  const corp = await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corp) return { ok: false, error: "Corporation not found" };
   if (corp.bankCharter?.status !== "active") {
     return { ok: false, error: "Corporation has no active bank charter" };
   }
 
-  const updated = await db.collection<Corporation>("corporations").updateOne(
+  const updated = await corporationsCollection(db).updateOne(
     { _id: corporationId, "bankCharter.status": "active" },
     {
       $set: {

@@ -15,7 +15,7 @@ import {
 import { buildEscrowWithdrawalTxEntry } from "@/lib/corporations/escrowTxLog";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
   /** Amount in the corporation's local (liquidCurrencyCode) units. */
@@ -86,7 +86,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // read-side check above and over-withdraw.
     const cooldownFloor = currentTurn - ESCROW_WITHDRAW_COOLDOWN_TURNS;
     const now = new Date();
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         shareEscrowBalance: { $gte: amount },

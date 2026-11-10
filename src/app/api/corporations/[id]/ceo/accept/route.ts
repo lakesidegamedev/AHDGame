@@ -5,13 +5,14 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createNotification } from "@/lib/notifications";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
-import type { Corporation, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { openCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -84,7 +85,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     }
 
     // Enforce one CEO per character: check if this character is already CEO of another active corporation
-    const existingCeo = await db.collection<Corporation>("corporations").findOne({
+    const existingCeo = await corporationsCollection(db).findOne({
       ceoId: myChar._id,
       ceoVacant: { $ne: true },
       _id: { $ne: corporation._id },
@@ -116,7 +117,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     // the handover, or a later dismissal restores the old human over the new.
     // Claimed on the offer still naming this character, so an accept that
     // lands after a withdrawal, re-offer or a parallel accept seats no one.
-    const seated = await db.collection<Corporation>("corporations").updateOne(
+    const seated = await corporationsCollection(db).updateOne(
       { _id: corporation._id, pendingCeoCharacterId: myChar._id },
       {
         $set: {

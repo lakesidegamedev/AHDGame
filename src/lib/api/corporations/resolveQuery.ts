@@ -4,6 +4,7 @@ import type { Corporation } from "@/lib/db/types/corporation";
 import type { State } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
 import { directingParentCorporationId } from "@/lib/corporations/subsidiaries/authorization";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Returns the canonical URL path segment for a corporation document.
@@ -49,9 +50,9 @@ export async function resolveCorporation(
   const effectiveProjection = inclusion
     ? projection
     : { editorialStance: 0 as const, ...projection };
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne(query, { projection: effectiveProjection });
+  const corporation = await corporationsCollection(db).findOne(query, {
+    projection: effectiveProjection,
+  });
   if (!corporation) {
     return {
       ok: false,

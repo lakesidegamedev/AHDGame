@@ -44,6 +44,7 @@ import {
 import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -115,8 +116,7 @@ export async function findDeadBanksWithLoans(db: Db): Promise<DeadBank[]> {
       history.map((entry) => [entry.corporationId.toString(), entry.corporationId])
     ).values(),
   ];
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({
       $or: [
         { "bankCharter.status": { $in: ["failed", "revoked"] } },
@@ -315,8 +315,7 @@ async function loadDeadBankLoanPrefetch(
           .toArray()
       : Promise.resolve([]),
     corporationIds.size > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: [...corporationIds.values()] } },
             { projection: { name: 1, liquidCapital: 1 } }

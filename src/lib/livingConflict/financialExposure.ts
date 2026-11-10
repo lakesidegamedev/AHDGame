@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Corporation, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { bankEquity, getCashReserves } from "@/lib/banking/rules/balanceSheet";
@@ -10,6 +10,7 @@ import {
 } from "./rules/financialExposure";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Current enacted euro membership and actual sovereign-bank positions. */
 export async function loadFinancialExposure(db: Db, availableCountries: Set<string>) {
@@ -32,8 +33,7 @@ export async function loadFinancialExposure(db: Db, availableCountries: Set<stri
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "bankCharter.status": { $in: ["active", "failed"] } },
         { projection: { countryId: 1, bankCharter: 1 } }

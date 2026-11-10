@@ -38,6 +38,7 @@ import {
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -184,8 +185,7 @@ async function loadParties(
   db: Db,
   agreement: Pick<SupplyAgreement, "supplierCorpId" | "buyerCorpId">
 ): Promise<{ supplier: Corporation; buyer: Corporation } | null> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [agreement.supplierCorpId, agreement.buyerCorpId] } })
     .toArray();
   const supplier = corps.find((c) => c._id.equals(agreement.supplierCorpId));
@@ -260,9 +260,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       );
     }
 
-    const counterparty = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: counterpartyId });
+    const counterparty = await corporationsCollection(db).findOne({ _id: counterpartyId });
     if (!counterparty) {
       return errorResponse(
         404,
@@ -685,12 +683,10 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         delta: [{ field: "status", before: agreement.status, after: nextStatus }],
         outcome: "ok",
       });
-      const other = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: isSupplier ? agreement.buyerCorpId : agreement.supplierCorpId },
-          { projection: { userId: 1 } }
-        );
+      const other = await corporationsCollection(db).findOne(
+        { _id: isSupplier ? agreement.buyerCorpId : agreement.supplierCorpId },
+        { projection: { userId: 1 } }
+      );
       if (other) {
         await notifySupplyAgreementEvent({
           recipient: other,

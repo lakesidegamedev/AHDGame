@@ -1,5 +1,5 @@
 import type { Db, Document } from "mongodb";
-import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import {
   COMMODITY_BASE_PRICES,
   commodityMixWeight,
@@ -14,6 +14,7 @@ import { US_STATE_IDS } from "@/lib/countries/us/data/usStateBaselines";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { currentTurnDeliveredAdvertisingUnits, type MediaOutletDelivery } from "./rules";
 import { loadPoliticalMediaOrdersForClearing } from "@/lib/politicalMedia/journal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Load measured US media delivery for concentration-gated legislation.
@@ -84,8 +85,7 @@ export async function loadUSMediaOutletDelivery(
     ).values(),
   ];
   const corporations = corporationIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find({ _id: { $in: corporationIds } }, { projection: { countryOwnerId: 1 } })
         .toArray()
     : [];

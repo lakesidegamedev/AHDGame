@@ -15,6 +15,7 @@ import {
   mediaDevelopmentThresholdAnchor,
   shouldRetireChronicMediaDevelopment,
 } from "./rules/mediaProductRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface MediaProductReceiptCorp extends Pick<Corporation, "_id"> {
   mediaProductDevelopmentReceiptV1?: {
@@ -335,7 +336,7 @@ export async function processMediaProductProjectsV1(input: {
     delete corporation.mediaProductAdvertisingReceiptV1;
   }
   if (receiptClearOps.length > 0) {
-    await input.db.collection<Corporation>("corporations").bulkWrite(receiptClearOps, {
+    await corporationsCollection(input.db).bulkWrite(receiptClearOps, {
       ordered: false,
     });
   }

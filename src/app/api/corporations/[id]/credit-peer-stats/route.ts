@@ -11,6 +11,7 @@ import { CREDIT_RATINGS, type CreditRating } from "@/lib/db/types/centralBank";
 import { getGameState } from "@/lib/gameState";
 import { getTurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -46,8 +47,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // memory. Share the centralBanks load with other corp-detail routes via
     // the per-turn cache.
     const [sameCountryCorps, refData] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ countryId })
         .project<
           Pick<

@@ -82,6 +82,9 @@ import {
 import { ZERO_BANKING_TURN_SUMMARY, type BankingTurnSummary } from "@/lib/turn/bankingTurnSummary";
 import { serviceInterbankAndCbMargin } from "./bankingInterbankTurn";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+
+const BANK_CHARTER_ONLY = { projection: { bankCharter: 1 } };
 
 const BROAD_MONEY_ONLY = { projection: { externalBroadMoney: 1 } };
 
@@ -184,8 +187,7 @@ async function runBankingTurn(
     // The banking stages read the charter, cash and deposit book. The
     // settlement stamps on the same document are most of its bytes and are
     // only read by the journal, under its own projection.
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "bankCharter.status": "active" }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray(),
     centralBanksCollection(db)
@@ -542,9 +544,10 @@ async function processOneBank(
   };
 
   // Re-check idempotency against live doc (concurrent / retry safety).
-  const live = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corp._id }, { projection: { liquidCapital: 1, bankCharter: 1, countryId: 1 } });
+  const live = await corporationsCollection(db).findOne(
+    { _id: corp._id },
+    { projection: { liquidCapital: 1, bankCharter: 1, countryId: 1 } }
+  );
   if (!live?.bankCharter || live.bankCharter.lastBankingTurn === turn) {
     return result;
   }
@@ -1006,7 +1009,7 @@ async function processOneBank(
   let underwritingFeesForTurn = 0;
   let published = false;
   let superseded = false;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const unbooked = unbookedSovereignAssetIncome(publicationCharter);
     sovereignCouponIncomeForTurn = unbooked.couponIncome;
@@ -1127,9 +1130,7 @@ async function processLoanBookOnlyBank(
   row: LoanBookOnlyBank
 ): Promise<LoanServiceResult | null> {
   const { corp } = row;
-  const live = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
+  const live = await corporationsCollection(db).findOne({ _id: corp._id }, BANK_CHARTER_ONLY);
   const charter = live?.bankCharter;
   if (!isNamedLendingCharter(charter) || charter.lastBankingTurn === turn) return null;
   // Not the type guard: a deposit taker is handled by processOneBank, and the
@@ -1141,7 +1142,7 @@ async function processLoanBookOnlyBank(
     serviceNamedLoanBook(db, turn, corp, currency, charter.charteredTurn)
   );
 
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   let publicationCharter = charter;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (attempt > 0) {
@@ -1302,9 +1303,7 @@ async function serviceNpcBulkBook(
       throw new Error(settled.error ?? "Household loan book is awaiting settlement recovery");
     }
     const [bank, loans, pool] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: bankCorporationId }, { projection: { bankCharter: 1 } }),
+      corporationsCollection(db).findOne({ _id: bankCorporationId }, BANK_CHARTER_ONLY),
       db
         .collection<BankLoan>("bankLoans")
         .aggregate<{ total: number }>([

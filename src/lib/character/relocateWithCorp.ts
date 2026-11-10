@@ -65,6 +65,7 @@ import {
   loadUsPoliticalStateIds,
   unplayableTerritoryHomeError,
 } from "@/lib/elections/usPoliticalHome";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 class RelocationUnderwritingLeaseConflict extends Error {}
 
@@ -319,9 +320,7 @@ export async function handleRelocateWithCorp(request: Request) {
           }
           currencyConversion = convResult;
           if (convResult.converted) {
-            const refreshed = await db
-              .collection<Corporation>("corporations")
-              .findOne({ _id: corp._id });
+            const refreshed = await corporationsCollection(db).findOne({ _id: corp._id });
             if (!refreshed) {
               return errorResponse(500, "Corporation not found after currency conversion");
             }
@@ -377,7 +376,7 @@ export async function handleRelocateWithCorp(request: Request) {
               workingCorp,
               workingFxRate
             );
-            const updateResult = await db.collection<Corporation>("corporations").updateOne(
+            const updateResult = await corporationsCollection(db).updateOne(
               {
                 _id: workingCorp._id,
                 primaryUnderwritingIncomingFunding: { $exists: false },
@@ -455,9 +454,10 @@ export async function handleRelocateWithCorp(request: Request) {
                   primaryUnderwritingIncomingFunding: { $exists: false },
                   bankUnderwritingFunding: { $exists: false },
                 };
-                const leaseFree = await db
-                  .collection<Corporation>("corporations")
-                  .findOne(leaseFreeFilter, { projection: { _id: 1 }, session });
+                const leaseFree = await corporationsCollection(db).findOne(leaseFreeFilter, {
+                  projection: { _id: 1 },
+                  session,
+                });
                 if (!leaseFree) return { status: "underwriting_busy" as const };
 
                 const frozenFxByCurrency = new Map(fxByCurrency);
@@ -482,7 +482,7 @@ export async function handleRelocateWithCorp(request: Request) {
                   workingCorp,
                   frozenBondLease!.nativeFxRate
                 );
-                const updateResult = await db.collection<Corporation>("corporations").updateOne(
+                const updateResult = await corporationsCollection(db).updateOne(
                   leaseFreeFilter,
                   {
                     $set: baseCorpSet,
@@ -526,7 +526,7 @@ export async function handleRelocateWithCorp(request: Request) {
             creditRating = bondCommit.data.creditRating;
           } else {
             // imperial-free — no payment, no bond, just move
-            const updateResult = await db.collection<Corporation>("corporations").updateOne(
+            const updateResult = await corporationsCollection(db).updateOne(
               {
                 _id: workingCorp._id,
                 primaryUnderwritingIncomingFunding: { $exists: false },

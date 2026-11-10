@@ -59,6 +59,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type Log = (message: string) => void;
 
@@ -580,8 +581,7 @@ async function phaseDiagnostic(db: Db, plan: EconomyResetPlan, log: Log): Promis
         { projection: { corporationId: 1, countryId: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("corporations")
+    corporationsCollection<Document>(db)
       .find({}, { projection: { _id: 1, countryOwnerId: 1, isPrimaryNationalCorporation: 1 } })
       .toArray(),
   ]);

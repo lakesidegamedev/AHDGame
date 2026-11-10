@@ -16,6 +16,7 @@ import { canActOnCorporationAsParent } from "../authorization";
 import { subsidiaryCeoBlockMessage, subsidiaryCeoBlockReason } from "../helpers";
 import { collectSiblingSubsidiaryCeoUserIds, resolveParentCeoUserId } from "../parentContext";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface AppointSubsidiaryCeoInput {
   sub: Corporation;
@@ -44,9 +45,7 @@ export async function appointSubsidiaryCeo(
 
   const controllingParent = await resolveControllingCorporateParent(db, sub);
   if (!controllingParent) return fail("This corporation is no longer a subsidiary.", 409);
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId });
+  const parent = await corporationsCollection(db).findOne({ _id: controllingParent.corporationId });
   if (!parent) return fail("Parent corporation not found.", 404);
 
   if (ceoType === "npp") {
@@ -117,7 +116,7 @@ export async function appointSubsidiaryCeo(
 
   // Reseat: close the current holder's tenure, then set the new human CEO.
   const previousCeoId = sub.ceoId;
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: sub._id },
     {
       $set: {

@@ -28,6 +28,7 @@ import {
 } from "@/lib/admin/seed/seedCountryGameStates";
 import { scheduledMarketizationLevel, DUAL_TRACK_CEILING } from "@/lib/constants/commandEconomy";
 import { batchSpawnNppCorporations, NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface NppCorpCountryPlan {
   countryId: CountryId;
@@ -142,8 +143,7 @@ export async function seedNppCorporations(
               .toArray()
           )
         : null;
-    const existing = await db
-      .collection<Corporation>("corporations")
+    const existing = await corporationsCollection(db)
       .find({ ceoType: "npp", countryId })
       .project<Pick<Corporation, "type" | "industryModel" | "mediaDiscriminator">>({
         type: 1,

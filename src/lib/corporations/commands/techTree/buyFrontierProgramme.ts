@@ -7,6 +7,7 @@ import {
   isFrontierOpen,
   type FrontierProgrammeKind,
 } from "@/lib/constants/techTree";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type BuyFrontierProgrammeResult =
   | {
@@ -60,7 +61,7 @@ export async function buyFrontierProgramme(
     return { ok: false, status: 402, error: "Not enough R&D points for this programme." };
   }
 
-  const updateResult = await db.collection<Corporation>("corporations").updateOne(
+  const updateResult = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
       rdScore: { $gte: rdCost },

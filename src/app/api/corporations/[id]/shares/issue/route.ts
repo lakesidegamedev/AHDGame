@@ -31,6 +31,7 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 import { equityPoolCurrency } from "@/lib/equities/marketPool";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -265,9 +266,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         }
         result = corporation;
       } else {
-        result = await db
-          .collection<Corporation>("corporations")
-          .findOneAndUpdate(cooldownQuery as never, updatePipeline, { returnDocument: "after" });
+        result = await corporationsCollection(db).findOneAndUpdate(
+          cooldownQuery as never,
+          updatePipeline,
+          { returnDocument: "after" }
+        );
       }
     } catch (error) {
       if (!frozenUnderwritingOffer) await refundPreparedEquityPlacement(db, placement, now);

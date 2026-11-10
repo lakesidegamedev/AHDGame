@@ -55,6 +55,7 @@ import {
   prepareConstructionBorrowerTransfers,
   settleConstructionBorrowerTransfers,
 } from "@/lib/banking/constructionBorrowerTransfer";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // PLANTS-GATED: a spin-off only re-points `corporationId` on the existing row, so
 // capitalStock, buildQueue, CIP and plantsStartTurn ride along untouched. There
@@ -335,9 +336,10 @@ export async function spinOff(
     }
 
     // Anchor the parent's spin-off cooldown.
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: parent._id }, { $set: { lastSpinOffTurn: turn, updatedAt: now } });
+    await corporationsCollection(db).updateOne(
+      { _id: parent._id },
+      { $set: { lastSpinOffTurn: turn, updatedAt: now } }
+    );
 
     // The incorporation fee is government revenue, not destroyed money: it goes
     // to the parent's country treasury, and both legs are ledgered for
@@ -448,7 +450,7 @@ export async function spinOff(
       }
     }
     await settleConstructionBorrowerTransfers(db, constructionTransfers);
-    await db.collection<Corporation>("corporations").deleteOne({ _id: newCorpId });
+    await corporationsCollection(db).deleteOne({ _id: newCorpId });
     await refundCorpLiquidCapital(db, parent._id, costLocal);
     await Promise.all(
       sectors.map((sector, index) =>

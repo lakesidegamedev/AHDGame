@@ -1,12 +1,13 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { State } from "@/lib/db/types/state";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { sectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import type { PrivateSuccessionFirm } from "./rules/privateFacilities";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Snapshot the current private corporations and paid facility basis. The
  * settlement writer must refresh this before applying any claim. */
@@ -24,8 +25,7 @@ export async function loadLivePrivateSuccessionFirms(
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevelFor } = buildSourceRegionHierarchy(states);
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const privateCorporations = corporations.filter(

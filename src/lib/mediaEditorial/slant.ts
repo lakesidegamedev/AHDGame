@@ -10,6 +10,7 @@ import {
   normalizeEditorialPosition,
   type EditorialPosition,
 } from "./rules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Largest price cut an advertiser can get from fully aligned local newsrooms. */
 export const SLANT_MAX_PRICE_DISCOUNT = 0.15;
@@ -144,8 +145,7 @@ export async function loadStateSlant(db: Db, stateId: string): Promise<StateSlan
     })
     .toArray();
   if (sectors.length === 0) return null;
-  const corps = await db
-    .collection("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...new Set(sectors.map((s) => s.corporationId))] as never[] } })
     .project<{ _id: unknown; editorialStance?: EditorialPosition }>({ editorialStance: 1 })
     .toArray();

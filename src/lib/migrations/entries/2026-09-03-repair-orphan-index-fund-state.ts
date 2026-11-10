@@ -2,6 +2,7 @@ import type { AnyBulkWriteOperation, Db, ObjectId, UpdateFilter } from "mongodb"
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 import { INDEX_FUND_INITIAL_NAV } from "@/lib/indexFunds/unitAccounting";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type FundState = Pick<
   IndexFund,
@@ -22,8 +23,7 @@ type FundState = Pick<
  * subscription or redemption racing the migration keeps its own atomic delta.
  */
 async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const liveCorporations = await db
-    .collection<{ _id: ObjectId }>("corporations")
+  const liveCorporations = await corporationsCollection<{ _id: ObjectId }>(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
   const liveIds = new Set(liveCorporations.map((corporation) => corporation._id.toString()));

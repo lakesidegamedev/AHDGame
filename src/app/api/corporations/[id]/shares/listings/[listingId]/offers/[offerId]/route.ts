@@ -19,7 +19,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Character, Corporation, ShareOffer } from "@/lib/db/types";
+import type { Character, ShareOffer } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -79,9 +80,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // Refund escrow. offer.escrowAmount is in the LISTING corp's liquidCurrencyCode
     // (Option B); normalize to ₳ via the listing corp's FX, then hop to whatever
     // party the refund lands in.
-    const listingCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: offer.corporationId });
+    const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
     const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
     const refundAnchor = corpLiquidCapitalToAnchor(
       offer.escrowAmount,
@@ -91,9 +90,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     const currentTurn = await getCurrentTurn(db);
 
     if (offer.buyerCorporationId) {
-      const buyerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: offer.buyerCorporationId });
+      const buyerCorp = await corporationsCollection(db).findOne({ _id: offer.buyerCorporationId });
       const buyerFxRate = await getCorpFxRate(db, buyerCorp ?? {});
       const refundInBuyerCapital = anchorToCorpLiquidCapital(
         refundAnchor,
@@ -111,12 +108,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       }
       let refundCredited = false;
       try {
-        const refundResult = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: offer.buyerCorporationId },
-            { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
-          );
+        const refundResult = await corporationsCollection(db).updateOne(
+          { _id: offer.buyerCorporationId },
+          { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
+        );
         if (refundResult.matchedCount === 0) {
           throw new Error("Buyer corporation not found");
         }
@@ -143,12 +138,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         });
       } catch (error) {
         if (refundCredited) {
-          await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: offer.buyerCorporationId },
-              { $inc: { liquidCapital: -refundInBuyerCapital }, $set: { updatedAt: new Date() } }
-            );
+          await corporationsCollection(db).updateOne(
+            { _id: offer.buyerCorporationId },
+            { $inc: { liquidCapital: -refundInBuyerCapital }, $set: { updatedAt: new Date() } }
+          );
         }
         await restoreOfferToPending(db, offer._id);
         throw error;

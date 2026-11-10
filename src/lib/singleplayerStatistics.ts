@@ -3,6 +3,7 @@ import type { GameState } from "@/lib/db/types";
 import type { EconomicVitalSigns } from "@/lib/db/types/economicVitalSigns";
 import { ALLOWED_FEATURE_FLAGS, METRIC_DEFINITION_VERSION } from "@/lib/clientStatistics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -95,7 +96,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
       }
     ),
     db.collection("politicalParties").countDocuments(),
-    db.collection("corporations").countDocuments(),
+    corporationsCollection(db).countDocuments(),
     db.collection("npps").countDocuments(),
     db
       .collection("corporateSectors")

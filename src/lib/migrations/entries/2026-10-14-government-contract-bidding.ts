@@ -3,6 +3,7 @@ import { ensureGovernmentContractIndexes } from "@/lib/governmentContracts/persi
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Withdraw only unanswered legacy offers; active and historical signed contracts retain their terms. */
 export const migration: Migration = {
@@ -178,8 +179,7 @@ export const migration: Migration = {
       ...withdrawnExtraction.map((c) => ({ ...c, type: "contract_expired" })),
     ];
     if (withdrawn.length) {
-      const corporations = await db
-        .collection("corporations")
+      const corporations = await corporationsCollection(db)
         .find(
           { _id: { $in: withdrawn.map((c) => c.corporationId) } },
           { projection: { userId: 1, name: 1 } }

@@ -1,5 +1,4 @@
 import type { Db, Document, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   getInitialRates,
@@ -18,6 +17,7 @@ import {
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type AnyDoc = Document & { _id: ObjectId | string; countryId: string };
 
@@ -122,10 +122,7 @@ export async function applyEraCurrencyTopology(
       );
     }
 
-    const corporations = await db
-      .collection<Corporation>("corporations")
-      .find({ countryId })
-      .toArray();
+    const corporations = await corporationsCollection(db).find({ countryId }).toArray();
     for (const corporation of corporations) {
       if (corporation.liquidCurrencyCode === "EUR") continue;
       const result = await convertCorpCurrency(

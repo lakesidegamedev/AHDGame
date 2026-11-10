@@ -68,6 +68,7 @@ import {
   methodBuildDelayTurns,
   methodTransitionStartTurn,
 } from "@/lib/corporations/rules/methodAdoption";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const STRATEGY_LOCK_MESSAGE: Record<
   "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
@@ -380,7 +381,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     });
 
     // Apply changes atomically
-    const debit = await db.collection("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: retoolCostInCorpCapital },

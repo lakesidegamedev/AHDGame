@@ -8,7 +8,6 @@ import type {
   BargainingCampaign,
   Character,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   Union,
 } from "@/lib/db/types";
@@ -65,6 +64,7 @@ import { applyConflictOutcome } from "@/lib/livingConflict/engine";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -130,8 +130,7 @@ async function executiveNationalize(ctx: CrisisActionContext, sectorType: string
   // One eligibility snapshot for every distinct owner (shared with the route).
   const corpIdByKey = new Map<string, ObjectId>();
   for (const s of sectors) corpIdByKey.set(String(s.corporationId), s.corporationId);
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...corpIdByKey.values()] } })
     .toArray();
   const eligibility = await resolveCorpEligibilityBatch(db, country, corps, ctx.currentTurn);

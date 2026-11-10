@@ -1,5 +1,4 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import { DEFENCE_CONTRACT_SUPPLIER_SHARE } from "@/lib/military/defenceContractLimits";
 import {
@@ -10,6 +9,7 @@ import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { applyMoneyMove } from "@/lib/banking/moneyMove";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface Clawback {
   contractId: string;
@@ -118,8 +118,7 @@ async function survey(db: Db): Promise<Survey> {
   const countries = [...new Set(rawClawbacks.map((row) => row.countryId))];
   const corporations =
     corporationIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporationIds.map((id) => new ObjectId(id)) } })
           .toArray()
       : [];

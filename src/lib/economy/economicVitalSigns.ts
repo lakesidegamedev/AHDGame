@@ -4,7 +4,6 @@ import type {
   Bond,
   CommodityPrice,
   CorporateSector,
-  Corporation,
   EconomicVitalSigns,
   ExchangeRate,
   GameConfig,
@@ -45,6 +44,7 @@ import {
 } from "./economicVitalSignsMetrics";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export {
   summarizeLedgerTurnover,
   computeEconomicVitalSigns,
@@ -321,8 +321,7 @@ export async function snapshotEconomicVitalSigns(
     // Ring-fenced money lives on corporations, outside the ledger: active bank
     // charter reserves plus share-escrow balances. Narrow projection on
     // purpose: only the classification and balance fields below are read.
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { $or: [{ bankCharter: { $exists: true } }, { shareEscrowBalance: { $exists: true } }] },
         {

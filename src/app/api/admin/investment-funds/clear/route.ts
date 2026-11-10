@@ -2,15 +2,14 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Promise<{
   corporations: number;
   shares: number;
 }> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ "shareholders.fundId": { $exists: true } }, { projection: { _id: 1, shareholders: 1 } })
     .toArray();
 
@@ -35,7 +34,7 @@ async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Pro
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(db).bulkWrite(ops);
   }
 
   return { corporations: ops.length, shares: releasedShares };

@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
+import type { Character, ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
 import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListing";
 import { cancelShareOrderAndRefund } from "@/lib/corporations/cancelShareOrder";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ShareMarketCleanupResult {
   ordersCancelled: number;
@@ -28,9 +29,7 @@ export async function cancelPendingShareOfferAndRefund(
   now: Date,
   forexEnabled: boolean
 ): Promise<boolean> {
-  const listingCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: offer.corporationId });
+  const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
   const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
   const refundAnchor = corpLiquidCapitalToAnchor(
     offer.escrowAmount,
@@ -40,9 +39,7 @@ export async function cancelPendingShareOfferAndRefund(
   const currentTurn = await getCurrentTurn(db);
 
   if (offer.buyerCorporationId) {
-    const buyerCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: offer.buyerCorporationId });
+    const buyerCorp = await corporationsCollection(db).findOne({ _id: offer.buyerCorporationId });
     if (!buyerCorp) {
       const cancelRes = await db
         .collection<ShareOffer>("shareOffers")
@@ -62,12 +59,10 @@ export async function cancelPendingShareOfferAndRefund(
         { $set: { status: "cancelled", updatedAt: now } }
       );
     if (cancelRes.modifiedCount !== 1) return false;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: offer.buyerCorporationId },
-        { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: offer.buyerCorporationId },
+      { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
+    );
     await emitTx(db, {
       type: "share_listing_refund",
       turn: currentTurn,

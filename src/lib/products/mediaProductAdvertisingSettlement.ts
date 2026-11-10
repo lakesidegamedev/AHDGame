@@ -10,7 +10,7 @@
  * the table is far larger than those projections.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
+import type { MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProductAdvertisingDenominationWitness } from "@/lib/products/rules/productAdvertising";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
@@ -38,6 +38,7 @@ import {
   type ProductAdvertisingPayable,
   type ProductAdvertisingPayableAllocation,
 } from "@/lib/products/productAdvertisingClearing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type { ProductAdvertisingFamily } from "@/lib/products/productAdvertisingClearing";
 
@@ -340,8 +341,7 @@ export async function settleProductAdvertisingObligations(
   const rows =
     corporationIds.length === 0
       ? []
-      : await db
-          .collection<Corporation>("corporations")
+      : await corporationsCollection(db)
           .find(
             {
               _id: { $in: [...corporationIds] },
@@ -414,7 +414,7 @@ export async function settleProductAdvertisingObligations(
     obligation: ProductAdvertisingObligation
   ): Promise<void> => {
     await Promise.all([
-      db.collection<Corporation>("corporations").updateOne(
+      corporationsCollection(db).updateOne(
         { _id: corporationId },
         {
           $pull: {

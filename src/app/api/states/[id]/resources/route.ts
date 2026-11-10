@@ -12,9 +12,9 @@ import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { activeExtractionContractFilter } from "@/lib/db/collections/extractionContracts";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isProspectingEnabled, isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -102,8 +102,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const corpIds = [...new Set(contracts.map((c) => c.corporationId as ObjectId))];
     const corporations =
       corpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: corpIds } }, { projection: { name: 1 } })
             .toArray()
         : [];

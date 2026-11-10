@@ -14,7 +14,6 @@ import type { NPP } from "@/lib/db/types/npp";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ElectionCandidate } from "@/lib/db/types/election";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CabinetMember } from "@/lib/db/types/cabinet";
 import type { CountryLeaderState } from "@/lib/db/types/countryLeaderState";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -34,6 +33,7 @@ import {
   randomReplacementBirthYear,
 } from "./rules/mortality";
 import { NPP_TURNOVER_CONFIG as CONFIG, NPP_TURNOVER_EXEMPT_COUNTRIES } from "./turnoverData";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export {
   annualDeathProbability,
@@ -366,12 +366,10 @@ export async function processNppMortality(
   // marked vacant, so the caretaker step seats a living NPP next turn (by
   // sector record at v6). Player companies were handed to the successor above.
   if (deadIds.length > 0) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateMany(
-        { ceoId: { $in: deadIds }, caretakerCeo: { $exists: false }, ceoVacant: { $ne: true } },
-        { $set: { ceoVacant: true, updatedAt: now } }
-      );
+    await corporationsCollection(db).updateMany(
+      { ceoId: { $in: deadIds }, caretakerCeo: { $exists: false }, ceoVacant: { $ne: true } },
+      { $set: { ceoVacant: true, updatedAt: now } }
+    );
   }
 
   // A failed post never undoes the departures it reports.
@@ -431,8 +429,7 @@ async function seatSuccessors(
     { ordered: false }
   );
 
-  const caretaken = await db
-    .collection<Corporation>("corporations")
+  const caretaken = await corporationsCollection(db)
     .find(
       { ceoId: { $in: successions.map((s) => s.deadId) }, caretakerCeo: { $exists: true } },
       { projection: { _id: 1, ceoId: 1 } }
@@ -443,7 +440,7 @@ async function seatSuccessors(
     return successor && corp.ceoId ? [{ corp, deadId: corp.ceoId, successor }] : [];
   });
   if (reseats.length === 0) return;
-  await db.collection<Corporation>("corporations").bulkWrite(
+  await corporationsCollection(db).bulkWrite(
     reseats.map(({ corp, successor }) => ({
       updateOne: {
         filter: { _id: corp._id },

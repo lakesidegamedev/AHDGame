@@ -92,6 +92,7 @@ import { BLR_NPP_CAPITAL_STATE } from "@/lib/countries/blr/geographyFacts";
 import { UKR_NPP_CAPITAL_STATE } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
 import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -902,8 +903,7 @@ export async function batchSpawnNppCorporations(
   const perSectorCount = Math.max(1, Math.floor(options?.perSectorCount ?? 1));
   const results: SpawnNppCorporationResult[] = [];
   const existingNames = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find({ countryId })
       .project<{ name: string }>({ name: 1 })
       .toArray()

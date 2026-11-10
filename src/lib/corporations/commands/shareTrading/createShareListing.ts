@@ -36,6 +36,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -120,7 +121,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     const nowTurn = await getCurrentTurn(db);
 
     if (sellAsCorporation) {
-      const placerCorp = await db.collection<Corporation>("corporations").findOne({
+      const placerCorp = await corporationsCollection(db).findOne({
         ...(sellerCorporationId ? { _id: new ObjectId(sellerCorporationId) } : {}),
         ceoId: character._id,
         ceoVacant: { $ne: true },
@@ -358,9 +359,10 @@ export async function createShareListing(request: Request, { params }: RoutePara
       );
 
       if (shouldVacateCeo) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne({ _id: corporation._id }, buildCeoRestoreUpdate(corporation, new Date()));
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          buildCeoRestoreUpdate(corporation, new Date())
+        );
       }
 
       throw error;

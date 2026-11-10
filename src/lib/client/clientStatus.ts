@@ -41,7 +41,6 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type {
   Character,
-  Corporation,
   CorporationHistory,
   Election,
   ElectionCandidate,
@@ -60,6 +59,7 @@ import { buildWidgetPerTurn, type WidgetPerTurn } from "@/lib/client/widgetFigur
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // GET /api/client-status — Returns status bar enrichment data (funds, corp, election stats, income).
 // Auth: requireBasicAuth
@@ -124,7 +124,7 @@ export async function handleClientStatus(request: Request) {
       // Imperial characters: corporation, dividend income, bond income — no elections/offices
       const [ceoCorp, dividendCorps, holderBonds] = await Promise.all([
         includeCorp
-          ? db.collection<Corporation>("corporations").findOne(
+          ? corporationsCollection(db).findOne(
               { ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } },
               {
                 projection: {
@@ -145,8 +145,7 @@ export async function handleClientStatus(request: Request) {
             )
           : Promise.resolve(null),
         includeChipData
-          ? db
-              .collection<Corporation>("corporations")
+          ? corporationsCollection(db)
               .find({
                 "shareholders.imperialCharacterId": imperial._id,
               })
@@ -486,7 +485,7 @@ export async function handleClientStatus(request: Request) {
             .findOne({ characterId: character._id, status: "active" }, { sort: { enteredAt: -1 } })
         : Promise.resolve(null),
       includeCorp
-        ? db.collection<Corporation>("corporations").findOne(
+        ? corporationsCollection(db).findOne(
             { ceoId: character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
             {
               projection: {
@@ -510,8 +509,7 @@ export async function handleClientStatus(request: Request) {
         .collection<ElectedOfficial>("electedOfficials")
         .findOne({ characterId: character._id }, { projection: { officeType: 1 } }),
       // Dividend income: corps where character is a shareholder with a dividend rate
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ "shareholders.characterId": character._id })
         .project<{
           _id: ObjectId;

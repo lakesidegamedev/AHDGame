@@ -119,6 +119,7 @@ import {
 } from "./fundedOwnershipSettlement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
@@ -678,7 +679,7 @@ export async function nationalizeSector(
 ): Promise<NationalizeSectorResult> {
   const now = new Date();
   const sectors = db.collection<CorporateSector>("corporateSectors");
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const sector = await sectors.findOne({ _id: params.sectorId });
   if (!sector) throw new Error("Sector not found");
@@ -986,7 +987,7 @@ export async function nationalizeWholeCorp(
   params: NationalizeWholeCorpParams
 ): Promise<NationalizeWholeCorpResult> {
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const bonds = bondsCollection(db);
 
@@ -1673,12 +1674,11 @@ export async function payShareholders(
   const corpRows = allocation.corporationRows.filter((r) => r.payout > 0);
   if (corpRows.length > 0) {
     const ids = corpRows.map((r) => new ObjectId(r.corporationId));
-    const docs = await db
-      .collection<Corporation>("corporations")
+    const docs = await corporationsCollection(db)
       .find({ _id: { $in: ids } })
       .toArray();
     const corpById = new Map(docs.map((c) => [c._id.toString(), c]));
-    await db.collection<Corporation>("corporations").bulkWrite(
+    await corporationsCollection(db).bulkWrite(
       corpRows.map((r) => {
         const creditor = corpById.get(r.corporationId);
         const creditorCurrency = (creditor?.liquidCurrencyCode ??

@@ -50,6 +50,11 @@ describe("data access counter", () => {
       ).toEqual({});
     }
   });
+  it("exempts the repositories from the direct counter", () => {
+    expect(
+      countAccess('db.collection<Doc>("corporations");', "src/lib/db/repositories/corporations.ts")
+    ).toEqual({});
+  });
   it("skips tests and fixtures", () => {
     for (const file of [
       "src/lib/a.test.ts",

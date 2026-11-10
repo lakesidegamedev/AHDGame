@@ -12,7 +12,6 @@ import type { Db, ObjectId } from "mongodb";
 import type {
   BargainingCampaign,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   Union,
 } from "@/lib/db/types";
@@ -39,6 +38,7 @@ import {
   decideNppBargainingAction,
   industrialActionPressure,
 } from "./nppBargainingPolicy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Minimum worker-weighted `unionization` (0-100) across an NPP union's scope
@@ -276,8 +276,7 @@ export async function processNppUnionBehavior(
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { isDefunct: { $ne: true } },
         { projection: { _id: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1 } }

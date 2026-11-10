@@ -33,6 +33,7 @@ import {
   stateRunAdvances,
 } from "@/lib/market/producerMarket/stateRunAdvanceRules";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type CorpCash = Pick<
   Corporation,
@@ -90,8 +91,7 @@ async function frozenAnchors(db: Db, keys: readonly string[]): Promise<Map<strin
 
 async function loadStateCorps(db: Db, ids: readonly string[]): Promise<CorpCash[]> {
   if (ids.length === 0) return [];
-  return db
-    .collection<Corporation>("corporations")
+  return corporationsCollection(db)
     .find(
       { _id: { $in: ids.map((id) => new ObjectId(id)) } },
       {

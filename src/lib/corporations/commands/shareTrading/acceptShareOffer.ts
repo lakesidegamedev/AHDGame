@@ -44,13 +44,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { notifyHostileTakeoverThresholdIfEligible } from "@/lib/corporations/hostileTakeoverNotifications";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
-import type {
-  Character,
-  Corporation,
-  Notification,
-  ShareListing,
-  ShareOffer,
-} from "@/lib/db/types";
+import type { Character, Notification, ShareListing, ShareOffer } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -199,9 +194,7 @@ export async function settleListingOffer(
   // corp's liquidCurrencyCode (Option B). proceeds + refund always equals
   // offer.escrowAmount exactly in local terms, so we compute both in local
   // and then hop through ₳ for the seller-credit / buyer-refund wallet math.
-  const listingCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: listing.corporationId });
+  const listingCorp = await corporationsCollection(db).findOne({ _id: listing.corporationId });
   const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
   const proceedsLocal = sharesToAccept * offer.pricePerShare;
   const refundLocal = (offer.shares - sharesToAccept) * offer.pricePerShare;
@@ -244,10 +237,10 @@ export async function settleListingOffer(
 
   const [sellerCorp, buyerCorp, activation] = await Promise.all([
     listing.sellerCorporationId
-      ? db.collection<Corporation>("corporations").findOne({ _id: listing.sellerCorporationId })
+      ? corporationsCollection(db).findOne({ _id: listing.sellerCorporationId })
       : null,
     offer.buyerCorporationId
-      ? db.collection<Corporation>("corporations").findOne({ _id: offer.buyerCorporationId })
+      ? corporationsCollection(db).findOne({ _id: offer.buyerCorporationId })
       : null,
     db
       .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")

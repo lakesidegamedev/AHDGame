@@ -33,6 +33,7 @@ import {
   loadFloatAuditContext,
   type FloatAuditContext,
 } from "./fundFloatTradePlan";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type HoldingSaleInput = {
   corporationId: ObjectId;
@@ -214,8 +215,7 @@ export async function sellFundHoldingsForRedemptionCash(
 
   const corpIds = holdingsToSell.map((h) => h.corporationId);
   const settlementDb = fundSettlementDb(db, options?.session);
-  const corps = (await settlementDb
-    .collection<CorpQuoteRow>("corporations")
+  const corps = (await corporationsCollection<CorpQuoteRow>(settlementDb)
     .find({ _id: { $in: corpIds } })
     .project({
       _id: 1,
@@ -459,8 +459,7 @@ export async function sellFundHoldingShares(
   }
 
   const settlementDb = fundSettlementDb(db, options?.session);
-  const corps = (await settlementDb
-    .collection<CorpQuoteRow>("corporations")
+  const corps = (await corporationsCollection<CorpQuoteRow>(settlementDb)
     .find({ _id: corporationId })
     .project({
       _id: 1,

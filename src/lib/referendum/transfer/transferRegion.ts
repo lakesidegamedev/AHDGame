@@ -39,6 +39,8 @@ import { reseedJoinedRegionElections } from "./reseedJoinedRegionElections";
 import { rescaleRegionDelegations } from "@/lib/country/apportionChamber";
 import { transferResetV2RegionToIreland } from "./transferResetV2Region";
 import { ensureIrelandResetV2ForReunification } from "@/lib/countries/ie/resetV2/ensureForReunification";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import type { Document } from "mongodb";
 
 export interface TransferRegionArgs {
   regionId: string;
@@ -145,7 +147,7 @@ async function transferRegionInTransaction(
     await refundConversionConstruction(db, regionId, currentTurn);
     if (currencyPair?.kind === "convert") {
       // Freeze inferred GBP before countryId changes, including legacy unstamped corporations.
-      await db.collection("corporations").updateMany(
+      await corporationsCollection<Document>(db).updateMany(
         {
           headquartersState: regionId,
           $or: [

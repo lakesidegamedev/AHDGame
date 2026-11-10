@@ -65,6 +65,7 @@ import {
 } from "@/lib/bonds/payInstitutionalBondHolders";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -175,17 +176,14 @@ export async function executeCorporationBondDefaultDissolution(
   await distributeCrossEquityInKind(db, corporation, now, currentTurn);
 
   if (assetLiquidationInc > 0) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $inc: { liquidCapital: assetLiquidationInc }, $set: { updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $inc: { liquidCapital: assetLiquidationInc }, $set: { updatedAt: now } }
+    );
   }
 
   const refreshedCorporation =
-    (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
-    corporation;
+    (await corporationsCollection(db).findOne({ _id: corporation._id })) ?? corporation;
 
   const centralBanks = await centralBanksCollection(db).find({}).toArray();
   const primeMap = buildPrimeRateMap(centralBanks);
@@ -260,8 +258,7 @@ export async function executeCorporationBondDefaultDissolution(
           .toArray()
       : [],
     corpShareholderIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corpShareholderIds } },
             { projection: { _id: 1, name: 1, liquidCurrencyCode: 1, countryId: 1 } }
@@ -518,8 +515,7 @@ export async function executeCorporationBondDefaultDissolution(
 
   if (corpBondPay.size > 0) {
     const creditorIds = [...corpBondPay.keys()].map((id) => new ObjectId(id));
-    const creditorDocs = await db
-      .collection<Corporation>("corporations")
+    const creditorDocs = await corporationsCollection(db)
       .find({ _id: { $in: creditorIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const creditorMap = new Map(creditorDocs.map((c) => [c._id.toString(), c]));
@@ -561,7 +557,7 @@ export async function executeCorporationBondDefaultDissolution(
         },
       };
     });
-    await db.collection<Corporation>("corporations").bulkWrite(corpOps);
+    await corporationsCollection(db).bulkWrite(corpOps);
   }
 
   dissolutionTxEntries.push(
@@ -617,7 +613,7 @@ export async function executeCorporationBondDefaultDissolution(
         };
       });
     if (equityOps.length > 0) {
-      await db.collection<Corporation>("corporations").bulkWrite(equityOps);
+      await corporationsCollection(db).bulkWrite(equityOps);
     }
   }
 
@@ -764,7 +760,7 @@ export async function executeCorporationBondDefaultDissolution(
     deletedAt: now,
   });
 
-  await db.collection<Corporation>("corporations").deleteOne({ _id: refreshedCorporation._id });
+  await corporationsCollection(db).deleteOne({ _id: refreshedCorporation._id });
   await recordCorporationExit(db, refreshedCorporation, {
     reason:
       options.exitReason ?? (options.requireDefaultedBonds ? "bond_default" : "forced_liquidation"),

@@ -83,59 +83,31 @@
     "src/app/api/admin/conflicts/cold-war/toggle/route.ts": {
       "gameState": 1
     },
-    "src/app/api/admin/corporations/[id]/capital/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/admin/corporations/[id]/ceo/route.ts": {
       "characters": 1,
-      "corporations": 4,
       "gameState": 1
     },
     "src/app/api/admin/corporations/[id]/dividend/route.ts": {
-      "characters": 1,
-      "corporations": 2
-    },
-    "src/app/api/admin/corporations/[id]/force-liquidate/route.ts": {
-      "corporations": 1
+      "characters": 1
     },
     "src/app/api/admin/corporations/[id]/hq/route.ts": {
       "characters": 1,
-      "corporateSectors": 1,
-      "corporations": 2
+      "corporateSectors": 1
     },
     "src/app/api/admin/corporations/[id]/imf-bailout/route.ts": {
       "characters": 1,
-      "corporations": 6,
       "untyped": 1
     },
-    "src/app/api/admin/corporations/[id]/resume/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/admin/corporations/[id]/suspend/route.ts": {
-      "corporations": 1,
       "gameState": 1
-    },
-    "src/app/api/admin/corporations/[id]/timers/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/admin/corporations/reset-timers/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/admin/corporations/resume-all/route.ts": {
-      "corporations": 1
     },
     "src/app/api/admin/corporations/route.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1
     },
     "src/app/api/admin/corporations/seed-unowned/route.ts": {
       "gameState": 1
-    },
-    "src/app/api/admin/corporations/spawn-npp-all/route.ts": {
-      "corporations": 1,
-      "untyped": 1
     },
     "src/app/api/admin/country/[code]/bills/route.ts": {
       "gameState": 1
@@ -246,8 +218,7 @@
     },
     "src/app/api/admin/debug/stock-exchange-snapshot/route.ts": {
       "corporateSectors": 2,
-      "corporations": 4,
-      "untyped": 8
+      "untyped": 6
     },
     "src/app/api/admin/demographics/reseed/route.ts": {
       "characters": 1,
@@ -264,16 +235,12 @@
     "src/app/api/admin/economy/command-economy/route.ts": {
       "gameState": 1
     },
-    "src/app/api/admin/economy/npp-corp-health/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/admin/economy/npps/route.ts": {
       "npps": 1,
       "politicalParties": 1
     },
     "src/app/api/admin/economy/stock-market/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/admin/elections/[id]/place-candidate-options/route.ts": {
       "characters": 1,
@@ -383,25 +350,12 @@
     "src/app/api/admin/heal/banned-party-membership/route.ts": {
       "characters": 1
     },
-    "src/app/api/admin/heal/ceo-votes/route.ts": {
-      "corporations": 3
-    },
     "src/app/api/admin/heal/confidence-votes/route.ts": {
       "characters": 1,
       "electedOfficials": 2
     },
     "src/app/api/admin/heal/corporation-cash/route.ts": {
-      "corporations": 2,
       "untyped": 1
-    },
-    "src/app/api/admin/heal/corporation-ceo-vacant/route.ts": {
-      "corporations": 4
-    },
-    "src/app/api/admin/heal/corporation-shares/route.ts": {
-      "corporations": 2
-    },
-    "src/app/api/admin/heal/corporation-timers/route.ts": {
-      "corporations": 3
     },
     "src/app/api/admin/heal/cross-country-party-org/route.ts": {
       "politicalParties": 2,
@@ -433,9 +387,6 @@
       "electedOfficials": 3,
       "elections": 2,
       "npps": 1
-    },
-    "src/app/api/admin/heal/nationalization-shares/route.ts": {
-      "corporations": 1
     },
     "src/app/api/admin/heal/npp-data-corruption/route.ts": {
       "npps": 2
@@ -480,8 +431,7 @@
       "untyped": 2
     },
     "src/app/api/admin/heal/strategy-cooldown/route.ts": {
-      "corporateSectors": 3,
-      "corporations": 2
+      "corporateSectors": 3
     },
     "src/app/api/admin/heal/uk-commons-seats/route.ts": {
       "electedOfficials": 3,
@@ -500,7 +450,6 @@
       "untyped": 1
     },
     "src/app/api/admin/investment-funds/clear/route.ts": {
-      "corporations": 2,
       "untyped": 5
     },
     "src/app/api/admin/investment-funds/deploy-cash-all/route.ts": {
@@ -800,36 +749,27 @@
     },
     "src/app/api/banking/corporation/[id]/route.ts": {
       "characters": 1,
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/banking/hub/route.ts": {
       "characters": 1,
-      "corporations": 2,
       "npps": 1
     },
     "src/app/api/bonds/[bondId]/buy/route.ts": {
       "characters": 1,
-      "corporations": 3,
       "gameState": 3
     },
     "src/app/api/bonds/[bondId]/buyback/route.ts": {
-      "corporations": 2,
       "gameState": 1
     },
     "src/app/api/bonds/[bondId]/route.ts": {
       "characters": 1,
-      "corporations": 4,
       "npps": 1
     },
     "src/app/api/bonds/[bondId]/sell/route.ts": {
       "characters": 2,
-      "corporations": 2,
       "gameState": 1,
       "untyped": 2
-    },
-    "src/app/api/bonds/route.ts": {
-      "corporations": 1
     },
     "src/app/api/campaigns/[id]/campaign-strength/detail/route.ts": {
       "characters": 1,
@@ -852,9 +792,7 @@
       "characters": 2
     },
     "src/app/api/character/allocate-stats/route.ts": {
-      "characters": 2,
-      "corporations": 1,
-      "untyped": 1
+      "characters": 2
     },
     "src/app/api/character/constituency/route.ts": {
       "characters": 5,
@@ -870,8 +808,7 @@
       "characters": 1
     },
     "src/app/api/character/me/route.ts": {
-      "characters": 2,
-      "corporations": 2
+      "characters": 2
     },
     "src/app/api/character/reallocate-stats/route.ts": {
       "characters": 2
@@ -915,7 +852,6 @@
     },
     "src/app/api/client-nav/route.ts": {
       "characters": 4,
-      "corporations": 2,
       "electedOfficials": 1,
       "elections": 2,
       "politicalParties": 2,
@@ -987,11 +923,9 @@
     },
     "src/app/api/contracts/extraction/eligible-corporations/route.ts": {
       "characters": 1,
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/contracts/extraction/route.ts": {
-      "corporations": 1,
       "gameState": 1,
       "untyped": 1
     },
@@ -1007,75 +941,37 @@
     "src/app/api/corporation/[id]/tech/frontier/route.ts": {
       "gameState": 1
     },
-    "src/app/api/corporation/[id]/tech/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/corporation/[id]/tech/unlock/route.ts": {
       "gameState": 1
     },
-    "src/app/api/corporations/[id]/autopilot/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/bank/lending-profile/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/bank/treasury/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/corporations/[id]/bond-default/cash/route.ts": {
       "characters": 1,
-      "corporations": 4,
       "untyped": 2
     },
     "src/app/api/corporations/[id]/bond-default/route.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 1,
-      "untyped": 2
-    },
-    "src/app/api/corporations/[id]/bonds/history/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/bonds/route.ts": {
-      "corporateSectors": 2,
-      "corporations": 2
-    },
-    "src/app/api/corporations/[id]/capital-injection/route.ts": {
-      "characters": 1,
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/ceo/accept/route.ts": {
-      "corporations": 2,
-      "states": 1
-    },
-    "src/app/api/corporations/[id]/ceo/caretaker/route.ts": {
-      "corporations": 1,
       "untyped": 1
     },
-    "src/app/api/corporations/[id]/ceo/decline/route.ts": {
-      "corporations": 1
+    "src/app/api/corporations/[id]/bonds/route.ts": {
+      "corporateSectors": 2
+    },
+    "src/app/api/corporations/[id]/capital-injection/route.ts": {
+      "characters": 1
+    },
+    "src/app/api/corporations/[id]/ceo/accept/route.ts": {
+      "states": 1
     },
     "src/app/api/corporations/[id]/ceo/resign/route.ts": {
-      "corporations": 1,
       "untyped": 1
     },
     "src/app/api/corporations/[id]/ceo/vote/route.ts": {
-      "characters": 2,
-      "corporations": 4
+      "characters": 2
     },
     "src/app/api/corporations/[id]/commodities/route.ts": {
       "corporateSectors": 1,
       "gameState": 1,
       "states": 1
-    },
-    "src/app/api/corporations/[id]/construction-finance/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/credit-peer-stats/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/deals/route.ts": {
-      "corporations": 1
     },
     "src/app/api/corporations/[id]/defence-contracts/[contractId]/factories/route.ts": {
       "corporateSectors": 1
@@ -1086,56 +982,26 @@
     "src/app/api/corporations/[id]/dissolve/route.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "corporations": 5,
       "untyped": 1
-    },
-    "src/app/api/corporations/[id]/dividends/route.ts": {
-      "corporations": 1
     },
     "src/app/api/corporations/[id]/editorial-stance/route.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "untyped": 1
-    },
-    "src/app/api/corporations/[id]/escrow-withdraw/route.ts": {
-      "corporations": 1
     },
     "src/app/api/corporations/[id]/expand-suggestions/route.ts": {
       "characters": 1,
       "corporateSectors": 3,
-      "corporations": 1,
       "gameState": 1,
       "states": 1
-    },
-    "src/app/api/corporations/[id]/funds/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/group/overview/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/corporations/[id]/legal-structure/route.ts": {
-      "corporations": 1,
-      "untyped": 1
     },
     "src/app/api/corporations/[id]/media-products/route.ts": {
       "corporateSectors": 1
     },
     "src/app/api/corporations/[id]/my-voting-identities/route.ts": {
-      "corporations": 1,
       "untyped": 1
     },
-    "src/app/api/corporations/[id]/nationalization-status/route.ts": {
-      "corporations": 2
-    },
-    "src/app/api/corporations/[id]/operator-policy/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/corporations/[id]/parent-bond-payoff/route.ts": {
-      "characters": 3,
-      "corporations": 7
-    },
-    "src/app/api/corporations/[id]/portfolio/route.ts": {
-      "corporations": 3
+      "characters": 3
     },
     "src/app/api/corporations/[id]/privatize/[voteId]/vote/route.ts": {
       "characters": 1
@@ -1146,80 +1012,40 @@
     "src/app/api/corporations/[id]/products/route.ts": {
       "corporateSectors": 1
     },
-    "src/app/api/corporations/[id]/rename/route.ts": {
-      "corporations": 2
-    },
-    "src/app/api/corporations/[id]/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/corporations/[id]/shareholder-address/route.ts": {
-      "characters": 1,
-      "corporations": 1,
-      "untyped": 1
+      "characters": 1
     },
     "src/app/api/corporations/[id]/shares/consolidate/route.ts": {
       "characters": 2,
-      "corporations": 4,
       "untyped": 3
     },
-    "src/app/api/corporations/[id]/shares/issue/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/corporations/[id]/shares/listings/[listingId]/offers/[offerId]/route.ts": {
-      "characters": 2,
-      "corporations": 4
+      "characters": 2
     },
     "src/app/api/corporations/[id]/shares/orders/[orderId]/route.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/app/api/corporations/[id]/shares/self-issue/route.ts": {
       "characters": 1,
-      "corporations": 4,
       "gameState": 1,
       "untyped": 2
     },
-    "src/app/api/corporations/[id]/subsidiary/formalize/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/corporations/[id]/supply-agreements/route.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 2,
-      "states": 1,
-      "untyped": 1
+      "states": 1
     },
     "src/app/api/corporations/[id]/supply-listings/route.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
-    "src/app/api/corporations/[id]/ticker/route.ts": {
-      "corporations": 2,
-      "untyped": 2
-    },
-    "src/app/api/corporations/[id]/underwriting/route.ts": {
-      "corporations": 3
-    },
-    "src/app/api/corporations/[id]/votes/[voteId]/vote/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/corporations/[id]/votes/route.ts": {
-      "characters": 1,
-      "corporations": 1,
-      "untyped": 1
-    },
-    "src/app/api/corporations/buyer-search/route.ts": {
-      "corporations": 1
+      "characters": 1
     },
     "src/app/api/corporations/route.ts": {
       "characters": 1,
       "corporateSectors": 2,
-      "corporations": 1,
       "states": 1
-    },
-    "src/app/api/corporations/search/route.ts": {
-      "corporations": 1
     },
     "src/app/api/corporations/underwriting-banks/route.ts": {
       "gameState": 1
@@ -1229,9 +1055,6 @@
     },
     "src/app/api/country/[code]/central-bank/nominate/route.ts": {
       "characters": 1
-    },
-    "src/app/api/country/[code]/central-bank/savings/route.ts": {
-      "corporations": 1
     },
     "src/app/api/country/[code]/coalitions/[id]/admin/add/route.ts": {
       "politicalParties": 2
@@ -1312,15 +1135,8 @@
       "politicalParties": 5,
       "untyped": 1
     },
-    "src/app/api/country/[code]/command-economy/plan/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/country/[code]/command-economy/soe/[corpId]/director/route.ts": {
-      "characters": 1,
-      "corporations": 2
-    },
-    "src/app/api/country/[code]/command-economy/soe/[corpId]/route.ts": {
-      "corporations": 2
+      "characters": 1
     },
     "src/app/api/country/[code]/congress/members/route.ts": {
       "characters": 1,
@@ -1336,12 +1152,8 @@
       "electedOfficials": 1,
       "untyped": 1
     },
-    "src/app/api/country/[code]/corp-search/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/country/[code]/corp-sectors/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/country/[code]/elections/[electionId]/manifesto/route.ts": {
       "elections": 1,
@@ -1374,7 +1186,6 @@
     },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/defence-contracts/route.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 2
     },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/energy/build/route.ts": {
@@ -1388,9 +1199,6 @@
     },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/infra/start/route.ts": {
       "states": 1
-    },
-    "src/app/api/country/[code]/executive/cabinet/[positionId]/intelligence/assessment/route.ts": {
-      "corporations": 1
     },
     "src/app/api/country/[code]/executive/cabinet/[positionId]/intelligence/shared.ts": {
       "gameState": 1
@@ -1449,7 +1257,6 @@
     },
     "src/app/api/country/[code]/government-contracts/access/route.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/app/api/country/[code]/international-organizations/[orgId]/influence/route.ts": {
@@ -1504,52 +1311,20 @@
       "untyped": 1
     },
     "src/app/api/country/[code]/national-corporation/[id]/appoint-ceo/route.ts": {
-      "characters": 1,
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/draw-cap/route.ts": {
-      "corporations": 2
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/invest/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/mandate/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/privatize/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/profit-split/route.ts": {
-      "corporations": 2
+      "characters": 1
     },
     "src/app/api/country/[code]/national-corporation/[id]/remove-ceo/route.ts": {
-      "corporations": 1,
       "untyped": 1
     },
     "src/app/api/country/[code]/national-corporation/[id]/resign-ceo/route.ts": {
-      "corporations": 1,
       "untyped": 1
-    },
-    "src/app/api/country/[code]/national-corporation/[id]/treasury-draw/route.ts": {
-      "corporations": 2
     },
     "src/app/api/country/[code]/national-corporations/route.ts": {
       "characters": 1,
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/nationalization-auctions/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/nationalization-target-detail/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/country/[code]/nationalization-targets/route.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/country/[code]/nationalize/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/country/[code]/overview-counts/route.ts": {
       "characters": 1,
@@ -1755,8 +1530,7 @@
       "untyped": 2
     },
     "src/app/api/country/[code]/pending-nationalizations/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/country/[code]/referendum/[refId]/ground-game/route.ts": {
       "politicalParties": 1
@@ -1776,18 +1550,15 @@
       "states": 1
     },
     "src/app/api/country/[code]/region/[id]/economy/adjust-growth/route.ts": {
-      "corporateSectors": 2,
-      "corporations": 2
+      "corporateSectors": 2
     },
     "src/app/api/country/[code]/region/[id]/economy/attack-sector/route.ts": {
       "corporateSectors": 2,
-      "corporations": 3,
       "gameState": 1,
       "states": 1
     },
     "src/app/api/country/[code]/region/[id]/economy/attack/route.ts": {
       "corporateSectors": 4,
-      "corporations": 4,
       "gameState": 1,
       "states": 1
     },
@@ -1981,16 +1752,12 @@
     "src/app/api/discord-bot/blackjack/resolve/route.ts": {
       "characters": 1
     },
-    "src/app/api/discord-bot/bonds/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/discord-bot/client-access/route.ts": {
       "characters": 1
     },
     "src/app/api/discord-bot/corporation/route.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 2,
       "states": 1
     },
     "src/app/api/discord-bot/country/[code]/region/route.ts": {
@@ -2005,7 +1772,6 @@
     "src/app/api/discord-bot/financials/route.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/app/api/discord-bot/government/route.ts": {
@@ -2019,14 +1785,12 @@
     },
     "src/app/api/discord-bot/lookup/route.ts": {
       "characters": 2,
-      "corporations": 1,
       "elections": 1,
       "politicalParties": 1,
       "states": 1
     },
     "src/app/api/discord-bot/marketshare/route.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/app/api/discord-bot/party/route.ts": {
@@ -2054,11 +1818,7 @@
     },
     "src/app/api/discord-bot/sectors/route.ts": {
       "corporateSectors": 2,
-      "corporations": 2,
       "states": 2
-    },
-    "src/app/api/discord-bot/stock-chart/route.ts": {
-      "corporations": 1
     },
     "src/app/api/discord-bot/supporter/remove/route.ts": {
       "characters": 2
@@ -2068,7 +1828,6 @@
     },
     "src/app/api/discord-bot/sync-roles/route.ts": {
       "characters": 2,
-      "corporations": 2,
       "electedOfficials": 2,
       "politicalParties": 2
     },
@@ -2206,7 +1965,6 @@
     },
     "src/app/api/game/turn/dashboard/route.ts": {
       "characters": 1,
-      "corporations": 1,
       "elections": 2,
       "politicalParties": 1,
       "states": 1,
@@ -2219,26 +1977,10 @@
       "characters": 1,
       "electedOfficials": 1
     },
-    "src/app/api/imperial-characters/[id]/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/imperial-characters/route.ts": {
-      "corporations": 1,
       "gameState": 1,
       "npps": 1,
       "untyped": 1
-    },
-    "src/app/api/index-funds/[slug]/wind-up/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/index-funds/charter/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/index-petitions/route.ts": {
-      "corporations": 1
-    },
-    "src/app/api/investment-funds/[slug]/route.ts": {
-      "corporations": 3
     },
     "src/app/api/investment-funds/[slug]/subscribe/route.ts": {
       "gameState": 1,
@@ -2255,9 +1997,6 @@
     },
     "src/app/api/merger-reviews/queue/route.ts": {
       "characters": 1
-    },
-    "src/app/api/merger-reviews/route.ts": {
-      "corporations": 1
     },
     "src/app/api/mobile-dock/route.ts": {
       "elections": 1
@@ -2306,14 +2045,12 @@
       "untyped": 3
     },
     "src/app/api/news/wire/route.ts": {
-      "corporations": 3,
       "states": 1
     },
     "src/app/api/notifications/route.ts": {
       "characters": 2
     },
     "src/app/api/npps/eligible-caretakers/route.ts": {
-      "corporations": 1,
       "npps": 1
     },
     "src/app/api/npps/route.ts": {
@@ -2326,8 +2063,7 @@
     },
     "src/app/api/pip/corp/route.ts": {
       "characters": 1,
-      "corporateSectors": 2,
-      "corporations": 2
+      "corporateSectors": 2
     },
     "src/app/api/pip/elections/route.ts": {
       "characters": 1,
@@ -2365,15 +2101,9 @@
       "politicalParties": 2,
       "states": 2
     },
-    "src/app/api/portfolio/trade-history/route.ts": {
-      "corporations": 2
-    },
     "src/app/api/profile/bio/route.ts": {
       "characters": 1,
       "untyped": 1
-    },
-    "src/app/api/public/v1/bonds/route.ts": {
-      "corporations": 1
     },
     "src/app/api/public/v1/market/route.ts": {
       "corporateSectors": 2,
@@ -2384,7 +2114,6 @@
     },
     "src/app/api/sectors/route.ts": {
       "corporateSectors": 3,
-      "corporations": 1,
       "states": 1,
       "untyped": 3
     },
@@ -2443,10 +2172,9 @@
     },
     "src/app/api/singleplayer/operator/diagnostics/route.ts": {
       "characters": 1,
-      "corporations": 1,
       "gameState": 1,
       "politicalParties": 1,
-      "untyped": 3
+      "untyped": 2
     },
     "src/app/api/singleplayer/saves/[id]/load/route.ts": {
       "gameState": 1
@@ -2461,19 +2189,11 @@
     "src/app/api/state/[stateId]/route.ts": {
       "states": 1
     },
-    "src/app/api/states/[id]/resources/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/stock-exchange/candles/route.ts": {
-      "corporations": 1,
       "gameState": 1
-    },
-    "src/app/api/stock-exchange/markers/route.ts": {
-      "corporations": 2
     },
     "src/app/api/stock-exchange/wealth-list/route.ts": {
       "characters": 2,
-      "corporations": 1,
       "states": 1
     },
     "src/app/api/suggestions/public/[issueNumber]/comments/route.ts": {
@@ -2483,11 +2203,7 @@
     "src/app/api/suggestions/public/[issueNumber]/route.ts": {
       "politicalParties": 1
     },
-    "src/app/api/supply-offers/route.ts": {
-      "corporations": 1
-    },
     "src/app/api/tutorial/context/route.ts": {
-      "corporations": 2,
       "elections": 1,
       "politicalParties": 1,
       "states": 1
@@ -2499,8 +2215,7 @@
       "characters": 1
     },
     "src/app/api/unions/[id]/route.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/app/api/unions/leaderboard/route.ts": {
       "corporateSectors": 1
@@ -2508,12 +2223,6 @@
     "src/app/api/upload/avatar/route.ts": {
       "characters": 1,
       "untyped": 1
-    },
-    "src/app/api/upload/corporation-header/route.ts": {
-      "corporations": 2
-    },
-    "src/app/api/upload/corporation-logo/route.ts": {
-      "corporations": 2
     },
     "src/app/api/upload/news-image/route.ts": {
       "characters": 1
@@ -2626,11 +2335,7 @@
       "elections": 1
     },
     "src/app/api/wiki/my/claim/route.ts": {
-      "corporations": 1,
       "politicalParties": 1
-    },
-    "src/app/api/world/corps/route.ts": {
-      "corporations": 1
     },
     "src/app/api/world/flags/route.ts": {
       "gameState": 1
@@ -2645,9 +2350,6 @@
     },
     "src/app/api/world/sovereign-watch/route.ts": {
       "gameState": 1
-    },
-    "src/app/api/world/trade/tariffs/route.ts": {
-      "corporations": 1
     },
     "src/app/campaign-manager/page.tsx": {
       "elections": 1,
@@ -2668,7 +2370,6 @@
     },
     "src/app/character/[id]/characterData.ts": {
       "characters": 2,
-      "corporations": 1,
       "elections": 1,
       "gameState": 1,
       "npps": 1,
@@ -2692,12 +2393,8 @@
     "src/app/charters/page.tsx": {
       "characters": 1
     },
-    "src/app/corporation/[id]/layout.tsx": {
-      "corporations": 1
-    },
     "src/app/corporation/[id]/sector/[sectorId]/layout.tsx": {
       "corporateSectors": 2,
-      "corporations": 1,
       "states": 1
     },
     "src/app/country/[code]/executive/aras/page.tsx": {
@@ -2764,9 +2461,6 @@
       "politicalParties": 4,
       "states": 2
     },
-    "src/app/country/[code]/state-ownership/page.tsx": {
-      "corporations": 1
-    },
     "src/app/elections/[id]/country/[code]/region/[stateId]/layout.tsx": {
       "elections": 1,
       "states": 1
@@ -2793,16 +2487,12 @@
       "npps": 1
     },
     "src/app/politicians/npp/[id]/page.tsx": {
-      "corporations": 1,
       "npps": 4,
       "politicalParties": 1,
       "states": 1
     },
     "src/app/portfolio/[characterId]/layout.tsx": {
       "characters": 2
-    },
-    "src/app/portfolio/corporation/[corpId]/layout.tsx": {
-      "corporations": 1
     },
     "src/app/president/primary/[partyId]/page.tsx": {
       "elections": 1,
@@ -2818,7 +2508,6 @@
     },
     "src/app/profile/page.tsx": {
       "characters": 4,
-      "corporations": 1,
       "electedOfficials": 1,
       "gameState": 1,
       "politicalParties": 2,
@@ -2848,7 +2537,6 @@
       "gameState": 1
     },
     "src/app/wiki/my/page.tsx": {
-      "corporations": 1,
       "politicalParties": 1
     },
     "src/app/wiki/random-events/page.tsx": {
@@ -2862,25 +2550,20 @@
       "electedOfficials": 1
     },
     "src/lib/account/cascadeCharacterDeletion.ts": {
-      "corporations": 1,
       "gameState": 1,
       "untyped": 2
     },
     "src/lib/account/loadUserCharacterAndCeoCorpIds.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/account/processExpiredBannedShareholders.ts": {
-      "characters": 1,
-      "corporations": 3
+      "characters": 1
     },
     "src/lib/account/processInactiveCeoCorpShares.ts": {
-      "characters": 1,
-      "corporations": 3
+      "characters": 1
     },
     "src/lib/account/processInactiveShareholderShares.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/account/stripPartyMembershipForBannedUser.ts": {
       "characters": 2,
@@ -2922,7 +2605,6 @@
     },
     "src/lib/actions/loadRecommendations.ts": {
       "corporateSectors": 3,
-      "corporations": 4,
       "politicalParties": 1,
       "states": 2
     },
@@ -2970,7 +2652,6 @@
     },
     "src/lib/admin/economyReset/apply.ts": {
       "characters": 1,
-      "corporations": 1,
       "gameState": 1,
       "npps": 3,
       "states": 2,
@@ -3026,7 +2707,6 @@
       "untyped": 19
     },
     "src/lib/admin/seed/applyEraCurrencyTopology.ts": {
-      "corporations": 1,
       "npps": 2,
       "states": 1,
       "untyped": 5
@@ -3037,10 +2717,6 @@
     "src/lib/admin/seed/incomeStartVintage.ts": {
       "gameState": 2
     },
-    "src/lib/admin/seed/indexes/assertUniqueCorporationIds.ts": {
-      "corporations": 1,
-      "untyped": 1
-    },
     "src/lib/admin/seed/indexes/boundedNpcCandidates.ts": {
       "untyped": 1
     },
@@ -3049,8 +2725,7 @@
     },
     "src/lib/admin/seed/indexes/core.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
-      "untyped": 3
+      "untyped": 1
     },
     "src/lib/admin/seed/indexes/crises.ts": {
       "untyped": 2
@@ -3070,7 +2745,6 @@
     },
     "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts": {
       "corporateSectors": 2,
-      "corporations": 6,
       "gameState": 1,
       "states": 1
     },
@@ -3123,7 +2797,6 @@
     },
     "src/lib/admin/seed/seedBudgets.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 2,
       "untyped": 6
     },
@@ -3152,7 +2825,6 @@
     },
     "src/lib/admin/seed/seedCountryBudgets.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 2,
       "untyped": 1
     },
@@ -3271,7 +2943,6 @@
       "untyped": 1
     },
     "src/lib/admin/seed/seedNppCorporations.ts": {
-      "corporations": 1,
       "states": 1
     },
     "src/lib/admin/seed/seedParties.ts": {
@@ -3306,9 +2977,6 @@
     "src/lib/admin/seed/seedSeats.ts": {
       "states": 1,
       "untyped": 1
-    },
-    "src/lib/admin/seed/seedSovereignBondInstruments.ts": {
-      "corporations": 2
     },
     "src/lib/admin/seed/seedStatePolicies.ts": {
       "untyped": 3
@@ -3351,21 +3019,17 @@
       "untyped": 2
     },
     "src/lib/admin/seed/upsertCountryOwnedCorps.ts": {
-      "corporateSectors": 1,
-      "corporations": 2
+      "corporateSectors": 1
     },
     "src/lib/admin/seed/verifyCommandEconomySeed.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
       "states": 1
     },
     "src/lib/admin/seedDiagnostic/baseline.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/admin/seedDiagnostic/conformance.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 2,
       "npps": 1,
       "politicalParties": 2,
@@ -3373,17 +3037,14 @@
       "untyped": 19
     },
     "src/lib/admin/seedDiagnostic/conformanceMacro.ts": {
-      "corporations": 1,
       "gameState": 1,
-      "states": 1,
-      "untyped": 1
+      "states": 1
     },
     "src/lib/admin/seedDiagnostic/drift.ts": {
       "gameState": 2
     },
     "src/lib/admin/seedDiagnostic/economicOpening.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "untyped": 2
     },
     "src/lib/admin/seedDiagnostic/index.ts": {
@@ -3395,14 +3056,12 @@
     },
     "src/lib/admin/spawnNppCorporation.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1,
       "npps": 1,
       "states": 1,
       "untyped": 4
     },
     "src/lib/admin/startingParties.ts": {
-      "corporations": 1,
       "electedOfficials": 1,
       "gameState": 1,
       "npps": 4,
@@ -3416,17 +3075,14 @@
       "untyped": 1
     },
     "src/lib/advertising/commands.ts": {
-      "corporateSectors": 1,
-      "corporations": 1,
-      "untyped": 1
+      "corporateSectors": 1
     },
     "src/lib/advertising/persistence.ts": {
       "untyped": 2
     },
     "src/lib/advertising/suppliers.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/alignment/commands/queueAidAlignment.ts": {
       "gameState": 1
@@ -3454,7 +3110,6 @@
       "elections": 1
     },
     "src/lib/analytics/worldDepthAnalytics.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/api/abuseDetection.ts": {
@@ -3464,7 +3119,6 @@
       "untyped": 3
     },
     "src/lib/api/corporations/resolveQuery.ts": {
-      "corporations": 1,
       "states": 1
     },
     "src/lib/api/headOfGovernment.ts": {
@@ -3473,9 +3127,6 @@
     },
     "src/lib/api/rejectDuringTurn.ts": {
       "gameState": 1
-    },
-    "src/lib/api/savings/savingsApy.ts": {
-      "corporations": 1
     },
     "src/lib/api/stateTickRates.ts": {
       "corporateSectors": 2,
@@ -3490,9 +3141,6 @@
     "src/lib/audit/dossier.ts": {
       "characters": 1,
       "untyped": 2
-    },
-    "src/lib/audit/relatedSupplyAgreements.ts": {
-      "corporations": 1
     },
     "src/lib/auth/characterCreation.ts": {
       "characters": 6,
@@ -3512,182 +3160,102 @@
     "src/lib/auth/unifiedMigration.ts": {
       "untyped": 1
     },
-    "src/lib/banking/adminUnwind.ts": {
-      "corporations": 1
-    },
     "src/lib/banking/atomicDocumentSettlement.ts": {
       "untyped": 3
     },
-    "src/lib/banking/bankCash.ts": {
-      "corporations": 1
-    },
-    "src/lib/banking/bankSovereignClaims.ts": {
-      "corporations": 4
-    },
-    "src/lib/banking/bankTreasury.ts": {
-      "corporations": 9
-    },
-    "src/lib/banking/bankTreasuryReceipt.ts": {
-      "corporations": 4
-    },
     "src/lib/banking/blacklist.ts": {
-      "characters": 1,
-      "corporations": 3
-    },
-    "src/lib/banking/cancelConversionUnderwriting.ts": {
-      "corporations": 3
+      "characters": 1
     },
     "src/lib/banking/capacityAllocation.ts": {
-      "corporateSectors": 2,
-      "corporations": 2
+      "corporateSectors": 2
     },
     "src/lib/banking/charter.ts": {
       "corporateSectors": 1,
-      "corporations": 6,
       "untyped": 2
     },
     "src/lib/banking/constructionAdmission.ts": {
-      "corporateSectors": 2,
-      "corporations": 2
+      "corporateSectors": 2
     },
     "src/lib/banking/constructionBorrowerTransfer.ts": {
       "corporateSectors": 2
     },
     "src/lib/banking/constructionCancellation.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/banking/constructionFinance.ts": {
       "corporateSectors": 5
     },
     "src/lib/banking/constructionForeclosure.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/banking/constructionFundingLease.ts": {
-      "corporateSectors": 2,
-      "corporations": 3
+      "corporateSectors": 2
     },
     "src/lib/banking/constructionLoanLock.ts": {
       "corporateSectors": 2
     },
     "src/lib/banking/constructionSale.ts": {
-      "corporateSectors": 2,
-      "corporations": 3
+      "corporateSectors": 2
     },
     "src/lib/banking/constructionSaleMerge.ts": {
       "corporateSectors": 1
     },
     "src/lib/banking/constructionServiceLease.ts": {
-      "corporateSectors": 1,
-      "corporations": 4
+      "corporateSectors": 1
     },
     "src/lib/banking/constructionSettlement.ts": {
       "corporateSectors": 1
     },
     "src/lib/banking/deadBankLoans.ts": {
-      "characters": 1,
-      "corporations": 2
+      "characters": 1
     },
     "src/lib/banking/depositBookReturn.ts": {
-      "characters": 2,
-      "corporations": 3
+      "characters": 2
     },
     "src/lib/banking/depositorBook.ts": {
       "characters": 2,
       "npps": 1
     },
     "src/lib/banking/deposits.ts": {
-      "characters": 3,
-      "corporations": 1
+      "characters": 3
     },
     "src/lib/banking/health.ts": {
-      "characters": 1,
-      "corporations": 2
-    },
-    "src/lib/banking/insurance.ts": {
-      "corporations": 2
-    },
-    "src/lib/banking/insurancePremium.ts": {
-      "corporations": 1,
-      "untyped": 1
-    },
-    "src/lib/banking/interbank.ts": {
-      "corporations": 2
+      "characters": 1
     },
     "src/lib/banking/legacyDepositInterest.ts": {
       "characters": 3,
-      "corporations": 1,
       "untyped": 2
     },
     "src/lib/banking/lending.ts": {
-      "characters": 1,
-      "corporations": 3
+      "characters": 1
     },
     "src/lib/banking/loanApproval.ts": {
-      "characters": 3,
-      "corporations": 3
+      "characters": 3
     },
     "src/lib/banking/moneyMove.ts": {
       "untyped": 1
     },
     "src/lib/banking/namedLoanBook.ts": {
-      "characters": 2,
-      "corporations": 2
+      "characters": 2
     },
     "src/lib/banking/npcBanks.ts": {
-      "corporations": 6,
-      "states": 2,
-      "untyped": 2
-    },
-    "src/lib/banking/outlook.ts": {
-      "corporations": 1
+      "states": 2
     },
     "src/lib/banking/projectionSettlement.ts": {
       "untyped": 1
     },
-    "src/lib/banking/propForexFees.ts": {
-      "corporations": 2
-    },
-    "src/lib/banking/propSettlement.ts": {
-      "corporations": 1,
-      "untyped": 1
-    },
-    "src/lib/banking/propTrading.ts": {
-      "corporations": 7
-    },
-    "src/lib/banking/rates.ts": {
-      "corporations": 2
-    },
     "src/lib/banking/recovery.ts": {
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/banking/separationLaw.ts": {
       "gameState": 3
     },
-    "src/lib/banking/serviceInterbankLoan.ts": {
-      "corporations": 1
-    },
     "src/lib/banking/settlementJournal.ts": {
       "untyped": 1
     },
-    "src/lib/banking/snapshot.ts": {
-      "corporations": 1
-    },
-    "src/lib/banking/supervision.ts": {
-      "corporations": 2
-    },
     "src/lib/banking/transferCharter.ts": {
-      "characters": 1,
-      "corporations": 3
-    },
-    "src/lib/banking/underwritingOffer.ts": {
-      "corporations": 2
-    },
-    "src/lib/banking/underwritingSettlement.ts": {
-      "corporations": 4
+      "characters": 1
     },
     "src/lib/billEnactment.ts": {
       "characters": 5,
@@ -3698,29 +3266,19 @@
     "src/lib/bonds/executeCorporationBondDefaultDissolution.ts": {
       "characters": 3,
       "corporateSectors": 1,
-      "corporations": 7,
       "untyped": 2
     },
     "src/lib/bonds/executeCorporationBondRefinance.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/bonds/executeCorporationBondRestructure.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "corporations": 4,
       "untyped": 1
-    },
-    "src/lib/bonds/fundBondCandidates.ts": {
-      "corporations": 1
     },
     "src/lib/bonds/marketPoolLedger.ts": {
       "gameState": 1
-    },
-    "src/lib/bonds/primaryMarket.ts": {
-      "corporations": 4,
-      "untyped": 1
     },
     "src/lib/bonds/purchaseBondUnitsForFund.ts": {
       "untyped": 1
@@ -3732,18 +3290,13 @@
       "untyped": 1
     },
     "src/lib/bonds/sovereign.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/bonds/sovereignFunding.ts": {
       "characters": 1
     },
-    "src/lib/bonds/sovereignMaturityBond.ts": {
-      "corporations": 1
-    },
     "src/lib/bonds/sovereignMaturityPayoutTargets.ts": {
       "characters": 1,
-      "corporations": 1,
       "npps": 1
     },
     "src/lib/bonds/sovereignPrimarySettlement.ts": {
@@ -3770,9 +3323,8 @@
     },
     "src/lib/budget/incomePayout.ts": {
       "characters": 2,
-      "corporations": 1,
       "gameState": 1,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/budget/incomeTaxShares.ts": {
       "gameState": 1,
@@ -3780,7 +3332,6 @@
     },
     "src/lib/budget/inflation.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1,
       "states": 1
     },
@@ -3793,7 +3344,6 @@
     },
     "src/lib/budget/publicEnterpriseRevenue.ts": {
       "corporateSectors": 2,
-      "corporations": 2,
       "gameState": 2
     },
     "src/lib/budget/revenue.ts": {
@@ -3827,7 +3377,6 @@
     },
     "src/lib/cabinet/cabinetBriefing.ts": {
       "characters": 1,
-      "corporations": 1,
       "politicalParties": 1,
       "states": 1,
       "untyped": 1
@@ -3968,7 +3517,6 @@
     },
     "src/lib/character/financialData.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
       "untyped": 1
     },
     "src/lib/character/nationalNpiOrdinalRank.ts": {
@@ -3976,14 +3524,12 @@
     },
     "src/lib/character/performRelocation.ts": {
       "characters": 1,
-      "corporations": 2,
       "electedOfficials": 2,
       "politicalParties": 2,
       "untyped": 6
     },
     "src/lib/character/relocateWithCorp.ts": {
       "corporateSectors": 1,
-      "corporations": 5,
       "states": 1
     },
     "src/lib/character/relocationCampaigns.ts": {
@@ -4018,7 +3564,6 @@
     },
     "src/lib/client/clientStatus.ts": {
       "characters": 2,
-      "corporations": 4,
       "electedOfficials": 1,
       "elections": 1,
       "politicalParties": 1,
@@ -4040,7 +3585,6 @@
     },
     "src/lib/commodities/commodityDetail.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1,
       "states": 1
     },
@@ -4181,7 +3725,6 @@
     },
     "src/lib/contests/engine.ts": {
       "characters": 2,
-      "corporations": 1,
       "electedOfficials": 2,
       "elections": 1,
       "gameState": 3,
@@ -4193,15 +3736,13 @@
       "untyped": 2
     },
     "src/lib/contests/netWorth.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/contests/prize.ts": {
       "characters": 1
     },
     "src/lib/contests/queries.ts": {
       "characters": 1,
-      "corporations": 1,
       "politicalParties": 1
     },
     "src/lib/contests/referralAward.ts": {
@@ -4209,36 +3750,25 @@
     },
     "src/lib/corporations/applyPriceMultipliers.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
       "untyped": 2
     },
     "src/lib/corporations/brandFacilityLoss.ts": {
-      "corporateSectors": 1,
-      "corporations": 2
+      "corporateSectors": 1
     },
     "src/lib/corporations/buildRoom.ts": {
       "corporateSectors": 1,
       "states": 1
     },
     "src/lib/corporations/cancelShareListing.ts": {
-      "characters": 3,
-      "corporations": 6
+      "characters": 3
     },
     "src/lib/corporations/cancelShareOrder.ts": {
       "characters": 1,
-      "corporations": 3,
       "untyped": 1
     },
     "src/lib/corporations/caretakerCeo.ts": {
       "characters": 1,
-      "corporations": 5,
       "npps": 1
-    },
-    "src/lib/corporations/ceoHistory.ts": {
-      "corporations": 3
-    },
-    "src/lib/corporations/ceoResidency.ts": {
-      "corporations": 3
     },
     "src/lib/corporations/ceoSalaryVote.ts": {
       "characters": 1
@@ -4247,11 +3777,7 @@
       "corporateSectors": 1
     },
     "src/lib/corporations/cleanupShareMarketActivity.ts": {
-      "characters": 2,
-      "corporations": 3
-    },
-    "src/lib/corporations/commands/acquisitions/acquisitionOffers.ts": {
-      "corporations": 4
+      "characters": 2
     },
     "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts": {
       "untyped": 2
@@ -4266,84 +3792,58 @@
     "src/lib/corporations/commands/acquisitions/executeAgreedAcquisition.ts": {
       "characters": 1,
       "corporateSectors": 3,
-      "corporations": 3,
       "gameState": 1
     },
     "src/lib/corporations/commands/acquisitions/referenceValuation.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/commands/acquisitions/subsidiaryOutcome.ts": {
-      "corporations": 2,
       "untyped": 1
-    },
-    "src/lib/corporations/commands/antitrustCase.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/commands/capitalOperations/goPublic.ts": {
-      "corporations": 3
     },
     "src/lib/corporations/commands/capitalOperations/relocateHeadquarters.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 4,
       "states": 2,
       "untyped": 1
     },
     "src/lib/corporations/commands/capitalOperations/updateCorporationSettings.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/commands/ceoPay.ts": {
-      "corporations": 3,
       "npps": 1
     },
     "src/lib/corporations/commands/founding/foundCorporation.ts": {
       "characters": 1,
-      "corporations": 7,
       "states": 1,
       "untyped": 2
     },
     "src/lib/corporations/commands/internalSupplyPolicy.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
       "gameState": 1
     },
     "src/lib/corporations/commands/plantSectorSplitAttempt.ts": {
-      "corporateSectors": 5,
-      "corporations": 4
-    },
-    "src/lib/corporations/commands/privatization/fundOnlyBuyout.ts": {
-      "corporations": 3
-    },
-    "src/lib/corporations/commands/privatization/openPrivatizationVote.ts": {
-      "corporations": 1
+      "corporateSectors": 5
     },
     "src/lib/corporations/commands/privatization/resolvePrivatizationVote.ts": {
-      "characters": 1,
-      "corporations": 4
+      "characters": 1
     },
     "src/lib/corporations/commands/sectorOperations/abandonSector.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
       "gameState": 1,
       "states": 1
     },
     "src/lib/corporations/commands/sectorOperations/attemptUnionBusting.ts": {
       "corporateSectors": 5,
-      "corporations": 2,
       "states": 1
     },
     "src/lib/corporations/commands/sectorOperations/buildCapacity.ts": {
       "characters": 1,
       "corporateSectors": 5,
-      "corporations": 3,
       "gameState": 1,
       "states": 1
     },
     "src/lib/corporations/commands/sectorOperations/bulkBuildCapacity.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/commands/sectorOperations/bulkSetSectorOperations.ts": {
       "characters": 1,
@@ -4351,14 +3851,11 @@
     },
     "src/lib/corporations/commands/sectorOperations/buyListedSector.ts": {
       "corporateSectors": 10,
-      "corporations": 3,
       "states": 1
     },
     "src/lib/corporations/commands/sectorOperations/cancelSectorStrategy.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
-      "gameState": 1,
-      "untyped": 1
+      "gameState": 1
     },
     "src/lib/corporations/commands/sectorOperations/convertSectorIndustry.ts": {
       "corporateSectors": 3,
@@ -4367,7 +3864,6 @@
     "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
       "characters": 1,
       "corporateSectors": 3,
-      "corporations": 1,
       "gameState": 1,
       "states": 1
     },
@@ -4393,9 +3889,7 @@
     },
     "src/lib/corporations/commands/sectorOperations/setSectorStrategy.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
-      "gameState": 1,
-      "untyped": 1
+      "gameState": 1
     },
     "src/lib/corporations/commands/sectorOperations/setSectorSupplyPriority.ts": {
       "corporateSectors": 2
@@ -4408,79 +3902,50 @@
     },
     "src/lib/corporations/commands/shareTrading/acceptShareOffer.ts": {
       "characters": 3,
-      "corporations": 3,
       "gameState": 1
     },
     "src/lib/corporations/commands/shareTrading/buyPublicShares.ts": {
       "characters": 3,
-      "corporations": 1,
       "gameState": 2
     },
     "src/lib/corporations/commands/shareTrading/createShareListing.ts": {
       "characters": 1,
-      "corporations": 2,
       "untyped": 2
     },
     "src/lib/corporations/commands/shareTrading/fillShareOrder.ts": {
-      "characters": 2,
-      "corporations": 4
-    },
-    "src/lib/corporations/commands/shareTrading/fillShareOrderSettlement.ts": {
-      "corporations": 1
+      "characters": 2
     },
     "src/lib/corporations/commands/shareTrading/placeShareOrder.ts": {
-      "characters": 2,
-      "corporations": 3
+      "characters": 2
     },
     "src/lib/corporations/commands/shareTrading/sellPublicShares.ts": {
       "characters": 3,
-      "corporations": 4,
       "untyped": 2
     },
     "src/lib/corporations/commands/shareTrading/shareFillAudit.ts": {
       "gameState": 1
     },
-    "src/lib/corporations/commands/shareTrading/shareFillMoneyLegs.ts": {
-      "corporations": 3
-    },
     "src/lib/corporations/commands/shareTrading/submitShareOffer.ts": {
-      "characters": 3,
-      "corporations": 2
+      "characters": 3
     },
     "src/lib/corporations/commands/supplyAgreements.ts": {
       "corporateSectors": 1,
-      "corporations": 3,
       "gameState": 3,
       "states": 1
     },
     "src/lib/corporations/commands/takeovers/hostileTakeover.ts": {
       "characters": 2,
       "corporateSectors": 5,
-      "corporations": 10,
       "gameState": 1,
       "states": 1,
       "untyped": 2
     },
-    "src/lib/corporations/commands/takeSupplyListing.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/commands/techTree/abandonTechDecade.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/commands/techTree/buyFrontierProgramme.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/commands/techTree/unlockTechNode.ts": {
-      "corporations": 2
-    },
     "src/lib/corporations/commodityDominanceContext.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/lib/corporations/convertCorpCurrency.ts": {
-      "corporateSectors": 3,
-      "corporations": 2
+      "corporateSectors": 3
     },
     "src/lib/corporations/corpMarketShare.ts": {
       "corporateSectors": 1,
@@ -4493,47 +3958,26 @@
       "corporateSectors": 1
     },
     "src/lib/corporations/distributeCrossEquityInKind.ts": {
-      "corporations": 2,
       "gameState": 1
     },
     "src/lib/corporations/economicActionLog.ts": {
       "untyped": 1
     },
     "src/lib/corporations/groupDominanceSectors.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/corporations/groups/applyGroupRelief.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/groups/applySynergies.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/groups/applyTransferPricingAudit.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/groups/groupBalanceSheet.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/corporations/groups/groupMembership.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/groups/management.ts": {
-      "corporations": 5,
       "gameState": 1,
       "states": 1
     },
     "src/lib/corporations/groups/publicListing.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/hostileTakeoverNotifications.ts": {
-      "corporations": 2,
       "untyped": 1
-    },
-    "src/lib/corporations/imfPortfolioReceivables.ts": {
-      "corporations": 1
     },
     "src/lib/corporations/issueRelocationBond.ts": {
       "corporateSectors": 1,
@@ -4547,101 +3991,67 @@
       "characters": 1
     },
     "src/lib/corporations/mergerReview/concentration.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/corporations/mergerReview/divestiture.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/mergerReview/lifecycle.ts": {
-      "corporations": 3
+      "corporateSectors": 1
     },
     "src/lib/corporations/moveSector.ts": {
       "corporateSectors": 1
     },
     "src/lib/corporations/nppCeoAffiliations.ts": {
-      "corporations": 1,
       "npps": 2,
       "politicalParties": 1,
       "untyped": 1
     },
     "src/lib/corporations/nppPickup.ts": {
       "corporateSectors": 5,
-      "corporations": 3,
       "states": 1
     },
     "src/lib/corporations/offTypeHandover.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1,
       "untyped": 4
     },
-    "src/lib/corporations/ownTruckHaul.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/parentCeoVisibility.ts": {
-      "corporations": 1
-    },
     "src/lib/corporations/personalHoldingOps.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/corporations/previewQuickDissolve.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "corporations": 2,
       "gameState": 1,
       "states": 1
     },
     "src/lib/corporations/queries/corporationDefenceContracts.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/queries/corporationDetail.ts": {
       "gameState": 1
     },
     "src/lib/corporations/queries/corporationDetail/marketViewContext.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/corporations/queries/corporationDetail/portfolioHoldings.ts": {
-      "corporations": 2
+      "corporateSectors": 1
     },
     "src/lib/corporations/queries/corporationDetail/referenceSectors.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/corporations/queries/corporationDetail/shareholders.ts": {
       "characters": 2,
-      "corporations": 1,
       "npps": 2,
       "untyped": 3
     },
     "src/lib/corporations/queries/corporationDetail/stateViewContext.ts": {
       "gameState": 2
     },
-    "src/lib/corporations/queries/corporationDetail/subsidiaryContext.ts": {
-      "corporations": 6
-    },
     "src/lib/corporations/queries/defenceSuppliers.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/queries/extractionOpportunities.ts": {
       "corporateSectors": 1,
       "states": 1
     },
-    "src/lib/corporations/queries/myOpenShareOrders.ts": {
-      "corporations": 1
-    },
     "src/lib/corporations/queries/sectorDetail.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/corporations/queries/sectorDetailContext.ts": {
       "characters": 1,
       "corporateSectors": 3,
-      "corporations": 4,
       "gameState": 1,
       "npps": 1,
       "states": 2,
@@ -4653,25 +4063,12 @@
     "src/lib/corporations/queries/sectorDetailSections.ts": {
       "corporateSectors": 1
     },
-    "src/lib/corporations/releaseCharacterHeldSharesToFloat.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/releaseHeldSharesToFloat.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/relocationBondFunding.ts": {
-      "corporations": 2
-    },
     "src/lib/corporations/repairDuplicateSectors.ts": {
       "corporateSectors": 4,
       "states": 1
     },
-    "src/lib/corporations/reservedCorporateHoldings.ts": {
-      "corporations": 1
-    },
     "src/lib/corporations/restoreSectorsToUnowned.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
       "states": 1
     },
     "src/lib/corporations/securedConstructionProperty.ts": {
@@ -4680,90 +4077,45 @@
     "src/lib/corporations/sentimentEvents.ts": {
       "untyped": 1
     },
-    "src/lib/corporations/settlementLock.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/shareEscrowSettlement.ts": {
-      "corporations": 2
-    },
     "src/lib/corporations/startingGrantLedger.ts": {
       "gameState": 1
     },
-    "src/lib/corporations/subsidiaries/authorization.ts": {
-      "corporations": 1
-    },
     "src/lib/corporations/subsidiaries/commands/appointSubsidiaryCeo.ts": {
       "characters": 1,
-      "corporations": 2,
       "npps": 1
-    },
-    "src/lib/corporations/subsidiaries/commands/capitalInjection.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/subsidiaries/commands/formalizeSubsidiary.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/subsidiaries/commands/releaseSubsidiary.ts": {
-      "corporations": 1
-    },
-    "src/lib/corporations/subsidiaries/commands/setParentDividendFloor.ts": {
-      "corporations": 1
     },
     "src/lib/corporations/subsidiaries/commands/spinOff.ts": {
       "characters": 1,
-      "corporateSectors": 3,
-      "corporations": 2
-    },
-    "src/lib/corporations/subsidiaries/cycleGuard.ts": {
-      "corporations": 1
+      "corporateSectors": 3
     },
     "src/lib/corporations/subsidiaries/parentContext.ts": {
-      "characters": 1,
-      "corporations": 2
-    },
-    "src/lib/corporations/subsidiaries/turnCleanup.ts": {
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/corporations/supplyExchange/guards.ts": {
       "corporateSectors": 1,
       "gameState": 2
     },
     "src/lib/corporations/supplyExchange/listingView.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/corporations/techTree/diffusion.ts": {
       "corporateSectors": 1,
       "states": 1
     },
-    "src/lib/corporations/techTree/frontierResearch.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/techTree/techUnlockLedger.ts": {
-      "corporations": 2
-    },
-    "src/lib/corporations/tickerSymbol.ts": {
-      "corporations": 3,
-      "untyped": 2
-    },
     "src/lib/corporations/turnReferenceData.ts": {
       "states": 1
     },
     "src/lib/corporations/viewerShareholding.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/corporations/votes/voteEffects.ts": {
-      "corporations": 7,
-      "untyped": 7
+      "untyped": 1
     },
     "src/lib/corporations/votes/voteNotifications.ts": {
       "characters": 1,
-      "corporations": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/corporations/votes/voteService.ts": {
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/counties/projections.ts": {
@@ -5052,7 +4404,6 @@
     },
     "src/lib/countries/jp/seedBudgets.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 2,
       "untyped": 2
     },
@@ -5337,7 +4688,6 @@
     },
     "src/lib/countries/uk/seedBudgets.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 2,
       "untyped": 4
     },
@@ -5361,18 +4711,16 @@
     },
     "src/lib/country/mergeCountry.ts": {
       "corporateSectors": 2,
-      "corporations": 2,
       "elections": 3,
       "npps": 1,
       "states": 1,
-      "untyped": 14
+      "untyped": 12
     },
     "src/lib/country/mergeMilitary.ts": {
       "untyped": 2
     },
     "src/lib/country/mergeNationalCorporations.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/country/mergeNationalFisc.ts": {
       "gameState": 1
@@ -5382,11 +4730,10 @@
       "untyped": 7
     },
     "src/lib/country/mergeRegion.ts": {
-      "corporations": 1,
       "electedOfficials": 1,
       "npps": 1,
       "states": 4,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/country/nationalApproval.ts": {
       "states": 1
@@ -5404,7 +4751,6 @@
     "src/lib/country/regionEconomyView.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "corporations": 3,
       "gameState": 1,
       "states": 1,
       "untyped": 2
@@ -5440,14 +4786,8 @@
     "src/lib/crises/crisisLocation.ts": {
       "states": 1
     },
-    "src/lib/crises/financialCrisisBankResponse.ts": {
-      "corporations": 3
-    },
     "src/lib/crises/financialCrisisFiscalResponse.ts": {
       "characters": 1
-    },
-    "src/lib/crises/financialCrisisGuarantees.ts": {
-      "corporations": 1
     },
     "src/lib/crises/interactionEngine.ts": {
       "characters": 3,
@@ -5464,8 +4804,7 @@
     },
     "src/lib/crises/optionActions.ts": {
       "characters": 2,
-      "corporateSectors": 3,
-      "corporations": 1
+      "corporateSectors": 3
     },
     "src/lib/crises/queries/crisisQueries.ts": {
       "states": 1
@@ -5496,8 +4835,7 @@
     },
     "src/lib/currency/migration.ts": {
       "characters": 1,
-      "corporations": 1,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/currentTurn.ts": {
       "gameState": 1
@@ -5569,7 +4907,6 @@
     },
     "src/lib/economy/economicVitalSigns.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/economy/queries/countryEconomyOutlook.ts": {
@@ -5577,7 +4914,6 @@
     },
     "src/lib/economy/queries/loadCommandEconomyDashboard.ts": {
       "characters": 1,
-      "corporations": 1,
       "gameState": 1,
       "untyped": 1
     },
@@ -5900,16 +5236,8 @@
       "characters": 1,
       "untyped": 1
     },
-    "src/lib/equities/blockPacing.ts": {
-      "corporations": 4,
-      "untyped": 1
-    },
     "src/lib/equities/cashoutLimits.ts": {
-      "corporateSectors": 1,
-      "corporations": 2
-    },
-    "src/lib/equities/primaryMarket.ts": {
-      "corporations": 3
+      "corporateSectors": 1
     },
     "src/lib/era/context.ts": {
       "gameState": 2
@@ -5926,28 +5254,21 @@
     },
     "src/lib/events/pree/driver.ts": {
       "characters": 2,
-      "corporations": 1,
       "electedOfficials": 1,
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/events/pree/handlers/lotteryWin.ts": {
       "characters": 1,
       "untyped": 1
     },
     "src/lib/events/pree/handlers/minorityExpansionDemand.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/events/pree/handlers/minorityExtractionObjection.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/events/pree/handlers/minorityStrategyPressure.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/events/pree/payload.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/events/substrate/applyEffects.ts": {
       "characters": 2,
@@ -5964,24 +5285,15 @@
     "src/lib/events/worldEvents/driver.ts": {
       "characters": 2
     },
-    "src/lib/extraction/commands/acceptContractOffer.ts": {
-      "corporations": 2
-    },
     "src/lib/extraction/commands/issueContractOffer.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/extraction/commands/launchCorpProspect.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/extraction/revenueAnchor.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/financialTxLog/atomicCashGuard.ts": {
       "characters": 2,
-      "corporations": 8,
-      "untyped": 12
+      "untyped": 4
     },
     "src/lib/financialTxLog/expiresAt.ts": {
       "gameState": 1
@@ -6032,11 +5344,9 @@
       "politicalParties": 2
     },
     "src/lib/governmentContracts/automatedBids.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/governmentContracts/commands.ts": {
-      "corporations": 2,
       "untyped": 1
     },
     "src/lib/governmentContracts/defence.ts": {
@@ -6044,20 +5354,14 @@
       "untyped": 1
     },
     "src/lib/governmentContracts/eligibility.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/governmentContracts/opportunityNotifications.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/governmentContracts/plantSlots.ts": {
       "corporateSectors": 2,
       "untyped": 2
-    },
-    "src/lib/governmentContracts/queries.ts": {
-      "corporations": 2,
-      "untyped": 1
     },
     "src/lib/governmentContracts/reservations.ts": {
       "untyped": 8
@@ -6067,8 +5371,7 @@
       "untyped": 1
     },
     "src/lib/governmentContracts/viewerOpportunities.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/governorOffice/access.ts": {
       "politicalParties": 1
@@ -6110,15 +5413,8 @@
       "characters": 1,
       "electedOfficials": 1
     },
-    "src/lib/imf/ensureImfInstitutionPlaceholder.ts": {
-      "corporations": 2
-    },
-    "src/lib/imf/resolveImfCorporation.ts": {
-      "corporations": 1
-    },
     "src/lib/imf/seedImfInstitution.ts": {
       "characters": 1,
-      "corporations": 3,
       "untyped": 1
     },
     "src/lib/impeachment/autoVoteNpps.ts": {
@@ -6149,52 +5445,29 @@
       "untyped": 1
     },
     "src/lib/indexFunds/corporationTrade.ts": {
-      "corporations": 4,
-      "untyped": 7
+      "untyped": 6
     },
     "src/lib/indexFunds/dividendPassThrough.ts": {
       "characters": 2,
-      "corporations": 5,
       "npps": 4,
-      "untyped": 7
-    },
-    "src/lib/indexFunds/fundBondReserve.ts": {
-      "corporations": 1
+      "untyped": 5
     },
     "src/lib/indexFunds/fundCron.ts": {
       "untyped": 1
     },
-    "src/lib/indexFunds/fundCronRebalance.ts": {
-      "corporations": 1
-    },
     "src/lib/indexFunds/fundCrossRebalancing.ts": {
-      "corporations": 2,
       "untyped": 2
     },
     "src/lib/indexFunds/fundFloatSettlement.ts": {
       "untyped": 1
     },
-    "src/lib/indexFunds/fundFloatTradePlan.ts": {
-      "corporations": 3
-    },
     "src/lib/indexFunds/fundHolderEnrichment.ts": {
       "characters": 1,
-      "corporations": 1,
       "npps": 1
-    },
-    "src/lib/indexFunds/fundHoldingWriteOff.ts": {
-      "corporations": 1,
-      "untyped": 1
-    },
-    "src/lib/indexFunds/fundRedemptionLiquidity.ts": {
-      "corporations": 2
     },
     "src/lib/indexFunds/fundTxLog.ts": {
       "characters": 1,
       "untyped": 1
-    },
-    "src/lib/indexFunds/managerEligibility.ts": {
-      "corporations": 1
     },
     "src/lib/indexFunds/nppInvesting.ts": {
       "npps": 5,
@@ -6203,9 +5476,6 @@
     "src/lib/indexFunds/nppRedemption.ts": {
       "npps": 1,
       "untyped": 2
-    },
-    "src/lib/indexFunds/petitions/service.ts": {
-      "corporations": 1
     },
     "src/lib/indexFunds/playerCommandAudit.ts": {
       "untyped": 1
@@ -6226,35 +5496,24 @@
     },
     "src/lib/indexFunds/sponsorship/charterFund.ts": {
       "corporateSectors": 1,
-      "corporations": 3,
       "untyped": 3
-    },
-    "src/lib/indexFunds/sponsorship/corporateHolderPayout.ts": {
-      "corporations": 2,
-      "untyped": 1
     },
     "src/lib/indexFunds/sponsorship/eligibility.ts": {
       "corporateSectors": 1,
       "gameState": 1,
       "untyped": 2
     },
-    "src/lib/indexFunds/sponsorship/expenseFees.ts": {
-      "corporations": 2
-    },
     "src/lib/indexFunds/sponsorship/holderPayout.ts": {
-      "corporations": 2,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/indexFunds/sponsorship/sponsorUnits.ts": {
       "untyped": 3
     },
     "src/lib/indexFunds/sponsorship/windUp.ts": {
-      "corporations": 1,
       "untyped": 5
     },
     "src/lib/indexFunds/subscriptionOrders.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/indexFunds/subscriptions.ts": {
@@ -6290,9 +5549,6 @@
       "elections": 1,
       "states": 1,
       "untyped": 4
-    },
-    "src/lib/intelligence/economicAction.ts": {
-      "corporations": 1
     },
     "src/lib/internationalOrganizations/aid.ts": {
       "states": 1
@@ -6350,7 +5606,6 @@
     },
     "src/lib/ledger/balanceSnapshot.ts": {
       "characters": 1,
-      "corporations": 1,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1
@@ -6438,23 +5693,13 @@
       "characters": 1
     },
     "src/lib/lineOfCredit/buildSnapshot.ts": {
-      "characters": 1,
-      "corporations": 1
-    },
-    "src/lib/lineOfCredit/controlledEquity.ts": {
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/lineOfCredit/garnishment.ts": {
       "characters": 1
     },
     "src/lib/lineOfCredit/ledger.ts": {
       "untyped": 1
-    },
-    "src/lib/lineOfCredit/locTurnEstimate.ts": {
-      "corporations": 1
-    },
-    "src/lib/lineOfCredit/netWorth.ts": {
-      "corporations": 2
     },
     "src/lib/lineOfCredit/settlement.ts": {
       "characters": 1,
@@ -6475,7 +5720,6 @@
       "untyped": 1
     },
     "src/lib/livingConflict/financialExposure.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/livingConflict/globalResponse.ts": {
@@ -6539,26 +5783,15 @@
     },
     "src/lib/market/producerMarket/openingApply.ts": {
       "corporateSectors": 2,
-      "corporations": 2,
       "gameState": 2,
-      "untyped": 6
-    },
-    "src/lib/market/producerMarket/payablesSettlement.ts": {
-      "corporations": 1
+      "untyped": 4
     },
     "src/lib/market/producerMarket/settlement.ts": {
       "corporateSectors": 2,
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/marketing/marketedWorldServer.ts": {
       "gameState": 1
-    },
-    "src/lib/mechanicalLaws/forcedDivestiture.ts": {
-      "corporations": 1
-    },
-    "src/lib/mechanicalLaws/guards.ts": {
-      "corporations": 2
     },
     "src/lib/mediaEditorial/applyEffects.ts": {
       "elections": 1,
@@ -6566,25 +5799,21 @@
     },
     "src/lib/mediaEditorial/opinionPull.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/mediaEditorial/slant.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/mediaRegulation/turnData.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/metricEngine/phase.ts": {
       "gameState": 1,
       "states": 2
     },
     "src/lib/metricEngine/providers.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/metricEngine/spendingProvider.ts": {
       "states": 1
@@ -6638,12 +5867,6 @@
     "src/lib/migrations/entries/2026-09-03-bond-market-pool-working-balance.ts": {
       "gameState": 1
     },
-    "src/lib/migrations/entries/2026-09-03-equity-market-pools.ts": {
-      "corporations": 1
-    },
-    "src/lib/migrations/entries/2026-09-03-repair-orphan-index-fund-state.ts": {
-      "corporations": 1
-    },
     "src/lib/migrations/entries/2026-09-03-retire-orphan-sovereign-float.ts": {
       "gameState": 1
     },
@@ -6665,9 +5888,6 @@
     "src/lib/migrations/entries/2026-09-17-playable-region-texture-residuals.ts": {
       "gameState": 1
     },
-    "src/lib/migrations/entries/2026-09-17-repair-duplicate-corporation-sequential-ids.ts": {
-      "corporations": 1
-    },
     "src/lib/migrations/entries/2026-09-17-supply-listing-indexes.ts": {
       "untyped": 1
     },
@@ -6683,11 +5903,7 @@
     "src/lib/migrations/entries/2026-09-20-turn-clock-indexes.ts": {
       "untyped": 1
     },
-    "src/lib/migrations/entries/2026-09-24-activate-pending-npp-defence-contracts.ts": {
-      "corporations": 1
-    },
     "src/lib/migrations/entries/2026-09-24-backfill-npp-tech-baselines.ts": {
-      "corporations": 2,
       "gameState": 1
     },
     "src/lib/migrations/entries/2026-09-25-federal-budget-snapshot-history-index.ts": {
@@ -6712,17 +5928,9 @@
     "src/lib/migrations/entries/2026-10-04-bank-failure-politics-index.ts": {
       "untyped": 1
     },
-    "src/lib/migrations/entries/2026-10-04-bank-loan-charter-epoch.ts": {
-      "corporations": 1
-    },
-    "src/lib/migrations/entries/2026-10-04-bank-prop-forex-fee-index.ts": {
-      "corporations": 1,
-      "untyped": 1
-    },
     "src/lib/migrations/entries/2026-10-04-construction-service-lease-index.ts": {
       "corporateSectors": 4,
-      "corporations": 2,
-      "untyped": 6
+      "untyped": 4
     },
     "src/lib/migrations/entries/2026-10-04-government-accountability.ts": {
       "characters": 1,
@@ -6746,15 +5954,10 @@
     "src/lib/migrations/entries/2026-10-04-political-media-order-indexes.ts": {
       "untyped": 1
     },
-    "src/lib/migrations/entries/2026-10-04-underwriting-recovery-indexes.ts": {
-      "corporations": 2,
-      "untyped": 2
-    },
     "src/lib/migrations/entries/2026-10-07-activate-live-demographics-v2.ts": {
       "gameState": 1
     },
     "src/lib/migrations/entries/2026-10-08-backfill-spinoff-tech-baselines.ts": {
-      "corporations": 2,
       "gameState": 1
     },
     "src/lib/migrations/entries/2026-10-09-corporate-fund-positions.ts": {
@@ -6780,9 +5983,8 @@
       "untyped": 3
     },
     "src/lib/migrations/entries/2026-10-14-government-contract-bidding.ts": {
-      "corporations": 1,
       "gameState": 1,
-      "untyped": 5
+      "untyped": 4
     },
     "src/lib/migrations/entries/2026-10-15-live-world-npp-autonomy-v6.ts": {
       "gameState": 2
@@ -6797,7 +5999,6 @@
       "untyped": 5
     },
     "src/lib/migrations/entries/2026-10-16-stock-holding-tax-tiers.ts": {
-      "corporations": 2,
       "gameState": 5,
       "untyped": 2
     },
@@ -6832,8 +6033,7 @@
       "untyped": 1
     },
     "src/lib/military/defenceMinisterInterests.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/military/manpowerPool.ts": {
       "states": 1
@@ -6849,8 +6049,7 @@
       "characters": 1
     },
     "src/lib/monetaryPolicy/queries/adminLoanTracker.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/monetaryPolicy/queries/countryCentralBankDetail.ts": {
       "characters": 3,
@@ -6859,9 +6058,6 @@
     },
     "src/lib/monetaryPolicy/queries/inflationDiagnostics.ts": {
       "gameState": 1
-    },
-    "src/lib/moneySupply/liquidityAdvance.ts": {
-      "corporations": 1
     },
     "src/lib/moneySupply/monetaryOperationJournal.ts": {
       "gameState": 1
@@ -6875,7 +6071,6 @@
     "src/lib/moneySupply/snapshot.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1,
@@ -6885,21 +6080,15 @@
     "src/lib/nationalization/auctionListing.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 2,
       "states": 1
-    },
-    "src/lib/nationalization/billProvisionValidation.ts": {
-      "corporations": 1
     },
     "src/lib/nationalization/billTargetPreview.ts": {
       "characters": 1,
       "corporateSectors": 2,
-      "corporations": 2,
       "states": 1
     },
     "src/lib/nationalization/concentration.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/nationalization/consequences/apply.ts": {
       "politicalParties": 1,
@@ -6911,37 +6100,25 @@
     "src/lib/nationalization/corpNationalizationThreat.ts": {
       "corporateSectors": 1
     },
-    "src/lib/nationalization/dissolvedCorporation.ts": {
-      "corporations": 1
-    },
     "src/lib/nationalization/enactedSectorTaking.ts": {
       "corporateSectors": 1
     },
     "src/lib/nationalization/fundedOwnershipSettlement.ts": {
-      "characters": 1,
-      "corporations": 1
-    },
-    "src/lib/nationalization/heldEquityTransfer.ts": {
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/nationalization/legislativeNationalize.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/nationalization/legislativePrivatize.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/nationalization/mandateControl.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/nationalization/monopolyTrigger.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/nationalization/nationalCorporation.ts": {
-      "corporations": 2,
       "gameState": 1
     },
     "src/lib/nationalization/nationalCorporationView.ts": {
@@ -6952,30 +6129,25 @@
     },
     "src/lib/nationalization/nationalizeSectorWide.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/lib/nationalization/ownershipTransition.ts": {
       "characters": 4,
       "corporateSectors": 4,
-      "corporations": 4,
       "states": 1
     },
     "src/lib/nationalization/pendingNationalizations.ts": {
-      "corporateSectors": 2,
-      "corporations": 2
+      "corporateSectors": 2
     },
     "src/lib/nationalization/privatizationAuction.ts": {
       "characters": 2,
-      "corporateSectors": 2,
-      "corporations": 3
+      "corporateSectors": 2
     },
     "src/lib/nationalization/privatizationNotifications.ts": {
       "characters": 1
     },
     "src/lib/nationalization/privatizeAsset.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/lib/nationalization/registerView.ts": {
@@ -6983,33 +6155,25 @@
     },
     "src/lib/nationalization/restructure.ts": {
       "corporateSectors": 5,
-      "corporations": 5,
       "untyped": 1
     },
     "src/lib/nationalization/reverseNationalization.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/nationalization/seedToNatCorp.ts": {
       "corporateSectors": 2
     },
     "src/lib/nationalization/soeOperations.ts": {
-      "corporateSectors": 3,
-      "corporations": 3
+      "corporateSectors": 3
     },
     "src/lib/nationalization/soeRemittance.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/nationalization/stateControlledBuckets.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/nationalization/targetEligibility.ts": {
       "corporateSectors": 1
-    },
-    "src/lib/nationalization/treasury.ts": {
-      "corporations": 2
     },
     "src/lib/nationalization/treasuryLedger.ts": {
       "gameState": 1
@@ -7023,7 +6187,6 @@
     },
     "src/lib/navigation/resolveNavbarPageCountry.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 2
     },
     "src/lib/news.ts": {
@@ -7049,7 +6212,6 @@
       "npps": 2
     },
     "src/lib/npp/mortality.ts": {
-      "corporations": 3,
       "electedOfficials": 2,
       "gameState": 1,
       "npps": 5
@@ -7171,7 +6333,6 @@
     },
     "src/lib/nppAutonomy/proposeNppPrivatizationBill.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
       "politicalParties": 1
     },
     "src/lib/nppAutonomy/v1Readiness.ts": {
@@ -7185,11 +6346,9 @@
       "npps": 2
     },
     "src/lib/nppAutonomy/v3/finance/nppFoundCorporation.ts": {
-      "corporations": 2,
       "npps": 2
     },
     "src/lib/nppAutonomy/v3/finance/nppShares.ts": {
-      "corporations": 2,
       "npps": 3
     },
     "src/lib/nppAutonomy/v3/party/nppBuildOrg.ts": {
@@ -7216,8 +6375,7 @@
       "states": 1
     },
     "src/lib/onboarding/checklist.ts": {
-      "corporations": 2,
-      "untyped": 9
+      "untyped": 7
     },
     "src/lib/onboarding/firstDays.ts": {
       "elections": 1,
@@ -7407,11 +6565,7 @@
       "characters": 2
     },
     "src/lib/pensions/pensionTurn.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/policy/nationalPolicyRecordsList.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/policy/policyRecordPayload.ts": {
       "characters": 1,
@@ -7464,9 +6618,6 @@
     "src/lib/politicalStrength/orgBuildStateSize.ts": {
       "states": 3
     },
-    "src/lib/portfolio/loadCharacterPortfolio.ts": {
-      "corporations": 2
-    },
     "src/lib/presidentialBillAction.ts": {
       "characters": 5,
       "electedOfficials": 1,
@@ -7477,29 +6628,13 @@
       "npps": 1
     },
     "src/lib/products/manufacturingProjectPersistence.ts": {
-      "corporations": 4,
       "untyped": 1
-    },
-    "src/lib/products/mediaProductAdvertisingSettlement.ts": {
-      "corporations": 2
-    },
-    "src/lib/products/mediaProductPersistence.ts": {
-      "corporations": 1
-    },
-    "src/lib/products/productAdvertisingClearing.ts": {
-      "corporations": 1
     },
     "src/lib/products/venture/access.ts": {
       "corporateSectors": 1
     },
-    "src/lib/products/venture/refund.ts": {
-      "corporations": 3
-    },
     "src/lib/products/venture/store.ts": {
       "untyped": 1
-    },
-    "src/lib/products/venture/turn.ts": {
-      "corporations": 3
     },
     "src/lib/propagateNameChange.ts": {
       "electedOfficials": 1,
@@ -7507,7 +6642,6 @@
     },
     "src/lib/publicApi/character.ts": {
       "characters": 6,
-      "corporations": 1,
       "elections": 1,
       "politicalParties": 1,
       "states": 1
@@ -7519,7 +6653,6 @@
     "src/lib/publicApi/corporation.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "corporations": 4,
       "states": 1
     },
     "src/lib/publicApi/economy.ts": {
@@ -7532,9 +6665,6 @@
       "elections": 4,
       "npps": 1,
       "politicalParties": 2
-    },
-    "src/lib/publicApi/funds.ts": {
-      "corporations": 1
     },
     "src/lib/publicApi/government.ts": {
       "characters": 1,
@@ -7566,9 +6696,6 @@
     "src/lib/publicApi/tierLimits.ts": {
       "untyped": 1
     },
-    "src/lib/publicApi/trade.ts": {
-      "corporations": 1
-    },
     "src/lib/publicFinance/queries/federalBudgetDetail.ts": {
       "gameState": 2,
       "states": 1
@@ -7580,7 +6707,6 @@
       "untyped": 1
     },
     "src/lib/recap/loadStoryData.ts": {
-      "corporations": 1,
       "elections": 2,
       "gameState": 1,
       "npps": 1,
@@ -7614,7 +6740,6 @@
     },
     "src/lib/referendum/refundConversionConstruction.ts": {
       "corporateSectors": 5,
-      "corporations": 3,
       "gameState": 1,
       "untyped": 2
     },
@@ -7625,14 +6750,10 @@
       "untyped": 7
     },
     "src/lib/referendum/secede/expandToSubRegions.ts": {
-      "corporations": 1,
       "gameState": 1,
       "npps": 1,
       "states": 4,
-      "untyped": 3
-    },
-    "src/lib/referendum/secede/migrateProducerWallets.ts": {
-      "corporations": 2
+      "untyped": 2
     },
     "src/lib/referendum/secede/planSectorFanout.ts": {
       "corporateSectors": 1
@@ -7664,11 +6785,10 @@
     },
     "src/lib/referendum/transfer/carryNorthernIrelandMPs.ts": {
       "characters": 1,
-      "corporations": 1,
       "electedOfficials": 2,
       "npps": 1,
       "politicalParties": 1,
-      "untyped": 6
+      "untyped": 5
     },
     "src/lib/referendum/transfer/convertPublicCurrency.ts": {
       "states": 2,
@@ -7680,17 +6800,15 @@
     "src/lib/referendum/transfer/convertTransferredResidentsCurrency.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/referendum/transfer/evacuateRegionPolitics.ts": {
       "characters": 3,
-      "corporations": 2,
       "electedOfficials": 6,
       "elections": 2,
       "npps": 3,
       "politicalParties": 2,
-      "untyped": 19
+      "untyped": 17
     },
     "src/lib/referendum/transfer/reapportionNationalBudget.ts": {
       "states": 2
@@ -7699,10 +6817,9 @@
       "untyped": 1
     },
     "src/lib/referendum/transfer/transferRegion.ts": {
-      "corporations": 1,
       "electedOfficials": 2,
       "states": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/referendum/transfer/transferResetV2Region.ts": {
       "gameState": 1
@@ -7714,33 +6831,21 @@
       "untyped": 3
     },
     "src/lib/remediation/compensation.ts": {
-      "corporations": 2,
-      "gameState": 1,
-      "untyped": 1
+      "gameState": 1
     },
     "src/lib/remediation/defects/AHD-1124-brl-forced-maturity-restitution.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/remediation/defects/AHD-1266-tr-repudiation-restitution.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 1
-    },
-    "src/lib/remediation/defects/AHD-1267-vf-bank-restitution.ts": {
-      "corporations": 2
     },
     "src/lib/remediation/defects/AHD-1271-merged-state-extraction.ts": {
       "corporateSectors": 3,
-      "corporations": 1,
       "gameState": 1,
       "states": 2,
       "untyped": 5
-    },
-    "src/lib/remediation/defects/AHD-1271-natcorp-split-sector-type.ts": {
-      "corporations": 2,
-      "untyped": 1
     },
     "src/lib/remediation/defects/AHD-1271-pool-country-attribution.ts": {
       "states": 1,
@@ -7749,20 +6854,13 @@
     "src/lib/remediation/defects/AHD-1372-merged-party-org.ts": {
       "politicalParties": 3
     },
-    "src/lib/remediation/defects/AHD-1448-freight-overbilling-restitution.ts": {
-      "corporations": 2,
-      "untyped": 1
-    },
     "src/lib/remediation/defects/AHD-1694-greenbaum-restoration.ts": {
-      "corporations": 5,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-1694-injected-bank-restoration.ts": {
-      "corporations": 5,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-1749-monroe-bank-restoration.ts": {
-      "corporations": 2,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-951-orphan-null-party-seats.ts": {
@@ -7770,39 +6868,28 @@
     },
     "src/lib/remediation/defects/AHD-command-economy-private-sector-ownership.ts": {
       "corporateSectors": 4,
-      "corporations": 6,
       "gameState": 1,
       "untyped": 2
     },
-    "src/lib/remediation/defects/AHD-defence-procurement-overaward.ts": {
-      "corporations": 1
-    },
     "src/lib/remediation/defects/AHD-defence-supplier-windfall.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-dissolution-npp-successors.ts": {
       "corporateSectors": 3,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/remediation/defects/AHD-duplicate-sectors.ts": {
       "corporateSectors": 1,
       "states": 1
     },
-    "src/lib/remediation/defects/AHD-private-market-cap-history.ts": {
-      "corporations": 1
-    },
     "src/lib/remediation/defects/AHD-sovereign-coupon-arrears.ts": {
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-sovereign-maturity-stranded-payout.ts": {
       "characters": 1,
-      "corporations": 1,
       "npps": 1
     },
     "src/lib/remediation/defects/AHD-sovereign-maturity-unfunded-rollover.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/remediation/defects/AHD-sovereign-rollover-wall.ts": {
@@ -7810,14 +6897,12 @@
     },
     "src/lib/remediation/defects/AHD-tinky-stale-vote-excess.ts": {
       "characters": 3,
-      "corporations": 2,
       "untyped": 1
     },
     "src/lib/remediation/defects/AHD-whole-plants-conversion.ts": {
       "corporateSectors": 4,
-      "corporations": 3,
       "gameState": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/remediation/guards.ts": {
       "gameState": 1
@@ -7882,7 +6967,6 @@
     },
     "src/lib/retireCharacter.ts": {
       "characters": 1,
-      "corporations": 3,
       "electedOfficials": 3,
       "elections": 1,
       "gameState": 1,
@@ -7893,19 +6977,14 @@
       "characters": 3
     },
     "src/lib/savings/accountsShell.ts": {
-      "characters": 2,
-      "corporations": 2
+      "characters": 2
     },
     "src/lib/savings/closeCharacterSavings.ts": {
       "characters": 1,
-      "corporations": 1,
-      "untyped": 2
+      "untyped": 1
     },
     "src/lib/savings/ledger.ts": {
       "untyped": 1
-    },
-    "src/lib/savings/migration.ts": {
-      "corporations": 1
     },
     "src/lib/savings/nationalTotals.ts": {
       "characters": 2,
@@ -7913,7 +6992,6 @@
     },
     "src/lib/savings/shadow.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/scotus/enactRulingBill.ts": {
@@ -7928,7 +7006,6 @@
     },
     "src/lib/search/universalSearch.ts": {
       "characters": 3,
-      "corporations": 2,
       "electedOfficials": 1,
       "elections": 1,
       "npps": 1
@@ -7979,12 +7056,6 @@
     "src/lib/sidebarWidgets/data/viewerContext.ts": {
       "characters": 1
     },
-    "src/lib/sidebarWidgets/data/watchlist.ts": {
-      "corporations": 1
-    },
-    "src/lib/sidebarWidgets/dueSoon/corporate.ts": {
-      "corporations": 1
-    },
     "src/lib/sidebarWidgets/dueSoon/index.ts": {
       "characters": 1,
       "electedOfficials": 1
@@ -7993,7 +7064,6 @@
       "politicalParties": 1
     },
     "src/lib/sidebarWidgets/widgetData.ts": {
-      "corporations": 1,
       "untyped": 2
     },
     "src/lib/sim/backfillMissingSeats.ts": {
@@ -8004,7 +7074,6 @@
       "untyped": 5
     },
     "src/lib/sim/cloneControllers.ts": {
-      "corporations": 2,
       "npps": 1
     },
     "src/lib/sim/driveSyntheticActors.ts": {
@@ -8013,9 +7082,8 @@
     },
     "src/lib/sim/economyTelemetry.ts": {
       "corporateSectors": 3,
-      "corporations": 1,
       "gameState": 3,
-      "untyped": 19
+      "untyped": 18
     },
     "src/lib/sim/electionReport.ts": {
       "elections": 1,
@@ -8027,7 +7095,6 @@
       "untyped": 5
     },
     "src/lib/sim/experimentsReport.ts": {
-      "corporations": 3,
       "electedOfficials": 1,
       "gameState": 1,
       "npps": 2,
@@ -8042,27 +7109,22 @@
     },
     "src/lib/sim/materializeSyntheticActors.ts": {
       "characters": 4,
-      "corporations": 3,
       "politicalParties": 1,
-      "untyped": 17
+      "untyped": 14
     },
     "src/lib/sim/metrics.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "electedOfficials": 2,
       "elections": 1,
       "gameState": 1,
       "npps": 1,
-      "untyped": 11
+      "untyped": 10
     },
     "src/lib/sim/oppositionResearchDriver.ts": {
       "elections": 1
     },
     "src/lib/sim/worldsimBootstrapConformance.ts": {
       "untyped": 2
-    },
-    "src/lib/sim/worldsimCorporationBootstrap.ts": {
-      "corporations": 1
     },
     "src/lib/singleplayer/saveArchive.ts": {
       "untyped": 6
@@ -8102,24 +7164,17 @@
     },
     "src/lib/singleplayerStatistics.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "electedOfficials": 1,
       "elections": 1,
       "gameState": 1,
       "npps": 1,
       "politicalParties": 1,
       "states": 1,
-      "untyped": 13
+      "untyped": 12
     },
     "src/lib/singleplayerTurn.ts": {
       "characters": 2,
       "untyped": 2
-    },
-    "src/lib/sovereignDefault/cascade/cascadeOrchestrator.ts": {
-      "corporations": 1
-    },
-    "src/lib/sovereignDefault/imfSovereignFacilityTurn.ts": {
-      "corporations": 1
     },
     "src/lib/sovereignDefault/legislative/applyLegislatorImpactsForChamber.ts": {
       "characters": 1,
@@ -8141,9 +7196,6 @@
     "src/lib/sovereignDefault/political/legislatorPoliticalImpact.ts": {
       "characters": 1,
       "npps": 1
-    },
-    "src/lib/sovereignDefault/snapshotLoader.ts": {
-      "corporations": 1
     },
     "src/lib/states/approval/getRegionalApprovalData.ts": {
       "gameState": 1,
@@ -8171,16 +7223,14 @@
       "electedOfficials": 1
     },
     "src/lib/subsidies/subsidyBudgetCosts.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/suggestions/reporterDisplay.ts": {
       "characters": 1,
       "politicalParties": 1
     },
     "src/lib/support/discordTicketCommands.ts": {
-      "characters": 1,
-      "corporations": 1
+      "characters": 1
     },
     "src/lib/telemetry/longHorizon/telemetry.ts": {
       "electedOfficials": 1,
@@ -8189,9 +7239,6 @@
     },
     "src/lib/telemetry/research/countryTurn.ts": {
       "states": 1
-    },
-    "src/lib/telemetry/research/securities.ts": {
-      "corporations": 1
     },
     "src/lib/time/gameTime.ts": {
       "gameState": 2
@@ -8243,11 +7290,7 @@
     "src/lib/turn/bankingTurn.ts": {
       "characters": 2,
       "corporateSectors": 1,
-      "corporations": 6,
       "untyped": 1
-    },
-    "src/lib/turn/bankSolvencyTurn.ts": {
-      "corporations": 2
     },
     "src/lib/turn/billLifecycle/configs/oneParty.ts": {
       "characters": 1
@@ -8266,20 +7309,13 @@
       "states": 1
     },
     "src/lib/turn/bondTurn.ts": {
-      "corporations": 2,
-      "untyped": 4
+      "untyped": 2
     },
     "src/lib/turn/bondTurnAutoResolve.ts": {
-      "corporations": 1,
-      "untyped": 1
-    },
-    "src/lib/turn/bondTurnHelpers.ts": {
-      "corporations": 2,
       "untyped": 1
     },
     "src/lib/turn/bondTurnLedger.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 3
     },
     "src/lib/turn/campaignBoostDecay.ts": {
@@ -8327,15 +7363,8 @@
     },
     "src/lib/turn/corporation/__perf__/marketContextCpu.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "gameState": 1,
-      "untyped": 2
-    },
-    "src/lib/turn/corporation/antitrustBreakups.ts": {
-      "corporations": 1
-    },
-    "src/lib/turn/corporation/antitrustCompliance.ts": {
-      "corporations": 2
+      "untyped": 1
     },
     "src/lib/turn/corporation/buildLookups.ts": {
       "characters": 1,
@@ -8346,14 +7375,9 @@
     },
     "src/lib/turn/corporation/buildLookupsLoad.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
-    "src/lib/turn/corporation/cashArrears.ts": {
-      "corporations": 1
-    },
     "src/lib/turn/corporation/corporateTaxPriority.ts": {
-      "corporations": 2,
       "untyped": 3
     },
     "src/lib/turn/corporation/corporationSectorShed.ts": {
@@ -8369,7 +7393,6 @@
     },
     "src/lib/turn/corporation/corporationTurnPhases.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 2
     },
     "src/lib/turn/corporation/corporationTurnSideEffects.ts": {
@@ -8377,12 +7400,8 @@
       "gameState": 1,
       "untyped": 2
     },
-    "src/lib/turn/corporation/financialDistressTracking.ts": {
-      "corporations": 2
-    },
     "src/lib/turn/corporation/fundedProducerTurn.ts": {
       "corporateSectors": 5,
-      "corporations": 1,
       "gameState": 1,
       "untyped": 1
     },
@@ -8390,11 +7409,7 @@
       "untyped": 2
     },
     "src/lib/turn/corporation/loadSettleableSupplyAgreements.ts": {
-      "corporations": 2,
       "untyped": 1
-    },
-    "src/lib/turn/corporation/manufacturingDevelopmentCashSettlement.ts": {
-      "corporations": 3
     },
     "src/lib/turn/corporation/marketCapSnapshot.ts": {
       "untyped": 2
@@ -8404,7 +7419,6 @@
       "untyped": 7
     },
     "src/lib/turn/corporation/nppCeoPay.ts": {
-      "corporations": 1,
       "npps": 1,
       "untyped": 1
     },
@@ -8412,15 +7426,10 @@
       "npps": 2
     },
     "src/lib/turn/corporation/nppInsolvencyDissolution.ts": {
-      "corporations": 2,
       "gameState": 1
     },
-    "src/lib/turn/corporation/operatingCashSettlement.ts": {
-      "corporations": 1
-    },
     "src/lib/turn/corporation/producerMarketPhase.ts": {
-      "corporateSectors": 1,
-      "corporations": 2
+      "corporateSectors": 1
     },
     "src/lib/turn/corporation/producerMarketShadowPhase.ts": {
       "untyped": 1
@@ -8428,33 +7437,20 @@
     "src/lib/turn/corporation/producerTurnDemand.ts": {
       "states": 1
     },
-    "src/lib/turn/corporation/recomputeSharePrices.ts": {
-      "corporations": 1
-    },
-    "src/lib/turn/corporation/settleSupplyAgreements.ts": {
-      "corporations": 2
-    },
     "src/lib/turn/corporation/shareListings.ts": {
-      "characters": 3,
-      "corporations": 5
+      "characters": 3
     },
     "src/lib/turn/corporation/shareOrders.ts": {
       "characters": 3,
-      "corporations": 7,
-      "untyped": 9
-    },
-    "src/lib/turn/corporation/stateRunAdvance.ts": {
-      "corporations": 1
+      "untyped": 4
     },
     "src/lib/turn/corporation/transitionStruggling.ts": {
       "corporateSectors": 1
     },
     "src/lib/turn/corporation/voteReminders.ts": {
-      "characters": 1,
-      "corporations": 2
+      "characters": 1
     },
     "src/lib/turn/corporationCountrySnapshot.ts": {
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/turn/crisisTurn.ts": {
@@ -8467,11 +7463,7 @@
       "untyped": 1
     },
     "src/lib/turn/defenceDeliveryTurn.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
-    },
-    "src/lib/turn/defenceWindfallRecoveryTurn.ts": {
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/turn/demographicTurnoutTurn.ts": {
       "characters": 1,
@@ -8485,9 +7477,6 @@
     },
     "src/lib/turn/eraCheckpointTurn.ts": {
       "gameState": 1
-    },
-    "src/lib/turn/extraction/contractSettlement.ts": {
-      "corporations": 3
     },
     "src/lib/turn/federationNpcMandates.ts": {
       "gameState": 1
@@ -8509,13 +7498,12 @@
     "src/lib/turn/gameHealthSnapshot.ts": {
       "characters": 3,
       "corporateSectors": 1,
-      "corporations": 1,
       "electedOfficials": 3,
       "elections": 2,
       "npps": 2,
       "politicalParties": 4,
       "states": 1,
-      "untyped": 22
+      "untyped": 21
     },
     "src/lib/turn/governmentApprovalFavorability.ts": {
       "electedOfficials": 1
@@ -8545,12 +7533,8 @@
     },
     "src/lib/turn/investorWealthSnapshots.ts": {
       "characters": 2,
-      "corporations": 2,
       "states": 1,
       "untyped": 1
-    },
-    "src/lib/turn/lineOfCreditTurn.ts": {
-      "corporations": 1
     },
     "src/lib/turn/ministerialOrderProcessing.ts": {
       "states": 1
@@ -8563,7 +7547,6 @@
     },
     "src/lib/turn/npp/billVoting.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "npps": 1
     },
     "src/lib/turn/npp/challengerSupply.ts": {
@@ -8592,34 +7575,21 @@
     "src/lib/turn/npp/endorsements.ts": {
       "elections": 1
     },
-    "src/lib/turn/npp/foundingCashLedger.ts": {
-      "corporations": 2,
-      "untyped": 1
-    },
     "src/lib/turn/npp/fragileMarketSupply.ts": {
       "gameState": 1
     },
     "src/lib/turn/npp/leadershipVoting.ts": {
       "untyped": 2
     },
-    "src/lib/turn/npp/nppConstructionFinance.ts": {
-      "corporations": 1
-    },
     "src/lib/turn/npp/nppCorpTreasury.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/turn/npp/nppProspecting.ts": {
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/turn/npp/nppSupplyAgreements.ts": {
       "corporateSectors": 1,
-      "corporations": 2,
       "gameState": 1
-    },
-    "src/lib/turn/npp/reinvestmentCashLedger.ts": {
-      "corporations": 1
     },
     "src/lib/turn/npp/slateOverride.ts": {
       "untyped": 1
@@ -8632,7 +7602,6 @@
       "corporateSectors": 1
     },
     "src/lib/turn/nppActionProcessing.ts": {
-      "corporations": 1,
       "npps": 1
     },
     "src/lib/turn/nppBondCash/index.ts": {
@@ -8736,9 +7705,6 @@
       "npps": 1,
       "untyped": 2
     },
-    "src/lib/turn/prospecting/resolveProspects.ts": {
-      "corporations": 1
-    },
     "src/lib/turn/queueAdminTurns.ts": {
       "gameState": 1
     },
@@ -8773,7 +7739,6 @@
     "src/lib/turn/stockExchangeSnapshot.ts": {
       "characters": 1,
       "corporateSectors": 1,
-      "corporations": 2,
       "gameState": 1,
       "npps": 1,
       "states": 2,
@@ -8800,7 +7765,6 @@
       "untyped": 19
     },
     "src/lib/turn/treasuryTurn.ts": {
-      "corporations": 1,
       "gameState": 1
     },
     "src/lib/turn/turnWorkerHandoff.ts": {
@@ -8813,12 +7777,10 @@
     },
     "src/lib/turn/unions/labourRelationsTurn.ts": {
       "characters": 1,
-      "corporateSectors": 1,
-      "corporations": 1
+      "corporateSectors": 1
     },
     "src/lib/turn/unions/nppUnionBehavior.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "npps": 2
     },
     "src/lib/turnSystem.ts": {
@@ -8829,7 +7791,6 @@
     },
     "src/lib/unions/commands/bargaining.ts": {
       "corporateSectors": 4,
-      "corporations": 2,
       "states": 1
     },
     "src/lib/unions/commands/foundUnion.ts": {
@@ -8849,8 +7810,7 @@
       "characters": 2
     },
     "src/lib/unions/commands/ratifySettlement.ts": {
-      "characters": 2,
-      "corporations": 1
+      "characters": 2
     },
     "src/lib/unions/commands/resignUnionLeadership.ts": {
       "characters": 2,
@@ -8932,7 +7892,6 @@
     },
     "src/lib/wiki/syncPriorSubmissions.ts": {
       "characters": 1,
-      "corporations": 1,
       "politicalParties": 1
     },
     "src/lib/wiki/updatePoliticianPageOnElection.ts": {
@@ -8944,7 +7903,6 @@
     },
     "src/lib/world/legacyLeaderboard.ts": {
       "characters": 1,
-      "corporations": 1,
       "untyped": 1
     },
     "src/lib/world/macro/backgroundNation.ts": {
@@ -8965,24 +7923,18 @@
       "gameState": 3
     },
     "src/lib/world/succession/chooseFirmHeadquarters.ts": {
-      "corporations": 1,
       "states": 1
     },
     "src/lib/world/succession/chooseResidentHome.ts": {
       "characters": 1,
       "states": 1
     },
-    "src/lib/world/succession/facilityPaymentTurn.ts": {
-      "corporations": 2
-    },
     "src/lib/world/succession/loadLiveInventory.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/lib/world/succession/loadLivePrivateFirms.ts": {
       "corporateSectors": 1,
-      "corporations": 1,
       "states": 1
     },
     "src/lib/world/succession/loadLiveResidents.ts": {
@@ -8990,8 +7942,7 @@
       "states": 1
     },
     "src/lib/world/succession/materializeCustody.ts": {
-      "corporateSectors": 2,
-      "corporations": 1
+      "corporateSectors": 2
     },
     "src/lib/world/succession/materializeFederalRetirement.ts": {
       "characters": 1,
@@ -9000,12 +7951,8 @@
       "npps": 1,
       "untyped": 3
     },
-    "src/lib/world/succession/materializePrivateFirms.ts": {
-      "corporations": 1
-    },
     "src/lib/world/succession/materializePublicCorporations.ts": {
-      "corporateSectors": 1,
-      "corporations": 3
+      "corporateSectors": 1
     },
     "src/lib/world/succession/materializeResidents.ts": {
       "characters": 1,

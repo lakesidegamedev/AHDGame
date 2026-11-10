@@ -35,6 +35,7 @@ import {
   updateAdvertisingAgreementPersistent,
 } from "@/lib/advertising/persistence";
 import { countAdvertisingMediaSectorModels } from "@/lib/advertising/suppliers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function serializeAdvertisingAgreement(agreement: AdvertisingAgreement) {
   return {
@@ -106,8 +107,7 @@ export async function listAdvertisingAgreements(corpId: string) {
     ].filter((id) => ObjectId.isValid(id));
     const counterparties =
       counterpartyHex.length > 0
-        ? await db
-            .collection("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: counterpartyHex.map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string; ticker?: string | null }>({
               name: 1,

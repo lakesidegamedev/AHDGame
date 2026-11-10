@@ -33,6 +33,7 @@ import { decideBankCommand } from "@/lib/banking/rules/decide";
 import type { BorrowerSnapshot } from "@/lib/banking/rules/boundary";
 import { reviveObjectIds, settleTransition } from "@/lib/banking/settlementJournal";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { CHARACTER_LOAN_SPREAD_PP };
 
@@ -239,7 +240,7 @@ export async function loadBorrowerSnapshot(
       },
     };
   }
-  const corp = await db.collection<Corporation>("corporations").findOne({ _id: borrower.id });
+  const corp = await corporationsCollection(db).findOne({ _id: borrower.id });
   if (!corp) return { error: "Borrower corporation not found" };
   return {
     name: corp.name ?? "Borrower",
@@ -330,9 +331,10 @@ export async function originateLoan(
   if ("error" in loadedBorrower) return reject(loadedBorrower.error);
   if (loadedBorrower.snapshot.blocked) return reject("Borrower is on the bank's blacklist");
   if (!loadedBorrower.snapshot.currencyMatches) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: borrower.id }, { projection: { liquidCurrencyCode: 1, countryId: 1 } });
+    const corp = await corporationsCollection(db).findOne(
+      { _id: borrower.id },
+      { projection: { liquidCurrencyCode: 1, countryId: 1 } }
+    );
     const corpCurrency = corp ? resolveCorpLiquidCurrencyCode(corp) : undefined;
     return reject(
       `Loan currency ${currency} does not match corporation treasury currency ${corpCurrency ?? "unknown"}`
@@ -456,8 +458,7 @@ export async function listBorrowerFacingLoans(
   const bankIds = [...new Set(loans.map((loan) => loan.bankCorporationId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const banks = await db
-    .collection<Pick<Corporation, "_id" | "name" | "sequentialId">>("corporations")
+  const banks = await corporationsCollection<Pick<Corporation, "_id" | "name" | "sequentialId">>(db)
     .find({ _id: { $in: bankIds } })
     .project({ _id: 1, name: 1, sequentialId: 1 })
     .toArray();

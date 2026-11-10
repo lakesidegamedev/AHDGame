@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
-import type { Corporation, Character } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
@@ -10,19 +10,18 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { corpFinancials } from "./corpFinancials";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
 export async function queryCorporation(db: Db, params: { name?: string; id?: string }) {
   const { name, id } = params;
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      id
-        ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
-        : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    id
+      ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
+      : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
+  );
   if (!corp) return null;
 
   // Top 20 holders come from the embedded shareholders array (there is no
@@ -52,8 +51,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
           .toArray()
       : Promise.resolve([]),
     holderCorporationIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: holderCorporationIds } }, { projection: { name: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -176,8 +174,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
 }
 
 export async function queryCorporationList(db: Db) {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({})
     .project<{
       _id: unknown;
@@ -217,13 +214,11 @@ export async function queryShareHistory(
   const page = Math.max(params.page ?? 1, 1);
   const pageSize = Math.min(Math.max(params.pageSize ?? 50, 1), 200);
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      id
-        ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
-        : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    id
+      ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
+      : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
+  );
   if (!corp) return null;
 
   const filter = { corporationId: corp._id };

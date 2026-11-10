@@ -2,10 +2,11 @@ import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { sumStrengthGrants, type TechTreeNode } from "@/lib/constants/techTree";
-import type { ActionAuditInput, Corporation } from "@/lib/db/types";
+import type { ActionAuditInput } from "@/lib/db/types";
 import { emitTxStrict, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { frontierResearchInc } from "./frontierResearch";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Finance-history ledger rows for sector tech-tree unlocks.
@@ -214,8 +215,7 @@ export async function flushNppTechUnlockLedger(
     const corpIds = [...new Set(intended.map((e) => e.corporationId.toString()))].map(
       (id) => intended.find((e) => e.corporationId.toString() === id)!.corporationId
     );
-    const posts = await db
-      .collection<Corporation>("corporations")
+    const posts = await corporationsCollection(db)
       .find({ _id: { $in: corpIds } }, { projection: { unlockedTechNodeIds: 1 } })
       .toArray();
     const postOwnedByCorp = new Map(
@@ -287,7 +287,7 @@ export async function flushNppTechUnlockLedger(
  */
 async function refundUnrecordedUnlock(db: Db, entry: TechUnlockLedgerInput): Promise<void> {
   try {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: entry.corporationId },
       buildTechUnlockRefundUpdate({
         nodeId: entry.nodeId,

@@ -12,6 +12,7 @@ import { componentsForStrategy } from "@/lib/military/arsenalComponents";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { listOpenContracts } from "@/lib/db/collections/defenceContracts";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** One plant the defence minister could award a contract to. */
 export interface DefenceSupplierView {
@@ -80,8 +81,7 @@ export async function listDefenceSuppliers(
   // constraint: a UK corporation banking in pounds can be paid from the UK appropriation
   // whether the works sit in Kent or Attica. The old sector-country filter implemented
   // the opposite of `resolveFillEligibility` and is what ticket #1149 was looking at.
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ countryId: countryId as Corporation["countryId"] })
     .toArray();
   const eligibleCorps = corps.filter((c) => canSupply(c, countryId));

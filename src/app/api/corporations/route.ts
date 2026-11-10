@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { foundCorporationSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Character, Corporation, CorporateSector, State, User } from "@/lib/db/types";
+import type { Character, CorporateSector, State, User } from "@/lib/db/types";
 import {
   INACTIVE_CEO_TURN_THRESHOLD,
   isInactiveCeoPenaltyCandidate,
@@ -22,6 +22,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { foundCorporation } from "@/lib/corporations/commands/founding/foundCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const INACTIVE_CEO_THRESHOLD_MS = INACTIVE_CEO_TURN_THRESHOLD * 60 * 60 * 1000;
 
@@ -68,8 +69,7 @@ export async function GET(request: Request) {
       corpFilter.name = { $regex: escaped, $options: "i" };
     }
 
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find(corpFilter)
       .sort({ createdAt: -1 })
       .limit(20)

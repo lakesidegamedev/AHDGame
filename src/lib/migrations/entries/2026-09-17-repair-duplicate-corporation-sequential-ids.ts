@@ -5,6 +5,7 @@ import {
   type SeededCorporationIdentity,
 } from "@/lib/admin/seed/indexes/assertUniqueCorporationIds";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SovereignIssuerRepair {
   countryId: string;
@@ -55,7 +56,7 @@ export async function repairDuplicateCorporationSequentialIds(
   db: Db,
   ctx: MigrationContext
 ): Promise<MigrationResult> {
-  const corporations = db.collection<RepairCorporationDoc>("corporations");
+  const corporations = corporationsCollection<RepairCorporationDoc>(db);
   const notes: string[] = [];
   let updated = 0;
   let alreadyCorrect = 0;

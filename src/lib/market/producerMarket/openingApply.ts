@@ -16,6 +16,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { ProducerOpeningPlan } from "./migrationRules";
 import type { ProducerOpeningMarker } from "./liveMode";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const PRODUCER_OPENINGS = "producerOpenings";
 
@@ -131,7 +132,7 @@ export async function applyProducerOpening(
   }
 
   if (plan.accounts.length > 0) {
-    const result = await db.collection("corporations").bulkWrite(
+    const result = await corporationsCollection(db).bulkWrite(
       plan.accounts.map((account) => ({
         updateOne: {
           filter: { _id: oid(account.id), ...openOrSame("producerPayables") } as never,
@@ -150,7 +151,7 @@ export async function applyProducerOpening(
   // an approved non-cash opening adjustment (kept in producerOpenings above).
   const cleared = plan.nonCashOpeningAdjustments.map((a) => oid(a.accountId));
   if (cleared.length > 0)
-    await db.collection("corporations").updateMany({ _id: { $in: cleared } } as never, {
+    await corporationsCollection(db).updateMany({ _id: { $in: cleared } } as never, {
       $unset: { operatingCashArrearsByCurrency: "" },
     });
 

@@ -8,7 +8,6 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -26,6 +25,7 @@ import {
   poolByGroupAndCountry,
   type GroupMemberTaxPosition,
 } from "./lossRelief";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** The per-corp figures the turn already computed, narrowed to what relief needs. */
 export interface CorpTaxSnapshotRow {
@@ -67,8 +67,7 @@ export async function applyGroupLossRelief(
   const relevant = snapshots.filter((s) => groupedIds.has(s.corpId.toString()));
   if (relevant.length === 0) return result;
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: relevant.map((s) => s.corpId) } })
     .toArray();
   const corpById = new Map(corps.map((c) => [c._id.toString(), c]));

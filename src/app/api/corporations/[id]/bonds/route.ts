@@ -71,6 +71,7 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -262,8 +263,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const issuerIds = [...new Set(heldBonds.map((b) => b.corporationId.toString()))];
     const issuers =
       issuerIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: issuerIds.map((i) => new ObjectId(i)) } })
             .project<Pick<Corporation, "_id" | "name" | "sequentialId">>({
               _id: 1,
@@ -837,12 +837,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // writes can't interleave and drop one.
       if (faceValueInCorpCapital > 0) {
         await withCorpLock(corporation._id, () =>
-          db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corporation._id },
-              { $inc: { liquidCapital: faceValueInCorpCapital }, $set: { updatedAt: now } }
-            )
+          corporationsCollection(db).updateOne(
+            { _id: corporation._id },
+            { $inc: { liquidCapital: faceValueInCorpCapital }, $set: { updatedAt: now } }
+          )
         );
       }
     }

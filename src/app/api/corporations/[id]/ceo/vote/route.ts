@@ -15,6 +15,7 @@ import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -167,12 +168,10 @@ async function reconcilePendingCeo(
 
   if (!leaderId || leaderId === incumbentId) {
     if (prevPending) {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $unset: { pendingCeoCharacterId: "" }, $set: { updatedAt: now } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $unset: { pendingCeoCharacterId: "" }, $set: { updatedAt: now } }
+      );
     }
     return;
   }
@@ -184,12 +183,10 @@ async function reconcilePendingCeo(
   ).holds;
   if (leaderHoldsBonds) return;
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporation._id },
-      { $set: { pendingCeoCharacterId: new ObjectId(leaderId), updatedAt: now } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporation._id },
+    { $set: { pendingCeoCharacterId: new ObjectId(leaderId), updatedAt: now } }
+  );
 
   const leaderChar = await db
     .collection<Character>("characters")
@@ -255,8 +252,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (!charShareholding) {
       // Check if the user is CEO of a corporation that holds shares in this corp.
-      const managedCorps = await db
-        .collection<Corporation>("corporations")
+      const managedCorps = await corporationsCollection(db)
         .find({ ceoId: voterCharacter._id, ceoType: { $ne: "npp" } }, { projection: { _id: 1 } })
         .toArray();
 
@@ -461,8 +457,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // Withdraw both identities the voter may have used: their own character
     // vote and any vote cast through a corporation they run.
     const managedCorpIds = (
-      await db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(db)
         .find({ ceoId: voterCharacter._id, ceoType: { $ne: "npp" } }, { projection: { _id: 1 } })
         .toArray()
     ).map((mc) => mc._id);

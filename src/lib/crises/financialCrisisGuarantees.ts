@@ -11,6 +11,7 @@ import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { guaranteedDepositorShortfall } from "@/lib/livingConflict/rules/financialRescue";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface FundedGuarantee {
   _id: string;
@@ -144,8 +145,7 @@ export async function processFinancialCrisisGuarantees(
     // Epochless legacy promises cannot pay a later charter, but any remaining
     // funded escrow can still be returned after its original expiry.
     const banks = guarantee.bankEpochs?.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({
             $or: guarantee.bankEpochs.map((epoch) => ({
               _id: epoch.bankId,

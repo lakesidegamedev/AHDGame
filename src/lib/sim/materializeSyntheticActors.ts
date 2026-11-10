@@ -68,6 +68,7 @@ import {
   PROBE_FOUNDER_CASH,
 } from "./actorProbes";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -231,12 +232,10 @@ async function refuseCorporateIndexCollisions(
   const seqs = corps.map((c) => c.sequentialId);
   const ownIds = new Set(corps.map((c) => c._id.toHexString()));
   const [tickerHits, seqHits] = await Promise.all([
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({ tickerSymbol: { $in: tickers } })
       .toArray(),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({ sequentialId: { $in: seqs } })
       .toArray(),
   ]);
@@ -748,9 +747,10 @@ export async function readActorPopulation(
         .countDocuments({ resolutionPath: { $exists: true, $ne: [] } }),
       db.collection("wealthListHistory").countDocuments({}),
       syntheticIdSet.length > 0
-        ? db
-            .collection("corporations")
-            .countDocuments({ ceoType: "character", ceoId: { $in: syntheticIdSet } })
+        ? corporationsCollection(db).countDocuments({
+            ceoType: "character",
+            ceoId: { $in: syntheticIdSet },
+          })
         : Promise.resolve(0),
     ]);
   const counts: ActorPopulationCounts = {

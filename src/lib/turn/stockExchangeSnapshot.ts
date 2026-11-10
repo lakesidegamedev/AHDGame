@@ -78,6 +78,7 @@ import {
 } from "@/lib/constants/sectorStrategies";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -103,11 +104,11 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const now = new Date();
 
       // Fetch all data needed for snapshots
-      const corporationsCollection = database.collection<Corporation>("corporations");
+      const corporationsHandle = corporationsCollection(database);
       // Repairs public corporations left with hiddenFromExchange set by a
       // late IPO that cleared isPrivate but not the auction marker, which
       // hides them from every exchange. New IPOs clear it in goPublic.
-      await corporationsCollection.updateMany(
+      await corporationsHandle.updateMany(
         {
           isPrivate: { $ne: true },
           hiddenFromExchange: true,
@@ -115,7 +116,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         },
         { $set: { hiddenFromExchange: false } }
       );
-      const corporations = await corporationsCollection
+      const corporations = await corporationsHandle
         .find(
           { hiddenFromExchange: { $ne: true }, isPrivate: { $ne: true } },
           {
@@ -1162,8 +1163,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       // privacy, then land on an exchange that only lists public corps.
       const privateCorpCountByExchange = new Map<string, number>();
       let totalPrivateCorpCount = 0;
-      const privateCorpRows = await database
-        .collection<Corporation>("corporations")
+      const privateCorpRows = await corporationsCollection(database)
         .aggregate<{ _id: string | null; count: number }>([
           { $match: { hiddenFromExchange: { $ne: true }, isPrivate: true } },
           { $group: { _id: "$countryId", count: { $sum: 1 } } },

@@ -23,6 +23,7 @@ import {
   isControllingHolder,
 } from "@/lib/equities/rules/cashoutLimits";
 import { toInternalUnits } from "./locMath";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Trade kinds that put shares into the recipient's hands. */
 const ACQUISITION_KINDS: ShareTradeKind[] = [
@@ -55,8 +56,7 @@ export async function computeControlledEquityHaircutInternal(
   currentTurn: number
 ): Promise<ControlledEquityHaircut> {
   const charId = character._id;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ "shareholders.characterId": charId })
     .project<
       Pick<

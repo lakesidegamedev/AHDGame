@@ -39,6 +39,7 @@ import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -174,8 +175,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Always re-read: listing cancels restore reserved shares onto the register.
     const freshCorporation =
-      (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
-      corporation;
+      (await corporationsCollection(db).findOne({ _id: corporation._id })) ?? corporation;
 
     const freshEligibility = corporationCanRestructureShares(freshCorporation);
     if (!freshEligibility.ok) return errorResponse(409, freshEligibility.reason);
@@ -257,8 +257,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         corpIds.length > 0
-          ? db
-              .collection<Corporation>("corporations")
+          ? corporationsCollection(db)
               .find({ _id: { $in: corpIds } })
               .project<{ _id: ObjectId; name: string }>({ name: 1 })
               .toArray()
@@ -310,7 +309,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const restructure = await db.collection<Corporation>("corporations").updateOne(
+    const restructure = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         totalShares: oldTotal,
@@ -423,8 +422,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         ownerIds.corporationIds.size > 0
-          ? db
-              .collection<Corporation>("corporations")
+          ? corporationsCollection(db)
               .find({
                 _id: { $in: [...ownerIds.corporationIds].map((s) => new ObjectId(s)) },
               })

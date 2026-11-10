@@ -13,6 +13,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Remediation for the Greenbaum Group incident (sequential 493).
@@ -59,12 +60,10 @@ type CorpDoc = Pick<Corporation, "_id" | "name" | "bankCharter" | "liquidCapital
 };
 
 async function load(db: Db): Promise<CorpDoc | null> {
-  return db
-    .collection<CorpDoc>("corporations")
-    .findOne(
-      { _id: new ObjectId(CORPORATION_ID) },
-      { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
-    );
+  return corporationsCollection<CorpDoc>(db).findOne(
+    { _id: new ObjectId(CORPORATION_ID) },
+    { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
+  );
 }
 
 const markerOf = (doc: CorpDoc | null) => doc?.remediation?.[DEFECT_ID];
@@ -108,9 +107,7 @@ async function plan(db: Db): Promise<HealPlan> {
   const o = outstanding(doc);
   const notes: string[] = [];
   if (doc && o.reopen) {
-    const corp = (await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: doc._id })) as Corporation;
+    const corp = (await corporationsCollection(db).findOne({ _id: doc._id })) as Corporation;
     const eligibility = await checkCharterEligibility(
       db,
       { ...corp, liquidCapital: (corp.liquidCapital ?? 0) + (o.refund ? REFUND : 0) },
@@ -150,7 +147,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   if (payload?.refund) {
     // Claim the marker first so a retry can never pay twice; the journal key
     // makes the transfer itself idempotent as well.
-    const claimed = await db.collection<CorpDoc>("corporations").updateOne(
+    const claimed = await corporationsCollection<CorpDoc>(db).updateOne(
       { _id: id, [MARKER_PATH]: { $exists: false } },
       {
         $set: {
@@ -193,9 +190,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         event: { kind: "bank.resolved", command: "remediation.greenbaum", amount: REFUND },
       });
       if (move.status !== "applied" || move.error) {
-        await db
-          .collection<CorpDoc>("corporations")
-          .updateOne({ _id: id }, { $unset: { [MARKER_PATH]: "" } });
+        await corporationsCollection<CorpDoc>(db).updateOne(
+          { _id: id },
+          { $unset: { [MARKER_PATH]: "" } }
+        );
         return {
           documentsScanned: 1,
           documentsUpdated: 0,
@@ -234,9 +232,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       const outcome: Marker["reopen"] = result.ok
         ? "done"
         : `refused: ${(result.reasons[0] ?? "ineligible").slice(0, 120)}`;
-      await db
-        .collection<CorpDoc>("corporations")
-        .updateOne({ _id: id }, { $set: { [`${MARKER_PATH}.reopen`]: outcome } });
+      await corporationsCollection<CorpDoc>(db).updateOne(
+        { _id: id },
+        { $set: { [`${MARKER_PATH}.reopen`]: outcome } }
+      );
       reopened = result.ok;
       notes.push(`reopen as retail ${outcome}`);
     }

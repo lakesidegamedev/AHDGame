@@ -14,6 +14,7 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type ConvertCorpCurrencyResult = ConvertCorpCurrencySuccess | ConvertCorpCurrencyError;
 
@@ -319,7 +320,7 @@ export async function convertCorpCurrency(
   ) => {
     let corpWriteApplied = false;
     try {
-      const corpWrite = await db.collection<Corporation>("corporations").updateOne(
+      const corpWrite = await corporationsCollection(db).updateOne(
         {
           _id: corp._id,
           primaryUnderwritingIncomingFunding: { $exists: false },
@@ -370,7 +371,7 @@ export async function convertCorpCurrency(
         }
       }
       try {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: corp._id },
           {
             $set: revertCorpSet,

@@ -65,6 +65,7 @@ import {
   type SupplyAgreementSettlements,
   type ByCorpScope,
 } from "./settleSupplyAgreementsAllocation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export {
   addCorpToCorpSettlement,
   allocateDeliveriesToBuyers,
@@ -611,8 +612,9 @@ export async function settleSupplyAgreements(args: {
   ].filter(ObjectId.isValid);
   const freshCapitalByCorpId = new Map<string, number>();
   if (participantIds.length > 0) {
-    const currentBalances = await db
-      .collection<Pick<Corporation, "_id" | "liquidCapital">>("corporations")
+    const currentBalances = await corporationsCollection<
+      Pick<Corporation, "_id" | "liquidCapital">
+    >(db)
       .find(
         { _id: { $in: participantIds.map((id) => new ObjectId(id)) } },
         { projection: { liquidCapital: 1 } }
@@ -686,7 +688,7 @@ export async function settleSupplyAgreements(args: {
       // Keep the in-memory snapshot consistent for any later same-turn reader.
       corp.liquidCapital = (freshCapitalByCorpId.get(corpId) ?? corp.liquidCapital ?? 0) + delta;
     }
-    if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
+    if (ops.length > 0) await corporationsCollection(db).bulkWrite(ops);
   }
   step.mark("settle.corpWrites");
   if (deliveries.length > 0) {

@@ -14,7 +14,6 @@ import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope
 import { countriesByTier } from "@/lib/world/eraRoster";
 import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import type { SeedDiagnosticCheck } from "./types";
@@ -25,6 +24,7 @@ import { openingInflationProblem } from "@/lib/seeds/reference/rules/openingInfl
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function checkEconomicOpening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "1991-default") return [];
@@ -33,7 +33,7 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
       db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
       centralBanksCollection<{ countryId: string; primeRate: number }>(db).find({}).toArray(),
       federalBudgetCollection(db).find({}).toArray(),
-      db.collection<Corporation>("corporations").find({}).toArray(),
+      corporationsCollection(db).find({}).toArray(),
       db.collection("corporateSectors").find({}).toArray(),
       db.collection<StateResourceCapacity>("stateResourceCapacity").find({}).toArray(),
       db.collection<MacroCountryState>("macroCountries").find({}).toArray(),

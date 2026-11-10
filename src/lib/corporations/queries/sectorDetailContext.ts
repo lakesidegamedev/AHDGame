@@ -41,6 +41,7 @@ import type { SiblingCorpProjection } from "./sectorDetailTypes";
 import type { AuthUser } from "@/lib/auth";
 import type { Db, WithId } from "mongodb";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Reads the state, country, tariff, sibling and market context for one sector. */
 export async function loadSectorDetailContext({
@@ -73,12 +74,10 @@ export async function loadSectorDetailContext({
   } | null = null;
   const controllingParent = user && !isCeo ? getControllingCorporateParent(corporation) : null;
   if (user && controllingParent) {
-    const parentCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne(
-        { _id: controllingParent.corporationId },
-        { projection: { userId: 1, ceoVacant: 1, name: 1, sequentialId: 1 } }
-      );
+    const parentCorp = await corporationsCollection(db).findOne(
+      { _id: controllingParent.corporationId },
+      { projection: { userId: 1, ceoVacant: 1, name: 1, sequentialId: 1 } }
+    );
     isParentCeo =
       !!parentCorp &&
       parentCorp.ceoVacant !== true &&
@@ -132,7 +131,7 @@ export async function loadSectorDetailContext({
         )
       : await getCharacterByUserId(db, user.userId);
     if (viewerChar) {
-      viewerCorporation = await db.collection<Corporation>("corporations").findOne(
+      viewerCorporation = await corporationsCollection(db).findOne(
         {
           ceoId: viewerChar._id,
           ...(imperialActive ? { ceoType: "imperial" } : {}),
@@ -415,8 +414,7 @@ export async function loadSectorDetailContext({
   );
   const [corpsForLookup, siblingCorps, siblingFxByCurrency, unownedDoc] = await Promise.all([
     corpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corpIds.map((cid) => new ObjectId(cid)) } },
             {
@@ -436,8 +434,7 @@ export async function loadSectorDetailContext({
           .toArray()
       : Promise.resolve([] as Corporation[]),
     siblingCorpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: siblingCorpIds } })
           .project<SiblingCorpProjection>({
             _id: 1,

@@ -4,10 +4,10 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Corporation } from "@/lib/db/types";
 import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isR2Enabled, uploadFile, deleteByPrefix } from "@/lib/r2";
 import { parseFormData } from "@/lib/api/validate";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 4 * 1024 * 1024; // 4 MB (banner assets)
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     // Use userId (not ceoId via character lookup) so users with multiple characters
     // still pass auth — corporation.userId is authoritative for CEO ownership.
-    const corporation = await db.collection<Corporation>("corporations").findOne({
+    const corporation = await corporationsCollection(db).findOne({
       _id: corpObjectId,
       userId: new ObjectId(auth.user.userId),
       ceoVacant: { $ne: true },
@@ -113,12 +113,10 @@ export async function POST(request: Request) {
       url = `/api/uploads/corporation-headers/${filename}`;
     }
 
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $set: { headerImageUrl: url, updatedAt: new Date() } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $set: { headerImageUrl: url, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ url });
   } catch (error) {

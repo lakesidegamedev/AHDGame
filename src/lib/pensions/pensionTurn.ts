@@ -17,7 +17,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { CollectiveAgreement, Corporation, Union } from "@/lib/db/types";
+import type { CollectiveAgreement, Union } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -41,6 +41,7 @@ import {
   fxRateForCorpFromMap,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { PENSION_SCHEMES };
 
@@ -168,8 +169,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   const employerIds = [...new Set(agreements.map((a) => a.employerCorporationId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const employers = await db
-    .collection<Corporation>("corporations")
+  const employers = await corporationsCollection(db)
     .find(
       { _id: { $in: employerIds } },
       { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1 } }

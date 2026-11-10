@@ -17,6 +17,7 @@ import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // NPP-run corps have no owner to dissolve an insolvent or bond-defaulted company, so they
 // would bleed liquidCapital negative forever and pollute wealth metrics. Any NPP corps whose
@@ -77,8 +78,7 @@ export async function processNppInsolventCorpDissolution(
     .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
   const currentYear = gs?.currentYear ?? null;
 
-  let corps = await db
-    .collection<Corporation>("corporations")
+  let corps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", countryOwnerId: { $exists: false }, suspended: { $ne: true } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
@@ -163,7 +163,7 @@ export async function processNppInsolventCorpDissolution(
     }
   }
   if (clockOps.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(clockOps);
+    await corporationsCollection(db).bulkWrite(clockOps);
   }
 
   const insolvent = corps

@@ -12,10 +12,10 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { PLAYER_RUN_CEO_FILTER } from "@/lib/corporations/playerRunCeo";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request) {
   try {
@@ -25,8 +25,7 @@ export async function GET(request: Request) {
     const excludeId = url.searchParams.get("exclude");
 
     const db = await getDb();
-    const rows = await db
-      .collection<Corporation>("corporations")
+    const rows = await corporationsCollection(db)
       .find({
         // Not state-owned; player-run (a human CEO must be able to accept) or
         // genuinely AI-run (offers auto-resolve). Any country is eligible.

@@ -8,7 +8,6 @@ import type {
   BargainingCampaign,
   Character,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   GameConfig,
   State,
@@ -52,6 +51,7 @@ import { rejectIfTurnProcessing, resolveOwnedUnion, type UnionActionResult } fro
 // and both references are resolved at call time, never at module init.
 import { openSettlementRatification } from "./ratifySettlement";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -348,9 +348,7 @@ export async function openBargainingCampaignFromLiveConditions(
   const [employer, sectors, activeAgreement, macro, lastEndedAtTurn] = await Promise.all([
     preloaded?.employerKnownToExist
       ? Promise.resolve({ _id: employerId })
-      : db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: employerId }, { projection: { _id: 1 } }),
+      : corporationsCollection(db).findOne({ _id: employerId }, { projection: { _id: 1 } }),
     db
       .collection<CorporateSector>("corporateSectors")
       .find(
@@ -1088,12 +1086,10 @@ export async function actOnBargainingCampaignAsEmployer(
   if (!employerRouteQuery) {
     return { ok: false, status: 400, error: "Invalid employer corporation ID." };
   }
-  const employer = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { $and: [{ _id: campaign.employerCorporationId }, employerRouteQuery] },
-      { projection: { userId: 1, ceoVacant: 1 } }
-    );
+  const employer = await corporationsCollection(db).findOne(
+    { $and: [{ _id: campaign.employerCorporationId }, employerRouteQuery] },
+    { projection: { userId: 1, ceoVacant: 1 } }
+  );
   if (employer?.ceoVacant || !employer?.userId || employer.userId.toString() !== userId) {
     return { ok: false, status: 403, error: "Only the employer's CEO can answer this campaign." };
   }

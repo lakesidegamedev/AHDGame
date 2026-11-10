@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const INDEX_FUNDS_COLLECTION = "indexFunds";
 
@@ -51,8 +52,7 @@ export async function queryIndexFundDetail(db: Db, slug: string) {
   const corpIds = topHoldings.map((h) => h.corporationId).filter(Boolean);
   const corps =
     corpIds.length > 0
-      ? await db
-          .collection<{ _id: import("mongodb").ObjectId; name: string }>("corporations")
+      ? await corporationsCollection<{ _id: import("mongodb").ObjectId; name: string }>(db)
           .find({ _id: { $in: corpIds } })
           .project({ name: 1 })
           .toArray()

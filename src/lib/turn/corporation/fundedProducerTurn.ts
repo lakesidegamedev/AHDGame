@@ -131,6 +131,7 @@ import {
   type ProducerWalletScope,
 } from "./producerMarketPhase";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -1687,8 +1688,7 @@ async function admitNewProducerEntrants(
       });
     }
   }
-  if (corpOps.length > 0)
-    await db.collection<Corporation>("corporations").bulkWrite(corpOps, { ordered: false });
+  if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps, { ordered: false });
   if (sectorOps.length > 0)
     await db
       .collection<CorporateSector>("corporateSectors")

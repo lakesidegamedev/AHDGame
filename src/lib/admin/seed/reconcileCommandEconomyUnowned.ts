@@ -19,14 +19,7 @@
 import { operatingSectorFilter } from "@/lib/constants/corporations";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type {
-  Corporation,
-  CorporateSector,
-  GameConfig,
-  GameState,
-  State,
-  UnownedSector,
-} from "@/lib/db/types";
+import type { CorporateSector, GameConfig, GameState, State, UnownedSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { commandEconomySoeSectors, isCommandEconomy } from "@/lib/constants/commandEconomy";
@@ -34,6 +27,7 @@ import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { generateCountryOwnedSeedData } from "@/lib/seeds/reference/budgets";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReconcileCommandEconomyUnownedResult {
   commandCountries: CountryId[];
@@ -154,7 +148,7 @@ export async function reconcileCommandEconomyUnowned(
       entry.corporation.type) as OperatingSectorType;
     const countryId = entry.corporation.countryOwnerId as CountryId;
 
-    const existing = await db.collection<Corporation>("corporations").findOne({
+    const existing = await corporationsCollection(db).findOne({
       countryOwnerId: countryId,
       assignedSectorTypes: sectorType,
     });
@@ -164,9 +158,10 @@ export async function reconcileCommandEconomyUnowned(
       if (!dryRun) {
         // Never overwrite an ObjectId that already belongs to another corp
         // (legacy 3-digit SOE ids collided with the first band map).
-        const idTaken = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corpId }, { projection: { _id: 1, countryOwnerId: 1 } });
+        const idTaken = await corporationsCollection(db).findOne(
+          { _id: corpId },
+          { projection: { _id: 1, countryOwnerId: 1 } }
+        );
         if (idTaken) {
           corpId = new ObjectId();
         }
@@ -174,12 +169,12 @@ export async function reconcileCommandEconomyUnowned(
         const { _id, sequentialId: seedSequentialId, ...corpData } = entry.corporation;
         let sequentialId = seedSequentialId;
         if (sequentialId != null) {
-          const conflict = await db
-            .collection<Corporation>("corporations")
-            .findOne({ sequentialId }, { projection: { _id: 1 } });
+          const conflict = await corporationsCollection(db).findOne(
+            { sequentialId },
+            { projection: { _id: 1 } }
+          );
           if (conflict && !conflict._id.equals(corpId)) {
-            const [maxRow] = await db
-              .collection<Corporation>("corporations")
+            const [maxRow] = await corporationsCollection(db)
               .find({ sequentialId: { $type: NUMERIC_BSON_TYPE } })
               .project({ sequentialId: 1 })
               .sort({ sequentialId: -1 })
@@ -188,18 +183,16 @@ export async function reconcileCommandEconomyUnowned(
             sequentialId = (maxRow?.sequentialId ?? sequentialId) + 1;
           }
         }
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corpId },
-            { $set: { ...corpData, ...(sequentialId != null ? { sequentialId } : {}) } },
-            { upsert: true }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: corpId },
+          { $set: { ...corpData, ...(sequentialId != null ? { sequentialId } : {}) } },
+          { upsert: true }
+        );
       }
       soesCreated++;
     } else {
       if (!dryRun) {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: corpId },
           {
             $set: {

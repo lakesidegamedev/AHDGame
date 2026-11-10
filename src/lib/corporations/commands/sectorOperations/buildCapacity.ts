@@ -92,6 +92,7 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -422,12 +423,10 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
         return errorResponse(409, "That build queue changed while you were cancelling. Try again.");
       }
       if (refundInCorpCapital > 0) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id },
-            { $inc: { liquidCapital: refundInCorpCapital }, $set: { updatedAt: now } }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          { $inc: { liquidCapital: refundInCorpCapital }, $set: { updatedAt: now } }
+        );
       }
 
       // Return cancelled units to the unowned pool. Only the part that never
@@ -1122,7 +1121,7 @@ export async function placeCapacityBuild(
   // both pass, and both $inc down through zero. `$gte` makes the loser's
   // write match nothing.
   const costInCorpCapital = anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate);
-  const debit = await db.collection<Corporation>("corporations").updateOne(
+  const debit = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
       liquidCapital: { $gte: costInCorpCapital },
@@ -1158,12 +1157,10 @@ export async function placeCapacityBuild(
     }
   );
   if (queueWrite.modifiedCount !== 1) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
+    );
     void observe("order", "concurrent_change");
     return fail(
       409,

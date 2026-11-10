@@ -28,6 +28,7 @@ import {
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import { executeFundOnlyBuyout } from "./fundOnlyBuyout";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface OpenPrivatizationVoteInput {
   db: Db;
@@ -132,7 +133,7 @@ export async function openPrivatizationVote(
     const cleanedShareholders = (corporation.shareholders ?? []).map(
       ({ superShares: _superShares, ...rest }) => rest
     );
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $set: {

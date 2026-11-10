@@ -9,7 +9,6 @@ import {
 import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import type {
-  Corporation,
   Character,
   CorporationPrivatizationVote,
   IndexFund,
@@ -31,6 +30,7 @@ import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ResolveInput {
   db: Db;
@@ -70,9 +70,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // against current shareholdings. A holder who sold their shares between
   // casting and the deadline should not influence the outcome, and a holder
   // who partially divested should only count for what they still own.
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: vote.corporationId });
+  const corp = await corporationsCollection(db).findOne({ _id: vote.corporationId });
 
   const liveVotes = corp
     ? vote.votes.flatMap((v) => {
@@ -150,7 +148,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       vote.totalReservedCash,
       forexEnabled
     );
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: {
@@ -260,9 +258,10 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       });
       totalCharCorpPaid += payout;
     } else if (holder.corporationId) {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne({ _id: holder.corporationId }, { $inc: { liquidCapital: payout } });
+      await corporationsCollection(db).updateOne(
+        { _id: holder.corporationId },
+        { $inc: { liquidCapital: payout } }
+      );
       void emitTx(db, {
         type: "share_buyout_payout",
         turn: currentTurn,
@@ -363,7 +362,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   }
   const newTotalShares = ceoSharesAfter; // = old totalShares − publicFloat
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: {

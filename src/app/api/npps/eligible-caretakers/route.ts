@@ -12,9 +12,10 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request) {
   try {
@@ -41,8 +42,7 @@ export async function GET(request: Request) {
         .find({ isNPP: true })
         .project<{ nppId?: NPP["_id"] }>({ nppId: 1 })
         .toArray(),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ ceoType: "npp" })
         .project<{ ceoId?: NPP["_id"] }>({ ceoId: 1 })
         .toArray(),

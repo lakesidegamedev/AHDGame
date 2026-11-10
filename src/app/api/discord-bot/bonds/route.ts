@@ -4,7 +4,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
-import type { Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -14,6 +13,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -49,9 +49,9 @@ export async function GET(request: Request) {
     let filterCorpName: string | null = null;
     if (corpName) {
       const escapedName = corpName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ name: { $regex: new RegExp(`^${escapedName}$`, "i") } });
+      const corp = await corporationsCollection(db).findOne({
+        name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+      });
       if (!corp) {
         return NextResponse.json({ found: false, bonds: [] });
       }
@@ -79,8 +79,7 @@ export async function GET(request: Request) {
 
     // Resolve corporation names
     const corpIds = [...new Set(bonds.map((b) => b.corporationId.toString()))];
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
       .project<{
         _id: ObjectId;

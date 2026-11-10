@@ -28,6 +28,7 @@ import { summarizeGameHealth } from "@/lib/turn/rules/gameHealth";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -719,8 +720,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
         },
       ])
       .toArray(),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         // Corps have no top-level `revenue`; per-turn revenue lives on each

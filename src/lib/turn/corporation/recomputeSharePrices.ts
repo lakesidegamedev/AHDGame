@@ -47,6 +47,7 @@ import { bankEquity } from "@/lib/banking/balanceSheet";
 import { bankNpvFromPerTurnIncome } from "@/lib/banking/valuation";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
 import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface RecomputeSharePricesResult {
   corpsRepriced: number;
@@ -422,9 +423,10 @@ export async function recomputeSharePricesAfterBondTurn(
 
   if (corpOps.length > 0) {
     const [corpResult] = await Promise.all([
-      database
-        .collection<Corporation>("corporations")
-        .bulkWrite(corpOps, intraHour ? { ordered: false } : undefined),
+      corporationsCollection(database).bulkWrite(
+        corpOps,
+        intraHour ? { ordered: false } : undefined
+      ),
       histOps.length > 0
         ? database.collection<CorporationHistory>("corporationHistory").bulkWrite(histOps)
         : null,

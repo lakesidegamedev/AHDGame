@@ -28,6 +28,7 @@ import {
 import { lastTurnSupplyAgreementCash } from "@/lib/corporations/supplyAgreementCash";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface LatestCorpIncomeRow {
   income?: number;
@@ -103,8 +104,7 @@ export async function loadPortfolioHoldings(
   ];
   const heldBondIssuerCorps =
     heldBondIssuerCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: heldBondIssuerCorpIds.map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, name: 1 } }
@@ -161,8 +161,7 @@ export async function loadPortfolioHoldings(
 
   const reserved = await loadReservedPositionsPlacedBy(db, corporation._id);
   const reservedByTarget = new Map(reserved.map((r) => [r.targetCorpId.toString(), r.shares]));
-  const heldCorps = await db
-    .collection<Corporation>("corporations")
+  const heldCorps = await corporationsCollection(db)
     .find({
       $or: [
         { "shareholders.corporationId": corporation._id },

@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * True iff `callerUserId` is the sitting CEO (owner) of the corporation that
@@ -24,9 +25,10 @@ export async function canActOnCorporationAsParent(
   const controllingParent = await resolveControllingCorporateParent(db, sub);
   if (!controllingParent) return false;
 
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId }, { projection: { userId: 1, ceoVacant: 1 } });
+  const parent = await corporationsCollection(db).findOne(
+    { _id: controllingParent.corporationId },
+    { projection: { userId: 1, ceoVacant: 1 } }
+  );
   if (!parent) return false;
   if (parent.ceoVacant === true) return false;
   if (!parent.userId) return false;

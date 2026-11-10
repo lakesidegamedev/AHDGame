@@ -54,6 +54,8 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import type { Document } from "mongodb";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -423,7 +425,7 @@ async function mergeNationalCorporations(
   toCountryId: CountryId,
   now: Date
 ): Promise<void> {
-  const corps = db.collection("corporations");
+  const corps = corporationsCollection<Document>(db);
 
   const incumbentId = (
     await corps.findOne(
@@ -623,7 +625,7 @@ async function repointShareholderEntries(
   toCorpId: unknown,
   now: Date
 ): Promise<void> {
-  const corps = db.collection("corporations");
+  const corps = corporationsCollection<Document>(db);
   const issuers = await corps.find({ "shareholders.corporationId": fromCorpId }).toArray();
 
   for (const issuer of issuers) {

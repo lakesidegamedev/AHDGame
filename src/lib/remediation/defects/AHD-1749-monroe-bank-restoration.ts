@@ -13,6 +13,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // Frozen turn-601 waterfall resolution: vault plus USD insurance fund
 // paid the household book into the central bank. The 22,150.23 household
@@ -103,12 +104,10 @@ function incOf(update: Record<string, unknown> | undefined): Record<string, numb
   return out;
 }
 async function load(db: Db): Promise<CorpDoc | null> {
-  return db
-    .collection<CorpDoc>("corporations")
-    .findOne(
-      { _id: new ObjectId(CORPORATION_ID) },
-      { projection: { name: 1, liquidCapital: 1, bankCharter: 1, remediation: 1 } }
-    );
+  return corporationsCollection<CorpDoc>(db).findOne(
+    { _id: new ObjectId(CORPORATION_ID) },
+    { projection: { name: 1, liquidCapital: 1, bankCharter: 1, remediation: 1 } }
+  );
 }
 const markerOf = (doc: CorpDoc | null): Marker | undefined => {
   const v = doc?.remediation?.[DEFECT_ID];
@@ -344,7 +343,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   // Claim the marker BEFORE the money moves; the journal key is the second
   // at-most-once guard, and a crash resumes from the journal rather than paying twice.
-  await db.collection<CorpDoc>("corporations").updateOne(
+  await corporationsCollection<CorpDoc>(db).updateOne(
     { _id: id, [`${MARKER_PATH}.status`]: { $ne: "done" } },
     {
       $set: {

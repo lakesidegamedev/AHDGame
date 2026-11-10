@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector, Notification } from "@/lib/db/types";
+import type { CorporateSector, Notification } from "@/lib/db/types";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -21,6 +21,7 @@ import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { hasTenderOpportunity } from "./rules/opportunities";
 import { canBid } from "./rules";
 import type { GovernmentTender } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** One projected read per dataset, then one idempotent bulk write per published tender. */
 export async function notifyTenderBidders(
@@ -30,8 +31,7 @@ export async function notifyTenderBidders(
   now: Date
 ) {
   if (!canBid(tender, turn)) return;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       {
         userId: { $type: "objectId" },

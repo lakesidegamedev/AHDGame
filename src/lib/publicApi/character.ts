@@ -7,7 +7,6 @@ import type {
   State,
   ElectionCandidate,
   Election,
-  Corporation,
   InvestorRankingSnapshot,
   CharacterAchievement,
   Achievement,
@@ -18,6 +17,7 @@ import { getDiscordAvatarUrl } from "@/lib/discord";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { buildCharacterHref, parseCharacterId } from "@/lib/utils/profileUrls";
 import { partyUrl } from "@/lib/urls";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -150,8 +150,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
 
   const corporations =
     characterIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ ceoId: { $in: characterIds }, ceoVacant: { $ne: true } })
           .project<{ _id: ObjectId; name: string; ceoId: ObjectId }>({ _id: 1, name: 1, ceoId: 1 })
           .toArray()

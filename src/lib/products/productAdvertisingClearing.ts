@@ -37,6 +37,7 @@ import {
   productAdvertisingDenominationWitness,
   type ProductAdvertisingDenominationWitness,
 } from "@/lib/products/rules/productAdvertising";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type ProductAdvertisingFamily = "media" | "manufacturing";
 
@@ -529,10 +530,11 @@ async function sellerEligibility(
       )
     ),
   ].filter((id) => ObjectId.isValid(id));
-  const rows = await db
-    .collection<{ _id: ObjectId; liquidCurrencyCode?: unknown; countryId?: unknown }>(
-      "corporations"
-    )
+  const rows = await corporationsCollection<{
+    _id: ObjectId;
+    liquidCurrencyCode?: unknown;
+    countryId?: unknown;
+  }>(db)
     .find(
       { _id: { $in: ids.map((id) => new ObjectId(id)) } },
       { projection: { _id: 1, liquidCurrencyCode: 1, countryId: 1 } }

@@ -1,10 +1,11 @@
 import { getDb } from "@/lib/mongodb";
 import { loadResetLawPolicyRecords } from "./resetLawPolicyRecords";
-import type { Corporation, Tariff, Subsidy } from "@/lib/db/types";
+import type { Tariff, Subsidy } from "@/lib/db/types";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
 import { assembleNationalPolicyRecords } from "@/lib/policy/nationalPolicyRecords";
 import type { PolicyRecordResponse } from "@/lib/policy/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function formatSectorLabel(raw: string): string {
   return raw.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -129,8 +130,7 @@ export async function loadNationalPolicyRecords(
     .filter((value): value is NonNullable<Tariff["targetCorporationId"]> => value != null);
   const targetedCorporations =
     corporationIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporationIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { wouldCreateOwnershipCycle } from "./helpers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Refusal message shown when a corporate purchase would close an ownership loop. */
 export const OWNERSHIP_CYCLE_ERROR =
@@ -21,8 +21,7 @@ export async function corpPurchaseWouldCycle(
 ): Promise<boolean> {
   if (buyerCorpId.equals(targetCorpId)) return true;
 
-  const allCorps = await db
-    .collection<Corporation>("corporations")
+  const allCorps = await corporationsCollection(db)
     .find({}, { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
 

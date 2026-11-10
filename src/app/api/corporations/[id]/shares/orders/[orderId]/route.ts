@@ -11,6 +11,7 @@ import {
   actorMayCancelShareOrder,
   cancelShareOrderAndRefund,
 } from "@/lib/corporations/cancelShareOrder";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -89,9 +90,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     let placerCorp: Pick<Corporation, "ceoId" | "ceoVacant"> | null = null;
     if (order.placerCorporationId && order.characterId?.toString() !== charId.toString()) {
-      placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: order.placerCorporationId }, { projection: { ceoId: 1, ceoVacant: 1 } });
+      placerCorp = await corporationsCollection(db).findOne(
+        { _id: order.placerCorporationId },
+        { projection: { ceoId: 1, ceoVacant: 1 } }
+      );
     }
     if (!actorMayCancelShareOrder(order, charId, placerCorp)) {
       return errorResponse(403, "Not your order");

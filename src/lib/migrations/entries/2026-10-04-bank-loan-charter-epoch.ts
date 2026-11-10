@@ -1,6 +1,7 @@
 import type { BankCharterHistoryEntry, BankLoan } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types";
 import type { Migration } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type EpochRange = { charteredTurn: number; nextCharteredTurn?: number };
 
@@ -27,8 +28,7 @@ export const migration: Migration = {
           charter: 1,
         })
         .toArray(),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ "bankCharter.charteredTurn": { $exists: true } })
         .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
         .toArray(),

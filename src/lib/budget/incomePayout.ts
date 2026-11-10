@@ -26,6 +26,7 @@ import { resolvePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -606,7 +607,7 @@ export async function creditIncomeAfterTax(
           throw new Error("Income central bank unavailable");
       }
       if (bankOps.length) {
-        const saved = await db.collection("corporations").bulkWrite(bankOps, { session });
+        const saved = await corporationsCollection<Document>(db).bulkWrite(bankOps, { session });
         if (saved.matchedCount !== bankOps.length)
           throw new Error("Bank cannot fund income withholding");
       }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { CorporateSector, State, UnownedSector, Corporation } from "@/lib/db/types";
+import type { CorporateSector, State, UnownedSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
@@ -28,6 +28,7 @@ import { loadCountryPresentationOverrides } from "@/lib/country/countryIdentity"
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -294,8 +295,7 @@ export async function GET(request: Request) {
 
       const corporations =
         corpObjectIds.length > 0
-          ? await db
-              .collection<Corporation>("corporations")
+          ? await corporationsCollection(db)
               .find({ _id: { $in: corpObjectIds } })
               .project<
                 {

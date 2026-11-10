@@ -30,6 +30,7 @@ import {
   recordPrimaryPoolPlacement,
   type LoadedPrimaryPlacementLimits,
 } from "./cashoutLimits";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Maximum share of the pool's equity-liquidity allocation committed to one issue. */
 const EQUITY_PRIMARY_COMMIT_SHARE = 0.2;
@@ -276,8 +277,7 @@ export async function placePendingShareIssuances(
   turn: number,
   now: Date
 ): Promise<{ corporationsTouched: number; sharesPlaced: number; paidLocal: number }> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       { "pendingShareIssuance.remainingShares": { $gt: 0 }, isPrivate: { $ne: true } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
@@ -306,8 +306,7 @@ export async function placePendingShareIssuances(
   ];
   const banks =
     bankIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: bankIds } },
             {
@@ -485,12 +484,10 @@ export async function placePendingShareIssuances(
     } else {
       const debit = await debitEquityPoolGated(db, currency, paidLocal, "issuanceOut", now);
       if (!debit.ok) continue;
-      const update = await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id, "pendingShareIssuance.remainingShares": { $gte: shares } },
-          publication
-        );
+      const update = await corporationsCollection(db).updateOne(
+        { _id: corporation._id, "pendingShareIssuance.remainingShares": { $gte: shares } },
+        publication
+      );
       if (update.modifiedCount === 0) {
         await refundEquityPoolDebit(db, currency, paidLocal, "issuanceOut", now);
         continue;

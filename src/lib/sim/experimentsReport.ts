@@ -4,7 +4,6 @@ import type { Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { NPP } from "@/lib/db/types/npp";
 import type { ElectedOfficial } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import {
   collectBalanceMetrics,
@@ -23,6 +22,7 @@ import {
   readLongHorizonTelemetryReport,
   type LongHorizonTelemetryReport,
 } from "@/lib/telemetry/longHorizon/telemetry";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -346,12 +346,10 @@ async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<Wealt
       .collection<ElectedOfficial>("electedOfficials")
       .find({ nppId: { $in: topIds } }, { projection: { nppId: 1, officeType: 1 } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ ceoType: "npp", ceoId: { $in: topIds } }, { projection: { ceoId: 1, name: 1 } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "shareholders.nppId": { $in: topIds } }, { projection: { shareholders: 1 } })
       .toArray(),
   ]);
@@ -398,8 +396,7 @@ async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<Wealt
 }
 
 async function collectTopCorporations(db: Db): Promise<TopCorporation[]> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { countryOwnerId: { $exists: false }, suspended: { $ne: true } },
       {

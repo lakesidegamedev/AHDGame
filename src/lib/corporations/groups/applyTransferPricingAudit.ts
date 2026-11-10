@@ -35,6 +35,7 @@ import {
   shiftDirection,
   type IntraGroupPosition,
 } from "./transferPricing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const AGREEMENTS = "supplyAgreements";
 
@@ -68,8 +69,7 @@ export async function applyTransferPricingAudit(
     corpIds.add(p.supplierCorpId);
     corpIds.add(p.buyerCorpId);
   }
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...corpIds].map((id) => new ObjectId(id)) } })
     .project<Pick<Corporation, "_id" | "name" | "countryId" | "userId" | "liquidCurrencyCode">>({
       name: 1,

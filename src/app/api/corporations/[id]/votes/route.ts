@@ -24,6 +24,7 @@ import {
   SUPERSHARE_MIN_MULTIPLIER,
   SUPERSHARE_MAX_MULTIPLIER,
 } from "@/lib/corporations/superShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const OpenVoteSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("governance_change"), newLegalStructure: z.string() }),
@@ -129,9 +130,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (body.type === "ticker_change") {
-      const conflict = await db
-        .collection("corporations")
-        .findOne({ tickerSymbol: body.newTicker, _id: { $ne: corporation._id } });
+      const conflict = await corporationsCollection(db).findOne({
+        tickerSymbol: body.newTicker,
+        _id: { $ne: corporation._id },
+      });
       if (conflict) {
         return errorResponse(409, "That ticker is already in use by another corporation");
       }

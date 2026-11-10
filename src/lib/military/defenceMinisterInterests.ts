@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { resolveSelfDealing, type SelfDealingBasis } from "@/lib/military/defenceSelfDealing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * A defence supplier the minister has a stake in, OTHER than the one in front of them.
@@ -44,8 +45,7 @@ export async function findCompetingSupplierInterest(
   if (ministerUserId) or.push({ userId: ministerUserId });
   if (ministerCharacterId) or.push({ "shareholders.characterId": ministerCharacterId });
 
-  const candidates = await db
-    .collection<Corporation>("corporations")
+  const candidates = await corporationsCollection(db)
     .find({
       countryId: input.countryId,
       _id: { $ne: input.excludeCorporationId },

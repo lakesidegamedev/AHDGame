@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const setCashSchema = z.object({
   liquidCapital: z.number().min(0).max(1_000_000_000),
@@ -20,8 +20,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find({}, { projection: { name: 1, liquidCapital: 1 } })
       .toArray();
 
@@ -55,9 +54,7 @@ export async function POST(request: NextRequest) {
 
     const db = await getDb();
 
-    const result = await db
-      .collection<Corporation>("corporations")
-      .updateMany({}, { $set: { liquidCapital } });
+    const result = await corporationsCollection(db).updateMany({}, { $set: { liquidCapital } });
 
     // Log admin action
     await db.collection("adminLogs").insertOne({

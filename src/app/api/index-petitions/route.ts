@@ -6,7 +6,7 @@ import { getGameState } from "@/lib/gameState";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import { INDEX_LISTING_PETITIONS } from "@/lib/indexFunds/petitions/service";
 import type { IndexListingPetition } from "@/lib/db/types/indexListingPetition";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * The committee's own inbox: petitions waiting on the seat this character
@@ -37,8 +37,7 @@ export async function GET() {
       .sort({ deadlineAtTurn: 1 })
       .toArray();
 
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         { _id: { $in: petitions.map((p) => p.corporationId) } },
         { projection: { name: 1, tickerSymbol: 1 } }

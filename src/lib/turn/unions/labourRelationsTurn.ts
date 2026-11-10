@@ -3,7 +3,6 @@ import type {
   Character,
   BargainingCampaign,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   StateMetrics,
   Union,
@@ -18,6 +17,7 @@ import {
   type MandateLocal,
 } from "@/lib/unions/commands/bargaining";
 import { closeDueRatificationVotes } from "@/lib/unions/commands/ratifySettlement";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -133,8 +133,7 @@ async function notifyLabourRelationsEvents(
         { projection: { name: 1, ownerId: 1, ownerType: 1 } }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: events.map((event) => event.employerCorporationId) } },
         { projection: { name: 1 } }

@@ -1,8 +1,9 @@
 import type { Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { CorporateSector, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Seeds only UK budget data: national budget, enacted laws, regional budgets,
@@ -110,9 +111,11 @@ export async function seedUkBudgets(
   );
   for (const entry of ukCorpData) {
     const { _id: corpId, ...corpData } = entry.corporation;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corpId }, { $set: corpData }, { upsert: true });
+    await corporationsCollection(db).updateOne(
+      { _id: corpId },
+      { $set: corpData },
+      { upsert: true }
+    );
 
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;

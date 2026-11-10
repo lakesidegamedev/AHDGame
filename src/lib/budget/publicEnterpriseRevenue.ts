@@ -33,6 +33,7 @@ import { soeCapacityReplacementCostAnchor } from "@/lib/economy/soe";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -318,8 +319,7 @@ export async function calculateCountryOwnedBudgetRevenue(
    */
   hoistedFxByCurrency?: ReadonlyMap<CurrencyCode, number>
 ): Promise<Partial<Record<keyof FederalRevenue, number>>> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ countryOwnerId: countryId }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
     .toArray();
 
@@ -448,8 +448,7 @@ export async function estimateCountryOwnedBudgetNetLocal(
   /** Same hoisting contract as {@link calculateCountryOwnedBudgetRevenue}. */
   plantsContext?: PlantsBudgetContext
 ): Promise<number> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ countryOwnerId: countryId }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
     .toArray();
   if (corporations.length === 0) return 0;

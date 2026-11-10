@@ -20,6 +20,7 @@ import { buildFundNavMetrics } from "@/lib/indexFunds/fundNavMetrics";
 import { getOpenOrdersEscrowAnchor } from "@/lib/indexFunds/fundValuation";
 import { listFundBondHoldings } from "@/lib/bonds/fundBondHoldings";
 import { corpCapitalToAnchor, loadValuationFxRates } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type CorpSummary = {
   _id: ObjectId;
@@ -80,8 +81,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     ].map((id) => new ObjectId(id));
 
     const corps = corpIds.length
-      ? await db
-          .collection<CorpSummary>("corporations")
+      ? await corporationsCollection<CorpSummary>(db)
           .find({ _id: { $in: corpIds } })
           .project({ name: 1, tickerSymbol: 1, sequentialId: 1, type: 1 })
           .toArray()
@@ -121,9 +121,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     // mirroring the check the wind-up route enforces.
     let viewerIsSponsorCeo = false;
     if (fund.sponsorCorporationId && auth) {
-      const sponsor = await db
-        .collection<{ _id: ObjectId; userId?: ObjectId }>("corporations")
-        .findOne({ _id: fund.sponsorCorporationId }, { projection: { userId: 1 } });
+      const sponsor = await corporationsCollection<{ _id: ObjectId; userId?: ObjectId }>(
+        db
+      ).findOne({ _id: fund.sponsorCorporationId }, { projection: { userId: 1 } });
       viewerIsSponsorCeo = !!sponsor?.userId && sponsor.userId.toString() === auth.userId;
     }
 
@@ -147,8 +147,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     }
 
     const corporations = auth
-      ? await db
-          .collection<import("@/lib/db/types").Corporation>("corporations")
+      ? await corporationsCollection<import("@/lib/db/types").Corporation>(db)
           .find(
             { userId: new ObjectId(auth.userId) },
             { projection: { name: 1, liquidCapital: 1, liquidCurrencyCode: 1, countryId: 1 } }

@@ -28,6 +28,7 @@ import { planOpeningSovereignMaturityCohorts } from "@/lib/bonds/rules/openingMa
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SeedSovereignBondInstrumentsResult {
   countriesSeeded: number;
@@ -47,8 +48,7 @@ export interface SeedSovereignBondInstrumentsResult {
 async function loadPrimaryNationalCorporations(
   db: Db
 ): Promise<Map<string, Pick<Corporation, "_id" | "name">>> {
-  const rows = await db
-    .collection<Corporation>("corporations")
+  const rows = await corporationsCollection(db)
     .find({ countryOwnerId: { $in: [...COUNTRY_ORDER] }, isPrimaryNationalCorporation: true })
     .project<Pick<Corporation, "_id" | "name"> & { countryOwnerId: string }>({
       _id: 1,
@@ -71,7 +71,7 @@ async function findAnyNationalCorporation(
   db: Db,
   countryId: CountryId
 ): Promise<Pick<Corporation, "_id" | "name"> | null> {
-  return db.collection<Corporation>("corporations").findOne({ countryOwnerId: countryId });
+  return corporationsCollection(db).findOne({ countryOwnerId: countryId });
 }
 
 /**

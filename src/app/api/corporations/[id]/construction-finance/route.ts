@@ -1,6 +1,5 @@
 /** CEO loan quotes for a paid sector build; no lender reads while disabled. */
 import { NextResponse } from "next/server";
-import type { Corporation } from "@/lib/db/types";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
@@ -12,6 +11,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getCountryIdForCurrency, type CurrencyCode } from "@/lib/constants/currencies";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const noStore = { "Cache-Control": "private, no-store" };
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,8 +39,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     );
     if (typeof centralBank?.primeRate !== "number" || !Number.isFinite(centralBank.primeRate))
       return errorResponse(409, "The currency's loan rate is unavailable", { headers: noStore });
-    const banks = await db
-      .collection<Corporation>("corporations")
+    const banks = await corporationsCollection(db)
       .find(
         {
           _id: { $ne: corporation._id },

@@ -32,6 +32,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -203,7 +204,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       ? rescaleOtherOpexAnchorForRetool(sector.otherOpexPerUnitAnchor, cancelRescaleRatio)
       : null;
 
-    const debit = await db.collection("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: cancelCostInCorpCapital },

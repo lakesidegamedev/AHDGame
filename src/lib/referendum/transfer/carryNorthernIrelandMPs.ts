@@ -3,6 +3,7 @@ import { unformGovernmentAndVacatePM } from "@/lib/turn/parliamentaryGovernment"
 /** Reunification carries Northern Ireland's Commons delegation into the Dail in its existing region. */
 import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -50,12 +51,10 @@ export async function carryNorthernIrelandMPs(
   await mirrorNorthernIrelandMPs(db, rows, now);
   const nppIds = rows.flatMap((mp) => (mp.nppId ? [mp.nppId] : []));
   if (nppIds.length)
-    await db
-      .collection("corporations")
-      .updateMany(
-        { ceoType: "npp", ceoId: { $in: nppIds } },
-        { $set: { headquartersState: "NIR", countryId: "IE", updatedAt: now } }
-      );
+    await corporationsCollection(db).updateMany(
+      { ceoType: "npp", ceoId: { $in: nppIds } },
+      { $set: { headquartersState: "NIR", countryId: "IE", updatedAt: now } }
+    );
 }
 
 export async function mirrorNorthernIrelandMPs(

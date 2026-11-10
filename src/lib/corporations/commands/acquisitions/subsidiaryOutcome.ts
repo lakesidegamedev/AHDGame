@@ -27,6 +27,7 @@ import {
   type SubsidiaryAcquisitionFacts,
   type SubsidiaryBlock,
 } from "./rules/subsidiaryOutcome";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const SYSTEM_USER_ID = "000000000000000000000000";
 
@@ -40,8 +41,7 @@ async function gatherFacts(
   acquirer: Corporation,
   target: Corporation
 ): Promise<SubsidiaryAcquisitionFacts> {
-  const allCorps = await db
-    .collection<Corporation>("corporations")
+  const allCorps = await corporationsCollection(db)
     .find({}, { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
 
@@ -132,7 +132,7 @@ export async function transferTargetEquityToAcquirer(
     now: Date;
   }
 ): Promise<boolean> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const current = await corps.findOne(
     { _id: input.targetId, acquisitionSettlementId: input.offerId },
     { projection: { totalShares: 1 } }

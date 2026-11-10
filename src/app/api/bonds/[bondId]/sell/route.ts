@@ -6,7 +6,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { sellBondSchema } from "@/lib/api/schemas/bonds";
 import { badRequest, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, Corporation, ExchangeRate, User } from "@/lib/db/types";
+import type { Bond, Character, ExchangeRate, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -46,6 +46,7 @@ import {
   type BondSaleSettlementOps,
 } from "@/lib/bonds/saleRecovery";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -463,9 +464,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (!ObjectId.isValid(sellAsCorp)) {
         return errorResponse(400, "Invalid corporation ID");
       }
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: new ObjectId(sellAsCorp) });
+      const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(sellAsCorp) });
       if (!corp) {
         return errorResponse(404, "Corporation not found");
       }
@@ -516,13 +515,11 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
           if (!poolDebit.ok) throw await poolDepthRefusal();
 
-          const payoutResult = await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corp._id },
-              { $inc: { liquidCapital: proceedsInCorpCapital }, $set: { updatedAt: now } },
-              { session }
-            );
+          const payoutResult = await corporationsCollection(db).updateOne(
+            { _id: corp._id },
+            { $inc: { liquidCapital: proceedsInCorpCapital }, $set: { updatedAt: now } },
+            { session }
+          );
           if (payoutResult.matchedCount === 0) {
             throw notFound("Corporation not found");
           }

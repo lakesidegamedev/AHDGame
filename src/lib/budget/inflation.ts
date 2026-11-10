@@ -28,7 +28,7 @@ import type { State } from "@/lib/db/types/state";
 import { nationalOutputGap } from "@/lib/metricEngine/outputTrend";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { Tariff } from "@/lib/db/types/tariff";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
@@ -42,6 +42,7 @@ import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOve
 import { getBankId } from "@/lib/centralBank/helpers";
 import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -831,8 +832,7 @@ export async function calculateCountryInflation(
   );
   const corporations =
     corporationIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporationIds } }, { projection: { countryId: 1 } })
           .toArray()
       : [];

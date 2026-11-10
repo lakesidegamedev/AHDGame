@@ -1,6 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { User } from "@/lib/db/types/user";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import type { StockExchangeSnapshot } from "@/lib/db/types/stockExchangeSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
@@ -20,6 +19,7 @@ import { loadSinceAway } from "./data/sinceAway";
 import { loadSectorHeatmap } from "./data/sectorHeatmap";
 import { loadNetWorth } from "./data/netWorth";
 import { loadCommodityBoard } from "./data/commodityBoard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -91,7 +91,7 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
       ? user.activeImperialCharacterId
       : user?.activeCharacterId;
   if (!ceoId) return null;
-  const corp = await db.collection<Corporation>("corporations").findOne(
+  const corp = await corporationsCollection(db).findOne(
     { ceoId, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
     {
       projection: {

@@ -31,7 +31,8 @@ import {
 } from "@/lib/tickets/contextNeeds";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import type { Ticket, TicketMessage } from "@/lib/db/types/ticket";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { Character, User } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com").replace(
   /\/$/,
@@ -56,9 +57,10 @@ async function resolveReporter(
     db
       .collection<Character>("characters")
       .findOne({ userId }, { projection: { _id: 1, name: 1, sequentialId: 1 } }),
-    db
-      .collection<Corporation>("corporations")
-      .findOne({ userId }, { projection: { _id: 1, name: 1, tickerSymbol: 1, sequentialId: 1 } }),
+    corporationsCollection(db).findOne(
+      { userId },
+      { projection: { _id: 1, name: 1, tickerSymbol: 1, sequentialId: 1 } }
+    ),
   ]);
 
   if (character) {

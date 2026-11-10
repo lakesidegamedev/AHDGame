@@ -1,7 +1,6 @@
 /** The batched reads behind the corporation turn lookups. */
 import type { Db } from "mongodb";
 import type {
-  Corporation,
   CorporateSector,
   CommodityPrice,
   CentralBank,
@@ -29,6 +28,7 @@ import { type MediaProductProject, MEDIA_PRODUCT_PROJECTS } from "@/lib/products
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -77,8 +77,7 @@ export async function loadCorporationLookupInputs({
     activeManufacturingProjects,
     activeMediaProductProjects,
   ] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {

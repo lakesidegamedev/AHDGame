@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporateSector, State, User } from "@/lib/db/types";
+import type { CorporateSector, State, User } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   isOperatingSectorType,
@@ -23,6 +23,7 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const PAGE_SIZE = 15;
 
@@ -136,8 +137,7 @@ export async function GET(request: Request) {
 
     const corporations =
       corpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: corpIds } })
             .project<
               {

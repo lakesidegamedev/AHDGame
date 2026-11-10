@@ -15,6 +15,7 @@ import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJour
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { toAccountSnapshot } from "./snapshot";
 import { savingsClosureTransition } from "./rules/closure";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function closeCharacterSavings(
   db: Db,
@@ -35,9 +36,10 @@ export async function closeCharacterSavings(
       throw new Error("Savings balance requires reconciliation before character deletion");
     const holderMissing =
       isBankHolder(original.holder) &&
-      !(await db
-        .collection("corporations")
-        .findOne({ _id: new ObjectId(original.holder) }, { projection: { _id: 1 } }));
+      !(await corporationsCollection(db).findOne(
+        { _id: new ObjectId(original.holder) },
+        { projection: { _id: 1 } }
+      ));
     if (holderMissing && (owner || !options.allowMissingHolderWriteOff))
       throw new Error("Recover savings from the missing bank before deleting the character");
     const accountsCollection = db.collection<SavingsAccount>("savingsAccounts");

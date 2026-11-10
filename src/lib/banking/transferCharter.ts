@@ -4,6 +4,7 @@ import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { Character } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type TransferBankCharterResult =
   | {
@@ -165,7 +166,7 @@ async function drainOrphans(
   now: Date
 ): Promise<void> {
   if (orphans.length === 0) return;
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   for (const orphan of orphans) {
     if (sameId(orphan.to, ownId) && orphan.fingerprint === liveFingerprint) continue;
     const holder = await corps.findOne({ _id: orphan.to }, { projection: { bankCharter: 1 } });
@@ -260,7 +261,7 @@ async function clearPlan(
   // Guarded on planned owner and attempt token so concurrent resumers
   // cannot clear a newer plan or a loser clear the winner's plan. A throw
   // here is fine: re-keys are idempotent and the retry clears the plan.
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     {
       _id: targetId,
       "bankCharterTransfer.to": destId,
@@ -299,7 +300,7 @@ export async function transferBankCharterToAcquirer(
   if (targetId.equals(acquirerId)) {
     return { ok: false, error: "A corporation cannot absorb itself" };
   }
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const [target, acquirer] = await Promise.all([
     corps.findOne(
       { _id: targetId },

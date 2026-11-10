@@ -27,6 +27,7 @@ import {
   recapDeadlineExpired,
   type CapitalStanding,
 } from "./capitalAdequacy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Outstanding household tranches per bank, keyed by bank corp id hex.
@@ -81,8 +82,7 @@ const ZERO: SupervisionSummary = {
 export async function processBankSupervision(db: Db, turn: number): Promise<SupervisionSummary> {
   const summary: SupervisionSummary = { ...ZERO, errors: [] };
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ "bankCharter.status": "active" })
     .project<
       Pick<
@@ -141,7 +141,7 @@ export async function processBankSupervision(db: Db, turn: number): Promise<Supe
         continue;
       }
 
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: corp._id, "bankCharter.status": "active" },
         {
           $set: {

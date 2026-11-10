@@ -9,7 +9,7 @@
  */
 
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, ExchangeRate, GameConfig } from "@/lib/db/types";
+import type { CorporateSector, ExchangeRate, GameConfig } from "@/lib/db/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
@@ -25,6 +25,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Price ratio at or above this: the resource is short enough to survey. */
 export const NPP_PROSPECT_SHORTAGE_RATIO = 1.15;
@@ -99,8 +100,7 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
     .findOne({ _id: "default" }, { projection: { prospectingEnabled: 1 } });
   if (cfg?.prospectingEnabled !== true) return 0;
 
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", type: "extraction", suspended: { $ne: true } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }

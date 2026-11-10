@@ -5,8 +5,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { CorporateSector, Corporation } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const healCooldownSchema = z.object({
   forceAll: z.boolean().optional(),
@@ -44,8 +45,7 @@ export async function GET() {
 
     // Fetch parent corporation names for display
     const corpIds = [...new Set(sectors.map((s) => s.corporationId.toString()))];
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } }, { projection: { name: 1 } })
       .toArray();
     const corpNameMap = new Map(corps.map((c) => [c._id.toString(), c.name]));
@@ -110,8 +110,7 @@ export async function POST(request: Request) {
 
     // Fetch parent corporation names
     const corpIds = [...new Set(sectors.map((s) => s.corporationId.toString()))];
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } }, { projection: { name: 1 } })
       .toArray();
     const corpNameMap = new Map(corps.map((c) => [c._id.toString(), c.name]));

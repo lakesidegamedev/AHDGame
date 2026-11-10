@@ -9,7 +9,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Corporation } from "@/lib/db/types";
 import { isAgreementPremiumLegal, type SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import type { SupplyListing } from "@/lib/db/types/supplyListing";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
@@ -25,6 +24,7 @@ import {
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Below this the remainder of a listing is rounding dust and the take consumes it whole. */
 const LISTING_DUST_UNITS = 1e-6;
@@ -78,9 +78,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       return errorResponse(409, "This offer's price is outside the contract band");
     }
 
-    const publisher = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: listing.corporationId });
+    const publisher = await corporationsCollection(db).findOne({ _id: listing.corporationId });
     // The same staleness rule the board applies when listing: the offer binds
     // only while the CEO who posted it still runs the corporation.
     // AI listings carry no publishing user (the turn engine reposts them each

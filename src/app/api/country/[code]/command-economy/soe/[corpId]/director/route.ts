@@ -13,10 +13,10 @@ import { ObjectId } from "mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
 import { badRequest, forbidden, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { Character } from "@/lib/db/types/character";
 import { canAppointSoeDirector } from "@/lib/economy/commandEconomyAuth";
 import { resolveWriteContext } from "@/lib/economy/queries/commandEconomyWriteContext";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteContext {
   params: Promise<{ code: string; corpId: string }>;
@@ -37,12 +37,10 @@ export async function POST(request: Request, context: RouteContext) {
     if (!ObjectId.isValid(corpId)) {
       return NextResponse.json(notFound("Enterprise not found").toJson(), { status: 404 });
     }
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne(
-        { _id: new ObjectId(corpId), countryId, soe: { $exists: true } },
-        { projection: { _id: 1, soe: 1 } }
-      );
+    const corp = await corporationsCollection(db).findOne(
+      { _id: new ObjectId(corpId), countryId, soe: { $exists: true } },
+      { projection: { _id: 1, soe: 1 } }
+    );
     if (!corp?.soe) {
       return NextResponse.json(notFound("Enterprise not found").toJson(), { status: 404 });
     }
@@ -110,12 +108,10 @@ export async function POST(request: Request, context: RouteContext) {
       }
     }
 
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: new ObjectId(corpId) },
-        { $set: { "soe.directorId": targetId, "soe.directorName": targetName } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: new ObjectId(corpId) },
+      { $set: { "soe.directorId": targetId, "soe.directorName": targetName } }
+    );
 
     return NextResponse.json({
       success: true,

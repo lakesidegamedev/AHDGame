@@ -24,6 +24,7 @@ import { COUNTRY_CURRENCY_MAP, INITIAL_RATES, type CurrencyCode } from "@/lib/co
 import type { CountryId } from "@/lib/constants/countries";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Expire share listings whose expiresAt has passed:
@@ -133,8 +134,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   );
   const listingCorps =
     listingCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: listingCorpIds } })
           .project<Pick<Corporation, "_id" | "liquidCurrencyCode" | "countryId">>({
             _id: 1,
@@ -242,8 +242,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   // corp's liquidCapital is in its home currency, so convert on refund.
   if (corpLiquidRefunds.size > 0) {
     const refundCorpIds = [...corpLiquidRefunds.keys()].map((id) => new ObjectId(id));
-    const refundCorps = await db
-      .collection<Corporation>("corporations")
+    const refundCorps = await corporationsCollection(db)
       .find({ _id: { $in: refundCorpIds } })
       .project<{
         _id: ObjectId;
@@ -295,7 +294,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     });
     // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection<Corporation>("corporations").bulkWrite(ops as any);
+    await corporationsCollection(db).bulkWrite(ops as any);
   }
 
   // Emit batched refund tx entries.
@@ -310,7 +309,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     if (listing.sharesRemaining <= 0) continue;
     try {
       if (listing.sellerCorporationId) {
-        const targetCorp = await db.collection<Corporation>("corporations").findOne(
+        const targetCorp = await corporationsCollection(db).findOne(
           {
             _id: listing.corporationId,
             "shareholders.corporationId": listing.sellerCorporationId,
@@ -346,12 +345,10 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
           if (!restored) throw new Error("Expired stock holding could not be restored");
           continue;
         }
-        const targetCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
-            { projection: { "shareholders.$": 1 } }
-          );
+        const targetCorp = await corporationsCollection(db).findOne(
+          { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
+          { projection: { "shareholders.$": 1 } }
+        );
         const returnPrice =
           targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
         await creditShares(

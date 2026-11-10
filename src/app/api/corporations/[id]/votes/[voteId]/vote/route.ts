@@ -16,6 +16,7 @@ import { getGameState } from "@/lib/gameState";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const CastSchema = z.object({
   vote: z.enum(["yes", "no"]),
@@ -64,12 +65,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // Explicit corporation vote — verify the user is CEO of this corp
       // and that the corp holds shares in the target.
       const corpOid = new ObjectId(voterCorporationId);
-      const managedCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: corpOid, ceoId: voterCharacter._id, ceoType: { $ne: "npp" } },
-          { projection: { _id: 1 } }
-        );
+      const managedCorp = await corporationsCollection(db).findOne(
+        { _id: corpOid, ceoId: voterCharacter._id, ceoType: { $ne: "npp" } },
+        { projection: { _id: 1 } }
+      );
       if (!managedCorp) {
         return errorResponse(403, "You are not the CEO of that corporation");
       }
@@ -91,8 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         voteShares = shareholderVotingPower(corporation, charShareholding);
       } else {
         // Auto-detect a managed corporation that holds shares.
-        const managedCorps = await db
-          .collection<Corporation>("corporations")
+        const managedCorps = await corporationsCollection(db)
           .find({ ceoId: voterCharacter._id, ceoType: { $ne: "npp" } }, { projection: { _id: 1 } })
           .toArray();
 

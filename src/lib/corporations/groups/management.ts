@@ -21,6 +21,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { scheduleGroupReceiving, effectiveGroupReceiving } from "./rules/participation";
 import type { GroupManagementCommand } from "./managementSchema";
 import type { GroupManagement } from "./managementTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const defaultGroupManagement = (root: Corporation): GroupManagement => ({
   name: root.name,
@@ -37,8 +38,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
   const ids = rootId ? membership.membersByRootId.get(rootId) : undefined;
   if (!rootId || !ids) return null;
   const [corps, world, config, regions] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: ids.map((id) => new ObjectId(id)) } },
         {
@@ -265,7 +265,7 @@ export async function updateGroupManagement(
       command.enabled,
       ctx.turn
     );
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         userId: new ObjectId(userId),
@@ -290,7 +290,7 @@ export async function updateGroupManagement(
       direction.ceoTenureKey !== groupOperator(corporation, rootId).ceoTenureKey
     )
       return deny("This suggestion is no longer current.", 409);
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         userId: new ObjectId(userId),
@@ -315,7 +315,7 @@ export async function updateGroupManagement(
       return deny("Choose a current subsidiary.", 400);
     if (!(await canActOnCorporationAsParent(db, new ObjectId(userId), target)))
       return deny("You no longer control this subsidiary.");
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: target._id,
         ceoId: target.ceoId,
@@ -356,7 +356,7 @@ export async function updateGroupManagement(
       : command.action === "discount"
         ? { "groupManagement.supplyDiscount": command.discount }
         : { "groupManagement.supplyPolicy": command.policy };
-  const result = await db.collection<Corporation>("corporations").updateOne(
+  const result = await corporationsCollection(db).updateOne(
     {
       _id: ctx.root._id,
       userId: new ObjectId(userId),

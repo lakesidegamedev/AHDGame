@@ -12,7 +12,6 @@ import type {
   Bill,
   BargainingCampaign,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   Union,
 } from "@/lib/db/types";
@@ -82,6 +81,7 @@ import {
 import { paidUnionServices } from "@/lib/unions/rules";
 import { normalizeServiceIds } from "@/lib/unions/unionServices";
 import { clampPoliticalContributionPct } from "@/lib/unions/unionPoliticalContributions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -262,8 +262,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       (s) => new ObjectId(s)
     );
     const corps = corpIds.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corpIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

@@ -4,7 +4,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameState, MarketCapHistory, Corporation } from "@/lib/db/types";
+import type { GameState, MarketCapHistory } from "@/lib/db/types";
 import type { MarketIndexIntraday } from "@/lib/db/types/marketIndexIntraday";
 import type { MarketCapTick } from "@/lib/db/types/marketCapTick";
 import type { ShareTradeHistory, ShareTradeKind } from "@/lib/db/types/shareTradeHistory";
@@ -23,6 +23,7 @@ import {
   mergeQuarterCandles,
   type CandleInput,
 } from "@/lib/stockExchange/candles";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // Game-calendar ranges plus older client ranges retained for compatibility.
 const VALID_TURNS = new Set([4, 12, 24, 48, 168, 240, 480, 720, 8760, 0]);
@@ -129,8 +130,7 @@ export async function GET(request: Request) {
     // Scope before grouping so other venues cannot consume the limit or poison the sum.
     const corps =
       venueCountry || sector
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({
               ...(venueCountry ? { countryId: venueCountry } : {}),
               ...(sector

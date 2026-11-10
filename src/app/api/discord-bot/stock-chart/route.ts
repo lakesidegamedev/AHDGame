@@ -3,8 +3,9 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporationHistory, MarketCapHistory } from "@/lib/db/types";
+import type { CorporationHistory, MarketCapHistory } from "@/lib/db/types";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // GET /api/discord-bot/stock-chart — Returns historical share price or aggregate market-cap data for a corporation or exchange.
 // Auth: requireAdminOrApiKey
@@ -32,9 +33,9 @@ export async function GET(request: Request) {
     // --- Per-corporation mode ---
     if (corpName) {
       const escapedName = corpName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const corporation = await db
-        .collection<Corporation>("corporations")
-        .findOne({ name: { $regex: new RegExp(`^${escapedName}$`, "i") } });
+      const corporation = await corporationsCollection(db).findOne({
+        name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+      });
 
       if (!corporation) {
         return NextResponse.json({ found: false });

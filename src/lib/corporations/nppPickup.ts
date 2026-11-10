@@ -25,6 +25,7 @@ import {
   getExtractionContractsCollection,
 } from "@/lib/db/collections/extractionContracts";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Share of a leaving plant's built capacity an NPP operator takes over. The
@@ -131,8 +132,7 @@ export async function chooseNppPickupReceiver(
   if (!currencyCode) return null;
   const lane = laneOf(sector);
   const existingNames = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find({ countryId: hostCountry as CountryId })
       .project<{ name: string }>({ name: 1 })
       .toArray()
@@ -289,7 +289,7 @@ export async function disposeLeavingSectors(
   );
 
   if (eligible.length > 0) {
-    const nppCorpIds = await db.collection<Corporation>("corporations").distinct("_id", {
+    const nppCorpIds = await corporationsCollection(db).distinct("_id", {
       ceoType: "npp",
       countryOwnerId: { $exists: false },
       ownershipState: { $ne: "stateOwned" },
@@ -400,8 +400,7 @@ async function repointContracts(
   if (handedOff.length === 0) return;
   const receiverCountry = new Map(
     (
-      await db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(db)
         .find({ _id: { $in: handedOff.map((h) => h.pickup.receiverCorporationId) } })
         .project<Pick<Corporation, "_id" | "countryId">>({ countryId: 1 })
         .toArray()

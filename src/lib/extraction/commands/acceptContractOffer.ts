@@ -21,6 +21,7 @@ import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type AcceptContractResult =
   | { ok: true; status: 200; activatedTurn: number; expiresTurn: number; signingFeeLocal: number }
@@ -277,12 +278,10 @@ export async function acceptContractOffer(
           throw new Error(settled.error ?? "Funded signing fee is incomplete");
         debited = true;
       } else {
-        const debit = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id, liquidCapital: { $gte: signingFeeLocal } },
-            { $inc: { liquidCapital: -signingFeeLocal }, $set: { updatedAt: now } }
-          );
+        const debit = await corporationsCollection(db).updateOne(
+          { _id: corporation._id, liquidCapital: { $gte: signingFeeLocal } },
+          { $inc: { liquidCapital: -signingFeeLocal }, $set: { updatedAt: now } }
+        );
         if (debit.modifiedCount === 0) {
           await revertClaim();
           return {
@@ -374,12 +373,10 @@ export async function acceptContractOffer(
       // the claim. The refund is additive ($inc), so it needs no affordability
       // guard; the claim revert is guarded on our activatedTurn stamp.
       if (debited) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id },
-            { $inc: { liquidCapital: signingFeeLocal }, $set: { updatedAt: now } }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          { $inc: { liquidCapital: signingFeeLocal }, $set: { updatedAt: now } }
+        );
       }
       await revertClaim();
       throw error;

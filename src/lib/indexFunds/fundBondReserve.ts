@@ -44,6 +44,7 @@ import {
 } from "@/lib/bonds/fundBondCandidates";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export { MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS };
 export {
@@ -118,8 +119,9 @@ export async function loadBondFundCandidates(
       );
     } else {
       const corpIds = [...new Set(bonds.map((b) => b.corporationId.toString()))];
-      const corps = await db
-        .collection<{ _id: ObjectId; creditRatingSnapshot?: string }>("corporations")
+      const corps = await corporationsCollection<{ _id: ObjectId; creditRatingSnapshot?: string }>(
+        db
+      )
         .find(
           { _id: { $in: corpIds.map((id) => new ObjectId(id)) } },
           { projection: { creditRatingSnapshot: 1 } }

@@ -41,6 +41,7 @@ import type {
   TouchedDocs,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
 
@@ -155,8 +156,11 @@ async function survey(db: Db): Promise<Survey> {
   // plants. Sorting makes the choice deterministic, and a country with more than
   // one candidate is routed to `withoutEnterprise` so a human picks.
   const countryIds = [...new Set(commandStates.map((s) => s.countryId as CountryId))];
-  const enterprises = await db
-    .collection<{ _id: ObjectId; name?: string; countryOwnerId?: string }>("corporations")
+  const enterprises = await corporationsCollection<{
+    _id: ObjectId;
+    name?: string;
+    countryOwnerId?: string;
+  }>(db)
     .find(
       { countryOwnerId: { $in: countryIds }, assignedSectorTypes: "extraction" },
       { projection: { name: 1, countryOwnerId: 1 } }

@@ -15,6 +15,7 @@ import type { BondFundUniverse } from "@/lib/indexFunds/fundDefinitions";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS = 48;
 
@@ -144,8 +145,7 @@ export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandid
           .toArray()
       : Promise.resolve([] as Array<{ _id: string; creditRating?: string }>),
     corporationIds.length > 0
-      ? db
-          .collection<{ _id: ObjectId; creditRatingSnapshot?: string }>("corporations")
+      ? corporationsCollection<{ _id: ObjectId; creditRatingSnapshot?: string }>(db)
           .find({ _id: { $in: corporationIds } }, { projection: { creditRatingSnapshot: 1 } })
           .toArray()
       : Promise.resolve([] as Array<{ _id: ObjectId; creditRatingSnapshot?: string }>),

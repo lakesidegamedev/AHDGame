@@ -16,6 +16,7 @@ import type { Corporation } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildAuctionListings } from "@/lib/nationalization/auctionListing";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -60,8 +61,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
       liquidCapital: number;
     }> = [];
     if (viewer) {
-      const myCorps = await db
-        .collection<Corporation>("corporations")
+      const myCorps = await corporationsCollection(db)
         .find({ ceoId: viewer._id, ceoVacant: { $ne: true } })
         .project<{
           _id: Corporation["_id"];

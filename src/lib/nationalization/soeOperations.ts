@@ -75,6 +75,7 @@ import {
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface MetricOpInput {
   countryId: CountryId;
@@ -346,8 +347,7 @@ export async function processSoeOperations(
   // (e.g. the UK NHS) and pre-Phase-1 backfilled corps carry `countryOwnerId`
   // but NOT `ownershipState`, so filtering on `ownershipState` alone would miss
   // them entirely. The post-filter keeps the canonical reader as the final word.
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { $or: [{ countryOwnerId: { $exists: true } }, { ownershipState: "stateOwned" }] },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
@@ -452,9 +452,7 @@ export async function processSoeOperations(
   }
   const rdOps = buildRdModernizationOps(soeCorps, revenueByCorp, now);
   if (rdOps.length > 0) {
-    await db
-      .collection<Corporation>("corporations")
-      .bulkWrite(rdOps as AnyBulkWriteOperation<Corporation>[]);
+    await corporationsCollection(db).bulkWrite(rdOps as AnyBulkWriteOperation<Corporation>[]);
   }
 
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
@@ -599,7 +597,7 @@ export async function processSoeOperations(
     });
   }
   if (backingOps.length > 0) {
-    const credited = await db.collection<Corporation>("corporations").bulkWrite(backingOps);
+    const credited = await corporationsCollection(db).bulkWrite(backingOps);
     const options = await treasuryLedger();
     // A partial write cannot say which credit landed; the treasury legs stay
     // witnessed and the missed enterprise surfaces as a divergence.

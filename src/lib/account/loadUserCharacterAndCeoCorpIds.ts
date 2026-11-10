@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface UserCharacterAndCeoCorpIds {
   characterIds: ObjectId[];
@@ -20,8 +21,7 @@ export async function loadUserCharacterAndCeoCorpIds(
     return { characterIds, ceoCorpIds: [] };
   }
 
-  const ceoCorps = await db
-    .collection<Corporation>("corporations")
+  const ceoCorps = await corporationsCollection(db)
     .find({ ceoId: { $in: characterIds } }, { projection: { _id: 1 } })
     .toArray();
 

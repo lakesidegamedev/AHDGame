@@ -20,7 +20,6 @@ import type {
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { isPatreonActive } from "@/lib/db/types";
 import {
   fetchPartyHistory,
@@ -34,6 +33,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getNationalNpiOrdinalRank } from "@/lib/character/nationalNpiOrdinalRank";
 import { resolveMemberSince } from "@/lib/character/memberSince";
 import { loadCharacterByUrlId } from "./characterLoaders";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface CandidateElection {
   election: Election;
@@ -222,7 +222,7 @@ export async function getCharacterById(characterId: string) {
             .project({ sequentialId: 1, name: 1, countryId: 1 })
             .toArray()
         : Promise.resolve([]),
-      db.collection<Corporation>("corporations").findOne(
+      corporationsCollection(db).findOne(
         {
           ceoId: character._id,
           ceoVacant: { $ne: true },

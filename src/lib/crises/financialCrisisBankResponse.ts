@@ -14,6 +14,7 @@ import {
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type FinancialCrisisBankResponse = "recapitalize" | "guarantee" | "resolve";
 
@@ -81,7 +82,7 @@ export async function prepareFinancialCrisisBankResponse(
     option.action.response === "resolve"
       ? false
       : (treasuryCashLedgerEnabled ?? (await loadBankingPolicy(db)).treasuryCashLedger);
-  const eligible = await db.collection<Corporation>("corporations").findOne(
+  const eligible = await corporationsCollection(db).findOne(
     {
       countryId: countryId as Corporation["countryId"],
       "bankCharter.status": "active",
@@ -154,8 +155,7 @@ export async function applyFinancialCrisisBankResponse(
     currency = frozen.currency;
     if (!budget || ctx.countryId !== frozen.countryId)
       throw new Error("Original guarantee funding treasury changed before settlement");
-    banks = await ctx.db
-      .collection<Corporation>("corporations")
+    banks = await corporationsCollection(ctx.db)
       .find(
         {
           $or: frozen.bankEpochs.map((bank) => ({
@@ -185,8 +185,7 @@ export async function applyFinancialCrisisBankResponse(
     currency = resolveCountryCurrencyCode(budget);
     if (!budget || !currency) throw new Error("Treasury currency is unavailable");
     banks = rankBanksForFinancialIntervention(
-      await ctx.db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(ctx.db)
         .find(
           {
             countryId: ctx.countryId as Corporation["countryId"],

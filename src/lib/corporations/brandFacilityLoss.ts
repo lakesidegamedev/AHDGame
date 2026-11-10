@@ -1,7 +1,8 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { applyFacilityLoss } from "@/lib/market/brandLoyalty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Brand facility-loss hook (the "Boeing rule", Package A). Losing a sector —
@@ -23,9 +24,10 @@ export async function applyBrandFacilityLoss(
   lostSectorRevenue: number
 ): Promise<void> {
   if (!(lostSectorRevenue > 0)) return;
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corpId }, { projection: { brandLoyalty: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corpId },
+    { projection: { brandLoyalty: 1 } }
+  );
   const loyalty = corp?.brandLoyalty ?? 0;
   if (loyalty <= 0) return; // nothing to lose
 
@@ -50,7 +52,8 @@ export async function applyBrandFacilityLoss(
   const share = Math.min(1, lostSectorRevenue / denom);
   const next = applyFacilityLoss(loyalty, share);
   if (next === loyalty) return;
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corpId }, { $set: { brandLoyalty: Math.round(next * 100) / 100 } });
+  await corporationsCollection(db).updateOne(
+    { _id: corpId },
+    { $set: { brandLoyalty: Math.round(next * 100) / 100 } }
+  );
 }

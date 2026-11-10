@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/rules/stockTaxReceipt";
 import type { PendingStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import type { Db } from "mongodb";
-import type { Character, Corporation, IndexFund, ShareOrder } from "@/lib/db/types";
+import type { Character, IndexFund, ShareOrder } from "@/lib/db/types";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -46,6 +46,7 @@ import {
 } from "@/lib/equities/equityPoolSellAllocation";
 import type { EquityMarketPool } from "@/lib/db/types";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Per-character delta for a corp, plus the fill price for new-entry cost basis. */
 interface ShareDelta {
@@ -132,8 +133,7 @@ export async function fillPendingShareOrders(
   const corpIds = [...ordersByCorp.keys()].map((k) => new ObjectId(k));
   // Keep the full shareholder array for live holding caps. Other corporation
   // payload fields are not read by this matcher.
-  const corpDocs = await db
-    .collection<Corporation>("corporations")
+  const corpDocs = await corporationsCollection(db)
     .find(
       { _id: { $in: corpIds } },
       {
@@ -750,7 +750,7 @@ export async function fillPendingShareOrders(
     await db.collection("shareOrders").bulkWrite(orderFillOps);
   }
   if (incOps.length > 0) {
-    await db.collection("corporations").bulkWrite(incOps);
+    await corporationsCollection(db).bulkWrite(incOps);
   }
   await recordPoolSellAbsorbed(db, poolSellAbsorbed, turn, (id) => new ObjectId(id));
   // Phase 2: $push for new shareholder entries that didn't exist at read time.
@@ -783,7 +783,7 @@ export async function fillPendingShareOrders(
       },
     }));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("corporations").bulkWrite(pushOps as any[]);
+    await corporationsCollection(db).bulkWrite(pushOps as any[]);
   }
   if (charCashAdjustments.size > 0) {
     const forexEnabled = await isForexEnabled();
@@ -887,7 +887,7 @@ export async function fillPendingShareOrders(
         },
       };
     });
-    await db.collection("corporations").bulkWrite(corpPayOps);
+    await corporationsCollection(db).bulkWrite(corpPayOps);
   }
 
   // Legacy fallback for worlds without a currency pool.
@@ -901,7 +901,7 @@ export async function fillPendingShareOrders(
         },
       }));
     if (treasuryOps.length > 0) {
-      await db.collection("corporations").bulkWrite(treasuryOps);
+      await corporationsCollection(db).bulkWrite(treasuryOps);
     }
   }
 
@@ -1017,7 +1017,7 @@ export async function fillPendingShareOrders(
       }
     }
     if (fundCapTableOps.length > 0) {
-      await db.collection("corporations").bulkWrite(fundCapTableOps);
+      await corporationsCollection(db).bulkWrite(fundCapTableOps);
     }
     if (fundHoldingOps.length > 0) {
       await db.collection("indexFunds").bulkWrite(fundHoldingOps);
@@ -1115,8 +1115,7 @@ export async function fillPendingShareOrders(
             .toArray()
         : Promise.resolve([] as { _id: ObjectId; name: string }[]),
       corpIdSet.size > 0
-        ? db
-            .collection<Corporation>("corporations")
+        ? corporationsCollection(db)
             .find({ _id: { $in: [...corpIdSet].map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
             .toArray()

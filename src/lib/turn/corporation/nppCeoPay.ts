@@ -27,6 +27,7 @@ import {
 } from "@/lib/corporations/caretakerCeo";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type NppCareer = Pick<NPP, "_id" | "ceoTrackRecord" | "personality">;
 
@@ -200,7 +201,7 @@ export async function processNppCeoPay(
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops, { ordered: true });
+    await corporationsCollection(db).bulkWrite(ops, { ordered: true });
   }
   return result;
 }

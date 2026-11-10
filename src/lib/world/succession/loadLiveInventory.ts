@@ -1,6 +1,5 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { State } from "@/lib/db/types/state";
@@ -8,6 +7,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import type { SuccessionCustodyAsset } from "./rules/custody";
 import type { SuccessionRegion } from "./rules/territory";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface LiveSuccessionInventory {
   sourceRegions: SuccessionRegion[];
@@ -29,8 +29,7 @@ export async function loadLiveSuccessionInventory(
     .toArray();
   const { topLevel, topLevelFor } = buildSourceRegionHierarchy(states);
 
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       {
         $or: [

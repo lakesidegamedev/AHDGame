@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { rawLotsFromSector, militaryDivertedShare } from "@/lib/military/arsenal";
 import {
@@ -41,6 +41,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { resolveDefenseLine } from "@/lib/turn/defenseEnvelope";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Idempotency key for one contract's settlement in one turn.
@@ -129,9 +130,10 @@ export async function applyDefenceDeliveries(
       db.collection<CorporateSector>("corporateSectors").findOne({ _id: contract.sectorId }),
       // Eligibility and payment read the corp's country, currency and cash; its
       // settlement stamps are never read on this path and are most of the doc.
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED }),
+      corporationsCollection(db).findOne(
+        { _id: contract.corporationId },
+        { projection: SETTLEMENT_HISTORY_EXCLUDED }
+      ),
     ]);
     if (!sector || !corp) {
       // The supplier plant or corp is gone, so the order can never deliver and

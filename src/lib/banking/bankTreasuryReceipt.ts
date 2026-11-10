@@ -16,7 +16,6 @@ import {
 import { settleAtomicDocumentTransition } from "@/lib/banking/atomicDocumentSettlement";
 import { ensureFund } from "@/lib/banking/insurance";
 import { loadBondPoolsByCurrency, bondPoolCurrency, loadBondQuote } from "@/lib/bonds/marketPool";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { type BankingPolicySnapshot, savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import {
   thawHolderSnapshot,
@@ -29,6 +28,7 @@ import {
   bankCashFloor,
 } from "./bankTreasuryShared";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export function reserveTransition(
   receipt: BankTreasuryTradeReceipt,
@@ -550,7 +550,7 @@ export async function paySaleEscrow(
   db: Db,
   receipt: BankTreasuryTradeReceipt
 ): Promise<SettlementResult> {
-  const corporations = db.collection<BankState>("corporations");
+  const corporations = corporationsCollection<BankState>(db);
   const bank = await corporations.findOne(
     { _id: receipt.bankId },
     { projection: { bankCharter: 1, bankTreasuryEscrows: 1 } }
@@ -708,7 +708,7 @@ export async function markBankTreasury(
     mark += activeHolderUnits(bond.holders ?? [], bankId, charter.charteredTurn) * quote.bidPerUnit;
   }
   mark = roundLocal(mark, charter.currency);
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     {
       _id: bankId,
       "bankCharter.currency": charter.currency,
@@ -755,9 +755,10 @@ export async function runReceipt(
     };
   const bankId = receipt.bankId;
   const [bank, bond] = await Promise.all([
-    db
-      .collection<BankState>("corporations")
-      .findOne({ _id: bankId }, { projection: { bankCharter: 1 } }),
+    corporationsCollection<BankState>(db).findOne(
+      { _id: bankId },
+      { projection: { bankCharter: 1 } }
+    ),
     bondsCollection(db).findOne({ _id: receipt.bondId }),
   ]);
   if (!bond)
@@ -968,9 +969,10 @@ export async function runReceipt(
       };
     }
   }
-  const current = await db
-    .collection<BankState>("corporations")
-    .findOne({ _id: bankId }, { projection: { bankCharter: 1 } });
+  const current = await corporationsCollection<BankState>(db).findOne(
+    { _id: bankId },
+    { projection: { bankCharter: 1 } }
+  );
   if (current?.bankCharter) await markBankTreasury(db, bankId, current.bankCharter, receipt.turn);
   await updateReceipt(db, receipt, "completed");
   return {

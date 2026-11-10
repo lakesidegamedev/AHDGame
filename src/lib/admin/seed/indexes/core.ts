@@ -3,6 +3,7 @@ import { ensureProviderIdentityIndexes } from "@/lib/auth/providerIdentityIndexe
 import type { Db } from "mongodb";
 import { assertUniqueCorporationSequentialIds } from "./assertUniqueCorporationIds";
 import { ensureIndex } from "./helpers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const CORPORATE_SECTOR_IDENTITY_INDEX_NAME =
   "corporateSectors_corporation_state_type_models_unique";
@@ -190,20 +191,17 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
   // tolerant (same contract ensureIndex offers other indexes): anything else,
   // including a post-guard E11000 from a concurrent writer, still throws.
   try {
-    await db
-      .collection("corporations")
-      .createIndex(
-        { sequentialId: 1 },
-        { unique: true, sparse: true, name: "corporations_sequentialId" }
-      );
+    await corporationsCollection(db).createIndex(
+      { sequentialId: 1 },
+      { unique: true, sparse: true, name: "corporations_sequentialId" }
+    );
     log("  ✓ corporations.corporations_sequentialId");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes("already exists")) {
       log("  = corporations.corporations_sequentialId (already exists)");
     } else {
-      const indexes = await db
-        .collection("corporations")
+      const indexes = await corporationsCollection(db)
         .indexes()
         .catch(() => []);
       const equivalentGuard = indexes.find(

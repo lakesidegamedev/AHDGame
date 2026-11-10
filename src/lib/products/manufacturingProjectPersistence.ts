@@ -12,6 +12,7 @@ import {
   type ManufacturingProductProject,
   type ManufacturingDevelopmentCashReceiptV2,
 } from "./manufacturingProject";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function ensureManufacturingProductProjectIndexesV2(db: Db): Promise<string> {
   await db.collection(MANUFACTURING_PRODUCT_PROJECTS_V2).createIndex(
@@ -185,7 +186,7 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
     return orphan || acknowledged || outsideWindow ? [{ corporation, receipt }] : [];
   });
   if (advertisingToClear.length > 0) {
-    const cleared = await input.db.collection<Corporation>("corporations").bulkWrite(
+    const cleared = await corporationsCollection(input.db).bulkWrite(
       advertisingToClear.map(({ corporation, receipt }) => ({
         updateOne: {
           filter: {
@@ -203,8 +204,7 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
       advertisingToClear.map(({ corporation }) => corporation._id.toString())
     );
     if (cleared.matchedCount !== advertisingToClear.length) {
-      const current = await input.db
-        .collection<Corporation>("corporations")
+      const current = await corporationsCollection(input.db)
         .find(
           { _id: { $in: advertisingToClear.map(({ corporation }) => corporation._id) } },
           { projection: { _id: 1, manufacturingProductAdvertisingReceiptV2: 1 } }
@@ -235,13 +235,10 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
       },
     })
   );
-  const cleared = await input.db
-    .collection<Corporation>("corporations")
-    .bulkWrite(receiptOps, { ordered: false });
+  const cleared = await corporationsCollection(input.db).bulkWrite(receiptOps, { ordered: false });
   let clearedIds = new Set(receiptsToClear.keys());
   if (cleared.matchedCount !== receiptOps.length) {
-    const current = await input.db
-      .collection<Corporation>("corporations")
+    const current = await corporationsCollection(input.db)
       .find(
         { _id: { $in: [...receiptsToClear.values()].map(({ corporation }) => corporation._id) } },
         { projection: { _id: 1, manufacturingProductDevelopmentReceiptV2: 1 } }

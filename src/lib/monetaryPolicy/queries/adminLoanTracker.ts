@@ -5,7 +5,7 @@
 import { getPresetMonetaryScope } from "../presetMonetaryScope";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import {
   COUNTRY_CURRENCY_MAP,
@@ -38,6 +38,7 @@ import {
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -99,12 +100,10 @@ async function computeSpreadForCharacter(
   const incomeEstimate = await estimatePerTurnCurrencyIncomeHomeFace(db, char, rates);
   const incomeScore = incomeScoreFromPerTurnCurrency(incomeEstimate);
 
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoId: char._id, countryId: char.countryId },
-      { projection: { creditCompositeSnapshot: 1 } }
-    );
+  const corporation = await corporationsCollection(db).findOne(
+    { ceoId: char._id, countryId: char.countryId },
+    { projection: { creditCompositeSnapshot: 1 } }
+  );
 
   const homeCurrency = getHomeCurrency(char, preset);
   const primeHome =

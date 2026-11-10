@@ -52,6 +52,7 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantLedger";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export { SECTOR_SCOPE_LABELS, type SectorScope };
 
 export interface NationalizeSectorWideParams {
@@ -99,7 +100,7 @@ export async function nationalizeSectorWide(
   }
 
   const sectors = db.collection<CorporateSector>("corporateSectors");
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const sectorLane = getCorporateSectorLaneQuery({
     sectorType: params.sectorType,
     industryModel: params.industryModel,

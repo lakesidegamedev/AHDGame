@@ -24,6 +24,8 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-1271-natcorp-split-sector-type";
 
@@ -79,8 +81,7 @@ async function findMistyped(db: Db): Promise<{
   playerSwitched: SplitOffCorp[];
   nonEnumClaim: SplitOffCorp[];
 }> {
-  const corps = await db
-    .collection<SplitOffCorp>("corporations")
+  const corps = await corporationsCollection<SplitOffCorp>(db)
     .find(
       {
         countryOwnerId: { $type: "string" },
@@ -242,7 +243,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     if (!approved.has(String(corp._id))) continue;
     const want = corp.assignedSectorTypes?.[0];
     if (!want) continue;
-    const res = await db.collection("corporations").updateOne(
+    const res = await corporationsCollection<Document>(db).updateOne(
       // The stale type is part of the filter, so a concurrent correction wins.
       { _id: corp._id, type: corp.type, assignedSectorTypes: [want] } as Record<string, unknown>,
       { $set: { type: want, updatedAt: now } }

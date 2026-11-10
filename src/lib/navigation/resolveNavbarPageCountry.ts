@@ -4,6 +4,7 @@ import type { State } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { toCountryId } from "./countryContext";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 function readQueryCountry(search?: string | null) {
   if (!search) return null;
@@ -35,11 +36,13 @@ export async function resolveNavbarPageCountry(args: { pathname: string; search?
   if (!corporationQuery) return null;
 
   const db = await getDb();
-  const corporation = await db
-    .collection<{ _id: ObjectId; countryId?: string; headquartersState?: string }>("corporations")
-    .findOne(corporationQuery, {
-      projection: { _id: 1, countryId: 1, headquartersState: 1 },
-    });
+  const corporation = await corporationsCollection<{
+    _id: ObjectId;
+    countryId?: string;
+    headquartersState?: string;
+  }>(db).findOne(corporationQuery, {
+    projection: { _id: 1, countryId: 1, headquartersState: 1 },
+  });
   if (!corporation) return null;
 
   let corporationCountry = toCountryId(corporation.countryId);

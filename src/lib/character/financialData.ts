@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
 import {
@@ -17,18 +17,18 @@ import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function getFinancialData(characterId: ObjectId) {
   const db = await getDb();
 
   const [corporation, corporationsWithShares, activeBonds, fundPosition] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne({
+    corporationsCollection(db).findOne({
       ceoId: characterId,
       ceoVacant: { $ne: true },
       imfInstitution: { $ne: true },
     }),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "shareholders.characterId": characterId })
       .project({
         _id: 1,

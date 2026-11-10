@@ -4,6 +4,7 @@ import { dismissCaretakerCeo } from "@/lib/corporations/caretakerCeo";
 import { canActOnCorporationAsParent } from "../authorization";
 import { SUBSIDIARY_MIN_AGE_TURNS } from "../constants";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReleaseSubsidiaryInput {
   sub: Corporation;
@@ -36,7 +37,7 @@ export async function releaseSubsidiary(
     return fail(`A subsidiary cannot be released for another ${remaining} turn(s).`);
   }
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: sub._id },
     {
       $unset: {

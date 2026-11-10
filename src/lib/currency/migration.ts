@@ -17,6 +17,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const BATCH_SIZE = 500;
 
@@ -281,7 +282,7 @@ export async function migrateCorporationLiquidCapital(db: Db): Promise<Migration
     )
   );
 
-  const col = db.collection("corporations");
+  const col = corporationsCollection(db);
   const cursor = col
     .find({})
     .project({ _id: 1, countryId: 1, liquidCapital: 1, liquidCurrencyCode: 1 })

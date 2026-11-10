@@ -13,6 +13,7 @@ import type {
   VerifyResult,
 } from "../types";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Restores banks charged margin interest on central bank liquidity injections
@@ -146,8 +147,7 @@ type CorpDoc = Pick<Corporation, "_id" | "name" | "bankCharter" | "liquidCapital
 };
 
 async function load(db: Db): Promise<Map<string, CorpDoc>> {
-  const docs = await db
-    .collection<CorpDoc>("corporations")
+  const docs = await corporationsCollection<CorpDoc>(db)
     .find(
       { _id: { $in: ROWS.map((row) => new ObjectId(row.corporationId)) } },
       { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
@@ -209,9 +209,7 @@ async function plan(db: Db): Promise<HealPlan> {
     const doc = docs.get(row.corporationId);
     if (!doc) continue;
     // Eligibility is checked as if the refund had landed: capital comes from it.
-    const corp = (await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: doc._id })) as Corporation;
+    const corp = (await corporationsCollection(db).findOne({ _id: doc._id })) as Corporation;
     const marker = markerOf(doc);
     const refunded = marker ? 0 : row.refund;
     const eligibility = await checkCharterEligibility(
@@ -261,7 +259,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       refund: row.refund,
       reopen: row.reopenAs ? "pending" : "not-planned",
     };
-    const res = await db.collection<CorpDoc>("corporations").updateOne(
+    const res = await corporationsCollection<CorpDoc>(db).updateOne(
       { _id: new ObjectId(row.corporationId), [MARKER_PATH]: { $exists: false } },
       {
         $inc: { liquidCapital: row.refund },
@@ -307,18 +305,20 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let reopened = 0;
   for (const row of reopens) {
     const id = new ObjectId(row.corporationId);
-    const doc = await db
-      .collection<CorpDoc>("corporations")
-      .findOne({ _id: id }, { projection: { bankCharter: 1, remediation: 1 } });
+    const doc = await corporationsCollection<CorpDoc>(db).findOne(
+      { _id: id },
+      { projection: { bankCharter: 1, remediation: 1 } }
+    );
     if (!doc || doc.bankCharter?.status === "active" || markerOf(doc)?.reopen !== "pending")
       continue;
     const result = await issueCharter(db, id, row.reopenAs!, CURRENCY);
     const outcome: Marker["reopen"] = result.ok
       ? "done"
       : `refused: ${(result.reasons[0] ?? "ineligible").slice(0, 120)}`;
-    await db
-      .collection<CorpDoc>("corporations")
-      .updateOne({ _id: id }, { $set: { [`${MARKER_PATH}.reopen`]: outcome } });
+    await corporationsCollection<CorpDoc>(db).updateOne(
+      { _id: id },
+      { $set: { [`${MARKER_PATH}.reopen`]: outcome } }
+    );
     if (result.ok) reopened += 1;
     notes.push(`${row.name}: reopen as ${row.reopenAs} ${outcome}`);
   }

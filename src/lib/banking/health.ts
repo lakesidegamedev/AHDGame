@@ -22,6 +22,7 @@ import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { lifecycleStage, type BankLifecycleStage } from "@/lib/banking/rules/lifecycle";
 import { buildSavingsComparison, readCohort, type SavingsComparison } from "@/lib/savings/shadow";
 import { getCurrentTurn } from "@/lib/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CurrencyBankingHealth {
   currency: CurrencyCode;
@@ -105,8 +106,7 @@ async function playerHeldByBank(db: Db, currency: CurrencyCode): Promise<Map<str
 }
 
 export async function buildBankingHealth(db: Db, now = new Date()): Promise<BankingHealthReport> {
-  const banks = await db
-    .collection<Corporation>("corporations")
+  const banks = await corporationsCollection(db)
     .find({ "bankCharter.status": "active" })
     .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
     .toArray();
@@ -183,8 +183,7 @@ export async function buildBankingHealth(db: Db, now = new Date()): Promise<Bank
           authoritativeCurrencies: readCohort(policy),
         });
 
-  const resolvingRows = await db
-    .collection<Corporation>("corporations")
+  const resolvingRows = await corporationsCollection(db)
     .find({
       "bankCharter.resolutionClaimedTurn": { $exists: true },
       "bankCharter.depositorsResolvedTurn": { $exists: false },

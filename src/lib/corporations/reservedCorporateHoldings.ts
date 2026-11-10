@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReservedCorporatePosition {
   corporationId: ObjectId;
@@ -224,9 +225,10 @@ export async function isSittingCeoOfControllingParent(
   if (!viewerUserId) return false;
   const controllingParent = await resolveControllingCorporateParent(db, corporation);
   if (!controllingParent) return false;
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId }, { projection: { userId: 1, ceoVacant: 1 } });
+  const parent = await corporationsCollection(db).findOne(
+    { _id: controllingParent.corporationId },
+    { projection: { userId: 1, ceoVacant: 1 } }
+  );
   return parent != null && parent.ceoVacant !== true && parent.userId?.toString() === viewerUserId;
 }
 

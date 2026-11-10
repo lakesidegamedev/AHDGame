@@ -4,6 +4,7 @@ import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { resolveGameYear } from "@/lib/era/era";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type SpinOffTechRow = Pick<Corporation, "_id" | "type" | "unlockedTechNodeIds">;
 
@@ -23,8 +24,7 @@ async function backfillSpinOffTechBaselines(
     }
   );
   const currentYear = resolveGameYear(gameState ?? {}) ?? STARTING_YEAR;
-  const corporations = await db
-    .collection<SpinOffTechRow>("corporations")
+  const corporations = await corporationsCollection<SpinOffTechRow>(db)
     .find({ isSpinOff: true })
     .project<SpinOffTechRow>({ _id: 1, type: 1, unlockedTechNodeIds: 1 })
     .toArray();
@@ -59,7 +59,7 @@ async function backfillSpinOffTechBaselines(
     };
   }
 
-  const result = await db.collection<Corporation>("corporations").bulkWrite(operations);
+  const result = await corporationsCollection(db).bulkWrite(operations);
   return {
     documentsScanned: corporations.length,
     documentsUpdated: result.modifiedCount,

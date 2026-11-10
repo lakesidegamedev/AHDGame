@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type CorporationSettlementLock = "bondSettlementInProgressAt" | "dissolutionInProgressAt";
 
@@ -8,9 +9,7 @@ async function clearLock(
   corporationId: Corporation["_id"],
   field: CorporationSettlementLock
 ): Promise<void> {
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corporationId }, { $unset: { [field]: "" } });
+  await corporationsCollection(db).updateOne({ _id: corporationId }, { $unset: { [field]: "" } });
 }
 
 async function claimCorporationSettlementLock(
@@ -19,12 +18,10 @@ async function claimCorporationSettlementLock(
   field: CorporationSettlementLock,
   now: Date
 ): Promise<boolean> {
-  const claim = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporationId, [field]: { $exists: false } },
-      { $set: { [field]: now, updatedAt: now } }
-    );
+  const claim = await corporationsCollection(db).updateOne(
+    { _id: corporationId, [field]: { $exists: false } },
+    { $set: { [field]: now, updatedAt: now } }
+  );
   return claim.matchedCount > 0;
 }
 

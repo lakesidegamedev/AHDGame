@@ -6,7 +6,7 @@ import { accountId } from "@/lib/ledger/accounts";
 import type { LedgerEntry } from "@/lib/ledger/types";
 /** Freeze a complete turn before moving cash, then publish replayable absolute receipts. */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { encodeReceipt, decodeReceipt, stageReceiptChunks } from "./receiptStorage";
 import { roundStageTimings, stageClock, type StageTimings } from "./stageTimings";
@@ -18,6 +18,7 @@ import { advanceProducerEconomy } from "./production";
 import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type EconomyInput = Parameters<typeof advanceProducerEconomy>[0];
 export type EconomyResult = ReturnType<typeof advanceProducerEconomy>;
@@ -291,8 +292,7 @@ async function verifyPhysicalTargets(
       ...existing.map((sector) => sector.corporationId.toHexString()),
     ]),
   ];
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       { _id: { $in: corporationIds.map((id) => new ObjectId(id)) } },
       { projection: { _id: 1 } }

@@ -13,10 +13,10 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { computeNationalizationTargetDetail } from "@/lib/nationalization/billTargetPreview";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -38,9 +38,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(corporationId) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(corporationId) });
     if (!corp || corp.countryId !== countryId) {
       return errorResponse(404, "Corporation not found in this country.");
     }

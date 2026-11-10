@@ -42,6 +42,7 @@ import {
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CarveSelection {
   sectorId: ObjectId;
@@ -110,7 +111,7 @@ export async function privatizeAsset(
   await assertPrivateEnterprisePermitted(db, params.countryId);
 
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const sectors = db.collection<CorporateSector>("corporateSectors");
 
   if (params.selections.length === 0) throw new Error("No sectors selected to privatize");

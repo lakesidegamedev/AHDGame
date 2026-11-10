@@ -10,8 +10,8 @@ import {
   corpLiquidCapitalToAnchor,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
-import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
   dryRun: z.boolean().default(true),
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const { dryRun } = parsed.data;
     const db = await getDb();
-    const corps = db.collection<Corporation>("corporations");
+    const corps = corporationsCollection(db);
     const now = new Date();
 
     // National corporations are the destination for orphaned shares.
