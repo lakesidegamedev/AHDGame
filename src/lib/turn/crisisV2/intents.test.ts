@@ -114,10 +114,38 @@ describe("routeEffectIntents", () => {
     const [filter, pipeline] = update.mock.calls[0] as unknown as [unknown, unknown[]];
     expect(filter).toEqual({ "bankCharter.status": "active", countryId: { $in: ["US"] } });
     expect(Array.isArray(pipeline)).toBe(true);
-    expect(JSON.stringify(pipeline[0])).toContain("stressCarry");
-    expect(JSON.stringify(pipeline[0])).toContain("0.3");
+    expect(JSON.stringify(pipeline)).toContain("stressCarry");
+    expect(JSON.stringify(pipeline)).toContain("0.3");
     // The panic only starts where the accumulated carry reaches a whole turn.
-    expect(JSON.stringify(pipeline[1])).toContain("$gte");
+    expect(JSON.stringify(pipeline.at(-1))).toContain("$gte");
+  });
+
+  it("halves stale carry per skipped turn and stamps the push turn", async () => {
+    const { db, collections } = makeDb();
+    await routeEffectIntents(db, [{ kind: "bankStress", delta: 0.3 }], { ...targets(), turn: 40 });
+    const [, pipeline] = collections.get("corporations")!.updateMany.mock.calls[0] as unknown as [
+      unknown,
+      unknown[],
+    ];
+    expect(pipeline).toHaveLength(3);
+    const text = JSON.stringify(pipeline);
+    expect(text).toContain("$pow");
+    expect(text).toContain("stressCarryTurn");
+  });
+
+  it("keeps module-driven stress as a sustained panic that does not use the carry", async () => {
+    const { db, collections } = makeDb();
+    await routeEffectIntents(
+      db,
+      [
+        { kind: "bankStress", delta: 0.3, sustained: true },
+        { kind: "bankStress", delta: 0.4, sustained: true },
+      ],
+      { ...targets(), turn: 40 }
+    );
+    const update = collections.get("corporations")!.updateMany;
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.calls[0]![1]).toEqual({ $max: { "bankCharter.panicTurns": 1 } });
   });
 
   it("sums stress from several intents into one bank update", async () => {
@@ -133,7 +161,7 @@ describe("routeEffectIntents", () => {
     const update = collections.get("corporations")!.updateMany;
     expect(update).toHaveBeenCalledTimes(1);
     const [, pipeline] = update.mock.calls[0] as unknown as [unknown, unknown[]];
-    expect(JSON.stringify(pipeline[0])).toContain("2.2");
+    expect(JSON.stringify(pipeline)).toContain("2.2");
   });
 
   it("widens the borrowing premium by lowering investor confidence", async () => {

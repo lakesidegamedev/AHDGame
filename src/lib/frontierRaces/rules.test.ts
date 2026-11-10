@@ -81,7 +81,7 @@ import { frontierMethodEffects } from "./rules";
 describe("frontierMethodEffects", () => {
   it("turns held methods into one plant output effect", () => {
     expect(frontierMethodEffects({ fusion: "winner", orbital: "licence" })).toEqual([
-      { kind: "plantOutput", pct: METHOD_PLANT_OUTPUT_PCT * 1.5 },
+      { kind: "plantOutput", pct: METHOD_PLANT_OUTPUT_PCT * 1.5, method: true },
     ]);
     expect(frontierMethodEffects(undefined)).toEqual([]);
   });

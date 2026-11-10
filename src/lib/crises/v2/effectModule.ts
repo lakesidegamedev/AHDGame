@@ -26,7 +26,12 @@ export type EffectIntent =
       serviceGdpShare?: number;
       serviceTurns?: number;
     }
-  | { kind: "bankStress"; delta: number }
+  /**
+   * Bank stress. A plain push builds up in each bank's carry and panics it
+   * only on whole units. `sustained` keeps a crisis panic running for as long as
+   * the crisis pushes: the delta is a panic length in turns, not a fractional push.
+   */
+  | { kind: "bankStress"; delta: number; sustained?: boolean }
   | { kind: "bondYield"; deltaBps: number }
   /** Points of approval, narrowed to a demographic group when named. */
   | { kind: "approval"; delta: number; group?: string; officeRole?: string }

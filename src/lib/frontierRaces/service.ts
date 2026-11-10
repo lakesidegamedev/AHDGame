@@ -167,25 +167,37 @@ export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResu
     };
   }
 
-  const updated = await races.findOneAndUpdate(
+  // Reserve under `pending`, which winner resolution ignores, so an entrant that
+  // then fails to pay can never be crowned. The guard keeps a decided race closed.
+  const reserved = await races.findOneAndUpdate(
     { _id: def.id, winner: { $exists: false } },
     {
-      $inc: { [`contributions.${key}`]: points },
+      $inc: { [`pending.${key}`]: points },
       $set: { [`names.${key}`]: name, updatedAt: new Date() },
     },
     { returnDocument: "after" }
   );
-  if (!updated) return fail("closed", "This programme already has a winner");
+  if (!reserved) return fail("closed", "This programme already has a winner");
 
   if (!(await charge())) {
     // Points are bookkeeping, not money: taking them back creates nothing.
-    await races.updateOne({ _id: def.id }, { $inc: { [`contributions.${key}`]: -points } });
+    await races.updateOne({ _id: def.id }, { $inc: { [`pending.${key}`]: -points } });
     return fail(
       "cannot_pay",
       args.kind === "country" ? "The treasury cannot cover this order" : "Not enough R&D points"
     );
   }
-  const total = updated.contributions[key] ?? points;
+  // Paid: move the points into the counted contributions. No winner guard here,
+  // because the payer has already been charged and the spend must be recorded.
+  const promoted = await races.findOneAndUpdate(
+    { _id: def.id },
+    {
+      $inc: { [`pending.${key}`]: -points, [`contributions.${key}`]: points },
+      $set: { updatedAt: new Date() },
+    },
+    { returnDocument: "after" }
+  );
+  const total = promoted?.contributions[key] ?? points;
   return { ok: true, points, total, progress: Math.min(1, total / def.threshold) };
 }
 

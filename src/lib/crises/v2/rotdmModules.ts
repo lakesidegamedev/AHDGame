@@ -84,7 +84,7 @@ export const bankStressModule: EffectModule = {
   id: "rotdm.bankStress",
   evaluate(ctx, params) {
     const delta = numberParam(params, "max", 3) * crisisPressure(ctx);
-    return delta < 0.05 ? [] : [{ kind: "bankStress", delta }];
+    return delta < 0.05 ? [] : [{ kind: "bankStress", delta, sustained: true }];
   },
 };
 

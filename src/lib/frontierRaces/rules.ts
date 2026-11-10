@@ -60,6 +60,7 @@ export const LICENCE_STRENGTH = 0.5;
  * Plant output a corporation gets from holding a method, at full strength.
  * Sized so one method (6000+ research points) beats what the same points buy
  * from ordinary frontier programmes (about +5.6%), because a race can be lost.
+ * It sits outside the shared tech plant-output cap, as its own capped term.
  */
 export const METHOD_PLANT_OUTPUT_PCT = 0.1;
 /** National approval points for the winning nation. */
@@ -198,7 +199,7 @@ export function conversionReturn(points: number): number {
 /** Tech effects a corporation's held methods add to its primary sector. */
 export function frontierMethodEffects(
   methods: Readonly<Record<string, "winner" | "licence">> | undefined
-): { kind: "plantOutput"; pct: number }[] {
+): { kind: "plantOutput"; pct: number; method: true }[] {
   const pct = methodPlantOutputPct(Object.values(methods ?? {}));
-  return pct > 0 ? [{ kind: "plantOutput", pct }] : [];
+  return pct > 0 ? [{ kind: "plantOutput", pct, method: true }] : [];
 }

@@ -364,6 +364,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // Active plant-wide tech effects against their caps.
       plantOutputPct: agg ? Math.round(agg.plantOutputBonus * 1000) / 10 : null,
       plantOutputCapPct: Math.round(TECH_PLANT_OUTPUT_CAP * 100),
+      // Frontier race methods sit on top of the node cap as their own term.
+      methodOutputPct: agg ? Math.round(agg.methodOutputBonus * 1000) / 10 : null,
       inputEfficiencyPct: agg ? Math.round(agg.inputEfficiencyBonus * 1000) / 10 : null,
       inputEfficiencyCapPct: Math.round(TECH_INPUT_EFFICIENCY_CAP * 100),
       // Overview metrics.
