@@ -181,7 +181,22 @@ export function resetSelectionPreflight(
   const requested = RESET_SYSTEMS.filter((system) => selected[system] === "v2");
   if (requested.length === 0) return { allowed: true };
   if (preset !== "1991-default" || !atPresetAnchor) {
-    return { allowed: false, reason: "Reset v2 requires the 1991-default opening date" };
+    const settings = [
+      ["legislation", "Legislation"],
+      ["cabinet", "Cabinet"],
+      ["metrics", "Metrics"],
+      ["demographics", "Demographics"],
+    ] as const;
+    const changes = settings
+      .filter(([system]) => requested.includes(system))
+      .map(([, label]) => label);
+    return {
+      allowed: false,
+      reason:
+        "Reset v2 requires the 1991 default preset at week 1. " +
+        "For the selected date, open Admin Dashboard > Feature gates and set the following " +
+        `next-reset versions to v1 in order: ${changes.join(", ")}. Then retry the reset.`,
+    };
   }
   const unavailable = requested.filter((system) => !v2Ready[system]);
   if (unavailable.length > 0) {

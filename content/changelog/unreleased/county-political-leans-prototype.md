@@ -23,3 +23,5 @@ areas: [engine]
   remain unchanged.
 - Added aggregate-only world budget checks and exact Census block population
   reconciliation for California's official map, plus resident-priced replays.
+- Reset errors now show which next-reset system versions to change before
+  choosing an opening date outside the v2 preset.

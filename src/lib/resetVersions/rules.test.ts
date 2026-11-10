@@ -192,7 +192,7 @@ describe("reset-era system versions", () => {
     expect(resetSelectionPreflight(null, "2019-default", false, staged)).toEqual({ allowed: true });
     expect(resetSelectionPreflight(state, "2019-default", true, ready)).toEqual({
       allowed: false,
-      reason: "Reset v2 requires the 1991-default opening date",
+      reason: expect.stringContaining("next-reset versions to v1 in order: Metrics."),
     });
     expect(resetSelectionPreflight(state, "1991-default", false, ready).allowed).toBe(false);
     expect(resetSelectionPreflight(state, "1991-default", true, staged)).toEqual({
@@ -200,6 +200,31 @@ describe("reset-era system versions", () => {
       reason: "Reset v2 systems are not ready: metrics",
     });
     expect(resetSelectionPreflight(state, "1991-default", true, ready)).toEqual({ allowed: true });
+  });
+
+  it("shows the dependency order for changing v2 selections before a 2027 reset", () => {
+    const state = {
+      resetSystemSelections: {
+        metrics: "v2",
+        legislation: "v2",
+        cabinet: "v2",
+        demographics: "v1",
+      } as const,
+    };
+    expect(resetSelectionPreflight(state, "2027-default", true, ready)).toEqual({
+      allowed: false,
+      reason: expect.stringContaining(
+        "next-reset versions to v1 in order: Legislation, Cabinet, Metrics."
+      ),
+    });
+    expect(
+      resetSelectionPreflight(
+        { resetSystemSelections: { metrics: "v1", legislation: "v1", cabinet: "v1" } },
+        "2027-default",
+        true,
+        ready
+      )
+    ).toEqual({ allowed: true });
   });
 
   it("rejects an inconsistent stored selection rather than silently dropping it", () => {
