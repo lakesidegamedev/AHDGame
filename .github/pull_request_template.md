@@ -20,4 +20,5 @@
 - [ ] It does, and I have disclosed it below or privately to a maintainer
 
 <!-- Economy or turn code only: say who the change helps or hurts. Required by the check. -->
-Affects: 
+
+Affects:
