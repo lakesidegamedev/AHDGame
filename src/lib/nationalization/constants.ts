@@ -226,6 +226,25 @@ export const POLITICAL_TIER_WEIGHT: Record<"fair" | "discounted" | "seizure", nu
   seizure: 1.0,
 };
 
+/**
+ * Cold-war tension points one taking adds when the owner is FOREIGN (spec §12.3).
+ *
+ * The world has no bilateral relations scalar, so the diplomatic consequence runs
+ * through the shared tension ledger, which already feeds DEFCON, procurement
+ * demand and detente goodwill: an expropriation of another country's capital is
+ * a public act against that country and reads the same way to everyone. Scaled by
+ * the payment tier, because a fully compensated nationalization is a market
+ * transaction while an uncompensated seizure is a diplomatic incident. Kept
+ * small on purpose (a declared war spikes 10 to 20): one taking should not read
+ * like an outbreak, and a country that sweeps a whole sector pays the sum of its
+ * individual takings. Tunable.
+ */
+export const EXPROPRIATION_TENSION_BY_TIER: Record<CompensationTier, number> = {
+  fair: 0.5,
+  discounted: 1.5,
+  seizure: 3,
+};
+
 /** Legitimacy points removed for a full seizure (confidence-model countries). */
 export const LEGITIMACY_HIT_BASE = 6;
 
