@@ -1,4 +1,4 @@
-import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
+import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { createNotification, createNotifications } from "@/lib/notifications";

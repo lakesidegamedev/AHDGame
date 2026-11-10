@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { processCaucusChairElections } from "@/lib/caucusChairElections";
+import { processCaucusChairElections } from "@/lib/elections/party/caucusChairElections";
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
 import type {
   NationalPartyElection,
@@ -19,7 +19,7 @@ import {
   type CycleAnchorCandidate,
 } from "@/lib/elections/defaultCycleAnchor";
 import { isUserActive } from "@/lib/players/playerActivity";
-import { LEADERSHIP_INACTIVE_TURN_THRESHOLD } from "@/lib/statePartyElections";
+import { LEADERSHIP_INACTIVE_TURN_THRESHOLD } from "@/lib/elections/party/statePartyElections";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
 import {
   notifyNationalMembersElectionsOpenedBatch,

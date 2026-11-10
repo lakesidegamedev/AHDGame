@@ -1,4 +1,4 @@
-import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
+import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET  /api/admin/country/[code]/state-party-elections
@@ -21,18 +21,18 @@ import {
   createMissingElections,
   POSITION_LABELS,
   ELECTION_DURATION_TURNS,
-} from "@/lib/statePartyElections";
+} from "@/lib/elections/party/statePartyElections";
 import {
   processCompletedNationalElections,
   createMissingNationalElections,
   NATIONAL_ELECTION_DURATION_TURNS,
-} from "@/lib/nationalPartyElections";
+} from "@/lib/elections/party/nationalPartyElections";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import {
   processCompletedCommitteeElections,
   createMissingCommitteeElections,
   COMMITTEE_ELECTION_DURATION_TURNS,
-} from "@/lib/nationalCommitteeElections";
+} from "@/lib/elections/party/nationalCommitteeElections";
 import type {
   StatePartyElection,
   NationalPartyElection,

@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { NATIONAL_ELECTION_DURATION_TURNS } from "@/lib/nationalPartyElections";
+import { NATIONAL_ELECTION_DURATION_TURNS } from "@/lib/elections/party/nationalPartyElections";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { findCaucusBySlug } from "@/lib/db/caucusLookup";
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";

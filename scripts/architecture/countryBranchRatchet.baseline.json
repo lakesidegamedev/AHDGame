@@ -275,7 +275,7 @@
     "src/lib/sim/backfillMissingSeats.ts": 3,
     "src/lib/sim/economyTelemetry.ts": 2,
     "src/lib/sim/materializeSyntheticActors.ts": 1,
-    "src/lib/statePartyElections.ts": 1,
+    "src/lib/elections/party/statePartyElections.ts": 1,
     "src/lib/states/regionalExecutive.ts": 6,
     "src/lib/states/rules/seatSelectors.ts": 2,
     "src/lib/turn/billLifecycle/engine.ts": 2,

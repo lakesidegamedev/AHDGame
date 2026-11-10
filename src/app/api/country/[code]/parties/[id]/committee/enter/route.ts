@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { z } from "zod";
-import { notifyCommitteeCandidacyDeclared } from "@/lib/nationalCommitteeElections";
+import { notifyCommitteeCandidacyDeclared } from "@/lib/elections/party/nationalCommitteeElections";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type {
