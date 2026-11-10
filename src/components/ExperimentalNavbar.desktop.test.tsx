@@ -105,7 +105,7 @@ describe("experimental desktop menu integration", () => {
       .getAllByRole<HTMLAnchorElement>("link")
       .map((a) => a.getAttribute("href"));
     for (const href of [
-      "/corporation/7",
+      "/api/corporations/mine",
       "/corporation/7/group",
       "/unions/union",
       "/world/german-question",
@@ -131,7 +131,7 @@ describe("experimental desktop menu integration", () => {
       .getAllByRole<HTMLAnchorElement>("link")
       .map((a) => a.getAttribute("href"));
     for (const href of [
-      "/corporation/7",
+      "/api/corporations/mine",
       "/corporation/7/group",
       "/unions/union",
       "/unions",
