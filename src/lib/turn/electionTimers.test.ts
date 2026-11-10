@@ -254,7 +254,8 @@ describe("ensurePerpetualElections", () => {
     db.collectionMocks["elections"].insertMany.mockResolvedValue({ insertedIds: {} });
     db.collectionMocks["elections"].deleteMany.mockResolvedValue({ deletedCount: 0 });
 
-    const { ensurePerpetualElections, DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
+    const { ensurePerpetualElections, DEFAULT_DURATIONS } =
+      await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(now, 385);
 
     const [inserted] = vi.mocked(db.collectionMocks["elections"].insertMany).mock.calls[0];

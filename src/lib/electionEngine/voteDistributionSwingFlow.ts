@@ -57,7 +57,10 @@ import { personalStatTenureRetentionForCandidate } from "@/lib/elections/rules/t
 import { persuasionDrivers } from "./persuasionDrivers";
 import type { EnrichedCandidate, DistributeVotesOptions, AppealWeightTrace } from "./types";
 import { democraticHealthMultiplierForCandidate } from "./democraticHealth";
-import { applyFptpSpoilerTransfers, shouldApplyFptpSpoiler } from "@/lib/elections/rules/spoilerTransfers";
+import {
+  applyFptpSpoilerTransfers,
+  shouldApplyFptpSpoiler,
+} from "@/lib/elections/rules/spoilerTransfers";
 
 /**
  * Per-candidate within-group weight for the §7.3.2 nominal_share line:

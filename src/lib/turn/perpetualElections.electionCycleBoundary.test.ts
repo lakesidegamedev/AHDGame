@@ -290,7 +290,8 @@ async function runBoundarySpawners(now: Date, currentTurn?: number): Promise<voi
   const { ensureIELocalCouncilElections } = await import("@/lib/elections/scheduling/countries/ie");
   const { ensureJPElections, ensureJPRegionalCouncilElections } =
     await import("@/lib/elections/scheduling/countries/jp");
-  const { ensureRURepublicSovietElections } = await import("@/lib/elections/scheduling/countries/ru");
+  const { ensureRURepublicSovietElections } =
+    await import("@/lib/elections/scheduling/countries/ru");
   const { ensureFRSenateElections } =
     await import("@/lib/elections/scheduling/countries/betaParliaments");
   await ensureIELocalCouncilElections(now, currentTurn);

@@ -216,7 +216,8 @@ describe("perpetualElections", () => {
     });
 
     it("House completes after exactly 96 turns (durationHours) when now advances 1h per turn", async () => {
-      const { advanceElectionTimers, DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
+      const { advanceElectionTimers, DEFAULT_DURATIONS } =
+        await import("@/lib/elections/scheduling");
       const houseDuration = DEFAULT_DURATIONS.house.durationHours;
       expect(houseDuration).toBe(96);
 

@@ -243,7 +243,8 @@ describe("resolvePrimariesIfNeeded", () => {
       // seats by primary share rather than falling back to general-vote share.
       const { initElectionVoteTally } = await import("@/lib/electionEngine");
       expect(initElectionVoteTally).toHaveBeenCalled();
-      const { initPresidentVoteTally } = await import("@/lib/elections/presidential/presidentialElectionEngine");
+      const { initPresidentVoteTally } =
+        await import("@/lib/elections/presidential/presidentialElectionEngine");
       expect(initPresidentVoteTally).not.toHaveBeenCalled();
       const primaryResults = vi.mocked(initElectionVoteTally).mock.calls[0][3];
       expect(primaryResults?.byParty?.DEM?.[0]?.won).toBe(true);
@@ -1693,7 +1694,8 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { accumulatePresidentVoteTurn } = await import("@/lib/elections/presidential/presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     expect(accumulatePresidentVoteTurn).toHaveBeenCalledWith(
       electionId,
       10,
@@ -1843,7 +1845,8 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { initPresidentVoteTally } = await import("@/lib/elections/presidential/presidentialElectionEngine");
+    const { initPresidentVoteTally } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     expect(initPresidentVoteTally).toHaveBeenCalledWith(
       electionId,
       [candidate],

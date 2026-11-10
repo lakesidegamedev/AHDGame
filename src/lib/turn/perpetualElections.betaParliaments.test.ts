@@ -626,7 +626,8 @@ describe("beta lower-chamber specs (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureITSenateElections, ensureITElections } = await import("@/lib/elections/scheduling");
+      const { ensureITSenateElections, ensureITElections } =
+        await import("@/lib/elections/scheduling");
       await ensureITSenateElections(NOW);
       const senatoEndTurn = mock.insertCalls.flat()[0]?.endTurn;
 

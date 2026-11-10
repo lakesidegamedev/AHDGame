@@ -125,7 +125,10 @@ export {
   ensureWALRegionalCouncilElections,
 } from "./countries/ukDevolved";
 export { SPAWN_ELECTIONS_REGISTRY } from "@/lib/elections/scheduling/registry";
-export type { SpawnElectionsHandler, SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
+export type {
+  SpawnElectionsHandler,
+  SpawnElectionsResult,
+} from "@/lib/elections/scheduling/registry";
 
 // The DE Landtag/Minister-President spawners live in `election/germanyLandtag`;
 // the original module re-exported them here for countryPhases.ts's barrel import.
