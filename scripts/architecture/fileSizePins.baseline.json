@@ -20,6 +20,6 @@
     "src/lib/turn/corporation/sectorCalculations.ts": 1858,
     "src/lib/turn/corporation/sectorTurn.ts": 1736,
     "src/lib/world/worldEntityManifest.ts": 1581,
-    "src/simulation/phases/turnPhaseRegistry.ts": 1799
+    "src/simulation/phases/turnPhaseRegistry.ts": 1798
   }
 }

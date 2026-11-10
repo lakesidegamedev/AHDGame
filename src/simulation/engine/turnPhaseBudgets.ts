@@ -38,6 +38,8 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   playerIncomeTax: 45,
   incomeTaxBases: 10,
   russianCouncilComposition: 100,
+  // Every election spawner for the countries in play, each idempotent and gated on its own anchor.
+  countryElections: 3000,
   corporationTurn: 4500,
   ministerialOrders: 2000,
   indexFunds: 18000,
