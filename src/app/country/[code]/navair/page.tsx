@@ -195,10 +195,11 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
     desc: AIR_MISSIONS[key].desc,
   }));
 
-  const stations: StationOption[] = REGIONS.map((r) => ({
+  const stations: StationOption[] = REGIONS.map((r): StationOption => ({
     id: r.id,
     name: r.name,
     allowed: isWaterAccessible(r.id) && isNavigable(r.id),
+    blockedReason: !isWaterAccessible(r.id) ? "land" : !isNavigable(r.id) ? "no-port" : undefined,
   })).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
