@@ -1,15 +1,8 @@
 /**
- * Opening tax-rate and health-levy ladders for the four countries whose law
- * book is the political-legislation book (US, UK, RU, DD).
- *
- * These are not laws. The national budget seed reads the default rung of a
- * ladder to set each country's opening tax rates (and the UK health levy), the
- * way an authored rate table would. Nothing here is seeded as a law type, shown
- * to players or enacted. Keys are the lever ids that each budget config's
- * `taxPolicyIds` and `policyRevenueConfigs` name.
- *
- * Rungs keep the stance coordinates (`economic`, `social`) because a config
- * may pick its default rung by position instead of by index.
+ * Opening tax-rate and health-levy ladders for US, UK, RU and DD. Not laws:
+ * the budget seed reads each ladder's default rung as an authored rate table.
+ * Keys are the lever ids named by `taxPolicyIds` and `policyRevenueConfigs`.
+ * Rungs keep `economic` and `social` because a config may pick by position.
  */
 import type { LegislationPolicyOption } from "@/lib/db/types";
 
