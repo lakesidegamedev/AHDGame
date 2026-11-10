@@ -1,6 +1,6 @@
 {
   "note": "Literal country-code branches outside src/lib/countries. Counts may only go down. Move the rule into the country folder, then run `npm run country-branches:lower`.",
-  "total": 731,
+  "total": 725,
   "files": {
     "src/app/api/admin/country/[code]/cabinet-nominations/route.ts": 1,
     "src/app/api/admin/country/[code]/region/[id]/redistrict/trigger/route.ts": 1,
@@ -180,7 +180,7 @@
     "src/lib/elections/blendDetailViewModel.ts": 1,
     "src/lib/elections/buildPollingData.ts": 1,
     "src/lib/elections/campaignStatePresence.ts": 1,
-    "src/lib/elections/canonicalCycle.ts": 16,
+    "src/lib/elections/canonicalCycle.ts": 10,
     "src/lib/elections/contingentProjection.ts": 1,
     "src/lib/elections/electionMethod.ts": 2,
     "src/lib/elections/electoralLaws.ts": 1,
