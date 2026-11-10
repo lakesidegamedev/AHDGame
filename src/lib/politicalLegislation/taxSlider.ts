@@ -54,16 +54,8 @@ export function validateTaxSliderProposal(
  * the DELTA — clamp((currentRate − proposedRate) / scale, −5, +5) with
  * scale = (maxRate − minRate) / 10. Cuts read rightward (+), hikes leftward (−).
  */
-export function taxSliderNpcEconomic(
-  taxSlider: NonNullable<LegislationType["taxSlider"]>,
-  currentRate: number,
-  proposedRate: number
-): number {
-  const scale = (taxSlider.maxRate - taxSlider.minRate) / 10;
-  if (scale <= 0) return 0;
-  const force = (currentRate - proposedRate) / scale;
-  return Math.max(-5, Math.min(5, force));
-}
+export { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
+import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
 
 export type ResolvedTaxSliderFields =
   | {

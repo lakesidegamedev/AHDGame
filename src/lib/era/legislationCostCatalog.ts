@@ -4,6 +4,7 @@
  * the two forms are consulted by costs.ts only when the era year is non-null;
  * flag-off keeps the legacy COST_SCALE_ANCHORS path byte-identical.
  */
+import { successorTaxInstrumentIds } from "@/lib/resetLegislation/successorTaxTypes";
 import { MECHANICAL_TYPE_IDS } from "@/lib/mechanicalLaws/legislation";
 import {
   MODERN_ERA_COST_CLASSES,
@@ -31,6 +32,8 @@ const BANKING_SEPARATION_COST_CLASSES: Record<string, CostClass> = Object.fromEn
 
 /** Per-type cost class. Populated in Task 3 (full coverage, validated). */
 export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
+  // Successor tax instruments collect revenue and have no spending-side cost.
+  ...Object.fromEntries(successorTaxInstrumentIds.map((id) => [id, "none" as const])),
   ...BANKING_SEPARATION_COST_CLASSES,
   // Mechanical laws (competition, subsidiary limits, foreign investment) cost nothing.
   ...Object.fromEntries(MECHANICAL_TYPE_IDS.map((id) => [id, "none" as CostClass])),

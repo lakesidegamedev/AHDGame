@@ -9,6 +9,8 @@
  * world the price documents carry the settled market's supply and demand, so
  * this reads real buyers.
  */
+import { sizeBuildDemand, fullMixBuildRoom } from "./rules/buildDemandCapacity";
+import { loadBuildDemandProducers } from "./loadBuildDemandProducers";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
@@ -30,7 +32,8 @@ export interface BuildRoomContext {
   demandRows?: (
     supply: Partial<Record<CommodityType, number>>,
     stateId: string,
-    countryId: string
+    countryId: string,
+    outputMultiplier?: number
   ) => import("./rules/fundedBuildDemand").BuildDemandRow[] | undefined;
   demandTurn?: number;
   /** Unmet demand for an output mix in a state, in capacity units per day. */
@@ -64,6 +67,23 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
       .toArray(),
     loadFundedBuildDemand(db),
   ]);
+  const capacity = funded ? await loadBuildDemandProducers(db) : null;
+  const demandRows = (
+    supply: Partial<Record<CommodityType, number>>,
+    stateId: string,
+    countryId: string,
+    outputMultiplier = 1
+  ) =>
+    funded && capacity
+      ? sizeBuildDemand({
+          rows: funded.rows(supply, stateId, countryId),
+          supply,
+          outputMultiplier,
+          stateId,
+          countryId,
+          producers: capacity.producers,
+        })
+      : undefined;
   const globalBalances = new Map<CommodityType, Balance>(
     priceDocs.map((p) => [
       p.commodity,
@@ -86,14 +106,24 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
   const priceDocByCommodity = new Map(priceDocs.map((p) => [p.commodity, p]));
   return {
     funded: funded != null,
-    demandRows: (supply, stateId, countryId) => funded?.rows(supply, stateId, countryId),
+    demandRows,
     demandTurn: funded?.turn,
     demandGapUnits(supplyMix, stateId, countryId) {
       if (funded) {
-        const rows = new Map(
-          funded.rows(supplyMix, stateId, countryId).map((r) => [r.commodity, r])
+        // This API is a raw gap; older callers subtract queues themselves.
+        // demandRows supplies the fully reserved candidate-specific estimate.
+        return (
+          fullMixBuildRoom(
+            sizeBuildDemand({
+              rows: funded.rows(supplyMix, stateId, countryId),
+              supply: supplyMix,
+              stateId,
+              countryId,
+              outputMultiplier: 1,
+              producers: [],
+            })
+          ) ?? 0
         );
-        return sectorDemandGapUnits(supplyMix, (commodity) => rows.get(commodity)?.unmet ?? 0);
       }
       return sectorDemandGapUnits(supplyMix, (commodity) => {
         // Restore the cap-hidden demand: state share for local outputs,

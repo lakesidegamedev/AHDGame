@@ -32,6 +32,7 @@ describe("runRequiredStartupMigrations", () => {
 
     expect(REQUIRED_STARTUP_MIGRATIONS.map((migration) => migration.id)).toEqual([
       "2026-10-21-backfill-mechanical-law-types",
+      "2026-11-09-successor-tax-types",
       "2026-10-14-contest-account-history",
       "2026-10-14-government-contract-bidding",
       "2026-10-15-income-tax-policy-parity",
@@ -64,6 +65,7 @@ describe("runRequiredStartupMigrations", () => {
       "2026-10-16-scotus-career-achievements",
       "2026-10-23-bank-money-move-unprojected-index",
       "2026-10-23-drop-log-text-indexes",
+      "2026-11-09-jp-law-lean-effects",
     ]);
     expect(REQUIRED_STARTUP_MIGRATIONS.every((migration) => migration.idempotent)).toBe(true);
     expect(runMigrationsMock).toHaveBeenNthCalledWith(1, db, {

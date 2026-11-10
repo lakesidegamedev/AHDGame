@@ -38,3 +38,42 @@ it("does not show national demand for a regional-only output", () => {
   );
   expect(screen.queryByText(/\/ National/)).toBeNull();
 });
+
+it("shows rounded per-output buildings and the conservative full-mix count without operating history", () => {
+  render(
+    <FundedBuildDemand
+      unitsPerFacility={10}
+      rows={[
+        {
+          commodity: "software",
+          scope: "national",
+          funded: 100,
+          delivered: 100,
+          unmet: 0,
+          capacityUnits: 0,
+        },
+        {
+          commodity: "network_services",
+          scope: "national",
+          funded: 100,
+          delivered: 0,
+          unmet: 100,
+          capacityUnits: 25,
+        },
+      ]}
+    />
+  );
+  expect(screen.getByText("Buildings to fill gap")).toBeTruthy();
+  expect(screen.getByText("3")).toBeTruthy();
+  expect(screen.getByText("Room with buyers for every output: 0 buildings")).toBeTruthy();
+  expect(screen.getByText(/staffing, inputs or profit recommendation/)).toBeTruthy();
+  expect(
+    screen.getByText(/A zero all-output count does not mean no buildings are useful/)
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/may be profitable if those sales cover the full running costs/)
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/Delivered means completed purchases by buyers in this market/)
+  ).toBeTruthy();
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, type ReactNode } from "react";
+import { useBodyScrollLock } from "./useBodyScrollLock";
 
 interface ModalProps {
   open: boolean;
@@ -58,6 +59,7 @@ export function Modal({
   variant = "default",
 }: ModalProps) {
   const titleId = useId();
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (!open || !closeOnEscape) return;
@@ -81,7 +83,7 @@ export function Modal({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex ${layoutClass} justify-center px-4`}
+      className={`fixed inset-0 z-[100] flex overscroll-contain ${layoutClass} justify-center px-4`}
       role="dialog"
       aria-modal
       // Without a name a screen reader announces only "dialog". String titles

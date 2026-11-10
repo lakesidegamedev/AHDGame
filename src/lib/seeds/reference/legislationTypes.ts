@@ -1,3 +1,4 @@
+import { successorTaxTypes } from "@/lib/resetLegislation/successorTaxTypes";
 import { expandIncomeTaxTypes } from "@/lib/budget/incomeTaxCatalog";
 import type { LegislationType, EffectTargetWeighted, MetricCategoryId } from "@/lib/db/types";
 import { policyOptions, taxRateOptions, withPerCapitaCosts } from "./policyOptionHelpers";
@@ -8772,19 +8773,8 @@ const rawLegislationTypes: LegislationType[] = [
   // 2027 to 2040 law types for the legacy-catalog legislatures (DE, JP, CN, IE).
   ...modernEraLegislationTypes,
 
-  // ── Scotland / Wales legislation types — PURPOSEFULLY POSTPONED ────────────
-  // The seceded devolved nations do NOT yet have their own legislation. This was
-  // a deliberate scope cut during the secession feature: Holyrood/Senedd run on
-  // the standup government + cabinet, but a Scotland/Wales policy page currently
-  // surfaces no enactable laws (the policy route filters legislationTypes by
-  // `countryScope`, and nothing is scoped "sco"/"wls" yet — though the
-  // LegislationType.countryScope union already reserves both codes).
-  //
-  // TODO(secession): author `@/lib/countries/sco/data/scoLegislationTypes.ts` +
-  // `@/lib/countries/wal/data/walLegislationTypes.ts` (each entry
-  // `countryScope: "sco"` / "wls" —
-  // note Wales is "wls", not "wal") and spread them here, mirroring the
-  // per-country pattern above. Until then, localize Westminster's bills.
+  // National tax instruments for independent Scotland and Wales.
+  ...successorTaxTypes,
 
   // ── P6a: Recruitment / National Service (militaryReadiness + conscription axis home) ──
   {

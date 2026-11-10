@@ -1,3 +1,4 @@
+import { v2VotePosition } from "@/lib/resetLegislation/rules/politicalPositions";
 import { billVotePositions } from "@/lib/legislature/votePositions";
 /**
  * National bills display the active legislature and its current voting mandates.
@@ -521,6 +522,16 @@ export async function listNationalLegislatureBills(
           return {
             legislationTypeId: provision.type,
             legislationTypeName,
+            ...(provision.type === "reset_law"
+              ? {
+                  ...v2VotePosition(provision),
+                  positionLabel:
+                    formatBillPositionLabel(
+                      v2VotePosition(provision)?.economic,
+                      v2VotePosition(provision)?.social
+                    ) ?? undefined,
+                }
+              : {}),
             effectDirection: 0,
             directionLabel: "Center" as const,
             effectTargetLabel: undefined,
@@ -588,7 +599,9 @@ export async function listNationalLegislatureBills(
     const headlinePositionLabel =
       firstPolicy && (firstPolicy.economic != null || firstPolicy.social != null)
         ? formatBillPositionLabel(firstPolicy.economic, firstPolicy.social)
-        : null;
+        : firstDisplayProvision && "positionLabel" in firstDisplayProvision
+          ? (firstDisplayProvision.positionLabel ?? null)
+          : null;
     const headlineEffectTargetLabel = (() => {
       if (firstPolicy?.policyOptionId && headlineLegislationType?.policyOptions) {
         const option = headlineLegislationType.policyOptions.find(
@@ -988,16 +1001,22 @@ export async function getNationalBillDetail(
       )
     : buildVotesByParty(otherVoteInputs.votes, voterPartyMap, partyMap, otherVoteInputs.weightMap);
 
-  // Read-only per-party whip summary for the origin chamber: every seated party
-  // shows its national whip direction, defaulting to "free vote" when none.
+  // Read-only per-party whip summary for the chamber now voting: every seated
+  // party shows its national whip direction, defaulting to "free vote" when none.
+  // A bill that has moved to its second chamber is whipped there, not in the
+  // origin chamber; concurrent and veto-override ballots keep the origin view.
   const whipWindowStart = getBillWhipWindowStart(bill);
+  const whipChamber =
+    bill.status === "active_both" || bill.status === "veto_override"
+      ? bill.originChamber
+      : (bill.currentChamber ?? bill.originChamber);
   const originWhips = await db
     .collection<BillWhip>("billWhips")
     .find({
       targetType: "bill",
       targetId: bill._id,
       issuedBy: "nationalParty",
-      chamber: bill.originChamber,
+      chamber: whipChamber,
       ...(whipWindowStart ? { createdAt: { $gte: whipWindowStart } } : {}),
     })
     .toArray();
@@ -1005,7 +1024,14 @@ export async function getNationalBillDetail(
   for (const whip of [...originWhips].sort((a, b) => a.attemptNumber - b.attemptNumber)) {
     whipDirectionByParty.set(whip.partyId, whip.direction);
   }
-  const whipCounts = voteByPartyOrigin.map((p) => ({
+  const whipParties =
+    whipChamber === bill.originChamber
+      ? voteByPartyOrigin
+      : [
+          ...voteByPartyOther,
+          ...voteByPartyOrigin.filter((p) => !voteByPartyOther.some((o) => o.party === p.party)),
+        ];
+  const whipCounts = whipParties.map((p) => ({
     partyId: p.party,
     partyName: p.partyName,
     partyColor: p.partyColor,

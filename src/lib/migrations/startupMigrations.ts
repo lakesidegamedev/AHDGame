@@ -1,3 +1,4 @@
+import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as crisisV2Indexes } from "./entries/2026-11-08-crisis-v2-indexes";
@@ -39,6 +40,7 @@ import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-c
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
 import { runMigrations, type RunSummary } from "./runner";
+import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
 
@@ -55,6 +57,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // The Competition, Subsidiary Limits and Foreign Investment Acts must exist
   // before the merger gate reads them, or every new country fails open.
   backfillMechanicalLawTypes,
+  successorTaxTypes,
   // Ownership and achievement definitions must exist before the next reset or settlement.
   contestAccountHistory,
   governmentContractBidding,
@@ -110,6 +113,9 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   bankMoneyMoveUnprojectedIndex,
   // Unused text indexes on the turn's two busiest logs cost index writes every turn.
   dropLogTextIndexes,
+  // Japanese laws carry lean effects in code; the live law types need them stored or
+  // passed bills still move no regional lean. Idempotent, existing jp_* docs only.
+  jpLawLeanEffects,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */

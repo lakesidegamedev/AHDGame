@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PositionBadges } from "@/components/PositionBadges";
 import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
 import { BillVoteIndicator } from "./BillVoteIndicator";
 import { BillProposalChip } from "./BillProposalChip";
@@ -197,6 +198,21 @@ export function BillCard({
             {bill.summary}
           </p>
         </Link>
+        {bill.provisions
+          ?.filter((provision) => provision.economic != null || provision.social != null)
+          .map((provision, index) => (
+            <div
+              key={`${provision.legislationTypeId}:${index}`}
+              className="mt-2 flex flex-wrap items-center gap-3 text-xs"
+            >
+              <span className="text-muted">{provision.legislationTypeName}</span>
+              <PositionBadges
+                economic={provision.economic}
+                social={provision.social}
+                align="items-start"
+              />
+            </div>
+          ))}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px]">
           {sponsorHref ? (
             // Duplicate of the name link below, so keep it out of the a11y tree.

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import { useTranslations } from "next-intl";
 import { visibleWorldNavItems, type WorldNavOpts } from "@/components/navbar/worldNavItems";
 import { WorldNavBadge } from "@/components/navbar/WorldNavBadge";
