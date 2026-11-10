@@ -16,27 +16,20 @@ export type CheckpointCountry = (typeof CHECKPOINT_COUNTRIES)[number];
 
 const PRESET = "2027-default";
 
-async function metricsFor(country: CheckpointCountry): Promise<StateMetrics[]> {
-  switch (country) {
-    case "US":
-      return (await import("@/lib/countries/us/data/usStateMetrics2027")).stateMetrics2027;
-    case "UK":
-      return (await import("@/lib/countries/uk/data/ukStateMetrics")).ukStateMetrics;
-    case "DE":
-      return (await import("@/lib/countries/de/data/deStateMetrics")).deStateMetrics;
-    case "JP":
-      return (await import("@/lib/countries/jp/data/jpStateMetrics")).jpStateMetrics;
-    case "CN":
-      return (await import("@/lib/countries/cn/data/cnStateMetrics")).cnStateMetrics;
-  }
-}
+const METRICS: Record<CheckpointCountry, () => Promise<StateMetrics[]>> = {
+  US: async () => (await import("@/lib/countries/us/data/usStateMetrics2027")).stateMetrics2027,
+  UK: async () => (await import("@/lib/countries/uk/data/ukStateMetrics")).ukStateMetrics,
+  DE: async () => (await import("@/lib/countries/de/data/deStateMetrics")).deStateMetrics,
+  JP: async () => (await import("@/lib/countries/jp/data/jpStateMetrics")).jpStateMetrics,
+  CN: async () => (await import("@/lib/countries/cn/data/cnStateMetrics")).cnStateMetrics,
+};
 
 export async function loadOpeningRegions(country: CheckpointCountry): Promise<{
   regions: CheckpointRegion[];
   seededPopulation: Record<string, number>;
 }> {
   const roster = await REGION_ROSTERS[country]!["2027"]!();
-  const metrics = new Map((await metricsFor(country)).map((m) => [String(m._id), m]));
+  const metrics = new Map((await METRICS[country]()).map((m) => [String(m._id), m]));
   const regions: CheckpointRegion[] = [];
   const seededPopulation: Record<string, number> = {};
   for (const state of roster) {
