@@ -20,3 +20,8 @@ export const successorTaxTypes: LegislationType[] = expandIncomeTaxTypes(
     })
   )
 );
+
+/** Tier provisions inherit the era and cost classification of their base instrument. */
+export const successorTaxInstrumentIds = [
+  ...new Set(successorTaxTypes.map((type) => type._id.split(/__(?:income|capital)_/)[0]!)),
+];
