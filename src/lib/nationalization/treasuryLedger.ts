@@ -81,6 +81,8 @@ const FLOW_ACCOUNTING = {
   },
   // A peace indemnity leaves one treasury for another, in each one's currency.
   peace_indemnity: { txType: "peace_indemnity", reason: "peace_indemnity" },
+  // Nation-funded frontier programme points, with no modeled recipient.
+  frontier_programme: { txType: "crisis_response_cost", reason: "frontier_programme" },
   // An index listing petition paid to the treasury when nobody holds the seat.
   index_listing_lobbying: { txType: "index_listing_lobbying", reason: "index_listing_lobbying" },
 } as const satisfies Record<string, { txType: FinancialTxType; reason: string }>;

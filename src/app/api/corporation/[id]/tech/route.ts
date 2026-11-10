@@ -134,6 +134,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
       frontierProgrammes: corporation.frontierProgrammes,
+      frontierMethods: corporation.frontierMethods,
     };
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));

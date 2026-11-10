@@ -74,6 +74,8 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   crisisTurn: 600,
   // Detectors read their inputs and streaks each turn; per-crisis work is batched.
   crisisV2Turn: 200,
+  // Three race documents, one batched corporation read and a handful of guarded writes.
+  frontierRaces: 40,
   autoCrisisTurn: 600,
   nppCorporateAttacks: 600,
   stateOwnershipConcentration: 400,

@@ -6,6 +6,7 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
     "Immutable receipt chunks are written by SHA-256 _id and read only by the bounded list of hashes in one frozen turn manifest. Reset deletes all chunks; there are no secondary scans or TTL queries.",
   fundWritedownCompensationLedger: "Retired world receipts have no active secondary access path.",
   procurementRestrictions: "One restriction per country, read and updated by its country _id.",
+  frontierRaces: "One document per programme race, read and written by its race _id.",
   vietnamEscalation: "One singleton, read and upserted by _id.",
   appliedWorldTransitions:
     "One receipt per authored rule, upserted by _id; the bounded rule roster is read once.",

@@ -419,6 +419,13 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               . Next programme:{" "}
               <span className="text-foreground">{data.frontier.nextCost} R&amp;D points</span>.
             </p>
+            <p>
+              The 2040s programme races pay a bigger prize to the first to finish.{" "}
+              <a href="/frontier-races" className="text-foreground underline">
+                See the race leaderboard
+              </a>
+              .
+            </p>
             {!data.frontier.open ? (
               <p>Finish this tier&apos;s nine core technologies in your track to open them.</p>
             ) : (

@@ -40,6 +40,7 @@ export async function loadSectorTechContext(
       | "unlockedTechNodeIds"
       | "techDecadeLane"
       | "frontierProgrammes"
+      | "frontierMethods"
       | "ceoType"
     >;
     sector: Pick<CorporateSector, "countryId">;
@@ -74,6 +75,7 @@ export async function loadSectorTechContext(
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
       frontierProgrammes: corporation.frontierProgrammes,
+      frontierMethods: corporation.frontierMethods,
     },
     strategyWorld: { sectorResearch, laneResearch, diffusion },
   };

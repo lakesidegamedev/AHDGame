@@ -430,6 +430,7 @@ export async function loadSectorDetailContext({
                 unlockedTechNodeIds: 1,
                 techDecadeLane: 1,
                 frontierProgrammes: 1,
+                frontierMethods: 1,
               },
             }
           )
