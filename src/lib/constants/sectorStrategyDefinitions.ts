@@ -1,6 +1,6 @@
 import type { OperatingSectorType } from "./corporations";
 import type { SectorStrategy } from "./sectorStrategyTypes";
-import { withTier2039 } from "./sectorStrategyDefinitions2039";
+import { TIER_2039_STRATEGIES } from "./sectorStrategyDefinitions2039";
 
 const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
   // ── Energy ──────────────────────────────────────────────────────────────
@@ -1491,4 +1491,9 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
   ],
 };
 
-export const SECTOR_STRATEGIES = withTier2039(BASE_SECTOR_STRATEGIES);
+export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = Object.fromEntries(
+  Object.entries(BASE_SECTOR_STRATEGIES).map(([sector, list]) => [
+    sector,
+    [...list, ...(TIER_2039_STRATEGIES[sector] ?? [])],
+  ])
+) as Record<OperatingSectorType, SectorStrategy[]>;

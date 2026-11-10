@@ -1,4 +1,3 @@
-import type { OperatingSectorType } from "./corporations";
 import type { SectorStrategy } from "./sectorStrategyTypes";
 
 /** Production methods that open with the 2039 research tier, appended to each sector's list. */
@@ -110,15 +109,3 @@ export const TIER_2039_STRATEGIES: Record<string, SectorStrategy[]> = {
     },
   ],
 };
-
-/** A strategy table with the 2039 methods appended to each sector's list. */
-export function withTier2039(
-  base: Record<OperatingSectorType, SectorStrategy[]>
-): Record<OperatingSectorType, SectorStrategy[]> {
-  return Object.fromEntries(
-    Object.entries(base).map(([sector, list]) => [
-      sector,
-      [...list, ...(TIER_2039_STRATEGIES[sector] ?? [])],
-    ])
-  ) as Record<OperatingSectorType, SectorStrategy[]>;
-}
