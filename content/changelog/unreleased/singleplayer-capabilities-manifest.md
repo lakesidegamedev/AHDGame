@@ -6,7 +6,7 @@ summary: >-
   supports, so the desktop app shows only choices that will work.
 tags: [singleplayer]
 badges: [patch]
-areas: [singleplayer]
+areas: [backend]
 ---
 
 ## What changed
