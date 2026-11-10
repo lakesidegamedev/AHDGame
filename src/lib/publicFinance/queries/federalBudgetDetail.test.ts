@@ -110,6 +110,32 @@ describe("projectSovereign", () => {
     });
   });
 
+  it("projects the latest austerity package only while its approval cost is fading", () => {
+    const lastPackage = {
+      fiscalYear: 2031,
+      appliedTurn: 1000,
+      sizeGdpShare: 0.04,
+      taxRise: 30,
+      spendingCut: 70,
+      approvalCost: 6,
+    };
+    const fresh = projectSovereign({ fiscalConsolidation: { lastPackage } }, 1000);
+    expect(fresh.consolidation).toMatchObject({
+      fiscalYear: 2031,
+      sizeGdpShare: 0.04,
+      taxShare: 0.3,
+      cutShare: 0.7,
+      approvalCost: 6,
+      approvalEffectNow: 6,
+    });
+    const half = projectSovereign({ fiscalConsolidation: { lastPackage } }, 1024);
+    expect(half.consolidation?.approvalEffectNow).toBeCloseTo(3);
+    expect(
+      projectSovereign({ fiscalConsolidation: { lastPackage } }, 1048).consolidation
+    ).toBeNull();
+    expect(projectSovereign({}, 1000).consolidation).toBeNull();
+  });
+
   it("treats an elapsed lock turn as open", () => {
     expect(projectSovereign({ marketAccessLockedUntilTurn: 50 }, 100).marketAccess).toBe("Open");
   });
