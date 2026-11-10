@@ -11,7 +11,7 @@
  *   resolveElections()  - batch (one round of queries, then _enrichElection)
  *   _enrichElection()   - low-level enrichment on pre-fetched data
  */
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import { usesCampaignRules } from "@/lib/campaignTargeting/rules";
 import { applyStandingAds } from "@/lib/campaignTargeting/standingAds";
 

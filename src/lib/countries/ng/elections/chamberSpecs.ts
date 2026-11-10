@@ -1,4 +1,4 @@
-import { defineChamberSpec } from "@/lib/turn/perpetualElections/chamberSpec";
+import { defineChamberSpec } from "@/lib/elections/scheduling/chamberSpec";
 import { NG_REGIONAL_COUNCIL_SEATS } from "@/lib/constants/states";
 
 /** Every NG office rides one concurrent four-year general-election cycle. */

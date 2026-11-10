@@ -9,7 +9,7 @@ import {
   type NGPresidentCandidate,
 } from "./ngPresidentResolution";
 import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
-import { NG_ZONES } from "@/lib/nigeriaPresidentialElectionEngine";
+import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 
 vi.mock("@/lib/elections/resolution/presidentExecutiveSeating", () => ({

@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureSEElections } from "@/lib/turn/perpetualElections";
+import { ensureSEElections } from "@/lib/elections/scheduling";
 
 /**
  * Sweden's elections.

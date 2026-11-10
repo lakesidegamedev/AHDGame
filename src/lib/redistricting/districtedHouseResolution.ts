@@ -10,7 +10,7 @@ import {
   assignDistrictsToNominees,
 } from "./districtedResolution";
 import { buildNomineesByParty, buildSeatResult } from "./districtedSeatResult";
-import { getMultiSeatMinShare } from "@/lib/turn/election/seatAllocation";
+import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
 
 export interface DistrictedArgs {
   countryId: string;

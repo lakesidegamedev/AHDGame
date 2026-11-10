@@ -1,5 +1,5 @@
 import type { CountryId } from "@/lib/constants/countries";
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import type { Db, Filter } from "mongodb";
 import { ObjectId } from "mongodb";
 import type {

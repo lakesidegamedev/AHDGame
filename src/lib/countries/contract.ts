@@ -36,7 +36,7 @@ import type { LegislativeProcess } from "@/lib/legislature/process";
 import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
-import type { SpawnElectionsHandler } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsHandler } from "@/lib/elections/scheduling/registry";
 import type { ShippingPreset } from "@/lib/world/eraRoster";
 import type { WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 

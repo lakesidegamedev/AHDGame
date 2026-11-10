@@ -15,7 +15,7 @@ vi.mock("@/lib/db/sessionDb", () => ({
  */
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@/lib/turn/perpetualElections", () => ({
+vi.mock("@/lib/elections/scheduling", () => ({
   ensureSCOElections: vi.fn().mockResolvedValue(undefined),
   ensureWALElections: vi.fn().mockResolvedValue(undefined),
   ensureSCOGovernorElections: vi.fn().mockResolvedValue(undefined),

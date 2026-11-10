@@ -12,7 +12,7 @@ import {
   assignByLeanOrdering,
   type CandidateDistributionInfo,
 } from "@/lib/utils/subdivisionResults";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import type { ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";

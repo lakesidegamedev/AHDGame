@@ -329,7 +329,7 @@ const SIZE_CAP_ALLOWLIST = new Set([
   "src/lib/commodities/rules/commodityMarket.ts",
   "src/lib/corporations/queries/corporationDetail.ts",
   "src/lib/turn/suspiciousDetection.ts",
-  "src/lib/turn/perpetualElections.ts",
+  "src/lib/elections/scheduling/index.ts",
   "src/components/admin/economy/CorporationsAdminPanel.tsx",
   "src/components/admin/economy/CommoditiesAdminPanel.tsx",
 ]);

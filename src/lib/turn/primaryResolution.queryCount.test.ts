@@ -27,7 +27,7 @@ vi.mock("@/lib/electionEngine", () => ({
   initElectionVoteTally: vi.fn(),
   accumulateVoteTurn: vi.fn(),
 }));
-vi.mock("@/lib/presidentialElectionEngine", () => ({
+vi.mock("@/lib/elections/presidential/presidentialElectionEngine", () => ({
   initPresidentVoteTally: vi.fn(),
   accumulatePresidentVoteTurn: vi.fn(),
 }));

@@ -12,7 +12,7 @@ import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularEle
 import { targetedAdBonuses } from "@/lib/campaignTargeting/rules";
 import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/electionEngine/types";
 import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import { personalStatTenureRetentionForCandidate } from "@/lib/electionEngine/rules/tenureRetention";
+import { personalStatTenureRetentionForCandidate } from "@/lib/elections/rules/tenureRetention";
 import type { CensusGroupView } from "@/lib/db/types";
 
 const SOURCE_REVISION = "98ffb6ded3a4110e94598e98ce582ad2c0ba9eeb";

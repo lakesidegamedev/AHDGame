@@ -1,6 +1,6 @@
 import { DE_WAHLKREIS_SEATS } from "@/lib/constants/states";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { defineChamberSpec } from "@/lib/turn/perpetualElections/chamberSpec";
+import { defineChamberSpec } from "@/lib/elections/scheduling/chamberSpec";
 import { getLandtagAnchor } from "../data/deLandtag";
 
 /** Bundestag: one race per Land sized by its Wahlkreise; a called snap moves the next term. */

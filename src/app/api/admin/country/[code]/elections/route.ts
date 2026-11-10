@@ -17,7 +17,7 @@ import type { Election, SenateClass, State, GameState } from "@/lib/db/types";
 import { SENATE_CLASSES, STATE_SENATE_SEATS } from "@/lib/constants";
 import { isUsElectoralState } from "@/lib/constants/states";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { adjustElectionDurations } from "@/lib/elections/rules/timerAdjustment";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";

@@ -19,7 +19,7 @@ import { coalitionWhipKey, partyWhipKey } from "@/lib/elections/contingentHouseS
 import {
   loadHouseVoteStandings,
   loadPartyCoalitions,
-} from "@/lib/turn/election/contingentHouseVoteStandings";
+} from "@/lib/elections/resolution/contingentHouseVoteStandings";
 
 export interface ContingentHouseVoteViewCandidate {
   id: string;

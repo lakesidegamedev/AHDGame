@@ -42,7 +42,7 @@ import {
   ensureTRSenateElections,
   DEFAULT_DURATIONS,
   withElectionGameStateSnapshot,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import { getJpSangiinClassSeats } from "@/lib/constants/states";
 import { MS_PER_TURN, getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { getCycleAnchors } from "@/lib/elections/cycleAnchorContext";

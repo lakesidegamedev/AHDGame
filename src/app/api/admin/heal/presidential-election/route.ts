@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { Election, GameState } from "@/lib/db/types";
 

@@ -8,7 +8,7 @@ import {
   easternBlocElectionsLive,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import { hu2014RegionSeats } from "@/lib/turn/huAssemblyReform";
 
 import { bindHu2011Campaigns } from "./assemblyCampaignBinding2011";

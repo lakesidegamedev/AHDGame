@@ -5,7 +5,7 @@ import {
   ensureEasternBlocAssemblyElections,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /** Czechoslovakia Chamber of the People. */
 export async function ensureCSElections(now: Date, inFlightTurn?: number): Promise<void> {

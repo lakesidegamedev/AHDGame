@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureBALElections } from "@/lib/turn/perpetualElections";
+import { ensureBALElections } from "@/lib/elections/scheduling";
 
 /**
  * The Baltic States's elections.

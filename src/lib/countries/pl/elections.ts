@@ -5,7 +5,7 @@ import {
   ensureEasternBlocAssemblyElections,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /** Poland Sejm, using the regional delegate pattern in both eras. */
 export async function ensurePLElections(now: Date, inFlightTurn?: number): Promise<void> {

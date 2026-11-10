@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureBLRElections } from "@/lib/turn/perpetualElections";
+import { ensureBLRElections } from "@/lib/elections/scheduling";
 
 /**
  * Belarus's elections.

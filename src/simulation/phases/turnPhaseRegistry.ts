@@ -38,7 +38,7 @@ import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModi
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
 import { processCampaignSpendReset } from "@/lib/turn/elections/campaignSpendReset";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
-import { closeDueContingentHouseVotes } from "@/lib/turn/election/contingentHouseVoteClose";
+import { closeDueContingentHouseVotes } from "@/lib/elections/resolution/contingentHouseVoteClose";
 import { processPostConversionElections } from "@/lib/turn/postConversionElections";
 import {
   resolvePrimariesIfNeeded,
@@ -49,7 +49,7 @@ import {
   advanceElectionTimers,
   ensurePerpetualElections,
   cleanupStaleElectionCandidates,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import {
   resolveExpiredLeadershipElections,
   vacateLeadershipForLostSeats,

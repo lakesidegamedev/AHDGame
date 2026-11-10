@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureITElections, ensureITSenateElections } from "@/lib/turn/perpetualElections";
+import { ensureITElections, ensureITSenateElections } from "@/lib/elections/scheduling";
 
 /**
  * Italy's elections. SERVER ONLY (spawners reach getDb).

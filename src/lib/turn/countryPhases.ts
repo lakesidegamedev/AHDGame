@@ -100,7 +100,7 @@ import {
   ensureWALGovernorElections,
   ensureSCORegionalCouncilElections,
   ensureWALRegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import {
   getParliamentaryCountryIds,
   updateParliamentaryGovernmentSeats,

@@ -38,12 +38,12 @@ import { getElectionOpponents } from "@/lib/actions/electionOpponents";
 import { loadPollPartyColors } from "@/lib/actions/pollPartyColors";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { CountryId } from "@/lib/constants/countries";
-import type { PersonalStatTenureContext } from "@/lib/electionEngine/rules/tenureRetention";
+import type { PersonalStatTenureContext } from "@/lib/elections/rules/tenureRetention";
 import {
   isHeadOfGovernmentRace,
   resolvePresidentApproval,
 } from "@/lib/electionEngine/presidentialCoattail";
-import { getPresidentialConsecutiveTerms } from "@/lib/turn/election/presidentialTenureLedger";
+import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/presidentialTenureLedger";
 
 // Poll pricing lives in the shared rules module: quotePollAction is the single
 // source of truth the effect, validation and the POST debit all call.

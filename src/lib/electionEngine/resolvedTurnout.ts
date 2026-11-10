@@ -32,7 +32,7 @@ export function capTurnSliceToElectorate(
  *
  * Missing or non-finite `unregisteredPct` leaves the pool untouched.
  */
-export { scalePoolToRegistered } from "./rules/registration";
+export { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 
 /**
  * Hard ceiling on CUMULATIVE ballots: this turn's slice can release at most

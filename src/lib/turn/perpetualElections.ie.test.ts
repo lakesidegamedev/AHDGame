@@ -75,7 +75,7 @@ describe("ensureIEElections", () => {
     const mock = makeIEMockDb(states, 1);
     await mountIEDb(mock);
 
-    const { ensureIEElections } = await import("./perpetualElections");
+    const { ensureIEElections } = await import("@/lib/elections/scheduling");
     await ensureIEElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -94,7 +94,7 @@ describe("ensureIEElections", () => {
     const mock = makeIEMockDb([{ _id: "DUB", houseDistricts: 64 }, { _id: "XXX" }], 1);
     await mountIEDb(mock);
 
-    const { ensureIEElections } = await import("./perpetualElections");
+    const { ensureIEElections } = await import("@/lib/elections/scheduling");
     await expect(ensureIEElections(now)).rejects.toThrow(/XXX is missing houseDistricts/);
     expect(mock.insertCalls.flat()).toHaveLength(0);
   });

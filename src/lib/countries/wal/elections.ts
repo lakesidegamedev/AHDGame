@@ -4,7 +4,7 @@ import {
   ensureWALElections,
   ensureWALGovernorElections,
   ensureWALRegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 
 /**
  * Wales's elections.

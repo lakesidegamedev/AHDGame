@@ -1,4 +1,4 @@
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { BR_CHAMBER_SPEC, BR_GOVERNOR_SPEC, BR_SENATE_SPEC } from "./chamberSpecs";
 import { brazilPresidentialRules } from "../rules/presidential";
 
@@ -40,10 +40,10 @@ export async function ensureBRPresidentialElection(
   inFlightTurn?: number
 ): Promise<void> {
   const { getDb } = await import("@/lib/mongodb");
-  const { countryElectionsLive } = await import("@/lib/turn/perpetualElections/shared");
+  const { countryElectionsLive } = await import("@/lib/elections/scheduling/shared");
   const { isNppAutonomyActive } = await import("@/lib/nppAutonomy/featureFlag");
   const { buildCanonicalSpawn, getCurrentTurnAndCtx, justResolvedInSameTurn } =
-    await import("@/lib/turn/perpetualElections/engine");
+    await import("@/lib/elections/scheduling/engine");
   const { withCampaignRules } = await import("@/lib/campaignTargeting/rules");
   const db = await getDb();
   if (!(await countryElectionsLive(db, "BR")) && !(await isNppAutonomyActive(db, "BR"))) return;

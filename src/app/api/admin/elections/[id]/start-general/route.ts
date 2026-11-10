@@ -15,7 +15,7 @@ import {
   buildPartyChairMaps,
   resolvePartyChairPrimaryRole,
 } from "@/lib/primaryScore";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import type {
   Character,
   Election,

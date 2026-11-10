@@ -1,7 +1,7 @@
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import type { SpawnElectionsResult } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import {
   CN_NPC_SEATS,
   CN_NPC_SEATS_1953,

@@ -25,7 +25,7 @@ vi.mock("@/lib/electionEngine", () => ({
   initElectionVoteTally: vi.fn(),
   accumulateVoteTurn: vi.fn(),
 }));
-vi.mock("@/lib/presidentialElectionEngine", () => ({
+vi.mock("@/lib/elections/presidential/presidentialElectionEngine", () => ({
   initPresidentVoteTally: vi.fn(),
   accumulatePresidentVoteTurn: vi.fn(),
 }));
@@ -243,7 +243,8 @@ describe("resolvePrimariesIfNeeded", () => {
       // seats by primary share rather than falling back to general-vote share.
       const { initElectionVoteTally } = await import("@/lib/electionEngine");
       expect(initElectionVoteTally).toHaveBeenCalled();
-      const { initPresidentVoteTally } = await import("@/lib/presidentialElectionEngine");
+      const { initPresidentVoteTally } =
+        await import("@/lib/elections/presidential/presidentialElectionEngine");
       expect(initPresidentVoteTally).not.toHaveBeenCalled();
       const primaryResults = vi.mocked(initElectionVoteTally).mock.calls[0][3];
       expect(primaryResults?.byParty?.DEM?.[0]?.won).toBe(true);
@@ -1693,7 +1694,8 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { accumulatePresidentVoteTurn } = await import("@/lib/presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     expect(accumulatePresidentVoteTurn).toHaveBeenCalledWith(
       electionId,
       10,
@@ -1729,7 +1731,7 @@ describe("accumulateGeneralElectionVotes", () => {
     await accumulateGeneralElectionVotes(NOW, 10, undefined, { slice: "early" });
 
     const { accumulatePresidentVoteTurn, initPresidentVoteTally } =
-      await import("@/lib/presidentialElectionEngine");
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     expect(initPresidentVoteTally).not.toHaveBeenCalled();
     if (expected) {
       expect(accumulatePresidentVoteTurn).toHaveBeenCalledWith(electionId, 10, NOW, undefined, {
@@ -1843,7 +1845,8 @@ describe("accumulateGeneralElectionVotes", () => {
 
     await accumulateGeneralElectionVotes(NOW, 10);
 
-    const { initPresidentVoteTally } = await import("@/lib/presidentialElectionEngine");
+    const { initPresidentVoteTally } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     expect(initPresidentVoteTally).toHaveBeenCalledWith(
       electionId,
       [candidate],

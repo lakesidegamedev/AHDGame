@@ -28,8 +28,8 @@ import {
   organizationAdWeight,
   NG_CAMPAIGN_TURNOUT_RATE,
 } from "@/lib/campaignTargeting/rules";
-import { NG_ZONES } from "@/lib/nigeriaPresidentialElectionEngine";
-import { planTurnSlice } from "@/lib/electionEngine/rules/turnSlice";
+import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
+import { planTurnSlice } from "@/lib/elections/rules/turnSlice";
 
 /** Approximate NG presidential turnout (share of population voting). */
 const NG_TURNOUT_RATE = NG_CAMPAIGN_TURNOUT_RATE;

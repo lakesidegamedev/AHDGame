@@ -7,7 +7,7 @@ import type { Db, AnyBulkWriteOperation, Filter } from "mongodb";
 import type { Character, ElectedOfficial, NPP, OfficeType } from "@/lib/db/types";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
-import { preserveExecutiveOffice } from "@/lib/turn/election/generalResolutionHelpers";
+import { preserveExecutiveOffice } from "@/lib/elections/resolution/generalResolutionHelpers";
 
 export async function reconcileBundestagHolderOffices(
   db: Db,

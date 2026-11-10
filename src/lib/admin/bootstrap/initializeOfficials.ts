@@ -133,7 +133,7 @@ export async function initializeOfficials(db: Db): Promise<{
   let electionsCreated = 0;
 
   if (existingElections === 0) {
-    const { DEFAULT_DURATIONS } = await import("@/lib/turn/perpetualElections");
+    const { DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
     const senateDur = DEFAULT_DURATIONS.senate;
     const houseDur = DEFAULT_DURATIONS.house;
 

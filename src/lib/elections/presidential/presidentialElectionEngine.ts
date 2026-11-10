@@ -66,7 +66,7 @@ import {
 } from "@/lib/electionEngine/economicReferendum";
 import { loadReferendumInputs } from "@/lib/elections/referendumInputs";
 import { loadResponseCredit } from "@/lib/elections/responseCredit";
-import { getPresidentialConsecutiveTerms } from "@/lib/turn/election/presidentialTenureLedger";
+import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/presidentialTenureLedger";
 import type { GameState } from "@/lib/db/types/gameState";
 import { BASE_APPROVAL } from "@/lib/utils/governmentApproval";
 import { getStateLean } from "@/lib/utils/demographics";
@@ -108,7 +108,7 @@ import { eraYearContextFromGameState } from "@/lib/era/context";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
 import { MONETARY_BASELINES } from "@/lib/constants/currencies";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import { planTurnSlice, sameTurnSliceParts } from "@/lib/electionEngine/rules/turnSlice";
+import { planTurnSlice, sameTurnSliceParts } from "@/lib/elections/rules/turnSlice";
 import { loadRegionalBonusMapsWithLookup } from "@/lib/primaryRegionalBonusLoader";
 import { campaignStrengthLookupKey } from "@/lib/campaigns/suspendEndorseLifecycle";
 import { computeSuspendTransferFraction } from "@/lib/campaigns/suspendEndorseAffinity";

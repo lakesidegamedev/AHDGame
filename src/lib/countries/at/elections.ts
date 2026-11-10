@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureATElections } from "@/lib/turn/perpetualElections";
+import { ensureATElections } from "@/lib/elections/scheduling";
 
 /**
  * Austria's elections.

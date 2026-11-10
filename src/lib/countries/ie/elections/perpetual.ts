@@ -1,5 +1,5 @@
-import { ensureRegionalGovernorElections } from "@/lib/turn/perpetualElections/shared";
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { ensureRegionalGovernorElections } from "@/lib/elections/scheduling/shared";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { IE_DAIL_SPEC, IE_LOCAL_COUNCIL_SPEC, IE_UACHTARAN_SPEC } from "./chamberSpecs";
 
 /** Dáil Éireann, one multi-seat constituency election per region. */

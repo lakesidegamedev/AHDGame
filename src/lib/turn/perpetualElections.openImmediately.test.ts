@@ -116,7 +116,7 @@ describe("next-cycle primaries open immediately (no 'Opens in X turns' dead zone
     });
     await mount(mock);
 
-    const { ensureIEElections } = await import("./perpetualElections");
+    const { ensureIEElections } = await import("@/lib/elections/scheduling");
     await ensureIEElections(NOW);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "DUB")!;
@@ -144,7 +144,7 @@ describe("next-cycle primaries open immediately (no 'Opens in X turns' dead zone
     });
     await mount(mock);
 
-    const { ensureUKElections } = await import("./perpetualElections");
+    const { ensureUKElections } = await import("@/lib/elections/scheduling");
     await ensureUKElections(NOW);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "LON")!;
@@ -181,7 +181,7 @@ describe("next-cycle primaries open immediately (no 'Opens in X turns' dead zone
     });
     await mount(mock);
 
-    const { ensureUKRegionalCouncilElections } = await import("./perpetualElections");
+    const { ensureUKRegionalCouncilElections } = await import("@/lib/elections/scheduling");
     await ensureUKRegionalCouncilElections(NOW);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "LON")!;
@@ -216,7 +216,7 @@ describe("next-cycle primaries open immediately (no 'Opens in X turns' dead zone
     });
     await mount(mock);
 
-    const { ensureUKRegionalCouncilElections } = await import("./perpetualElections");
+    const { ensureUKRegionalCouncilElections } = await import("@/lib/elections/scheduling");
     await ensureUKRegionalCouncilElections(NOW);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "SCO")!;
@@ -247,7 +247,7 @@ describe("next-cycle primaries open immediately (no 'Opens in X turns' dead zone
     });
     await mount(mock);
 
-    const { ensureJPCouncillorElections } = await import("./perpetualElections");
+    const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
     await ensureJPCouncillorElections(NOW, 1);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "KAN" && d.chamberClass === 1)!;

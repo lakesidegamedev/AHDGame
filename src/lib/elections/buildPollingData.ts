@@ -1,6 +1,6 @@
-import { countPrStv, validateRankedBallots } from "@/lib/turn/election/rules/prStv";
+import { countPrStv, validateRankedBallots } from "@/lib/elections/rules/prStv";
 import type { PoliticalParty, PrimarySnapshot, ElectionVoteTally } from "@/lib/db/types";
-import { allocateSeats, isMultiSeatElection } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats, isMultiSeatElection } from "@/lib/elections/resolution/seatAllocation";
 import type { PartyGroup } from "./candidateEnrichment";
 import type { PollingData } from "./electionResponseTypes";
 import type { ElectionMethod } from "@/lib/constants/countries";

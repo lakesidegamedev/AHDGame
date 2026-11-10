@@ -37,7 +37,7 @@ import {
   presidentialRulesetFor,
   type PresidentialRuleset,
 } from "@/lib/elections/presidentialRuleset";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
 import { loadLiveStateActions } from "@/lib/elections/primaryStateActions";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";

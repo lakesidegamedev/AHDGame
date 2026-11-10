@@ -19,7 +19,7 @@ import {
   stopIsolatedMongod,
   type IsolatedMongod,
 } from "@/lib/test-utils/realMongoFixture";
-import { validateRankedBallots } from "@/lib/turn/election/rules/prStv";
+import { validateRankedBallots } from "@/lib/elections/rules/prStv";
 import type { EnrichedCandidate } from "./types";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));

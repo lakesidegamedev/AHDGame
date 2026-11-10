@@ -78,7 +78,7 @@ describe("ensureCNElections", () => {
     const mock = makeCNMockDb(regions, [], [], currentTurn);
     await mountCNDb(mock);
 
-    const { ensureCNElections } = await import("./perpetualElections");
+    const { ensureCNElections } = await import("@/lib/elections/scheduling");
     await ensureCNElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -101,7 +101,7 @@ describe("ensureCNElections", () => {
     });
     await mountCNDb(mock);
 
-    const { ensureCNElections } = await import("./perpetualElections");
+    const { ensureCNElections } = await import("@/lib/elections/scheduling");
     await ensureCNElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -183,7 +183,7 @@ describe("ensureCNElections", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(mockDb as never);
 
-    const { ensureCNElections } = await import("./perpetualElections");
+    const { ensureCNElections } = await import("@/lib/elections/scheduling");
 
     // First call
     await ensureCNElections(now);
@@ -201,7 +201,7 @@ describe("ensureCNElections", () => {
     const mock = makeCNMockDb(regions, [], [], currentTurn);
     await mountCNDb(mock);
 
-    const { ensureCNElections } = await import("./perpetualElections");
+    const { ensureCNElections } = await import("@/lib/elections/scheduling");
     await ensureCNElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -256,7 +256,7 @@ describe("ensureCNElections", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(mockDb);
 
-    const { ensureCNElections } = await import("./perpetualElections");
+    const { ensureCNElections } = await import("@/lib/elections/scheduling");
     await ensureCNElections(now);
 
     const insertCalls =
@@ -273,7 +273,7 @@ describe("ensureCNElections", () => {
     const mock = makeCNMockDb(regions, [], [], currentTurn);
     await mountCNDb(mock);
 
-    const { ensureCNElections } = await import("./perpetualElections");
+    const { ensureCNElections } = await import("@/lib/elections/scheduling");
     await ensureCNElections(now);
 
     const inserted = mock.insertCalls.flat();

@@ -16,7 +16,7 @@
  * something these probes do.
  */
 
-import { resolveNominationForParty } from "@/lib/turn/election/conventionResolution";
+import { resolveNominationForParty } from "@/lib/elections/resolution/conventionResolution";
 import { campaignActionsPerTurn } from "@/lib/campaigns/actions";
 import { FOMC_COMMITTEE_COUNTRY_IDS, FOMC_TERM_TURNS } from "@/lib/db/types/centralBank";
 import { canCharacterInteract, deriveCharacterRoles } from "@/lib/crises/interactionEngine";

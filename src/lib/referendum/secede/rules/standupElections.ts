@@ -8,7 +8,7 @@ import { yearOfTurn } from "@/lib/utils/gameDate";
 import {
   SCO_REGIONAL_COUNCIL_SEATS,
   WAL_REGIONAL_COUNCIL_SEATS,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import type { SecedingCountryId } from "../subRegions";
 export function buildStandupElections(input: {
   countryId: SecedingCountryId;

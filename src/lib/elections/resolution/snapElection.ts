@@ -44,7 +44,7 @@ import {
   unformGovernmentAndVacatePM,
   failInProgressBills,
 } from "@/lib/turn/parliamentaryGovernment";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { byElectionTypesFor } from "@/lib/utils/electionLabels";

@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureTRElections, ensureTRSenateElections } from "@/lib/turn/perpetualElections";
+import { ensureTRElections, ensureTRSenateElections } from "@/lib/elections/scheduling";
 
 /**
  * SERVER ONLY: spawners reach getDb.

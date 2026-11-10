@@ -22,11 +22,11 @@ import {
   getGeneralWindow,
   justResolvedInSameTurn,
   sendBatchedElectionAnnouncements,
-} from "@/lib/turn/perpetualElections/engine";
+} from "@/lib/elections/scheduling/engine";
 import {
   UK_GOVERNOR_REGIONS,
   ensureRegionalGovernorElections,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /**
  * Ensure every UK region has an active/upcoming Commons election.

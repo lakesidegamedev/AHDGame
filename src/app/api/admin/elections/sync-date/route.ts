@@ -39,7 +39,7 @@ import {
   cycleAnchorContextFromGameState,
   getCycleAnchors,
 } from "@/lib/elections/cycleAnchorContext";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";

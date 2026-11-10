@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { generateLandeslistenForCycle } from "@/lib/elections/germanyLandesliste";
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { DE_BUNDESTAG_SPEC } from "./chamberSpecs";
 
 /**

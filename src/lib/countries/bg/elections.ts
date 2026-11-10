@@ -1,13 +1,13 @@
 import type { CountryGameState } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
-import { getCurrentTurnAndCtx } from "@/lib/turn/perpetualElections/engine";
+import { getCurrentTurnAndCtx } from "@/lib/elections/scheduling/engine";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import {
   easternBlocElectionsLive,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import { bgElectionSeatsForPreset } from "./rules/assemblyTransition";
 import { getElectionMethod } from "@/lib/elections/electionMethod";
 import { bindBgFoundingCampaigns } from "./foundingCampaignBinding1990";

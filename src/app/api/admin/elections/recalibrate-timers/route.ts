@@ -40,7 +40,7 @@ import {
   ensureDEElections,
   ensureJPElections,
   ensureJPCouncillorElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import type { Filter } from "mongodb";
 import type { Election, GameState } from "@/lib/db/types";
 import {
@@ -61,7 +61,7 @@ const DE_BUNDESTAG_CYCLE_PERIOD_HOURS = 192; // 4 game-years — period only, no
 const IE_DAIL_CYCLE_PERIOD_HOURS = 192; // 4 game-years
 const IE_UACHTARAN_CYCLE_PERIOD_HOURS = 336; // 7 game-years
 const IE_LOCAL_COUNCIL_CYCLE_PERIOD_HOURS = 240; // 5 game-years
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { getUKRegionalCouncilCycle1EndTurn } from "@/lib/elections/ukRegionalCouncilStagger";

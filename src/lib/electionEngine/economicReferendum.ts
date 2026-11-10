@@ -29,8 +29,15 @@
  * the internal [-1, +1] driver-budget units used by `persuasionDrivers.ts`.
  */
 
-import { calculateInflationPenalty, INFLATION_BAND_PCT } from "./rules/economicReferendum";
-export { INFLATION_BAND_PCT, INFLATION_CAP, INFLATION_SLOPE } from "./rules/economicReferendum";
+import {
+  calculateInflationPenalty,
+  INFLATION_BAND_PCT,
+} from "@/lib/elections/rules/economicReferendum";
+export {
+  INFLATION_BAND_PCT,
+  INFLATION_CAP,
+  INFLATION_SLOPE,
+} from "@/lib/elections/rules/economicReferendum";
 
 /** National macro aggregates the referendum reads. All in display percent. */
 export interface MiseryInputs {

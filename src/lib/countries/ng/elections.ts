@@ -1,7 +1,7 @@
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import type { SpawnElectionsResult } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import { NG_SEATS_PER_REGION } from "@/lib/seeds/ng/ngRegions";
 import { NG_REGIONAL_COUNCIL_SEATS } from "@/lib/constants/states";
 import {
