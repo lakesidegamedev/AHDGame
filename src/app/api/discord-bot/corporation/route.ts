@@ -6,7 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporateSector, State, StateMetrics, Bond } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
@@ -29,7 +29,6 @@ import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { calculateCreditScore, getBondCouponRate } from "@/lib/constants/bonds";
 import { corporateBondMaturityLiquidity } from "@/lib/bonds/corporateCredit";
 import { isBondDefaultCreditPenaltyActive } from "@/lib/bonds/corporateBondDefault";
-import type { CentralBank } from "@/lib/db/types";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { getGameState } from "@/lib/gameState";
 import { getPublicShareQuote, getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
@@ -49,6 +48,8 @@ import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/c
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const LIST_CACHE_HEADERS = {
@@ -118,8 +119,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
       .collection<CorporateSector>("corporateSectors")
       .find({ corporationId: corporation._id })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ corporationId: corporation._id, matured: false })
       .sort({ createdAt: -1 })
       .toArray(),
@@ -365,9 +365,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   // Prime rate for coupon
   const countryId = corporation.countryId;
   // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-  const centralBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: getBankId(countryId) });
+  const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
   const primeRate =
     centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
   const effectiveCouponRate = getBondCouponRate(primeRate, creditRating.rating);

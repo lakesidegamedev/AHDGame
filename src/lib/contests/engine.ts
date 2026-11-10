@@ -69,6 +69,7 @@ import { payContestPrize } from "./prize";
 import { loadCharacterNetWorths, loadExternalInflows } from "./netWorth";
 import { announceContestResults, type SettledRoundResult } from "./announce";
 import { getContestRoundsCollection } from "./collection";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 type PlayerCharacter = Pick<
   Character,
@@ -190,8 +191,7 @@ async function loadInjections(
 ): Promise<Map<string, number>> {
   const totals = new Map<string, number>();
   if (corporationIds.length === 0) return totals;
-  const rows = await db
-    .collection("financialTxLog")
+  const rows = await financialTxLogCollection(db)
     .find(
       {
         type: "corp_capital_injection",

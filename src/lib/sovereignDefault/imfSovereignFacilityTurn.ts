@@ -33,6 +33,7 @@ import {
   IMF_SOVEREIGN_AMORTIZATION_TURNS,
   IMF_SOVEREIGN_INCOME_CAPTURE_DEFAULT,
 } from "./constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const PRINCIPAL_EPS = 1e-6;
 
@@ -43,8 +44,7 @@ export async function processSovereignImfFacilityPayments(
   const imfCorp = await getImfCorporation(db);
   if (!imfCorp) return { paymentsApplied: 0 };
 
-  const active = await db
-    .collection<FederalBudget>("federalBudget")
+  const active = await federalBudgetCollection(db)
     .find({ imfSovereignBailoutActive: true })
     .toArray();
   if (active.length === 0) return { paymentsApplied: 0 };
@@ -106,7 +106,7 @@ export async function processSovereignImfFacilityPayments(
     if (paymentAnchor > 0) {
       update.$inc = { imfSovereignFacilityCumulativePaidAnchor: paymentAnchor };
     }
-    await db.collection<FederalBudget>("federalBudget").updateOne({ _id: budget._id }, update);
+    await federalBudgetCollection(db).updateOne({ _id: budget._id }, update);
 
     if (paymentInImfCurrency > 0) {
       await db.collection<Corporation>("corporations").updateOne(

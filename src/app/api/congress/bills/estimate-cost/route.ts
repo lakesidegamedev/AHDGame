@@ -19,7 +19,7 @@ import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { validateBudgetImpact } from "@/lib/budget/validation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Bill } from "@/lib/db/types/legislation";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const estimateSchema = z.object({
   countryId: z.string().min(1),
@@ -64,9 +64,10 @@ export async function POST(request: Request) {
     };
     const result = await validateBudgetImpact(db, draft, "national", { countryId, budgetId });
 
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId }, { projection: { gdp: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId },
+      { projection: { gdp: 1 } }
+    );
     const gdp = budget?.gdp ?? 0;
     const pctOfGdp = gdp > 0 ? (result.costAmount / gdp) * 100 : 0;
 

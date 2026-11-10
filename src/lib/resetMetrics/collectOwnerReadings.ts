@@ -5,7 +5,7 @@
  */
 import { inheritedCalibrationRegion } from "./rules/conversionCalibration";
 import type { Db } from "mongodb";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { State } from "@/lib/db/types/state";
@@ -52,6 +52,7 @@ import type { HouseholdProductionStatus } from "./rules/householdSources";
 import { modelHouseholdIncome } from "./rules/modelHouseholdIncome";
 import { resolveRegionalBudgetCadence } from "@/simulation/phases/regionalBudgetCadence";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -128,8 +129,7 @@ export async function collectResetMetricOwnerReadings(
         }
       )
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { countryId: { $in: countryIds } },
         {

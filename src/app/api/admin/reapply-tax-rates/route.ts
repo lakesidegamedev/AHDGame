@@ -13,8 +13,9 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { Bill, LegislationType } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
-import type { FederalBudget, FederalTaxRates } from "@/lib/db/types/budget";
+import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { calculateFederalRevenue, normalizeFederalTaxRates } from "@/lib/budget/revenue";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function POST() {
   try {
@@ -34,7 +35,7 @@ export async function POST() {
     const taxLegTypeMap = new Map(taxLegTypes.map((lt) => [lt._id, lt]));
 
     // Get current federal budget
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: "federal" });
+    const budget = await federalBudgetCollection(db).findOne({ _id: "federal" });
     if (!budget) {
       return errorResponse(404, "Federal budget not found");
     }
@@ -92,7 +93,7 @@ export async function POST() {
     const newSurplus = newRevenue.total - budget.spending.total;
 
     // Update the budget
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: "federal" },
       {
         $set: {

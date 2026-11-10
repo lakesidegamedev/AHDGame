@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   calculateDailyGrowthCost,
   GROWTH_ADJUST_COST_PER_PERCENT,
@@ -22,6 +22,7 @@ import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const adjustGrowthSchema = z.object({
   sectorId: z.string().min(1, "Sector ID is required"),
@@ -145,9 +146,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // currentGrowthCost reflects the actual charge for next turn.
     const perTurnGrowthRate = newGrowthRate / GROWTH_RATE_TURNS_PER_YEAR;
     // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-    const centralBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: getBankId(countryId) });
+    const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
     const primeRate =
       centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
     const marketSharePct = await fetchSectorMarketSharePercent(db, sector, corporation);

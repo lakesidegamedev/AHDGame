@@ -33,6 +33,7 @@ import {
   claimAtFiscalScale,
   fiscalScaleCouponOrder,
 } from "@/lib/budget/rules/fiscalScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
@@ -903,12 +904,10 @@ async function migrateLegacyClaims(
     )
   );
   if (movable.length) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: budgetId as FederalBudget["_id"] },
-        { $pull: { sovereignCouponClaims: { id: { $in: movable.map((claim) => claim.id) } } } }
-      );
+    await federalBudgetCollection(db).updateOne(
+      { _id: budgetId as FederalBudget["_id"] },
+      { $pull: { sovereignCouponClaims: { id: { $in: movable.map((claim) => claim.id) } } } }
+    );
   }
   return legacy.filter((claim) => pinned.has(claim.id));
 }
@@ -1034,9 +1033,10 @@ function payoutTransition(
 
 /** Cash the Treasury currently holds in its own currency; missing reads as zero. */
 async function readBudgetCash(db: Db, budgetId: unknown): Promise<number> {
-  const row = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId as never }, { projection: { treasuryCashLocal: 1 } });
+  const row = await federalBudgetCollection(db).findOne(
+    { _id: budgetId as never },
+    { projection: { treasuryCashLocal: 1 } }
+  );
   const value = (row as { treasuryCashLocal?: unknown } | null)?.treasuryCashLocal;
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
 }
@@ -1259,9 +1259,7 @@ export async function settleFundedSovereignCoupons(
       fresh.push(
         ...(await installGroupedReplaySupplements(db, fresh, existingById, frozenSet!.parts))
       );
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budget._id }, { $max: frozenSet!.marks });
+    await federalBudgetCollection(db).updateOne({ _id: budget._id }, { $max: frozenSet!.marks });
     for (const row of fresh) {
       const saved = existingById.get(row._id);
       if (saved?.settledTurn !== undefined) continue;
@@ -1320,9 +1318,10 @@ export async function settleFundedSovereignCoupons(
   // resumed batches, so their landed debits are not offered again.
   let fundableCash = 0;
   if (claims.length && !skipSettlementWork) {
-    const cash = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budget._id }, { projection: { treasuryCashLocal: 1 } });
+    const cash = await federalBudgetCollection(db).findOne(
+      { _id: budget._id },
+      { projection: { treasuryCashLocal: 1 } }
+    );
     const value = (cash as { treasuryCashLocal?: unknown } | null)?.treasuryCashLocal;
     fundableCash = typeof value === "number" && Number.isFinite(value) ? value : 0;
   }

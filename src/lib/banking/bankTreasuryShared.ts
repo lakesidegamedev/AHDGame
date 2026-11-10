@@ -19,8 +19,8 @@ import { ObjectId, type Db } from "mongodb";
 import type { BondPoolQuoteSnapshot } from "@/lib/bonds/marketPool";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getReserveRequirement } from "@/lib/banking/reserves";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export const BANK_TREASURY_TRADES_COLLECTION = "bankTreasuryTrades";
 
@@ -154,9 +154,10 @@ export async function bankCashFloor(
   const centralBankId = getBankId(countryId);
   const [reserveRatio, centralBank, interbankLoans] = await Promise.all([
     getReserveRequirement(db, charter.currency),
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: centralBankId }, { projection: { primeRate: 1, inflationHistory: 1 } }),
+    centralBanksCollection(db).findOne(
+      { _id: centralBankId },
+      { projection: { primeRate: 1, inflationHistory: 1 } }
+    ),
     db
       .collection<InterbankLoan>("interbankLoans")
       .find({

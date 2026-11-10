@@ -1,12 +1,12 @@
 import type { Db } from "mongodb";
 import type { UKNhsState } from "@/lib/db/types/ukNhsState";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   NHS_QUALITY_START,
   NHS_BASELINE_HEALTHCARE_SHARE,
   fundingRatioFromHealthcareShare,
   tickNhsQuality,
 } from "@/lib/countries/uk/nhs/nhsQuality";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Persistence and per-turn drive for the UK NHS quality score.
@@ -36,9 +36,10 @@ export async function tickNhsFromBudget(
   db: Db,
   args: { fiscalYear: number; now: Date }
 ): Promise<number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: "UK" }, { projection: { spending: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: "UK" },
+    { projection: { spending: 1 } }
+  );
   const healthSpending =
     budget?.spending.byCategory.health ?? budget?.spending.byCategory.healthcare;
   const healthcareShare =

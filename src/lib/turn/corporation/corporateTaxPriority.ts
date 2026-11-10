@@ -10,6 +10,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { planCorporateTaxPriority } from "./rules/corporateTaxPriority";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 const idFor = (value: string) =>
   new ObjectId(createHash("sha256").update(value).digest("hex").slice(0, 24));
 
@@ -262,7 +263,7 @@ async function settleCorporateTaxPriorityBatch(
         },
       }));
       if (treasuryOps.length) {
-        const updated = await db.collection("federalBudget").bulkWrite(treasuryOps, { session });
+        const updated = await federalBudgetCollection(db).bulkWrite(treasuryOps, { session });
         if (updated.matchedCount !== treasuryOps.length)
           throw new Error("Corporate tax Treasury unavailable");
       }

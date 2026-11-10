@@ -13,7 +13,7 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
-import type { Corporation, FederalBudget } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
@@ -32,6 +32,7 @@ import {
   stateRunAdvanceReturn,
   stateRunAdvances,
 } from "@/lib/market/producerMarket/stateRunAdvanceRules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type CorpCash = Pick<
   Corporation,
@@ -229,8 +230,7 @@ async function treasuryCashByCountry(
   db: Db,
   countryIds: readonly string[]
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<FederalBudget>("federalBudget")
+  const rows = await federalBudgetCollection(db)
     .find(
       { countryId: { $in: [...countryIds] as CountryId[] } },
       { projection: { countryId: 1, treasuryCashLocal: 1 } }

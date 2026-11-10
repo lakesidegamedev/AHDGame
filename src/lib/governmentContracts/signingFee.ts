@@ -4,7 +4,7 @@
  */
 import type { Db } from "mongodb";
 import { createHash } from "node:crypto";
-import type { Corporation, ExtractionContract, StateBudget, FederalBudget } from "@/lib/db/types";
+import type { Corporation, ExtractionContract, StateBudget } from "@/lib/db/types";
 import {
   getCorpFxRate,
   anchorToCorpLiquidCapital,
@@ -22,6 +22,7 @@ import {
 } from "@/lib/banking/rules/boundary";
 import { signingFeeCredit } from "./rules/signingFee";
 import { ContractError } from "./eligibility";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 const logId = (key: string) => oid(createHash("sha256").update(key).digest("hex").slice(0, 24));
 export async function settleTenderSigningFee(
   db: Db,
@@ -64,9 +65,10 @@ export async function settleTenderSigningFee(
               )
           : null;
       const national = contract.grantedByLevel === "national" || !stateBudget;
-      const nationalBudget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: contract.countryId }, { projection: { currencyCode: 1 } });
+      const nationalBudget = await federalBudgetCollection(db).findOne(
+        { countryId: contract.countryId },
+        { projection: { currencyCode: 1 } }
+      );
       let destinationCurrency = (nationalBudget?.currencyCode ??
         COUNTRY_CURRENCY_MAP[contract.countryId]) as CurrencyCode;
       let destinationRate = await getCurrencyFxRate(db, destinationCurrency);

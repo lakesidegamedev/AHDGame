@@ -12,6 +12,7 @@ import {
   aggregateNationalLabourTightness,
   aggregateNationalMetricValue,
 } from "./nationalMetrics/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Plausible range for the back-solved income-band index at world start. A seed
@@ -66,7 +67,7 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
   const [allStates, regionMetrics, federalBudgets, eraGameState] = await Promise.all([
     db.collection<State>("states").find({}).toArray(),
     db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
-    db.collection<FederalBudget>("federalBudget").find({}).toArray(),
+    federalBudgetCollection(db).find({}).toArray(),
     db.collection<GameState>("gameState").findOne(
       { _id: "current" },
       {

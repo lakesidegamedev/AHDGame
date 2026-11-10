@@ -18,6 +18,7 @@ import {
   sumStockValueByCharacter,
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -153,8 +154,7 @@ async function computeWealthListFallback(
         countryId: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false, "holders.characterId": { $in: characterIds } })
       .project<Pick<Bond, "_id" | "holders" | "marketPrice" | "currencyCode" | "countryId">>({
         _id: 1,

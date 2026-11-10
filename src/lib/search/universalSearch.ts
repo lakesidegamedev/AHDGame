@@ -19,7 +19,6 @@ import type {
   Bill,
   StateBill,
   WikiPage,
-  Bond,
   LegislationType,
 } from "@/lib/db/types";
 import { BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
@@ -28,6 +27,7 @@ import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 import { legislatureUrl } from "@/lib/urls";
 import type { SearchResult } from "@/lib/search/types";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Maximum accepted `q` length (after trimming). Longer queries are rejected
@@ -692,7 +692,7 @@ export async function runUniversalSearch({
     if (enabledCountries) {
       bondQuery.countryId = { $in: enabledCountries };
     }
-    const bonds = await db.collection<Bond>("bonds").find(bondQuery).limit(5).toArray();
+    const bonds = await bondsCollection(db).find(bondQuery).limit(5).toArray();
     const corpNameById = new Map(bondCorpMatches.map((c) => [c._id.toString(), c.name]));
 
     for (const bond of bonds) {

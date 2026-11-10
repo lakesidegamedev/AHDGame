@@ -32,6 +32,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-stranded-payout";
 const PAYOUT_KIND = "sovereign_maturity_payout";
@@ -136,8 +137,7 @@ async function survey(db: Db): Promise<PayoutPatch[]> {
     return rows.map((row) => `${name}:${String(row._id)}`);
   };
   const [bonds, ...liveGroups] = await Promise.all([
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { _id: { $in: candidates.map((c) => c.bondKey as Bond["_id"]) } },
         { projection: { sovereignMaturityClaim: 1 } }

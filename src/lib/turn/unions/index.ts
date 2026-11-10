@@ -3,7 +3,6 @@ import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { ObjectId } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Character, CorporateSector, State, Union, User } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import type { UnionOrganizer } from "@/lib/db/types/union";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
@@ -40,6 +39,7 @@ import { getBannedUnionCountryIds } from "@/lib/labour/unionLaws";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { processLabourRelationsTurn } from "./labourRelationsTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -172,8 +172,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // weights have to decay in step with the pool they came from or the two
   // numbers drift apart. Suspended unions stay frozen, same as dues.
   const bannedUnionCountryIds = await getBannedUnionCountryIds(db);
-  const enforcementBudgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const enforcementBudgets = await federalBudgetCollection(db)
     .find({ unionsBanned: true }, { projection: { countryId: 1, unionEnforcementPosture: 1 } })
     .toArray();
   const enforcementPostures = new Map(

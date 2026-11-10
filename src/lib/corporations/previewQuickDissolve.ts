@@ -6,16 +6,8 @@
  */
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
-import type {
-  Bond,
-  Character,
-  Corporation,
-  CorporateSector,
-  State,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { ApiError } from "@/lib/api/errors";
 import { corporationDissolutionAgeBlock } from "@/lib/corporations/dissolutionAgeGuard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -51,6 +43,8 @@ import {
 } from "@/lib/constants/commodities";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildStateLookups, stateGdpAnchorBlend } from "@/lib/turn/commodity/sectorLedger";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -116,9 +110,8 @@ export async function previewQuickDissolve(
   const corpIdStr = corporation._id.toString();
 
   const [outstandingBonds, heldBonds, fxByCurrency] = await Promise.all([
-    db.collection<Bond>("bonds").countDocuments({ corporationId: corporation._id, matured: false }),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db).countDocuments({ corporationId: corporation._id, matured: false }),
+    bondsCollection(db)
       .find({ "holders.corporationId": corporation._id, matured: false })
       .toArray(),
     loadFxRatesByCurrency(db),
@@ -301,7 +294,7 @@ export async function previewQuickDissolve(
       .collection<StateMetrics>("macroMetrics")
       .find({}, { projection: { "economic.gdpGrowth.value": 1 } })
       .toArray(),
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
   ]);
 
   const natcorpIds = new Set(

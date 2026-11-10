@@ -11,7 +11,6 @@ import {
   decisionAnsweredByLever,
 } from "@/lib/crises/interactionEngine";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { ObjectId } from "mongodb";
 import {
   campaignBriefForGlobalResponder,
@@ -20,6 +19,7 @@ import {
   visibleGlobalResponses,
 } from "@/lib/livingConflict/globalResponse";
 import { getGameState } from "@/lib/gameState";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * GET /api/crises/[id]/interaction
@@ -122,9 +122,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       (n) => n.nodeId === interaction.currentNodeId
     );
     if (currentNode?.type === "aid" && character.countryId) {
-      const budget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: character.countryId });
+      const budget = await federalBudgetCollection(db).findOne({ countryId: character.countryId });
       const senderGdp =
         budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
       const pledged = await db

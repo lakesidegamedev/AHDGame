@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
-import type { Bond } from "@/lib/db/types/bond";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { federalSurplus, type SurplusInputs } from "./federalSurplus";
 import { sovereignBondOutstanding, sovereignDebtTerms } from "@/lib/bonds/sovereignPrincipal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Stored fiscal fields that must agree with their definitions at every close:
@@ -118,8 +118,7 @@ export async function reconcileFederalBudgetInvariants(
   const result: InvariantReconciliation = { checked: 0, corrected: 0, skipped: 0 };
   try {
     const [budgets, bonds] = await Promise.all([
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           {},
           {
@@ -140,8 +139,7 @@ export async function reconcileFederalBudgetInvariants(
           }
         )
         .toArray(),
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find(
           { issuerType: "sovereign", matured: false, defaulted: false },
           // The outstanding helper re-checks the query-filtered fields, so
@@ -222,7 +220,7 @@ export async function reconcileFederalBudgetInvariants(
     }
 
     if (ops.length > 0) {
-      await db.collection<FederalBudget>("federalBudget").bulkWrite(ops, { ordered: false });
+      await federalBudgetCollection(db).bulkWrite(ops, { ordered: false });
       result.corrected = ops.length;
       console.info(
         `[BudgetInvariant] turn ${turn}: reconciled ${result.corrected} of ${result.checked} ` +

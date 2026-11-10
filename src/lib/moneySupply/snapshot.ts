@@ -3,10 +3,7 @@ import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies
 import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
-  Bond,
-  CentralBank,
   Corporation,
-  FederalBudget,
   GameConfig,
   MoneySupplySnapshot,
   OrganizationFund,
@@ -31,6 +28,9 @@ import {
   type MutableComponents,
 } from "./assemble";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -65,10 +65,10 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     .findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const currencyFor = (countryId: CountryId) => homeCurrency(countryId, preset);
-  let banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  let banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.some((bank) => bank.externalBroadMoney == null)) {
     await seedMoneySupplyBaselines(db, preset);
-    banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+    banks = await centralBanksCollection(db).find({}).toArray();
   }
   const [
     characters,
@@ -141,8 +141,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       .collection("politicalParties")
       .find({}, { projection: { countryId: 1, treasury: 1 } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         {},
         {
@@ -158,8 +157,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       .collection<OrganizationFund>("organizationFunds")
       .find({}, { projection: { currencyCountryId: 1, balanceLocal: 1 } })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ issuerType: "sovereign", matured: false, defaulted: false })
       .toArray(),
     db

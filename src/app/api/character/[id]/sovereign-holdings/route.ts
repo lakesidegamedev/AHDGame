@@ -10,10 +10,10 @@ import { ObjectId } from "mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { computeRequiredIssuance } from "@/lib/sovereignDefault/requiredIssuance";
 import { ENTITY_DEMAND_WEIGHT } from "@/lib/sovereignDefault/constants";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -34,8 +34,7 @@ async function handleGET(_req: Request, { params }: RouteParams) {
   const currentTurn = await getCurrentTurn(db);
 
   // All active sovereign bonds the character holds (any country)
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       matured: false,

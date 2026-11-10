@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { buildNationalBillCountryScopeFilter } from "@/lib/legislature/nationalBillScope";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { CentralBank, FederalBudget, GameConfig, GameState, State } from "@/lib/db/types";
+import type { GameConfig, GameState, State } from "@/lib/db/types";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { isColdWarPrincipal, type OverviewCounts } from "@/lib/country/overviewCounts";
@@ -13,6 +13,8 @@ import { getColdWarDials } from "@/lib/coldwar/dials";
 import { commandEconomyOffices } from "@/lib/constants/commandEconomyOffices";
 import { DUAL_TRACK_CEILING, scheduledMarketizationLevel } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -83,11 +85,12 @@ async function resolveCommandEconomyActive(db: Db, countryId: CountryId): Promis
     db
       .collection<GameState>("gameState")
       .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      {
         projection: { "economicFactors.marketizationLevel": 1 },
-      }),
+      }
+    ),
   ]);
   const enabled = config?.commandEconomyEnabled === true;
   if (!enabled) return false;
@@ -122,11 +125,12 @@ async function resolveFiscalFigures(
   countryId: CountryId
 ): Promise<{ gdpMillions: number | null; budgetBalancePctGdp: number | null }> {
   const [budget, gdpAgg] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      {
         projection: { gdp: 1, gdpSmoothed: 1, "revenue.total": 1, "spending.total": 1 },
-      }),
+      }
+    ),
     db
       .collection<State>("states")
       .aggregate<{ _id: null; gdpMillions: number }>([
@@ -197,8 +201,7 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
     ),
     orNull(db.collection("states").countDocuments({ countryId })),
     orNull(
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .findOne({ _id: getBankId(countryId) }, { projection: { primeRate: 1 } })
         .then((bank) => bank?.primeRate ?? null)
     ),

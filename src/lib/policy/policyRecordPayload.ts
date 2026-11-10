@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Character, ElectedOfficial, State } from "@/lib/db/types";
-import type { EnactedLaw, FederalBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw } from "@/lib/db/types/budget";
 import {
   getLegislationTypeById,
   canonicalizeLegislationTypeId,
@@ -16,6 +16,7 @@ import {
 } from "@/lib/policy/nationalPolicyRecords";
 import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
 export interface PolicyProvenance {
@@ -75,9 +76,9 @@ export async function loadPolicyRecordPayload(countryId: CountryId) {
       })
       .sort({ enactedAt: 1 })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId }),
+    federalBudgetCollection(db).findOne({
+      _id: countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId,
+    }),
     db
       .collection<State>("states")
       .find({ countryId }, { projection: { population: 1 } })

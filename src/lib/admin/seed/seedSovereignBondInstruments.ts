@@ -12,7 +12,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { calculateBondMarketPrice } from "@/lib/constants/bonds";
 import { getOpeningPolicyRate } from "@/lib/centralBank/rules/openingPolicyRate";
-import type { Bond, CentralBank, Corporation, FederalBudget } from "@/lib/db/types";
+import type { Bond, Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { sovereignCreditSpreadPp } from "@/lib/bonds/rules/sovereignCreditSpread";
 import { COUNTRY_ORDER, getCountryConfig, type CountryId } from "@/lib/constants/countries";
@@ -25,6 +25,9 @@ import {
   SOVEREIGN_RECONCILE_DISTRIBUTION,
 } from "@/lib/bonds/sovereign";
 import { planOpeningSovereignMaturityCohorts } from "@/lib/bonds/rules/openingMaturity";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface SeedSovereignBondInstrumentsResult {
   countriesSeeded: number;
@@ -93,16 +96,13 @@ export async function seedSovereignBondInstruments(
   // deliberately NOT fully preloaded — see loadPrimaryNationalCorporations.
   const budgetIds = COUNTRY_ORDER.map((c) => getNationalBudgetId(c));
   const [budgetRows, bankRows, bondRows, primaryCorporations] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ _id: { $in: budgetIds } } as Record<string, unknown>)
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({ _id: { $in: COUNTRY_ORDER.map((c) => getBankId(c)) } } as Record<string, unknown>)
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({
         issuerType: "sovereign",
         countryId: { $in: [...COUNTRY_ORDER] },
@@ -249,7 +249,7 @@ export async function seedSovereignBondInstruments(
   }
 
   if (staged.length > 0) {
-    await db.collection<Omit<Bond, "_id">>("bonds").insertMany(staged);
+    await bondsCollection<Omit<Bond, "_id">>(db).insertMany(staged);
   }
 
   if (countriesSeeded === 0) {

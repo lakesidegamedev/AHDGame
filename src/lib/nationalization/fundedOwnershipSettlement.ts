@@ -22,6 +22,7 @@ import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJour
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import type { TreasuryCashOptions } from "./treasuryLedger";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -138,9 +139,10 @@ export async function settleFundedWholeCorpShareholderPool(
   );
   if (!(treasuryLocal > 0))
     throw new Error("Funded buyout rounded to a non-positive Treasury debit");
-  const budget = await db
-    .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-    .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection<{
+    countryId: string;
+    currencyCode?: CurrencyCode | null;
+  }>(db).findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
   if (!budget) throw new Error("Funded buyout Treasury account is missing");
   const treasuryFilter: Record<string, unknown> = { countryId: budget.countryId };
   if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))
@@ -386,9 +388,13 @@ export async function settleFundedWholeCorpLiquidation(
   );
   let treasuryFilter: Record<string, unknown> | undefined;
   if (treasuryLocal > 0) {
-    const budget = await db
-      .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-      .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+    const budget = await federalBudgetCollection<{
+      countryId: string;
+      currencyCode?: CurrencyCode | null;
+    }>(db).findOne(
+      { countryId: input.countryId },
+      { projection: { countryId: 1, currencyCode: 1 } }
+    );
     if (!budget) throw new Error("Funded liquidation Treasury account is missing");
     treasuryFilter = { countryId: budget.countryId };
     if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))

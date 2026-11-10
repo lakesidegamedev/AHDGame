@@ -12,6 +12,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 // Frozen turn-601 waterfall resolution: vault plus USD insurance fund
 // paid the household book into the central bank. The 22,150.23 household
@@ -499,9 +500,11 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     .collection<{ _id: string }>(BANK_FAILURE_EVENTS)
     .deleteOne({ _id: FAILURE_EVENT_ID });
 
-  const existing = await db
-    .collection("financialTxLog")
-    .findOne({ type: "restitution_credit", subjectId: id, "meta.defectId": DEFECT_ID });
+  const existing = await financialTxLogCollection(db).findOne({
+    type: "restitution_credit",
+    subjectId: id,
+    "meta.defectId": DEFECT_ID,
+  });
   if (!existing) {
     const entry: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged"> = {
       type: "restitution_credit" as const,

@@ -7,7 +7,6 @@ import { bankMayManageFunds } from "@/lib/indexFunds/sponsorship/rules/eligibili
 import { ObjectId, type Db } from "mongodb";
 import type { BankCharter, BankCharterType, BankLoan } from "@/lib/db/types/bank";
 import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -29,6 +28,7 @@ import { getCurrentTurn } from "@/lib/currentTurn";
 import { charterTypeMay } from "@/lib/banking/rules/capabilities";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { depositBookReturnKey } from "@/lib/banking/depositBookReturn";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
@@ -889,8 +889,9 @@ export async function isChairOfCurrencyBank(
 ): Promise<boolean> {
   const countryId = getCountryIdForCurrency(currency);
   const bankId = getBankId(countryId);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { chairCharacterId: 1 } });
+  const bank = await centralBanksCollection(db).findOne(
+    { _id: bankId },
+    { projection: { chairCharacterId: 1 } }
+  );
   return !!bank?.chairCharacterId && bank.chairCharacterId.equals(characterId);
 }

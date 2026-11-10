@@ -8,6 +8,7 @@ import { perTurnCouponPayment } from "@/lib/constants/bonds";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { resolveBondCurrency } from "./bondTurnHelpers";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 // Tx log entry accumulators (resolved to names + emitted after all phases).
 // `charId` carries the holder id in string form for batched name lookup;
@@ -73,8 +74,7 @@ export async function snapshotBondHistory(args: {
 }): Promise<number> {
   const { db, activeBonds, fxByCurrency, turn, now } = args;
   // Get updated bonds after all price changes
-  const updatedBonds = await db
-    .collection<Bond>("bonds")
+  const updatedBonds = await bondsCollection(db)
     .find({ matured: false })
     .project({ _id: 1, marketPrice: 1 })
     .toArray();

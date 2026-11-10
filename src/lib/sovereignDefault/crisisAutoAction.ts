@@ -7,11 +7,11 @@
  */
 
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { applyRepudiateResolution } from "./resolution/repudiate";
 import type { CountryId } from "@/lib/constants/countries";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface CrisisAutoActionReport {
   countriesChecked: number;
@@ -38,8 +38,7 @@ export async function processCrisisAutoActions(
   // Find all federalBudget rows in crisisPending with an expired timer.
   // Disabled countries are gated from entering crisisPending (crisisDetection.ts
   // access guard), so scanning all is safe.
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({
       sovereignCrisisState: "crisisPending",
       // Turn-first expiry (freezes on pause) with a wall-clock fallback for any
@@ -67,12 +66,10 @@ export async function processCrisisAutoActions(
     if (!decision) {
       // Decision row is missing or already in a terminal state — clear the timer
       // so we don't attempt again next turn.
-      await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne(
-          { _id: getNationalBudgetId(countryCode) },
-          { $set: { crisisAutoActionAt: null } }
-        );
+      await federalBudgetCollection(db).updateOne(
+        { _id: getNationalBudgetId(countryCode) },
+        { $set: { crisisAutoActionAt: null } }
+      );
       console.warn(
         `[crisisAutoAction] ${countryCode}: crisisAutoActionAt expired but no open decision found — cleared timer`
       );

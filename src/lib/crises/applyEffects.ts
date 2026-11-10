@@ -8,6 +8,7 @@ import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { CharacterStats, StatKey } from "@/lib/stats/statsConstants";
 import { STAT_MIN, STAT_MAX } from "@/lib/stats/statsConstants";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Clamp a stat value to the legal [STAT_MIN, STAT_MAX] range.
@@ -73,7 +74,7 @@ async function applyInflationEffects(
   const delta = effects.reduce((sum, e) => sum + e.value, 0);
   if (affectedCountries.length === 0 || delta === 0) return;
 
-  await db.collection("federalBudget").updateMany(
+  await federalBudgetCollection(db).updateMany(
     { countryId: { $in: affectedCountries } },
     {
       $inc: { "economicFactors.inflationRate": delta },

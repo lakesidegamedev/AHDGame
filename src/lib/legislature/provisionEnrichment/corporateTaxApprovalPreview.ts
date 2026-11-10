@@ -1,8 +1,9 @@
 import type { Db } from "mongodb";
-import type { FederalBudget, StateBudget, LegislationType } from "@/lib/db/types";
+import type { StateBudget, LegislationType } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { corporateTaxApprovalForCountry } from "@/lib/resetLegislation/rules/voterReactions";
 import type { FiscalScope } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Undefined preserves legacy display for other types; empty means no known reaction. */
 export async function corporateTaxApprovalPreview(
@@ -17,12 +18,10 @@ export async function corporateTaxApprovalPreview(
   if (proposedRate === undefined) return {};
   const budget =
     change.scope === "federal"
-      ? await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne(
-            { _id: getNationalBudgetId(scope.countryId) },
-            { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
-          )
+      ? await federalBudgetCollection(db).findOne(
+          { _id: getNationalBudgetId(scope.countryId) },
+          { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
+        )
       : scope.scope === "region"
         ? await db
             .collection<StateBudget>("stateBudgets")

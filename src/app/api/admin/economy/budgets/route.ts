@@ -17,9 +17,11 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { FISCAL_YEAR_START_TURN_IN_YEAR } from "@/lib/budget/fiscalYear";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { z } from "zod";
-import type { FederalBudget, FederalBudgetSnapshot } from "@/lib/db/types/budget";
-import type { CentralBank, GameState } from "@/lib/db/types";
+import type { FederalBudgetSnapshot } from "@/lib/db/types/budget";
+import type { GameState } from "@/lib/db/types";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -79,13 +81,11 @@ export async function GET(request: Request) {
 
     // Live budget request
     const [budget, gameState, centralBank] = await Promise.all([
-      db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
+      federalBudgetCollection(db).findOne({ _id: budgetId }),
       db
         .collection<GameState>("gameState")
         .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-      db
-        .collection<CentralBank>("centralBanks")
-        .findOne({ countryId }, { projection: { primeRate: 1 } }),
+      centralBanksCollection(db).findOne({ countryId }, { projection: { primeRate: 1 } }),
     ]);
 
     if (!budget) return errorResponse(404, "Budget not found");

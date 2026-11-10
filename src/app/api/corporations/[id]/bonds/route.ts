@@ -70,6 +70,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -93,8 +94,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // centralBanks come from the shared per-turn cache so a burst of corp-
     // detail requests in the same turn shares a single DB round-trip.
     const [bonds, sectors, refData, fxByCurrency, marketMode] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({ corporationId: corporation._id })
         .sort({ createdAt: -1 })
         .toArray(),
@@ -251,8 +251,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Find bonds this corporation HOLDS in other companies
-    const heldBonds = await db
-      .collection<Bond>("bonds")
+    const heldBonds = await bondsCollection(db)
       .find({
         "holders.corporationId": corporation._id,
         corporationId: { $ne: corporation._id },
@@ -487,9 +486,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const postEffectiveCooldown = corporation.isPrivate
       ? BOND_ISSUANCE_COOLDOWN_TURNS_PRIVATE
       : BOND_ISSUANCE_COOLDOWN_TURNS;
-    const latestBond = await db
-      .collection<Bond>("bonds")
-      .findOne({ corporationId: corporation._id }, { sort: { issuedAtTurn: -1 } });
+    const latestBond = await bondsCollection(db).findOne(
+      { corporationId: corporation._id },
+      { sort: { issuedAtTurn: -1 } }
+    );
     if (latestBond) {
       const cooldownEnd = latestBond.issuedAtTurn + postEffectiveCooldown;
       if (currentTurn < cooldownEnd) {
@@ -512,10 +512,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // wildly inflated credit-score drift on new non-USD bond issuances and
     // setting the wrong coupon rate for the bond's entire lifetime.
     const [existingBonds, sectors, refData, fxByCurrency, postMarketMode] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
-        .find({ corporationId: corporation._id, matured: false })
-        .toArray(),
+      bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
       db
         .collection<CorporateSector>("corporateSectors")
         .find({ corporationId: corporation._id })
@@ -832,8 +829,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       };
     } else {
       const insertResult = underwrittenBondId
-        ? await db.collection<Bond>("bonds").insertOne({ _id: underwrittenBondId, ...bondDoc })
-        : await db.collection<Bond>("bonds").insertOne(bondDoc as Bond);
+        ? await bondsCollection(db).insertOne({ _id: underwrittenBondId, ...bondDoc })
+        : await bondsCollection(db).insertOne(bondDoc as Bond);
       insertedBondId = insertResult.insertedId;
       // Serialize the treasury credit against other same-corp money ops (e.g.
       // a hostile takeover firing on this corp at the same instant) so the two

@@ -1,6 +1,5 @@
 import { euroLedgerCrossRate, type EuroMonetaryUnion } from "@/lib/currency/euro/rules";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import type { CurrencyOrder } from "@/lib/db/types/currencyOrder";
@@ -20,6 +19,7 @@ import { recoverStaleFillClaims } from "@/lib/forex/fillRecovery";
 import { sendSystemMail } from "@/lib/mail/systemMail";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // ── Limit order processing ──────────────────────────────────────────────────
 
@@ -178,7 +178,7 @@ export async function processTriggeredLimitOrders(
       const reserveBankId = toCountryEntry
         ? getBankId(toCountryEntry.countryId as Parameters<typeof getBankId>[0])
         : fromBankId;
-      const banks = db.collection<CentralBank>("centralBanks");
+      const banks = centralBanksCollection(db);
       if (reserveBankId === fromBankId) {
         await banks.updateOne(
           { _id: fromBankId },

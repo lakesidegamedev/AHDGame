@@ -27,6 +27,9 @@ import { PRIVATE_HOLDER_COLLECTIONS, type MaturityClaimSource } from "./rules/bo
 import type { PartialMoneyMoveSource } from "./rules/moneyMoves";
 import { buildEconomyResetPlan, type EconomyResetSource } from "./rules/plan";
 import type { EconomyResetPlan } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -280,8 +283,7 @@ async function loadSource(
         { projection: { "currencyBalances.savings": 1, lineOfCredit: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("bonds")
+    bondsCollection<Document>(db)
       .find(
         {},
         {
@@ -310,8 +312,7 @@ async function loadSource(
       .collection<Document>(SOVEREIGN_COUPON_CLAIMS_COLLECTION)
       .find({ settledTurn: { $exists: false } })
       .toArray(),
-    db
-      .collection<Document>("federalBudget")
+    federalBudgetCollection<Document>(db)
       .find(
         {},
         {
@@ -324,8 +325,7 @@ async function loadSource(
         }
       )
       .toArray(),
-    db
-      .collection<Document>("centralBanks")
+    centralBanksCollection<Document>(db)
       .find({}, { projection: { reserveBalance: 1, pendingLocReserveCredit: 1 } })
       .toArray(),
     db

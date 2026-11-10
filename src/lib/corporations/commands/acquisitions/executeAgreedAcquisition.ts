@@ -9,15 +9,8 @@ import {
 import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
-import type {
-  Bond,
-  Character,
-  Corporation,
-  CorporateSector,
-  ImperialCharacter,
-} from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector, ImperialCharacter } from "@/lib/db/types";
 import type { IndexFund } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   EQUITY_MARKET_POOLS_COLLECTION,
   type EquityMarketPool,
@@ -80,6 +73,8 @@ import {
   markAcquisitionProgress,
 } from "./acquisitionSettlement";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -234,9 +229,10 @@ async function runAgreedAcquisition(
     if (!eligibility.ok) return { ok: false, error: eligibility.error, status: eligibility.status };
   } else {
     // v1 scope guards — defer bond assumption + cross-holding transfer.
-    const openBonds = await db
-      .collection<Bond>("bonds")
-      .countDocuments({ corporationId: target._id, matured: false });
+    const openBonds = await bondsCollection(db).countDocuments({
+      corporationId: target._id,
+      matured: false,
+    });
     if (openBonds > 0)
       return {
         ok: false,
@@ -419,9 +415,10 @@ async function runAgreedAcquisition(
         )
       : [],
     floatPaid
-      ? db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ countryId: target.countryId }, { projection: { _id: 1 } })
+      ? federalBudgetCollection(db).findOne(
+          { countryId: target.countryId },
+          { projection: { _id: 1 } }
+        )
       : null,
     floatPaid
       ? db

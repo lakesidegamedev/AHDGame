@@ -25,6 +25,7 @@ import type {
   ActionAuditInput,
   ActionAuditSubject,
 } from "@/lib/db/types/actionAuditLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export type TxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -304,7 +305,7 @@ export async function emitTx(
       flagged: flags.length > 0,
     };
     try {
-      await db.collection<FinancialTxLogEntry>("financialTxLog").insertOne(doc);
+      await financialTxLogCollection(db).insertOne(doc);
     } catch (insertErr) {
       if (isDuplicateKeyError(insertErr)) return "already-applied";
       throw insertErr;
@@ -354,10 +355,7 @@ export async function emitTxBulk(
       entries.some((entry) => entry.subjectType === "character" && taxablePlayerIncome(entry.type))
     ) {
       await persistTaxableIncomeBatch(db, docs);
-    } else
-      await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
-        .insertMany(docs, { ordered: false });
+    } else await financialTxLogCollection(db).insertMany(docs, { ordered: false });
     await shadowLedgerFromTx(db, docs);
     // BULK path so the hot loop (bondTurn / corporationTurn, hundreds of
     // entries/turn) pays one insertMany at flush time, not one per row. The
@@ -399,7 +397,7 @@ export async function emitTxStrict(
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      await db.collection<FinancialTxLogEntry>("financialTxLog").insertOne(doc);
+      await financialTxLogCollection(db).insertOne(doc);
       await shadowLedgerFromTx(db, [doc]);
       recordAudit(buildAuditEnvelope(doc));
       return doc;
@@ -434,7 +432,7 @@ export async function emitTxStrict(
 
 async function findTxById(db: Db, id: ObjectId): Promise<FinancialTxLogEntry | null> {
   try {
-    return await db.collection<FinancialTxLogEntry>("financialTxLog").findOne({ _id: id });
+    return await financialTxLogCollection(db).findOne({ _id: id });
   } catch {
     return null;
   }
@@ -549,10 +547,9 @@ async function persistTaxableIncomeBatch(
   attemptsLeft = 3
 ): Promise<void> {
   try {
-    await db.collection<FinancialTxLogEntry>("financialTxLog").insertMany(docs, { ordered: false });
+    await financialTxLogCollection(db).insertMany(docs, { ordered: false });
   } catch (error) {
-    const saved = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const saved = await financialTxLogCollection(db)
       .find({ _id: { $in: docs.map((doc) => doc._id) } })
       .toArray();
     const expected = new Map(docs.map((doc) => [doc._id.toHexString(), doc]));

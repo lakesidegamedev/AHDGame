@@ -59,12 +59,12 @@ import { INFRA_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetInfra";
 import { applyTreasuryEffects } from "./treasuryEffects";
 import { THRESHOLDS } from "@/lib/utils/metricScoring";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { CountryId } from "@/lib/constants/countries";
 import { expireMinisterialOrders } from "@/lib/cabinet/ministerialOrderLifecycle";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Maximum |modifier| any single metric can receive per turn from the combined
@@ -703,12 +703,11 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     const bankId = getBankId(cid as CountryId);
     pressureByBank[bankId] = (pressureByBank[bankId] ?? 0) + pressure;
   }
-  const allBanks = await db
-    .collection<CentralBank>("centralBanks")
+  const allBanks = await centralBanksCollection(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
   if (allBanks.length > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(
+    await centralBanksCollection(db).bulkWrite(
       allBanks.map((b) => ({
         updateOne: {
           filter: { _id: b._id },

@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 
-/** Collections with a typed getter in `src/lib/db/collections`; new code must use it. */
+/** Collections with a typed door in `src/lib/db/collections` or `src/lib/db/repositories`; new code must use it. */
 export const FRONT_DOOR_COLLECTIONS = [
   "characters",
   "corporations",
@@ -16,6 +16,9 @@ export const FRONT_DOOR_COLLECTIONS = [
   "elections",
   "corporateSectors",
   "federalBudget",
+  "bonds",
+  "centralBanks",
+  "financialTxLog",
 ] as const;
 
 export const UNTYPED = "untyped";
@@ -30,7 +33,7 @@ export interface DataAccessBaseline {
 }
 
 export const BASELINE_PATH = join("scripts", "architecture", "dataAccessRatchet.baseline.json");
-const GETTER_DIR = "src/lib/db/collections/";
+const DOOR_DIRS = ["src/lib/db/collections/", "src/lib/db/repositories/"];
 const SOURCE_EXT = /\.(?:ts|tsx|mts|cts)$/;
 const TEST_FILE = /(?:\.(?:test|spec)\.[cm]?tsx?$|TestDb\.[cm]?tsx?$|\.d\.ts$)/;
 const TEST_DIR = /(?:^|\/)(?:__tests__|__mocks__|__fixtures__|mocks|test-utils|test|tests)\//;
@@ -51,7 +54,7 @@ export function countAccess(source: string, file: string): FileCounts {
     false,
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
   );
-  const getterModule = file.startsWith(GETTER_DIR);
+  const getterModule = DOOR_DIRS.some((dir) => file.startsWith(dir));
   const visit = (node: ts.Node) => {
     if (
       ts.isCallExpression(node) &&

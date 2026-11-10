@@ -2,7 +2,6 @@ import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { CURRENCY_ANCHOR_COUNTRY, type CurrencyCode } from "@/lib/constants/currencies";
 import type { Bond } from "@/lib/db/types/bond";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryGameState } from "@/lib/db/types";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { MacroCountryState } from "@/lib/world/macro/types";
@@ -24,6 +23,8 @@ import {
   FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
   type FederationSettlementApplicationRecord,
 } from "./runtimeEntities";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
 
@@ -109,8 +110,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
     .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
     .find({ applicationId }, { session })
     .toArray();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ $or: [{ _id: sourceCountryId }, { countryId: sourceCountryId }] }, { session })
     .toArray();
   const bonds = input.bondSnapshot
@@ -118,8 +118,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
         (bond) =>
           bond.issuerType === "sovereign" && bond.countryId === sourceCountryId && !bond.matured
       )
-    : await db
-        .collection<Bond>("bonds")
+    : await bondsCollection(db)
         .find({ issuerType: "sovereign", countryId: sourceCountryId, matured: false }, { session })
         .toArray();
   if (
@@ -319,13 +318,11 @@ export async function materializeLegacyFederationServiceTurn(input: {
   }
   const localCash = (endingCashMinor / 100) * issuerRate;
   if (!Number.isFinite(localCash)) throw new Error("Legacy cash exceeds local precision");
-  const sourceUpdated = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
-      { $set: { treasuryBalance: localCash } },
-      { session }
-    );
+  const sourceUpdated = await federalBudgetCollection(db).updateOne(
+    { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
+    { $set: { treasuryBalance: localCash } },
+    { session }
+  );
   if (sourceUpdated.matchedCount !== 1)
     throw new Error("Legacy administration cash changed during service");
   const receipt: FederationLegacyServiceTurn = {

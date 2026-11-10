@@ -4,6 +4,7 @@ import type { BondMarketPool } from "@/lib/db/types";
 import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { BOND_POOL_M2_SHARE } from "@/lib/bonds/marketPool";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Opening balance sheet for the bond market pools.
@@ -20,8 +21,7 @@ async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<Migra
       .collection<{ currencyCode?: string }>("exchangeRates")
       .find({}, { projection: { currencyCode: 1 } })
       .toArray(),
-    db
-      .collection<{ currencyCode?: string }>("bonds")
+    bondsCollection<{ currencyCode?: string }>(db)
       .aggregate<{ _id: string | null }>([
         { $match: { matured: { $ne: true } } },
         { $group: { _id: "$currencyCode" } },

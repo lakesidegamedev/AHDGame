@@ -7,7 +7,7 @@ import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { Db } from "mongodb";
-import type { Character, CentralBank, SavingsLedgerEntry } from "@/lib/db/types";
+import type { Character, SavingsLedgerEntry } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { CountryId } from "@/lib/constants/countries";
@@ -28,6 +28,7 @@ import { processNppSavingsInterest } from "@/lib/turn/nppSavingsInterest";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { ensureCentralBankPricingPhaseIn } from "@/lib/monetaryPolicy/centralBankPricing";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -51,7 +52,7 @@ async function bookCentralBankInterestCreation(
     byBankId.set(bankId, (byBankId.get(bankId) ?? 0) + amount);
   }
 
-  await db.collection<CentralBank>("centralBanks").bulkWrite(
+  await centralBanksCollection(db).bulkWrite(
     [...byBankId.entries()].map(([bankId, amount]) => ({
       updateOne: {
         filter: { _id: bankId },
@@ -90,8 +91,7 @@ export async function processSavingsInterestTurn(
   const bankingPolicy = await loadBankingPolicy(db);
   const accountsAuthoritative = bankingPolicy.savingsAccounts === "authoritative";
 
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project({ _id: 1, primeRate: 1, nationalSavingsBalance: 1, inflationHistory: 1 })
     .toArray();
@@ -235,7 +235,7 @@ export async function processSavingsInterestTurn(
       },
     }));
     if (nationalSavingsOps.length > 0) {
-      await db.collection<CentralBank>("centralBanks").bulkWrite(nationalSavingsOps);
+      await centralBanksCollection(db).bulkWrite(nationalSavingsOps);
     }
 
     // Phase 2 (quarterly): flush pending → savings balance, log ledger transaction
@@ -502,7 +502,7 @@ export async function processSavingsInterestTurn(
     );
   }
   if (legacyNationalBalance.size > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(
+    await centralBanksCollection(db).bulkWrite(
       [...legacyNationalBalance.entries()].map(([cid, balance]) => ({
         updateOne: {
           filter: { _id: getBankId(cid) },

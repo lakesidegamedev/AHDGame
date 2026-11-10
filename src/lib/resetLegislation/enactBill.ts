@@ -4,7 +4,6 @@ import type { Db, ObjectId } from "mongodb";
 import type { Bill, ResetLawProvision } from "@/lib/db/types/legislation";
 import type { StateBill } from "@/lib/db/types/stateBill";
 import type { GameState } from "@/lib/db/types/gameState";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
@@ -15,6 +14,7 @@ import type { ResetLawOpeningBoard } from "./rules/openingBoard";
 import { enactReviewedBill } from "./rules/billEnactment";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import type { ResetLawEnactmentReceipt, ResetLawProgramDocument } from "./program";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function resetLawProvisions(bill: Pick<Bill | StateBill, "provisions">): ResetLawProvision[] {
   return (bill.provisions ?? []).filter(
@@ -238,7 +238,7 @@ export async function applyResetLawBillEnactment(
       if (defenseAnnualDelta !== 0) {
         spendingIncrement["spending.byCategory.defense"] = defenseAnnualDelta;
       }
-      const written = await db.collection<FederalBudget>("federalBudget").updateOne(
+      const written = await federalBudgetCollection(db).updateOne(
         { countryId: country },
         {
           $inc: spendingIncrement,

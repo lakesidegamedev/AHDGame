@@ -7,7 +7,6 @@ import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CountryGameState } from "@/lib/db/types";
 import type { Bond } from "@/lib/db/types/bond";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { CURRENCY_ANCHOR_COUNTRY, type CurrencyCode } from "@/lib/constants/currencies";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -34,6 +33,8 @@ import {
   continuingContributionRiskLoss,
   planContinuingDebtService,
 } from "./rules/continuingService";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
@@ -135,8 +136,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
       [sourceCountryId, ...ids].sort().join(",")
   )
     throw new Error("Continuing successor duties disagree with approved terms");
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       { $or: [{ _id: sourceCountryId }, { countryId: sourceCountryId }] },
       { session, projection: { treasuryBalance: 1, currencyCode: 1 } }
@@ -145,8 +145,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
   if (budgets.length !== 1) throw new Error("Continuing issuer needs one treasury");
   const allBonds =
     input.bondSnapshot ??
-    (await db
-      .collection<Bond>("bonds")
+    (await bondsCollection(db)
       .find({ issuerType: "sovereign", countryId: sourceCountryId, matured: false }, { session })
       .toArray());
   const bonds = allBonds.filter(
@@ -290,13 +289,11 @@ export async function materializeContinuingFederationServiceTurn(input: {
   const endingCash = safeMinor(startingCash + plan.totalContributionsMinor);
   const localCash = budgets[0].treasuryBalance + (plan.totalContributionsMinor / 100) * issuerRate;
   if (!Number.isFinite(localCash)) throw new Error("Continuing cash exceeds local precision");
-  const sourceUpdated = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
-      { $set: { treasuryBalance: localCash } },
-      { session }
-    );
+  const sourceUpdated = await federalBudgetCollection(db).updateOne(
+    { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
+    { $set: { treasuryBalance: localCash } },
+    { session }
+  );
   if (sourceUpdated.matchedCount !== 1)
     throw new Error("Continuing issuer cash changed during service");
   const receipt: FederationContinuingServiceTurn = {

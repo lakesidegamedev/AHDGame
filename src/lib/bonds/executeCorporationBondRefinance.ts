@@ -1,11 +1,5 @@
 import type { Db } from "mongodb";
-import type {
-  Bond,
-  BondMaturityTurns,
-  CentralBank,
-  Corporation,
-  CorporateSector,
-} from "@/lib/db/types";
+import type { Bond, BondMaturityTurns, Corporation, CorporateSector } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import {
   buildPrimeRateMap,
@@ -32,6 +26,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CorporationRefinanceResult {
   ok: true;
@@ -72,8 +68,7 @@ export async function executeCorporationBondRefinance(
 ): Promise<CorporationRefinanceResult | CorporationRefinanceInfeasible> {
   const { now, currentTurn, maturityTurns } = options;
 
-  const defaultedBonds = await db
-    .collection<Bond>("bonds")
+  const defaultedBonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false, defaulted: true })
     .toArray();
 
@@ -88,8 +83,7 @@ export async function executeCorporationBondRefinance(
     return { ok: false, reason: "Refinance limit reached" };
   }
 
-  const allNonMatured = await db
-    .collection<Bond>("bonds")
+  const allNonMatured = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
 
@@ -97,7 +91,7 @@ export async function executeCorporationBondRefinance(
     .collection<CorporateSector>("corporateSectors")
     .find({ corporationId: corporation._id })
     .toArray();
-  const centralBanks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const centralBanks = await centralBanksCollection(db).find({}).toArray();
   const primeRateByCountry = buildPrimeRateMap(centralBanks);
   const fxByCurrency = await loadFxRatesByCurrency(db);
   // Under plants the growth-cost deduction is a phantom charge (growth spend no
@@ -223,7 +217,7 @@ export async function executeCorporationBondRefinance(
     updatedAt: now,
   };
 
-  const inserted = await db.collection("bonds").insertOne(bondDoc);
+  const inserted = await bondsCollection<Omit<Bond, "_id">>(db).insertOne(bondDoc);
 
   // Refinancing is a debt-for-debt swap: existing holders are rolled into the new
   // bond at par (no cash changes hands). Do NOT credit the corporation with the
@@ -242,7 +236,7 @@ export async function executeCorporationBondRefinance(
   // Preserve `defaultedAtTurn` (historical mark) and stamp `defaultCure` so the
   // Bonds tab can render the "Default cured" badge. The caller's game-state
   // guard guarantees currentTurn > 0, so the stamp is unconditionally safe.
-  await db.collection<Bond>("bonds").updateMany(
+  await bondsCollection(db).updateMany(
     { _id: { $in: oldIds }, sovereignMaturityClaim: { $exists: false } },
     {
       $set: {

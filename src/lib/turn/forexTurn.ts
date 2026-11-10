@@ -71,6 +71,7 @@ import {
   sendFillNotifications,
 } from "./forexLimitOrders";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface ForexTurnResult {
   countriesUpdated: number;
@@ -159,7 +160,7 @@ export async function processForexTurn(
   const euroUnion = await reconcileEuroMonetaryUnion(db, currentTurn);
 
   // Load all central bank data in one query
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   const bankMap = new Map(banks.map((b) => [b.countryId, b]));
 
   // Command-economy regime gate (default OFF). When on, command-era currencies

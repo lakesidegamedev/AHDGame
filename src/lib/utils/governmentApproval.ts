@@ -15,7 +15,6 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import type { StateMetrics, MetricCategoryId, State } from "@/lib/db/types";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { enforcementApprovalModifier } from "@/lib/unions/enforcementCosts";
 import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
 import {
@@ -69,6 +68,7 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -925,9 +925,10 @@ export async function snapshotApprovalHistory(
     turn,
     expectationsRampTurns(headOffice, countryConfig.lowerElectionSystem)
   );
-  const unionBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { unionsBanned: 1, unionEnforcementPosture: 1 } });
+  const unionBudget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { unionsBanned: 1, unionEnforcementPosture: 1 } }
+  );
   const unionEnforcementMod = enforcementApprovalModifier(
     unionBudget?.unionsBanned === true,
     unionBudget?.unionEnforcementPosture

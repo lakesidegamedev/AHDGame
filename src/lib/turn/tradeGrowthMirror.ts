@@ -13,12 +13,12 @@
  */
 
 import type { Db } from "mongodb";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface TradeGrowthMirrorResult {
   countriesUpdated: number;
@@ -81,7 +81,7 @@ export async function mirrorTradeGrowth(db: Db): Promise<TradeGrowthMirrorResult
   }
 
   if (bulkOps.length > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(bulkOps as never);
+    await centralBanksCollection(db).bulkWrite(bulkOps as never);
   }
 
   return { countriesUpdated: bulkOps.length };

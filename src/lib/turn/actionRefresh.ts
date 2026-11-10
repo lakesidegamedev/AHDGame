@@ -1,7 +1,6 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CongressLeader, LeadershipRole } from "@/lib/db/types/leadership";
 import {
   applyNationalInfluenceTurn,
@@ -51,6 +50,7 @@ import {
 } from "./actionRefreshRoles";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -107,8 +107,7 @@ export async function processActionRefresh(
    * `centralBanks` document, not on `character.currentOffice`, so we load
    * chair ids up-front rather than keying off currentOffice.type.
    */
-  const chairRows = await db
-    .collection<CentralBank>("centralBanks")
+  const chairRows = await centralBanksCollection(db)
     .find({ chairCharacterId: { $ne: null } }, { projection: { chairCharacterId: 1 } })
     .toArray();
   const chairCharacterIds = new Set(

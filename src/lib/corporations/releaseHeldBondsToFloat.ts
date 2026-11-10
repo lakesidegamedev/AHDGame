@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Bond } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface ReleaseCorporationHeldBondsResult {
   unitsReleased: number;
@@ -24,7 +24,7 @@ export async function releaseCorporationHeldBondsToFloat(
   holderCorporationId: ObjectId,
   now: Date = new Date()
 ): Promise<ReleaseCorporationHeldBondsResult> {
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
 
   const held = await bonds
     .find({ "holders.corporationId": holderCorporationId }, { projection: { _id: 1, holders: 1 } })

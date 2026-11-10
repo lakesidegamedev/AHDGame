@@ -40,6 +40,7 @@ import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedempti
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const FUND_TX = "indexFundTransactions";
 const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
@@ -159,8 +160,7 @@ export async function advanceWindDowns(
 
   let stillHoldingBonds: Set<string>;
   try {
-    const rows = await db
-      .collection("bonds")
+    const rows = await bondsCollection(db)
       .aggregate<{ _id: unknown }>([
         { $match: { "holders.fundId": { $in: bondPhase.map((f) => f._id) } } },
         { $unwind: "$holders" },
@@ -282,9 +282,9 @@ export async function completeWindUp(
     if (current.status !== "winding_down") throw new Error("Fund is not winding down");
     if (current.holdings.some((holding) => holding.shares > 0))
       throw new Error("Fund still holds stocks");
-    const bonds = await tx
-      .collection("bonds")
-      .countDocuments({ holders: { $elemMatch: { fundId: fund._id, units: { $gt: 0 } } } });
+    const bonds = await bondsCollection(tx).countDocuments({
+      holders: { $elemMatch: { fundId: fund._id, units: { $gt: 0 } } },
+    });
     const orders = await tx
       .collection("shareOrders")
       .countDocuments({ placerFundId: fund._id, status: "open" });

@@ -20,6 +20,7 @@ import {
 import type { BankingTransition, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Opt-in government-side witness for an event-driven caller whose own rows do
@@ -165,12 +166,13 @@ async function incTreasuryBalance(
     return result.status === "applied" || result.status === "replayed";
   }
   const receipt = witness?.onceKey ? `appliedRecoveryCredits.${witness.onceKey}` : null;
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(receipt ? { countryId, [receipt]: { $exists: false } } : { countryId }, {
+  const result = await federalBudgetCollection(db).updateOne(
+    receipt ? { countryId, [receipt]: { $exists: false } } : { countryId },
+    {
       $inc: { treasuryBalance: delta },
       $set: { updatedAt: now, ...(receipt ? { [receipt]: now } : {}) },
-    });
+    }
+  );
   return (result?.matchedCount ?? 0) > 0;
 }
 
@@ -179,18 +181,20 @@ async function loadTreasuryAccount(
   db: Db,
   countryId: CountryId
 ): Promise<{ _id: FederalBudget["_id"] }> {
-  const treasury = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { _id: 1 } });
+  const treasury = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { _id: 1 } }
+  );
   if (!treasury) throw new Error(`Treasury for ${countryId} is unavailable`);
   return treasury;
 }
 
 /** Resolve the denomination of the persisted treasury, including 2027 EUR budgets. */
 export async function loadTreasuryCurrency(db: Db, countryId: CountryId): Promise<CurrencyCode> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { countryId: 1, currencyCode: 1 } }
+  );
   return resolveCountryCurrencyCode(budget ?? { countryId }) ?? "USD";
 }
 
@@ -323,9 +327,10 @@ export async function settleFundedTreasuryCompensation(
   );
   if (!(treasuryAmountLocal > 0) || !(donorAmountLocal > 0))
     throw new Error("Funded compensation rounded to a non-positive cash leg");
-  const budget = await db
-    .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-    .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection<{
+    countryId: string;
+    currencyCode?: CurrencyCode | null;
+  }>(db).findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
   if (!budget) throw new Error("Funded compensation Treasury account is missing");
   const budgetFilter: Record<string, unknown> = { countryId: budget.countryId };
   if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))

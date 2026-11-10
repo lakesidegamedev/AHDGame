@@ -8,7 +8,7 @@ import { loadCharacterFundPortfolio } from "@/lib/indexFunds/corporationPortfoli
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type { Corporation, PortfolioHistory, Bond, Character } from "@/lib/db/types";
+import type { Corporation, PortfolioHistory, Character } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -36,6 +36,7 @@ import {
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 type PortfolioHistoryReading = Pick<
   PortfolioHistory,
@@ -234,8 +235,7 @@ export async function loadPortfolioForCharacter(
   });
 
   // Find all bonds where this character is a holder
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ "holders.characterId": charId, matured: false })
     .toArray();
 

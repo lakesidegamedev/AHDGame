@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
-import type { Character, CentralBank, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES, getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -33,6 +33,7 @@ import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBa
 import { getGameState } from "@/lib/gameState";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -126,8 +127,7 @@ export async function processLineOfCreditTurn(
   const gameState = await getGameState(db);
   const centralBankPricing = await loadCentralBankPricingAdjustment(db, turn);
   const rates = await loadExchangeRatesMap(db);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project({ _id: 1, primeRate: 1 })
     .toArray();

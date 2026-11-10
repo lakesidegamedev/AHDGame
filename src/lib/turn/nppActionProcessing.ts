@@ -82,6 +82,7 @@ import {
 } from "./nppSurplusActions";
 import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
 import { getNppsCollection } from "@/lib/db/collections/npps";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 export {
   NPP_FOUNDING_FEE_ANCHOR,
   sellNppStockSurplus,
@@ -662,8 +663,7 @@ export async function investNppBondSurplus(
     if (rng() >= NPP_BOND_INVEST_BASE_PROBABILITY * riskToleranceMult) continue;
 
     if (!bondsByCountry.has(countryId)) {
-      const bonds = await db
-        .collection<Bond>("bonds")
+      const bonds = await bondsCollection(db)
         .find(
           { countryId, maturityTurn: { $gt: currentTurn }, publicFloat: { $gt: 0 } },
           {

@@ -1,6 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { Bond } from "@/lib/db/types/bond";
 import type { BankCharter, BankTreasuryTradeReceipt } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types/corporation";
@@ -46,6 +45,8 @@ export {
   type BankTreasuryTradeResult,
 } from "./bankTreasuryShared";
 import { markBankTreasury, runReceipt } from "./bankTreasuryReceipt";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Load only same-currency sovereign bills and pool cash while the feature is enabled. */
 export async function getBankTreasuryOverview(
@@ -64,8 +65,7 @@ export async function getBankTreasuryOverview(
   const charter = bank?.bankCharter;
   if (!charter) return null;
   const currency = charter.currency;
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       matured: { $ne: true },
@@ -265,7 +265,7 @@ export async function tradeBankTreasuryBill(
     db
       .collection<BankState>("corporations")
       .findOne({ _id: input.bankId }, { projection: { bankCharter: 1 } }),
-    db.collection<Bond>("bonds").findOne({ _id: input.bondId }),
+    bondsCollection(db).findOne({ _id: input.bondId }),
   ]);
   const charter = bank?.bankCharter;
   const exactFailedEstate =
@@ -438,9 +438,10 @@ export async function tradeBankTreasuryBill(
     fillUnits = planned.units;
     amountLocal = roundLocal(planned.cost, charter.currency);
     const budgetId = getNationalBudgetId(bond.countryId!);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId }, { projection: { currencyCode: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId },
+      { projection: { currencyCode: 1 } }
+    );
     if (!budget || budget.currencyCode !== charter.currency)
       return {
         status: "rejected",
@@ -591,8 +592,7 @@ export async function liquidateFailedBankTreasury(
   );
   const charter = bank?.bankCharter;
   if (!charter) return { soldUnits: 0, proceedsLocal: 0, pending: false };
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       matured: { $ne: true },
@@ -618,7 +618,7 @@ export async function liquidateFailedBankTreasury(
   let proceedsLocal = 0;
   for (const initial of bonds) {
     while (true) {
-      const bond = await db.collection<Bond>("bonds").findOne({ _id: initial._id });
+      const bond = await bondsCollection(db).findOne({ _id: initial._id });
       if (!bond || bond.matured || bond.defaulted) break;
       const lots = activeHolderUnits(bond.holders ?? [], bankId, charter.charteredTurn);
       if (lots <= 0) break;

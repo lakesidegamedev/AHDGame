@@ -5,7 +5,7 @@
 import { getPresetMonetaryScope } from "../presetMonetaryScope";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Db } from "mongodb";
-import type { Character, CentralBank, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import {
   COUNTRY_CURRENCY_MAP,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/lineOfCredit/creditMath";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -145,8 +146,7 @@ export async function loadAdminLoanTracker(params: { db: Db; countryId: CountryI
     ? getSeedCurrencyCode(countryId, gameState.preset)
     : (COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode);
   const rates = await loadExchangeRatesMap(db);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project({ _id: 1, primeRate: 1 })
     .toArray();

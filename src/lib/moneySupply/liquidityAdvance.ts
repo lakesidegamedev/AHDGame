@@ -22,6 +22,7 @@ import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { allocateLiquidityAdvance } from "./rules/liquidityAdvance";
 import { releaseMonetaryCommandReservation } from "./commandReservation";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const COLLECTION = "bankLiquidityOperations";
 export class LiquidityAdvanceRejected extends Error {}
@@ -185,12 +186,12 @@ async function finishLiquidityAdvance(
     throw new LiquidityAdvanceRejected(receipt.error ?? "Liquidity command was rejected");
   }
   const { command, bankId, currency } = receipt;
-  const banks = db.collection<
+  const banks = centralBanksCollection<
     Omit<CentralBank, "lastMonetaryOperationTurn"> & {
       lastMonetaryOperationTurn?: number | null;
       pendingLiquidityOperationId?: string;
     }
-  >("centralBanks");
+  >(db);
   if (receipt.status === "planning") {
     const already = await banks.findOne(
       { _id: bankId, pendingLiquidityOperationId: receipt._id },

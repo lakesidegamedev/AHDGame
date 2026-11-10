@@ -9,7 +9,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { refundOrCapture } from "@/lib/observability/context";
-import type { Bond, Character, Corporation, User } from "@/lib/db/types";
+import type { Character, Corporation, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -45,6 +45,7 @@ import { reserveBondUnitsForHolder } from "@/lib/bonds/bondHolderOps";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote } from "@/lib/bonds/marketPool";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -85,7 +86,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid bond ID");
     }
 
-    const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
       return errorResponse(404, "Bond not found");
     }
@@ -204,9 +205,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
         if (!reserved) {
           await refundCorpLiquidCapital(db, corp._id, costInCorpCapital);
-          const latestBond = await db
-            .collection<Bond>("bonds")
-            .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
+          const latestBond = await bondsCollection(db).findOne(
+            { _id: bond._id },
+            { projection: { publicFloat: 1 } }
+          );
           return errorResponse(409, `Only ${latestBond?.publicFloat ?? 0} units available`);
         }
 
@@ -399,9 +401,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (!reserved) {
             await refundImperialCash(db, imperial._id, bondCurrency, costLocal, forexEnabled);
             await reverseExplicitPayConversionOrCapture(db, imperialConversion, "bonds.buy");
-            const latestBond = await db
-              .collection<Bond>("bonds")
-              .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
+            const latestBond = await bondsCollection(db).findOne(
+              { _id: bond._id },
+              { projection: { publicFloat: 1 } }
+            );
             return errorResponse(409, `Only ${latestBond?.publicFloat ?? 0} units available`);
           }
 
@@ -560,9 +563,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (!reserved) {
           await refundCharacterCash(db, character._id, bondCurrency, costLocal, forexEnabled);
           await reverseExplicitPayConversionOrCapture(db, playerConversion, "bonds.buy");
-          const latestBond = await db
-            .collection<Bond>("bonds")
-            .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
+          const latestBond = await bondsCollection(db).findOne(
+            { _id: bond._id },
+            { projection: { publicFloat: 1 } }
+          );
           return errorResponse(409, `Only ${latestBond?.publicFloat ?? 0} units available`);
         }
 

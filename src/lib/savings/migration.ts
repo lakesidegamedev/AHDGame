@@ -38,6 +38,7 @@ import {
   type SavingsMigrationPlan,
 } from "@/lib/savings/rules/migration";
 import { SAVINGS_ACCOUNTS_COLLECTION, loadLegacySavingsRows } from "@/lib/savings/shadow";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 function finite(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -51,8 +52,7 @@ export async function loadSavingsMigrationInput(db: Db): Promise<MigrationInput>
       .find({ "bankCharter.status": { $in: ["active", "revoked", "failed"] } })
       .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({})
       .project<Pick<CentralBank, "_id" | "externalBroadMoney">>({ externalBroadMoney: 1 })
       .toArray(),

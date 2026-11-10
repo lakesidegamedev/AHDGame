@@ -5,9 +5,10 @@
  */
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import type { generateStateBudgets } from "@/lib/seeds/reference/budgets";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -37,7 +38,7 @@ export async function seedCountryBudgets(
   }: CountryBudgetSeedOptions
 ): Promise<void> {
   if (reset) {
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId });
+    await federalBudgetCollection(db).deleteMany({ countryId });
     const stateIds = (
       await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray()
     ).map((state) => state._id as string);
@@ -75,9 +76,11 @@ export async function seedCountryBudgets(
   }
   if (nationalBudget) {
     const { _id, ...budgetData } = nationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
     log(`Seeded 1 ${countryId} national budget`);
   }
 

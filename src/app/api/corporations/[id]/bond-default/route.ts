@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Bond, CentralBank, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import {
@@ -34,6 +34,8 @@ import {
 import type { Character } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -62,8 +64,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "National corporations cannot use bond default resolution here");
     }
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ corporationId: corporation._id, matured: false })
       .toArray();
 
@@ -77,7 +78,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .collection<CorporateSector>("corporateSectors")
         .find({ corporationId: corporation._id })
         .toArray(),
-      db.collection<CentralBank>("centralBanks").find({}).toArray(),
+      centralBanksCollection(db).find({}).toArray(),
       getGameState(),
       db
         .collection("corporationHistory")

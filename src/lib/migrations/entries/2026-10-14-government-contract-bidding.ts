@@ -2,6 +2,7 @@ import type { Migration } from "../types";
 import { ensureGovernmentContractIndexes } from "@/lib/governmentContracts/persistence";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Withdraw only unanswered legacy offers; active and historical signed contracts retain their terms. */
 export const migration: Migration = {
@@ -76,7 +77,7 @@ export const migration: Migration = {
       )
       .toArray();
     if (release.length) {
-      await db.collection("federalBudget").bulkWrite(
+      await federalBudgetCollection(db).bulkWrite(
         release.map((c) => {
           const marker = `governmentDirectOfferWithdrawals.${c._id.toHexString()}`;
           const amount = c.encumberedAmount ?? 0;
@@ -95,8 +96,7 @@ export const migration: Migration = {
           };
         })
       );
-      const budgetRows = await db
-        .collection("federalBudget")
+      const budgetRows = await federalBudgetCollection(db)
         .find(
           { countryId: { $in: [...new Set(release.map((c) => c.countryId))] } },
           { projection: { countryId: 1, governmentDirectOfferWithdrawals: 1 } }

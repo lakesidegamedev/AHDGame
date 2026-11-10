@@ -16,6 +16,7 @@ import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const BATCH_SIZE = 500;
 
@@ -208,7 +209,7 @@ export async function updateCentralBanks(db: Db, preset: string): Promise<void> 
   const scope = getPresetMonetaryScope(preset);
   // centralBanks uses string _id, resolved via getBankId so shared banks (e.g.
   // ECB for DE) map to the canonical document instead of per-country dupes.
-  await db.collection("centralBanks").bulkWrite(
+  await centralBanksCollection(db).bulkWrite(
     scope.centralBankCountries.map((countryId) => {
       const bankId = getBankId(countryId);
       return {
@@ -255,7 +256,7 @@ export async function updateCentralBanks(db: Db, preset: string): Promise<void> 
     ),
   ];
   if (excludedBankIds.length > 0) {
-    await db.collection<{ _id: string }>("centralBanks").deleteMany({
+    await centralBanksCollection<{ _id: string }>(db).deleteMany({
       _id: { $in: excludedBankIds },
     });
   }

@@ -36,6 +36,7 @@ import {
   sumStockValueByCharacter,
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -281,8 +282,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
         countryId: 1,
       })
       .toArray(),
-    database
-      .collection<Bond>("bonds")
+    bondsCollection(database)
       .find({ matured: false, "holders.characterId": { $in: characterIds } })
       .project<Pick<Bond, "_id" | "holders" | "marketPrice" | "currencyCode" | "countryId">>({
         _id: 1,

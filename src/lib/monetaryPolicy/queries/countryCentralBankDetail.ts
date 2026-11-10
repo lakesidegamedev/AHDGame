@@ -27,7 +27,6 @@ import type {
   MoneySupplySnapshot,
   NPP,
 } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { LocLedgerEntry } from "@/lib/db/types/locLedger";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { SavingsLedgerEntry } from "@/lib/db/types/savingsLedger";
@@ -70,6 +69,9 @@ import {
   computeReservePoolTransferLimits,
   turnsUntilReservePoolTransferReady,
 } from "@/lib/centralBank/reservePoolTransfer";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 type ViewerCharacter = Character | null;
 
@@ -199,19 +201,11 @@ export async function loadCountryCentralBankDetail(params: {
     getGameStateCore(db),
     getCentralBankScope(db, countryId),
   ]);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOneAndUpdate(
-      { _id: bankId },
-      buildCentralBankBootstrapUpdate(
-        countryId,
-        bankId,
-        intorgId,
-        undefined,
-        gameState?.currentYear
-      ),
-      { upsert: true, returnDocument: "after" }
-    );
+  const bank = await centralBanksCollection(db).findOneAndUpdate(
+    { _id: bankId },
+    buildCentralBankBootstrapUpdate(countryId, bankId, intorgId, undefined, gameState?.currentYear),
+    { upsert: true, returnDocument: "after" }
+  );
 
   if (!bank) {
     return { ok: false as const, status: 500, error: "Failed to load central bank" };
@@ -221,7 +215,7 @@ export async function loadCountryCentralBankDetail(params: {
   const financialBank =
     financialBankId === bankId
       ? bank
-      : await db.collection<CentralBank>("centralBanks").findOne({ _id: financialBankId });
+      : await centralBanksCollection(db).findOne({ _id: financialBankId });
   if (!financialBank)
     return { ok: false as const, status: 503, error: "National financial account unavailable" };
 
@@ -230,7 +224,7 @@ export async function loadCountryCentralBankDetail(params: {
   const policyBank =
     policyScope.bankId === bankId
       ? bank
-      : await db.collection<CentralBank>("centralBanks").findOne({ _id: policyScope.bankId });
+      : await centralBanksCollection(db).findOne({ _id: policyScope.bankId });
   if (!policyBank)
     return { ok: false as const, status: 503, error: "Monetary authority unavailable" };
   const isPolicyChair =
@@ -248,9 +242,9 @@ export async function loadCountryCentralBankDetail(params: {
       isBankGovernmentControlledLive(policyBank, bankHomeCountryId),
       buildCentralBankChairData(db, bank),
       isForexEnabled(),
-      db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
+      federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+        _id: "federal";
+      }),
     ]);
   const viewerSetsRate =
     governmentControlled && viewer?.character
@@ -328,11 +322,12 @@ export async function loadCountryCentralBankDetail(params: {
   const anchorBudgetDoc =
     bankHomeCountryId === countryId
       ? budgetDoc
-      : await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ _id: getNationalBudgetId(bankHomeCountryId) } as { _id: "federal" }, {
+      : await federalBudgetCollection(db).findOne(
+          { _id: getNationalBudgetId(bankHomeCountryId) } as { _id: "federal" },
+          {
             projection: { "economicFactors.inflationRate": 1 },
-          });
+          }
+        );
   const rateInflationValue = anchorBudgetDoc?.economicFactors?.inflationRate ?? null;
   const currentTurn = gameState?.currentTurn ?? 0;
 
@@ -615,8 +610,7 @@ export async function loadCountryCentralBankDetail(params: {
   const locInterestReceivedLifetime = locPaymentInterestAgg[0]?.total ?? 0;
   const [moneySupply, eligibleQeBonds] = await Promise.all([
     Promise.resolve(moneyForBreakdown),
-    db
-      .collection("bonds")
+    bondsCollection(db)
       .find(
         {
           issuerType: "sovereign",

@@ -27,6 +27,7 @@ import {
   type TreasuryCashOptions,
 } from "@/lib/nationalization/treasuryLedger";
 import { settleTransition } from "@/lib/banking/settlementJournal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface ApplyTermContext {
   /** The country imposing or offering. Receives an indemnity it is not paying. */
@@ -291,7 +292,7 @@ async function moveIndemnity(
     return;
   }
 
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
   if (ctx.peaceOfferId) {
     const receiptId = String(ctx.peaceOfferId);
     const applyNegotiatedIndemnity = async (session?: ClientSession) => {

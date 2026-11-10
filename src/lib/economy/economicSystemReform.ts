@@ -16,7 +16,6 @@ import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import { adjustLeaderConfidence } from "@/lib/turn/rulingPartyConfidence";
 import { adjustPopularLegitimacy } from "@/lib/turn/popularLegitimacy";
 import { createSystemNewsPost } from "@/lib/news";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { EconomicSystemReformProvision } from "@/lib/db/types/legislation";
 import {
@@ -24,6 +23,7 @@ import {
   ECONOMIC_SYSTEM_TARGET_LEVEL,
   canLegislateEconomicSystem,
 } from "./economicSystemReformRules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Leader-confidence and popular-legitimacy deltas, by direction and size. */
 const REFORM_REGIME_EFFECTS = {
@@ -75,9 +75,10 @@ export async function applyEconomicSystemReformProvision(
   }
 
   const budgetId = getNationalBudgetId(countryId);
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId }, { projection: { economicFactors: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: budgetId },
+    { projection: { economicFactors: 1 } }
+  );
   const gameState = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
@@ -88,7 +89,7 @@ export async function applyEconomicSystemReformProvision(
       : scheduledMarketizationLevel(countryId, gameState?.currentYear ?? null);
   const targetLevel = ECONOMIC_SYSTEM_TARGET_LEVEL[provision.target];
 
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { _id: budgetId },
     {
       $set: {

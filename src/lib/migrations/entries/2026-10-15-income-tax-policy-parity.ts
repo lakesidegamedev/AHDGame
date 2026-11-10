@@ -1,5 +1,5 @@
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { FederalBudget, LegislationType, StatePolicy } from "@/lib/db/types";
+import type { LegislationType, StatePolicy } from "@/lib/db/types";
 import {
   INCOME_TAX_POLICY_JURISDICTIONS,
   incomeTaxPolicyOptionId,
@@ -7,6 +7,7 @@ import {
   readTaxPolicyRate,
 } from "@/lib/budget/rules/incomeTaxPolicy";
 import type { Migration } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Align original seed policies with existing receipts, without changing rates or enacted laws. */
 export const migration: Migration = {
@@ -25,8 +26,7 @@ export const migration: Migration = {
     };
     const [policies, budgets, types] = await Promise.all([
       db.collection<StatePolicy>("statePolicies").find(seedOnly).toArray(),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           { countryId: { $in: ["BR", "NG"] } },
           { projection: { countryId: 1, "taxRates.incomeTax": 1, "taxRatePhaseIn.incomeTax": 1 } }

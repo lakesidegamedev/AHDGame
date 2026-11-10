@@ -20,7 +20,6 @@ import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
 
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { calculateCountryInflation, PEGGED_MONEY_GROWTH_COEFF } from "@/lib/budget/inflation";
@@ -56,6 +55,7 @@ import {
 } from "@/lib/tariffs/tariffInflationExposure";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface InflationRecalcOptions {
   /**
@@ -210,7 +210,7 @@ export async function runInflationRecalc(
     return true;
   };
 
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   // The half tick reads every budget once up front; it never self-heals a
   // missing one (the turn does, through ensureFederalBudget).
   const halfStepBudgets = halfStep
@@ -426,12 +426,10 @@ export async function runInflationRecalc(
         // y-axis convention. Keyed by the bank doc's _id — the previous
         // `{ _id: countryId }` write was a silent no-op for shared banks whose
         // _id ("ECB") differs from their countryId.
-        await db
-          .collection<CentralBank>("centralBanks")
-          .updateOne(
-            { _id: bank._id },
-            { $set: { currentSavingsPressure: savingsPressure * 100 } }
-          );
+        await centralBanksCollection(db).updateOne(
+          { _id: bank._id },
+          { $set: { currentSavingsPressure: savingsPressure * 100 } }
+        );
       }
     })
   );

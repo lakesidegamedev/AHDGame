@@ -4,7 +4,7 @@
  * records what the pool paid, and values a borrower's controlled holdings.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Bond, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
@@ -36,6 +36,7 @@ import {
   trailingAnnualEarnings,
   type PrimaryPlacementLimits,
 } from "./rules/cashoutLimits";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
   const config = await db
@@ -124,8 +125,7 @@ export async function loadCorpBookBasisById(
         }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         {
           corporationId: { $in: ids },

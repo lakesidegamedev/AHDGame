@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector, Bond } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
 import {
@@ -16,6 +16,7 @@ import {
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export async function getFinancialData(characterId: ObjectId) {
   const db = await getDb();
@@ -39,8 +40,7 @@ export async function getFinancialData(characterId: ObjectId) {
         countryId: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false, defaulted: false, "holders.characterId": characterId })
       .project({ couponRate: 1, currencyCode: 1, countryId: 1, holders: 1 })
       .toArray(),

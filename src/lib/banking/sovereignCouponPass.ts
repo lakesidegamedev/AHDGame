@@ -29,6 +29,7 @@ import {
   type SovereignCouponSettlementPrefetch,
 } from "@/lib/banking/fundedSovereignCoupons";
 import type { SovereignCouponCorporationQuote } from "@/lib/banking/rules/sovereignCoupons";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Receipt-owned claim ids one settleable-queue read may inline. A healthy pass
@@ -224,7 +225,7 @@ export async function loadSovereignCouponPass(
           ]
         : []
     );
-    if (marks.length) await db.collection<FederalBudget>("federalBudget").bulkWrite(marks);
+    if (marks.length) await federalBudgetCollection(db).bulkWrite(marks);
   }
 
   // One keyed read for every budget's settleable queue. Each branch is the

@@ -10,9 +10,6 @@ import { currentMoneyGrowth } from "./rules/growthSignal";
 import { MONEY_ACCOUNTING_VERSION } from "./calculate";
 import type { Db } from "mongodb";
 import type {
-  Bond,
-  CentralBank,
-  FederalBudget,
   GameConfig,
   GameState,
   MonetaryPolicyDecision,
@@ -33,6 +30,9 @@ import { LiquidityAdvanceRejected } from "./liquidityAdvance";
 import { MonetaryOperationRejected } from "./monetaryOperationJournal";
 import { MONEY_SUPPLY_SNAPSHOTS_COLLECTION } from "./snapshot";
 import { isMoneySupplyEnabledFromConfig } from "./featureFlag";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface NppMonetaryConditions {
   inflation: number;
@@ -129,8 +129,7 @@ export async function processNppMonetaryOperations(
     .findOne({ _id: "default" }, { projection: { moneySupplyEnabled: 1 } });
   if (!isMoneySupplyEnabledFromConfig(config))
     return { banksProcessed: 0, evaluationsRecorded: 0, operationsExecuted: 0 };
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find(
       {},
       {
@@ -158,8 +157,7 @@ export async function processNppMonetaryOperations(
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
   const union = gameState?.euroMonetaryUnion;
   const bankById = new Map(banks.map((bank) => [bank._id, bank]));
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       {},
       {
@@ -239,8 +237,7 @@ export async function processNppMonetaryOperations(
       : getSeedCurrencyCode(countryId, gameState?.preset ?? DEFAULT_SEED_PRESET);
     const budget = budgetById.get(getNationalBudgetId(countryId));
     const [bond, moneySupply] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({
           issuerType: "sovereign",
           countryId,
@@ -329,9 +326,10 @@ export async function processNppMonetaryOperations(
         });
       }
     }
-    await db
-      .collection<CentralBank>("centralBanks")
-      .updateOne({ _id: bank._id }, { $set: { lastMonetaryPolicyEvaluation: evaluation } });
+    await centralBanksCollection(db).updateOne(
+      { _id: bank._id },
+      { $set: { lastMonetaryPolicyEvaluation: evaluation } }
+    );
     evaluationsRecorded++;
   }
   return { banksProcessed, evaluationsRecorded, operationsExecuted };

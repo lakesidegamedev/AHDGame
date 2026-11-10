@@ -7,7 +7,6 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { OfficeHolders } from "@/lib/crises/v2/accountability";
 import type { HolderFootprint } from "@/lib/crises/v2/exposure";
 import type { CrisisRole } from "@/lib/crises/v2/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CongressLeader } from "@/lib/db/types/leadership";
 import {
   listCrisisHolderProviders,
@@ -15,6 +14,7 @@ import {
   type CrisisHolderContext,
   type CrisisHolderProvider,
 } from "./registry";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export const HEAD_OF_STATE_OFFICES = [
   "president",
@@ -89,8 +89,7 @@ async function loadFormedGovernments(db: Db, countryIds: string[], draft: Draft)
 }
 
 async function loadCentralBankChairs(db: Db, countryIds: string[], draft: Draft): Promise<void> {
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find(
       { countryId: { $in: countryIds as CountryId[] }, chairCharacterId: { $ne: null } },
       { projection: { countryId: 1, chairCharacterId: 1 } }

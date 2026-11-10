@@ -5,8 +5,6 @@ import type {
   CorporateSector,
   CommodityPrice,
   CentralBank,
-  Bond,
-  FederalBudget,
   StateBudget,
   Tariff,
   State,
@@ -28,6 +26,9 @@ import {
 } from "@/lib/products/manufacturingProject";
 import { activeManufacturingProductProjectProjection } from "@/lib/products/manufacturingProjectPersistence";
 import { type MediaProductProject, MEDIA_PRODUCT_PROJECTS } from "@/lib/products/mediaProduct";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Issues the parallel reads the lookups are built from. */
 export async function loadCorporationLookupInputs({
@@ -183,16 +184,14 @@ export async function loadCorporationLookupInputs({
       .toArray() as Promise<CommodityPrice[]>,
     // Only countryId + primeRate read here; the doc is NOT returned from
     // buildCorporationLookups so downstream consumers are unaffected.
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({}, { projection: { countryId: 1, primeRate: 1, primeRateSmoothed: 1 } })
       .toArray() as Promise<CentralBank[]>,
     // All active bonds — sovereigns included. Issuer-side filtering (corporate-only)
     // happens in the bondsByCorpId loop below; holder-side keeps everything so
     // sovereign bonds held by corps contribute to portfolio anchor / share price.
-    db.collection<Bond>("bonds").find({ matured: false }).toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    bondsCollection(db).find({ matured: false }).toArray(),
+    federalBudgetCollection(db)
       .find(
         {},
         {

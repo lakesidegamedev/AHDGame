@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { BankCharter } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
@@ -15,6 +14,7 @@ export {
   playerDepositRatePercent,
 } from "@/lib/banking/rules/rates";
 import { effectiveBankRatesFromPrime } from "@/lib/banking/rules/rates";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type SetBankRatesResult =
   { ok: true; depositOffset: number; lendingOffset: number } | { ok: false; error: string };
@@ -107,8 +107,9 @@ export async function getEffectiveBankRates(
 ): Promise<{ depositRatePercent: number; lendingRatePercent: number }> {
   const countryId = getCountryIdForCurrency(charter.currency);
   const bankId = getBankId(countryId);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { primeRate: 1 } });
+  const bank = await centralBanksCollection(db).findOne(
+    { _id: bankId },
+    { projection: { primeRate: 1 } }
+  );
   return effectiveBankRatesFromPrime(charter, bank?.primeRate);
 }

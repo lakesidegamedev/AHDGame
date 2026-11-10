@@ -14,6 +14,7 @@ import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote, advanceBondPoolSnapshot } from "@/lib/bonds/marketPool";
 import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export type PurchaseBondUnitsForFundResult =
   | {
@@ -391,9 +392,7 @@ export async function settleBondPurchasesInTransaction(
     .bulkWrite(debits, { ordered: true, session });
   if (debited.matchedCount !== debits.length) throw new BondBatchGuardMiss("fund cash");
 
-  const reserved = await db
-    .collection<Bond>("bonds")
-    .bulkWrite(reservations, { ordered: true, session });
+  const reserved = await bondsCollection(db).bulkWrite(reservations, { ordered: true, session });
   if (reserved.matchedCount !== reservations.length) throw new BondBatchGuardMiss("bond float");
 
   if (poolCredits.length > 0) {

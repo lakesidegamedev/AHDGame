@@ -6,7 +6,7 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { handleRouteError, badRequest, internalError, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
@@ -31,6 +31,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 type TxLogInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -87,8 +88,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       "bondSettlementInProgressAt",
       now,
       async () => {
-        const defaultedBonds = await db
-          .collection<Bond>("bonds")
+        const defaultedBonds = await bondsCollection(db)
           .find({ corporationId: corporation._id, matured: false, defaulted: true })
           .toArray();
 
@@ -506,13 +506,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
           };
 
           if (!compensate) {
-            const claimedBonds = await db
-              .collection<Bond>("bonds")
-              .updateMany(
-                { ...maturityFilter(bondIds[0]!), _id: { $in: bondIds } },
-                maturityUpdate,
-                so
-              );
+            const claimedBonds = await bondsCollection(db).updateMany(
+              { ...maturityFilter(bondIds[0]!), _id: { $in: bondIds } },
+              maturityUpdate,
+              so
+            );
             if (claimedBonds.modifiedCount !== bondIds.length) {
               throw badRequest("Bond state changed during payoff. Refresh and try again.");
             }
@@ -520,9 +518,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
             for (const bond of defaultedBonds) {
               let result: { modifiedCount: number };
               try {
-                result = await db
-                  .collection<Bond>("bonds")
-                  .updateOne(maturityFilter(bond._id), maturityUpdate, so);
+                result = await bondsCollection(db).updateOne(
+                  maturityFilter(bond._id),
+                  maturityUpdate,
+                  so
+                );
               } catch (err) {
                 return compensateAndThrow(err);
               }
@@ -542,7 +542,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                   if (bond[field] === undefined) priorUnset[field] = "";
                   else priorSet[field] = bond[field];
                 }
-                const result = await db.collection<Bond>("bonds").updateOne(
+                const result = await bondsCollection(db).updateOne(
                   {
                     _id: bond._id,
                     matured: true,

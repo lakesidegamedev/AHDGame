@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { NPP } from "@/lib/db/types/npp";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFundPosition, IndexFund } from "@/lib/db/types/indexFund";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
@@ -20,6 +19,8 @@ import {
 } from "@/lib/economy/marketAccessVisibility";
 import type { LivingConflictState } from "@/lib/livingConflict/types";
 import { collectEconomyTelemetry, type EconomyTelemetry } from "@/lib/sim/economyTelemetry";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -466,8 +467,7 @@ export async function computeNppWealthAnchorMap(
   const nppIds = npps.map((n) => n._id);
 
   const bondHoldingsByNpp = new Map<string, number>();
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(
       { "holders.nppId": { $in: nppIds } },
       { projection: { holders: 1, currencyCode: 1, countryId: 1 } }
@@ -803,8 +803,7 @@ async function collectEconomyMetrics(db: Db): Promise<EconomyMetrics> {
       .collection<EconomyCommodityRow>("commodityPrices")
       .find({ basePrice: { $gt: 0 } }, { projection: { basePrice: 1, globalPrice: 1 } })
       .toArray(),
-    db
-      .collection<EconomyBudgetRow>("federalBudget")
+    federalBudgetCollection<EconomyBudgetRow>(db)
       .find(
         {},
         {
@@ -934,7 +933,7 @@ export async function collectBalanceMetrics(db: Db): Promise<BalanceReport> {
 }
 
 async function collectFiscalMetrics(db: Db): Promise<FiscalCountryMetrics[]> {
-  const rows = await db.collection("federalBudget").find({}).toArray();
+  const rows = await federalBudgetCollection(db).find({}).toArray();
   return rows
     .map((row) => ({
       countryId: String(row.countryId ?? row._id),

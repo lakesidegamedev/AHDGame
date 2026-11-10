@@ -6,9 +6,9 @@
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getInflationTarget } from "@/lib/budget/inflation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface InflationVsTarget {
   inflation: number;
@@ -22,11 +22,12 @@ export async function loadInflationVsTarget(
   anchorCountryId: CountryId,
   currentYear: number | null | undefined
 ): Promise<InflationVsTarget | null> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(anchorCountryId) } as { _id: "federal" }, {
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(anchorCountryId) } as { _id: "federal" },
+    {
       projection: { "economicFactors.inflationRate": 1 },
-    });
+    }
+  );
   const inflation = budget?.economicFactors?.inflationRate;
   if (typeof inflation !== "number" || !Number.isFinite(inflation)) return null;
   const target = getInflationTarget(anchorCountryId, currentYear);

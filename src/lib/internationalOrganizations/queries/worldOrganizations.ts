@@ -38,6 +38,7 @@ import {
 import { loadBlocWarEntryStatusByDisplayOrg } from "@/lib/internationalOrganizations/warEntryStatus";
 import { loadMembershipDefenseWarnings } from "@/lib/internationalOrganizations/membershipDefenseWarnings";
 import { loadPactEntryWarnings } from "@/lib/military/treatyDefence";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // Re-exported from its own module: `entityGdp` builds on it, and this view
 // builds on `entityGdp`. Kept exported here so existing callers are unaffected.
@@ -94,8 +95,7 @@ export async function loadWorldOrganizationsView(db: Db) {
   // line is still empty is not silently unrated. Macro-tier members have no
   // federalBudget; their defense-sector share of capacity fills the gap.
   const defensePctByCountry = new Map<string, number>();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ countryId: { $in: [...allMembers] } })
     .project<Pick<FederalBudget, "countryId" | "gdp" | "spending" | "baselineSpendingByCategory">>({
       countryId: 1,

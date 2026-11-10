@@ -5,7 +5,6 @@ import type {
   Character,
   State,
   Corporation,
-  CentralBank,
   PoliticalParty,
   StatePartyOrg,
   CareerEvent,
@@ -20,6 +19,7 @@ import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { officeResignsOnRelocation } from "@/lib/character/officeResignsOnRelocation";
 import { severFromChainOfCommand } from "@/lib/military/severFromChainOfCommand";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -137,11 +137,9 @@ export async function performRelocation(
   // 4. Central bank chair: only when changing country.
   let chairResignedFrom: string | null = null;
   if (countryChanged) {
-    const chairBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ chairCharacterId: characterId });
+    const chairBank = await centralBanksCollection(db).findOne({ chairCharacterId: characterId });
     if (chairBank) {
-      await db.collection<CentralBank>("centralBanks").updateOne(
+      await centralBanksCollection(db).updateOne(
         { _id: chairBank._id },
         {
           $set: {

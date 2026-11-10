@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { CentralBank, Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
@@ -51,6 +51,7 @@ import { SECTOR_SCOPE_LABELS, type SectorScope } from "./sectorScope";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantLedger";
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 export { SECTOR_SCOPE_LABELS, type SectorScope };
 
 export interface NationalizeSectorWideParams {
@@ -118,7 +119,7 @@ export async function nationalizeSectorWide(
   );
 
   const [centralBanks, fxByCurrency, marketMode, sweepGameState] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),

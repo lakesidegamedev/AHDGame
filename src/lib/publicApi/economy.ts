@@ -10,13 +10,14 @@ import { bgAssemblyName, bgAssemblyPartySeats } from "@/lib/countries/bg/rules/a
 import { getCountryState } from "@/lib/countryState";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { liveNationalGdpUnits, resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -106,15 +107,13 @@ export async function queryCountryEconomy(db: Db, country: string) {
   const exchangeApiKey = getExchangeApiKey(country as CountryId);
 
   const [centralBank, snapshot, budget, states] = await Promise.all([
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ countryId: country } as Filter<CentralBank>),
+    centralBanksCollection(db).findOne({ countryId: country } as Filter<CentralBank>),
     exchangeApiKey
       ? db
           .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
           .findOne({ _id: exchangeApiKey as unknown as StockExchangeSnapshot["_id"] })
       : Promise.resolve(null),
-    db.collection<FederalBudget>("federalBudget").findOne(
+    federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(country as CountryId) },
       {
         projection: {

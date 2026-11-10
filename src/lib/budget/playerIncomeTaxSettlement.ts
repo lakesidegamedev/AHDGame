@@ -15,6 +15,8 @@ import type {
   IncomeTaxBatchReceipt,
 } from "@/lib/db/types/incomeTax";
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -255,12 +257,10 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         },
       },
     }));
-    if (nationalOps.length)
-      await db.collection<FederalBudget>("federalBudget").bulkWrite(nationalOps);
+    if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
     if (regionalOps.length) await db.collection<StateBudget>("stateBudgets").bulkWrite(regionalOps);
     const [nationalProof, regionalProof] = await Promise.all([
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find({ _id: { $in: [...national.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
         .toArray(),
       db
@@ -367,7 +367,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         : []),
     ]);
     if (transactions.length)
-      await db.collection("financialTxLog").bulkWrite(
+      await financialTxLogCollection<Document>(db).bulkWrite(
         [...transactions, ...governmentReceipts].map((transaction) => ({
           updateOne: {
             filter: { _id: transaction._id },

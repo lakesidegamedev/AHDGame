@@ -14,6 +14,8 @@ import { financialAusteritySpending } from "@/lib/livingConflict/rules/financial
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { buildInitialLegislativePhases } from "@/lib/sovereignDefault/legislative/buildPhases";
 import type { CrisisActionContext } from "./optionActions";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type FinancialFiscalResponse =
   "stimulus" | "austerity" | "restructure" | "sovereign_support";
@@ -43,9 +45,7 @@ export async function prepareFinancialFiscalResponse(
       );
     return;
   }
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as CountryId });
+  const budget = await federalBudgetCollection(db).findOne({ countryId: countryId as CountryId });
   if (!budget?.spending || !budget.revenue) throw badRequest("The national budget is unavailable.");
   if (response === "stimulus" || response === "sovereign_support") {
     const amount = financialInterventionAmount(
@@ -58,9 +58,9 @@ export async function prepareFinancialFiscalResponse(
       !(await sovereignSupportRecipient(db, countryId, currency))
     )
       throw badRequest("No stressed sovereign shares the treasury currency.");
-    const centralBank = await db
-      .collection("centralBanks")
-      .findOne({ _id: getBankId(countryId as CountryId) as never });
+    const centralBank = await centralBanksCollection(db).findOne({
+      _id: getBankId(countryId as CountryId) as never,
+    });
     const availableCash = treasuryCashLedgerEnabled
       ? (budget.treasuryCashLocal ?? 0)
       : budget.treasuryBalance;
@@ -118,12 +118,10 @@ export async function applyFinancialFiscalResponse(
       if (result.modifiedCount !== 1)
         throw badRequest("No open sovereign funding decision remains.");
     }
-    await ctx.db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { countryId: ctx.countryId as CountryId, sovereignCrisisState: "crisisPending" },
-        { $set: { sovereignCrisisState: "crisisResolving" } }
-      );
+    await federalBudgetCollection(ctx.db).updateOne(
+      { countryId: ctx.countryId as CountryId, sovereignCrisisState: "crisisPending" },
+      { $set: { sovereignCrisisState: "crisisResolving" } }
+    );
     await ctx.db.collection<{ _id: string }>("financialCrisisFiscalActions").insertOne({
       _id: key,
       response,
@@ -139,20 +137,20 @@ export async function applyFinancialFiscalResponse(
     ctx.option,
     treasuryCashLedgerEnabled
   );
-  const budget = await ctx.db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: ctx.countryId as CountryId });
+  const budget = await federalBudgetCollection(ctx.db).findOne({
+    countryId: ctx.countryId as CountryId,
+  });
   if (!budget) throw new Error("National budget disappeared");
   const currency = resolveCountryCurrencyCode(budget)!;
   if (!currency) throw new Error("National budget currency disappeared");
   const centralBankId = getBankId(ctx.countryId as CountryId);
   const centralBank =
     response === "stimulus" || response === "sovereign_support"
-      ? await ctx.db
-          .collection<{ _id: string; monetaryAuthorityId?: string }>("centralBanks")
-          .findOne({
+      ? await centralBanksCollection<{ _id: string; monetaryAuthorityId?: string }>(ctx.db).findOne(
+          {
             _id: centralBankId,
-          })
+          }
+        )
       : null;
   if ((response === "stimulus" || response === "sovereign_support") && !centralBank)
     throw new Error("Monetary authority disappeared");
@@ -298,7 +296,7 @@ export async function applyFinancialFiscalResponse(
 
 async function sovereignSupportRecipient(db: Db, donor: string, currency: string | undefined) {
   if (!currency) return null;
-  return db.collection<FederalBudget>("federalBudget").findOne(
+  return federalBudgetCollection(db).findOne(
     {
       countryId: { $ne: donor as CountryId },
       currencyCode: currency as FederalBudget["currencyCode"],

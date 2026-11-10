@@ -1,5 +1,6 @@
 import type { Migration, MigrationResult } from "../types";
 import { FINANCIAL_TX_LOG_COUNTERPARTY_INDEX } from "@/lib/admin/seed/indexes/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * `financialTxLog` counterparty index on a live database.
@@ -21,7 +22,7 @@ export const migration: Migration = {
     const label = `financialTxLog.${options.name}`;
     if (ctx.dryRun)
       return { documentsScanned: 1, documentsUpdated: 0, notes: [`would create ${label}`] };
-    await db.collection("financialTxLog").createIndex({ ...keys }, { ...options });
+    await financialTxLogCollection(db).createIndex({ ...keys }, { ...options });
     return { documentsScanned: 1, documentsUpdated: 1, notes: [`created/verified ${label}`] };
   },
 };

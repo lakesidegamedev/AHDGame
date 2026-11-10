@@ -11,8 +11,8 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { loadGroupBalanceSheet } from "@/lib/corporations/groups/groupBalanceSheet";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -38,7 +38,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const memberIds = sheet.members.map((m) => new ObjectId(m.corporationId));
-    const txLog = db.collection<FinancialTxLogEntry>("financialTxLog");
+    const txLog = financialTxLogCollection(db);
     const [reliefTxs, auditTxs, exposedAgreements] = await Promise.all([
       // The tx log has a ~7-day TTL, so this is inherently "recent" — which is
       // exactly the window the panel wants.

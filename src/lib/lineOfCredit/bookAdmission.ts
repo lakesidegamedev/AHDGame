@@ -6,6 +6,7 @@ import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { SETTLED_KEYS_CAP } from "@/lib/banking/moneyMove";
 import type { LocPlan } from "./settlement";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 function locAdmissionBanks(plan: LocPlan): string[] {
   const next = plan.effect.locAfter;
@@ -29,7 +30,7 @@ const stamp = (key: string) => `${key}:loc-book-complete`;
 
 /** A busy owner remains pending and recoverable, never expires into a second writer. */
 export async function acquireLocBookAdmission(db: Db, key: string, plan: LocPlan) {
-  const banks = db.collection<CentralBank & { settledKeys?: string[] }>("centralBanks");
+  const banks = centralBanksCollection<CentralBank & { settledKeys?: string[] }>(db);
   for (const bankId of locAdmissionBanks(plan)) {
     const current = await banks.findOne(
       { _id: bankId },
@@ -59,7 +60,7 @@ export async function acquireLocBookAdmission(db: Db, key: string, plan: LocPlan
 
 /** The completion receipt prevents concurrent retries from reacquiring a released owner. */
 export async function releaseLocBookAdmission(db: Db, key: string, plan: LocPlan) {
-  const banks = db.collection<CentralBank & { settledKeys?: string[] }>("centralBanks");
+  const banks = centralBanksCollection<CentralBank & { settledKeys?: string[] }>(db);
   for (const bankId of locAdmissionBanks(plan)) {
     const released = await banks.updateOne(
       { _id: bankId, pendingLocBookMutationId: key },

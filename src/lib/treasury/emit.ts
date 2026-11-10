@@ -22,6 +22,7 @@ import {
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { recordAudit, recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface EmitTreasuryTransactionArgs {
   db: Db;
@@ -76,8 +77,7 @@ async function resolveBudgetCurrencies(
   // currency read must not make the caller retry a committed transfer.
   let budgets: FederalBudget[];
   try {
-    budgets = await db
-      .collection<FederalBudget>("federalBudget")
+    budgets = await federalBudgetCollection(db)
       .find(
         { _id: { $in: countries.map(getNationalBudgetId) } },
         { projection: { _id: 1, currencyCode: 1 } }

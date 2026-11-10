@@ -33,10 +33,10 @@ import {
 import type { PeaceTerm } from "@/lib/military/peaceTerm";
 import { isConflictConcluded } from "@/lib/military/conflictLifecycle";
 import { getCountryState } from "@/lib/countryState";
-import type { FederalBudget } from "@/lib/db/types";
 import { opposedBelligerents } from "@/lib/military/occupation";
 import { PEACE_OFFER_DURATION_TURNS, type PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import { moderatedBillText } from "@/lib/api/schemas/congress";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const bodySchema = z.object({
   conflictId: z.string().min(1),
@@ -315,9 +315,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // a bar with no reason behind it.
     let maxAmount: number | null = null;
     if (term.kind === "indemnity") {
-      const payerBudget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: term.payer }, { projection: { gdp: 1 } });
+      const payerBudget = await federalBudgetCollection(db).findOne(
+        { countryId: term.payer },
+        { projection: { gdp: 1 } }
+      );
       maxAmount = maxIndemnityForGdp(payerBudget?.gdp);
       if (maxAmount == null) {
         return errorResponse(

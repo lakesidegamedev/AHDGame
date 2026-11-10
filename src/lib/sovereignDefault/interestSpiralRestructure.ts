@@ -17,6 +17,7 @@ import { shouldRestructureForInterest } from "@/lib/budget/rules/fiscalStabilize
 import { insertSovereignCrisisDecision } from "./crisisDetection";
 import { emitInterestSpiralCrisisNews } from "./crisisNews";
 import { applyRestructureResolution } from "./resolution/restructure";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface InterestSpiralRestructureResult {
   ok: boolean;
@@ -44,7 +45,7 @@ export async function restructureForInterestSpiral(
   options: InterestSpiralRestructureOptions = {}
 ): Promise<InterestSpiralRestructureResult> {
   const budgetId = getNationalBudgetId(countryCode);
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
   const budget = await budgets.findOne(
     { _id: budgetId },
     { projection: { sovereignCrisisState: 1, "fiscalConsolidation.interestSpiralYears": 1 } }

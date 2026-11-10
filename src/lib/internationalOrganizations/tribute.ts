@@ -51,10 +51,10 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { getOrganizationFundsCollection } from "@/lib/db/collections/organizationFunds";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadGdpUsdMillionsByEntity } from "./entityGdp";
 import { getOrganizationFund } from "./organizationFund";
 import { tributeMembers, type AccessTable } from "./orgMembership";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface TributeResult {
   /** Total credited to the fund, in the fund's own currency. */
@@ -101,7 +101,7 @@ export async function chargeOrganizationTribute(
       organizationId as InternationalOrganizationId
     );
     const fundRate = getGdpAnchorRate(currencyCountryId, preset);
-    const budget = db.collection<FederalBudget>("federalBudget");
+    const budget = federalBudgetCollection(db);
     const now = new Date();
 
     // One read for the whole roll rather than one per payer: this runs inside a

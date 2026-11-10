@@ -18,9 +18,10 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
-import type { CentralBank, FomcNomination } from "@/lib/db/types/centralBank";
+import type { FomcNomination } from "@/lib/db/types/centralBank";
 import type { Character, NPP } from "@/lib/db/types";
 import { FOMC_VOTE_WINDOW_TURNS, FOMC_PLAYER_VOTE_WINDOW_MS } from "@/lib/db/types/centralBank";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -71,7 +72,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const body = parsed.data;
 
-    const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+    const bank = await centralBanksCollection(db).findOne({ _id: bankId });
     if (!bank?.fomcBoard)
       return NextResponse.json(notFound("Committee not found").toJson(), { status: 404 });
     if (!bank.fomcBoard.some((s) => s.seatId === body.seatId))

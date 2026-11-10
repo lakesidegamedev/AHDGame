@@ -1,7 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { applyMoneyMove } from "@/lib/banking/moneyMove";
 import type { Corporation } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -11,6 +10,8 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export const DEFECT_ID = "AHD-defence-supplier-windfall";
 
@@ -150,7 +151,7 @@ async function survey(db: Db): Promise<Survey> {
   const corporationId = new ObjectId(CORPORATION_ID);
   const [corporation, budget, contracts, gameState] = await Promise.all([
     db.collection<CorporationEvidence>("corporations").findOne({ _id: corporationId }),
-    db.collection<BudgetEvidence>("federalBudget").findOne({ countryId: COUNTRY_ID }),
+    federalBudgetCollection<BudgetEvidence>(db).findOne({ countryId: COUNTRY_ID }),
     db
       .collection<ContractEvidence>("defenceContracts")
       .find({ _id: { $in: SOURCE_CONTRACT_IDS.map((id) => new ObjectId(id)) } })
@@ -367,8 +368,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     thresholds
   );
   const inserted = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "admin_transfer", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

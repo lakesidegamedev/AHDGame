@@ -43,6 +43,7 @@ import {
 } from "@/lib/banking/loanServiceBatch";
 import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -323,8 +324,7 @@ async function loadDeadBankLoanPrefetch(
           .toArray()
       : Promise.resolve([]),
     npcCurrencies.size > 0
-      ? db
-          .collection<{ _id: string; externalBroadMoney?: number }>("centralBanks")
+      ? centralBanksCollection<{ _id: string; externalBroadMoney?: number }>(db)
           .find(
             {
               _id: {

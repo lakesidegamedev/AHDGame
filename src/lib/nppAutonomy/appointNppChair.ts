@@ -8,6 +8,7 @@ import {
   oppositeAlignment,
   type ChairAlignment,
 } from "@/lib/centralBank/chairAlignment";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // CHAIR_TERM_TURNS lives in src/lib/turn/centralBankChairSelection.ts (not re-exported
 // from @/lib/db/types/centralBank), so we keep the literal here to match it (4 years × 48 turns).
@@ -44,7 +45,7 @@ export async function appointNppChair(
         ? { ...seat, termExpiresAtTurn: chairTermExpiresAtTurn }
         : seat
     );
-    await db.collection<CentralBank>("centralBanks").updateOne(
+    await centralBanksCollection(db).updateOne(
       { _id: bank._id },
       {
         $set: {
@@ -77,7 +78,7 @@ export async function appointNppChair(
   // double-seat one NPP across two banks if a country ever gets a second bank.
   let chosenNpp: NPP;
   if (existing) {
-    const seatedElsewhere = await db.collection<CentralBank>("centralBanks").findOne({
+    const seatedElsewhere = await centralBanksCollection(db).findOne({
       _id: { $ne: bank._id },
       chairNppId: existing._id,
     });
@@ -97,7 +98,7 @@ export async function appointNppChair(
       ? deriveChairAlignment(chosenNpp.personality)
       : "hawk";
 
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bank._id },
     {
       $set: {

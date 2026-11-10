@@ -83,7 +83,6 @@ import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJour
 import type { BankingPolicySnapshot } from "./rules/policy";
 import { oid, type TransitionLeg, type TransitionProjection } from "@/lib/banking/rules/boundary";
 import { getNationalBudgetId, issueDepositInsuranceBackstopBond } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
@@ -91,6 +90,7 @@ import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import { BANK_FAILURE_EVENTS } from "./failurePolitics";
 import type { BankFailurePoliticalEvent } from "./rules/failurePolitics";
 import { CENTRAL_BANK_HOLDER } from "@/lib/savings/rules/accounts";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -173,7 +173,7 @@ async function ensureTreasuryInsuranceCash(
   if (!(args.amount > 0)) return null;
   const countryId = getCountryIdForCurrency(args.currency);
   const budgetId = getNationalBudgetId(countryId);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne(
+  const budget = await federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: args.treasuryCashLedgerEnabled
@@ -206,7 +206,7 @@ async function ensureTreasuryInsuranceCash(
   });
   if (!issuance) return `Could not issue a funded insurance bond for ${countryId}.`;
 
-  const fundedBudget = await db.collection<FederalBudget>("federalBudget").findOne(
+  const fundedBudget = await federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: args.treasuryCashLedgerEnabled
@@ -711,9 +711,10 @@ async function returnDepositBookInner(
 
   if (policy.failurePolitics && options.cause === "failure" && npc > 0) {
     const countryId = getCountryIdForCurrency(currency);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { gdp: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) },
+      { projection: { gdp: 1 } }
+    );
     // Both GDP and paid amounts are in this government's native currency.
     // Publish last: no event is visible before cash and liability projections land.
     if (typeof budget?.gdp === "number" && Number.isFinite(budget.gdp) && budget.gdp > 0) {
@@ -1035,25 +1036,23 @@ export async function debitTreasuryDepositInsurance(
   const countryId = getCountryIdForCurrency(currency);
   const budgetId = getNationalBudgetId(countryId);
   const now = new Date();
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      treasuryCashLedgerEnabled
-        ? { _id: budgetId, treasuryCashLocal: { $gte: amount } }
-        : { _id: budgetId, treasuryBalance: { $gte: amount } },
-      {
-        $inc: {
-          ...(treasuryCashLedgerEnabled
-            ? { treasuryCashLocal: -amount }
-            : { treasuryBalance: -amount }),
-          ...(treasuryCashLedgerEnabled ? { treasuryBalance: -amount } : {}),
-          [`spending.byCategory.${DEPOSIT_INSURANCE_SPENDING_KEY}`]: amount,
-          "spending.total": amount,
-          surplus: -amount,
-        },
-        $set: { updatedAt: now },
-      }
-    );
+  const result = await federalBudgetCollection(db).updateOne(
+    treasuryCashLedgerEnabled
+      ? { _id: budgetId, treasuryCashLocal: { $gte: amount } }
+      : { _id: budgetId, treasuryBalance: { $gte: amount } },
+    {
+      $inc: {
+        ...(treasuryCashLedgerEnabled
+          ? { treasuryCashLocal: -amount }
+          : { treasuryBalance: -amount }),
+        ...(treasuryCashLedgerEnabled ? { treasuryBalance: -amount } : {}),
+        [`spending.byCategory.${DEPOSIT_INSURANCE_SPENDING_KEY}`]: amount,
+        "spending.total": amount,
+        surplus: -amount,
+      },
+      $set: { updatedAt: now },
+    }
+  );
   if (!result.matchedCount)
     throw new Error("Treasury cash cannot cover the deposit insurance debit.");
 }

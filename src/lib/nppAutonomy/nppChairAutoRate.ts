@@ -3,7 +3,6 @@ import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CentralBank, RateChangeRecord } from "@/lib/db/types/centralBank";
 import { SYSTEM_RATE_ACTOR } from "@/lib/centralBank/rateHistory";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
@@ -50,6 +49,8 @@ import {
   fxDepreciation,
   fxRateAdjustment,
 } from "@/lib/nppAutonomy/v6/rules/fxRateResponse";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Bounded step toward the target: 0.5x the gap, clamped to [-1.75, +0.75].
@@ -163,7 +164,7 @@ export async function processNppChairAutoRate(
   const budgetId = getNationalBudgetId(countryId);
   const budget = commonIndicators
     ? null
-    : await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    : await federalBudgetCollection(db).findOne({ _id: budgetId });
   const inflationRate =
     commonIndicators?.inflationRate ??
     finiteOr(budget?.economicFactors?.inflationRate, targetInflation);
@@ -306,7 +307,7 @@ export async function processNppChairAutoRate(
         reason: taylor,
       };
 
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bank._id },
     {
       $set: governmentControlled

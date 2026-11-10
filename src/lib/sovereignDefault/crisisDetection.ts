@@ -32,6 +32,7 @@ import { EXTREME_DISTRESS_DEBT_TO_GDP } from "@/lib/budget/debt";
 import { npcExecutiveAutoPropose } from "./npc/npcExecutiveAutoPropose";
 import { applyPopulistSurgeOnCrisis } from "./political/applyPopulistSurge";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -79,7 +80,7 @@ export async function evaluateSovereignAuctionForCountry(
   realtimeMs: number
 ): Promise<EvaluationSummary | null> {
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return null;
 
   const currentState: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -127,9 +128,10 @@ export async function evaluateSovereignAuctionForCountry(
   const autonomousCrisisEligible =
     access.nppGoverned && snapshot.debtToGdp >= AUTONOMOUS_CRISIS_MIN_DEBT_TO_GDP;
   if (!access.enabledForPlayers && !autonomousCrisisEligible) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budgetId }, { $set: { lastAuctionDemandRatio: demand.demandRatio } });
+    await federalBudgetCollection(db).updateOne(
+      { _id: budgetId },
+      { $set: { lastAuctionDemandRatio: demand.demandRatio } }
+    );
     return {
       countryCode,
       outcome: classified.outcome,
@@ -166,9 +168,7 @@ export async function evaluateSovereignAuctionForCountry(
     };
   }
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: baseUpdate });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: baseUpdate });
 
   if (transition.firedThisEvaluation) {
     const decision = await insertSovereignCrisisDecision(db, countryCode, currentTurn, realtimeMs);

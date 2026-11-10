@@ -13,6 +13,7 @@ import {
 } from "@/lib/budget/rules/incomeTaxTiers";
 import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import type { Migration } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export const migration: Migration = {
   id: "2026-10-16-income-tax-tiers",
@@ -20,7 +21,7 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     const [national, regional, types, policies, state, characters, imperials] = await Promise.all([
-      db.collection<FederalBudget>("federalBudget").find({}).toArray(),
+      federalBudgetCollection(db).find({}).toArray(),
       db.collection<StateBudget>("stateBudgets").find({}).toArray(),
       db
         .collection<LegislationType>("legislationTypes")

@@ -10,6 +10,8 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Restitution for a bank charter destroyed by a hostile-takeover merge. The
@@ -124,7 +126,7 @@ async function loadDocs(db: Db): Promise<{
       .collection<CorporationDoc>("corporations")
       .find({ _id: new ObjectId(HUNT_OIL_ID) })
       .toArray(),
-    db.collection<CentralBankDoc>("centralBanks").find({ _id: US_CB_ID }).toArray(),
+    centralBanksCollection<CentralBankDoc>(db).find({ _id: US_CB_ID }).toArray(),
   ]);
   return { hunt: huntDocs[0], usCb: cbDocs[0] };
 }
@@ -237,9 +239,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         ? await db
             .collection<CorporationDoc>("corporations")
             .updateOne({ _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } }, update)
-        : await db
-            .collection<CentralBankDoc>("centralBanks")
-            .updateOne({ _id: row.docId, [MARKER_PATH]: { $exists: false } }, update);
+        : await centralBanksCollection<CentralBankDoc>(db).updateOne(
+            { _id: row.docId, [MARKER_PATH]: { $exists: false } },
+            update
+          );
     if (res.modifiedCount === 1) applied.push(row);
   }
 
@@ -293,8 +296,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // emitTxBulk mints its own ids, so read them back rather than guessing: a
   // rollback has to be able to delete the receipts it created.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

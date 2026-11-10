@@ -17,7 +17,6 @@ import {
   scheduledMarketizationLevel,
   NPP_DEFAULT_INTERNAL_REPRESSION,
 } from "@/lib/constants/commandEconomy";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameConfig, GameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
@@ -33,6 +32,7 @@ import {
   type CommandEconomyDashboard,
   type RawSoe,
 } from "@/lib/economy/commandEconomyDashboard";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function loadCommandEconomyDashboard(
   db: Db,
@@ -60,9 +60,9 @@ export async function loadCommandEconomyDashboard(
   const cabinet = getCabinetMembersCollection(db);
 
   const [budget, corps, gov, plannerSeat, bankSeat, viewerRolesRaw] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
+    federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+      _id: "federal";
+    }),
     db
       .collection<Corporation>("corporations")
       .find({ countryId, soe: { $exists: true } }, { projection: { _id: 1, name: 1, soe: 1 } })

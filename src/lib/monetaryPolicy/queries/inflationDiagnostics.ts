@@ -45,10 +45,11 @@ import {
 } from "@/lib/tariffs/tariffInflationExposure";
 import type { CentralBank, TurnSnapshot } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SavingsLedgerEntry } from "@/lib/db/types/savingsLedger";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const SAVINGS_FLOW_WINDOW_TURNS = 12;
 
@@ -127,7 +128,7 @@ export async function loadInflationDiagnostics(
     gameState,
     tariffExposureSnapshot,
   ] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
     loadCommodityPressureSnapshots(db, currentTurn),
     db
@@ -181,9 +182,9 @@ export async function loadInflationDiagnostics(
     if (!bank) continue;
 
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId } as { _id: "federal" });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId } as {
+      _id: "federal";
+    });
 
     const nationalDocId = getNationalDocId(countryId);
     const nationalMetrics = nationalDocId

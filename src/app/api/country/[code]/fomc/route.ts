@@ -11,7 +11,6 @@ import { handleRouteError, notFound } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COMMAND_CEILING, scheduledMarketizationLevel } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { getGameState } from "@/lib/gameState";
 import { resolveJurisdiction } from "@/lib/monetaryGovernance/jurisdiction";
 import { bankToJurisdictionState } from "@/lib/monetaryGovernance/governanceShell";
@@ -19,7 +18,7 @@ import { computeRateLimits } from "@/lib/centralBank/rateLimits";
 import { loadInflationVsTarget } from "@/lib/monetaryGovernance/inflationGap";
 import { allowedActionsFor } from "@/lib/monetaryGovernance/rules/allowedActions";
 import { isBankGovernmentControlledLive } from "@/lib/centralBank/governance";
-import type { CentralBank, FomcNomination } from "@/lib/db/types/centralBank";
+import type { FomcNomination } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import {
   RATE_CHANGES_PER_TERM,
@@ -35,6 +34,8 @@ import {
   tallyMeeting,
 } from "@/lib/centralBank/fomc";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Resolved sessions returned to the panel (newest last in storage). */
 const MEETING_HISTORY_LIMIT = 10;
@@ -57,7 +58,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const db = await getDb();
     const jurisdiction = await resolveJurisdiction(db, countryId);
     const { institutionId: bankId, memberCountryIds: memberCountries } = jurisdiction;
-    const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+    const bank = await centralBanksCollection(db).findOne({ _id: bankId });
     if (!bank?.fomcBoard) return NextResponse.json({ hasCommittee: false, governance: null });
 
     const board = bank.fomcBoard;
@@ -155,11 +156,12 @@ export async function GET(_request: Request, context: RouteContext) {
     // falling back to the era schedule.
     const gameState = await getGameState(db);
     const rateBudget = commandEconomyEnabled
-      ? await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+      ? await federalBudgetCollection(db).findOne(
+          { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+          {
             projection: { "economicFactors.marketizationLevel": 1 },
-          })
+          }
+        )
       : null;
     const persistedLevel = rateBudget?.economicFactors?.marketizationLevel;
     const resolvedLevel =

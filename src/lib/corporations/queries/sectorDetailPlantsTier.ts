@@ -9,7 +9,6 @@ import type {
   GameState,
   UnownedSector,
   BankLoan,
-  Bond,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -83,6 +82,7 @@ import type { StrategyAvailabilityWorld, TechCorpView } from "@/lib/constants/te
 import type { EffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { OwnershipMarginTerms } from "@/lib/nationalization/ownershipMarginTerms";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Builds the plants-tier view: capacity, own supply and freight. Null below plants. */
 export async function buildSectorDetailPlantsTier({
@@ -623,9 +623,10 @@ export async function buildSectorDetailPlantsTier({
         },
         { projection: { _id: 1 } }
       ),
-      db
-        .collection<Bond>("bonds")
-        .findOne({ corporationId: corporation._id, matured: false }, { projection: { _id: 1 } }),
+      bondsCollection(db).findOne(
+        { corporationId: corporation._id, matured: false },
+        { projection: { _id: 1 } }
+      ),
     ]);
     const unsettled =
       !!activeLoan ||

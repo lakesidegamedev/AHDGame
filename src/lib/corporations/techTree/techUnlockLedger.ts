@@ -2,9 +2,10 @@ import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { sumStrengthGrants, type TechTreeNode } from "@/lib/constants/techTree";
-import type { ActionAuditInput, Corporation, FinancialTxLogEntry } from "@/lib/db/types";
+import type { ActionAuditInput, Corporation } from "@/lib/db/types";
 import { emitTxStrict, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { frontierResearchInc } from "./frontierResearch";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Finance-history ledger rows for sector tech-tree unlocks.
@@ -230,8 +231,7 @@ export async function flushNppTechUnlockLedger(
     if (committed.length === 0) return result;
 
     const turns = [...new Set(committed.map((e) => e.turn))];
-    const existing = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const existing = await financialTxLogCollection(db)
       .find(
         {
           type: "corp_tech_unlock",

@@ -41,6 +41,7 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export const DEFECT_ID = "AHD-sovereign-rollover-wall";
 
@@ -183,8 +184,7 @@ export function mergeHolders(bonds: readonly Pick<Bond, "holders">[]): BondHolde
 /** Read-only: every series with more than one plain bond, and what it folds into. */
 export async function surveySovereignSeries(db: Db): Promise<Payload> {
   const turn = await currentTurn(db);
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(ELIGIBLE_FILTER as never, {
       projection: {
         countryId: 1,
@@ -322,7 +322,7 @@ async function applySeries(
   turn: number,
   ctx: HealContext
 ): Promise<boolean> {
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
   const ids = row.members.map((member) => new ObjectId(member.id));
   try {
     await runRequiredTransaction(
@@ -429,10 +429,11 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 async function verify(db: Db): Promise<VerifyResult> {
   const { series } = await surveySovereignSeries(db);
   const remaining = series.reduce((sum, row) => sum + row.members.length - 1, 0);
-  const absorbedLive = await db
-    .collection<Bond>("bonds")
-    .countDocuments({ consolidatedIntoBondId: { $exists: true }, matured: { $ne: true } });
-  const absorbedWithFace = await db.collection<Bond>("bonds").countDocuments({
+  const absorbedLive = await bondsCollection(db).countDocuments({
+    consolidatedIntoBondId: { $exists: true },
+    matured: { $ne: true },
+  });
+  const absorbedWithFace = await bondsCollection(db).countDocuments({
     consolidatedIntoBondId: { $exists: true },
     $or: [
       { totalIssued: { $ne: 0 } },

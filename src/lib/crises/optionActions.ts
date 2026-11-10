@@ -41,7 +41,6 @@ import {
 } from "@/lib/unions/bargaining";
 import { clampWageLevel, WAGE_LEVEL_MAX } from "@/lib/labour/laborCost";
 import { logWireEvent } from "@/lib/wireEvent";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { computeAidOutcome } from "@/lib/crises/aidScaling";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
@@ -65,6 +64,7 @@ import { loadConflictState, saveConflictState } from "@/lib/livingConflict/drive
 import { applyConflictOutcome } from "@/lib/livingConflict/engine";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -753,9 +753,9 @@ async function vietnamSupport(ctx: CrisisActionContext): Promise<void> {
   }
 
   const state = await getVietnamEscalation(db);
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: ctx.countryId as CountryId });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: ctx.countryId as CountryId,
+  });
   const gdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
 

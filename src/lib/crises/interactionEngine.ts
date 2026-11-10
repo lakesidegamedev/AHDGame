@@ -21,7 +21,6 @@ import type {
   CrisisDecisionNode,
 } from "@/lib/db/types/crisis";
 import type { FederalBudget, ElectedOfficial } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import {
   getCountryConfig,
   getHeadOfStateOfficeType,
@@ -45,12 +44,14 @@ import {
   resolveGlobalResponse,
   spendGlobalResponseCost,
 } from "@/lib/livingConflict/globalResponse";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Read a country's national treasury balance (the unified fiscal cash position). */
 async function getTreasuryBalance(db: Db, countryId: string): Promise<number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as FederalBudget["countryId"] });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: countryId as FederalBudget["countryId"],
+  });
   return budget?.treasuryBalance ?? 0;
 }
 
@@ -169,9 +170,10 @@ export async function resolveCharacterRoles(
     if (financePosition && roles.includes(`cabinet:${financePosition}`))
       roles.push("financeMinister");
     const centralBankId = getBankId(character.countryId as CountryId);
-    const chair = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: centralBankId, chairCharacterId: character._id }, { projection: { _id: 1 } });
+    const chair = await centralBanksCollection(db).findOne(
+      { _id: centralBankId, chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    );
     if (chair) roles.push("centralBankChair");
   }
   const ledParty = await db

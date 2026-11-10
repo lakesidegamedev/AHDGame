@@ -27,6 +27,7 @@ import {
 } from "@/lib/imf/imfFacilityFinancials";
 import { lastTurnSupplyAgreementCash } from "@/lib/corporations/supplyAgreementCash";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface LatestCorpIncomeRow {
   income?: number;
@@ -91,9 +92,8 @@ export async function loadPortfolioHoldings(
   fxByCurrency: Map<CurrencyCode, number>
 ): Promise<PortfolioHoldings> {
   const [outstandingBonds, heldBondsRaw] = await Promise.all([
-    db.collection<Bond>("bonds").find({ corporationId: corporation._id, matured: false }).toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
+    bondsCollection(db)
       .find({ "holders.corporationId": corporation._id, matured: false })
       .toArray(),
   ]);

@@ -10,7 +10,7 @@ import type { Db } from "mongodb";
 import { effectiveBorrowingLimit } from "@/lib/budget/borrowingLimit";
 import { COST_INCOME_ANCHORS } from "@/lib/politicalLegislation/costAnchors";
 import { countryFiscalBase, regionFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { Bill, LegislationType } from "@/lib/db/types/legislation";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
@@ -28,6 +28,7 @@ import {
 } from "./costs";
 import { resolveNationalGdpPerCapita, resolveNationalMedianIncome } from "./spending";
 import { getEraContext } from "@/lib/era/context";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Era year for the cost basis; defensive so a mock db (no gameState) ⇒ flag off. */
 async function resolveEraYear(db: Db): Promise<number | null> {
@@ -125,9 +126,7 @@ export async function validateFederalBudgetImpact(
   bill: Pick<Bill, "legislationTypeId" | "effectDirection" | "provisions">,
   budgetId: string = "federal"
 ): Promise<BudgetValidationResult> {
-  const federalBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId });
+  const federalBudget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!federalBudget) {
     return { allowed: true, costAmount: 0, newTotalSpending: 0 };
   }

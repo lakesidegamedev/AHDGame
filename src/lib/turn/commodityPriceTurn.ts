@@ -11,16 +11,7 @@ import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand"
  * logic lives in ./commodity/.
  */
 import { getDb } from "@/lib/mongodb";
-import type {
-  CommodityPrice,
-  StateMetrics,
-  Corporation,
-  CentralBank,
-  Bond,
-  ExchangeRate,
-  StateBudget,
-  GameConfig,
-} from "@/lib/db/types";
+import type { CommodityPrice, StateMetrics, Corporation, CentralBank, ExchangeRate, StateBudget, GameConfig } from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
@@ -166,6 +157,8 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { TREATY_TRADE_DIRECTIVE_KEYS } from "@/lib/trade/rules/treatyTrade";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CommodityPriceTurnResult {
   commoditiesUpdated: number;
@@ -350,16 +343,14 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         }
       )
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({})
       .project<Pick<CentralBank, "_id" | "countryId" | "primeRate">>({ countryId: 1, primeRate: 1 })
       .toArray(),
     (await getStatesCollection(db))
       .find({}, { projection: { _id: 1, countryId: 1, gdp: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(recentDebtIssuanceFilter(turn), {
         projection: {
           issuerType: 1,

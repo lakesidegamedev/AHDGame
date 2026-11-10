@@ -1,6 +1,7 @@
 import type { AnyBulkWriteOperation, Db, Document } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Seeds only JP budget data: national budget, enacted laws, regional budgets,
@@ -14,7 +15,7 @@ export async function seedJpBudgets(
 ) {
   if (reset) {
     // Only delete JP-specific budget data, not US/UK
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId: "JP" });
+    await federalBudgetCollection(db).deleteMany({ countryId: "JP" });
     const jpStateIds = (
       await db.collection("states").find({ countryId: "JP" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
@@ -44,9 +45,11 @@ export async function seedJpBudgets(
   const jpNationalBudget = presetBudgets.find((b) => b.countryId === "JP");
   if (jpNationalBudget) {
     const { _id, ...budgetData } = jpNationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
     log("Seeded 1 JP national budget");
   }
 

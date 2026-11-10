@@ -15,6 +15,7 @@ import { loadOwnedMetricInputs } from "@/lib/resetMetrics/loadOwnedInputs";
 import { ownedPoliticalModifiers } from "@/lib/resetMetrics/rules/ownedInputs";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import type { MacroEconomicValues, StateMetricValues } from "@/lib/constants/corporations";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface StateViewContext {
   states: TurnStateProjection[];
@@ -128,8 +129,7 @@ export async function loadStateViewContext(
     countryIds.push(corporation.countryOwnerId);
   }
   const [federalBudgets, economicModelByCountry] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { countryId: { $in: countryIds } },
         {

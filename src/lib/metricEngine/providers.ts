@@ -20,6 +20,8 @@ import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { FiscalRatios } from "./fiscalMirror";
 import type { GameConfig } from "@/lib/db/types";
 import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -145,8 +147,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       })
       .toArray(),
     loadValuationFxRates(db),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "taxRates">>({
         countryId: 1,
@@ -312,8 +313,7 @@ const clampRange = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(
  */
 export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRatios>> {
   const [budgets, bonds] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<
         Pick<FederalBudget, "_id" | "countryId" | "gdp" | "gdpSmoothed" | "revenue" | "spending">
@@ -325,8 +325,7 @@ export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRa
         spending: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ issuerType: "sovereign", matured: false, defaulted: false })
       .project<
         Pick<
@@ -416,8 +415,7 @@ export interface FiscalTradeInputs {
 
 export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, FiscalTradeInputs>> {
   const [budgets, exRates, ftaPairs, memberships] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "taxRates" | "economicFactors">>({
         countryId: 1,

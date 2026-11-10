@@ -74,6 +74,7 @@ import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -122,7 +123,7 @@ export async function processFiscalYear(
   newFiscalYear: number,
   currentTurn: number
 ): Promise<void> {
-  const federalBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+  const federalBudgets = await federalBudgetCollection(db).find({}).toArray();
   if (federalBudgets.length === 0) {
     console.log("[FiscalYear] No federal budget found, skipping fiscal year processing");
     return;
@@ -355,7 +356,7 @@ export async function processFiscalYear(
         newGdp = newGdpSmoothed;
       }
 
-      await db.collection<FederalBudget>("federalBudget").updateOne(
+      await federalBudgetCollection(db).updateOne(
         { _id: federalBudget._id },
         {
           $set: {
@@ -612,7 +613,7 @@ export async function processFiscalYear(
     // `debt.principal` is owned by the bond ledger (bonds/sovereignPrincipal.ts);
     // never re-derive it from the balance here, or same-turn issuance/maturity is
     // clobbered. Rate/ratio/rating below refresh off the bond-owned stock.
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: federalBudget._id },
       {
         $set: {
@@ -707,7 +708,7 @@ export async function processFiscalYear(
   }
 
   if (stabilizerWrites.length > 0) {
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(stabilizerWrites);
+    await federalBudgetCollection(db).bulkWrite(stabilizerWrites);
   }
   if (backgroundFiscalWrites.length > 0) {
     await db.collection<MacroCountryState>("macroCountries").bulkWrite(backgroundFiscalWrites);
@@ -721,7 +722,7 @@ export async function processFiscalYear(
   }
 
   try {
-    const allBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+    const allBudgets = await federalBudgetCollection(db).find({}).toArray();
     for (const budget of allBudgets) {
       if (!processedBudgetIds.has(String(budget._id))) continue;
       const countryId = resolveBudgetCountryId(budget);
@@ -999,8 +1000,7 @@ export async function saveFiscalYearSnapshot(
   // singleton for all of them, so both reads below were pure repetition there.
   // Omitted by the fiscal-year rollover caller, which fetches as before.
   const budget =
-    preloaded?.budget ??
-    (await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetDocId }));
+    preloaded?.budget ?? (await federalBudgetCollection(db).findOne({ _id: budgetDocId }));
   if (!budget) return;
 
   let turn = preloaded?.currentTurn;

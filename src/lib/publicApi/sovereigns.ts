@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { FederalBudget, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -10,6 +10,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function demandBand(ratio: number): "subscribed" | "undersubscribed" | "failed" {
   return ratio >= 1 ? "subscribed" : ratio >= 0.7 ? "undersubscribed" : "failed";
@@ -30,9 +31,7 @@ export async function querySovereignWatch(db: Db) {
     registered.map(async (countryId: CountryId) => {
       const [snapshot, budget, liveGdpGrowth] = await Promise.all([
         loadCountrySovereignSnapshot(db, countryId, currentTurn),
-        db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ _id: getNationalBudgetId(countryId) }),
+        federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) }),
         loadNationalGdpGrowth(db, countryId, gameState?.currentYear),
       ]);
 

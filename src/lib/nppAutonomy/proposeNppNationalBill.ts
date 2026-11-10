@@ -20,7 +20,6 @@ import {
 } from "@/lib/congress/billProposalLimits";
 import { snapshotBillPolicyProvisions } from "@/lib/congress/billProposal";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   resolveTaxSliderProvisionFields,
   taxSliderNotchRate,
@@ -36,6 +35,7 @@ import type { BillStatus } from "@/lib/db/types/legislation";
 import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const VOTING_DURATION_HOURS = NPP_BILL_VOTING_DURATION_HOURS;
 
@@ -147,9 +147,10 @@ export async function proposeNppNationalBill(
   // sub-step moves simply skip this sponsorship attempt.
   if (legType.taxSlider && selection.taxSliderDirection) {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId }, { projection: { taxRates: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId },
+      { projection: { taxRates: 1 } }
+    );
     const currentRate =
       (budget?.taxRates as Record<string, number> | undefined)?.[legType.taxSlider.taxType] ??
       legType.taxSlider.baselineRate;

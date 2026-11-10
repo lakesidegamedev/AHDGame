@@ -40,6 +40,7 @@ import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Fallback target inflation rate — deviations drive infamy */
 const TARGET_INFLATION = 2.0;
@@ -103,8 +104,7 @@ export async function processCentralBankChairTurn(
   db: Db,
   currentTurn: number
 ): Promise<CentralBankChairTurnResult> {
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project<
       Pick<
@@ -446,9 +446,7 @@ export async function processCentralBankChairTurn(
   }
 
   if (bankBulkOps.length > 0) {
-    const bankWriteResult = await db
-      .collection<CentralBank>("centralBanks")
-      .bulkWrite(bankBulkOps as never);
+    const bankWriteResult = await centralBanksCollection(db).bulkWrite(bankBulkOps as never);
     bankWritesMatched = bankWriteResult.matchedCount ?? 0;
     bankWritesModified = bankWriteResult.modifiedCount ?? 0;
   }

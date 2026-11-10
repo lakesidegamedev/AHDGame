@@ -45,6 +45,7 @@ import {
   resetSystemSelectionsFrom,
   type ResetVersionState,
 } from "@/lib/resetVersions/rules";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -743,7 +744,7 @@ export async function resetGameWorld(
   await db.collection("statePolicies").deleteMany({});
   await db.collection("commodityPrices").deleteMany({});
   await db.collection("exchangeRates").deleteMany({});
-  await db.collection("centralBanks").deleteMany({});
+  await centralBanksCollection(db).deleteMany({});
 
   log("Teardown complete — bootstrap builds the new world, then finalize cleans up");
 

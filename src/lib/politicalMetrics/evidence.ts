@@ -14,6 +14,8 @@ import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { getEraMetricName } from "@/lib/era/metricCatalog";
 import type { MetricCategoryId, StateMetricValue } from "@/lib/db/types";
 import type { PoliticalMetricId } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type EvidenceSource =
   | { kind: "macro"; category: "economic" | "population"; metricId: string }
@@ -115,8 +117,8 @@ export async function loadEvidence(
       .collection<{ _id: string; population?: number }>("states")
       .find({ countryId } as never, { projection: { population: 1 } })
       .toArray(),
-    db.collection("centralBanks").findOne({ _id: getBankId(countryId) } as never),
-    db.collection("federalBudget").findOne({ _id: getNationalBudgetId(countryId) } as never),
+    centralBanksCollection(db).findOne({ _id: getBankId(countryId) } as never),
+    federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as never),
   ]);
   const populationById = new Map(states.map((s) => [s._id, s.population ?? 0]));
   const resolveMacro = (

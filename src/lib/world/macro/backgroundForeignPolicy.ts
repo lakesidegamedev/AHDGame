@@ -41,6 +41,7 @@ import {
   type ScriptedEmbargo,
   type WarSides,
 } from "./rules/foreignPolicy";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type { MacroForeignPolicyState } from "./rules/foreignPolicy";
 
@@ -621,9 +622,7 @@ export async function applyBackgroundForeignPolicy(
     embargoOps.length > 0
       ? db.collection<TradeEmbargo>("tradeEmbargoes").bulkWrite(embargoOps, { ordered: false })
       : null,
-    bankOps.length > 0
-      ? db.collection<CentralBank>("centralBanks").bulkWrite(bankOps, { ordered: false })
-      : null,
+    bankOps.length > 0 ? centralBanksCollection(db).bulkWrite(bankOps, { ordered: false }) : null,
   ]);
 
   // The decisions were saved as pending before any command ran. Each is marked

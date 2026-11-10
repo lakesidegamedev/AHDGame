@@ -46,6 +46,7 @@ import {
   openingProgramCostScale,
   scaleProgramCostModel,
 } from "@/lib/seeds/reference/rules/openingProgramCostScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Player books refit per category to their authored 1991 composition. */
 const OPENING_COMPOSITION_REFIT_1991: ReadonlySet<string> = new Set(["US", "UK"]);
@@ -244,12 +245,10 @@ export async function seedPoliticalLegislationBaseline(
   // Recalibrate from the new 1991 law book on every seed. A prior run's
   // non-law envelope must not be counted while measuring that book's cost.
   if (year === 1991) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: getNationalBudgetId("RU") },
-        { $unset: { nonLawSpendingGdpShareBaseline: "" } }
-      );
+    await federalBudgetCollection(db).updateOne(
+      { _id: getNationalBudgetId("RU") },
+      { $unset: { nonLawSpendingGdpShareBaseline: "" } }
+    );
   }
 
   // One budget sync so day-one budgets reflect the inherited law book
@@ -266,9 +265,7 @@ export async function seedPoliticalLegislationBaseline(
     await calibratePlayerOpeningPrograms1991(db, log);
     const { SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT } =
       await import("@/lib/seeds/reference/successorFiscal1991");
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId("RU") });
+    const budget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId("RU") });
     if (!budget) throw new Error("Missing 1991 Russian national budget after law sync");
     const targetSpending = Math.round(
       (budget.gdp * SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT.RU.expenditure) / 100
@@ -284,12 +281,10 @@ export async function seedPoliticalLegislationBaseline(
     if (residual < 0) {
       throw new Error(`1991 Russian law spending exceeds the fiscal envelope by ${-residual}`);
     }
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: budget._id },
-        { $set: { nonLawSpendingGdpShareBaseline: residual / budget.gdp } }
-      );
+    await federalBudgetCollection(db).updateOne(
+      { _id: budget._id },
+      { $set: { nonLawSpendingGdpShareBaseline: residual / budget.gdp } }
+    );
     await refreshNationalBudgetRevenue(db, [budget._id]);
     log(`Calibrated 1991 Russian non-law spending to ${targetSpending} SUR`);
   }
@@ -314,7 +309,7 @@ async function calibratePlayerOpeningPrograms1991(
 ): Promise<void> {
   for (const countryId of ["US", "UK"] as const) {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     if (!budget) throw new Error(`Missing 1991 ${countryId} national budget after law sync`);
     const { items } = await calculateFederalLawAnnualCosts(db, budget);
     const authored = OPENING_COMPOSITION_REFIT_1991.has(countryId)
@@ -373,9 +368,7 @@ async function calibratePlayerOpeningPrograms1991(
       scaleSet = { programCostScaleBaseline: bookScale };
       scaleNote = bookScale.toFixed(6);
     }
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budgetId }, { $set: scaleSet });
+    await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: scaleSet });
     const costOps: AnyBulkWriteOperation<EnactedLaw>[] = items.flatMap(({ law }) =>
       law.costModelV2
         ? [

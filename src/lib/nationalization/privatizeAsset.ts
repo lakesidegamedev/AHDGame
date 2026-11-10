@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
@@ -41,6 +41,7 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CarveSelection {
   sectorId: ObjectId;
@@ -173,7 +174,7 @@ export async function privatizeAsset(
 
   // ── 4. Value the carve: per-sector full value × fraction (₳), summed → local. ──
   const [centralBanks, fxByCurrency, marketMode, gameState] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),

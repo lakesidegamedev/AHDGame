@@ -16,7 +16,6 @@ import type {
   ActivityLogFundEvent,
   ActivityLogProfileEvent,
 } from "@/lib/db/types/activityLog";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import { getGameState } from "@/lib/gameState";
 import { isAltScoringEnabled } from "./featureFlag";
@@ -45,6 +44,7 @@ import {
   pruneStaleMatches,
   writeRunRecord,
 } from "./runPersist";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 // ─── Tunables ────────────────────────────────────────────────────────────
 
@@ -546,8 +546,7 @@ async function buildCandidateFacets(
   // ── wire edges: direct character-to-character money flow ─────────────
   const wireEdgesByUser = new Map<string, Map<string, AltWireObservation>>();
   if (candidateCharacterIds.length > 0) {
-    const wireRows = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const wireRows = await financialTxLogCollection(db)
       .find({
         type: { $in: ["wire_transfer_in", "wire_transfer_out"] },
         subjectType: "character",

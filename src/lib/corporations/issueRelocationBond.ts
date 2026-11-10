@@ -30,6 +30,8 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { errorResponse } from "@/lib/api/errors";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Relocation bond uses the longest corporate tenor (7yr = 336 turns). */
 export const RELOCATION_BOND_MATURITY_TURNS: BondMaturityTurns = 336;
@@ -74,9 +76,10 @@ export async function previewRelocationBond(
   /** Turn-local bank rates. Omit for a fresh quote outside the turn. */
   bankRatesOverride?: ReadonlyArray<RelocationPrimeBank>
 ): Promise<RelocationBondPreflight> {
-  const latestBond = await db
-    .collection<Bond>("bonds")
-    .findOne({ corporationId: corporation._id }, { sort: { issuedAtTurn: -1 } });
+  const latestBond = await bondsCollection(db).findOne(
+    { corporationId: corporation._id },
+    { sort: { issuedAtTurn: -1 } }
+  );
   let cooldownTurnsRemaining: number | null = null;
   if (latestBond) {
     const cooldownEnd = latestBond.issuedAtTurn + BOND_ISSUANCE_COOLDOWN_TURNS;
@@ -85,8 +88,7 @@ export async function previewRelocationBond(
     }
   }
 
-  const existingBonds = await db
-    .collection<Bond>("bonds")
+  const existingBonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
   const fxByCurrency = fxByCurrencyOverride ?? (await loadFxRatesByCurrency(db));
@@ -98,8 +100,7 @@ export async function previewRelocationBond(
     .toArray();
   const centralBanks =
     bankRatesOverride ??
-    (await db
-      .collection<CentralBank>("centralBanks")
+    (await centralBanksCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, primeRate: 1 } })
       .toArray());
   // Member-aware: shared-bank members (IE → ECB) must resolve the shared doc.
@@ -300,7 +301,7 @@ export async function issueRelocationBond(
     createdAt: now,
     updatedAt: now,
   };
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
   if (bondId) {
     const existing = await bonds.findOne({ _id: bondId }, session ? { session } : {});
     if (existing) {

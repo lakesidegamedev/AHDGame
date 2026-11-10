@@ -23,6 +23,7 @@ import { createSystemNewsPost } from "@/lib/news";
 import { logWireEvent } from "@/lib/wireEvent";
 import type { NewsCategory } from "@/lib/db/types/newsPost";
 import { planBriefs, type BriefKind, type BriefObservation } from "./rules/countryBriefs";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Briefs are looked for this often. */
 export const COUNTRY_BRIEF_INTERVAL_TURNS = 6;
@@ -121,8 +122,7 @@ export async function processCountryBriefs(db: Db, turn: number): Promise<Countr
       .toArray(),
     // One nearest-maturity bond per country. A global limit would let a country
     // whose bonds all mature late be crowded out by the others.
-    db
-      .collection<BondDoc>("bonds")
+    bondsCollection<BondDoc>(db)
       .aggregate<{ _id: string; couponRate: number; marketPrice: number }>([
         {
           $match: {

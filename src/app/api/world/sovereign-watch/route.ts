@@ -14,11 +14,11 @@ import { loadCountrySovereignSnapshot } from "@/lib/sovereignDefault/snapshotLoa
 import { computeMarketDemand } from "@/lib/sovereignDefault/marketDemand";
 import { computeDsa, type DsaResult } from "@/lib/sovereignDefault/debtSustainability";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface SovereignWatchRow {
   countryCode: CountryId;
@@ -51,7 +51,7 @@ export async function GET() {
       const cfg = COUNTRY_CONFIGS[code];
       const [snapshot, budget, liveGdpGrowth] = await Promise.all([
         loadCountrySovereignSnapshot(db, code, currentTurn),
-        db.collection<FederalBudget>("federalBudget").findOne({ _id: getNationalBudgetId(code) }),
+        federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(code) }),
         // Live national growth, not the frozen FY assumption in
         // `economicFactors.gdpGrowth`. See lib/country/nationalGdpGrowth.
         loadNationalGdpGrowth(db, code, gameStateForGrowth?.currentYear),

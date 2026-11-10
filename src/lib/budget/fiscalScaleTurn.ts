@@ -25,6 +25,7 @@ import {
   nextFiscalScale,
   type FiscalScaleState,
 } from "@/lib/budget/rules/fiscalScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type ScaleBudget = Pick<
   FederalBudget,
@@ -145,8 +146,7 @@ export async function measureFiscalScales(
       },
     });
   }
-  if (ops.length > 0)
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(ops, { ordered: false });
+  if (ops.length > 0) await federalBudgetCollection(db).bulkWrite(ops, { ordered: false });
   const logLine = fiscalScaleLogLine(input.turn, input.stage, logged);
   console.info(logLine);
   return { states, logLine };

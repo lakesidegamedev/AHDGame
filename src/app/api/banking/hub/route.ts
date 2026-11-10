@@ -42,6 +42,7 @@ import type { BankCharterType } from "@/lib/db/types/bank";
 import { savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import type { ObjectId } from "mongodb";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // GET /api/banking/hub - World banking hub payload (CBs, private banks, savings, loans).
 // Auth: requireAuth
@@ -109,8 +110,7 @@ async function handleGET() {
       loadBankingPolicy(db),
       getRegisteredCountryIds(db),
       getGameState(db),
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .find({})
         .project<
           Pick<

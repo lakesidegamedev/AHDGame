@@ -26,6 +26,8 @@ import {
   sovereignDebtTerms,
 } from "@/lib/bonds/sovereignPrincipal";
 import { getPath, setPath, scaleDeep } from "./docScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Extensive (economy-sized) budget fields that split by GDP share. Intensive
@@ -56,7 +58,7 @@ export async function promoteEconomyToNational(
   toCountryId: CountryId,
   conversionTurn = 0
 ): Promise<void> {
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
 
   // Idempotency: the new country already has a national budget.
   const existing = await budgets.findOne({ _id: toCountryId });
@@ -88,8 +90,7 @@ export async function promoteEconomyToNational(
   // bonds that back it. Scaling is linear, so each side's outstanding stock is
   // exactly its weight of the pre-split stock: no re-read, no rounding, and
   // the two principals conserve the pre-split total by construction.
-  const sourceBonds = await db
-    .collection<Bond>("bonds")
+  const sourceBonds = await bondsCollection(db)
     .find({ issuerType: "sovereign", countryId: fromCountryId, matured: false })
     .toArray();
   if (sourceBonds.some((bond) => bond.sovereignMaturityClaim))
@@ -210,7 +211,7 @@ export async function promoteEconomyToNational(
   // already carry the split stocks, and the end-of-turn bond-ledger reconcile
   // heals any bond half that did not land.
   if (sourceBonds.length > 0) {
-    await db.collection<Bond>("bonds").bulkWrite(
+    await bondsCollection(db).bulkWrite(
       sourceBonds.map((bond) => ({
         updateOne: {
           filter: { _id: bond._id, sovereignMaturityClaim: { $exists: false } },
@@ -231,7 +232,7 @@ export async function promoteEconomyToNational(
         },
       }))
     );
-    await db.collection<Omit<Bond, "_id">>("bonds").insertMany(
+    await bondsCollection<Omit<Bond, "_id">>(db).insertMany(
       sourceBonds.map((bond) => {
         const { _id, ...rest } = bond;
         void _id;

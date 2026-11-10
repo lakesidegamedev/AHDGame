@@ -32,6 +32,7 @@ import type {
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const PARTY_LEADERSHIP_FIELDS = ["chairId", "viceChairId", "treasurerId"] as const;
 type PartyLeadershipField = (typeof PARTY_LEADERSHIP_FIELDS)[number];
@@ -229,7 +230,7 @@ async function discoverPositions(db: Db, character: Character): Promise<Position
       .collection<ParliamentaryGovernment>("parliamentaryGovernments")
       .find({ pmCharacterId: characterId })
       .toArray(),
-    db.collection<CentralBank>("centralBanks").find({ chairCharacterId: characterId }).toArray(),
+    centralBanksCollection(db).find({ chairCharacterId: characterId }).toArray(),
   ]);
 
   const partyFilters: Record<string, unknown>[] = PARTY_LEADERSHIP_FIELDS.map((field) => ({
@@ -578,7 +579,7 @@ async function resignCentralBankChair(
   if (!bank.chairCharacterId?.equals(character._id)) return false;
   await vacateCentralBankChairCharacter(db, character._id);
   await vacateFomcChairSeat(db, bank._id);
-  const result = await db.collection<CentralBank>("centralBanks").updateOne(
+  const result = await centralBanksCollection(db).updateOne(
     { _id: bank._id, chairCharacterId: character._id },
     {
       $set: {
@@ -820,10 +821,7 @@ export async function resignAllPositions(db: Db, character: Character): Promise<
       db
         .collection<CabinetMember>("cabinetMembers")
         .deleteMany({ characterId: freshCharacter._id }),
-      db
-        .collection<CentralBank>("centralBanks")
-        .find({ chairCharacterId: freshCharacter._id })
-        .toArray(),
+      centralBanksCollection(db).find({ chairCharacterId: freshCharacter._id }).toArray(),
     ]);
   await releaseVacatedBlocSeats(db, leftoverBlocRowIds, now);
 

@@ -4,13 +4,7 @@
  * a refused QT asset exchange refunds the original market payment before releasing the command.
  */
 import { ObjectId, type Db, type Document } from "mongodb";
-import type {
-  Bond,
-  CentralBank,
-  FederalBudget,
-  GameConfig,
-  MonetaryOperationRecord,
-} from "@/lib/db/types";
+import type { Bond, CentralBank, GameConfig, MonetaryOperationRecord } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -45,6 +39,9 @@ import { treasuryAdvanceMoneyDelta } from "./rules/assemble";
 import { planOpenMarketOperation, quotedQeMarketPrice } from "./quantitativeEasing";
 import type { ExecuteMonetaryOperationInput } from "./operations";
 import { releaseMonetaryCommandReservation } from "./commandReservation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const COLLECTION = "monetaryOperationCommands";
 export class MonetaryOperationRejected extends Error {}
@@ -184,9 +181,9 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
     if (!Number.isSafeInteger(amount) || amount <= 0)
       throw new MonetaryOperationRejected("Amount must be positive");
     const budgetId = getNationalBudgetId(command.countryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId } as { _id: "federal" });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId } as {
+      _id: "federal";
+    });
     if (!budget) throw new MonetaryOperationRejected("Federal budget not found");
     receipt.currency = resolveCountryCurrencyCode(budget) ?? receipt.currency;
     receipt.cash.currency = receipt.currency;
@@ -263,7 +260,7 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
   }
   if (!command.bondId || !ObjectId.isValid(command.bondId))
     throw new MonetaryOperationRejected("Valid bond required");
-  const bond = await db.collection<Bond & { settledKeys?: string[] }>("bonds").findOne({
+  const bond = await bondsCollection<Bond & { settledKeys?: string[] }>(db).findOne({
     _id: new ObjectId(command.bondId),
     issuerType: "sovereign",
     countryId: command.countryId,
@@ -540,12 +537,12 @@ async function finish(
     throw new MonetaryOperationRejected(receipt.error ?? "Monetary operation was rejected");
   }
   const receipts = db.collection<Receipt>(COLLECTION);
-  const banks = db.collection<
+  const banks = centralBanksCollection<
     Omit<CentralBank, "lastMonetaryOperationTurn"> & {
       lastMonetaryOperationTurn?: number | null;
       pendingLiquidityOperationId?: string;
     }
-  >("centralBanks");
+  >(db);
   if (receipt.status === "planning") {
     const already = await banks.findOne(
       { _id: receipt.bankId, pendingLiquidityOperationId: `monetary:${receipt._id}` },

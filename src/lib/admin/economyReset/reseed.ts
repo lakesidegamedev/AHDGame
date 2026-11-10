@@ -14,6 +14,7 @@ import {
 import { isEasternBlocEra } from "@/lib/seeds/presetSelector";
 import type { CountryId } from "@/lib/constants/countries";
 import { countryCorporationSeeds, type CountryCorporationSeed } from "./rules/countryCorporations";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type Log = (message: string) => void;
 
@@ -143,8 +144,7 @@ export async function reseedCountryOwnedCorporations(
   });
   const liveCurrencies = new Map(
     (
-      await db
-        .collection<{ countryId: string; currencyCode?: string }>("federalBudget")
+      await federalBudgetCollection<{ countryId: string; currencyCode?: string }>(db)
         .find(
           { countryId: { $in: dissolvedFederations } },
           { projection: { countryId: 1, currencyCode: 1 } }

@@ -3,7 +3,6 @@
  * before a department receives authority; durable receipts make retries safe.
  */
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { BondTurnResult } from "@/lib/turn/bondTurn";
 import { includedAuthorityPerTurn } from "@/lib/governmentFinance/rules/appropriation";
@@ -26,6 +25,7 @@ import {
   activeDepartmentProgramFamilyIds,
   activeDepartmentProgramFundingControl,
 } from "@/lib/resetCabinet/rules/programRoster";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function settleResetTreasuryCashTurn(input: {
   db: Db;
@@ -57,8 +57,7 @@ export async function settleResetTreasuryCashTurn(input: {
       .collection<ResetDepartmentContinuitySnapshot>("resetDepartmentContinuity")
       .find(filter)
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { countryId: { $in: countries } },
         {

@@ -17,6 +17,7 @@ import {
   aggregateIncomeTaxRate,
   type IncomeShares,
 } from "./rules/incomeTaxTiers";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
@@ -58,8 +59,7 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
       .collection<State>("states")
       .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
     db
@@ -114,7 +114,6 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
         },
       };
     });
-  if (nationalOps.length)
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(nationalOps);
+  if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
   if (regionalOps.length) await db.collection<StateBudget>("stateBudgets").bulkWrite(regionalOps);
 }

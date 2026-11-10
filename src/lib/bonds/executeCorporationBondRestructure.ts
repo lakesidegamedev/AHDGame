@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, Character, Corporation, CorporateSector, CentralBank } from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -32,6 +32,8 @@ import {
   payInstitutionalBondHolders,
   selfHeldBondUnits,
 } from "@/lib/bonds/payInstitutionalBondHolders";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -80,8 +82,7 @@ export async function executeCorporationBondRestructure(
     throw badRequest("Corporation not found");
   }
 
-  const defaultedBonds = await db
-    .collection<Bond>("bonds")
+  const defaultedBonds = await bondsCollection(db)
     .find({ corporationId: refreshed._id, matured: false, defaulted: true })
     .toArray();
   if (defaultedBonds.length === 0) {
@@ -93,7 +94,7 @@ export async function executeCorporationBondRestructure(
       .collection<CorporateSector>("corporateSectors")
       .find({ corporationId: refreshed._id })
       .toArray(),
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -264,7 +265,7 @@ export async function executeCorporationBondRestructure(
 
   // 3. Cure the defaulted bonds.
   const bondIds = defaultedBonds.map((b) => b._id);
-  await db.collection<Bond>("bonds").updateMany(
+  await bondsCollection(db).updateMany(
     { _id: { $in: bondIds }, corporationId: refreshed._id, matured: false, defaulted: true },
     {
       $set: {

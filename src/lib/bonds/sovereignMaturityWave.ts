@@ -19,6 +19,7 @@ import {
   type SovereignMaturityRetirementFigures,
 } from "@/lib/bonds/sovereignMaturityRetirement";
 import type { SovereignMaturityCashLeg } from "@/lib/bonds/sovereignMaturityPayoutTargets";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Everything one sovereign maturity settles, built before any money moves. */
 export interface SovereignMaturityPlan {
@@ -77,12 +78,11 @@ export async function loadSovereignMaturityWave(
     ),
   ];
   const [budgetRows, partialReceipts] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        treasuryCashLocal?: number | null;
-        bankSovereignClaims?: Array<{ id?: string }>;
-      }>("federalBudget")
+    federalBudgetCollection<{
+      _id: string;
+      treasuryCashLocal?: number | null;
+      bankSovereignClaims?: Array<{ id?: string }>;
+    }>(db)
       .find(
         { _id: { $in: dueBudgetIds } },
         { projection: { _id: 1, treasuryCashLocal: 1, "bankSovereignClaims.id": 1 } }

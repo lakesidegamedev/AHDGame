@@ -2,7 +2,7 @@ import { incomeTierForTaxKey, incomeTaxRate } from "@/lib/budget/rules/incomeTax
 import type { Db } from "mongodb";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import {
   resolveTaxSliderProvisionFields,
@@ -14,6 +14,7 @@ import {
 import type { ResetCountry } from "./fundingOwner";
 import { resetTaxesFor, type TaxScope } from "./taxCatalog";
 import { taxRateBoundsFromExistingOptions, validateExactTaxRate } from "./rules/taxRate";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Resolve an exact-rate tax provision offered by the reviewed legislation
@@ -137,9 +138,10 @@ async function loadCurrentRate(
     return typeof rate === "number" && Number.isFinite(rate) ? rate : null;
   }
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(countryId as CountryId) }, { projection: { taxRates: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(countryId as CountryId) },
+    { projection: { taxRates: 1 } }
+  );
   const tier = incomeTierForTaxKey(taxType);
   const rate =
     tier && budget?.taxRates

@@ -9,7 +9,6 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Bond } from "@/lib/db/types/bond";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { FederalBudget } from "@/lib/db/types/budget";
@@ -21,6 +20,9 @@ import { FX_DEPRECIATION_LOOKBACK_TURNS, RECOVERY_CREDIBILITY_RATE_DISCOUNT } fr
 import { computeRequiredIssuance, requiredIssuanceFrom } from "./requiredIssuance";
 import { qualifyingHoldingsFace, sumQualifyingEntitySovereignHoldings } from "./entityHoldings";
 import type { SovereignDemandSnapshot } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function loadCountrySovereignSnapshot(
   db: Db,
@@ -34,14 +36,10 @@ export async function loadCountrySovereignSnapshot(
   // Use the canonical helper for the US-legacy `_id: "federal"` mapping
   // (and any future direct-election country that adopts the same convention).
   const budgetId = getNationalBudgetId(countryCode as CountryId);
-  const federalBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId });
+  const federalBudget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!federalBudget) return null;
 
-  const centralBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: countryCode });
+  const centralBank = await centralBanksCollection(db).findOne({ _id: countryCode });
 
   // `countryCode` is already known to be a real country: the COUNTRY_CONFIGS
   // guard at the top of this function returned null otherwise.
@@ -145,8 +143,7 @@ export async function loadCountrySovereignSnapshots(
 
   const budgetIdByCountry = new Map(known.map((code) => [code, getNationalBudgetId(code)]));
   const [budgets, centralBanks, boards, exchangeRates, imfCorp, bonds] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ _id: { $in: [...budgetIdByCountry.values()] } } as never, {
         projection: {
           debtToGdpRatio: 1,
@@ -159,8 +156,7 @@ export async function loadCountrySovereignSnapshots(
         },
       })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({ _id: { $in: known } } as never, { projection: { primeRate: 1 } })
       .toArray(),
     // `values` whole: the trust key is the literal dotted name
@@ -176,8 +172,7 @@ export async function loadCountrySovereignSnapshots(
     db
       .collection<{ _id: ObjectId }>("corporations")
       .findOne({ imfInstitution: true }, { projection: { _id: 1 } }),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { issuerType: "sovereign", countryId: { $in: known }, matured: false, defaulted: false },
         {

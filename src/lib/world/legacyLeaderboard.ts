@@ -6,7 +6,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Character, ExchangeRate } from "@/lib/db/types";
 import type { Corporation } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
@@ -31,6 +30,7 @@ import type {
   LegacyRankBy,
   LegacyScoreBreakdown,
 } from "./legacyLeaderboardTypes";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 function sameIteration(a: GameIteration | null, b: GameIteration | null): boolean {
   if (!a || !b) return false;
@@ -206,8 +206,7 @@ export async function getLegacyLeaderboardData(
         { projection: { _id: 1, shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { "holders.0": { $exists: true } },
         { projection: { _id: 1, holders: 1, marketPrice: 1, currencyCode: 1 } }

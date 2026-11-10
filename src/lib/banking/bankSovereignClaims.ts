@@ -17,6 +17,8 @@ import { settleAtomicDocumentTransition } from "@/lib/banking/atomicDocumentSett
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { bankSovereignMaturityCostBasis } from "@/lib/banking/rules/sovereignClaims";
 import { remarkBankTreasuryAfterMaturity } from "@/lib/banking/bankTreasury";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 type ClaimReceiptRow = { _id: string; kind?: string; turn?: number; status?: string };
 
@@ -208,9 +210,10 @@ export async function addBankMaturityClaims(
   // One projected read of the book decides which claims are already frozen,
   // so the normal replay pays for one read and one guarded push per bond
   // instead of two reads per bank epoch.
-  const book = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: input.budgetId }, { projection: { bankSovereignClaims: 1 } });
+  const book = await federalBudgetCollection(db).findOne(
+    { _id: input.budgetId },
+    { projection: { bankSovereignClaims: 1 } }
+  );
   const frozenById = new Map((book?.bankSovereignClaims ?? []).map((row) => [row.id, row]));
   for (const claim of pending) {
     const saved = frozenById.get(claim.id);
@@ -230,7 +233,7 @@ export async function addBankMaturityClaims(
   // that froze part of the book between the read and the push makes the guard
   // refuse it; that case falls back to the per-claim comparison below.
   if (missing.length > 0) {
-    const pushed = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const pushed = await federalBudgetCollection(db).updateOne(
       {
         _id: input.budgetId,
         "bankSovereignClaims.id": { $nin: missing.map((claim) => claim.id) },
@@ -241,20 +244,16 @@ export async function addBankMaturityClaims(
       for (const claim of missing) resolved.set(claim.id, claim);
     } else {
       for (const claim of missing) {
-        const existing = await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne(
-            { _id: input.budgetId, "bankSovereignClaims.id": claim.id },
-            { projection: { bankSovereignClaims: 1 } }
-          );
+        const existing = await federalBudgetCollection(db).findOne(
+          { _id: input.budgetId, "bankSovereignClaims.id": claim.id },
+          { projection: { bankSovereignClaims: 1 } }
+        );
         const saved = existing?.bankSovereignClaims?.find((row) => row.id === claim.id);
         if (!saved) {
-          const result = await db
-            .collection<FederalBudget>("federalBudget")
-            .updateOne(
-              { _id: input.budgetId, "bankSovereignClaims.id": { $ne: claim.id } },
-              { $push: { bankSovereignClaims: claim } }
-            );
+          const result = await federalBudgetCollection(db).updateOne(
+            { _id: input.budgetId, "bankSovereignClaims.id": { $ne: claim.id } },
+            { $push: { bankSovereignClaims: claim } }
+          );
           if (result.matchedCount === 1) {
             resolved.set(claim.id, claim);
             continue;
@@ -288,7 +287,7 @@ async function recordMaturityBankPayment(db: Db, claim: BankSovereignClaim): Pro
     return;
   const bondId = new ObjectId(claim.bondId);
   const quoteId = `sovereign-maturity:${claim.bondId}:${claim.dueTurn}`;
-  const result = await db.collection<Bond>("bonds").updateOne(
+  const result = await bondsCollection(db).updateOne(
     {
       _id: bondId,
       issuerType: "sovereign",
@@ -299,9 +298,10 @@ async function recordMaturityBankPayment(db: Db, claim: BankSovereignClaim): Pro
     { $push: { "sovereignMaturityClaim.paidBankClaimIds": claim.id } }
   );
   if (result.matchedCount === 0) {
-    const bond = await db
-      .collection<Bond>("bonds")
-      .findOne({ _id: bondId }, { projection: { sovereignMaturityClaim: 1, matured: 1 } });
+    const bond = await bondsCollection(db).findOne(
+      { _id: bondId },
+      { projection: { sovereignMaturityClaim: 1, matured: 1 } }
+    );
     if (!bond?.matured && bond?.sovereignMaturityClaim?.id !== quoteId)
       throw new Error(`Paid bank maturity claim ${claim.id} lost its due-turn quote`);
   }
@@ -797,9 +797,10 @@ async function payFromEscrow(
       if (claim.ledgerShadow && !claim.treasuryCashLedgerEnabled) {
         await ensureLedgerWitness(db, claim, transition.key, attemptTurn, "bank");
       }
-      await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne({ _id: budgetId }, { $pull: { bankSovereignClaims: { id: claim.id } } });
+      await federalBudgetCollection(db).updateOne(
+        { _id: budgetId },
+        { $pull: { bankSovereignClaims: { id: claim.id } } }
+      );
       return settled;
     }
     if (settled.status !== "rejected") return settled;
@@ -846,9 +847,10 @@ async function recoverCompletedClaim(
     ) {
       await ensureLedgerWitness(db, claim, record._id, record.turn ?? claim.turn, "insurance");
     }
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budgetId }, { $pull: { bankSovereignClaims: { id: claim.id } } });
+    await federalBudgetCollection(db).updateOne(
+      { _id: budgetId },
+      { $pull: { bankSovereignClaims: { id: claim.id } } }
+    );
     return true;
   }
   return false;

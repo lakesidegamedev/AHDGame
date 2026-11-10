@@ -6,7 +6,6 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   Corporation,
   ExchangeRate,
-  FederalBudget,
   GameState,
   LegislationType,
   ShareListing,
@@ -34,6 +33,7 @@ import {
 } from "@/lib/corporations/rules/legacyHoldingBasis";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -130,8 +130,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
         .collection<ExchangeRate>("exchangeRates")
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find({}, { projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
       db

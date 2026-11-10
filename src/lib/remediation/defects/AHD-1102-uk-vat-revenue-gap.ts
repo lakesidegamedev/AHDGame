@@ -7,6 +7,7 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Credits UK tax revenue missed while was live. The enactment
@@ -61,7 +62,7 @@ interface SnapshotDoc {
 }
 
 async function loadUkBudget(db: Db): Promise<BudgetDoc | null> {
-  return db.collection<BudgetDoc>("federalBudget").findOne({ countryId: "UK" });
+  return federalBudgetCollection<BudgetDoc>(db).findOne({ countryId: "UK" });
 }
 
 function alreadyHealed(budget: BudgetDoc | null): boolean {
@@ -151,7 +152,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   // Guarded on the marker being absent, so two concurrent runs cannot both
   // credit: the second matches nothing.
-  const res = await db.collection<BudgetDoc>("federalBudget").updateOne(
+  const res = await federalBudgetCollection<BudgetDoc>(db).updateOne(
     { _id: payload.budgetId, [MARKER]: { $exists: false } },
     {
       $inc: { treasuryBalance: payload.credit },

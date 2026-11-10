@@ -11,7 +11,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import { adminImfBailoutSchema } from "@/lib/api/schemas/adminImfBailout";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import { roundFaceToBondUnits } from "@/lib/bonds/corporateBondDefault";
@@ -26,6 +26,7 @@ import {
   imfPerTurnInterestRate,
   simulateImfFacilityPayoffTurns,
 } from "@/lib/imf/imfFacilityMath";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -136,8 +137,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       });
     }
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ corporationId: corp._id, matured: false })
       .toArray();
 
@@ -329,8 +329,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       body.incomeCapturePercent ?? DEFAULT_INCOME_CAPTURE_PERCENT
     );
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ corporationId: corp._id, matured: false })
       .toArray();
 
@@ -377,7 +376,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (bondIds.length > 0) {
         await db.collection("bondHistory").deleteMany({ bondId: { $in: bondIds } });
       }
-      await db.collection<Bond>("bonds").deleteMany({ corporationId: corp._id });
+      await bondsCollection(db).deleteMany({ corporationId: corp._id });
     }
 
     const shareholders = [...(corp.shareholders ?? [])];

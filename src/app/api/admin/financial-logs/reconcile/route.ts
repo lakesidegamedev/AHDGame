@@ -17,8 +17,9 @@ import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { FinancialTxLogEntry, FinancialSubjectType } from "@/lib/db/types/financialTxLog";
+import type { FinancialSubjectType } from "@/lib/db/types/financialTxLog";
 import type { PortfolioHistory, GameState, ExchangeRate } from "@/lib/db/types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 const DEFAULT_TURNS = 24;
 const MAX_TURNS = 168; // matches retention window
@@ -81,8 +82,7 @@ export async function GET(request: Request) {
     // Pull tx rows for both subject + counterparty positions on this entity.
     // For the actual-net comparison only the SUBJECT side counts (counterparty
     // entries don't move this entity's wallet).
-    const txRows = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const txRows = await financialTxLogCollection(db)
       .find({
         subjectId,
         subjectType: subjectTypeParam as FinancialSubjectType,

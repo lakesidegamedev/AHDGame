@@ -11,7 +11,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { CorporateSector, FederalBudget, Union } from "@/lib/db/types";
+import type { CorporateSector, Union } from "@/lib/db/types";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -23,6 +23,7 @@ import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { UNION_FOUNDING_ACTION_COST, unionFoundingCostLocal } from "@/lib/unions/unionFounding";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,8 +48,7 @@ export async function GET(req: NextRequest) {
     // the /unions page can render its banned-state banner and mark suspended
     // rows. federalBudget is small (one doc per country), a full scan with a
     // tight projection is cheap.
-    const bannedBudgets = await db
-      .collection<FederalBudget>("federalBudget")
+    const bannedBudgets = await federalBudgetCollection(db)
       .find({ unionsBanned: true }, { projection: { countryId: 1 } })
       .toArray();
     const bannedCountryIds = new Set(

@@ -8,7 +8,7 @@ import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { CentralBank, Corporation, PortfolioHistory } from "@/lib/db/types";
+import type { Corporation, PortfolioHistory } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { FOREX_ACTIVE_COUNTRIES, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -34,6 +34,7 @@ import {
   holdsPlayerSavings,
   privateHolderSavingsApyPercent,
 } from "@/lib/banking/rules/rates";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -55,7 +56,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const [forexEnabled, character, bank, gameState] = await Promise.all([
       isForexEnabled(),
       getCharacterByUserId(db, auth.user.userId),
-      db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) }),
+      centralBanksCollection(db).findOne({ _id: getBankId(countryId) }),
       getGameState(),
     ]);
 

@@ -7,7 +7,6 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { handleRouteError, forbidden, badRequest, notFound, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { Character } from "@/lib/db/types";
 import { isNominationWindowOpen } from "@/lib/turn/centralBankChairSelection";
 import { getGameState } from "@/lib/gameState";
@@ -18,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { applyNominateSpend } from "@/lib/centralBank/nominateSpend";
 import { getMoneyFlowReceiptsCollection } from "@/lib/db/collections/moneyFlowReceipts";
 import { MoneyFlowKeyConflictError } from "@/lib/db/nonAtomicMoneyFlow";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -68,7 +68,7 @@ export async function POST(request: Request, context: RouteContext) {
     const parsed = await parseJsonBody(request, schema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    const centralBanks = db.collection<CentralBank>("centralBanks");
+    const centralBanks = centralBanksCollection(db);
 
     const bank = await centralBanks.findOne({ _id: bankId });
     if (!bank)

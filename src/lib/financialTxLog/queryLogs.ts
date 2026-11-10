@@ -7,6 +7,7 @@ import type {
   SuspectFlagSeverity,
 } from "@/lib/db/types/financialTxLog";
 import { ALL_TX_TYPES } from "@/lib/financialTxLog/types-extended";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 50;
@@ -158,8 +159,7 @@ export async function queryTxLog(
   filter: Filter<FinancialTxLogEntry> & Record<string, unknown>,
   limit: number
 ): Promise<{ entries: FinancialTxLogEntry[]; nextCursor: string | null; hasMore: boolean }> {
-  const entries = await db
-    .collection<FinancialTxLogEntry>("financialTxLog")
+  const entries = await financialTxLogCollection(db)
     .find(filter)
     .sort(TX_LOG_SORT)
     .limit(limit + 1)
@@ -203,8 +203,7 @@ export async function queryTxAlerts(db: Db): Promise<{ alerts: TxAlertGroup[]; t
     flagTypes: string[];
   };
 
-  const raw = await db
-    .collection<FinancialTxLogEntry>("financialTxLog")
+  const raw = await financialTxLogCollection(db)
     .aggregate<GroupedDoc>([
       { $match: { flagged: true } },
       { $unwind: "$suspectFlags" },

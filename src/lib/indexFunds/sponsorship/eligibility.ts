@@ -1,7 +1,7 @@
 /** Fund creation eligibility is shared by the command and the bank's action menu. */
 import { isIndexFundsEnabled } from "../featureFlag";
 import type { Db } from "mongodb";
-import type { Corporation, FederalBudget, GameConfig, GameState } from "@/lib/db/types";
+import type { Corporation, GameConfig, GameState } from "@/lib/db/types";
 import { fundBankCharter, fundSponsorEligibility } from "./rules/eligibility";
 import { FUND_CHARTER_FEE_ANCHOR, FUND_MIN_SEED_CAPITAL_ANCHOR } from "./constants";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
@@ -10,6 +10,7 @@ import {
   anchorToCorpLiquidCapital,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function fundCreationEligibility(
   db: Db,
@@ -49,12 +50,10 @@ export async function fundCreationEligibility(
     return "The corporation needs enough cash for the creation fee and seed investment.";
   if (!options?.replay) {
     const budget = sponsor.countryId
-      ? await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne(
-            { countryId: sponsor.countryId },
-            { projection: { countryId: 1, currencyCode: 1 } }
-          )
+      ? await federalBudgetCollection(db).findOne(
+          { countryId: sponsor.countryId },
+          { projection: { countryId: 1, currencyCode: 1 } }
+        )
       : null;
     if (
       !budget ||

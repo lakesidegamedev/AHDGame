@@ -38,6 +38,7 @@ import {
 } from "./nppInvestCandidates";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** An NPP weighing a market buy this sweep, with its v6 chance. */
 export type InvestDecider = {
@@ -149,8 +150,7 @@ export async function investNppBondSurplusV6(
   if (deciders.length === 0) return;
 
   const countries = [...new Set(deciders.map((d) => d.countryId))];
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(
       {
         countryId: { $in: countries },

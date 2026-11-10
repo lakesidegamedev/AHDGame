@@ -9,7 +9,7 @@ import {
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { Bill, FederalBudget } from "@/lib/db/types";
+import type { Bill } from "@/lib/db/types";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import type { InternationalOrganizationProvision } from "@/lib/db/types/legislation";
 import { isMember, recordOrgHistoryEvent } from "@/lib/internationalOrganizations/service";
@@ -25,6 +25,7 @@ import {
 } from "./organizationFund";
 import { removeOrganizationMembership } from "./withdrawalBills";
 import { resolveJoinApplication } from "./joinApplication";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Enactment effects for the `international_organization` bill provision. Each
@@ -126,12 +127,10 @@ export async function applyOrgFundProvision(
         }
         return { fundCountry, amountFund: result.status === "applied" ? amountFund : 0 };
       }
-      const debit = await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne(
-          { countryId },
-          { $inc: { treasuryBalance: -amountLocal }, $set: { updatedAt: new Date() } }
-        );
+      const debit = await federalBudgetCollection(db).updateOne(
+        { countryId },
+        { $inc: { treasuryBalance: -amountLocal }, $set: { updatedAt: new Date() } }
+      );
       if (debit.modifiedCount > 0) {
         await witnessOrganizationCash(db, batch, {
           kind: "government",

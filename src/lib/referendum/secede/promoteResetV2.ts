@@ -6,7 +6,6 @@ import {
 } from "./rules/liveFinance";
 import { createHash } from "node:crypto";
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import { DEPARTMENT_DEFINITIONS } from "@/lib/governmentFinance/departmentCatalog";
@@ -44,6 +43,7 @@ import { groupOpeningDepartmentClaims } from "@/lib/resetFinance/rules/departmen
 import type { SecedingCountryId } from "./subRegions";
 import { buildSuccessorMetricRows, buildSuccessorRegionalRows } from "./rules/resetV2Promotion";
 import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function rekeyReference(
   reference: OpeningLawReference,
@@ -148,12 +148,10 @@ export async function promoteResetV2ForIndependence(
         )
       : null;
   if (versions.metrics === "v2") {
-    const fiscalBudget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { _id: countryId },
-        { projection: { gdp: 1, revenue: 1, spending: 1, debt: 1, economicFactors: 1 } }
-      );
+    const fiscalBudget = await federalBudgetCollection(db).findOne(
+      { _id: countryId },
+      { projection: { gdp: 1, revenue: 1, spending: 1, debt: 1, economicFactors: 1 } }
+    );
     if (!fiscalBudget) throw new Error(`${countryId} metric promotion has no successor budget`);
     const metricRows: ResetMetricSnapshot[] = buildSuccessorMetricRows({
       countryId,
@@ -304,9 +302,10 @@ export async function promoteResetV2ForIndependence(
   }
 
   if (versions.cabinet === "v2") {
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId }, { projection: { spending: 1, debt: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { spending: 1, debt: 1 } }
+    );
     if (!budget) throw new Error(`${countryId} v2 promotion has no national budget`);
     const sourceTurn = conversionTurn ?? gameState.currentTurn ?? 1;
     const familyAmounts = Object.fromEntries(

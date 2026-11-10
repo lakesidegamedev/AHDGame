@@ -4,7 +4,7 @@
  * the funded fee to the central bank without charging a later charter.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { CentralBank, Corporation, ExchangeRate } from "@/lib/db/types";
+import type { Corporation, ExchangeRate } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -16,6 +16,7 @@ import {
   recentPropForexVolume,
   type PropForexFeeReceipt,
 } from "./rules/propForexFees";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function loadPropForexFeeQuote(
   db: Db,
@@ -64,9 +65,10 @@ export async function loadPropForexFeeQuote(
     foreignVolumeAnchor: recentVolumeAnchorOf(foreign),
   });
   const centralBankId = getBankId(getCountryIdForCurrency(currencyCode));
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: centralBankId }, { projection: { _id: 1 } });
+  const bank = await centralBanksCollection(db).findOne(
+    { _id: centralBankId },
+    { projection: { _id: 1 } }
+  );
   if (!bank) throw new Error("Forex settlement bank is unavailable");
   return { ...quote, markLocal, centralBankId };
 }

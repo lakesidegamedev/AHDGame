@@ -5,10 +5,11 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
-import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CountryId } from "@/lib/constants/countries";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface EasternBlocSeedConfig {
   countryId: CountryId;
@@ -140,7 +141,7 @@ export async function seedEasternBlocBudget(
   }
 
   if (reset) {
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId });
+    await federalBudgetCollection(db).deleteMany({ countryId });
     const ids = (
       await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
@@ -172,9 +173,11 @@ export async function seedEasternBlocBudget(
       ?.fiscalYear ?? 1979;
   {
     const { _id, ...budgetData } = national;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
   }
 
   const laws = generateDefaultEnactedLaws(preset).filter((l) => l.countryId === countryId);

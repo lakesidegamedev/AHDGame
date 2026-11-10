@@ -5,7 +5,7 @@
 // cooldown skip — see spec §13.4).
 import { operatingSectorFilter, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db, ObjectId } from "mongodb";
-import type { CentralBank, Character, Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -21,6 +21,7 @@ import { isWithinRenationalizeCooldown } from "./privatizationShares";
 import { resolveCorpEligibility } from "./targetEligibility";
 import type { SectorScope } from "./nationalizeSectorWide";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -64,7 +65,7 @@ export async function computeSectorNationalizationPreview(
   const countryCurrency = (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode;
 
   const [centralBanks, fxByCurrency, marketMode, previewGameState] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),

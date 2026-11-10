@@ -19,6 +19,7 @@ import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import type { FinancialTxType } from "@/lib/db/types/financialTxLog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Each flow's transaction type and settlement reason. Event-driven flows reuse
@@ -137,8 +138,7 @@ export async function loadTreasuryCashContext(
         .collection<{ currencyCode: string; rate: number }>("exchangeRates")
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<{ countryId: string; currencyCode?: CurrencyCode }>("federalBudget")
+      federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db)
         .find({}, { projection: { countryId: 1, currencyCode: 1 } })
         .toArray(),
     ]);

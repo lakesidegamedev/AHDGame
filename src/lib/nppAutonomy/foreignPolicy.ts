@@ -61,6 +61,7 @@ export type {
   ForeignPolicyResult,
 } from "./foreignPolicyShared";
 import { voteCandidates, bilateralCandidates, warCandidates } from "./foreignPolicyCandidates";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -374,9 +375,9 @@ async function loadContext(
       .find({ status: "pending" })
       .toArray(),
     db.collection<TradeFlowSnapshot>("tradeFlowSnapshots").findOne({}, { sort: { turn: -1 } }),
-    db
-      .collection<{ countryId: CountryId; debtToGdpRatio?: number }>("federalBudget")
-      .findOne({ countryId }),
+    federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
+      countryId,
+    }),
     db
       .collection<PersistedForeignPolicyDecision>(DECISION_COLLECTION)
       .find({

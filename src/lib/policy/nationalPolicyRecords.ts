@@ -55,6 +55,7 @@ import { WAL_ECONOMY } from "@/lib/countries/wal/economy";
 import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Shared national policy-record assembly — extracted verbatim from
@@ -450,7 +451,7 @@ export async function assembleNationalPolicyRecords(
     })
     .toArray();
   const budgetId = countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId;
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
 
   const recordsByCanonicalId = mergePolicyRecordsByCanonicalId(policies);
   backfillNationalTaxPolicyRecords({

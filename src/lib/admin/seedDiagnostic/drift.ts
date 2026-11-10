@@ -30,6 +30,7 @@ import {
 import type { SeedDiagnosticCheck, SeedDiagnosticSeverity } from "./types";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Default annual population growth percent when seed configs omit an explicit rate. */
 export const DEFAULT_POP_GROWTH_PCT = 1;
@@ -352,12 +353,11 @@ async function checkLedgerHealth(db: Db): Promise<SeedDiagnosticCheck[]> {
 
 async function checkTreasurySign(db: Db, expect: SeedExpectations): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
-  const budgets = await db
-    .collection<{
-      countryId?: string;
-      treasuryBalance?: number;
-      debt?: { principal?: number };
-    }>("federalBudget")
+  const budgets = await federalBudgetCollection<{
+    countryId?: string;
+    treasuryBalance?: number;
+    debt?: { principal?: number };
+  }>(db)
     .find({})
     .toArray();
   const byCountry = new Map(budgets.map((b) => [String(b.countryId), b]));
@@ -507,8 +507,11 @@ export async function runDriftChecks(
   // USD GDP-per-capita band (after forex is trusted).
   const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
   const rateMap = new Map(rates.map((r) => [r.countryId, r]));
-  const budgets = await db
-    .collection<{ countryId?: string; gdp?: number; population?: number }>("federalBudget")
+  const budgets = await federalBudgetCollection<{
+    countryId?: string;
+    gdp?: number;
+    population?: number;
+  }>(db)
     .find({})
     .toArray();
   const budgetByCountry = new Map(budgets.map((b) => [String(b.countryId), b]));

@@ -77,6 +77,7 @@ import {
   type CampaignIntelligenceAssessment,
   type CampaignRequirementResult,
 } from "./campaign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -118,9 +119,7 @@ export async function loadCampaignCapability(
   countryId: string
 ): Promise<CampaignCapabilitySnapshot> {
   const [budget, approval, units] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: countryId as FederalBudget["countryId"] }),
+    federalBudgetCollection(db).findOne({ countryId: countryId as FederalBudget["countryId"] }),
     db
       .collection<GovernmentApproval>("governmentApprovals")
       .findOne({ _id: countryId as GovernmentApproval["_id"] }),
@@ -471,9 +470,9 @@ export async function spendGlobalResponseCost(
   if (option.action?.kind === "financialCrisisResponse") return 0;
   const pct = option.treasuryCostPctGdp ?? 0;
   if (!(pct > 0)) return 0;
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as FederalBudget["countryId"] });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: countryId as FederalBudget["countryId"],
+  });
   const gdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   const amount = Math.max(0, Math.round(gdp * pct));

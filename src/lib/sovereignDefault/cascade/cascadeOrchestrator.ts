@@ -24,6 +24,7 @@ import { applyBondHolderWriteDowns, type WriteDownReport } from "./bondHolderWri
 import { isCorporationInsolvent } from "./insolvency";
 import { computeBondWriteDownSeverity, type CascadeReason } from "./writeDownSeverity";
 import { emitPerCorpCascadeNews } from "./perCorpCascadeNews";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface CascadeInput {
   initialBonds: Bond[];
@@ -104,8 +105,7 @@ export async function runCascade(db: Db, input: CascadeInput): Promise<CascadeRe
     const nextLevelBonds: Bond[] = [];
     const flagOps: AnyBulkWriteOperation<Bond>[] = [];
     for (const insolventId of insolventIds) {
-      const activeCorpBonds = await db
-        .collection<Bond>("bonds")
+      const activeCorpBonds = await bondsCollection(db)
         .find({
           corporationId: insolventId,
           issuerType: { $ne: "sovereign" },
@@ -138,7 +138,7 @@ export async function runCascade(db: Db, input: CascadeInput): Promise<CascadeRe
       }
     }
     if (flagOps.length > 0) {
-      await db.collection<Bond>("bonds").bulkWrite(flagOps);
+      await bondsCollection(db).bulkWrite(flagOps);
     }
 
     levelBonds = nextLevelBonds;

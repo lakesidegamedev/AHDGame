@@ -14,6 +14,7 @@ import { withBankingTelemetryBatch } from "@/lib/banking/telemetry";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { settlePriorCorporateCashArrears } from "./cashArrears";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export { interleaveByKey };
 
@@ -319,8 +320,7 @@ export async function settleCorporateOperatingCashLegacy(
     .filter((key) => key.startsWith("federalBudget:"))
     .map((key) => key.slice("federalBudget:".length));
   if (treasuryCountries.length) {
-    const rows = await db
-      .collection<{ _id: ObjectId; countryId: string }>("federalBudget")
+    const rows = await federalBudgetCollection<{ _id: ObjectId; countryId: string }>(db)
       .find({ countryId: { $in: treasuryCountries } }, { projection: { _id: 1, countryId: 1 } })
       .toArray();
     for (const row of rows)

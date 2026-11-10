@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   getInitialNationalBudgetsForPreset,
   getNationalBudgetSeedConfigsForPreset,
 } from "@/lib/seeds/reference/budgets";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const COUNTRY_IDS = ["HU", "PL", "RO", "BG"] as const;
 
@@ -27,15 +27,15 @@ export async function seedModernTransitionBudgets2027(
   );
 
   if (reset) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
+    await federalBudgetCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
   }
   const now = new Date();
   for (const { _id, ...budget } of budgets) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budget, updatedAt: now } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budget, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${budgets.length} authored 2027 transition national budget(s)`);
 }

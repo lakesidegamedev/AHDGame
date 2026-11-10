@@ -5,7 +5,6 @@ import {
   loadFxRatesByCurrency,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -15,6 +14,7 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Restitution for a sovereign bond repudiation whose cascade debited holder CASH
@@ -514,8 +514,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // emitTxBulk mints its own ids, so read them back rather than guessing: a
   // rollback has to be able to delete the receipts it created.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

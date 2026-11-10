@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CentralBank, FomcSeat } from "@/lib/db/types/centralBank";
+import type { FomcSeat } from "@/lib/db/types/centralBank";
 import {
   FOMC_BOARD_SIZE,
   FOMC_TERM_TURNS,
@@ -9,6 +9,7 @@ import {
 import { spawnTechnocratNpp } from "@/lib/npp/generator";
 import type { ChairAlignment } from "@/lib/centralBank/chairAlignment";
 import { isBankGovernmentControlledLive } from "@/lib/centralBank/governance";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
  * Staggered term expiry so at most one seat opens per window: seat i of N
@@ -38,7 +39,7 @@ export async function seedFomcBoards(
   startTurn: number,
   log?: (msg: string) => void
 ): Promise<number> {
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   let seeded = 0;
 
   for (const bank of banks) {
@@ -97,7 +98,7 @@ export async function seedFomcBoards(
     }
 
     const chair = board[0];
-    await db.collection<CentralBank>("centralBanks").updateOne(
+    await centralBanksCollection(db).updateOne(
       { _id: bank._id },
       {
         $set: {

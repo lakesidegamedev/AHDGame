@@ -11,6 +11,7 @@ import {
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { snapshotTreasuryCurrency } from "@/lib/ledger/balanceSnapshot";
 import type { BankingTransition } from "@/lib/banking/rules/boundary";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface FiscalImpact {
   fromSurplus: number;
@@ -62,9 +63,9 @@ async function moveTreasury(
   _resyncDerived: boolean,
   witness?: TreasurySpendWitness
 ): Promise<FiscalImpact> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as FederalBudget["countryId"] });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: countryId as FederalBudget["countryId"],
+  });
   const before = budget?.treasuryBalance ?? 0;
   const after = Math.round(before + delta);
 
@@ -132,12 +133,10 @@ async function moveTreasury(
     if (settled.status !== "applied" && settled.status !== "replayed") {
       throw new Error(settled.error ?? "Funded Treasury expense is incomplete");
     }
-    const currentBudget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { countryId: countryId as FederalBudget["countryId"] },
-        { projection: { treasuryBalance: 1 } }
-      );
+    const currentBudget = await federalBudgetCollection(db).findOne(
+      { countryId: countryId as FederalBudget["countryId"] },
+      { projection: { treasuryBalance: 1 } }
+    );
     return {
       ...split,
       newTreasuryBalance: currentBudget?.treasuryBalance ?? before + delta,
@@ -147,12 +146,10 @@ async function moveTreasury(
 
   // $inc, not $set of a value computed from the read above: two concurrent
   // spends on one country would otherwise overwrite each other.
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { countryId: countryId as FederalBudget["countryId"] },
-      { $inc: { treasuryBalance: after - before }, $set: { updatedAt: now } }
-    );
+  const result = await federalBudgetCollection(db).updateOne(
+    { countryId: countryId as FederalBudget["countryId"] },
+    { $inc: { treasuryBalance: after - before }, $set: { updatedAt: now } }
+  );
   if (witness && (result?.matchedCount ?? 0) > 0) {
     await witnessTreasuryCash(db, ledger, {
       flow: witness.flow,

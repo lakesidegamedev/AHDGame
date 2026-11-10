@@ -29,6 +29,7 @@ import type { FinancialTxLogEntry, TxThresholds } from "@/lib/db/types/financial
 import { distributeConversionSpreadsBatch } from "@/lib/currency/marketMaker";
 import { buildEscrowFundingTxEntry } from "@/lib/corporations/escrowTxLog";
 import type { CorporationLookups, CorpSnapshot } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * v2: persist the per-state labour wage index (+ v2-3b: automation index) to
@@ -409,7 +410,7 @@ export async function updateCorporateTaxBases(args: {
       };
     });
   if (federalTaxBaseOps.length > 0) {
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(federalTaxBaseOps);
+    await federalBudgetCollection(db).bulkWrite(federalTaxBaseOps);
   }
 
   // State tax bases: a state gets written to if it has any domestic OR foreign

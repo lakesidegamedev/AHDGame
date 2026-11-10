@@ -18,7 +18,7 @@ import { loadTermSettlement } from "@/lib/settlement/queries/termSettlement";
 import { acceptPeace } from "@/lib/military/acceptPeace";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import { getCountryState } from "@/lib/countryState";
-import type { FederalBudget } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const bodySchema = z.object({ action: z.enum(["accept", "reject", "withdraw"]) });
 
@@ -132,9 +132,10 @@ export async function POST(
       // figure that could have drifted while the offer sat.
       let maxAmount: number | null = null;
       if (offer.term.kind === "indemnity") {
-        const payerBudget = await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ countryId: offer.term.payer }, { projection: { gdp: 1 } });
+        const payerBudget = await federalBudgetCollection(db).findOne(
+          { countryId: offer.term.payer },
+          { projection: { gdp: 1 } }
+        );
         maxAmount = maxIndemnityForGdp(payerBudget?.gdp);
       }
       // The target's system is re-read too: a country converted by some other route

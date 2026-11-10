@@ -48,7 +48,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
-import type { BankSovereignClaim, FederalBudget } from "@/lib/db/types/budget";
+import type { BankSovereignClaim } from "@/lib/db/types/budget";
 import type { BondMarketPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -62,6 +62,8 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-unfunded-rollover";
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
@@ -127,8 +129,7 @@ async function currentTurn(db: Db): Promise<number> {
 }
 
 async function loadOverdue(db: Db, turn: number): Promise<OverdueBond[]> {
-  return db
-    .collection<Bond>("bonds")
+  return bondsCollection(db)
     .find(
       {
         issuerType: "sovereign",
@@ -187,8 +188,7 @@ export async function surveyOverdueSovereignBonds(db: Db): Promise<Payload> {
   ];
   const currencies = [...new Set(bonds.flatMap((b) => (b.currencyCode ? [b.currencyCode] : [])))];
   const [budgets, pools] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { _id: { $in: budgetIds } },
         { projection: { _id: 1, countryId: 1, treasuryCashLocal: 1, bankSovereignClaims: 1 } }
@@ -395,7 +395,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const bonds = payload?.bonds ?? [];
   let stamped = 0;
   for (const bond of bonds) {
-    const result = await db.collection<Bond>("bonds").updateOne(
+    const result = await bondsCollection(db).updateOne(
       {
         _id: new ObjectId(bond.bondId),
         matured: { $ne: true },
@@ -430,8 +430,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
 async function verify(db: Db): Promise<VerifyResult> {
   const { bonds } = await surveyOverdueSovereignBonds(db);
-  const settled = await db
-    .collection<Bond>("bonds")
+  const settled = await bondsCollection(db)
     .find(
       { [MARKER_PATH]: { $exists: true } },
       { projection: { matured: 1, totalIssued: 1, sovereignMaturityClaim: 1 } }

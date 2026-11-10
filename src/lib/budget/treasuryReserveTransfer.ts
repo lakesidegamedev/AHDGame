@@ -2,7 +2,7 @@
 import { ObjectId, type Db, type Document } from "mongodb";
 import { isDeepStrictEqual } from "node:util";
 import * as Sentry from "@sentry/nextjs";
-import type { FederalBudget, GameConfig } from "@/lib/db/types";
+import type { GameConfig } from "@/lib/db/types";
 import type { TreasuryTransferRecord } from "@/lib/db/types/centralBank";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { CountryId } from "@/lib/constants/countries";
@@ -31,6 +31,8 @@ import { resolveLedgerTurn } from "@/lib/ledger/ledgerTurn";
 import { accountId } from "@/lib/ledger/accounts";
 import { buildTxDocs, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -99,7 +101,7 @@ function assertSame(saved: Command, input: Command): void {
 async function prepare(db: Db, command: Command): Promise<void> {
   const budgetId = command.countryId === "US" ? "federal" : command.countryId;
   const [budget, config] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
     db.collection<GameConfig>("gameConfig").findOne(
       { _id: "default" },
       {
@@ -113,9 +115,10 @@ async function prepare(db: Db, command: Command): Promise<void> {
   ]);
   if (!budget) throw new TreasuryReserveTransferRejected("Federal budget not found", 404);
   const bankId = getBankId(command.countryId);
-  const bank = await db
-    .collection<BalanceDocument>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { reserveBalance: 1 } });
+  const bank = await centralBanksCollection<BalanceDocument>(db).findOne(
+    { _id: bankId },
+    { projection: { reserveBalance: 1 } }
+  );
   if (!bank) throw new TreasuryReserveTransferRejected("Central bank not found", 404);
   if (bank.reserveBalance !== undefined && !Number.isFinite(bank.reserveBalance))
     throw new TreasuryReserveTransferRejected("Central bank reserves require reconciliation");
@@ -357,12 +360,10 @@ async function prepare(db: Db, command: Command): Promise<void> {
   if (claim.status === "rejected") throw new TreasuryReserveTransferRejected(claim.error);
 }
 async function release(db: Db, key: string, bankId: string): Promise<void> {
-  await db
-    .collection<BalanceDocument>("centralBanks")
-    .updateOne(
-      { _id: bankId, pendingTreasuryReserveKey: key },
-      { $unset: { pendingTreasuryReserveKey: "" } }
-    );
+  await centralBanksCollection<BalanceDocument>(db).updateOne(
+    { _id: bankId, pendingTreasuryReserveKey: key },
+    { $unset: { pendingTreasuryReserveKey: "" } }
+  );
 }
 async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
   const plan = receipt.treasuryReserveTransfer;
@@ -449,7 +450,7 @@ export async function resumeTreasuryReserveTransfer(
     await publishAudit(db, receipt);
     return result("replayed");
   }
-  const banks = db.collection<BalanceDocument>("centralBanks");
+  const banks = centralBanksCollection<BalanceDocument>(db);
   if (plan.state === "planning") {
     const claimed = await banks.updateOne(
       {
@@ -499,7 +500,7 @@ export async function resumeTreasuryReserveTransfer(
     if (plan.state === "rejected") return resumeTreasuryReserveTransfer(db, key);
     if (plan.state !== "admitted") throw new Error("Treasury transfer admission incomplete");
   }
-  const budgets = db.collection<BalanceDocument>("federalBudget");
+  const budgets = federalBudgetCollection<BalanceDocument>(db);
   // Freeze delivery generations only after this command owns the reservation.
   // They survive the bounded shared receipt array and prevent an old suspended
   // attempt from applying again after later transfers have evicted its stamp.

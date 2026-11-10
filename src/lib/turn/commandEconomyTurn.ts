@@ -1,5 +1,4 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { Corporation, CorporateSector, SoeState } from "@/lib/db/types/corporation";
@@ -62,6 +61,7 @@ import { resolveGosbankPosture } from "@/lib/economy/commandEconomyPosture";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Command-economy macro turn phase. Advances shortage-economy state on
@@ -426,7 +426,7 @@ export async function processCommandEconomyTurn(
     processedCountries.add(countryId);
     const reformReachedNow = reform != null && reform.reachedAtTurn == null && reformPull?.reached;
 
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: budget._id },
       {
         $set: {
@@ -479,7 +479,7 @@ export async function processCommandEconomyTurn(
     const { pull, reached } = economicReformPull(currentLevel, reform);
     const nextLevel = driftMarketizationLevel(currentLevel, pull);
     setStoredMarketizationLevel(countryId, nextLevel);
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: budget._id },
       {
         $set: {

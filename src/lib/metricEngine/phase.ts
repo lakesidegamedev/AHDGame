@@ -128,6 +128,7 @@ import {
 } from "@/lib/societyPressures/rules/region";
 import { fundingResponse } from "./spendingChannel";
 import { EDU_SPEND_HALF_SAT } from "./registry/education";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -373,7 +374,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     sectorRevenueTaxProvider(db, turn),
     // Per-country prime rate drives capital investment (P1c-0). Batched here so
     // there is no per-region round trip.
-    db.collection<{ _id: string; primeRate?: number }>("centralBanks").find({}).toArray(),
+    centralBanksCollection<{ _id: string; primeRate?: number }>(db).find({}).toArray(),
     // Per-region per-capita budget spend by category (P2 spending backbone). One
     // batched provider read; nodes consume it via {spending} inputs.
     spendingProvider(db),

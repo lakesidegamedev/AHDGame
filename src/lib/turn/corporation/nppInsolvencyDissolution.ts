@@ -1,6 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import type { Corporation } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import { isCommandEconomy, isSoeSpared } from "@/lib/constants/commandEconomy";
@@ -16,6 +15,8 @@ import { isMateriallyInsolvent } from "./nppInsolvencyRules";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 // NPP-run corps have no owner to dissolve an insolvent or bond-defaulted company, so they
 // would bleed liquidCapital negative forever and pollute wealth metrics. Any NPP corps whose
@@ -85,8 +86,7 @@ export async function processNppInsolventCorpDissolution(
     .toArray();
   if (commandEconomyEnabled) {
     // Per-country budget softness (default fairly soft when not yet written).
-    const softnessBudgets = await db
-      .collection<FederalBudget>("federalBudget")
+    const softnessBudgets = await federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, "economicFactors.budgetSoftness": 1 } })
       .toArray();
     const softnessByCountry = new Map<string, number>();
@@ -108,7 +108,7 @@ export async function processNppInsolventCorpDissolution(
   // NPP issuers whose bond default has lingered past the auto-resolver's reach.
   const lingeringDefaultIssuerIds = new Set(
     (
-      await db.collection<Bond>("bonds").distinct("corporationId", {
+      await bondsCollection(db).distinct("corporationId", {
         matured: false,
         defaulted: true,
         defaultedAtTurn: { $lte: turn - LINGERING_DEFAULT_GRACE_TURNS },

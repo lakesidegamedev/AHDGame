@@ -14,6 +14,8 @@ import type { ExchangeRate } from "@/lib/db/types";
 import { buildSeedExpectations, expectedPrimeRate, type SeedExpectations } from "./expectations";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
@@ -93,14 +95,13 @@ export async function collectLiveMetrics(
   const metrics: Record<string, number> = {};
   const countries = expect.seededCountryIds;
 
-  const budgets = await db
-    .collection<{
-      countryId?: string;
-      gdp?: number;
-      population?: number;
-      treasuryBalance?: number;
-      debt?: { principal?: number; interestRate?: number };
-    }>("federalBudget")
+  const budgets = await federalBudgetCollection<{
+    countryId?: string;
+    gdp?: number;
+    population?: number;
+    treasuryBalance?: number;
+    debt?: { principal?: number; interestRate?: number };
+  }>(db)
     .find({})
     .toArray();
   const budgetByCountry = new Map(budgets.map((b) => [String(b.countryId ?? b), b] as const));
@@ -115,13 +116,12 @@ export async function collectLiveMetrics(
     setMetric(metrics, `budget.${countryId}.treasuryBalance`, doc.treasuryBalance);
   }
 
-  const banks = await db
-    .collection<{
-      _id: string;
-      countryId?: CountryId;
-      primeRate?: number;
-      inflationHistory?: Array<{ rate?: number }>;
-    }>("centralBanks")
+  const banks = await centralBanksCollection<{
+    _id: string;
+    countryId?: CountryId;
+    primeRate?: number;
+    inflationHistory?: Array<{ rate?: number }>;
+  }>(db)
     .find({})
     .toArray();
   const bankById = new Map(banks.map((b) => [String(b._id), b]));

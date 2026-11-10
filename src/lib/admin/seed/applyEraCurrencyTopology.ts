@@ -16,6 +16,8 @@ import {
   redenominateStateBudget,
 } from "@/lib/currency/rules/redenominate";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 type AnyDoc = Document & { _id: ObjectId | string; countryId: string };
 
@@ -58,10 +60,10 @@ export async function applyEraCurrencyTopology(
     }
     const scale = currencyConversionScale(legacyRate, eurRate);
 
-    const budget = (await db.collection("federalBudget").findOne({ countryId })) as AnyDoc | null;
+    const budget = (await federalBudgetCollection(db).findOne({ countryId })) as AnyDoc | null;
     const needsFiscalConversion = budget?.currencyCode !== "EUR";
     if (budget && needsFiscalConversion) {
-      await db.collection<AnyDoc>("federalBudget").updateOne(
+      await federalBudgetCollection<AnyDoc>(db).updateOne(
         { _id: budget._id },
         {
           $set: {
@@ -138,12 +140,11 @@ export async function applyEraCurrencyTopology(
         throw new Error(`Cannot redenominate ${countryId} corporation: ${result.error}`);
     }
 
-    const bonds = (await db
-      .collection("bonds")
+    const bonds = (await bondsCollection<Document>(db)
       .find({ countryId, currencyCode: { $ne: "EUR" } })
       .toArray()) as Document[];
     if (bonds.length > 0) {
-      await db.collection("bonds").bulkWrite(
+      await bondsCollection<Document>(db).bulkWrite(
         bonds.map((bond) => ({
           updateOne: {
             filter: { _id: bond._id },

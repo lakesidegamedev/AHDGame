@@ -28,6 +28,7 @@ import {
   type BankTreasuryTradeResult,
   bankCashFloor,
 } from "./bankTreasuryShared";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export function reserveTransition(
   receipt: BankTreasuryTradeReceipt,
@@ -682,8 +683,7 @@ export async function markBankTreasury(
   charter: BankCharter,
   turn: number
 ): Promise<number> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       matured: { $ne: true },
@@ -758,7 +758,7 @@ export async function runReceipt(
     db
       .collection<BankState>("corporations")
       .findOne({ _id: bankId }, { projection: { bankCharter: 1 } }),
-    db.collection<Bond>("bonds").findOne({ _id: receipt.bondId }),
+    bondsCollection(db).findOne({ _id: receipt.bondId }),
   ]);
   if (!bond)
     return {

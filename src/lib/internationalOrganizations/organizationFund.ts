@@ -20,8 +20,8 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { getOrganizationFundsCollection } from "@/lib/db/collections";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadOrganizationDef } from "@/lib/internationalOrganizations/service";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Per-turn USD dues a member owes given its USD GDP + the org's annual rate. */
 export function memberDueUsd(gdpUsd: number, duesRateAnnual: number): number {
@@ -134,7 +134,7 @@ export async function chargeOrganizationDues(
   return withOrganizationCashBatch(db, context, async (batch) => {
     const preset = context?.preset ?? (await loadWorldPreset(db));
     const now = new Date();
-    const budget = db.collection<FederalBudget>("federalBudget");
+    const budget = federalBudgetCollection(db);
     let totalFund = 0;
     const fundedCash = batch?.treasuryCashLedgerEnabled === true;
     for (const m of memberGdpUsd) {

@@ -3,9 +3,9 @@
  * country's FederalBudget doc. Absent ⇒ baseline. All reads clamp to [0,100].
  */
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { INVESTOR_CONFIDENCE_BASELINE } from "./constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export function clampConfidence(v: number): number {
   if (!Number.isFinite(v)) return INVESTOR_CONFIDENCE_BASELINE;
@@ -13,9 +13,10 @@ export function clampConfidence(v: number): number {
 }
 
 export async function readInvestorConfidence(db: Db, countryId: CountryId): Promise<number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { investorConfidence: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { investorConfidence: 1 } }
+  );
   const raw = budget?.investorConfidence;
   return typeof raw === "number" ? clampConfidence(raw) : INVESTOR_CONFIDENCE_BASELINE;
 }
@@ -26,7 +27,7 @@ export async function writeInvestorConfidence(
   value: number,
   turn: number
 ): Promise<void> {
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { countryId },
     {
       $set: {

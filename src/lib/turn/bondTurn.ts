@@ -71,6 +71,8 @@ import { resolveBondMaturitiesAndDefaults, payMaturedBonds } from "./bondTurnMat
 import { createSovereignMaturityPlanner } from "./bondTurnSovereignPlan";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
@@ -116,8 +118,7 @@ export async function processBondTurn(
   // those same bonds. Reconcile tranches convert existing debt, not proceeds.
   const atParIssues: { countryId: string; face: number }[] = [];
   if (captureSovereignCashProceeds) {
-    const issued = await db
-      .collection<Bond>("bonds")
+    const issued = await bondsCollection(db)
       .find(
         {
           issuerType: "sovereign",
@@ -165,7 +166,7 @@ export async function processBondTurn(
   await processSovereignLegislativeTurn(db, Date.now(), turn);
   steps.mark("sovereignLegislative");
 
-  const activeBonds = await db.collection<Bond>("bonds").find({ matured: false }).toArray();
+  const activeBonds = await bondsCollection(db).find({ matured: false }).toArray();
 
   // Fund the exact holder snapshot this bond turn will pay. A funding failure
   // stops this payout phase before any creditor credits can escape its journal.
@@ -274,8 +275,7 @@ export async function processBondTurn(
   }
 
   // Get central bank rates for price calculations
-  const centralBanks = await db
-    .collection<CentralBank>("centralBanks")
+  const centralBanks = await centralBanksCollection(db)
     .find({})
     .project<Pick<CentralBank, "_id" | "countryId" | "primeRate">>({ countryId: 1, primeRate: 1 })
     .toArray();
@@ -818,7 +818,7 @@ export async function processBondTurn(
 
   // ── Phase 6: Apply all bulk writes ────────────────────────────────────────
   if (bondOps.length > 0) {
-    await db.collection("bonds").bulkWrite(bondOps);
+    await bondsCollection(db).bulkWrite(bondOps);
   }
 
   await withBondPoolLedgerBatch(db, poolLedgerContext, async (batch) => {

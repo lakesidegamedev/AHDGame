@@ -14,6 +14,7 @@ import { deriveLedgerEntry } from "@/lib/ledger/deriveFromTx";
 import { isAnchorBalanced } from "@/lib/ledger/epsilon";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export interface NppReinvestmentCashWitness {
   corporationId: ObjectId;
@@ -84,7 +85,7 @@ export async function flushNppReinvestmentCashWitnesses(
     const landed = pending.filter((row) => keys.get(row.corporationId.toHexString()) === row.key);
     const transactions = landed.flatMap((row) => row.transactions);
     if (transactions.length === 0) return;
-    const result = await db.collection<FinancialTxLogEntry>("financialTxLog").bulkWrite(
+    const result = await financialTxLogCollection(db).bulkWrite(
       transactions.map((doc) => ({
         updateOne: { filter: { _id: doc._id }, update: { $setOnInsert: doc }, upsert: true },
       })),

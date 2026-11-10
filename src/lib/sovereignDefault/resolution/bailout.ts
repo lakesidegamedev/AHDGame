@@ -17,6 +17,7 @@ import { IMF_BOARD_OVERRIDE_WINDOW_HOURS, IMF_BOARD_OVERRIDE_WINDOW_TURNS } from
 import { emitBailoutGrantedNews } from "../crisisNews";
 import { applyExecutivePoliticalImpact } from "../political/executivePoliticalImpact";
 import { emitCivilUnrestEvents } from "../political/civilUnrestEvents";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -50,7 +51,7 @@ export async function applyBailoutResolution(
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -89,9 +90,7 @@ export async function applyBailoutResolution(
     crisisLegislativeDeadlineAt: null,
   };
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: update });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: update });
 
   if (!input.skipDecisionUpdate) {
     const decisionUpdate: Partial<SovereignCrisisDecision> = {

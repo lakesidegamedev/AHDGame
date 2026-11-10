@@ -9,10 +9,10 @@
  */
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type { CabinetNomination, Character } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
 import { vacateFomcChairSeat } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Turns a nominee has to answer before the offer lapses. */
 export const CABINET_NOMINATION_CHOICE_TURNS = 3;
@@ -42,11 +42,9 @@ export async function findPendingCabinetNominationChoice(
 
 /** Plain-language name of the bank office blocking the appointment. */
 export async function describeBankOfficeConflict(db: Db, characterId: ObjectId): Promise<string> {
-  const chair = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ chairCharacterId: characterId });
+  const chair = await centralBanksCollection(db).findOne({ chairCharacterId: characterId });
   if (chair) return "central bank chair";
-  const boardSeat = await db.collection<CentralBank>("centralBanks").findOne({
+  const boardSeat = await centralBanksCollection(db).findOne({
     fomcBoard: { $elemMatch: { occupantType: "player", characterId } },
   });
   return boardSeat ? "Federal Reserve board seat" : "central bank office";
@@ -150,9 +148,9 @@ export async function resolveCabinetNominationChoice(
 
   // Accept: stand down from the bank office(s) that bar a cabinet seat. This
   // mirrors the chair resignation route, plus any US Fed board seat held.
-  const chairBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ chairCharacterId: input.characterId });
+  const chairBank = await centralBanksCollection(db).findOne({
+    chairCharacterId: input.characterId,
+  });
   if (chairBank) {
     await db
       .collection("characters")
@@ -161,7 +159,7 @@ export async function resolveCabinetNominationChoice(
         { $set: { currentOffice: null } }
       );
     await vacateFomcChairSeat(db, chairBank._id);
-    await db.collection<CentralBank>("centralBanks").updateOne(
+    await centralBanksCollection(db).updateOne(
       { _id: chairBank._id },
       {
         $set: {
@@ -176,7 +174,7 @@ export async function resolveCabinetNominationChoice(
       }
     );
   }
-  await db.collection<CentralBank>("centralBanks").updateMany(
+  await centralBanksCollection(db).updateMany(
     { fomcBoard: { $elemMatch: { occupantType: "player", characterId: input.characterId } } },
     {
       $set: {

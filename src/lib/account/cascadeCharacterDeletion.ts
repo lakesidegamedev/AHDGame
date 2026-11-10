@@ -10,7 +10,7 @@
 
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import type { Db, ObjectId } from "mongodb";
-import type { Bond, Corporation, ElectionCandidate, GameState } from "@/lib/db/types";
+import type { Corporation, ElectionCandidate, GameState } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   cleanupShareMarketActivityForCharacters,
@@ -21,6 +21,7 @@ import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseH
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface CascadeResult {
   sharesReleased: number;
@@ -100,7 +101,7 @@ export async function cascadeCharacterDeletion(
   // vacate-and-release path below. National / IMF corps are never auto-dissolved.
   const bondedCorpIds =
     ceoCorpIds.length > 0
-      ? await db.collection<Bond>("bonds").distinct("corporationId", {
+      ? await bondsCollection(db).distinct("corporationId", {
           corporationId: { $in: ceoCorpIds },
           matured: false,
         })

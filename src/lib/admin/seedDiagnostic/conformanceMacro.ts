@@ -23,13 +23,16 @@ import {
   currencyConversionScale,
   currencyForCountryAtYear,
 } from "@/lib/currency/rules/eraCurrency";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export async function checkNationalBudgets(
   db: Db,
   expect: SeedExpectations
 ): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
-  const budgets = await db.collection("federalBudget").find({}).toArray();
+  const budgets = await federalBudgetCollection(db).find({}).toArray();
   const byCountry = new Map(budgets.map((b) => [String(b.countryId), b]));
   // Check the active 1991 manifest against authored budget configs, including
   // the transition economies. A future roster expansion must not silently
@@ -280,14 +283,13 @@ export async function checkMonetary(
   db: Db,
   expect: SeedExpectations
 ): Promise<SeedDiagnosticCheck[]> {
-  const banks = await db
-    .collection<{
-      _id: string;
-      countryId?: CountryId;
-      primeRate?: number;
-      rateHistory?: unknown[];
-      inflationHistory?: unknown[];
-    }>("centralBanks")
+  const banks = await centralBanksCollection<{
+    _id: string;
+    countryId?: CountryId;
+    primeRate?: number;
+    rateHistory?: unknown[];
+    inflationHistory?: unknown[];
+  }>(db)
     .find({})
     .toArray();
   const byId = new Map(banks.map((b) => [String(b._id), b]));
@@ -467,12 +469,12 @@ export async function checkForex(db: Db, expect: SeedExpectations): Promise<Seed
 
     if (expectedCurrency === "EUR") {
       const [budget, legacyCorps, legacyBonds] = await Promise.all([
-        db.collection("federalBudget").findOne({ countryId }, { projection: { currencyCode: 1 } }),
+        federalBudgetCollection(db).findOne({ countryId }, { projection: { currencyCode: 1 } }),
         db.collection("corporations").countDocuments({
           countryId,
           liquidCurrencyCode: { $ne: "EUR" },
         }),
-        db.collection("bonds").countDocuments({ countryId, currencyCode: { $ne: "EUR" } }),
+        bondsCollection(db).countDocuments({ countryId, currencyCode: { $ne: "EUR" } }),
       ]);
       checks.push(
         budget?.currencyCode === "EUR" && legacyCorps === 0 && legacyBonds === 0

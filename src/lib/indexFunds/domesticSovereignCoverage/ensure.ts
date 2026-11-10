@@ -13,7 +13,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, GameConfig, IndexFund, IndexFundPosition } from "@/lib/db/types";
+import type { GameConfig, IndexFund, IndexFundPosition } from "@/lib/db/types";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -27,6 +27,8 @@ import {
   buildDomesticSovereignBondFundSeed,
   planDomesticSovereignCoverage,
 } from "@/lib/indexFunds/domesticSovereignCoverage/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface EnsureDomesticCoverageResult {
   /** Sorted country ids ensured this pass (inserted now, not merely planned). */
@@ -40,8 +42,7 @@ export async function ensureDomesticSovereignBondFunds(
   if (options.enabled !== true) return { ensured: [] };
 
   const registered = await getRegisteredCountryIds(db);
-  const budgets = await db
-    .collection<{ _id: string }>("federalBudget")
+  const budgets = await federalBudgetCollection<{ _id: string }>(db)
     .find(
       { _id: { $in: registered.map((countryId) => getNationalBudgetId(countryId)) } },
       { projection: { _id: 1 } }
@@ -49,7 +50,7 @@ export async function ensureDomesticSovereignBondFunds(
     .toArray();
   const budgetedCountryIds = budgets.map((doc) => (doc._id === "federal" ? "US" : String(doc._id)));
   const liveIssuerCountryIds = (
-    await db.collection<Bond>("bonds").distinct("countryId", {
+    await bondsCollection(db).distinct("countryId", {
       issuerType: "sovereign",
       matured: false,
       defaulted: { $ne: true },

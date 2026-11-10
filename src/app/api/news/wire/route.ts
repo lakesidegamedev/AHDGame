@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, Bond, NewsPost, State } from "@/lib/db/types";
+import type { Corporation, NewsPost, State } from "@/lib/db/types";
 import { formatSectorTypeSlugsInText } from "@/lib/utils/formatSectorTypeSlugsInText";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { BOND_MATURITY_LABELS, type BondMaturityTurns } from "@/lib/db/types/bond";
@@ -18,6 +18,7 @@ import type { WireEvent } from "@/lib/wireEvent";
 
 import type { WireItem } from "@/lib/news/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/news/types".
@@ -93,8 +94,7 @@ export async function GET() {
           .project({ name: 1, type: 1, headquartersState: 1, createdAt: 1, sequentialId: 1 })
           .toArray(),
 
-        db
-          .collection<Bond>("bonds")
+        bondsCollection(db)
           .find({ createdAt: { $gte: since } })
           .sort({ createdAt: -1 })
           .limit(20)

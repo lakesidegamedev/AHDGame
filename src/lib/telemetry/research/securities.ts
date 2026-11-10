@@ -28,6 +28,7 @@ import {
   type SecurityTelemetryRow,
   type SecurityTurnRow,
 } from "./rules";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -95,8 +96,7 @@ export async function buildSecurityTelemetryRowForTurn(
         }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: { $ne: true } })
       .project<Bond>({
         issuerType: 1,

@@ -30,6 +30,7 @@ import { loadExecutionPolicies } from "@/lib/monetaryGovernance/executionPolicy"
 import { decideGovernance } from "@/lib/monetaryGovernance/rules/machine";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -150,7 +151,7 @@ export async function castFomcBallot(
   now: Date,
   currentYear: number | null = null
 ): Promise<CastBallotResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   const meeting = bank?.activeFomcMeeting;
   const board = bank?.fomcBoard ?? [];
   const refuse = (reason: "no-meeting" | "not-seated" | "already-voted"): CastBallotResult => {
@@ -212,7 +213,7 @@ export async function castFomcBallot(
 
   const set = materializeTransitionSet(bank, decision.transition, now);
   set.updatedAt = now;
-  await db.collection<CentralBank>("centralBanks").updateOne({ _id: bankId }, { $set: set });
+  await centralBanksCollection(db).updateOne({ _id: bankId }, { $set: set });
   for (const event of decision.transition.events) emitBankingAuditEvent(event, db);
   const resolved = decision.next.activeMeeting == null;
   const moved = decision.transition.events.some(
@@ -240,7 +241,7 @@ export async function setFomcMotion(
   now: Date,
   currentYear: number | null = null
 ): Promise<SetFomcMotionResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   const meeting = bank?.activeFomcMeeting;
   if (!bank || !meeting || meeting.status !== "voting") {
     return { ok: false, reason: "no-meeting", message: "No meeting is currently taking votes." };
@@ -292,7 +293,7 @@ export async function setFomcMotion(
   set.updatedAt = now;
   // Guard against a ballot landing between read and write: only swap the
   // motion on the same meeting while it is still voting.
-  const res = await db.collection<CentralBank>("centralBanks").updateOne(
+  const res = await centralBanksCollection(db).updateOne(
     {
       _id: bankId,
       "activeFomcMeeting.meetingId": meeting.meetingId,
@@ -356,8 +357,7 @@ export async function processFomcMeetings(
   // share-price formula reads primeRateSmoothed; leaving a bank out would pin
   // its market's discount rate at whatever the EMA last was.
   {
-    const allBanks = await db
-      .collection<CentralBank>("centralBanks")
+    const allBanks = await centralBanksCollection(db)
       .find({}, { projection: { primeRate: 1, primeRateSmoothed: 1 } })
       .toArray();
     const emaOps = allBanks
@@ -376,12 +376,11 @@ export async function processFomcMeetings(
         };
       });
     if (emaOps.length > 0) {
-      await db.collection<CentralBank>("centralBanks").bulkWrite(emaOps);
+      await centralBanksCollection(db).bulkWrite(emaOps);
     }
   }
 
-  const candidates = await db
-    .collection<CentralBank>("centralBanks")
+  const candidates = await centralBanksCollection(db)
     .find({ fomcBoard: { $exists: true, $ne: [] } })
     .toArray();
 
@@ -469,7 +468,7 @@ export async function processFomcMeetings(
     }
     set.updatedAt = now;
 
-    await db.collection<CentralBank>("centralBanks").updateOne({ _id: bank._id }, { $set: set });
+    await centralBanksCollection(db).updateOne({ _id: bank._id }, { $set: set });
   }
 
   return result;

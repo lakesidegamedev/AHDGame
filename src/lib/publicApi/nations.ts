@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { FederalBudget, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import type { CountryState } from "@/lib/db/types/countryState";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -8,6 +8,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { liveNationalGdpUnits, resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 function finiteOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -133,7 +134,7 @@ export async function queryCountryBudget(db: Db, country: string) {
   if (!COUNTRY_CONFIGS[countryId]) return null;
 
   const [budget, states] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({
+    federalBudgetCollection(db).findOne({
       _id: getNationalBudgetId(countryId),
     }),
     db

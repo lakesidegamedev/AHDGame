@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { DepartmentAccount, EnactedLaw, FederalBudget } from "@/lib/db/types/budget";
+import type { DepartmentAccount, EnactedLaw } from "@/lib/db/types/budget";
 import type { StateBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { LegislationType } from "@/lib/db/types/legislation";
@@ -10,6 +10,7 @@ import {
   US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID,
   US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
 } from "./deliveryMultiplier";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface DepartmentDeliveryMultiplierInput {
   currentTurn: number;
@@ -112,8 +113,7 @@ export async function loadDepartmentDeliveryMultipliersByCountry(
       }
     : {};
   const [budgets, activeLaws] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(countryFilter, { projection: { countryId: 1, departmentAccounts: 1 } })
       .toArray(),
     db

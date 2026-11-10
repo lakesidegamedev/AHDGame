@@ -2,11 +2,9 @@ import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
 import type {
-  Bond,
   Character,
   Corporation,
   CorporateSector,
-  CentralBank,
   CorporationExitReason,
 } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
@@ -65,6 +63,8 @@ import {
   payInstitutionalBondHolders,
   selfHeldBondUnits,
 } from "@/lib/bonds/payInstitutionalBondHolders";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -94,8 +94,7 @@ export async function executeCorporationBondDefaultDissolution(
     throw badRequest("National corporations cannot be dissolved here");
   }
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
 
@@ -125,8 +124,7 @@ export async function executeCorporationBondDefaultDissolution(
   // Cash out any non-matured bonds the dissolving corp held as a creditor.
   // These are assets on the corp's balance sheet that must roll into liquidCapital
   // before the settlement snapshot so shareholders receive their full book value.
-  const heldCreditorBonds = await db
-    .collection<Bond>("bonds")
+  const heldCreditorBonds = await bondsCollection(db)
     .find({ "holders.corporationId": corporation._id, matured: false })
     .toArray();
 
@@ -158,7 +156,7 @@ export async function executeCorporationBondDefaultDissolution(
       // issuer's debt stays consistent (publicFloat + holderUnits ==
       // totalIssued/face). Pre-fix the $pull dropped the holder without
       // restoring float, orphaning the units on the surviving issuer.
-      await db.collection<Bond>("bonds").updateOne(
+      await bondsCollection(db).updateOne(
         { _id: bond._id, sovereignMaturityClaim: { $exists: false } },
         {
           $pull: { holders: { corporationId: corporation._id } },
@@ -189,7 +187,7 @@ export async function executeCorporationBondDefaultDissolution(
     (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
     corporation;
 
-  const centralBanks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const centralBanks = await centralBanksCollection(db).find({}).toArray();
   const primeMap = buildPrimeRateMap(centralBanks);
   // D11: under plants the settlement basis is replacement-cost book, not NPV.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
@@ -636,9 +634,10 @@ export async function executeCorporationBondDefaultDissolution(
     const floatCurrency = (refreshedCorporation.liquidCurrencyCode ??
       COUNTRY_CURRENCY_MAP[refreshedCorporation.countryId as keyof typeof COUNTRY_CURRENCY_MAP] ??
       "USD") as CurrencyCode;
-    await db
-      .collection<CentralBank>("centralBanks")
-      .updateOne({ _id: cbId }, { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } });
+    await centralBanksCollection(db).updateOne(
+      { _id: cbId },
+      { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } }
+    );
 
     dissolutionTxEntries.push({
       type: "corp_dissolution_distribution",
@@ -749,7 +748,7 @@ export async function executeCorporationBondDefaultDissolution(
   // NPP successors take the sectors over so their plants keep producing; only
   // what they cannot take returns to the unowned pool.
   const disposal = await disposeLeavingSectors(db, refreshedCorporation, sectors, now);
-  await db.collection<Bond>("bonds").deleteMany({ corporationId: refreshedCorporation._id });
+  await bondsCollection(db).deleteMany({ corporationId: refreshedCorporation._id });
   await releaseCorporationHeldSharesToFloat(db, refreshedCorporation._id, now);
 
   // A zero-pool wind-down pays funds nothing, so payFundShareholderRows never

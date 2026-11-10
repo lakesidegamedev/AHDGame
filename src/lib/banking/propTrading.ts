@@ -41,6 +41,7 @@ import {
   computePropEquityBase,
   sumPositionMarks,
 } from "@/lib/banking/rules/propLeverage";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export { PROP_LEVERAGE_MULTIPLE, computePropEquityBase, sumPositionMarks };
 
@@ -265,8 +266,7 @@ async function loadMarkInputs(
           .toArray()
       : Promise.resolve([] as IndexFund[]),
     bondIds.length > 0
-      ? db
-          .collection<Bond>("bonds")
+      ? bondsCollection(db)
           .find(
             { _id: { $in: bondIds } },
             { projection: { marketPrice: 1, faceValue: 1, countryId: 1, corporationId: 1 } }

@@ -13,6 +13,7 @@ import {
 } from "@/lib/livingConflict/rules/financialRescue";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadBankingPolicy } from "@/lib/banking/policy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export type FinancialCrisisBankResponse = "recapitalize" | "guarantee" | "resolve";
 
@@ -72,9 +73,9 @@ export async function prepareFinancialCrisisBankResponse(
 ): Promise<void> {
   if (option.action?.kind !== "financialCrisisResponse") return;
   if (!["recapitalize", "guarantee", "resolve"].includes(option.action.response)) return;
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as FederalBudget["countryId"] });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: countryId as FederalBudget["countryId"],
+  });
   const currency = resolveCountryCurrencyCode(budget);
   const cashLedgerEnabled =
     option.action.response === "resolve"
@@ -139,19 +140,17 @@ export async function applyFinancialCrisisBankResponse(
   let amount: number;
   if (pendingGuarantee) {
     const frozen = pendingGuarantee;
-    budget = (await ctx.db
-      .collection<{
-        _id: string;
-        countryId: string;
-        currencyCode?: string | null;
-      }>("federalBudget")
-      .findOne({
-        _id: frozen.treasuryId,
-        countryId: frozen.countryId,
-        currencyCode: frozen.treasuryCurrencyCodePresent
-          ? { $exists: true, $eq: frozen.treasuryCurrencyCode }
-          : { $exists: false },
-      })) as FederalBudget | null;
+    budget = (await federalBudgetCollection<{
+      _id: string;
+      countryId: string;
+      currencyCode?: string | null;
+    }>(ctx.db).findOne({
+      _id: frozen.treasuryId,
+      countryId: frozen.countryId,
+      currencyCode: frozen.treasuryCurrencyCodePresent
+        ? { $exists: true, $eq: frozen.treasuryCurrencyCode }
+        : { $exists: false },
+    })) as FederalBudget | null;
     currency = frozen.currency;
     if (!budget || ctx.countryId !== frozen.countryId)
       throw new Error("Original guarantee funding treasury changed before settlement");
@@ -180,9 +179,9 @@ export async function applyFinancialCrisisBankResponse(
       ctx.option,
       treasuryCashLedgerEnabled
     );
-    budget = await ctx.db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: ctx.countryId as FederalBudget["countryId"] });
+    budget = await federalBudgetCollection(ctx.db).findOne({
+      countryId: ctx.countryId as FederalBudget["countryId"],
+    });
     currency = resolveCountryCurrencyCode(budget);
     if (!budget || !currency) throw new Error("Treasury currency is unavailable");
     banks = rankBanksForFinancialIntervention(

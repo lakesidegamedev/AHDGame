@@ -27,7 +27,6 @@ import {
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
 import type {
-  Bond,
   Character,
   Corporation,
   CorporateSector,
@@ -106,6 +105,7 @@ import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { payNppSqueezeOut } from "@/lib/corporations/commands/takeovers/payNppSqueezeOut";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -925,7 +925,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         }
         await settleConstructionBorrowerTransfers(db, constructionTransfers);
 
-        await db.collection<Bond>("bonds").updateMany(
+        await bondsCollection(db).updateMany(
           {
             corporationId: target._id,
             $or: [{ issuerType: "corporation" }, { issuerType: { $exists: false } }],
