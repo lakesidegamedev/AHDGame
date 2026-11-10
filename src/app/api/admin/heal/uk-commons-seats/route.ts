@@ -14,7 +14,7 @@ import type {
 } from "@/lib/db/types";
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 
 interface RegionDiagnostic {
   region: string;

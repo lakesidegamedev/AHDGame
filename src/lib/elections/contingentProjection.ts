@@ -44,16 +44,16 @@ import {
   type SurvivingPartyResolver,
 } from "@/lib/parties/survivingParty";
 import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import {
   applyConversionVotePenalty,
   applyLegacySeatFloor,
-} from "@/lib/turn/election/conversionTerms";
-import { buildPrimaryShareMap } from "@/lib/turn/election/generalResolutionHelpers";
+} from "@/lib/elections/resolution/conversionTerms";
+import { buildPrimaryShareMap } from "@/lib/elections/resolution/generalResolutionHelpers";
 import {
   loadContingentElectionData,
   type ContingentChamberOfficials,
-} from "@/lib/turn/election/loadContingentElectionData";
+} from "@/lib/elections/resolution/loadContingentElectionData";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 

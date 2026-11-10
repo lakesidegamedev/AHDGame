@@ -2,13 +2,13 @@ import type { CountryGameState } from "@/lib/db/types";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import { getDb } from "@/lib/mongodb";
-import { getCurrentTurnAndCtx } from "@/lib/turn/perpetualElections/engine";
+import { getCurrentTurnAndCtx } from "@/lib/elections/scheduling/engine";
 import {
   easternBlocElectionsLive,
   ensureEasternBlocAssemblyElections,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import { roElectionSeatsForPreset } from "./rules/parliament1992";
 
 /** Romania's constituent bicameral parliament in 1991; Cold War assembly otherwise. */

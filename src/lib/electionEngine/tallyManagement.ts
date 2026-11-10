@@ -49,7 +49,7 @@ import {
   resolveGovExecutiveApproval,
 } from "./govCoattail";
 import { officeKeyForElectionType } from "@/lib/utils/electionLabels";
-import { allocateSeats, isMultiSeatElection } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats, isMultiSeatElection } from "@/lib/elections/resolution/seatAllocation";
 import { turnVoteWeight, resolveTurnWindow } from "./voteCalculations";
 import { distributeVotesByGroupLevelAllocation } from "./voteDistribution";
 import { distributeVotesBySwingFlow } from "./voteDistributionSwingFlow";
@@ -60,7 +60,7 @@ import {
 } from "./singleSeatIncumbency";
 import { getFundsByPartyForElection } from "./fundsByParty";
 import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "./tallyProjections";
-import { planTurnSlice, sameTurnSliceParts } from "./rules/turnSlice";
+import { planTurnSlice, sameTurnSliceParts } from "@/lib/elections/rules/turnSlice";
 import { accumulateHuBallots } from "@/lib/countries/hu/rules/accumulateBallots2014";
 import { allocateHuListTurnVotes } from "@/lib/countries/hu/rules/listBallots2014";
 import {
@@ -120,7 +120,7 @@ import {
   mergeRankedBallots,
   countPrStv,
   validateRankedBallots,
-} from "@/lib/turn/election/rules/prStv";
+} from "@/lib/elections/rules/prStv";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 

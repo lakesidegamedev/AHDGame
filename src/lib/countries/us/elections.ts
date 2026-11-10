@@ -9,7 +9,7 @@ import {
   TOTAL_HOUSE_SEATS,
   TOTAL_SENATE_SEATS,
 } from "@/lib/constants/states";
-import { ensurePresidentialElection } from "@/lib/turn/perpetualElections/shared";
+import { ensurePresidentialElection } from "@/lib/elections/scheduling/shared";
 
 /**
  * The United States' elections.

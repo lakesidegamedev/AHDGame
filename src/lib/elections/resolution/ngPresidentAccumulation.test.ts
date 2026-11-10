@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { accumulateNGPresidentVoteTurn } from "./ngPresidentAccumulation";
-import { NG_ZONES } from "@/lib/nigeriaPresidentialElectionEngine";
+import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
 
 vi.mock("@/lib/campaignTargeting/audience", () => ({ loadRegionalCampaignCells: vi.fn() }));
 

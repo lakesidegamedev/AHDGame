@@ -17,7 +17,7 @@ import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/electionEngine/constants";
 import {
   personalStatTenureRetentionForCandidate,
   type PersonalStatTenureContext,
-} from "@/lib/electionEngine/rules/tenureRetention";
+} from "@/lib/elections/rules/tenureRetention";
 import { applyCandidatePersonalVoteWeight } from "./granularPollPayload/rules";
 import {
   deriveGranularCells,

@@ -255,7 +255,6 @@ const DATA_DIRS = [
   // country's row makes a file country-AWARE, which this guard has always said
   // is not ownership. Only the per-country config directories belong here.
   "src/lib/turn/billLifecycle/configs/",
-  "src/lib/turn/perpetualElections/countries/",
   "src/lib/elections/scheduling/countries/",
 ];
 

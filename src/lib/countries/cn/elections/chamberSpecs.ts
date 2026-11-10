@@ -1,5 +1,5 @@
 import { getCnNpcSeats, getCnPeoplesCongressSeats } from "@/lib/constants";
-import { defineChamberSpec } from "@/lib/turn/perpetualElections/chamberSpec";
+import { defineChamberSpec } from "@/lib/elections/scheduling/chamberSpec";
 
 /** National People's Congress delegations: one multi-seat race per region, sized by era. */
 export const CN_NPC_DELEGATE_SPEC = defineChamberSpec({

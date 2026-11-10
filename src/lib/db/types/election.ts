@@ -161,7 +161,7 @@ export interface Election {
    * party's reserved share of each region's seats and, on a forced
    * conversion, its vote penalty. Stamped by the post-conversion step on the
    * snap races it opens and applied at resolution
-   * (`@/lib/turn/election/conversionTerms`). Absent on every other election.
+   * (`@/lib/elections/resolution/conversionTerms`). Absent on every other election.
    */
   conversionTerms?: {
     /** Former ruling party, as candidates store `party` (its sequentialId). */

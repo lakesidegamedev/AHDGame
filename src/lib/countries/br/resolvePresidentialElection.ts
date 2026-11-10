@@ -7,7 +7,7 @@ import type {
   ElectionVoteTally,
   ElectedOfficial,
 } from "@/lib/db/types";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 import { initElectionVoteTally } from "@/lib/electionEngine/tallyManagement";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";

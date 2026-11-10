@@ -386,7 +386,7 @@ export async function seedDELegislation(db: Db, log: (msg: string) => void) {
 }
 
 export async function seedDEElections(log: (msg: string) => void) {
-  const { ensureDEElections } = await import("@/lib/turn/perpetualElections");
+  const { ensureDEElections } = await import("@/lib/elections/scheduling");
   await ensureDEElections(new Date());
   log("Spawned missing DE Bundestag elections");
 }

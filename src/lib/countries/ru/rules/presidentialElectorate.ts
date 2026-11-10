@@ -3,7 +3,7 @@
  * russianPresidentialRegisteredVoters applies the existing general-election
  * registration gate to each region, using the same population fallback for old saves.
  */
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 export function russianPresidentialRegisteredVoters(
   regions: readonly { id: string; population: number; votingEligiblePopulation?: number }[],
   unregisteredByRegion: Readonly<Record<string, number | undefined>>

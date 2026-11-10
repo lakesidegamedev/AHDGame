@@ -2,7 +2,7 @@ import type { AnyBulkWriteOperation } from "mongodb";
 import type { CountryGameState, Election, ElectionStatus } from "@/lib/db/types";
 import { getJpSangiinSeats, getJpShugiinSeats } from "../data/jpSeats";
 import { getElectionMethod } from "@/lib/elections/electionMethod";
-import { defineChamberSpec, type ChamberHooks } from "@/lib/turn/perpetualElections/chamberSpec";
+import { defineChamberSpec, type ChamberHooks } from "@/lib/elections/scheduling/chamberSpec";
 import {
   japanShugiinFrozenRegionCapacity,
   japanShugiinRulesForRegion,

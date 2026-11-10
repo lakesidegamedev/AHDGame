@@ -12,7 +12,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Election } from "@/lib/db/types";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { getGameTime } from "@/lib/time/gameTime";
 
 interface RouteParams {

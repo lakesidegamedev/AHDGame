@@ -86,7 +86,7 @@ import { COUNTRY_ANCHOR } from "../../src/lib/maps/countryAnchors";
 import { MEDIAN_INCOME_THRESHOLDS } from "../../src/lib/utils/metricScoring";
 import { POPULATION_MULTIPLIERS } from "../../src/lib/seeds/reference/era1991PopulationMultipliers";
 import { CENSUS_BUNDLES } from "../../src/lib/seeds/regionCensusData";
-import { SPAWN_ELECTIONS_REGISTRY } from "../../src/lib/turn/perpetualElections/registry";
+import { SPAWN_ELECTIONS_REGISTRY } from "@/lib/elections/scheduling/registry";
 import { COUNTRY_ELECTION_PHASES } from "../../src/lib/turn/countryPhases";
 import { COUNTRY_SECTOR_WEIGHTS_1979 } from "../../src/lib/seeds/reference/sectorSeedWeights1979";
 import { COUNTRY_SECTOR_WEIGHTS_1991 } from "../../src/lib/seeds/reference/sectorSeedWeights1991";

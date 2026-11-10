@@ -4,7 +4,7 @@ import {
   ensureSCOElections,
   ensureSCOGovernorElections,
   ensureSCORegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 
 /**
  * Scotland's elections.

@@ -19,7 +19,7 @@ import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import { MONETARY_BASELINES } from "@/lib/constants/currencies";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
-import { INFLATION_BAND_PCT } from "@/lib/electionEngine/rules/economicReferendum";
+import { INFLATION_BAND_PCT } from "@/lib/elections/rules/economicReferendum";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/elections/referendumInputs", () => ({ loadReferendumInputs: vi.fn() }));

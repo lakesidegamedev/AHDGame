@@ -178,7 +178,7 @@ export async function POST(request: Request) {
     let houseElections = 0;
 
     // 48 turns = 1 year. House 2y (96t), Senate 6y (288t), staggered by class.
-    const { DEFAULT_DURATIONS } = await import("@/lib/turn/perpetualElections");
+    const { DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
     const senateDur = DEFAULT_DURATIONS.senate;
     const houseDur = DEFAULT_DURATIONS.house;
 

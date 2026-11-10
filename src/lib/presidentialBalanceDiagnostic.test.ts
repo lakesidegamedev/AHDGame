@@ -680,7 +680,7 @@ describe("Electoral College — symmetric race competitiveness", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } = await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -725,7 +725,7 @@ describe("Electoral College — symmetric race competitiveness", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } = await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -1461,7 +1461,7 @@ describe("Electoral College — 7-way race EV amplification", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } = await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -1549,7 +1549,7 @@ describe("Electoral College — 7-way race EV amplification", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } = await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];

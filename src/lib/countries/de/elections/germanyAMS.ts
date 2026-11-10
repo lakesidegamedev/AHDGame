@@ -22,12 +22,12 @@ import type {
 import {
   allocateViaSainteLague,
   BUNDESTAG_VOTE_THRESHOLD,
-} from "@/lib/turn/election/sainteLagueAllocation";
+} from "@/lib/elections/resolution/sainteLagueAllocation";
 import {
   crossoverRatesForPreset,
   deriveZweitstimmen,
   type ErststimmeInput,
-} from "@/lib/turn/election/ticketSplitCrossover";
+} from "@/lib/elections/resolution/ticketSplitCrossover";
 import { buildDEPartySlugToSeqId } from "@/lib/seeds/de/deStatePartyOrgCalculations";
 import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";

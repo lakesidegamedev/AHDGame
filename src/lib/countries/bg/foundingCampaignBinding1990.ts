@@ -6,7 +6,7 @@
 import { type ClientSession, type Db } from "mongodb";
 import type { Election, GameState, State, StateRegistrationPool } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";

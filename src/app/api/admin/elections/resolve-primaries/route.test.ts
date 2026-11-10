@@ -9,7 +9,7 @@ vi.mock("@/lib/electionEngine", () => ({
   fetchEnrichedCandidates: vi.fn(),
   initElectionVoteTally: vi.fn(),
 }));
-vi.mock("@/lib/presidentialElectionEngine", () => ({
+vi.mock("@/lib/elections/presidential/presidentialElectionEngine", () => ({
   initPresidentVoteTally: vi.fn(),
 }));
 // Only the two scoring functions are stubbed; the rest of the module (the pure

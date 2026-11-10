@@ -19,14 +19,14 @@ import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { DE_LANDTAG_SPEC } from "./chamberSpecs";
 import { pickNextCanonicalCycle, turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { getSeatIdFromElection } from "@/lib/seats";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { electionToLarpYear } from "@/lib/utils/formatters";
-import { allocateViaSainteLague } from "@/lib/turn/election/sainteLagueAllocation";
+import { allocateViaSainteLague } from "@/lib/elections/resolution/sainteLagueAllocation";
 import type {
   State,
   Election,

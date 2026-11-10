@@ -13,7 +13,7 @@ import type {
   ElectedOfficial,
 } from "@/lib/db/types";
 import { getElectionSeatKey } from "@/lib/turn/autoReelectionEntry";
-import { getMultiSeatMinShare } from "@/lib/turn/election/seatAllocation";
+import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
 
 /**
  * True for single-winner legislative races that use the officeholder-based flat

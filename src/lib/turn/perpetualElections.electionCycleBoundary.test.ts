@@ -287,12 +287,12 @@ function freshMount(): Mount {
 
 /** Run every named family spawner in registry order (shugiin before its mirror). */
 async function runBoundarySpawners(now: Date, currentTurn?: number): Promise<void> {
-  const { ensureIELocalCouncilElections } = await import("./perpetualElections/countries/ie");
+  const { ensureIELocalCouncilElections } = await import("@/lib/elections/scheduling/countries/ie");
   const { ensureJPElections, ensureJPRegionalCouncilElections } =
-    await import("./perpetualElections/countries/jp");
-  const { ensureRURepublicSovietElections } = await import("./perpetualElections/countries/ru");
+    await import("@/lib/elections/scheduling/countries/jp");
+  const { ensureRURepublicSovietElections } = await import("@/lib/elections/scheduling/countries/ru");
   const { ensureFRSenateElections } =
-    await import("./perpetualElections/countries/betaParliaments");
+    await import("@/lib/elections/scheduling/countries/betaParliaments");
   await ensureIELocalCouncilElections(now, currentTurn);
   await ensureJPElections(now, currentTurn);
   await ensureJPRegionalCouncilElections(now, currentTurn);

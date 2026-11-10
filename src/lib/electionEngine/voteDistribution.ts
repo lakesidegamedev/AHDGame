@@ -37,7 +37,7 @@ import {
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
 import { normalizePartyInfluencePresidentialPrimary } from "@/lib/utils/normalizeNPI";
 import { effectivePartyInfluenceForPresidentialPrimary } from "@/lib/primaryScore";
-import { applyFptpSpoilerTransfers, shouldApplyFptpSpoiler } from "./rules/spoilerTransfers";
+import { applyFptpSpoilerTransfers, shouldApplyFptpSpoiler } from "@/lib/elections/rules/spoilerTransfers";
 
 // ─── Group-level competitive allocation (Phase 1 realism) ───────────────────
 //

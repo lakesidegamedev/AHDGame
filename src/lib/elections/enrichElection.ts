@@ -7,7 +7,7 @@ import { resolveElectionYear } from "@/lib/utils/formatters";
 import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import { hu1991PrimaryAdvanceLimit } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianAssemblyPrimaryAdvanceLimit } from "@/lib/countries/ru/assemblyPrimaryProgression";
 import { usesLegacyPresidentialCampaign } from "@/lib/countries/ru/rules/presidentialCampaign";
@@ -36,7 +36,7 @@ import { loadCampaignAudience, loadNationalCampaignCells } from "@/lib/campaignT
 import type { Db, ObjectId as MongoObjectId } from "mongodb";
 import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocList";
 import { getCountryState } from "@/lib/countryState";
-import { allocateBlocListSeats } from "@/lib/turn/election/blocListAllocation";
+import { allocateBlocListSeats } from "@/lib/elections/resolution/blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { censusMedianVoter } from "./censusMedianVoter";
@@ -88,7 +88,7 @@ import {
 } from "@/lib/elections/candidateEnrichment";
 import { getOrCreateVoteTally } from "@/lib/elections/voteTallyService";
 import { projectDistrictedSeats } from "@/lib/redistricting/districtedHouseResolution";
-import { buildPrimaryShareMap } from "@/lib/turn/election/generalResolutionHelpers";
+import { buildPrimaryShareMap } from "@/lib/elections/resolution/generalResolutionHelpers";
 import { selectEndedDisplayCandidates } from "@/lib/elections/endedResultsCandidates";
 import { selectGeneralPhaseDisplayCandidates } from "@/lib/elections/generalPhaseCandidates";
 import { computeElectoralVotes } from "@/lib/elections/electoralVoteService";

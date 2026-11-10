@@ -31,7 +31,7 @@ import {
   ensurePerpetualElections,
   ensureUKElections,
   ensureUKRegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";

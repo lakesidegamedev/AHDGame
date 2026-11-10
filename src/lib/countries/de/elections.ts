@@ -2,7 +2,7 @@ import { seedPresetsFrom } from "@/lib/constants/turnTime";
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import type { SpawnElectionsResult } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import {
   DE_WAHLKREIS_SEATS,
   DE_LANDTAG_SEATS,

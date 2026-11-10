@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import type { RankedBallot, PrStvResult } from "@/lib/turn/election/rules/prStv";
+import type { RankedBallot, PrStvResult } from "@/lib/elections/rules/prStv";
 import type { DemocraticHealthElectionSnapshot } from "@/lib/electionEngine/democraticHealth";
 import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";

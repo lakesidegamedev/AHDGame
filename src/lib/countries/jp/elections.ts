@@ -1,6 +1,6 @@
 import { JP_PARTY_TIERS } from "@/lib/countries/jp/data/jpPartyTiers";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import type { SpawnElectionsResult } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import type { CountryElections } from "../contract";
 import {
   ensureJPCouncillorElections,

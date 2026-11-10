@@ -24,7 +24,7 @@ import type {
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { yearOfTurn } from "@/lib/utils/gameDate";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { HU_2011_COUNTS_COLLECTION, type Hu2011AssemblyRecord } from "./assemblyCount2011";
 

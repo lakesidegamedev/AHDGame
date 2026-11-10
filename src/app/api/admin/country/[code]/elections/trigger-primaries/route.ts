@@ -17,7 +17,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { recordPrimarySnapshots } from "@/lib/turnSystem";
 import { initElectionVoteTally, fetchEnrichedCandidates } from "@/lib/electionEngine";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   calcPrimaryScore,
   calcPresidentPrimaryScore,

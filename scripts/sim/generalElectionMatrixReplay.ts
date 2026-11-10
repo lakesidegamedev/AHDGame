@@ -4,11 +4,11 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { BSON, MongoClient, ObjectId, type Document, type CollectionOptions } from "mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "../../src/lib/db/types";
-import { resolveOneGeneralElection } from "../../src/lib/turn/election/generalResolution";
+import { resolveOneGeneralElection } from "@/lib/elections/resolution/generalResolution";
 import { getUkCommonsSeats } from "../../src/lib/constants/states";
 import { getElectionMethod } from "../../src/lib/elections/electionMethod";
 import { updateCountryState } from "../../src/lib/countryState";
-import { maybeReconcileBundestag } from "../../src/lib/turn/election/germanyAMS";
+import { maybeReconcileBundestag } from "@/lib/elections/resolution/germanyAMS";
 
 const arg = (name: string) =>
   process.argv.find((v) => v.startsWith(`--${name}=`))?.slice(name.length + 3);

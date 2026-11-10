@@ -11,9 +11,9 @@ import {
   getGeneralWindow,
   justResolvedInSameTurn,
   sendBatchedElectionAnnouncements,
-} from "@/lib/turn/perpetualElections/engine";
-import { ensureRegionalGovernorElections } from "@/lib/turn/perpetualElections/shared";
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+} from "@/lib/elections/scheduling/engine";
+import { ensureRegionalGovernorElections } from "@/lib/elections/scheduling/shared";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { JP_SANGIIN_SPEC, JP_SHUGIIN_SPEC } from "./chamberSpecs";
 
 /**

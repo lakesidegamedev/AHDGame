@@ -1,4 +1,4 @@
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import { CN_GOVERNOR_SPEC, CN_NPC_DELEGATE_SPEC, CN_PEOPLES_CONGRESS_SPEC } from "./chamberSpecs";
 
 /** NPC delegations: one multi-seat election per region, all seats contested. */

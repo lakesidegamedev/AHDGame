@@ -121,7 +121,7 @@ describe("ensureJPRegionalCouncilElections", () => {
     });
     await mount(mock);
 
-    const { ensureJPRegionalCouncilElections } = await import("./perpetualElections");
+    const { ensureJPRegionalCouncilElections } = await import("@/lib/elections/scheduling");
     await ensureJPRegionalCouncilElections(NOW);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "HOK")!;
@@ -167,7 +167,7 @@ describe("ensureJPRegionalCouncilElections", () => {
     });
     await mount(mock);
 
-    const { ensureJPRegionalCouncilElections } = await import("./perpetualElections");
+    const { ensureJPRegionalCouncilElections } = await import("@/lib/elections/scheduling");
     await ensureJPRegionalCouncilElections(NOW);
 
     const inserted = mock.insertCalls.flat();
@@ -200,7 +200,7 @@ describe("ensureJPRegionalCouncilElections", () => {
     });
     await mount(mock);
 
-    const { ensureJPRegionalCouncilElections } = await import("./perpetualElections");
+    const { ensureJPRegionalCouncilElections } = await import("@/lib/elections/scheduling");
     await ensureJPRegionalCouncilElections(NOW);
 
     expect(mock.insertCalls.flat()).toHaveLength(0);
@@ -228,7 +228,7 @@ describe("ensureJPRegionalCouncilElections", () => {
     });
     await mount(mock);
 
-    const { ensureJPRegionalCouncilElections } = await import("./perpetualElections");
+    const { ensureJPRegionalCouncilElections } = await import("@/lib/elections/scheduling");
     await ensureJPRegionalCouncilElections(NOW);
 
     const doc = mock.insertCalls.flat().find((d) => d.state === "HOK")!;

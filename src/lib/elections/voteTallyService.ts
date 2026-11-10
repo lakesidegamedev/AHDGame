@@ -1,7 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate, ElectionVoteTally, Election } from "@/lib/db/types";
 import { initElectionVoteTally } from "@/lib/electionEngine";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 
 export async function getOrCreateVoteTally(
   db: Db,

@@ -1,4 +1,4 @@
-import { defineChamberSpec } from "@/lib/turn/perpetualElections/chamberSpec";
+import { defineChamberSpec } from "@/lib/elections/scheduling/chamberSpec";
 
 /** Câmara dos Deputados: one multi-seat race per macro-region, sized by `houseDistricts`. */
 export const BR_CHAMBER_SPEC = defineChamberSpec({

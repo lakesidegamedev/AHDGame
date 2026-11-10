@@ -2,7 +2,7 @@ import { regBaselineMultiplier } from "../../src/lib/electionEngine/electionForm
 import {
   getMultiSeatMinShare,
   largestRemainderSeats,
-} from "../../src/lib/turn/election/seatAllocation";
+} from "@/lib/elections/resolution/seatAllocation";
 
 const OLD_COMMONS_MIN_SHARE = 0.2;
 const COMMONS_MIN_SHARE = getMultiSeatMinShare("commons");

@@ -1,6 +1,6 @@
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import { ensureYUElections } from "@/lib/turn/perpetualElections";
+import { ensureYUElections } from "@/lib/elections/scheduling";
 
 /**
  * Yugoslavia's elections.

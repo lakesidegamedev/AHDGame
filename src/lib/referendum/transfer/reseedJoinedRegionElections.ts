@@ -16,7 +16,7 @@ import {
   ensureIELocalCouncilElections,
   ensureIECathaoirleachElections,
   ensureDEElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import { updateParliamentaryGovernmentSeats } from "@/lib/turn/parliamentaryGovernment";
 
 export async function reseedJoinedRegionElections(

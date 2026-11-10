@@ -1,4 +1,4 @@
-import { ensureChamberElections } from "@/lib/turn/perpetualElections/chamberSpawner";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
 import {
   NG_GOVERNOR_SPEC,
   NG_HOUSE_SPEC,

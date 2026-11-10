@@ -17,7 +17,7 @@ import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentE
 import {
   resolveNigeriaPresidentialResult,
   NG_ZONES,
-} from "@/lib/nigeriaPresidentialElectionEngine";
+} from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 

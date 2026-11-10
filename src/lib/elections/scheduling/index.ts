@@ -21,8 +21,8 @@ export {
   readCurrentTurnAndCtx,
   sendBatchedElectionAnnouncements,
   withElectionGameStateSnapshot,
-} from "./perpetualElections/engine";
-export type { TurnAndCtx } from "./perpetualElections/engine";
+} from "./engine";
+export type { TurnAndCtx } from "./engine";
 export {
   IE_LOCAL_COUNCIL_SEATS,
   SCO_REGIONAL_COUNCIL_SEATS,
@@ -40,8 +40,8 @@ export {
   mirrorPeerRaceTiming,
   ruElectionsLive,
   seatsFromRegionField,
-} from "./perpetualElections/shared";
-export type { RegionalDelegateSpec } from "./perpetualElections/shared";
+} from "./shared";
+export type { RegionalDelegateSpec } from "./shared";
 export {
   ensureATElections,
   ensureESElections,
@@ -55,30 +55,30 @@ export {
   ensureSEElections,
   ensureTRElections,
   ensureTRSenateElections,
-} from "./perpetualElections/countries/betaParliaments";
+} from "./countries/betaParliaments";
 export {
   ensureBRElections,
   ensureBRSenateElections,
   ensureBRGovernorElections,
   ensureBRPresidentialElection,
-} from "./perpetualElections/countries/br";
+} from "./countries/br";
 export {
   ensureCNElections,
   ensureCNGovernorElections,
   ensureCNPeoplesCongressElections,
-} from "./perpetualElections/countries/cn";
+} from "./countries/cn";
 export {
   ensureDDGovernorElections,
   ensureDDLandAssemblyElections,
   ensureDDVolkskammerElections,
-} from "./perpetualElections/countries/dd";
-export { ensureDEElections } from "./perpetualElections/countries/de";
+} from "./countries/dd";
+export { ensureDEElections } from "./countries/de";
 export {
   ensureBALElections,
   ensureBLRElections,
   ensureUKRElections,
   ensureYUElections,
-} from "./perpetualElections/countries/easternBloc";
+} from "./countries/easternBloc";
 export { ensureHUElections } from "@/lib/countries/hu/perpetualElections";
 export { ensureCSElections, ensureCSNationsElections } from "@/lib/countries/cs/elections";
 export { ensurePLElections, ensurePLSenateElections } from "@/lib/countries/pl/elections";
@@ -89,13 +89,13 @@ export {
   ensureIEElections,
   ensureIELocalCouncilElections,
   ensureIEUachtaranElections,
-} from "./perpetualElections/countries/ie";
+} from "./countries/ie";
 export {
   ensureJPCouncillorElections,
   ensureJPElections,
   ensureJPGovernorElections,
   ensureJPRegionalCouncilElections,
-} from "./perpetualElections/countries/jp";
+} from "./countries/jp";
 export {
   ensureNGElections,
   ensureNGGovernorElections,
@@ -103,19 +103,19 @@ export {
   ensureNGRegionalCouncilElections,
   ensureNGSenateElections,
   ensureNGZoneElections,
-} from "./perpetualElections/countries/ng";
+} from "./countries/ng";
 export {
   ensureRUGovernorElections,
   ensureRUNationalitiesElections,
   ensureRURepublicSovietElections,
   ensureRUSupremeSovietElections,
   ensureRUUnionCongressElections,
-} from "./perpetualElections/countries/ru";
+} from "./countries/ru";
 export {
   ensureUKElections,
   ensureUKGovernorElections,
   ensureUKRegionalCouncilElections,
-} from "./perpetualElections/countries/uk";
+} from "./countries/uk";
 export {
   ensureSCOElections,
   ensureSCOGovernorElections,
@@ -123,16 +123,16 @@ export {
   ensureWALElections,
   ensureWALGovernorElections,
   ensureWALRegionalCouncilElections,
-} from "./perpetualElections/countries/ukDevolved";
-export { SPAWN_ELECTIONS_REGISTRY } from "./perpetualElections/registry";
-export type { SpawnElectionsHandler, SpawnElectionsResult } from "./perpetualElections/registry";
+} from "./countries/ukDevolved";
+export { SPAWN_ELECTIONS_REGISTRY } from "@/lib/elections/scheduling/registry";
+export type { SpawnElectionsHandler, SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 
 // The DE Landtag/Minister-President spawners live in `election/germanyLandtag`;
 // the original module re-exported them here for countryPhases.ts's barrel import.
 export {
   ensureDELandtagElections,
   ensureDEMinisterPresidentElections,
-} from "@/lib/turn/election/germanyLandtag";
+} from "@/lib/elections/resolution/germanyLandtag";
 
 // Re-exported so existing consumers (sync-date, snapElection, admin routes)
 // that import DEFAULT_DURATIONS from this module keep working.

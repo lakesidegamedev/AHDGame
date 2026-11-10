@@ -2,7 +2,7 @@ import {
   SCO_REGIONAL_COUNCIL_SEATS,
   WAL_REGIONAL_COUNCIL_SEATS,
   ensureSecededChamberElections,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /** SCO Holyrood standup spawner (sibling to `ensureIEElections`). */
 export async function ensureSCOElections(now: Date, inFlightTurn?: number): Promise<void> {

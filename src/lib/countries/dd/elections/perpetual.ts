@@ -4,7 +4,7 @@ import {
   ensureRegionalDelegateElections,
   ensureRegionalGovernorElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /**
  * DD Volkskammer: the GDR's unicameral chamber, elected as a single National

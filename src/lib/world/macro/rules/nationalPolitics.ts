@@ -13,8 +13,8 @@
  *
  * Pure: plain data in, plain data out; rng and turn/year are injected.
  */
-import { largestRemainderSeats } from "@/lib/turn/election/seatAllocation";
-import { allocateViaSainteLague } from "@/lib/turn/election/sainteLagueAllocation";
+import { largestRemainderSeats } from "@/lib/elections/resolution/seatAllocation";
+import { allocateViaSainteLague } from "@/lib/elections/resolution/sainteLagueAllocation";
 import {
   electorateCentre,
   FOLD_VOTE_SHARE,

@@ -6,7 +6,7 @@ import {
   ensureRegionalGovernorElections,
   ruElectionsLive,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /** Soviet of the Union — seats per region = the live region doc's houseDistricts. */
 export async function ensureRUSupremeSovietElections(

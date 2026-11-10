@@ -21,7 +21,7 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import {
   BG_ORDINARY_PLANS_COLLECTION,
   type BgOrdinaryPlanRecord,
-} from "@/lib/turn/election/bgOrdinaryEligibility";
+} from "@/lib/elections/resolution/bgOrdinaryEligibility";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { settleBgOrdinaryListHolders } from "./rules/ordinaryElectionPlan";
 import { bgOrdinarySeatingClockReady } from "./rules/assemblyClock1991";

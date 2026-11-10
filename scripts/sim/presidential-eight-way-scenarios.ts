@@ -17,7 +17,7 @@ import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
 import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/electionEngine/constants";
-import { INDEPENDENT_VOTE_PENALTY } from "@/lib/presidentialElectionEngine";
+import { INDEPENDENT_VOTE_PENALTY } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   getDelegatesForState,
   getDefaultPrimaryAllocation,

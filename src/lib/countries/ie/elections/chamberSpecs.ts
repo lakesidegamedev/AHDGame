@@ -1,4 +1,4 @@
-import { defineChamberSpec } from "@/lib/turn/perpetualElections/chamberSpec";
+import { defineChamberSpec } from "@/lib/elections/scheduling/chamberSpec";
 import { IE_LOCAL_COUNCIL_SEATS } from "../data/ieLocalCouncilSeats";
 
 /** Dáil Éireann: PR-STV constituencies sized by each region's seeded `houseDistricts`. */

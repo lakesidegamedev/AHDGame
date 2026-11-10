@@ -59,7 +59,7 @@ async function run() {
       ensureDEElections,
       ensureUKRegionalCouncilElections,
       DEFAULT_DURATIONS,
-    } = await import("@/lib/turn/perpetualElections");
+    } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(now, 1);
     await ensureUKElections(now);
     await ensureJPElections(now);

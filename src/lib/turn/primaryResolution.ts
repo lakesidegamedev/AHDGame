@@ -3,7 +3,7 @@
  * resolvePrimariesIfNeeded retains all registered Russian national list nominees;
  * constituency contests keep their normal party nomination limit.
  */
-import { nativeAssemblyPrimaryAdvanceLimit } from "./election/assemblyPrimaryProgression";
+import { nativeAssemblyPrimaryAdvanceLimit } from "@/lib/elections/resolution/assemblyPrimaryProgression";
 import { isBrazilIndirectPresidentialElection } from "@/lib/countries/br/rules/presidential";
 import {
   bindBallotElectorate,
@@ -23,7 +23,7 @@ import {
 } from "@/lib/campaignTargeting/rules";
 import { loadRegionalCampaignCells } from "@/lib/campaignTargeting/audience";
 import { getDb } from "@/lib/mongodb";
-import { accumulateNGPresidentVoteTurn } from "@/lib/turn/election/ngPresidentAccumulation";
+import { accumulateNGPresidentVoteTurn } from "@/lib/elections/resolution/ngPresidentAccumulation";
 import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
@@ -49,7 +49,7 @@ import {
 import {
   initPresidentVoteTally,
   accumulatePresidentVoteTurn,
-} from "@/lib/presidentialElectionEngine";
+} from "@/lib/elections/presidential/presidentialElectionEngine";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import {
   primarySharePctSoftmax,
@@ -63,7 +63,7 @@ import { getAllStateApprovalsForElection } from "@/lib/utils/getStateApprovalFor
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { getPrimaryWinnersForElection, type CountryId } from "@/lib/constants/countries";
 import { createVoteTurnMemo } from "@/lib/electionEngine/tallyManagement";
-import { writeVoteTallies } from "./election/writeVoteTallies";
+import { writeVoteTallies } from "@/lib/elections/resolution/writeVoteTallies";
 import { loadFundsByPartyForElections } from "@/lib/electionEngine/fundsByParty";
 import { ballotSharesWithinParty, scoreByPrimaryVotes } from "@/lib/turn/primaryBallots";
 import { processPrimaryStaggerWaves } from "./primaryStaggerPhase";
@@ -79,7 +79,7 @@ import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
 import {
   resolveNominationForParty,
   type NominationResolutionResult,
-} from "@/lib/turn/election/conventionResolution";
+} from "@/lib/elections/resolution/conventionResolution";
 import { logger } from "../observability/logger";
 import { buildNationwideElectoratePreload } from "@/lib/electionEngine/nationwideElectorate";
 import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
@@ -97,7 +97,7 @@ import {
 } from "@/lib/electionEngine/demographicsV2Preload";
 
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
-import { hasBankedGeneralTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { hasBankedGeneralTurn } from "@/lib/elections/rules/turnSlice";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 

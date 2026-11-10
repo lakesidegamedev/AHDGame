@@ -65,7 +65,7 @@ import {
 } from "@/lib/electionEngine/candidateEnrichment";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
-import { planTurnSlice, type TurnSlicePart } from "@/lib/electionEngine/rules/turnSlice";
+import { planTurnSlice, type TurnSlicePart } from "@/lib/elections/rules/turnSlice";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 import { getStatesCollection } from "@/lib/db/collections/states";
 
