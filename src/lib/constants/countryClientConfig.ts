@@ -3425,7 +3425,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
       },
     ],
     electionSystems: {
-      lowerChamber: "fptp",
+      lowerChamber: "pr_hareQuota",
       subNationalChamber: "fptp",
       subNationalExecutive: "parliamentary",
       headOfGovernment: "parliamentary",

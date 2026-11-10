@@ -51,6 +51,7 @@ export const ANALYTICS_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "congresoDiputados",
   "riksdag",
   "milletMeclisi",
+  "caCommons",
   "nationalrat",
   "eduskunta",
   "vouli",

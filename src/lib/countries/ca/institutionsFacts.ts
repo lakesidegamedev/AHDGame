@@ -61,7 +61,9 @@ export const CA_CONFIG: CountryConfig = {
     snapElectionsAllowed: true,
   },
   electionSystems: {
-    lowerChamber: "fptp",
+    // Regions elect many MPs each, so seats are allocated by regional vote share
+    // (the same approximation the UK Commons uses), not by one winner per region.
+    lowerChamber: "pr_hareQuota",
     subNationalChamber: "fptp",
     subNationalExecutive: "parliamentary",
     headOfGovernment: "parliamentary",

@@ -122,6 +122,7 @@ import { updateGovernmentSeats as updateUKGovernmentSeats } from "@/lib/turn/ukG
 import { getDb } from "@/lib/mongodb";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { JP_ELECTIONS } from "@/lib/countries/jp/elections";
+import { CA_ELECTIONS } from "@/lib/countries/ca/elections";
 import { JP_BILL_PHASE_SHAPE } from "@/lib/countries/jp/elections/billLifecycle";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 
@@ -333,6 +334,7 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
     { name: "ukGovernorElections", fn: ensureUKGovernorElections },
   ],
   JP: JP_ELECTIONS.electionPhases,
+  CA: CA_ELECTIONS.electionPhases,
   IE: [
     { name: "ieElections", fn: ensureIEElections },
     { name: "ieUachtaranElections", fn: ensureIEUachtaranElections },

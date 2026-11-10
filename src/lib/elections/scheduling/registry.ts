@@ -7,6 +7,7 @@ import { CN_ELECTIONS } from "@/lib/countries/cn/elections";
 import { IE_ELECTIONS } from "@/lib/countries/ie/elections";
 import { NG_ELECTIONS } from "@/lib/countries/ng/elections";
 import { BR_ELECTIONS } from "@/lib/countries/br/elections";
+import { CA_ELECTIONS } from "@/lib/countries/ca/elections";
 
 export interface SpawnElectionsResult {
   message: string;
@@ -28,4 +29,5 @@ export const SPAWN_ELECTIONS_REGISTRY: Partial<Record<CountryId, SpawnElectionsH
   BR: BR_ELECTIONS.spawn,
   NG: NG_ELECTIONS.spawn,
   IE: IE_ELECTIONS.spawn,
+  CA: CA_ELECTIONS.spawn,
 };

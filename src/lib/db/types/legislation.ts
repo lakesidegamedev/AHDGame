@@ -728,6 +728,8 @@ export interface LegislationTypePosition {
     | "congresoDiputados"
     | "senado" // ES Cortes chambers (added with 1979 Spain)
     | "riksdag" // SE Riksdag (unicameral; added with 1979 Sweden)
+    | "caCommons" // CA House of Commons
+    | "caSenate" // CA Senate (appointed)
     | "milletMeclisi"
     | "senato" // TR parliament chambers (added with 1979 Turkey)
     | "volkskammer" // DD Volkskammer (one-party; added with 1979 GDR)
