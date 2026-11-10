@@ -1,3 +1,4 @@
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -443,6 +444,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   countyPopulations,
   ukJpSubdivisionPopulations,
   jpLawLeanEffects,
+  financialTxLogTurnOrderIndex,
 ];
 
 // Deferred to follow-up (need bootstrap-marker pass on production first):
