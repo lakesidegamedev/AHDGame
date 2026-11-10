@@ -37,7 +37,10 @@ export function splitLiveDepartmentAccounts(
     row.programAllocationPercents = {};
   }
   for (const row of kept) {
-    if (row.accruedThroughTurn !== turn)
+    // Defense and intelligence shells are settled by their own turn processors
+    // and are never advanced by the cash settlement, so their stamp stays at
+    // the world opening. Only cash-settled departments must match the treasury.
+    if (!row.externallySettled && row.accruedThroughTurn !== turn)
       throw new Error("Source department and treasury turns disagree");
     const definition = definitions.find(
       (item) => item.id === row.departmentId && item.countryId === row.countryId

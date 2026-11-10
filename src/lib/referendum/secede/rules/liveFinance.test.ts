@@ -126,6 +126,26 @@ describe("live independence finance", () => {
     expect(accounts.moved[0].programAllocationPercents).toEqual({ L01: 100, L02: 150, L03: 100 });
     expect(accounts.kept[0].programAllocationPercents).toEqual({ L01: 100, L02: 150, L03: 100 });
   });
+  it("splits when an externally settled shell kept its opening turn stamp", () => {
+    // Defense and intelligence shells are never advanced by cash settlement,
+    // so their stamp stays at the world opening while the treasury moves on.
+    const stale = {
+      ...account("UK"),
+      _id: "UK:defence",
+      externallySettled: true,
+      accruedThroughTurn: 1,
+    };
+    const split = splitLiveDepartmentAccounts(
+      [account("UK"), stale],
+      [account("SCO")],
+      DEPARTMENT_DEFINITIONS,
+      0.3,
+      299
+    );
+    expect(split.kept).toHaveLength(2);
+    expect(split.moved[0].accruedThroughTurn).toBe(299);
+    expect(split.idMap["UK:defence"]).toBe("SCO:health");
+  });
   it("refuses a partially advanced cash book", () => {
     expect(() =>
       splitLiveDepartmentAccounts(
