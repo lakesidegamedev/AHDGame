@@ -1,17 +1,9 @@
 /**
- * Opening program spending for the US and the UK, in each preset.
- *
- * The national budget seed used to price the default option of every old US and
- * UK law type to get these numbers. Those types are gone (the political
- * legislation book owns both countries' laws), but the figures still set the
- * opening spending envelope that the first budget refresh calibrates non-law
- * spending against, so they are kept here as data.
- *
- * Rows are keyed by `country|fiscalYear|gdp|population` so a re-based config
- * never reads a mismatched row. `all` prices every national spending type;
- * `active` is the same book limited to types active in the fiscal year (the
- * 1991 opening fit reads it). A config without a row falls back to its authored
- * baseline.
+ * Opening program spending for the US and the UK, per preset. It sets the
+ * envelope the first budget refresh calibrates non-law spending against.
+ * Keys are `country|fiscalYear|gdp|population`, so a re-based config never reads
+ * a mismatched row. `all` is every national spending program; `active` is the
+ * subset active in the fiscal year. No row falls back to the authored baseline.
  */
 export interface OpeningProgramSpending {
   byCategory: Readonly<Record<string, number>>;

@@ -83,13 +83,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       su_turnover_tax: { economic: 0, social: 0 },
       su_social_insurance: { economic: 0, social: 0 },
       su_customs_tariff: { economic: -3, social: 0 },
-      su_economic_system: { economic: -4, social: 0 },
-      su_political_system: { economic: 0, social: 3 },
-      su_price_controls: { economic: -3, social: 0 },
-      su_agriculture: { economic: -3, social: 0 },
-      su_civil_liberties: { economic: 0, social: 3 },
-      su_defense_spending: { economic: -2, social: 1 },
-      su_housing: { economic: -3, social: 0 },
     },
     optionIndexes: {
       su_enterprise_levy: 4, // Enterprise Profit Remittance Statute
@@ -97,13 +90,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       su_turnover_tax: 2, // Turnover Tax Schedule
       su_social_insurance: 1, // Unified Social Insurance Statute
       su_customs_tariff: 2, // Foreign Trade Monopoly Statute
-      su_economic_system: 4, // Economic Organization Law (orthodox Gosplan)
-      su_political_system: 3, // Article 6 Statute (one-party)
-      su_price_controls: 2, // State Price Regulation Statute
-      su_agriculture: 2, // Collective Agriculture Statute
-      su_civil_liberties: 2, // State Information & Order Statute
-      su_defense_spending: 2, // Defense and Military-Industrial Statute
-      su_housing: 2, // State Housing Allocation Statute
     },
     regions: ruRegions,
   },
@@ -117,11 +103,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       dd_product_tax: { economic: 0, social: 0 },
       dd_social_insurance: { economic: 0, social: 0 },
       dd_foreign_trade: { economic: -3, social: 0 },
-      dd_economic_system: { economic: -4, social: 0 },
-      dd_political_system: { economic: 0, social: 3 }, // SED leading role
-      dd_price_controls: { economic: -3, social: 0 },
-      dd_civil_liberties: { economic: 0, social: 3 }, // Stasi security state
-      dd_housing: { economic: -2, social: 0 },
     },
     optionIndexes: {
       dd_enterprise_levy: 3, // VEB Surplus Remittance Statute
@@ -129,11 +110,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       dd_product_tax: 2, // Product Tax Schedule
       dd_social_insurance: 1, // Unified Social Insurance Statute
       dd_foreign_trade: 2, // Foreign Trade Monopoly Statute
-      dd_economic_system: 3, // Economic Order Law (orthodox plan)
-      dd_political_system: 3, // Leading Role Statute (SED monopoly)
-      dd_price_controls: 2, // Price Regulation Statute
-      dd_civil_liberties: 2, // State Security Statute
-      dd_housing: 2, // Housing Allocation Statute
     },
     regions: ddRegions,
   },

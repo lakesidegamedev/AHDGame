@@ -840,13 +840,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: { economic: 0, social: 0 }, // 1979: turnover tax major revenue source; center
       su_social_insurance: { economic: 0, social: 0 }, // 1979: state provides all; center
       su_customs_tariff: { economic: -3, social: 0 }, // 1979: foreign trade state monopoly; very left
-      su_economic_system: { economic: -3, social: 0 }, // 1979: Gosplan central planning; less intense than 1953 Stalinist peak; very left
-      su_political_system: { economic: 0, social: 2 }, // 1979: SU one-party; slightly less repressive than 1953 Stalinist peak
-      su_price_controls: { economic: -3, social: 0 }, // 1979: all prices state-set; maximum control
-      su_agriculture: { economic: -2, social: 0 }, // 1979: collective farms; some private plot tolerance (vs 1953 peak); left
-      su_civil_liberties: { economic: 0, social: 2 }, // 1979: KGB; Gulag much reduced from Stalin; dissident suppression; authoritarian (less than 1953)
-      su_defense_spending: { economic: -3, social: 1 }, // 1979: arms race; Afghanistan; very high defense share; very left
-      su_housing: { economic: -3, social: 0 }, // 1979: state housing (Khrushchyovka blocks); very left
     },
     optionIndexes: {
       su_enterprise_levy: 4, // 1979: below 1953's maximum 5; still high
@@ -854,13 +847,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: 3, // 1979: below 1953's 3; stable
       su_social_insurance: 1, // 1979: unified state; same as 1953
       su_customs_tariff: 2, // 1979: foreign trade monopoly; same as 1953
-      su_economic_system: 4, // 1979: Gosplan central planning; less than 1953's pure Stalinist 5
-      su_political_system: 2, // 1979: one-party; less than 1953 Stalinist index 3
-      su_price_controls: 3, // 1979: maximum price setting; same as 1953
-      su_agriculture: 2, // 1979: collective farms; some private plots; less than 1953's 3
-      su_civil_liberties: 1, // 1979: minimum civil liberties; same scale inverted (1=least free)
-      su_defense_spending: 3, // 1979: Afghanistan + arms race; maximum
-      su_housing: 3, // 1979: state housing; same as 1953
     },
     regions: ruRegions,
   },
@@ -880,11 +866,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       dd_product_tax: { economic: 0, social: 0 }, // 1979: commodity tax on output; center
       dd_social_insurance: { economic: 0, social: 0 }, // 1979: comprehensive state social insurance; center
       dd_foreign_trade: { economic: -3, social: 0 }, // 1979: foreign trade state monopoly; Außenhandel; very left
-      dd_economic_system: { economic: -3, social: 0 }, // 1979: central planning (Gosplan-style); Kombinat system; very left
-      dd_political_system: { economic: 0, social: 2 }, // 1979: SED leading role; Honecker hard-line but less than Ulbricht 1953
-      dd_price_controls: { economic: -3, social: 0 }, // 1979: all prices state-set; maximum
-      dd_civil_liberties: { economic: 0, social: 2 }, // 1979: Stasi at maximum; still very authoritarian; below 1953 peak
-      dd_housing: { economic: -2, social: 0 }, // 1979: state housing (Plattenbau); better supply than 1953; left
     },
     optionIndexes: {
       dd_enterprise_levy: 3, // 1979: Kombinat surplus remittance; below 1953's 4
@@ -892,11 +873,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       dd_product_tax: 2, // 1979: commodity tax; same as 1953
       dd_social_insurance: 1, // 1979: unified state social insurance; same
       dd_foreign_trade: 2, // 1979: foreign trade monopoly; same as 1953
-      dd_economic_system: 3, // 1979: Kombinat central planning; below 1953's Stalinist 4
-      dd_political_system: 3, // 1979: SED leading role; same as 1953
-      dd_price_controls: 3, // 1979: maximum price regulation; same
-      dd_civil_liberties: 1, // 1979: Stasi maximum; same scale (1=least free)
-      dd_housing: 3, // 1979: Plattenbau mass housing; above 1953's 2
     },
     regions: ddRegions,
   },

@@ -8,7 +8,6 @@ import { deLegislationTypes } from "../de/deLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
 import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ngLegislationTypes } from "../ng/ngLegislationTypes";
-import { ruLegislationTypes } from "../ru/ruLegislationTypes";
 import { frLegislationTypes } from "../fr/frLegislationTypes";
 import { itLegislationTypes } from "../it/itLegislationTypes";
 import { esLegislationTypes } from "../es/esLegislationTypes";
@@ -17,7 +16,6 @@ import { trLegislationTypes } from "../tr/trLegislationTypes";
 import { grLegislationTypes } from "../gr/grLegislationTypes";
 import { atLegislationTypes } from "../at/atLegislationTypes";
 import { fiLegislationTypes } from "../fi/fiLegislationTypes";
-import { ddLegislationTypes } from "../dd/ddLegislationTypes";
 import { huLegislationTypes } from "../hu/huLegislation";
 import { plLegislationTypes } from "../pl/plLegislation";
 import { roLegislationTypes } from "../ro/roLegislation";
@@ -8738,7 +8736,6 @@ const rawLegislationTypes: LegislationType[] = [
   // ── Brazil legislation types (Vargas-era developmentalism; Petrobras 1953) ──
   ...brLegislationTypes,
   // ── USSR legislation types (SU-continuing ↔ Russia-liberalizing levers) ────
-  ...ruLegislationTypes,
   // ── France legislation types (Fifth Republic; nationalization ↔ privatization) ──
   ...frLegislationTypes,
   // ── Italy legislation types (First Republic; IRI/ENI state holdings) ──
@@ -8755,7 +8752,6 @@ const rawLegislationTypes: LegislationType[] = [
   // ── Finland legislation types (state companies; tulopolitiikka settlements) ──
   ...fiLegislationTypes,
   // ── East Germany legislation types (GDR; plan ↔ reform/reunification) ──
-  ...ddLegislationTypes,
   // ── Eastern-bloc one-party legislation (HU/PL/RO/YU/BG/CS + UKR/BLR/BAL) ──
   ...huLegislationTypes,
   ...plLegislationTypes,

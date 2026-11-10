@@ -4413,14 +4413,6 @@
       "longBlocks": 0,
       "narrativeLines": 2
     },
-    "src/lib/elections/party/caucusChairElections.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/party/caucusChairElections.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/centralBank/chairAlignment.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -6221,10 +6213,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/countries/ru/data/ruLegislationTypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/countries/ru/data/ruMetricPresets1953.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -7645,102 +7633,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/elections/engine/index.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/constants.ts": {
-      "longBlocks": 9,
-      "narrativeLines": 3
-    },
-    "src/lib/elections/engine/economicReferendum.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/electionFormulaFactors.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/engine/electionFormulaFactors.ts": {
-      "longBlocks": 7,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/factorLedger.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/fundsByParty.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/incumbentSeatShare.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/majorParties.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/medianVoter.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/persuasionDrivers.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/presidentialCoattail.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/singleSeatIncumbency.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/slateAllocation.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/stateAttackMultiplier.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/tallyManagement.queryShape.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/engine/tallyManagement.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/engine/types.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 4
-    },
-    "src/lib/elections/engine/voteCalculations.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/voteDistribution.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/engine/voteDistributionSwingFlow.test.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 6
-    },
-    "src/lib/elections/engine/voteDistributionSwingFlow.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/voteDistributionSwingFlowDiff.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/engine/voteDistributionSwingFlowFamilies.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/elections/apportionmentEra.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -7762,6 +7654,10 @@
       "narrativeLines": 7
     },
     "src/lib/elections/buildPollingData.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/campaigns/supportAccrual.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -7829,6 +7725,102 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
+    "src/lib/elections/engine/constants.ts": {
+      "longBlocks": 9,
+      "narrativeLines": 3
+    },
+    "src/lib/elections/engine/economicReferendum.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/electionFormulaFactors.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/engine/electionFormulaFactors.ts": {
+      "longBlocks": 7,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/factorLedger.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/fundsByParty.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/incumbentSeatShare.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/index.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/majorParties.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/medianVoter.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/persuasionDrivers.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/presidentialCoattail.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/singleSeatIncumbency.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/slateAllocation.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/stateAttackMultiplier.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/tallyManagement.queryShape.test.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/engine/tallyManagement.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/engine/types.ts": {
+      "longBlocks": 2,
+      "narrativeLines": 4
+    },
+    "src/lib/elections/engine/voteCalculations.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/voteDistribution.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/engine/voteDistributionSwingFlow.test.ts": {
+      "longBlocks": 3,
+      "narrativeLines": 6
+    },
+    "src/lib/elections/engine/voteDistributionSwingFlow.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/voteDistributionSwingFlowDiff.test.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/engine/voteDistributionSwingFlowFamilies.test.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
     "src/lib/elections/enrichElection.ts": {
       "longBlocks": 1,
       "narrativeLines": 2
@@ -7874,6 +7866,30 @@
       "narrativeLines": 0
     },
     "src/lib/elections/officeResolution.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/party/caucusChairElections.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/party/caucusChairElections.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/party/nationalPartyElectionNotifications.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 1
+    },
+    "src/lib/elections/party/nationalPartyElections.test.ts": {
+      "longBlocks": 0,
+      "narrativeLines": 2
+    },
+    "src/lib/elections/party/nationalPartyQuorum.ts": {
+      "longBlocks": 1,
+      "narrativeLines": 0
+    },
+    "src/lib/elections/party/statePartyElections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -9789,18 +9805,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/elections/party/nationalPartyElectionNotifications.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
-    "src/lib/elections/party/nationalPartyElections.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 2
-    },
-    "src/lib/elections/party/nationalPartyQuorum.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/nativePush/policy.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -11253,10 +11257,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/seeds/reference/legislationTypes.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/seeds/reference/mediaGovernanceSweep.test.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -11714,10 +11714,6 @@
       "narrativeLines": 1
     },
     "src/lib/sovereignDefault/snapshotLoader.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/party/statePartyElections.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -12474,10 +12470,6 @@
       "narrativeLines": 0
     },
     "src/lib/turn/electionGameStateSnapshot.test.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/elections/campaigns/supportAccrual.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
