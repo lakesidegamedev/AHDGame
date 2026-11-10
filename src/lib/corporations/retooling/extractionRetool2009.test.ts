@@ -76,13 +76,14 @@ describe("issue #2009 - the pair matrix is complete and registry-derived", () =>
     const ids = extractionIds();
     expect(ids.length).toBeGreaterThanOrEqual(2);
     const pairs = extractionPairs();
-    // Ordered pairs without replacement: n * (n - 1). Eight strategies today
-    // (space resources joined in the 2049 tier), so fifty-six pairs; a future
+    // Ordered pairs without replacement: n * (n - 1). Nine strategies today
+    // (space resources joined in the 2049 tier, deep mining in the 2039 tier), so seventy-two pairs; a future
     // strategy expands this automatically.
     expect(pairs.length).toBe(ids.length * (ids.length - 1));
-    expect(pairs.length).toBe(56);
+    expect(pairs.length).toBe(72);
     expect([...ids].sort()).toEqual(
       [
+        "autonomous_deep_mining",
         "coal_mining",
         "iron_mining",
         "natural_gas_drilling",
