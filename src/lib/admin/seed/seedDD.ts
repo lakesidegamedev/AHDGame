@@ -11,7 +11,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { strictEraForPreset } from "@/lib/seeds/presetSelector";
 
 // Both Cold-War seeds (1953 + 1979) put East Germany on the modern
 // eastern-Länder codes that the unified-era FRG seeds carry under `DE`
@@ -28,7 +28,7 @@ const DD_DIVIDED_REGION_IDS = [...DD_EXCLUSIVE_REGION_IDS, "MV", "BB", "ST", "SN
 
 /** DD (the GDR) exists in the 1953 and 1979 divided-Germany eras. */
 function isDividedGermanyEra(preset: string): boolean {
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   return era === "1953" || era === "1979";
 }
 
@@ -139,8 +139,8 @@ export async function seedDDDemographics(
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
-  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-  const era = eraForPreset(preset);
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const era = strictEraForPreset(preset);
   const model = getCountryLayer1Model("DD", era);
   if (!model) {
     log("[DD] no Layer-1 model — skipping demographics");

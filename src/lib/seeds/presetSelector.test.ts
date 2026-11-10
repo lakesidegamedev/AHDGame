@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 import {
+  assertKnownSeedPreset,
   eraForPreset,
   isKnownPreset,
   presetForEra,
   SEED_ERA_IDS,
   selectPresetBundle,
   selectPresetBundleOptional,
+  strictEraForPreset,
   type EraId,
 } from "./presetSelector";
 import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
@@ -95,5 +97,29 @@ describe("selectPresetBundleOptional", () => {
     expect(
       selectPresetBundleOptional("1991-default", { "1953-default": "x", "1979-default": "y" })
     ).toBeUndefined();
+  });
+});
+
+describe("strictEraForPreset", () => {
+  it.each(["1953-default", "2027-default", "empty", "2019-no-parties"])(
+    "maps known preset %s like eraForPreset",
+    (preset) => {
+      expect(strictEraForPreset(preset)).toBe(eraForPreset(preset));
+    }
+  );
+
+  it.each([undefined, null, "", "unknown-preset"])("refuses %j with a SeedContractError", (bad) => {
+    expect(() => strictEraForPreset(bad)).toThrow(SeedContractError);
+    expect(() => assertKnownSeedPreset(bad)).toThrow(SeedContractError);
+  });
+
+  it("names the preset in the error", () => {
+    expect(() => strictEraForPreset("1850-default")).toThrow(/1850-default/);
+    expect(() => strictEraForPreset(undefined)).toThrow(/no preset given/);
+  });
+
+  it("leaves the runtime lookup fail-safe for the same inputs", () => {
+    expect(eraForPreset("unknown-preset")).toBe("2019");
+    expect(eraForPreset("")).toBe("2019");
   });
 });

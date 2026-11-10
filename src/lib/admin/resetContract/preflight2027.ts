@@ -22,6 +22,7 @@ import { evaluateResidueScan } from "@/lib/admin/resetContract/rules/residueScan
 import type { CountryId } from "@/lib/constants/countries";
 import { DE_LANDTAG_SPEC } from "@/lib/countries/de/elections/chamberSpecs";
 import { countriesByTier, type ShippingPreset } from "@/lib/world/eraRoster";
+import { assertKnownSeedPreset, dataPresetFor } from "@/lib/seeds/presetSelector";
 import { checkSeedContract } from "@/lib/seeds/contract/checkSeedContract";
 
 export const PREFLIGHT_PRESET: ShippingPreset = "2027-default";
@@ -111,6 +112,8 @@ export interface PreflightOptions {
   mode: PreflightMode;
   /** Defaults to the 2027 full-simulation countries. */
   countries?: readonly string[];
+  /** Defaults to the 2027 preset. A blank or unknown value is refused. */
+  preset?: string;
 }
 
 export interface PreflightReport {
@@ -123,10 +126,14 @@ export async function runPreflight2027(
   db: Db,
   options: PreflightOptions
 ): Promise<PreflightReport> {
-  const countries = [...(options.countries ?? fullSimulationCountries(PREFLIGHT_PRESET))];
+  const preset = options.preset ?? PREFLIGHT_PRESET;
+  assertKnownSeedPreset(preset);
+  const countries = [
+    ...(options.countries ?? fullSimulationCountries(dataPresetFor(preset) as ShippingPreset)),
+  ];
   const findings: PreflightFinding[] = [];
 
-  for (const gap of checkSeedContract(PREFLIGHT_PRESET)) {
+  for (const gap of checkSeedContract(preset)) {
     findings.push({
       severity: "fail",
       check: "seed-contract",

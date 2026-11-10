@@ -1,6 +1,10 @@
 import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
-import { selectPresetBundle, eraForPreset } from "@/lib/seeds/presetSelector";
+import {
+  assertKnownSeedPreset,
+  selectPresetBundle,
+  strictEraForPreset,
+} from "@/lib/seeds/presetSelector";
 import { selectStatesBundleForPreset } from "./seedStates";
 import { policies } from "@/lib/seeds/reference/policies";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
@@ -233,6 +237,8 @@ export async function runSeed(
     log = console.log,
   } = options;
 
+  assertKnownSeedPreset(preset);
+
   // Build US state-party-org rows scaled to the preset's presidential-margin
   // baseline (2019 → 2020 results, 1991 → 1988 results). `seedRegistrationLanes`
   // later overwrites `.organization` per the preset's lane templates; the
@@ -403,7 +409,7 @@ export async function runSeed(
   // 1991 worlds now seed from independent 1991 Layer-1 census data.
   const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const censusBundle = selectPresetBundle(
     preset,
     {
@@ -498,7 +504,7 @@ export async function runSeed(
   log(`Seeded ${usStateIds.length} US stateDemographicTurnout docs`);
 
   // Game config — persist seedYear so landing/login can read the active era
-  // without a separate admin step. era is already in scope from eraForPreset(preset).
+  // without a separate admin step. era is already in scope from strictEraForPreset(preset).
   //
   // D14 PROTECTION — on a NON-reset seed, `marketSystemMode` is deliberately
   // excluded from the `$set` and moved to `$setOnInsert`.
