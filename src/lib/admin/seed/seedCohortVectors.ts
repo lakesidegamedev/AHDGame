@@ -5,6 +5,7 @@ import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
+import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographicPaths";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
 
@@ -149,6 +150,7 @@ export async function seedCohortVectors(
       medianAge,
       birthRate,
       population,
+      survivalSeniorTail: presetUsesDemographicPaths(preset),
     });
 
     // People are whole; round each cell. Deterministic → idempotent on a fresh world.

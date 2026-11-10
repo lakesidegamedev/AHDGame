@@ -836,7 +836,10 @@ export async function runDemographicFlows(
     const eligible = Math.round(votingAgePopulation(vector, votingAgeFor(countryId)));
     const working = Math.round(workingAgePopulation(vector, workLo, workHi));
     // populationGrowth spans the FULL turn: pre-local `before` → post-internal `vector`.
-    const pm = derivePopulationMetrics(before, vector, flows, TURNS_PER_YEAR);
+    const pm = derivePopulationMetrics(before, vector, flows, TURNS_PER_YEAR, {
+      workingAgeMin: workLo,
+      retirementAge: workHi,
+    });
 
     regions.push({
       regionId,
