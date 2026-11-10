@@ -61,17 +61,19 @@ export function fundedIdleWeights(
     if (inputCut > 0) weights.push({ cause: "inputs", w: inputCut });
     if (cutBy.includes("cash") && shortfall - inputCut > 0)
       weights.push({ cause: "cash", w: shortfall - inputCut });
-  } else if (shortfall > 0)
-    weights.push({
-      cause:
-        cutBy.length > 0
-          ? cutBy.includes("inputs")
-            ? "inputs"
-            : "cash"
-          : (receipt.operatingArrears ?? 0) > 0
-            ? "cash"
-            : "inputs",
-      w: shortfall,
-    });
+  } else if (shortfall > 0) {
+    // A stop the receipt does not explain (no recorded cut, no arrears) is not
+    // blamed on inputs: the Inputs list names none, so the gap stays under
+    // "other limits" instead of sending the player to a shortage that is not there.
+    const cause =
+      cutBy.length > 0
+        ? cutBy.includes("inputs")
+          ? "inputs"
+          : "cash"
+        : (receipt.operatingArrears ?? 0) > 0
+          ? "cash"
+          : null;
+    if (cause) weights.push({ cause, w: shortfall });
+  }
   return weights;
 }
