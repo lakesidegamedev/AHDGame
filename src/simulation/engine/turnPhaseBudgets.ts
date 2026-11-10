@@ -40,6 +40,8 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   russianCouncilComposition: 100,
   // Every country bill lifecycle in play, each bounded by its own open bills.
   countryBillLifecycle: 3000,
+  // Every election spawner for the countries in play, each idempotent and gated on its own anchor.
+  countryElections: 3000,
   corporationTurn: 4500,
   ministerialOrders: 2000,
   indexFunds: 18000,

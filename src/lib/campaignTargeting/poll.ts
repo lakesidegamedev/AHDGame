@@ -10,7 +10,7 @@ import {
   primarySharePctSoftmax,
   PRIMARY_SHARE_SOFTMAX_TEMPERATURE,
 } from "@/lib/primaryScore";
-import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/elections/engine/constants";
 import {
   shiftElectorateForPrimary,
   applyPrimaryTurnoutRetention,
@@ -23,9 +23,9 @@ import type {
   StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { loadCampaignAudience } from "./audience";
 import {

@@ -28,7 +28,7 @@ import type {
 import { projectPrimaryByState } from "@/lib/primaryProjection";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import { summarizePrimaryProjection } from "@/lib/elections/presidentialPrimaryDisplay";
 import {
   resolvePartyFamily,

@@ -797,16 +797,14 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     }
   }
 
-  // Political-legislation v2 (spec §7): the authored 1953 enacted baseline +
-  // one budget sync. Runs after states AND budgets exist (it prices baseline
-  // laws on the regional-rollup fiscal base). No-op on other presets.
+  // Political-legislation baseline: the enacted law book for the world's year
+  // plus one budget sync. Runs after states AND budgets exist (it prices
+  // baseline laws on the regional-rollup fiscal base).
   {
-    const { isPoliticalLegislationPreset, seedPoliticalLegislationBaseline } =
+    const { seedPoliticalLegislationBaseline } =
       await import("@/lib/admin/seed/seedPoliticalLegislation");
-    if (isPoliticalLegislationPreset(preset)) {
-      const { resolveWorldSeedYear } = await import("@/lib/era/context");
-      await seedPoliticalLegislationBaseline(db, log, await resolveWorldSeedYear(db, preset));
-    }
+    const { resolveWorldSeedYear } = await import("@/lib/era/context");
+    await seedPoliticalLegislationBaseline(db, log, await resolveWorldSeedYear(db, preset));
   }
   await seedCNWiki(db);
   await seedNGWiki(db);

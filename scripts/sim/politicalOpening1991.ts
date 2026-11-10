@@ -12,8 +12,9 @@ async function main() {
   const { JP_GEOGRAPHY } = await import("@/lib/countries/jp/geography");
   const { NATIONAL_BASELINES_1991 } =
     await import("@/lib/politicalMetrics/seeds/nationalBaselines1991");
-  const { REGIONAL_TEXTURE_1991 } =
+  const { getRegionalTexture1991 } =
     await import("@/lib/politicalMetrics/seeds/regionalTexture1991");
+  const REGIONAL_TEXTURE_1991 = getRegionalTexture1991();
   const NON_PLAYABLE_BOARDS = (
     await import("@/lib/politicalMetrics/seeds/nonPlayableBoards")
   ).getNonPlayableBoards();

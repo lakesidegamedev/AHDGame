@@ -28,7 +28,7 @@ import {
 } from "@/lib/legislature/dto/stateLegislature";
 import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 
 function LegacyProposeStateBillModal({

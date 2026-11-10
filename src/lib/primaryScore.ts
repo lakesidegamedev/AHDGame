@@ -23,7 +23,7 @@ import {
 } from "@/lib/utils/normalizeNPI";
 import { infamyPenaltyMultiplier } from "@/lib/utils/infamy";
 import type { CountryId } from "@/lib/constants/countries";
-import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/elections/engine/constants";
 
 /**
  * Temperature for {@link primarySharePctSoftmax}. Lower = more decisive (the

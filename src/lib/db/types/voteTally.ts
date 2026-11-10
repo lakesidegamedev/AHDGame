@@ -1,7 +1,7 @@
 import type { ObjectId } from "mongodb";
 import type { RankedBallot, PrStvResult } from "@/lib/elections/rules/prStv";
-import type { DemocraticHealthElectionSnapshot } from "@/lib/electionEngine/democraticHealth";
-import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
+import type { DemocraticHealthElectionSnapshot } from "@/lib/elections/engine/democraticHealth";
+import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
 
 export interface VoteTurnSnapshot {
@@ -235,7 +235,7 @@ export interface ElectionVoteTally {
   unitTurnSnapshots?: Record<string, VoteTurnSnapshot[]>;
   /**
    * President only: the economic-referendum reading the engine applied on the
-   * last accumulation turn (see `src/lib/electionEngine/economicReferendum.ts`).
+   * last accumulation turn (see `src/lib/elections/engine/economicReferendum.ts`).
    * Descriptive snapshot for the UI gauge — the shift is already baked into the
    * vote totals and must NOT be applied again anywhere downstream.
    */
@@ -259,7 +259,7 @@ export interface ElectionVoteTally {
   democraticHealth?: DemocraticHealthElectionSnapshot;
   /**
    * President only: the descriptive factor ledger the engine teed on the last
-   * accumulation turn (see `src/lib/electionEngine/factorLedger.ts`). A
+   * accumulation turn (see `src/lib/elections/engine/factorLedger.ts`). A
    * read-only decomposition of each candidate's votes into named factors
    * (state lean & standing, policy fit, name recognition, turnout, persuasion
    * swing, spoiler, national mood, campaign, and a rounding residual). Already

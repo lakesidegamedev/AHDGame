@@ -532,6 +532,7 @@ export async function calculateFederalRevenue(
     propertyTax,
     healthcareIncome,
     lawRevenue,
+    automationLevy: (federalBudget?.automationLevyReceiptsLocal ?? 0) * TURNS_PER_YEAR,
     taxLikeRevenue,
     taxLikeRevenueAfterCap,
     revenueCapReduction,

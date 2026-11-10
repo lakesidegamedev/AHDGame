@@ -8,7 +8,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import {
   calcPresidentPrimaryScore,
   effectivePartyInfluenceForPresidentialPrimary,

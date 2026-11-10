@@ -195,7 +195,7 @@
     "src/lib/sim/experimentsReport.ts": 3,
     "src/lib/singleplayer/saveArchive.ts": 3,
     "src/lib/singleplayerStatistics.ts": 1,
-    "src/lib/statePartyElections.ts": 1,
+    "src/lib/elections/party/statePartyElections.ts": 1,
     "src/lib/telemetry/research/countryTurn.ts": 1,
     "src/lib/telemetry/research/export.ts": 1,
     "src/lib/treasury/emit.ts": 1,

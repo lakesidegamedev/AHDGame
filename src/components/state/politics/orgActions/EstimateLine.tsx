@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 
 export interface EstimateLineProps {
   /** Optional leading label, e.g. "Build" / "Contest". */

@@ -5,7 +5,7 @@ import { sectorDisplayProfit } from "./sectorSortUtils";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { STATE_FLAGS } from "@/lib/constants";
+import { STATE_FLAGS } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { MONEY_PERIOD_SUFFIX, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
 import { DenseSection, FillText, SmallButton, signTone } from "./dense/DenseKit";

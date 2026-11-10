@@ -18,6 +18,7 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { resolvePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
 import type { PlayerIncomeTaxAssessment, PlayerIncomeTaxTurnPlan } from "@/lib/db/types/incomeTax";
 import { settlePlayerIncomeTaxAssessments } from "./playerIncomeTaxSettlement";
 import {
@@ -122,7 +123,7 @@ export async function processPlayerIncomeTax(
       .toArray(),
     db
       .collection<FederalBudget>("federalBudget")
-      .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1 } })
+      .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1, priceIndex: 1 } })
       .toArray(),
     db
       .collection<StateBudget>("stateBudgets")
@@ -336,7 +337,7 @@ export async function processPlayerIncomeTax(
       Math.min(LOOKBACK_TURNS, turn - character.incomeTaxStartTurn! + 1),
       TURNS_PER_YEAR
     );
-    const tier = earnedIncomeTier(annual, median);
+    const tier = earnedIncomeTier(annual, median, resolvePriceIndex(budget.priceIndex));
     const groups = new Map<
       string,
       { currency: string; path: string; gross: number; taxKind: "income" | "capitalGains" }

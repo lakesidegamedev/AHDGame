@@ -568,7 +568,7 @@ describe("runConformanceChecks", () => {
     const laws = generateDefaultEnactedLaws("2019-default");
     const candidate = laws.find(
       (l) =>
-        l.countryId === "US" && (l as { gdpCostFraction?: number }).gdpCostFraction === undefined
+        l.countryId === "JP" && (l as { gdpCostFraction?: number }).gdpCostFraction === undefined
     );
     expect(candidate).toBeDefined();
 

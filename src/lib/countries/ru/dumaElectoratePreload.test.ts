@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Election, State } from "@/lib/db/types";
-import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
+import type { AccumulateVoteTurnPreload } from "@/lib/elections/engine/types";
 import {
   bindRussianDumaElectorate as bind,
   usesRussianDumaNationalElectorate as national,

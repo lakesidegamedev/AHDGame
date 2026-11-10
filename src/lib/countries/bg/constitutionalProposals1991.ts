@@ -14,7 +14,7 @@ import type {
 } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import {
   passesBgConstitution1991,

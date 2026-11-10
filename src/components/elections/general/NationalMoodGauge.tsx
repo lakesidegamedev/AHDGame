@@ -14,7 +14,7 @@
  */
 
 import { useTranslations } from "next-intl";
-import { REFERENDUM_SHARE_CLAMP } from "@/lib/electionEngine/economicReferendum";
+import { REFERENDUM_SHARE_CLAMP } from "@/lib/elections/engine/economicReferendum";
 
 export interface NationalMoodData {
   miseryIndex: number;

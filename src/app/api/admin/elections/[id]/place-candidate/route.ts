@@ -19,7 +19,7 @@ import type {
   Campaign,
 } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 
 const placeCandidateSchema = z
   .object({

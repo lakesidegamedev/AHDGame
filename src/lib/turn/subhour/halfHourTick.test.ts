@@ -25,7 +25,7 @@ const { calls, election, growth, inflation, forex, market } = vi.hoisted(() => {
 });
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
-vi.mock("@/lib/turn/elections/electionHalfTick", () => ({ runElectionHalfTick: election }));
+vi.mock("@/lib/elections/campaigns/electionHalfTick", () => ({ runElectionHalfTick: election }));
 vi.mock("./growthHalfStep", () => ({ runGrowthHalfStep: growth }));
 vi.mock("./inflationHalfStep", () => ({ runInflationHalfStep: inflation }));
 vi.mock("./forexHalfStep", () => ({ runForexHalfStep: forex }));

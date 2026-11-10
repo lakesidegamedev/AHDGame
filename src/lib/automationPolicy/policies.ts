@@ -7,13 +7,10 @@ import type { Db } from "mongodb";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { MODERN_ERA_LEGISLATURE_SPECS } from "@/lib/seeds/shared/modernEraLegislation";
 import { legacyOptionLevel } from "@/lib/energyTransition/rules";
-import type { AggregatedTechEffects } from "@/lib/constants/techTree/effects";
-import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { clampUnionLawBias } from "@/lib/labour/unionLaws";
 import {
   AUTOMATION_LAW_SLUGS,
   NO_AUTOMATION_POLICY,
-  applyAutomationLevy,
   automationCrewRetention,
   automationLevyInputPenalty,
   automationUnionBias,
@@ -87,24 +84,6 @@ export function automationPolicyFor(
   countryId: string | null | undefined
 ): AutomationPolicy {
   return (countryId ? policyByCountry?.get(countryId) : undefined) ?? NO_AUTOMATION_POLICY;
-}
-
-/**
- * A sector's tech aggregate with the automation levies folded into its input
- * rates. Returns the same object when the country has no levy on this method.
- */
-export function withAutomationLevy(
-  effects: AggregatedTechEffects,
-  policyByCountry: ReadonlyMap<string, AutomationPolicy> | undefined,
-  sector: { countryId?: string | null; strategyId?: string | null }
-): AggregatedTechEffects {
-  if (!policyByCountry) return effects;
-  const policy = automationPolicyFor(policyByCountry, sector.countryId);
-  return applyAutomationLevy(
-    effects,
-    automationLevyInputPenalty(policy, sector.strategyId),
-    COMMODITY_TYPES
-  );
 }
 
 /** Crew per unit of capacity after the country's automation laws keep part of the crew. */

@@ -11,7 +11,7 @@ import {
   estimateExplicitPayCoverage,
   estimateImplicitAutoConvertCoverage,
 } from "@/lib/currency/purchaseAffordability";
-import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
+import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   quoteIndexFundSubscription,

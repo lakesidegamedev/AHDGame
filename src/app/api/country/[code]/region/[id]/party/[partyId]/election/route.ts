@@ -11,7 +11,7 @@ import {
 } from "@/lib/parties/leadershipTenure";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { ALL_POSITIONS } from "@/lib/statePartyElections";
+import { ALL_POSITIONS } from "@/lib/elections/party/statePartyElections";
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
 import type {
   StatePartyElection,

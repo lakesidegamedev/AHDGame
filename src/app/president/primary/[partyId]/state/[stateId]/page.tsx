@@ -16,7 +16,7 @@ import type {
 } from "@/lib/db/types";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import {
   PRIMARY_WAVES,
   resolvePartyFamily,

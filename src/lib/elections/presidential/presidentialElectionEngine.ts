@@ -11,7 +11,7 @@
 import {
   PRESIDENTIAL_APPROVAL_VOTE_SLOPE,
   approvalVoteMultiplier,
-} from "@/lib/electionEngine/approvalVoteMultiplier";
+} from "@/lib/elections/engine/approvalVoteMultiplier";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 /**
@@ -39,23 +39,23 @@ import {
   turnVoteWeight,
   resolveTurnWindow,
   PARTY_STRENGTH_BY_OFFICE,
-} from "@/lib/electionEngine";
-import { ELECTION_DAY_TURNS, RAMP_TURNS } from "@/lib/electionEngine/voteCalculations";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
+} from "@/lib/elections/engine";
+import { ELECTION_DAY_TURNS, RAMP_TURNS } from "@/lib/elections/engine/voteCalculations";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import {
   createLedgerSink,
   assembleNationalLedger,
   type FactorLedgerSnapshot,
-} from "@/lib/electionEngine/factorLedger";
-import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/factorLedger";
+import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/elections/engine/constants";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCountryState } from "@/lib/countryState";
 import { getAllStateApprovalsForElection } from "@/lib/utils/getStateApprovalForElection";
-import { resolvePresidentApproval } from "@/lib/electionEngine/presidentialCoattail";
+import { resolvePresidentApproval } from "@/lib/elections/engine/presidentialCoattail";
 import {
   democraticHealthPressure,
   type DemocraticHealthElectionSnapshot,
-} from "@/lib/electionEngine/democraticHealth";
+} from "@/lib/elections/engine/democraticHealth";
 import { democraticHealthLabel } from "@/lib/governanceStyle/score";
 import { loadDemocraticHealth } from "@/lib/governanceStyle/loadDemocraticHealth";
 import { loadActivePresidentialHealthReliefPct } from "@/lib/events/substrate/countryModifiers";
@@ -63,7 +63,7 @@ import {
   applyReferendumShift,
   computeEconomicReferendum,
   type ReferendumResult,
-} from "@/lib/electionEngine/economicReferendum";
+} from "@/lib/elections/engine/economicReferendum";
 import { loadReferendumInputs } from "@/lib/elections/referendumInputs";
 import { loadResponseCredit } from "@/lib/elections/responseCredit";
 import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/presidentialTenureLedger";
@@ -80,7 +80,7 @@ import type {
 import {
   scalePoolToRegistered,
   capTurnSliceToRemainingElectorate,
-} from "@/lib/electionEngine/resolvedTurnout";
+} from "@/lib/elections/engine/resolvedTurnout";
 import { campaignStrengthVoteMultiplier } from "@/lib/campaigns/campaignStrength";
 import {
   presidentialRulesetFor,
@@ -101,7 +101,7 @@ import {
   buildGranularElectorateSubstrate,
   campaignContactByBucket,
 } from "@/lib/demographics/granularElectorate";
-import { loadDemographicsV2Preload } from "@/lib/electionEngine/demographicsV2Preload";
+import { loadDemographicsV2Preload } from "@/lib/elections/engine/demographicsV2Preload";
 import { summarizeParticipation, type ParticipationSummary } from "@/lib/demographics/v2/rules";
 import { demographicsV2CalibrationForCountry } from "@/lib/demographics/v2/calibration";
 import { eraYearContextFromGameState } from "@/lib/era/context";

@@ -4,7 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { HoldingTermSummary } from "@/components/corporation/shares/HoldingTermSelector";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { formatStableUtc } from "@/lib/time/localTime";
 import type { MyOpenShareOrder } from "@/lib/corporations/queries/myOpenShareOrders";
 

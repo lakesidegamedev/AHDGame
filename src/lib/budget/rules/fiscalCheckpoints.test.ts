@@ -12,6 +12,7 @@ import {
   type FiscalOpening,
   type FiscalPolicy,
   type FiscalRun,
+  centralBankPolicyRate,
 } from "./fiscalCheckpoints";
 import { INTEREST_REVENUE_RESTRUCTURE_SHARE } from "./fiscalStabilizer";
 
@@ -174,5 +175,55 @@ describe("long-run fiscal checkpoints", () => {
         }
       }
     });
+  });
+});
+
+describe("central bank policy rate", () => {
+  const shocked = (country: FiscalCheckpointCountry, year: number, points: number): FiscalRun => {
+    const macro = macroAtFor(country);
+    return projectFiscalCheckpoints({
+      opening: fiscalOpening(country),
+      macroAt: (y) => {
+        const m = macro(y);
+        return y >= year && y < year + 3 ? { ...m, inflation: m.inflation + points } : m;
+      },
+      policy: { averageMaturityYears: AVERAGE_MATURITY_YEARS[country] },
+    });
+  };
+
+  it("sits at the neutral rate while inflation is on target", () => {
+    for (const country of FISCAL_CHECKPOINT_COUNTRIES) {
+      const macro = macroAtFor(country);
+      for (const row of run(country).rows)
+        expect(row.policyRate, `${country} ${row.year}`).toBe(macro(row.year).policyRate);
+    }
+  });
+
+  it("raises the rate one for one with the inflation gap", () => {
+    const base = run("US");
+    const hot = shocked("US", 2035, 3);
+    expect(at(hot, 2035).policyRate).toBeCloseTo(at(base, 2035).policyRate + 3, 10);
+    expect(at(hot, 2035).inflation).toBeCloseTo(at(base, 2035).inflation + 3, 10);
+    expect(at(hot, 2040).policyRate).toBe(at(base, 2040).policyRate);
+  });
+
+  it("lifts the debt interest burden after an inflation shock", () => {
+    const base = run("US");
+    const hot = shocked("US", 2030, 4);
+    expect(at(hot, 2035).interestShareOfRevenue).toBeGreaterThan(
+      at(base, 2035).interestShareOfRevenue
+    );
+  });
+
+  it("cuts below neutral on low inflation but never below the floor", () => {
+    expect(
+      centralBankPolicyRate({ trendGrowth: 1, inflation: 0, targetInflation: 2, policyRate: 3 })
+    ).toBe(1);
+    expect(
+      centralBankPolicyRate({ trendGrowth: 1, inflation: -5, targetInflation: 2, policyRate: 3 })
+    ).toBe(0.25);
+    expect(
+      centralBankPolicyRate({ trendGrowth: 1, inflation: 0, targetInflation: 2, policyRate: 0.1 })
+    ).toBe(0.1);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { derivePlayableTexture1953 } from "@/lib/politicalMetrics/derive/playableTexture";
-import { REGIONAL_TEXTURE_1953 } from "./regionalTexture1953";
+import { getRegionalTexture1953 } from "./regionalTexture1953";
 import { REGIONAL_MODIFIERS_1953 } from "./regionalModifiers1953";
 import { states1953 } from "@/lib/seeds/reference/states1953";
 import { ukRegions1953 } from "@/lib/seeds/uk/ukRegions1953";
@@ -10,7 +10,7 @@ import type { PoliticalMetricId, PoliticalMetricsCountryId } from "@/lib/politic
 
 /**
  * Issue #704 contract for the generated texture. The committed
- * REGIONAL_TEXTURE_1953 is reviewable data, but the guarantees below are what
+ * The 1953 texture is reviewable data, but the guarantees below are what
  * make it safe to seed: every deviation inside +/-12, a zero
  * population-weighted country mean per family (so the authored national level
  * survives reseeding), hand-authored modifiers winning outright, and a
@@ -26,11 +26,11 @@ const POPULATIONS: Record<PoliticalMetricsCountryId, Map<string, number>> = {
   DD: new Map(ddRegions1953.map((s) => [s._id, s.population ?? 0])),
 };
 
-describe("REGIONAL_TEXTURE_1953", () => {
+describe("regional texture 1953", () => {
   it("stays inside the +/-12 bound at 1-decimal precision", () => {
     let cells = 0;
     for (const countryId of COUNTRIES) {
-      for (const texture of Object.values(REGIONAL_TEXTURE_1953[countryId])) {
+      for (const texture of Object.values(getRegionalTexture1953()[countryId])) {
         for (const v of Object.values(texture)) {
           expect(Math.abs(v!)).toBeLessThanOrEqual(12);
           expect(Number.isInteger(v! * 10)).toBe(true);
@@ -46,7 +46,7 @@ describe("REGIONAL_TEXTURE_1953", () => {
     // 0.05, so the weighted mean of the rounded vector stays within 0.05 of
     // the exact zero the generator centers before rounding.
     for (const countryId of COUNTRIES) {
-      const texture = REGIONAL_TEXTURE_1953[countryId];
+      const texture = getRegionalTexture1953()[countryId];
       const regions = Object.keys(texture);
       const families = new Set<PoliticalMetricId>();
       for (const t of Object.values(texture)) {
@@ -75,7 +75,7 @@ describe("REGIONAL_TEXTURE_1953", () => {
       for (const [regionId, modifiers] of Object.entries(REGIONAL_MODIFIERS_1953[countryId])) {
         for (const familyId of Object.keys(modifiers)) {
           expect(
-            REGIONAL_TEXTURE_1953[countryId]?.[regionId]?.[familyId as PoliticalMetricId]
+            getRegionalTexture1953()[countryId]?.[regionId]?.[familyId as PoliticalMetricId]
           ).toBeUndefined();
           zeroed++;
         }
@@ -83,7 +83,7 @@ describe("REGIONAL_TEXTURE_1953", () => {
     }
     expect(zeroed).toBeGreaterThan(0);
     expect(REGIONAL_MODIFIERS_1953.US.MS?.["society.integration"]).toBe(-18);
-    expect(REGIONAL_TEXTURE_1953.US.MS?.["society.integration"]).toBeUndefined();
+    expect(getRegionalTexture1953().US.MS?.["society.integration"]).toBeUndefined();
   });
 
   it("is deterministic and matches the committed artifact exactly", () => {
@@ -94,6 +94,6 @@ describe("REGIONAL_TEXTURE_1953", () => {
     const first = derivePlayableTexture1953();
     const second = derivePlayableTexture1953();
     expect(second.texture).toEqual(first.texture);
-    expect(REGIONAL_TEXTURE_1953).toEqual(first.texture);
+    expect(getRegionalTexture1953()).toEqual(first.texture);
   });
 });

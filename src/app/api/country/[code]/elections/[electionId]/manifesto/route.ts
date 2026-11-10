@@ -6,6 +6,7 @@
  * …/elections/manifestos, which serves the whole page at once; per-race GETs
  * were a traffic sink.
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -35,7 +36,7 @@ async function resolveContext(request: Request, code: string, electionId: string
   if (!COUNTRY_CONFIGS[countryId]) {
     return { error: errorResponse(400, "Invalid country") };
   }
-  if (countryId !== "UK") {
+  if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
     return { error: errorResponse(400, "Manifestos are UK-only") };
   }
   if (!ObjectId.isValid(electionId)) {

@@ -5,7 +5,7 @@ import { getCountryState, primeCountryStates, updateCountryState } from "@/lib/c
 import {
   resolveEnrichmentCountryConfig,
   type EnrichmentCountryConfig,
-} from "@/lib/electionEngine/candidateEnrichment";
+} from "@/lib/elections/engine/candidateEnrichment";
 
 /**
  * Resolve runtime vote configuration for a sweep. The one-shot honest-election

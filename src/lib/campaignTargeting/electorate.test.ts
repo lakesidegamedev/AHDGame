@@ -3,9 +3,9 @@ import {
   buildGranularElectorateSubstrate,
   type GranularSubstrateInput,
 } from "@/lib/demographics/granularElectorate";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { planAdPurchase } from "./rules";
 

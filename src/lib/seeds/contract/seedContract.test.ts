@@ -174,6 +174,21 @@ describe("generated data files", () => {
     extra["2019-default"].US = extra["2019-default"].JP;
     expect(dataFileGaps(boards, extra).length).toBeGreaterThan(0);
   });
+
+  it.each(["data:regional-texture-1953", "data:regional-texture-1991"])(
+    "rejects a %s deviation beyond the bound or an unknown family",
+    (id) => {
+      const texture = file(id);
+      const tooBig = copy(texture.load()) as Record<string, Record<string, object>>;
+      const [country] = Object.keys(tooBig);
+      const [region] = Object.keys(tooBig[country]);
+      tooBig[country][region] = { "economy.fiscal": 13 };
+      expect(dataFileGaps(texture, tooBig).length).toBeGreaterThan(0);
+      const unknown = copy(texture.load()) as Record<string, Record<string, object>>;
+      unknown[country][region] = { "economy.notAFamily": 1 };
+      expect(dataFileGaps(texture, unknown).length).toBeGreaterThan(0);
+    }
+  );
 });
 
 describe("reset preflight", () => {

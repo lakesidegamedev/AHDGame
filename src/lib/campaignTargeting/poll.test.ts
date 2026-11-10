@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db, ObjectId } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { makeCharacter, makeCandidate, makeElection } from "@/lib/test-utils/factories";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
 import { projectCampaignPoll } from "./poll";
 import { planAdPurchase } from "./rules";
 
-vi.mock("@/lib/electionEngine/candidateEnrichment", () => ({ fetchEnrichedCandidates: vi.fn() }));
+vi.mock("@/lib/elections/engine/candidateEnrichment", () => ({ fetchEnrichedCandidates: vi.fn() }));
 
 function fixture(type: "senate" | "president", primary: boolean) {
   const db = createMockDb();

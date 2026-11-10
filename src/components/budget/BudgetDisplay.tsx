@@ -403,6 +403,13 @@ export function BudgetDisplay({
         </div>
       </div>
 
+      {(revenue.automationLevy ?? 0) > 0 && (
+        <p className="text-xs text-muted">
+          Automation levy: {f(revenue.automationLevy ?? 0)} a year, paid by automating companies
+          straight into Treasury cash and not counted in the revenue total above.
+        </p>
+      )}
+
       {/* Spending breakdown bar */}
       <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
         <p className="text-sm font-medium">Spending breakdown</p>

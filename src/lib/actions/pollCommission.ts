@@ -42,7 +42,7 @@ import type { PersonalStatTenureContext } from "@/lib/elections/rules/tenureRete
 import {
   isHeadOfGovernmentRace,
   resolvePresidentApproval,
-} from "@/lib/electionEngine/presidentialCoattail";
+} from "@/lib/elections/engine/presidentialCoattail";
 import { getPresidentialConsecutiveTerms } from "@/lib/elections/resolution/presidentialTenureLedger";
 
 // Poll pricing lives in the shared rules module: quotePollAction is the single

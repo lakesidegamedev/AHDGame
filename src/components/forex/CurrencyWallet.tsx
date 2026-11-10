@@ -7,7 +7,7 @@ import {
   FOREX_ACTIVE_CURRENCIES,
   CURRENCY_SYMBOLS,
   CURRENCY_ANCHOR_COUNTRY,
-} from "@/lib/constants/currencies";
+} from "@/lib/constants/currencyCodes";
 import Link from "next/link";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { SavingsWalletBlock } from "@/components/forex/SavingsWalletBlock";

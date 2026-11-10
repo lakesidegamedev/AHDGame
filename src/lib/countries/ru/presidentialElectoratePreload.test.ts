@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Election, State } from "@/lib/db/types";
-import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
+import type { AccumulateVoteTurnPreload } from "@/lib/elections/engine/types";
 import { bindRussianPresidentialElectorate as bind } from "./presidentialElectoratePreload";
 function fixture() {
   const preload = {

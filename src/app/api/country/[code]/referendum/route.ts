@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
@@ -21,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "UK") {
+    if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
       return NextResponse.json({ referendums: [], isPM: false, isAdmin: false, currentTurn: 0 });
     }
 

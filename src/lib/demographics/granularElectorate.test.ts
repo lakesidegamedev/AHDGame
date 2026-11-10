@@ -24,8 +24,8 @@ import type {
   CensusGroupView,
   StateDemographicTurnout,
 } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
 import { GRANULAR_DIMENSIONS } from "@/lib/demographics/granularCells";
 import {
   buildGranularElectorateSubstrate,

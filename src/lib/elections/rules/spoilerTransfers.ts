@@ -1,8 +1,8 @@
 import { clamp } from "@/lib/numeric/rules";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS, getMajorPartiesForRegion } from "@/lib/constants/countries";
-import { FPTP_SPOILER_RATE } from "@/lib/electionEngine/constants";
-import { partitionMajorParties } from "@/lib/electionEngine/majorParties";
+import { FPTP_SPOILER_RATE } from "@/lib/elections/engine/constants";
+import { partitionMajorParties } from "@/lib/elections/engine/majorParties";
 
 interface SpoilerCandidate {
   candidateId: string;

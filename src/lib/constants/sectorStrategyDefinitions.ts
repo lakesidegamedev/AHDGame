@@ -1,8 +1,7 @@
 import type { OperatingSectorType } from "./corporations";
 import type { SectorStrategy } from "./sectorStrategyTypes";
 import { TIER_2039_STRATEGIES } from "./sectorStrategyDefinitions2039";
-
-// ─── Strategy definitions ───────────────────────────────────────────────────
+import { withMethodBuildProfile } from "@/lib/corporations/rules/methodAdoption";
 
 const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
   // ── Energy ──────────────────────────────────────────────────────────────
@@ -11,8 +10,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "fusion_commercial",
       requiresTechUnlock: true,
       minDecade: "2049",
-      buildTurns: 240,
-      downside: "Heaviest capital and licensing bill; plants take five years to commission.",
       researchThreshold: 6000,
       name: "Commercial Fusion",
       description:
@@ -30,8 +27,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "grid_storage_utility",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 96,
-      downside: "Storage media wear out and need steady chemical resupply; no base load.",
       name: "Grid-Scale Storage Utility",
       description:
         "Long-duration storage plants that firm intermittent supply and sell balancing power. Heavy chemical, steel and electronics inputs for the storage medium and its housings.",
@@ -48,8 +43,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "advanced_fission",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 192,
-      downside: "Four-year build and a heavy licensing and safety bill.",
       name: "Advanced Fission",
       description:
         "Factory-built small modular reactors with high firm output. Rare earths stand in for enriched fuel, and licensing and safety work add a heavy consulting and steel bill.",
@@ -106,8 +99,7 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       name: "Renewables Focus",
       description:
         "Solar, wind, and battery storage. Lower output but demands electronics for panels and inverters.",
-      // Buffed energy output 0.50→0.55; reduced electronics 0.25→0.17 and rare_earth 0.10→0.07
-      // to make renewables more competitive. Building materials raised 0.10→0.12 for civil works.
+      // Tuned so renewables compete with fossil power; civil works need building materials.
       supply: { energy: 0.55 },
       demand: {
         electronics: 0.17,
@@ -174,8 +166,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "humanoid_robotics",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 120,
-      downside: "Heavy electronics and rare earth draw; displaced workers raise unemployment.",
       name: "Humanoid Robotics",
       description:
         "General-purpose robots built and deployed on the line. High electronics and steel output, with heavy rare earth, energy and software demand for actuators and control.",
@@ -281,8 +271,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "neural_interfaces",
       requiresTechUnlock: true,
       minDecade: "2049",
-      buildTurns: 96,
-      downside: "Heavy electronics and approval costs; privacy backlash risk.",
       researchThreshold: 7000,
       name: "Neural Interfaces",
       description:
@@ -294,8 +282,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "agentic_services",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 48,
-      downside: "Compute spend grows with scale; automation cuts staff and raises layoffs.",
       name: "Agentic Services",
       description:
         "Software agents sold as a service that run whole business processes for clients. Top software output, with the heaviest energy draw in the sector.",
@@ -362,8 +348,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "cellular_agriculture",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 96,
-      downside: "High energy and chemical inputs; farm lobbies resist it.",
       name: "Cellular Agriculture",
       description:
         "Food grown from cell cultures in bioreactors. Needs almost no land or fertilizer, but runs on large amounts of energy and growth media chemicals.",
@@ -428,8 +412,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "direct_air_capture",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 120,
-      downside: "Very high energy draw per tonne; earns little without a carbon price.",
       name: "Direct Air Capture",
       description:
         "Pulls carbon dioxide from the air and turns it into chemical feedstock. Output is modest and the plants burn a very large amount of energy.",
@@ -513,8 +495,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "gene_therapy_scale",
       requiresTechUnlock: true,
       minDecade: "2049",
-      buildTurns: 120,
-      downside: "Long trial and approval path; failed trials are written off.",
       researchThreshold: 5000,
       name: "Gene Therapy at Scale",
       description:
@@ -532,8 +512,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "biofoundry",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 72,
-      downside: "Specialised chemical and electronics inputs; biosafety incidents hit hard.",
       name: "Biofoundry Biologics",
       description:
         "Automated labs that design and grow engineered biologics. Strong output with a pharmaceutical co-product, paid for with heavy software, electronics and lab chemical inputs.",
@@ -727,8 +705,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "personalised_media",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 36,
-      downside: "Heavy compute and data costs; privacy complaints and regulatory exposure.",
       name: "Personalised Media",
       description:
         "Every reader and viewer gets a feed assembled for them. Strong ad output, paid for with heavy software, energy and network demand.",
@@ -782,8 +758,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "drone_swarm",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 72,
-      downside: "Electronics and rare earth heavy; exposed to export controls.",
       name: "Drone Swarms",
       description:
         "Cheap autonomous drones fielded in large numbers. High ordnance output that runs on electronics and software rather than metal, and that directed-energy defences can counter.",
@@ -926,8 +900,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "autonomous_districts",
       requiresTechUnlock: true,
       minDecade: "2049",
-      buildTurns: 144,
-      downside: "Large construction and software outlay; one failure hits a whole district.",
       researchThreshold: 5000,
       requiresLaneResearch: [
         { lane: "technology", threshold: 3000 },
@@ -1004,8 +976,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "printed_mass_timber",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 72,
-      downside: "Needs a steady timber and chemical supply; shocks stall the printers.",
       name: "Printed Mass Timber",
       description:
         "Engineered timber panels cut and printed by machine and assembled fast on site. Leans on timber and software instead of steel and concrete.",
@@ -1090,8 +1060,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "orbital_logistics",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 96,
-      downside: "Launch capacity is scarce and costly; one failed launch halts deliveries.",
       name: "Orbital Constellations",
       description:
         "Large satellite constellations that carry network service to anywhere on the map. Very heavy electronics and launch costs, and rare earths for the payloads.",
@@ -1188,8 +1156,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "personalised_media",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 36,
-      downside: "Heavy compute and data costs; privacy complaints and regulatory exposure.",
       name: "Personalised Entertainment",
       description:
         "Shows and games assembled for each viewer as they watch. Strong ad output, paid for with heavy software, energy and network demand.",
@@ -1311,8 +1277,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "orbital_logistics",
       requiresTechUnlock: true,
       minDecade: "2039",
-      buildTurns: 96,
-      downside: "Launch capacity is scarce and costly; one failed launch halts deliveries.",
       name: "Orbital Logistics",
       description:
         "Satellite tracking and orbital relay networks that run freight and remote services anywhere. Heavy electronics, energy and vehicle inputs.",
@@ -1481,14 +1445,11 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       id: "space_resources",
       requiresTechUnlock: true,
       minDecade: "2049",
-      buildTurns: 240,
-      downside: "Longest lead time and launch dependency; returns arrive after years.",
       researchThreshold: 8000,
       requiresLaneResearch: [{ lane: "logistics", threshold: 3000 }],
       name: "Space Resources",
       description:
         "Lunar and asteroid pilot mining that lands rare earths and metals. Launch energy, electronics and freight make it the most input-hungry way to mine.",
-      // Still filtered by the state's deposit table like every extraction recipe.
       supply: { rare_earth: 0.62, iron: 0.18 },
       demand: { energy: 0.26, electronics: 0.14, freight: 0.12, vehicles: 0.08, software: 0.06 },
     },
@@ -1498,6 +1459,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
 export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = Object.fromEntries(
   Object.entries(BASE_SECTOR_STRATEGIES).map(([sector, list]) => [
     sector,
-    [...list, ...(TIER_2039_STRATEGIES[sector] ?? [])],
+    [...list, ...(TIER_2039_STRATEGIES[sector] ?? [])].map(withMethodBuildProfile),
   ])
 ) as Record<OperatingSectorType, SectorStrategy[]>;

@@ -9,7 +9,7 @@ import {
 } from "@/lib/constants/cabinetInfra";
 import { getInfraProjectsCollection } from "@/lib/db/collections/infraProjects";
 import type { InfraProject } from "@/lib/db/types/infraProject";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { strictEraForPreset } from "@/lib/seeds/presetSelector";
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -78,7 +78,7 @@ export function buildCountryPipeline(
 
 /** Idempotent: seeds only (country, transportation seat) pairs with zero projects. */
 export async function seedInfraProjects(db: Db, preset: string): Promise<void> {
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const col = getInfraProjectsCollection(db);
   for (const countryId of Object.keys(COUNTRY_CONFIGS) as CountryId[]) {
     const positionId = INFRA_POSITION_BY_COUNTRY[countryId];

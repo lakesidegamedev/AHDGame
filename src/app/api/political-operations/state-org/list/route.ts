@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   presenceBuiltThisTurn,
@@ -46,7 +47,7 @@ async function handleGET(request?: Request) {
           })
         ).candidate
       : auth.user.character;
-    if (character.countryId !== "US") {
+    if (!countryHasFeature("stateOrganisations", character.countryId)) {
       const [{ residentPoliticalIds }, racePresence] = await Promise.all([
         loadUsPoliticalStateIds(db),
         loadRacePresence(db, character._id),

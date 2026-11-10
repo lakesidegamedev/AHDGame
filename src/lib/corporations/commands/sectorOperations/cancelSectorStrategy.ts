@@ -17,6 +17,7 @@ import {
 } from "@/lib/constants/capacityEconomy";
 import { rescaleOtherOpexAnchorForRetool } from "@/lib/corporations/physicalPnl";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { isAwaitingBuild } from "@/lib/corporations/rules/methodAdoption";
 import { STRATEGY_TRANSITION_TURNS, CANCEL_COST_FRACTION } from "@/lib/constants/sectorStrategies";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
@@ -144,7 +145,14 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     // point but now running backward.
     const reversalTurns = Math.max(1, Math.round(progress * STRATEGY_TRANSITION_TURNS));
     // Elapsed at cancel moment in the reversed transition = STRATEGY_TRANSITION_TURNS - reversalTurns
-    const newTransitionStartTurn = currentTurn - (STRATEGY_TRANSITION_TURNS - reversalTurns);
+    // A sector still waiting for its build never left the original method, so
+    // the reversal is complete at once.
+    const newTransitionStartTurn = isAwaitingBuild({
+      currentTurn,
+      transitionStartTurn: sector.transitionStartTurn,
+    })
+      ? currentTurn - STRATEGY_TRANSITION_TURNS
+      : currentTurn - (STRATEGY_TRANSITION_TURNS - reversalTurns);
 
     const newStrategyId = sector.transitionFromStrategyId; // the original strategy (destination of reversal)
     const newTransitionFromStrategyId = sector.strategyId; // what we were transitioning toward

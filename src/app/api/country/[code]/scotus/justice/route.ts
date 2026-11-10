@@ -7,6 +7,7 @@
  * renders. Optional auth — anyone can look, but only the seated (character-backed)
  * Justice can act (enforced by the existing `justice/action` route).
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -32,7 +33,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("supremeCourtDocket", countryId)) {
       // SCOTUS is US-only per #3581 scope.
       return NextResponse.json({
         countryId,

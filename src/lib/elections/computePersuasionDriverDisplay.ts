@@ -21,9 +21,9 @@
 import {
   getPersuasionDriverBreakdown,
   type PersuasionDriverComponent,
-} from "@/lib/electionEngine/persuasionDrivers";
-import { effectivePeelableFraction } from "@/lib/electionEngine/electionFormulaFactors";
-import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/electionEngine/types";
+} from "@/lib/elections/engine/persuasionDrivers";
+import { effectivePeelableFraction } from "@/lib/elections/engine/electionFormulaFactors";
+import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/elections/engine/types";
 import type { PersuasionDriver } from "@/lib/elections/generalViewModel";
 
 interface PublicCandidate {

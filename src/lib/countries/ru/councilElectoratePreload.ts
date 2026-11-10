@@ -4,7 +4,7 @@
  * avoids applying registration twice and keeps shared turn preloads unchanged.
  */
 import type { Election } from "@/lib/db/types";
-import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
+import type { AccumulateVoteTurnPreload } from "@/lib/elections/engine/types";
 import { russianAssemblyPrimaryAdvanceLimit } from "./assemblyPrimaryProgression";
 
 export function bindRussianCouncilElectorate(

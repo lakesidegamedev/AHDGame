@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -10,7 +11,7 @@ import {
   STATE_ORG_COST_ACTIONS,
   STATE_ORG_PER_STATE_TURN_CAP,
   stateOrgLevelCost,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
     }
     const { stateId, campaignId } = parsed.data;
 
-    if (!campaignId && character.countryId !== "US") {
+    if (!campaignId && !countryHasFeature("stateOrganisations", character.countryId)) {
       return NextResponse.json(
         forbidden("Campaign Presence is currently a US-only feature").toJson(),
         { status: 403 }

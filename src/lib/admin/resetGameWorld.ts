@@ -35,7 +35,7 @@ import {
 import { buildSeasonRecaps } from "@/lib/recap/buildSeasonRecaps";
 import type { CharacterRecap } from "@/lib/recap/types";
 import type { GameIteration } from "@/lib/db/types/gameState";
-import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { assertKnownSeedPreset } from "@/lib/seeds/presetSelector";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
 import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
@@ -266,7 +266,8 @@ interface ResetGameWorldOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
   startingParties?: StartingPartiesMode;
   deleteProfiles: boolean;
-  preset?: string;
+  /** Required: a reset never assumes a preset. */
+  preset: string;
   seedHistorical?: boolean;
   adminUsername?: string;
   iteration?: import("@/lib/db/types/gameState").GameIteration;
@@ -324,7 +325,8 @@ export async function resetGameWorld(
   db: Db,
   options: ResetGameWorldOptions
 ): Promise<ResetGameWorldResult> {
-  const preset = options.preset ?? DEFAULT_SEED_PRESET;
+  assertKnownSeedPreset(options.preset);
+  const preset = options.preset;
   const startingParties = resolveStartingPartiesMode(preset, options.startingParties);
   const seedHistorical = startingParties !== "none" && options.seedHistorical !== false;
   const preIteration = options.preIteration === true;

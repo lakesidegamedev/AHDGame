@@ -10,8 +10,8 @@
  * (every four turns).
  */
 import type { ObjectId } from "mongodb";
-import { SUPPORT_RALLY_FULL_VALUE } from "@/lib/electionEngine/electionFormulaFactors";
-import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
+import { SUPPORT_RALLY_FULL_VALUE } from "@/lib/elections/engine/electionFormulaFactors";
+import { buildRallyAccrualEntry } from "@/lib/elections/campaigns/supportAccrual";
 import type { NppRaceSignal } from "@/lib/npp/actionSignals";
 
 export interface NppRallyWrite {

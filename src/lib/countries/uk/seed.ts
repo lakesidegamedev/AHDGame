@@ -170,9 +170,9 @@ export async function seedUKDemographics(
   let ukRegionDemographics: typeof ukRegionDemographicsStatic = ukRegionDemographics1991;
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
-  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
   const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const model = getCountryLayer1Model("UK", era);
   if (model) {
     const full = await loadFullOverride("UK", era);

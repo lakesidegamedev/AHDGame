@@ -24,7 +24,7 @@ import {
 } from "./calculator";
 import { INFLUENCE_ACTIONS, INFLUENCE_LIMITS } from "./constants";
 import { activeNppElectionCandidacyFilter } from "@/lib/elections/nppCandidacyQuery";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import {
   getEndorsementDecisionPhase,
   isSelfEndorsementCandidate,

@@ -23,8 +23,8 @@ import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_ACTION_COST,
   SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
-} from "@/lib/electionEngine/electionFormulaFactors";
-import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/engine/electionFormulaFactors";
+import { buildRallyAccrualEntry } from "@/lib/elections/campaigns/supportAccrual";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { ObjectId, type Db } from "mongodb";
 import { getGameTime } from "@/lib/time/gameTime";

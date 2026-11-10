@@ -49,7 +49,7 @@ import { getCabinetIdentity } from "@/lib/constants/cabinetIdentity";
 import { TRADE_MINISTER_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
 import { CardSkeleton, Skeleton } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { ResetCabinetActionPanel } from "./components/ResetCabinetActionPanel";
 

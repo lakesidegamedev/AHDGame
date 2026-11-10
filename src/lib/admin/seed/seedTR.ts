@@ -93,8 +93,8 @@ export async function seedTRDemographics(
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
-  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-  const era = eraForPreset(preset);
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const era = strictEraForPreset(preset);
   const model = getCountryLayer1Model("TR", era);
   if (!model) {
     log("[TR] no Layer-1 model — skipping demographics");

@@ -6,7 +6,6 @@ import {
   NEUTRAL_TECH_EFFECTS,
 } from "@/lib/constants/techTree";
 import { withEnergyTransition } from "@/lib/energyTransition/policies";
-import { withAutomationLevy } from "@/lib/automationPolicy/policies";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationLookups } from "../types";
 
@@ -16,8 +15,10 @@ import type { CorporationLookups } from "../types";
  * sector type, full strength. Neutral when the feature gate is off.
  * A retired (sunset) method runs on with dearer inputs, so its penalty folds
  * into the same aggregate (techTree/sunset). Energy transition worlds also
- * fold plant age, climate laws and mineral recycling into the input rates,
- * and automation levies make automation methods' inputs dearer.
+ * fold plant age, climate laws and mineral recycling into the input rates.
+ * Automation levies are not folded in here: this path has no settled input
+ * purchases and no treasury-paired cash move, so a levy would have no payee.
+ * The funded market collects them as a closing transfer to the treasury.
  */
 export function resolveSectorTechEffects(
   corp: Corporation,
@@ -48,9 +49,11 @@ export function resolveSectorTechEffects(
         currentYear
       )
     : NEUTRAL_TECH_EFFECTS;
-  return withAutomationLevy(
-    withEnergyTransition(base, lookups.energyTransition, sector, operatingSectorType, currentYear),
-    lookups.automationPolicyByCountry,
-    { countryId: sector.countryId ?? corp.countryId, strategyId: sector.strategyId }
+  return withEnergyTransition(
+    base,
+    lookups.energyTransition,
+    sector,
+    operatingSectorType,
+    currentYear
   );
 }

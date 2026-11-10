@@ -22,7 +22,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import "@/lib/seeds/stateDemographics";
 import type { Layer1PositionOverlay, CensusGroupView } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import {
   buildGranularElectorateSubstrate,
   clearGranularElectorateCache,

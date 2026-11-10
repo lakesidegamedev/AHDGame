@@ -4,7 +4,7 @@
  * failure. It never writes and never prints the connection string.
  *
  *   PREFLIGHT_MONGODB_URI=... PREFLIGHT_MONGODB_DB=... \
- *     npx tsx scripts/reset/preflight-2027.ts [--mode=pre-reset|fresh] [--countries=US,UK]
+ *     npx tsx scripts/reset/preflight-2027.ts [--mode=pre-reset|fresh] [--countries=US,UK] [--preset=2027-default]
  */
 import { MongoClient } from "mongodb";
 import {
@@ -31,10 +31,12 @@ async function main(): Promise<number> {
   }
   const countries = argValue("countries")?.split(",").filter(Boolean);
 
+  const preset = argValue("preset");
+
   const client = new MongoClient(uri, { readPreference: "secondaryPreferred" });
   try {
     await client.connect();
-    const report = await runPreflight2027(client.db(dbName), { mode, countries });
+    const report = await runPreflight2027(client.db(dbName), { mode, countries, preset });
     console.log(
       `2027 preflight (${mode}) on database "${dbName}"; countries: ${report.countries.join(", ")}`
     );

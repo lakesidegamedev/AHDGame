@@ -8,7 +8,7 @@ import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { hu1991RunoffCampaigns } from "./rules/assemblyCampaign1991";
 import { projectHu1991Runoff } from "./rules/campaignBallots1991";

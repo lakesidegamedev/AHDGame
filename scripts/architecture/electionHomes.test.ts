@@ -12,11 +12,7 @@ const OLD_HOMES = [
   "src/lib/turn/elections",
   "src/lib/turn/perpetualElections",
 ];
-const OLD_FILES = [
-  "src/lib/electionEngine.ts",
-  "src/lib/presidentialElectionEngine.ts",
-  "src/lib/nigeriaPresidentialElectionEngine.ts",
-];
+const OLD_FILES = ["src/lib/electionEngine.ts"];
 
 function walk(dir: string): string[] {
   if (!existsSync(dir)) return [];

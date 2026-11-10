@@ -13,8 +13,8 @@ import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
 import {
   calcStateTurnout,
   distributeVotesByGroupLevelAllocation,
-} from "../../src/lib/electionEngine";
-import type { EnrichedCandidate } from "../../src/lib/electionEngine";
+} from "../../src/lib/elections/engine";
+import type { EnrichedCandidate } from "../../src/lib/elections/engine";
 import type { CensusGroupView } from "../../src/lib/db/types/demographics";
 
 export { normalizeNPI } from "../../src/lib/utils/normalizeNPI";

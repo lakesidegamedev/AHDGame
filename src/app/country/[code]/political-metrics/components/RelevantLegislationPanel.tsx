@@ -7,7 +7,7 @@
  */
 
 import Link from "next/link";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { MetricLegislationInfo } from "@/lib/politicalMetrics/queries/countryPoliticalMetrics";
 import { formatLocalAmount } from "@/lib/utils/formatters";
