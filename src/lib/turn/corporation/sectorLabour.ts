@@ -166,14 +166,15 @@ export function resolveSectorHeadcount(args: {
    * workers the plan actually employs rather than nameplate staffing.
    */
   fundedHeadcount?: { desiredWorkers: number; workers: number };
-}): { desiredWorkers: number; workers: number } {
+}): { desiredWorkers: number; workers: number; referenceDesiredWorkers: number } {
   const rawSkill =
     args.rawWorkforceSkillByState.get(args.stateId) ??
     args.politicalBoard?.["education.adultSkills"] ??
     null;
+  const referenceDesiredWorkers = calculateWorkers(args.revenue, rawSkill);
   const desiredWorkers = args.fundedHeadcount
     ? args.fundedHeadcount.desiredWorkers
-    : calculateWorkers(args.revenue, rawSkill);
+    : referenceDesiredWorkers;
   accumulateLabourDemand(args.labourDemandByState, args.stateId, desiredWorkers);
   if (args.labourDemandWageIndexByState) {
     let wageDemand = args.labourDemandWageIndexByState.get(args.stateId);
@@ -185,10 +186,26 @@ export function resolveSectorHeadcount(args: {
   }
   return {
     desiredWorkers,
+    referenceDesiredWorkers,
     workers: args.fundedHeadcount
       ? args.fundedHeadcount.workers
       : filledWorkers(desiredWorkers, args.staffingFactor),
   };
+}
+
+/**
+ * Share of the crew-share payroll basis a funded plant actually employs.
+ * A funded run can sit far below `plantCrewShare`; pricing payroll at the crew
+ * share while dividing by the funded headcount inflated wages per worker (and
+ * the labour cost the pension charge reads) by the ratio of the two. Capped at
+ * 1 so a funded crew above the reference never raises the basis.
+ */
+export function fundedPayrollShare(args: {
+  fundedDesiredWorkers: number;
+  referenceDesiredWorkers: number;
+}): number {
+  if (!(args.referenceDesiredWorkers > 0)) return 1;
+  return Math.max(0, Math.min(1, args.fundedDesiredWorkers / args.referenceDesiredWorkers));
 }
 
 export interface SectorLabourEconomicsInput {
