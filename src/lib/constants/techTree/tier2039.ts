@@ -68,8 +68,10 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
   financial: [
     {
       name: "Agentic Wealth Managers",
-      description: "Agents manage portfolios for every client tier.",
+      description:
+        "Agents manage portfolios for every client tier and unlock the Agent Asset Management method.",
       effects: [
+        { kind: "unlockStrategy", strategyId: "agent_asset_management" },
         { kind: "laborCostReduction", pct: 0.16 },
         { kind: "growthCostReduction", pct: 0.085 },
       ],
@@ -322,8 +324,10 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
   retail: [
     {
       name: "Agentic Shopping Assistants",
-      description: "Customers' agents order direct from the store's agents.",
+      description:
+        "Customers' agents order direct from the store's agents and unlock the Agentic Storefronts method.",
       effects: [
+        { kind: "unlockStrategy", strategyId: "agentic_storefronts" },
         { kind: "laborCostReduction", pct: 0.13 },
         { kind: "growthCostReduction", pct: 0.105 },
       ],
@@ -372,8 +376,10 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
   manufacturing_vehicles: [
     {
       name: "Solid-State Battery Lines",
-      description: "Mass solid-state cells raise range and margin.",
+      description:
+        "Mass solid-state cells raise range and margin and unlock the Solid-State Vehicles method.",
       effects: [
+        { kind: "unlockStrategy", strategyId: "solid_state_vehicles" },
         { kind: "inputEfficiency", pct: 0.12 },
         { kind: "growthCostReduction", pct: 0.085 },
       ],
@@ -580,8 +586,10 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
   real_estate: [
     {
       name: "Agentic Property Management",
-      description: "Agents run leasing, repairs and billing.",
+      description:
+        "Agents run leasing, repairs and billing and unlock the Agentic Property Operations method.",
       effects: [
+        { kind: "unlockStrategy", strategyId: "agentic_property_operations" },
         { kind: "laborCostReduction", pct: 0.15 },
         { kind: "growthCostReduction", pct: 0.085 },
       ],
@@ -887,8 +895,10 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
   extraction: [
     {
       name: "Autonomous Mine Fleets",
-      description: "Driverless haulers and drills run nonstop.",
+      description:
+        "Driverless haulers and drills run nonstop and unlock the Autonomous Deep Mining method.",
       effects: [
+        { kind: "unlockStrategy", strategyId: "autonomous_deep_mining" },
         { kind: "plantOutput", pct: 0.033 },
         { kind: "growthCostReduction", pct: 0.105 },
       ],
